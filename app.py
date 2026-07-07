@@ -5913,6 +5913,159 @@ def drop_nataraj_batch_phantom_items(items, ocr_text: str) -> list:
     return cleaned
 
 
+def fix_maruti_and_company_rate_from_ocr(items, ocr_text: str) -> list:
+    """
+    FIX 12h: Correct unit_price for MARUTI AND COMPANY pharma invoices.
+
+    Table layout places M.R.P before the Sale Rate column:
+        HSN Mfac/Rack Batch Description Pack Qty S M.R.P Exp SaleRate %D Taxable GST% GSTValue
+    The LLM frequently maps the M.R.P column as unit_price instead of the Sale
+    Rate column. This vendor-scoped fixer reads the authoritative Sale Rate for
+    each row (validated by qty*rate*(1-disc%) ~ Taxable and Taxable*(1+GST%) ~
+    GST Value) and only overrides unit_price. Quantities and totals are left
+    untouched.
+    """
+    if not items or not ocr_text:
+        return items
+
+    ocr_upper = ocr_text.upper()
+    is_maruti = (
+        "MARUTI AND COMPANY" in ocr_upper
+        and re.search(r'M\.?\s*R\.?\s*P', ocr_upper)
+        and "SALE" in ocr_upper
+        and re.search(r'\bRATE\b', ocr_upper)
+        and "TAXABLE" in ocr_upper
+    )
+    if not is_maruti:
+        return items
+
+    row_pat = re.compile(
+        r'^.*?\b(?P<hsn>\d{3,4})\s+.*?'
+        r'(?P<qty>\d{1,5})\s+'
+        r'(?P<mrp>\d+\.\d+)\s+'
+        r'(?P<exp>\d{2}-\d{2})\s+'
+        r'(?P<rate>\d+\.\d+)\s+'
+        r'(?P<disc>\d+(?:\.\d+)?)\s+'
+        r'(?P<taxable>\d+\.\d+)\s+'
+        r'(?P<gst>\d{1,2})\s+'
+        r'(?P<gstval>\d+\.\d+)'
+        r'(?:\s+[A-Z0-9]+\s+\d{1,5}\s+(?P<descdup>[A-Z][A-Z0-9 .\-]*?))?\s*$'
+    )
+
+    parsed_rows = []
+    for raw_line in ocr_text.splitlines():
+        m = row_pat.match(raw_line)
+        if not m:
+            continue
+        try:
+            qty = int(m.group("qty"))
+            rate = float(m.group("rate"))
+            disc = float(m.group("disc"))
+            taxable = float(m.group("taxable"))
+            gst = float(m.group("gst"))
+            gstval = float(m.group("gstval"))
+        except (TypeError, ValueError):
+            continue
+        if qty <= 0 or rate <= 0 or taxable <= 0:
+            continue
+        # Validate the row is internally self-consistent so we never trust a
+        # mis-aligned numeric block.
+        calc_taxable = qty * rate * (1.0 - disc / 100.0)
+        if abs(calc_taxable - taxable) / max(taxable, 1.0) > 0.03:
+            continue
+        if gstval > 0:
+            calc_gstval = taxable * (1.0 + gst / 100.0)
+            if abs(calc_gstval - gstval) / max(gstval, 1.0) > 0.03:
+                continue
+        parsed_rows.append({
+            "qty": qty,
+            "rate": rate,
+            "taxable": taxable,
+            "gstval": gstval,
+            "desc": (m.group("descdup") or "").strip(),
+        })
+
+    if not parsed_rows:
+        return items
+
+    logger.info(
+        f"🔧 FIX12h: Detected MARUTI AND COMPANY format — verifying rate for "
+        f"{len(parsed_rows)} OCR row(s)")
+
+    def _first_word(text: str) -> str:
+        for word in re.sub(r'[^A-Z0-9 ]', ' ', str(text or '').upper()).split():
+            if len(word) >= 3:
+                return word
+        return ""
+
+    used_rows = set()
+
+    def _claim(idx: int):
+        used_rows.add(idx)
+
+    for item_idx, item in enumerate(items):
+        matched_idx = None
+
+        # 1) Match by product description (first significant word).
+        item_word = _first_word(item.get("product_description", ""))
+        if item_word:
+            for ridx, row in enumerate(parsed_rows):
+                if ridx in used_rows:
+                    continue
+                if row["desc"] and _first_word(row["desc"]) == item_word:
+                    matched_idx = ridx
+                    break
+
+        # 2) Match by quantity + total (taxable or GST value).
+        if matched_idx is None:
+            try:
+                cur_qty = float(normalize_numeric_value(
+                    str(item.get("quantity", "0"))) or 0)
+            except Exception:
+                cur_qty = 0.0
+            try:
+                cur_total = float(normalize_numeric_value(
+                    str(item.get("total_amount", "0"))) or 0)
+            except Exception:
+                cur_total = 0.0
+            for ridx, row in enumerate(parsed_rows):
+                if ridx in used_rows:
+                    continue
+                if cur_qty > 0 and abs(cur_qty - row["qty"]) < 0.5:
+                    if cur_total <= 0 or (
+                        abs(cur_total - row["taxable"]) / max(row["taxable"], 1.0) <= 0.03
+                        or abs(cur_total - row["gstval"]) / max(row["gstval"], 1.0) <= 0.03
+                    ):
+                        matched_idx = ridx
+                        break
+
+        # 3) Fall back to positional match only when row/item counts align.
+        if matched_idx is None and len(parsed_rows) == len(items):
+            if item_idx not in used_rows:
+                matched_idx = item_idx
+
+        if matched_idx is None:
+            continue
+
+        _claim(matched_idx)
+        ocr_rate = parsed_rows[matched_idx]["rate"]
+
+        try:
+            cur_rate = float(normalize_numeric_value(
+                str(item.get("unit_price", "0"))) or 0)
+        except Exception:
+            cur_rate = 0.0
+
+        if cur_rate <= 0 or abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) > 0.01:
+            item["unit_price"] = f"{ocr_rate:.2f}"
+            logger.warning(
+                f"⚠️ FIX12h: Corrected unit_price from Sale Rate column for "
+                f"'{item.get('product_description', '')}': {cur_rate} -> "
+                f"{item['unit_price']}")
+
+    return items
+
+
 def fix_unit_price_from_ocr_rate_column(items, ocr_text: str):
     """
     Override wrong unit_price when OCR clearly exposes a dedicated Rate column.
@@ -12168,6 +12321,11 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 8: Recover correct unit_price from OCR Rate column when MRP got mapped
     processed_items = fix_unit_price_from_ocr_rate_column(
+        processed_items, ocr_text)
+
+    # 🔧 FIX 12h: Correct unit_price for MARUTI AND COMPANY invoices (MRP column
+    # mapped as rate instead of the dedicated Sale Rate column)
+    processed_items = fix_maruti_and_company_rate_from_ocr(
         processed_items, ocr_text)
 
     # 🔧 FIX 9: Recover line items that Gemini missed but are visible in OCR

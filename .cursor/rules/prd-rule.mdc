@@ -1,0 +1,6 @@
+---
+description: 
+alwaysApply: true
+---
+
+Do not modify the existing logic or code in a way that could affect the processing or formatting of previously supported invoice formats. Resolve only the issue with the current invoice format while ensuring full backward compatibility with all existing invoice formats. Make the smallest possible changes, and avoid any refactoring or changes to shared logic unless absolutely necessary.
