@@ -1,0 +1,14 @@
+openai>=1.40.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
+pytesseract>=0.3.10
+opencv-python>=4.8.0
+pillow>=10.0.0
+numpy>=1.24.0
+azure-storage-blob>=12.19.0
+psutil>=5.9.0
