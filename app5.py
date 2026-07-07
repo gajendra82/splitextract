@@ -3391,13 +3391,16 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
             search_text = re.sub(r'[\[\]\|(){}]', ' ', search_text)
             # Remove structural tokens that are not qty/rate/amount values.
             search_text = re.sub(
-                r"\b\d{1,4}\s*['`\u2019]?\s*[sS]\b", ' ', search_text)  # pack like 15S
+                # pack like 15S
+                r"\b\d{1,4}\s*['`\u2019]?\s*[sS]\b", ' ', search_text)
             search_text = re.sub(
-                r'\b\d+[xX]\d+[A-Za-z]{1,5}\b', ' ', search_text)  # pack size like 1X15TA, 2X10CAP
+                # pack size like 1X15TA, 2X10CAP
+                r'\b\d+[xX]\d+[A-Za-z]{1,5}\b', ' ', search_text)
             search_text = re.sub(
                 r'\b3004\d{0,4}\b', ' ', search_text)  # HSN codes
             search_text = re.sub(
-                r'\b\d{1,2}\s*[-/]\s*\d{2,4}\b', ' ', search_text)  # expiry dates
+                # expiry dates
+                r'\b\d{1,2}\s*[-/]\s*\d{2,4}\b', ' ', search_text)
             search_text = re.sub(r'\b[A-Z]{1,4}\d[A-Z0-9]{4,14}\b', ' ',
                                  search_text, flags=re.IGNORECASE)  # batch-like codes
             all_nums = re.findall(r'(\d+(?:\.\d+)?)', search_text)
@@ -4971,7 +4974,7 @@ def fix_kids_clinic_spaced_rate_from_ocr(items, ocr_text: str) -> list:
 
         except Exception as _e:
             logger.debug(
-                f"FIX12d error for item '{item.get('product_description','')}': {_e}")
+                f"FIX12d error for item '{item.get('product_description', '')}': {_e}")
 
     return items
 
@@ -13010,7 +13013,7 @@ def enforce_schema(raw_data):
                                     int(_qty18) if _qty18 == int(_qty18) else round(_qty18, 2))
                             _fix18_count += 1
                             logger.warning(
-                                f"⚠️ FIX18: Pharmacea OCR-derived rate applied { _old_up18:.2f } -> {_up18:.2f} "
+                                f"⚠️ FIX18: Pharmacea OCR-derived rate applied {_old_up18:.2f } -> {_up18:.2f} "
                                 f"(qty={_qty18:.0f}) for '{_name18[:30]}'"
                             )
 
