@@ -134,6 +134,8 @@ GEMINI_IMAGE_RESOLUTION = 1.2
 USE_SMART_SAMPLING = False
 MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "1"))
 REQUEST_QUEUE_TIMEOUT = int(os.getenv("REQUEST_QUEUE_TIMEOUT", "3600"))
+REQUEST_STUCK_THRESHOLD_SECONDS = int(
+    os.getenv("REQUEST_STUCK_THRESHOLD_SECONDS", "1800"))
 
 
 # ============================================================================
@@ -230,6 +232,177 @@ request_processing_semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 request_queue_lock = Lock()
 active_requests = 0
 waiting_requests = 0
+
+# ============================================================================
+# REQUEST PROGRESS HEARTBEAT (stuck detection — not a processing timeout)
+# ============================================================================
+
+request_progress_lock = Lock()
+_request_progress = {
+    "active": False,
+    "request_start_time": None,
+    "last_progress_time": None,
+    "current_stage": None,
+    "current_page": None,
+    "total_pages": None,
+    "current_invoice": None,
+    "source_filename": None,
+    "batch_id": None,
+    "_last_progress_monotonic": None,
+    "_last_logged_stage": None,
+    "_last_logged_page": 0,
+}
+
+
+def _progress_iso_now() -> str:
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def begin_request_progress(
+    source_filename: Optional[str] = None,
+    batch_id: Optional[str] = None,
+    stage: str = "request_started",
+) -> None:
+    now_mono = time.monotonic()
+    now_iso = _progress_iso_now()
+    with request_progress_lock:
+        _request_progress.update({
+            "active": True,
+            "request_start_time": now_iso,
+            "last_progress_time": now_iso,
+            "current_stage": stage,
+            "current_page": None,
+            "total_pages": None,
+            "current_invoice": None,
+            "source_filename": source_filename,
+            "batch_id": batch_id,
+            "_last_progress_monotonic": now_mono,
+            "_last_logged_stage": None,
+            "_last_logged_page": 0,
+        })
+    update_request_progress(stage, source_filename=source_filename, force_log=True)
+
+
+def update_request_progress(
+    stage: str,
+    page: Optional[int] = None,
+    total_pages: Optional[int] = None,
+    invoice: Optional[str] = None,
+    source_filename: Optional[str] = None,
+    force_log: bool = False,
+) -> None:
+    now_mono = time.monotonic()
+    with request_progress_lock:
+        if not _request_progress["active"]:
+            return
+
+        prev_mono = _request_progress.get("_last_progress_monotonic")
+        seconds_since = round(now_mono - prev_mono, 2) if prev_mono else 0.0
+        prev_stage = _request_progress.get("current_stage")
+
+        _request_progress["last_progress_time"] = _progress_iso_now()
+        _request_progress["_last_progress_monotonic"] = now_mono
+        _request_progress["current_stage"] = stage
+        if page is not None:
+            _request_progress["current_page"] = page
+        if total_pages is not None:
+            _request_progress["total_pages"] = total_pages
+        if invoice is not None:
+            _request_progress["current_invoice"] = invoice
+        if source_filename is not None:
+            _request_progress["source_filename"] = source_filename
+
+        cur_page = _request_progress.get("current_page")
+        cur_invoice = _request_progress.get("current_invoice")
+        cur_source = _request_progress.get("source_filename")
+
+        should_log = force_log or stage != prev_stage
+        if not should_log and stage == "ocr_page_completed" and cur_page:
+            last_logged_page = _request_progress.get("_last_logged_page", 0)
+            if cur_page - last_logged_page >= 10 or seconds_since >= 60:
+                should_log = True
+        elif not should_log and seconds_since >= 60:
+            should_log = True
+
+        if should_log:
+            _request_progress["_last_logged_stage"] = stage
+            if cur_page:
+                _request_progress["_last_logged_page"] = cur_page
+            page_info = ""
+            if cur_page is not None:
+                total = _request_progress.get("total_pages")
+                page_info = (
+                    f", page={cur_page}/{total}" if total else f", page={cur_page}"
+                )
+            invoice_info = f", invoice={cur_invoice}" if cur_invoice else ""
+            logger.info(
+                f"💓 Progress heartbeat: stage={stage}{page_info}{invoice_info}"
+                f", source={cur_source or 'unknown'}"
+                f", since_last_progress={seconds_since}s"
+            )
+
+
+def clear_request_progress() -> None:
+    with request_progress_lock:
+        _request_progress.update({
+            "active": False,
+            "request_start_time": None,
+            "last_progress_time": None,
+            "current_stage": None,
+            "current_page": None,
+            "total_pages": None,
+            "current_invoice": None,
+            "source_filename": None,
+            "batch_id": None,
+            "_last_progress_monotonic": None,
+            "_last_logged_stage": None,
+            "_last_logged_page": 0,
+        })
+
+
+def get_runtime_health_snapshot() -> Dict:
+    with request_queue_lock:
+        active = active_requests
+        waiting = waiting_requests
+
+    with request_progress_lock:
+        progress = dict(_request_progress)
+        last_mono = progress.pop("_last_progress_monotonic", None)
+        progress.pop("_last_logged_stage", None)
+        progress.pop("_last_logged_page", None)
+
+    seconds_since_last_progress = None
+    if progress.get("active") and last_mono is not None:
+        seconds_since_last_progress = round(time.monotonic() - last_mono, 2)
+
+    semaphore_locked = active > 0
+
+    if active == 0:
+        processing_status = "idle"
+    elif (
+        seconds_since_last_progress is not None
+        and seconds_since_last_progress > REQUEST_STUCK_THRESHOLD_SECONDS
+    ):
+        processing_status = "potentially_stuck"
+    else:
+        processing_status = "processing"
+
+    return {
+        "active_requests": active,
+        "waiting_requests": waiting,
+        "semaphore_locked": semaphore_locked,
+        "request_stuck_threshold_seconds": REQUEST_STUCK_THRESHOLD_SECONDS,
+        "request_start_time": progress.get("request_start_time"),
+        "last_progress_time": progress.get("last_progress_time"),
+        "seconds_since_last_progress": seconds_since_last_progress,
+        "current_stage": progress.get("current_stage"),
+        "current_page": progress.get("current_page"),
+        "total_pages": progress.get("total_pages"),
+        "current_invoice": progress.get("current_invoice"),
+        "source_filename": progress.get("source_filename"),
+        "batch_id": progress.get("batch_id"),
+        "processing_status": processing_status,
+    }
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -413,9 +586,11 @@ def call_gemini_with_quota(url: str, payload: dict, timeout: int, request_type: 
             return None
 
         try:
+            update_request_progress(f"gemini_{request_type}_request")
             response = requests.post(url, json=payload, timeout=timeout)
 
             if response.status_code == 200:
+                update_request_progress(f"gemini_{request_type}_response_received")
                 return response
 
             if response.status_code in (429, 503):
@@ -4517,6 +4692,126 @@ def fix_partap_pdfplumber_rows_from_ocr(items, ocr_text: str):
     return items
 
 
+def _is_smartpharma360_table_layout(header_line: str, ocr_text: str) -> bool:
+    """
+    Detect SmartPharma360 distributor tables (e.g. ALARIC ENTERPRISES).
+    Column order: ... Expiry | Qty | Free | Rate | MRP | Old MRP | GST% | Amount | Disc% | Net
+    """
+    h = re.sub(r'\s+', ' ', (header_line or '').upper())
+    ocr_low = (ocr_text or '').lower()
+    has_header_cols = (
+        re.search(r'\bSNO\b', h)
+        and re.search(r'\bHSN\b', h)
+        and re.search(r'\bMFG\b', h)
+        and re.search(r'\bEXPIRY\b', h)
+        and re.search(r'\bQTY\b', h)
+        and re.search(r'\bRATE\b', h)
+        and re.search(r'\bMRP\b', h)
+    )
+    if not has_header_cols:
+        return False
+    has_footer = (
+        'smartpharma360' in ocr_low
+        or 'smartpharma360.in' in ocr_low
+    )
+    qty_pos = h.find('QTY')
+    rate_pos = h.find('RATE')
+    mrp_pos = h.find('MRP')
+    rate_before_mrp = (
+        qty_pos >= 0 and rate_pos >= 0 and mrp_pos >= 0
+        and qty_pos < rate_pos < mrp_pos
+    )
+    return has_footer or rate_before_mrp
+
+
+def _extract_smartpharma360_rate_rows(
+    lines: List[str], header_index: int, header_line: str
+) -> List[Dict[str, float]]:
+    """
+    Parse SmartPharma360 product rows using the Expiry-anchored tail:
+    Expiry Qty [Free] Rate MRP GST% Amount [Disc%] [Net...]
+    """
+    row_tail_pattern = re.compile(
+        r'\b(?P<exp>\d{2}/\d{2,4})\s+'
+        r'(?P<qty>\d{1,5})\s+'
+        r'(?:(?P<free>\d{1,5})\s+)?'
+        r'(?P<rate>\d+(?:\.\d{1,2})?)\s+'
+        r'(?P<mrp>\d+(?:\.\d{1,2})?)\s+'
+        r'(?P<gst>\d{1,2})\s+'
+        r'(?P<amount>\d+(?:\.\d{1,2})?)',
+        re.IGNORECASE,
+    )
+    product_line_pattern = re.compile(
+        r'^\s*\d+\s+\d{6,8}\b',
+        re.IGNORECASE,
+    )
+    stop_prefixes = ('note:', 'gst%', 'total :', 'terms')
+    extracted_rows: List[Dict[str, float]] = []
+
+    logger.info(
+        "📋 SmartPharma360 table parser: header=%r",
+        header_line[:120],
+    )
+
+    for line in lines[header_index + 1: header_index + 80]:
+        low = line.lower().strip()
+        if not low:
+            continue
+        if any(low.startswith(prefix) for prefix in stop_prefixes):
+            logger.info("📋 SmartPharma360 parser: stop at %r", line[:80])
+            break
+        if not product_line_pattern.search(line):
+            continue
+
+        match = row_tail_pattern.search(line)
+        if not match:
+            logger.info(
+                "📋 SmartPharma360 parser: no tail match for %r",
+                line[:100],
+            )
+            continue
+
+        try:
+            qty_val = float(match.group('qty'))
+            rate_val = float(match.group('rate'))
+            mrp_val = float(match.group('mrp'))
+            amount_val = float(match.group('amount'))
+        except (TypeError, ValueError):
+            continue
+
+        if not (qty_val > 0 and rate_val > 0 and amount_val > 0):
+            continue
+
+        delta = abs((qty_val * rate_val) - amount_val) / max(amount_val, 1.0)
+        if delta > 0.05:
+            logger.info(
+                "📋 SmartPharma360 parser: skip row (qty×rate mismatch %.1f%%): "
+                "qty=%s rate=%s amount=%s | %r",
+                delta * 100, qty_val, rate_val, amount_val, line[:100],
+            )
+            continue
+
+        row = {
+            'rate': round(rate_val, 2),
+            'taxable': round(amount_val, 2),
+            'qty': int(round(qty_val)),
+            'mrp': round(mrp_val, 2),
+        }
+        extracted_rows.append(row)
+        logger.info(
+            "📋 SmartPharma360 row %d: exp=%s qty=%s rate=%s mrp=%s amount=%s | %r",
+            len(extracted_rows),
+            match.group('exp'),
+            row['qty'],
+            row['rate'],
+            row['mrp'],
+            row['taxable'],
+            line[:100],
+        )
+
+    return extracted_rows
+
+
 def extract_rate_candidates_from_ocr_table(ocr_text: str) -> List[Dict[str, float]]:
     """
     Extract probable per-line "Rate" values from OCR table blocks like:
@@ -4544,7 +4839,22 @@ def extract_rate_candidates_from_ocr_table(ocr_text: str) -> List[Dict[str, floa
     if header_index is None:
         return []
 
-    header_line = lines[header_index].upper()
+    header_line = lines[header_index]
+
+    if _is_smartpharma360_table_layout(header_line, ocr_text):
+        smartpharma_rows = _extract_smartpharma360_rate_rows(
+            lines, header_index, header_line)
+        if smartpharma_rows:
+            logger.info(
+                "📋 SmartPharma360 parser: extracted %d product row(s)",
+                len(smartpharma_rows),
+            )
+            return smartpharma_rows
+        logger.warning(
+            "📋 SmartPharma360 layout detected but no product rows parsed; "
+            "falling back to generic table parser")
+
+    header_line = header_line.upper()
     is_old_mrp_qty_batch_layout = bool(re.search(
         r'OLD\s*MRP.*\bQTY\b.*\bBATCH\b.*\bEXP\b.*\bMRP\b.*\bRATE\b.*\bAMOUNT\b',
         header_line,
@@ -6079,14 +6389,16 @@ def fix_unit_price_from_ocr_rate_column(items, ocr_text: str):
     # For this format, defer corrections to the vendor-scoped FIX18 normalizer.
     try:
         _ocr_up_fix8 = (ocr_text or "").upper()
-        _is_pharmacea_fix8 = bool(re.search(
-            r'\bPHARMACE(?:A|\xc4)\s*LINK\b', _ocr_up_fix8, re.IGNORECASE))
+        _is_pharmacea_fix8 = _is_pharmacea_link_vendor("", ocr_text or "")
         _looks_pharmacea_table_fix8 = (
             bool(re.search(r'UNIT\s*PR', _ocr_up_fix8, re.IGNORECASE))
             and bool(re.search(r'DISCOUNT', _ocr_up_fix8, re.IGNORECASE))
             and bool(re.search(r'TAXABLE', _ocr_up_fix8, re.IGNORECASE))
         )
-        if _is_pharmacea_fix8 and _looks_pharmacea_table_fix8:
+        if _looks_pharmacea_table_fix8 and (
+            _is_pharmacea_fix8
+            or re.search(r'PHARMACE', _ocr_up_fix8, re.IGNORECASE)
+        ):
             logger.info(
                 "⏭️ Skipping FIX8 OCR rate-column override for Pharmacea format (handled by FIX18)")
             return items
@@ -6121,7 +6433,28 @@ def fix_unit_price_from_ocr_rate_column(items, ocr_text: str):
     if not row_candidates:
         return items
 
-    max_items = min(len(items), len(row_candidates))
+    logger.info(
+        "📋 FIX8 OCR table rows: count=%d | %s",
+        len(row_candidates),
+        [
+            {
+                "qty": r.get("qty"),
+                "rate": r.get("rate"),
+                "taxable": r.get("taxable"),
+            }
+            for r in row_candidates
+        ],
+    )
+
+    if len(row_candidates) != len(items):
+        logger.warning(
+            "⏭️ Skipping FIX8 OCR rate-column override: OCR row count (%d) "
+            "!= item count (%d)",
+            len(row_candidates), len(items),
+        )
+        return items
+
+    max_items = len(items)
     for idx in range(max_items):
         item = items[idx]
         candidate_rate = row_candidates[idx].get("rate", 0.0)
@@ -6146,6 +6479,24 @@ def fix_unit_price_from_ocr_rate_column(items, ocr_text: str):
                 str(item.get("total_amount", 0))))
         except Exception:
             total = 0.0
+
+        product = str(item.get("product_description", ""))[:40]
+        if qty > 0 and current_price > 0 and total > 0:
+            math_err = abs((qty * current_price) - total) / max(total, 1.0)
+            if math_err <= 0.05:
+                logger.info(
+                    "📋 FIX8 skip row %d (%r): qty=%s rate=%s total=%s "
+                    "(math-consistent, err=%.2f%%)",
+                    idx + 1, product, qty, current_price, total, math_err * 100,
+                )
+                continue
+
+        logger.info(
+            "📋 FIX8 row %d (%r): current qty=%s rate=%s total=%s | "
+            "OCR qty=%s rate=%s taxable=%s",
+            idx + 1, product, qty, current_price, total,
+            candidate_qty, candidate_rate, candidate_taxable,
+        )
 
         # Replace only when current value is clearly implausible vs OCR rate
         # e.g. 6636.00 (MRP/no decimal) instead of 37.23 (Rate)
@@ -9494,7 +9845,30 @@ def fix_pharmaceutical_column_misread(item):
     return item
 
 
-def fix_mrp_as_unit_price(item):
+def _is_pharmacea_link_vendor(vendor: str = "", ocr_text: str = "") -> bool:
+    """Detect Pharmacea Link from vendor field or OCR (tolerates common OCR typos)."""
+    _pat = re.compile(
+        r'\bPHARMACE(?:A|Ä|Á|D)?(?:DA)?\s*LINK\b',
+        re.IGNORECASE,
+    )
+    for _text in (vendor or "", ocr_text or ""):
+        if _text and _pat.search(_text):
+            return True
+    return False
+
+
+def _pharmacea_discount_rs(additional_fields) -> float:
+    """Pharmacea stores discount in Rs under discount_percentage (not a %)."""
+    if not isinstance(additional_fields, dict):
+        return 0.0
+    try:
+        return float(normalize_numeric_value(
+            str(additional_fields.get("discount_percentage", 0) or 0)))
+    except Exception:
+        return 0.0
+
+
+def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
     """
     ✅ ENHANCED: Detect and fix MRP/Rate confusion even when MRP is not in additional_fields
     Handles case where unit_price is a calculation value (like 9311.44) instead of actual rate
@@ -9513,6 +9887,13 @@ def fix_mrp_as_unit_price(item):
         # ✅ FIX: Get gross_amount (before tax) if available - this is what Rate × Qty should equal
         gross_amount = None
         additional_fields = item.get("additional_fields", {})
+        _is_pharmacea_mrp = _is_pharmacea_link_vendor(vendor, ocr_text)
+        if _is_pharmacea_mrp and isinstance(additional_fields, dict) and additional_fields.get("gross_amount"):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for Pharmacea Link row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(unit_price preserved for FIX18 Unit Price column normalizer)")
+            return item
         if isinstance(additional_fields, dict) and additional_fields.get("gross_amount"):
             try:
                 gross_amount = float(normalize_numeric_value(
@@ -12048,7 +12429,9 @@ def enforce_schema(raw_data):
         item = fix_pharmaceutical_column_misread(item)
 
         # 🔧 FIX 2: Detect and fix MRP/Rate confusion
-        item = fix_mrp_as_unit_price(item)
+        _vendor_for_mrp = str(
+            template["data"]["invoice_summary"].get("vendor", "") or "")
+        item = fix_mrp_as_unit_price(item, vendor=_vendor_for_mrp, ocr_text=ocr_text)
 
         # Normalize numeric fields
         for field in ["quantity", "unit_price", "total_amount"]:
@@ -12889,79 +13272,86 @@ def enforce_schema(raw_data):
     # Uses cross-item voting (>=2 items must share the same pattern) to prevent
     # a single anomalous item from triggering accidental correction.
     try:
-        _candidates_17 = []
-        for _item_17 in processed_items:
-            _add_17 = _item_17.get("additional_fields") if isinstance(
-                _item_17.get("additional_fields"), dict) else {}
-            _gross_raw_17 = _add_17.get("gross_amount", "")
+        _vendor_17 = str(
+            template["data"]["invoice_summary"].get("vendor", "") or "")
+        if _is_pharmacea_link_vendor(_vendor_17, ocr_text or ""):
+            logger.info(
+                "⏭️ FIX17: Skipping gross-based rate correction for Pharmacea Link "
+                "(handled by FIX18 Unit Price column normalizer)")
+        else:
+            _candidates_17 = []
+            for _item_17 in processed_items:
+                _add_17 = _item_17.get("additional_fields") if isinstance(
+                    _item_17.get("additional_fields"), dict) else {}
+                _gross_raw_17 = _add_17.get("gross_amount", "")
 
-            try:
-                _qty_17 = float(normalize_numeric_value(
-                    str(_item_17.get("quantity", 0))))
-            except Exception:
-                _qty_17 = 0.0
+                try:
+                    _qty_17 = float(normalize_numeric_value(
+                        str(_item_17.get("quantity", 0))))
+                except Exception:
+                    _qty_17 = 0.0
 
-            try:
-                _rate_17 = float(normalize_numeric_value(
-                    str(_item_17.get("unit_price", 0))))
-            except Exception:
-                _rate_17 = 0.0
+                try:
+                    _rate_17 = float(normalize_numeric_value(
+                        str(_item_17.get("unit_price", 0))))
+                except Exception:
+                    _rate_17 = 0.0
 
-            try:
-                _total_17 = float(normalize_numeric_value(
-                    str(_item_17.get("total_amount", 0))))
-            except Exception:
-                _total_17 = 0.0
+                try:
+                    _total_17 = float(normalize_numeric_value(
+                        str(_item_17.get("total_amount", 0))))
+                except Exception:
+                    _total_17 = 0.0
 
-            try:
-                _gross_17 = float(normalize_numeric_value(
-                    str(_gross_raw_17))) if _gross_raw_17 not in (None, "") else 0.0
-            except Exception:
-                _gross_17 = 0.0
+                try:
+                    _gross_17 = float(normalize_numeric_value(
+                        str(_gross_raw_17))) if _gross_raw_17 not in (None, "") else 0.0
+                except Exception:
+                    _gross_17 = 0.0
 
-            if _qty_17 <= 0 or _rate_17 <= 0 or _total_17 <= 0 or _gross_17 <= 0:
-                continue
+                if _qty_17 <= 0 or _rate_17 <= 0 or _total_17 <= 0 or _gross_17 <= 0:
+                    continue
 
-            if _gross_17 >= _total_17:
-                continue
+                if _gross_17 >= _total_17:
+                    continue
 
-            _gross_rate_17 = _gross_17 / _qty_17
-            _total_rate_17 = _total_17 / _qty_17
+                _gross_rate_17 = _gross_17 / _qty_17
+                _total_rate_17 = _total_17 / _qty_17
 
-            _matches_total_rate_17 = abs(
-                _rate_17 - _total_rate_17) / max(_total_rate_17, 1.0) <= 0.02
-            _misses_gross_rate_17 = abs(
-                _rate_17 - _gross_rate_17) / max(_gross_rate_17, 1.0) > 0.02
-            _tax_uplift_17 = (_total_17 - _gross_17) / max(_gross_17, 1.0)
-            _abs_diff_17 = abs(_rate_17 - _gross_rate_17)
+                _matches_total_rate_17 = abs(
+                    _rate_17 - _total_rate_17) / max(_total_rate_17, 1.0) <= 0.02
+                _misses_gross_rate_17 = abs(
+                    _rate_17 - _gross_rate_17) / max(_gross_rate_17, 1.0) > 0.02
+                _tax_uplift_17 = (_total_17 - _gross_17) / max(_gross_17, 1.0)
+                _abs_diff_17 = abs(_rate_17 - _gross_rate_17)
 
-            if (
-                _matches_total_rate_17 and
-                _misses_gross_rate_17 and
-                0.02 <= _tax_uplift_17 <= 0.18 and
-                _abs_diff_17 >= 0.50 and
-                _gross_rate_17 > 0
-            ):
-                _candidates_17.append((_item_17, _gross_rate_17, _rate_17))
+                if (
+                    _matches_total_rate_17 and
+                    _misses_gross_rate_17 and
+                    0.02 <= _tax_uplift_17 <= 0.18 and
+                    _abs_diff_17 >= 0.50 and
+                    _gross_rate_17 > 0
+                ):
+                    _candidates_17.append((_item_17, _gross_rate_17, _rate_17))
 
-        _fixed_17 = 0
-        if len(_candidates_17) >= 2:
-            for (_item_17, _gross_rate_17, _old_rate_17) in _candidates_17:
-                _item_17["unit_price"] = f"{_gross_rate_17:.2f}"
-                _fixed_17 += 1
+            _fixed_17 = 0
+            if len(_candidates_17) >= 2:
+                for (_item_17, _gross_rate_17, _old_rate_17) in _candidates_17:
+                    _item_17["unit_price"] = f"{_gross_rate_17:.2f}"
+                    _fixed_17 += 1
+                    logger.warning(
+                        f"⚠️ FIX17: Restored pre-tax unit_price from gross_amount for "
+                        f"'{_item_17.get('product_description', '')[:40]}': "
+                        f"{_old_rate_17:.2f} -> {_item_17['unit_price']}"
+                    )
+
+            if _fixed_17 > 0:
                 logger.warning(
-                    f"⚠️ FIX17: Restored pre-tax unit_price from gross_amount for "
-                    f"'{_item_17.get('product_description', '')[:40]}': "
-                    f"{_old_rate_17:.2f} -> {_item_17['unit_price']}"
-                )
-
-        if _fixed_17 > 0:
-            logger.warning(
-                f"⚠️ FIX17: Corrected {_fixed_17} line item rate(s) using gross_amount")
-        elif _candidates_17:
-            logger.debug(
-                f"FIX17: {len(_candidates_17)} candidate(s) found but "
-                f"cross-item threshold not met (need >=2); no correction applied")
+                    f"⚠️ FIX17: Corrected {_fixed_17} line item rate(s) using gross_amount")
+            elif _candidates_17:
+                logger.debug(
+                    f"FIX17: {len(_candidates_17)} candidate(s) found but "
+                    f"cross-item threshold not met (need >=2); no correction applied")
     except Exception as _e17:
         logger.debug(f"FIX17 error: {_e17}")
 
@@ -12973,11 +13363,50 @@ def enforce_schema(raw_data):
     # Uses item-level OCR line hints + additional_fields.gross_amount/discount_percentage.
     try:
         _vendor_18 = str(
-            template["data"]["invoice_summary"].get("vendor", "")).upper()
-        _is_pharmacea_18 = bool(
-            re.search(r'\bPHARMACE(?:A|\xc4)\s*LINK\b', _vendor_18, re.IGNORECASE))
+            template["data"]["invoice_summary"].get("vendor", "") or "")
+        _is_pharmacea_18 = _is_pharmacea_link_vendor(_vendor_18, ocr_text or "")
         if _is_pharmacea_18:
             _ocr_lines_18 = (ocr_text or "").splitlines()
+            _ocr_up_18 = (ocr_text or "").upper()
+            _has_unit_price_hdr_18 = bool(re.search(
+                r'UNIT\s*PR(?:ICE)?', _ocr_up_18, re.IGNORECASE))
+            _has_taxable_hdr_18 = bool(re.search(
+                r'TAXABLE', _ocr_up_18, re.IGNORECASE))
+            _has_discount_hdr_18 = bool(re.search(
+                r'DISCOUNT', _ocr_up_18, re.IGNORECASE))
+            logger.info(
+                f"🔧 FIX18: Pharmacea Link detected "
+                f"(vendor='{_vendor_18[:40]}', "
+                f"headers: unit_price={_has_unit_price_hdr_18}, "
+                f"taxable={_has_taxable_hdr_18}, discount={_has_discount_hdr_18})")
+
+            def _pharmacea_header_unit_price_offset():
+                """Estimate numeric-token offset of Unit Price before Taxable in header row."""
+                for _hdr18 in _ocr_lines_18:
+                    _up_hdr18 = re.sub(r'\s+', ' ', _hdr18.upper())
+                    if not (
+                        re.search(r'UNIT\s*PR', _up_hdr18)
+                        and re.search(r'TAXABLE', _up_hdr18)
+                    ):
+                        continue
+                    _unit_pos18 = re.search(r'UNIT\s*PR', _up_hdr18)
+                    _tax_pos18 = re.search(r'TAXABLE', _up_hdr18)
+                    _disc_pos18 = re.search(r'DISCOUNT', _up_hdr18)
+                    if not _unit_pos18 or not _tax_pos18:
+                        continue
+                    _cols_before_tax18 = 0
+                    if _disc_pos18 and _disc_pos18.start() < _tax_pos18.start():
+                        _cols_before_tax18 = 2  # unit_price, discount before taxable
+                    elif _unit_pos18.start() < _tax_pos18.start():
+                        _cols_before_tax18 = 1
+                    logger.info(
+                        f"🔧 FIX18: Header row detected — "
+                        f"unit_price column offset before taxable={_cols_before_tax18} "
+                        f"in '{_hdr18[:80]}'")
+                    return _cols_before_tax18
+                return None
+
+            _unit_price_col_offset_18 = _pharmacea_header_unit_price_offset()
 
             def _find_pharmacea_line_values(_name_18: str, _hsn_18: str, _gross_18: float, _disc_18: float):
                 """Return (qty_from_ocr, rate_from_ocr, gst_pct_from_ocr) for the best matching row line.
@@ -12985,8 +13414,8 @@ def enforce_schema(raw_data):
                 This is tailored for Pharmacea-style table rows where the structure is:
                   HSN  Qty  Unit  Unit Price  Discount  Taxable (Gross)  TaxRate  Total
 
-                We anchor on the gross_amount value and pick the rate token just before
-                the discount token in the same line.
+                We anchor on the gross_amount value and pick the rate token from the
+                Unit Price (Rs) column when OCR exposes it.
                 """
                 _name_tokens_18 = [
                     t for t in re.split(r'\W+', (_name_18 or "").upper())
@@ -13055,12 +13484,32 @@ def enforce_schema(raw_data):
                         _gross_idx = i
                         break
                 if _gross_idx is None or _gross_idx < 1:
+                    # Pipe-table fallback: gross often appears in second pipe segment.
+                    if '|' in _best:
+                        _pipe_parts18 = [p.strip() for p in _best.split('|')]
+                        for _seg18 in _pipe_parts18[1:]:
+                            _seg_nums18 = [
+                                float(x) for x in re.findall(
+                                    r'\b\d+(?:\.\d+)?\b', _seg18.replace(',', '.'))
+                                if float(x) > 0
+                            ]
+                            for _sv18 in _seg_nums18:
+                                if abs(_sv18 - _gross_18) <= max(0.01, _gross_18 * 0.005):
+                                    _gross_idx = _seg_nums18.index(_sv18)
+                                    _nums = _seg_nums18
+                                    break
+                            if _gross_idx is not None:
+                                break
+
+                if _gross_idx is None or _gross_idx < 1:
+                    logger.debug(
+                        f"FIX18: No gross anchor {_gross_18:.2f} in OCR line for "
+                        f"'{_name_18[:30]}' — line='{_best[:100]}'")
                     # Still return row qty/GST even when rate anchor is unavailable.
                     return _qty_row_18, None, _gst_18
 
                 # Determine rate token based on whether discount is explicitly captured.
-                # If discount is present right before gross, the rate is two tokens before gross.
-                # Otherwise assume rate is immediately before gross.
+                # Pharmacea table: ... Unit Price | Discount | Taxable ...
                 _rate_18 = None
                 _disc_idx = None
                 for i, v in enumerate(_nums):
@@ -13070,12 +13519,27 @@ def enforce_schema(raw_data):
 
                 if _disc_idx is not None and _disc_idx + 1 == _gross_idx and _gross_idx >= 2:
                     _rate_18 = _nums[_gross_idx - 2]
+                    _rate_col_idx18 = _gross_idx - 2
+                elif _unit_price_col_offset_18 == 2 and _gross_idx >= 2:
+                    _rate_18 = _nums[_gross_idx - 2]
+                    _rate_col_idx18 = _gross_idx - 2
+                elif _unit_price_col_offset_18 == 1 and _gross_idx >= 1:
+                    _rate_18 = _nums[_gross_idx - 1]
+                    _rate_col_idx18 = _gross_idx - 1
                 elif _gross_idx >= 1:
                     _rate_18 = _nums[_gross_idx - 1]
+                    _rate_col_idx18 = _gross_idx - 1
 
                 if not _rate_18 or _rate_18 <= 0:
+                    logger.debug(
+                        f"FIX18: Unit Price column not found in OCR for "
+                        f"'{_name_18[:30]}' (gross_idx={_gross_idx}, nums={_nums})")
                     return _qty_row_18, None, _gst_18
 
+                logger.info(
+                    f"🔧 FIX18: OCR row match for '{_name_18[:30]}' — "
+                    f"unit_price col_idx={_rate_col_idx18}, raw_rate={_rate_18:.2f}, "
+                    f"gross={_gross_18:.2f}, disc={_disc_18:.2f}")
                 return _qty_row_18, _rate_18, _gst_18
 
             _fix18_count = 0
@@ -13097,8 +13561,14 @@ def enforce_schema(raw_data):
 
                     _name18 = str(_it18.get("product_description", ""))
                     _hsn18 = str(_it18.get("hsn_code", ""))
+                    _raw_up18 = _up18
                     _qty_from_ocr18, _rate_from_ocr18, _gst_from_ocr18 = _find_pharmacea_line_values(
                         _name18, _hsn18, _gross18, _disc18)
+                    logger.info(
+                        f"🔧 FIX18: '{_name18[:30]}' — "
+                        f"input unit_price={_raw_up18:.2f}, "
+                        f"ocr_rate={_rate_from_ocr18}, "
+                        f"gross={_gross18:.2f}, disc={_disc18:.2f}, qty={_qty18:.0f}")
 
                     # Candidate qty from already-extracted rate and (gross+discount).
                     # This catches OCR-inflated qty values like 11/112/130 when rate is reasonable.
@@ -13186,9 +13656,13 @@ def enforce_schema(raw_data):
                             logger.warning(
                                 f"⚠️ FIX18: Pharmacea unit_price corrected "
                                 f"{_old_up18:.2f} -> {_corrected18:.2f} "
-                                f"(gross={_gross18}, disc={_disc18}, qty={_qty18}) "
+                                f"(formula: (gross+disc)/qty = ({_gross18}+{_disc18})/{_qty18:.0f}) "
                                 f"for '{_name18[:30]}'"
                             )
+                        else:
+                            logger.info(
+                                f"🔧 FIX18: Final unit_price for '{_name18[:30]}' = "
+                                f"{_up18:.2f} (no correction needed)")
 
                     # Repair clearly wrong total_amount using gross and GST uplift.
                     if _gross18 > 0:
@@ -13311,9 +13785,8 @@ def enforce_schema(raw_data):
     # Even when OCR misreads qty (e.g. "520" instead of "20"), derive: qty = (taxable+disc)/unit_price
     try:
         _vendor_19 = str(
-            template["data"]["invoice_summary"].get("vendor", "")).upper()
-        _is_pharmacea_19 = bool(
-            re.search(r'\bPHARMACE(?:A|\xc4)\s*LINK\b', _vendor_19, re.IGNORECASE))
+            template["data"]["invoice_summary"].get("vendor", "") or "")
+        _is_pharmacea_19 = _is_pharmacea_link_vendor(_vendor_19, ocr_text or "")
         if _is_pharmacea_19 and ocr_text:
             _ocr_lines_19 = ocr_text.splitlines()
             _fix19_count = 0
@@ -14285,12 +14758,7 @@ def _should_force_vision_fallback(line_items: List[Dict], ocr_text: str) -> Tupl
     # one line item extracted while OCR indicates multiple rows/totals.
     # This is intentionally vendor-scoped to reduce cross-format Vision fallbacks.
     try:
-        _ocr_up_single = (ocr_text or "").upper()
-        _is_pharmacea_vendor = bool(re.search(
-            r'\bPHARMACE(?:A|Ä)\s*LINK\b',
-            _ocr_up_single,
-            re.IGNORECASE,
-        ))
+        _is_pharmacea_vendor = _is_pharmacea_link_vendor("", ocr_text or "")
 
         if len(line_items) == 1 and _is_pharmacea_vendor:
             _ocr_total_single, _ = extract_net_amount_from_ocr(ocr_text or "")
@@ -16171,6 +16639,7 @@ Return ONLY JSON (do not include ocr_text):"""
 
 def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], ocr_stats_lock: Lock) -> dict:
     """Extract using GPT Text (when enabled) or Gemini Text API fallback."""
+    update_request_progress("llm_text_extraction")
     if USE_GPT_FOR_GOOD_OCR and _ocr_text_has_invoice_cues(text):
         if not OPENAI_API_KEY or not GPT_TEXT_MODEL:
             if not GPT_TEXT_MODEL:
@@ -16179,12 +16648,14 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
         else:
             logger.info("    🧭 OCR Quality = GOOD | Routing = GPT Text")
             try:
+                update_request_progress("openai_request")
                 gpt_parsed = extract_invoice_via_gpt(
                     build_invoice_prompt(text),
                     api_key=OPENAI_API_KEY,
                     model=GPT_TEXT_MODEL,
                     timeout=GPT_TIMEOUT,
                 )
+                update_request_progress("openai_response_received")
                 if gpt_parsed and _gpt_output_is_valid_json_structure(gpt_parsed):
                     if _gpt_output_has_mandatory_fields(gpt_parsed):
                         increment_ocr_stat(
@@ -16197,15 +16668,18 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
                     logger.warning(
                         "    ⚠️ GPT Failed (invalid JSON structure) | Fallback = Existing Gemini Text")
             except TimeoutError:
+                update_request_progress("openai_response_received")
                 logger.warning(
                     f"    ⚠️ GPT timeout after {GPT_TIMEOUT}s | Fallback = Existing Gemini Text")
             except Exception as e:
+                update_request_progress("openai_response_received")
                 logger.warning(
                     f"    ⚠️ GPT Failed ({e}) | Fallback = Existing Gemini Text")
 
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_text_calls", 1)
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "total_gemini_calls", 1)
 
+    update_request_progress("gemini_text_request")
     model_config = get_current_model_config()
     prompt = build_invoice_prompt(text)
     url = GEMINI_TEXT_URL.format(
@@ -16226,6 +16700,7 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
             request_type="text"
         )
         if not r:
+            update_request_progress("gemini_text_response_received")
             return None
 
         data = r.json()
@@ -16240,9 +16715,11 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
             parsed.pop("ocr_text", None)
             if isinstance(parsed.get("data"), dict):
                 parsed["data"].pop("ocr_text", None)
+        update_request_progress("gemini_text_response_received")
         logger.info(f"    ✅ Gemini Text API extracted data")
         return parsed
     except Exception as e:
+        update_request_progress("gemini_text_response_received")
         logger.error(f"Gemini extraction failed: {e}")
         return None
 
@@ -17857,6 +18334,31 @@ async def split_and_extract_invoices(
             detail="Provide either file upload or split_raw_blob_path/split_raw_url",
         )
 
+    source_filename = None
+    if file is not None and file.filename:
+        source_filename = file.filename
+    elif split_raw_blob_path:
+        source_filename = os.path.basename(split_raw_blob_path)
+    elif split_raw_url:
+        source_filename = os.path.basename(urlparse(split_raw_url).path)
+
+    source_filename = unquote(source_filename or "uploaded.pdf")
+    filename_lower = source_filename.lower()
+    SUPPORTED_EXTENSIONS = ['.pdf', '.png',
+                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+
+    file_extension = None
+    for ext in SUPPORTED_EXTENSIONS:
+        if filename_lower.endswith(ext):
+            file_extension = ext
+            break
+
+    if not file_extension:
+        raise HTTPException(status_code=400, detail="Unsupported format")
+
+    is_image_file = file_extension in [
+        '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+
     with request_queue_lock:
         waiting_requests += 1
         queued_ahead = max(waiting_requests - 1, 0)
@@ -17883,31 +18385,11 @@ async def split_and_extract_invoices(
 
     logger.info(
         f"📥 Request admitted. queued_ahead={queued_ahead}, wait={queue_wait_seconds}s, active={active_requests}")
-
-    source_filename = None
-    if file is not None and file.filename:
-        source_filename = file.filename
-    elif split_raw_blob_path:
-        source_filename = os.path.basename(split_raw_blob_path)
-    elif split_raw_url:
-        source_filename = os.path.basename(urlparse(split_raw_url).path)
-
-    source_filename = unquote(source_filename or "uploaded.pdf")
-    filename_lower = source_filename.lower()
-    SUPPORTED_EXTENSIONS = ['.pdf', '.png',
-                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
-
-    file_extension = None
-    for ext in SUPPORTED_EXTENSIONS:
-        if filename_lower.endswith(ext):
-            file_extension = ext
-            break
-
-    if not file_extension:
-        raise HTTPException(status_code=400, detail="Unsupported format")
-
-    is_image_file = file_extension in [
-        '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+    begin_request_progress(
+        source_filename=source_filename,
+        batch_id=batch_id,
+        stage="request_admitted",
+    )
 
     container_name = (blob_container.strip()
                       if blob_container else None) or AZURE_CONTAINER_NAME
@@ -17927,16 +18409,21 @@ async def split_and_extract_invoices(
         total_size = 0
         with open(temp_path, "wb") as buffer:
             if file is not None:
+                update_request_progress("file_upload")
                 while content := await file.read(5 * 1024 * 1024):
                     total_size += len(content)
                     buffer.write(content)
+                update_request_progress("file_upload_complete")
             elif split_raw_url:
+                update_request_progress("url_download")
                 dl_response = requests.get(split_raw_url, timeout=120)
                 dl_response.raise_for_status()
                 content = dl_response.content
                 total_size = len(content)
                 buffer.write(content)
+                update_request_progress("url_download_complete")
             else:
+                update_request_progress("azure_blob_download")
                 client = get_blob_service_client()
                 if not client:
                     raise HTTPException(
@@ -17948,6 +18435,9 @@ async def split_and_extract_invoices(
                 content = blob_client.download_blob().readall()
                 total_size = len(content)
                 buffer.write(content)
+                update_request_progress("azure_blob_download_complete")
+
+        update_request_progress("local_file_created")
 
         file_size_mb = total_size / (1024 * 1024)
         print(f"💾 File size: {file_size_mb:.2f}MB")
@@ -17965,6 +18455,10 @@ async def split_and_extract_invoices(
         doc = fitz.open(pdf_path)
         total_pages_count = doc.page_count
         print(f"📄 Pages: {total_pages_count}")
+        update_request_progress(
+            "pdf_opened",
+            total_pages=total_pages_count,
+        )
 
         # Extract with all tiers
         ocr_pool_workers = effective_ocr_pool_workers(parallel_batch_size)
@@ -17972,6 +18466,11 @@ async def split_and_extract_invoices(
             f"OCR page pool workers: {ocr_pool_workers} "
             f"(requested={parallel_batch_size}, "
             f"tesseract_limit={MAX_TESSERACT_CONCURRENCY})")
+        update_request_progress(
+            "ocr_started",
+            page=0,
+            total_pages=total_pages_count,
+        )
         with ThreadPoolExecutor(max_workers=ocr_pool_workers) as executor:
             futures = [
                 (i, executor.submit(extract_full_invoice_data_combined,
@@ -17990,6 +18489,21 @@ async def split_and_extract_invoices(
                         "ocr_text": "",
                         "ocr_method": "failed"
                     }
+                page_inv = None
+                if page_results[i]:
+                    page_inv = page_results[i].get("invoice_no")
+                update_request_progress(
+                    "ocr_page_completed",
+                    page=i + 1,
+                    total_pages=total_pages_count,
+                    invoice=page_inv,
+                )
+
+        update_request_progress(
+            "ocr_complete",
+            page=total_pages_count,
+            total_pages=total_pages_count,
+        )
 
         # ✅ MEM: the ThreadPoolExecutor + all rendered pixmaps/OCR arrays for this
         #         run are now out of scope. Force a collection before the
@@ -18075,6 +18589,11 @@ async def split_and_extract_invoices(
                     inv_ocr_section = ocr_sections.get(inv_on_page, page_ocr)
                     logger.info(
                         f"   🔄 RE-EXTRACTING invoice {inv_on_page} from section ({len(inv_ocr_section)} chars)...")
+                    update_request_progress(
+                        "multi_invoice_reextract_started",
+                        page=idx + 1,
+                        invoice=inv_on_page,
+                    )
 
                     try:
                         # Re-extract this specific invoice's data
@@ -18093,6 +18612,12 @@ async def split_and_extract_invoices(
                         logger.error(
                             f"   ❌ Error re-extracting {inv_on_page}: {str(e)}")
                         extracted_for_this_inv = None
+
+                    update_request_progress(
+                        "multi_invoice_reextract_completed",
+                        page=idx + 1,
+                        invoice=inv_on_page,
+                    )
 
                     groups.append({
                         "invoice_no": inv_on_page,
@@ -18231,6 +18756,8 @@ async def split_and_extract_invoices(
 
         groups = merged_groups
 
+        update_request_progress("invoice_grouping_complete")
+
         # ✅ RE-EXTRACT DATA FOR MULTI-PAGE INVOICES using combined OCR from all pages
         for g_idx, g in enumerate(groups):
             if len(g["pages"]) > 1:
@@ -18244,6 +18771,10 @@ async def split_and_extract_invoices(
                         continue
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
+                    update_request_progress(
+                        "multi_page_reextract_started",
+                        invoice=g.get("invoice_no"),
+                    )
                     try:
                         # Re-extract using combined OCR from all pages
                         re_extracted_data = extract_full_data_from_text_gemini(
@@ -18280,6 +18811,10 @@ async def split_and_extract_invoices(
                     except Exception as e:
                         logger.error(
                             f"   ❌ Error re-extracting multi-page invoice {g['invoice_no']}: {str(e)}")
+                    update_request_progress(
+                        "multi_page_reextract_completed",
+                        invoice=g.get("invoice_no"),
+                    )
 
         # ✅ Build PDFs with full OCR text
         # ✅ Build PDFs with proper OCR text merging
@@ -18291,6 +18826,10 @@ async def split_and_extract_invoices(
                 continue
             pdf_bytes = build_pdf_from_pages(doc, g["pages"])
             group_invoice_no = g["invoice_no"] or f"UNKNOWN_{idx+1}"
+            update_request_progress(
+                "split_pdf_generated",
+                invoice=group_invoice_no,
+            )
             canonical_invoice_no = group_invoice_no
             safe_name = re.sub(r'[<>:"/\\|?*]', '_', canonical_invoice_no)
             invoice_filename = f"invoice_{safe_name}.pdf"
@@ -18575,6 +19114,10 @@ async def split_and_extract_invoices(
                     )
                     invoice_info["storage"] = blob_info
                     invoice_info["pdf_url"] = blob_info["download_url"]
+                    update_request_progress(
+                        "blob_upload_completed",
+                        invoice=final_invoice_no,
+                    )
                 except Exception as e:
                     invoice_info["upload_error"] = str(e)
                     logger.warning(f"Blob upload failed: {e}")
@@ -18721,6 +19264,7 @@ async def split_and_extract_invoices(
         print(f"   💰 Cost saved: ~${ocr_stats['cost_saved']:.3f}")
         print()
 
+        update_request_progress("response_generated", force_log=True)
         return JSONResponse(response)
 
     except Exception as e:
@@ -18731,6 +19275,8 @@ async def split_and_extract_invoices(
             request_processing_semaphore.release()
             with request_queue_lock:
                 active_requests = max(0, active_requests - 1)
+
+        clear_request_progress()
 
         if doc:
             doc.close()
@@ -19359,11 +19905,14 @@ async def root():
 
 @app.get("/health")
 async def health():
+    runtime = get_runtime_health_snapshot()
+
     return {
         "status": "healthy",
         "pdfplumber": PDFPLUMBER_AVAILABLE,
         "tesseract": TESSERACT_AVAILABLE and os.path.exists(TESSERACT_CMD) if TESSERACT_CMD else False,
-        "current_model": get_current_model_config()["name"]
+        "current_model": get_current_model_config()["name"],
+        **runtime,
     }
 
 if __name__ == "__main__":
