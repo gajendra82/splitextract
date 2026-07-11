@@ -100,12 +100,48 @@ class ExtractionConfig:
         default_factory=lambda: os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     )
 
-    # API keys
+    # Vertex AI Gemini
+    google_genai_use_vertexai: bool = field(
+        default_factory=lambda: _env_bool("GOOGLE_GENAI_USE_VERTEXAI", True)
+    )
+    google_cloud_project: str = field(
+        default_factory=lambda: os.getenv(
+            "GOOGLE_CLOUD_PROJECT", "pod-ocr-502015"
+        ).strip()
+    )
+    google_cloud_location: str = field(
+        default_factory=lambda: os.getenv(
+            "GOOGLE_CLOUD_LOCATION", "global"
+        ).strip()
+    )
+    google_application_credentials: str = field(
+        default_factory=lambda: os.getenv(
+            "GOOGLE_APPLICATION_CREDENTIALS", ""
+        ).strip()
+    )
+
+    # GPT cost optimization (all default off — no behaviour change)
+    enable_gpt_cache: bool = field(
+        default_factory=lambda: _env_bool("ENABLE_GPT_CACHE", False)
+    )
+    enable_ocr_normalization: bool = field(
+        default_factory=lambda: _env_bool("ENABLE_OCR_NORMALIZATION", False)
+    )
+    enable_gpt_token_logging: bool = field(
+        default_factory=lambda: _env_bool("ENABLE_GPT_TOKEN_LOGGING", False)
+    )
+    gpt_cache_ttl_seconds: int = field(
+        default_factory=lambda: _env_int("GPT_CACHE_TTL_SECONDS", 86400)
+    )
+    gpt_cache_dir: str = field(
+        default_factory=lambda: os.getenv(
+            "GPT_CACHE_DIR",
+            os.path.join(os.getcwd(), ".gpt_cache"),
+        ).strip()
+    )
+
     openai_api_key: str = field(
         default_factory=lambda: os.getenv("OPENAI_API_KEY", "").strip()
-    )
-    gemini_api_key: str = field(
-        default_factory=lambda: os.getenv("GEMINI_API_KEY", "").strip()
     )
 
     # Retry / timeout

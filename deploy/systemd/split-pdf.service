@@ -1,0 +1,27 @@
+[Unit]
+Description=split-pdf Invoice PDF Splitter API
+Documentation=file:///var/www/html/split-extract/docs/SYSTEMD_SETUP.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/www/html/split-pdf
+EnvironmentFile=/var/www/html/.env
+
+ExecStart=/var/www/html/venv/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --timeout-keep-alive 1200
+
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+LimitNOFILE=65535
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=split-pdf
+
+[Install]
+WantedBy=multi-user.target

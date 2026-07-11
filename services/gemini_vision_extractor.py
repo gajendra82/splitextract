@@ -19,7 +19,6 @@ class GeminiVisionExtractor:
         config,
         call_gemini_fn: Callable,
         get_model_config_fn: Callable,
-        vision_url_template: str,
         vision_prompt: str,
         increment_stat_fn: Optional[Callable] = None,
         ocr_stats=None,
@@ -28,7 +27,6 @@ class GeminiVisionExtractor:
         self.config = config
         self._call_gemini = call_gemini_fn
         self._get_model_config = get_model_config_fn
-        self._vision_url_template = vision_url_template
         self._vision_prompt = vision_prompt
         self._increment_stat = increment_stat_fn
         self._ocr_stats = ocr_stats
@@ -52,9 +50,7 @@ class GeminiVisionExtractor:
 
         model_config = self._get_model_config()
         model_name = self.config.vision_model or model_config["name"]
-        api_key = self.config.gemini_api_key
         encoded = base64.b64encode(image_bytes).decode("utf-8")
-        url = self._vision_url_template.format(model=model_name, key=api_key)
         payload = {
             "contents": [
                 {
@@ -69,7 +65,7 @@ class GeminiVisionExtractor:
 
         try:
             response = self._call_gemini(
-                url=url,
+                model=model_name,
                 payload=payload,
                 timeout=self.config.vision_timeout or model_config["timeout"],
                 request_type="vision",

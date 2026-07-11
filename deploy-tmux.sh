@@ -22,10 +22,9 @@ fi
 
 cd "${INSTALL_DIR}"
 
-if [ ! -f .env ]; then
-  echo "==> Creating .env from .env.example"
-  cp .env.example .env
-  echo "!! Edit ${INSTALL_DIR}/.env with production keys before starting."
+if [ ! -f .env ] && [ ! -f /var/www/html/.env ]; then
+  echo "==> Copy template: cp .env.example /var/www/html/.env"
+  echo "!! Edit /var/www/html/.env with production keys before starting."
   exit 1
 fi
 

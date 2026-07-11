@@ -1,4 +1,46 @@
 from services.gpt_text_extractor import extract_invoice_via_gpt
+from services.gpt_cost_metrics import (
+    GPT_METRICS,
+    GPTRequestMetrics,
+    estimate_gpt_cost_usd,
+    estimate_tokens,
+    log_gpt_request_block,
+    log_pre_gpt_sizes,
+)
+from services.gpt_response_cache import GPTResponseCache, gpt_cache_key
+from services.ocr_text_normalize import normalize_ocr_whitespace
+from services.vertex_gemini_client import (
+    GeminiProviderError,
+    generate_content_via_vertex,
+    initialize_vertex_gemini_client,
+)
+from services.reliability import (
+    OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
+    OCR_SEMAPHORE_LOGGING_ENABLED,
+    OCR_THREADPOOL_LOGGING_ENABLED,
+    decrement_ocr_active,
+    get_enhanced_heartbeat_snapshot,
+    get_ready_snapshot,
+    get_resource_snapshot,
+    increment_ocr_active,
+    install_structured_logging,
+    log_semaphore_acquire,
+    log_semaphore_release,
+    on_heartbeat_update,
+    on_request_end,
+    on_request_start,
+    collect_page_futures,
+    register_request_progress_sync,
+    register_request_semaphore_probe,
+    register_tesseract_slot_probe,
+    register_watchdog_temp_file,
+    release_gemini_inflight_counter,
+    run_tesseract_call,
+    set_request_context,
+    start_watchdog,
+    track_llm_stage,
+    unregister_watchdog_temp_file,
+)
 from dotenv import load_dotenv
 import os
 import io
@@ -8,7 +50,8 @@ import gc
 import tempfile
 import json
 import uuid
-from typing import List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Optional, Tuple
+from contextvars import copy_context
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 import threading
@@ -99,6 +142,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ============================================================================
 # ⚙️ CONFIGURATION (Environment Variables)
 # ============================================================================
@@ -108,10 +152,20 @@ app.add_middleware(
 load_dotenv()
 
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 GPT_TEXT_MODEL = os.getenv("GPT_TEXT_MODEL", "").strip()
 GPT_TIMEOUT = int(os.getenv("GPT_TIMEOUT", "45"))
+ENABLE_GPT_CACHE = os.getenv(
+    "ENABLE_GPT_CACHE", "false").lower() in ("1", "true", "yes", "on")
+ENABLE_OCR_NORMALIZATION = os.getenv(
+    "ENABLE_OCR_NORMALIZATION", "false").lower() in ("1", "true", "yes", "on")
+ENABLE_GPT_TOKEN_LOGGING = os.getenv(
+    "ENABLE_GPT_TOKEN_LOGGING", "false").lower() in ("1", "true", "yes", "on")
+GPT_CACHE_TTL_SECONDS = int(os.getenv("GPT_CACHE_TTL_SECONDS", "86400"))
+GPT_CACHE_DIR = os.getenv(
+    "GPT_CACHE_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), ".gpt_cache"),
+).strip()
 USE_GPT_FOR_GOOD_OCR = os.getenv(
     "USE_GPT_FOR_GOOD_OCR", "false").lower() in ("1", "true", "yes", "on")
 AZURE_STORAGE_CONNECTION_STRING = os.getenv(
@@ -180,9 +234,6 @@ def _parse_max_tesseract_concurrency() -> int:
 MAX_TESSERACT_CONCURRENCY = _parse_max_tesseract_concurrency()
 
 # ✅ Validation & Configuration
-if not GEMINI_API_KEY:
-    logger.warning("⚠️ GEMINI_API_KEY not set! Image PDFs will fail.")
-
 if not AZURE_STORAGE_CONNECTION_STRING and not (AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY):
     logger.warning("⚠️ Azure credentials not set! Blob storage disabled.")
 
@@ -207,8 +258,15 @@ else:
 
 logger.info("✅ Configuration loaded from environment variables")
 
-GEMINI_TEXT_URL = "https://generativelanguage.googleapis.com/v1/models/{model}:generateContent?key={key}"
-GEMINI_VISION_URL = "https://generativelanguage.googleapis.com/v1/models/{model}:generateContent?key={key}"
+_gpt_response_cache = GPTResponseCache(
+    GPT_CACHE_DIR, ttl_seconds=GPT_CACHE_TTL_SECONDS)
+
+try:
+    initialize_vertex_gemini_client()
+except Exception as _vertex_init_err:
+    logger.error(
+        f"Failed to initialize Vertex AI Gemini client: {_vertex_init_err}"
+    )
 
 GEMINI_MODELS = [
     {
@@ -240,6 +298,7 @@ waiting_requests = 0
 request_progress_lock = Lock()
 _request_progress = {
     "active": False,
+    "request_id": None,
     "request_start_time": None,
     "last_progress_time": None,
     "current_stage": None,
@@ -262,12 +321,15 @@ def begin_request_progress(
     source_filename: Optional[str] = None,
     batch_id: Optional[str] = None,
     stage: str = "request_started",
-) -> None:
+    request_id: Optional[str] = None,
+) -> str:
+    request_id = request_id or uuid.uuid4().hex[:12]
     now_mono = time.monotonic()
     now_iso = _progress_iso_now()
     with request_progress_lock:
         _request_progress.update({
             "active": True,
+            "request_id": request_id,
             "request_start_time": now_iso,
             "last_progress_time": now_iso,
             "current_stage": stage,
@@ -280,7 +342,9 @@ def begin_request_progress(
             "_last_logged_stage": None,
             "_last_logged_page": 0,
         })
+    on_request_start(request_id, source_filename or "", stage)
     update_request_progress(stage, source_filename=source_filename, force_log=True)
+    return request_id
 
 
 def update_request_progress(
@@ -312,6 +376,15 @@ def update_request_progress(
         if source_filename is not None:
             _request_progress["source_filename"] = source_filename
 
+        on_heartbeat_update(
+            stage=stage,
+            page=page,
+            total_pages=total_pages,
+            invoice=invoice,
+            last_completed_step=stage,
+        )
+        track_llm_stage(stage)
+
         cur_page = _request_progress.get("current_page")
         cur_invoice = _request_progress.get("current_invoice")
         cur_source = _request_progress.get("source_filename")
@@ -342,10 +415,12 @@ def update_request_progress(
             )
 
 
-def clear_request_progress() -> None:
+def clear_request_progress(summary: Optional[Dict] = None) -> None:
+    on_request_end(summary)
     with request_progress_lock:
         _request_progress.update({
             "active": False,
+            "request_id": None,
             "request_start_time": None,
             "last_progress_time": None,
             "current_stage": None,
@@ -392,6 +467,7 @@ def get_runtime_health_snapshot() -> Dict:
         "waiting_requests": waiting,
         "semaphore_locked": semaphore_locked,
         "request_stuck_threshold_seconds": REQUEST_STUCK_THRESHOLD_SECONDS,
+        "request_id": progress.get("request_id"),
         "request_start_time": progress.get("request_start_time"),
         "last_progress_time": progress.get("last_progress_time"),
         "seconds_since_last_progress": seconds_since_last_progress,
@@ -402,7 +478,56 @@ def get_runtime_health_snapshot() -> Dict:
         "source_filename": progress.get("source_filename"),
         "batch_id": progress.get("batch_id"),
         "processing_status": processing_status,
+        **get_enhanced_heartbeat_snapshot(),
+        **get_resource_snapshot(),
     }
+
+
+def _sync_request_progress_from_reliability(
+    stage: str,
+    page: Optional[int] = None,
+    total_pages: Optional[int] = None,
+    invoice: Optional[str] = None,
+) -> None:
+    """Keep legacy _request_progress monotonic in sync with enhanced heartbeat."""
+    now_mono = time.monotonic()
+    with request_progress_lock:
+        if not _request_progress["active"]:
+            return
+        _request_progress["last_progress_time"] = _progress_iso_now()
+        _request_progress["_last_progress_monotonic"] = now_mono
+        _request_progress["current_stage"] = stage
+        if page is not None:
+            _request_progress["current_page"] = page
+        if total_pages is not None:
+            _request_progress["total_pages"] = total_pages
+        if invoice is not None:
+            _request_progress["current_invoice"] = invoice
+
+
+def _request_semaphore_probe() -> Dict[str, int]:
+    with request_queue_lock:
+        return {
+            "semaphore_active_requests": active_requests,
+            "semaphore_waiting_requests": waiting_requests,
+        }
+
+
+def _tesseract_slot_probe() -> Dict[str, int]:
+    with tesseract_concurrency_lock:
+        return {
+            "tesseract_slot_active": tesseract_active_count,
+            "tesseract_slot_waiting": tesseract_waiting_count,
+        }
+
+
+@app.on_event("startup")
+async def _reliability_startup():
+    install_structured_logging()
+    register_request_semaphore_probe(_request_semaphore_probe)
+    register_tesseract_slot_probe(_tesseract_slot_probe)
+    register_request_progress_sync(_sync_request_progress_from_reliability)
+    start_watchdog()
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -478,17 +603,31 @@ def tesseract_ocr_slot(task_label: str = "tesseract_ocr"):
             tesseract_active_count += 1
             active_now = tesseract_active_count
             waiting_now = tesseract_waiting_count
+        if OCR_SEMAPHORE_LOGGING_ENABLED:
+            log_semaphore_acquire(
+                "tesseract_ocr",
+                active_now,
+                waiting_now,
+            )
         logger.info(
             f"Tesseract OCR started: {task_label} "
             f"(active={active_now}, waiting={waiting_now})")
+        increment_ocr_active()
         yield
     finally:
         if acquired:
+            decrement_ocr_active()
             with tesseract_concurrency_lock:
                 tesseract_active_count = max(0, tesseract_active_count - 1)
                 active_now = tesseract_active_count
                 waiting_now = tesseract_waiting_count
             tesseract_ocr_semaphore.release()
+            if OCR_SEMAPHORE_LOGGING_ENABLED:
+                log_semaphore_release(
+                    "tesseract_ocr",
+                    active_now,
+                    waiting_now,
+                )
             logger.info(
                 f"Tesseract OCR completed: {task_label} "
                 f"(active={active_now}, waiting={waiting_now})")
@@ -570,8 +709,8 @@ def acquire_model_slot_with_wait(max_wait_seconds: int = MAX_WAIT_TIME) -> Optio
         time.sleep(max(0.5, sleep_time))
 
 
-def call_gemini_with_quota(url: str, payload: dict, timeout: int, request_type: str = "text"):
-    """Call Gemini with local RPM management + wait/retry on provider 429."""
+def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type: str = "text"):
+    """Call Vertex AI Gemini with local RPM management + wait/retry on provider 429/503."""
     start_time = time.time()
 
     while True:
@@ -585,33 +724,39 @@ def call_gemini_with_quota(url: str, payload: dict, timeout: int, request_type: 
         if not model_config:
             return None
 
+        update_request_progress(f"gemini_{request_type}_request")
         try:
-            update_request_progress(f"gemini_{request_type}_request")
-            response = requests.post(url, json=payload, timeout=timeout)
+            response = generate_content_via_vertex(
+                model=model,
+                payload=payload,
+                timeout=timeout,
+            )
+            update_request_progress(f"gemini_{request_type}_response_received")
+            return response
 
-            if response.status_code == 200:
-                update_request_progress(f"gemini_{request_type}_response_received")
-                return response
+        except GeminiProviderError as e:
+            logger.warning(
+                f"⚠️ Gemini {request_type} hit provider limit ({e.code}). Waiting for renewal..."
+            )
+            release_gemini_inflight_counter()
+            with quota_manager_lock:
+                model_config["current_rpm"] = model_config["max_requests_per_minute"]
 
-            if response.status_code in (429, 503):
-                logger.warning(
-                    f"⚠️ Gemini {request_type} hit provider limit ({response.status_code}). Waiting for renewal...")
-                with quota_manager_lock:
-                    model_config["current_rpm"] = model_config["max_requests_per_minute"]
+            if (time.time() - start_time) >= MAX_WAIT_TIME:
+                logger.error("⏱️ Gemini provider throttling wait timeout")
+                return None
 
-                if (time.time() - start_time) >= MAX_WAIT_TIME:
-                    logger.error("⏱️ Gemini provider throttling wait timeout")
-                    return None
+            time.sleep(2)
+            continue
 
-                time.sleep(2)
-                continue
-
-            logger.error(
-                f"Gemini {request_type} error: {response.status_code} - {response.text[:300]}")
+        except TimeoutError as e:
+            logger.error(f"Gemini {request_type} request timed out: {e}")
+            release_gemini_inflight_counter()
             return None
 
-        except requests.RequestException as e:
+        except Exception as e:
             logger.error(f"Gemini {request_type} request failed: {e}")
+            release_gemini_inflight_counter()
             return None
 
 # ============================================================================
@@ -666,7 +811,7 @@ def extract_text_with_pdfplumber(pdf_path: str, page_num: int) -> Tuple[Optional
         return None, 0.0
 
 
-def extract_text_with_tesseract(page) -> Tuple[Optional[str], float]:
+def extract_text_with_tesseract(page, page_num: Optional[int] = None) -> Tuple[Optional[str], float]:
     """
     Extract text from PDF page using Tesseract OCR
     Returns: (text, confidence_score)
@@ -702,11 +847,15 @@ def extract_text_with_tesseract(page) -> Tuple[Optional[str], float]:
 
         # OCR with confidence data (same `thresh` input → identical OCR output)
         with tesseract_ocr_slot("page_full_ocr"):
-            ocr_data = pytesseract.image_to_data(
-                thresh, output_type=pytesseract.Output.DICT)
+            def _do_ocr():
+                ocr_data = pytesseract.image_to_data(
+                    thresh, output_type=pytesseract.Output.DICT)
+                text = pytesseract.image_to_string(thresh)
+                return ocr_data, text
 
-            # Extract text
-            text = pytesseract.image_to_string(thresh)
+            ocr_data, text = run_tesseract_call(
+                _do_ocr, label="page_full_ocr", page=page_num,
+            )
         del thresh
 
         # Calculate average confidence
@@ -770,12 +919,18 @@ def _ocr_text_needs_rotation_retry(text: str) -> bool:
     return alpha_ratio < 0.38
 
 
-def _tesseract_ocr_on_thresh(thresh) -> Tuple[str, float]:
+def _tesseract_ocr_on_thresh(thresh, page_num: Optional[int] = None) -> Tuple[str, float]:
     """Run Tesseract on a preprocessed binary image array."""
     with tesseract_ocr_slot("page_full_ocr_relaxed"):
-        ocr_data = pytesseract.image_to_data(
-            thresh, output_type=pytesseract.Output.DICT)
-        text = pytesseract.image_to_string(thresh)
+        def _do_ocr():
+            ocr_data = pytesseract.image_to_data(
+                thresh, output_type=pytesseract.Output.DICT)
+            text = pytesseract.image_to_string(thresh)
+            return ocr_data, text
+
+        ocr_data, text = run_tesseract_call(
+            _do_ocr, label="page_full_ocr_relaxed", page=page_num,
+        )
     confidences = [int(conf) for conf in ocr_data['conf'] if int(conf) > 0]
     del ocr_data
     avg_confidence = sum(confidences) / \
@@ -783,7 +938,7 @@ def _tesseract_ocr_on_thresh(thresh) -> Tuple[str, float]:
     return text or "", float(avg_confidence)
 
 
-def extract_text_with_tesseract_relaxed(page) -> Tuple[Optional[str], float]:
+def extract_text_with_tesseract_relaxed(page, page_num: Optional[int] = None) -> Tuple[Optional[str], float]:
     """
     Like extract_text_with_tesseract(), but NEVER rejects low-confidence output.
     Used only for very specific formats where we must avoid a paid Vision call.
@@ -811,12 +966,12 @@ def extract_text_with_tesseract_relaxed(page) -> Tuple[Optional[str], float]:
         _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
         del gray
 
-        text, avg_confidence = _tesseract_ocr_on_thresh(thresh)
+        text, avg_confidence = _tesseract_ocr_on_thresh(thresh, page_num=page_num)
 
         if text and _ocr_text_needs_rotation_retry(text):
             rot_thresh = cv2.rotate(thresh, cv2.ROTATE_180)
             del thresh
-            rot_text, rot_conf = _tesseract_ocr_on_thresh(rot_thresh)
+            rot_text, rot_conf = _tesseract_ocr_on_thresh(rot_thresh, page_num=page_num)
             del rot_thresh
             if rot_text and _ocr_text_has_invoice_cues(rot_text):
                 logger.warning(
@@ -1114,6 +1269,17 @@ def try_extract_invoice_from_text(text: str) -> Optional[str]:
     tax_invoice_header_no = _extract_tax_invoice_header_number()
     if tax_invoice_header_no:
         return tax_invoice_header_no
+
+    # ERP header box: "INV.NO: 433" — BETA AGENCIES / MEDIBILL only
+    if re.search(r'BETA\s+AGENCIES', text_norm, re.IGNORECASE):
+        _inv_no_colon = re.search(
+            r'\bINV\.NO:\s*(\d{1,8})\b', text_norm, re.IGNORECASE)
+        if _inv_no_colon:
+            candidate = normalize_invoice_number(_inv_no_colon.group(1))
+            if candidate and not _is_suspicious_invoice_number(candidate):
+                logger.info(
+                    f"✅ ACCEPTED invoice# from INV.NO: label: '{candidate}'")
+                return candidate
 
     # Prefer high-confidence long IDs next (common for credit/tax invoices)
     high_confidence_id = _extract_high_confidence_long_id()
@@ -6703,6 +6869,23 @@ def _is_suspicious_invoice_number(inv_no: str) -> bool:
     return False
 
 
+def _is_invoice_no_label_anchored(value: str, ocr_text: str) -> bool:
+    """True when value appears immediately after an invoice-number label (not HSN column data)."""
+    if not value or not ocr_text:
+        return False
+    compact = re.sub(r'[^A-Z0-9]', '', str(value).upper())
+    if not compact:
+        return False
+    text_norm = normalize_text_for_search(ocr_text)
+    patterns = [
+        rf'\bINV\.NO:\s*{re.escape(compact)}\b',
+        rf'\b(?:Invoice|Inv)\.?\s*No\.?\s*[:\-]?\s*{re.escape(compact)}\b',
+        rf'\bINV\.?\s*NO\.?\s*[:\-]?\s*{re.escape(compact)}\s*(?:Date|Dt)\b',
+        rf'\bINV\.?\s*NO\.?\s*[:\-]?\s*{re.escape(compact)}\b',
+    ]
+    return any(re.search(p, text_norm, re.IGNORECASE) for p in patterns)
+
+
 def _looks_like_hsn_code(value: str, ocr_text: str = "") -> bool:
     if value is None:
         return False
@@ -6714,6 +6897,11 @@ def _looks_like_hsn_code(value: str, ocr_text: str = "") -> bool:
     compact = re.sub(r'\s+', '', token)
     if not compact.isdigit() or len(compact) not in (4, 6, 8):
         return False
+
+    if ocr_text and _is_invoice_no_label_anchored(compact, ocr_text):
+        text_norm_beta = normalize_text_for_search(ocr_text)
+        if re.search(r'BETA\s+AGENCIES', text_norm_beta, re.IGNORECASE):
+            return False
 
     if not ocr_text:
         return False
@@ -14914,7 +15102,7 @@ def _should_force_vision_fallback(line_items: List[Dict], ocr_text: str) -> Tupl
 # ============================================================================
 
 
-def _quick_page_quality_check(page) -> tuple:
+def _quick_page_quality_check(page, page_num: Optional[int] = None) -> tuple:
     """
     Fast pre-check (~3-8s) to decide if full Tesseract (~60-160s) is worth running.
     Renders only the top 30% of the page at reduced DPI (1.5x) and runs a quick
@@ -14952,9 +15140,15 @@ def _quick_page_quality_check(page) -> tuple:
         del gray
 
         with tesseract_ocr_slot("page_quality_probe"):
-            ocr_data = pytesseract.image_to_data(
-                thresh, output_type=pytesseract.Output.DICT)
-            quick_text = pytesseract.image_to_string(thresh)
+            def _do_probe_ocr():
+                ocr_data = pytesseract.image_to_data(
+                    thresh, output_type=pytesseract.Output.DICT)
+                quick_text = pytesseract.image_to_string(thresh)
+                return ocr_data, quick_text
+
+            ocr_data, quick_text = run_tesseract_call(
+                _do_probe_ocr, label="page_quality_probe", page=page_num,
+            )
         del thresh
 
         confidences = [int(c) for c in ocr_data['conf'] if int(c) > 0]
@@ -14978,7 +15172,8 @@ def _quick_page_quality_check(page) -> tuple:
         return True, 0.0, ""
 
 
-def _recover_6mr_invoice_date_from_header_crop(page, expected_day: int, expected_year: int) -> Optional[str]:
+def _recover_6mr_invoice_date_from_header_crop(page, expected_day: int, expected_year: int,
+                                               page_num: Optional[int] = None) -> Optional[str]:
     """
     SHESHADRI PHARMA DISTRIBUTORS (invoice_no like 6MR000813):
     Tesseract often misreads "04/04/2026" as "04/08/2026" (month 04 → 08).
@@ -15006,7 +15201,11 @@ def _recover_6mr_invoice_date_from_header_crop(page, expected_day: int, expected
             "-c tessedit_char_whitelist=0123456789/-. "
         )
         with tesseract_ocr_slot("6mr_date_crop"):
-            crop_text = pytesseract.image_to_string(crop, config=cfg)
+            crop_text = run_tesseract_call(
+                lambda: pytesseract.image_to_string(crop, config=cfg),
+                label="6mr_date_crop",
+                page=page_num,
+            )
         crop.close()
 
         flat = re.sub(r"\s+", " ", str(crop_text or "")).strip()
@@ -15039,7 +15238,7 @@ def _recover_6mr_invoice_date_from_header_crop(page, expected_day: int, expected
     return None
 
 
-def _recover_hyd_26_invoice_date_from_header(page) -> Optional[str]:
+def _recover_hyd_26_invoice_date_from_header(page, page_num: Optional[int] = None) -> Optional[str]:
     """
     HYD-26-* invoices (e.g. invoice_HYD-26-2789.pdf):
     Page often has no text layer; quick header probe may fail and full Tesseract is skipped.
@@ -15065,7 +15264,11 @@ def _recover_hyd_26_invoice_date_from_header(page) -> Optional[str]:
 
         cfg = "--psm 6 -c tessedit_char_whitelist=0123456789/-."
         with tesseract_ocr_slot("hyd_26_date_crop"):
-            crop_text = pytesseract.image_to_string(crop, config=cfg)
+            crop_text = run_tesseract_call(
+                lambda: pytesseract.image_to_string(crop, config=cfg),
+                label="hyd_26_date_crop",
+                page=page_num,
+            )
         crop.close()
 
         flat = re.sub(r"\s+", " ", str(crop_text or "")).strip()
@@ -15090,7 +15293,7 @@ def _recover_hyd_26_invoice_date_from_header(page) -> Optional[str]:
     return None
 
 
-def _recover_del_26_invoice_date_from_header(page) -> Optional[str]:
+def _recover_del_26_invoice_date_from_header(page, page_num: Optional[int] = None) -> Optional[str]:
     """
     DEL-26-* Novacare invoices: OCR a small header crop for 'No. DEL-26-#### Date dd-mm-yyyy'
     when the page has no text layer and Vision may pick a Due date instead.
@@ -15111,7 +15314,11 @@ def _recover_del_26_invoice_date_from_header(page) -> Optional[str]:
 
         cfg = "--psm 6"
         with tesseract_ocr_slot("del_26_date_crop"):
-            crop_text = pytesseract.image_to_string(crop, config=cfg)
+            crop_text = run_tesseract_call(
+                lambda: pytesseract.image_to_string(crop, config=cfg),
+                label="del_26_date_crop",
+                page=page_num,
+            )
         crop.close()
 
         return extract_novacare_del_invoice_date(str(crop_text or ""))
@@ -15169,6 +15376,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
     """
     if ocr_stats is None or ocr_stats_lock is None:
         raise ValueError("ocr_stats and ocr_stats_lock are required")
+
+    update_request_progress("ocr_page_started", page=page_num + 1)
+    set_request_context(page=str(page_num + 1))
 
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "total_pages", 1)
     fallback_ocr_text = ""
@@ -15347,7 +15557,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         # If the header yields no invoice tokens or low confidence, skip straight to Gemini Vision.
         tesseract_text, confidence = None, 0.0
         _probe_viable, _probe_conf, _probe_sample = _quick_page_quality_check(
-            page)
+            page, page_num=page_num)
         if not _probe_viable:
             logger.warning(
                 f"    ⚡ Page quality pre-check: conf={_probe_conf:.1f}%, no invoice tokens in header. "
@@ -15359,10 +15569,10 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             try:
                 if _is_hyd26_file:
                     _hyd_26_date_crop_iso = _recover_hyd_26_invoice_date_from_header(
-                        page)
+                        page, page_num=page_num)
                 elif _novacare_del26_context(_probe_sample or ""):
                     _del_26_date_crop_iso = _recover_del_26_invoice_date_from_header(
-                        page)
+                        page, page_num=page_num)
             except Exception:
                 pass
 
@@ -15372,48 +15582,49 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                     "    ⚠️ HYD-26: forcing relaxed Tesseract OCR to avoid Gemini Vision throttling"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif _novacare_del26_context(_probe_sample or ""):
                 logger.warning(
                     "    ⚠️ Novacare DEL-26: forcing relaxed Tesseract OCR for header date recovery"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif ocr_suggests_bharath_medical(_probe_sample or ""):
                 logger.warning(
                     "    ⚠️ Bharath Medical: forcing relaxed Tesseract OCR for scanned invoice"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif ocr_suggests_tulsyan_pharmaceuticals(_probe_sample or ""):
                 logger.warning(
                     "    ⚠️ TULSYAN PHARMACEUTICALS: forcing relaxed Tesseract OCR for scanned invoice"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif ocr_suggests_ksk_speciality(_probe_sample or ""):
                 logger.warning(
                     "    ⚠️ KSK SPECIALITY: forcing relaxed Tesseract OCR for scanned invoice"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif ocr_suggests_sri_lakshmi_pharma(_probe_sample or ""):
                 logger.warning(
                     "    ⚠️ SRI LAKSHMI PHARMA: forcing relaxed Tesseract OCR for scanned invoice"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             elif _probe_sample and not _ocr_text_has_invoice_cues(_probe_sample):
                 logger.warning(
                     "    ⚠️ Garbled header probe — forcing relaxed Tesseract OCR"
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page)
+                    page, page_num=page_num)
             else:
                 tesseract_text, confidence = None, 0.0
         else:
             logger.info(f"    🔍 Trying Tesseract OCR...")
-            tesseract_text, confidence = extract_text_with_tesseract(page)
+            tesseract_text, confidence = extract_text_with_tesseract(
+                page, page_num=page_num)
 
         if tesseract_text and len(tesseract_text.strip()) > 100:
             # Keep OCR text for downstream fallbacks even if we end up using Gemini Vision
@@ -15502,7 +15713,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 _d = int(_inv_date_6mr[8:10])
                                 if _y >= 2025 and _m == 8:
                                     recovered_iso = _recover_6mr_invoice_date_from_header_crop(
-                                        page, expected_day=_d, expected_year=_y
+                                        page, expected_day=_d, expected_year=_y,
+                                        page_num=page_num,
                                     )
                                     if recovered_iso and recovered_iso != _inv_date_6mr:
                                         logger.warning(
@@ -15828,7 +16040,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 or ocr_suggests_ksk_speciality(_bharath_ocr_hint)
                 or ocr_suggests_sri_lakshmi_pharma(_bharath_ocr_hint)
             ):
-                _bharath_relaxed, _ = extract_text_with_tesseract_relaxed(page)
+                _bharath_relaxed, _ = extract_text_with_tesseract_relaxed(
+                    page, page_num=page_num)
                 if (
                     _bharath_relaxed
                     and len(_bharath_relaxed.strip()) > len(str(_bharath_ocr_hint).strip())
@@ -15855,7 +16068,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         re.search(r"^HYD[\s\-_]*26[\s\-_]*\d+", inv_no_val, re.IGNORECASE))
                     if is_hyd26 and not _hyd_26_date_crop_iso:
                         _hyd_26_date_crop_iso = _recover_hyd_26_invoice_date_from_header(
-                            page)
+                            page, page_num=page_num)
 
                     cur = str(_sum.get("invoice_date", "") or "").strip()
                     if (
@@ -15912,7 +16125,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         _del26_date_iso = _del_26_date_crop_iso
                     if not is_novacare_del or not _del26_date_iso:
                         _relaxed_del, _ = extract_text_with_tesseract_relaxed(
-                            page)
+                            page, page_num=page_num)
                         if _relaxed_del:
                             if not is_novacare_del:
                                 is_novacare_del = is_novacare_del26_invoice(
@@ -15927,7 +16140,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 result["ocr_text"] = _relaxed_del
                     elif is_novacare_del and not _del26_date_iso:
                         _del26_date_iso = _recover_del_26_invoice_date_from_header(
-                            page)
+                            page, page_num=page_num)
 
                     cur_del = str(_sum_del.get(
                         "invoice_date", "") or "").strip()
@@ -16637,6 +16850,118 @@ INVOICE TEXT:
 Return ONLY JSON (do not include ocr_text):"""
 
 
+def _prepare_ocr_text_for_gpt(text: str) -> str:
+    """Optional lossless whitespace normalization before GPT (feature-flagged)."""
+    if not text:
+        return ""
+    if ENABLE_OCR_NORMALIZATION:
+        return normalize_ocr_whitespace(text)
+    return text
+
+
+def _invoice_no_from_gpt_payload(payload: Optional[dict]) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    for key in ("invoice_no",):
+        val = payload.get(key)
+        if val:
+            return str(val)
+    data = payload.get("data")
+    if isinstance(data, dict):
+        summary = data.get("invoice_summary")
+        if isinstance(summary, dict) and summary.get("invoice_no"):
+            return str(summary.get("invoice_no"))
+    return ""
+
+
+def _run_gpt_text_extraction(
+    text: str,
+    ocr_stats: Dict[str, float],
+    ocr_stats_lock: Lock,
+) -> Optional[dict]:
+    """GPT text path with optional cache, size logging, and token metrics."""
+    gpt_ocr_text = _prepare_ocr_text_for_gpt(text)
+    cache_key = gpt_cache_key(gpt_ocr_text)
+    invoice_hint = ""
+
+    if ENABLE_GPT_CACHE:
+        cached = _gpt_response_cache.get(cache_key)
+        if cached and _gpt_output_is_valid_json_structure(cached):
+            if _gpt_output_has_mandatory_fields(cached):
+                invoice_hint = _invoice_no_from_gpt_payload(cached)
+                metrics = GPTRequestMetrics(
+                    invoice_no=invoice_hint,
+                    ocr_chars=len(gpt_ocr_text),
+                    ocr_tokens_est=estimate_tokens(gpt_ocr_text),
+                    prompt_chars=0,
+                    prompt_tokens_est=0,
+                    cache_hit=True,
+                )
+                if ENABLE_GPT_TOKEN_LOGGING:
+                    log_gpt_request_block(metrics)
+                GPT_METRICS.record(metrics)
+                increment_ocr_stat(ocr_stats, ocr_stats_lock, "gpt_text_calls", 1)
+                logger.info("    ✅ GPT Success (cache hit)")
+                return cached
+
+    prompt = build_invoice_prompt(gpt_ocr_text)
+    if ENABLE_GPT_TOKEN_LOGGING:
+        log_pre_gpt_sizes(
+            invoice_no=invoice_hint,
+            ocr_text=gpt_ocr_text,
+            prompt=prompt,
+            enabled=True,
+        )
+
+    update_request_progress("openai_request")
+    gpt_parsed, token_usage = extract_invoice_via_gpt(
+        prompt,
+        api_key=OPENAI_API_KEY,
+        model=GPT_TEXT_MODEL,
+        timeout=GPT_TIMEOUT,
+    )
+    update_request_progress("openai_response_received")
+
+    invoice_hint = _invoice_no_from_gpt_payload(gpt_parsed)
+    input_tokens = int(token_usage.get("input_tokens", 0))
+    output_tokens = int(token_usage.get("output_tokens", 0))
+    total_tokens = int(token_usage.get("total_tokens", 0) or (input_tokens + output_tokens))
+    response_ms = float(token_usage.get("response_time_ms", 0))
+
+    if ENABLE_GPT_TOKEN_LOGGING:
+        metrics = GPTRequestMetrics(
+            invoice_no=invoice_hint,
+            ocr_chars=len(gpt_ocr_text),
+            ocr_tokens_est=estimate_tokens(gpt_ocr_text),
+            prompt_chars=len(prompt),
+            prompt_tokens_est=estimate_tokens(prompt),
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            estimated_cost_usd=estimate_gpt_cost_usd(
+                input_tokens, output_tokens, GPT_TEXT_MODEL),
+            response_time_ms=response_ms,
+            cache_miss=ENABLE_GPT_CACHE,
+            model=GPT_TEXT_MODEL,
+        )
+        log_gpt_request_block(metrics)
+        GPT_METRICS.record(metrics)
+
+    if gpt_parsed and _gpt_output_is_valid_json_structure(gpt_parsed):
+        if _gpt_output_has_mandatory_fields(gpt_parsed):
+            if ENABLE_GPT_CACHE:
+                _gpt_response_cache.set(cache_key, gpt_parsed)
+            increment_ocr_stat(ocr_stats, ocr_stats_lock, "gpt_text_calls", 1)
+            logger.info("    ✅ GPT Success")
+            return gpt_parsed
+        logger.warning(
+            "    ⚠️ GPT Failed (missing mandatory fields) | Fallback = Existing Gemini Text")
+    else:
+        logger.warning(
+            "    ⚠️ GPT Failed (invalid JSON structure) | Fallback = Existing Gemini Text")
+    return None
+
+
 def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], ocr_stats_lock: Lock) -> dict:
     """Extract using GPT Text (when enabled) or Gemini Text API fallback."""
     update_request_progress("llm_text_extraction")
@@ -16648,25 +16973,9 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
         else:
             logger.info("    🧭 OCR Quality = GOOD | Routing = GPT Text")
             try:
-                update_request_progress("openai_request")
-                gpt_parsed = extract_invoice_via_gpt(
-                    build_invoice_prompt(text),
-                    api_key=OPENAI_API_KEY,
-                    model=GPT_TEXT_MODEL,
-                    timeout=GPT_TIMEOUT,
-                )
-                update_request_progress("openai_response_received")
-                if gpt_parsed and _gpt_output_is_valid_json_structure(gpt_parsed):
-                    if _gpt_output_has_mandatory_fields(gpt_parsed):
-                        increment_ocr_stat(
-                            ocr_stats, ocr_stats_lock, "gpt_text_calls", 1)
-                        logger.info("    ✅ GPT Success")
-                        return gpt_parsed
-                    logger.warning(
-                        "    ⚠️ GPT Failed (missing mandatory fields) | Fallback = Existing Gemini Text")
-                else:
-                    logger.warning(
-                        "    ⚠️ GPT Failed (invalid JSON structure) | Fallback = Existing Gemini Text")
+                gpt_result = _run_gpt_text_extraction(text, ocr_stats, ocr_stats_lock)
+                if gpt_result is not None:
+                    return gpt_result
             except TimeoutError:
                 update_request_progress("openai_response_received")
                 logger.warning(
@@ -16682,8 +16991,6 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
     update_request_progress("gemini_text_request")
     model_config = get_current_model_config()
     prompt = build_invoice_prompt(text)
-    url = GEMINI_TEXT_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
     # Scale output tokens with input size: large multi-page invoices need more
     _ocr_len = len(text)
     _max_out = 16384 if _ocr_len > 20000 else 8192
@@ -16694,7 +17001,7 @@ def extract_full_data_from_text_gemini(text: str, ocr_stats: Dict[str, float], o
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="text"
@@ -16934,9 +17241,6 @@ def recover_missing_sparse_items_from_image_gemini(image_bytes: bytes, missing_c
 
     model_config = get_current_model_config()
     encoded = base64.b64encode(image_bytes).decode("utf-8")
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
-
     # Build OCR table context so Gemini can locate rows by surrounding lines
     ocr_table_lines = []
     if ocr_text:
@@ -17004,7 +17308,7 @@ Return ONLY JSON:
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="vision"
@@ -17042,7 +17346,10 @@ def _ocr_text_from_image_crop(pil_img, psm: int = 7, whitelist: Optional[str] = 
         if whitelist:
             config += f" -c tessedit_char_whitelist={whitelist}"
         with tesseract_ocr_slot(f"image_crop_psm_{psm}"):
-            return pytesseract.image_to_string(thresh, config=config).strip()
+            return run_tesseract_call(
+                lambda: pytesseract.image_to_string(thresh, config=config).strip(),
+                label=f"image_crop_psm_{psm}",
+            )
     except Exception:
         return ""
 
@@ -17670,8 +17977,6 @@ JSON SCHEMA:
 Do not include ocr_text. Return ONLY JSON."""
 
     encoded = base64.b64encode(image_bytes).decode("utf-8")
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
     payload = {
         "contents": [{
             "parts": [
@@ -17684,7 +17989,7 @@ Do not include ocr_text. Return ONLY JSON."""
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="vision"
@@ -17764,9 +18069,6 @@ def recover_vendor_name_from_image_gemini(image_bytes: bytes, customer_name: str
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_vision_calls", 1)
 
     model_config = get_current_model_config()
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
-
     try:
         header_img = PILImage.open(io.BytesIO(image_bytes))
         w, h = header_img.size
@@ -17814,7 +18116,7 @@ Return ONLY JSON:
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="vision"
@@ -17852,9 +18154,6 @@ def recover_invoice_no_from_image_gemini(image_bytes: bytes, current_invoice_no:
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_vision_calls", 1)
 
     model_config = get_current_model_config()
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
-
     try:
         header_img = PILImage.open(io.BytesIO(image_bytes))
         w, h = header_img.size
@@ -17910,7 +18209,7 @@ Return ONLY JSON:
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="vision"
@@ -17953,9 +18252,6 @@ def recover_uni_pharma_customer_from_image_gemini(
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_vision_calls", 1)
 
     model_config = get_current_model_config()
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
-
     prompt = """This is a UNI PHARMA GST invoice. Vendor/seller is UNI PHARMA (top). Buyer is in the left panel as "SD#### - NAME".
 Extract buyer customer name (without SD code), buyer address, buyer GSTIN from GST NO field.
 Return JSON only: {"customer":"","customer_address":"","customer_gstin":""}"""
@@ -18028,7 +18324,7 @@ Return JSON only: {"customer":"","customer_address":"","customer_gstin":""}"""
 
         for encoded in _up_images_encoded:
             r = call_gemini_with_quota(
-                url=url,
+                model=model_config["name"],
                 payload={
                     "contents": [{
                         "parts": [
@@ -18072,9 +18368,6 @@ def recover_customer_details_from_image_gemini(image_bytes: bytes, current_custo
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_vision_calls", 1)
 
     model_config = get_current_model_config()
-    url = GEMINI_VISION_URL.format(
-        model=model_config["name"], key=GEMINI_API_KEY)
-
     try:
         page_img = PILImage.open(io.BytesIO(image_bytes))
         w, h = page_img.size
@@ -18126,7 +18419,7 @@ Return ONLY JSON:
 
     try:
         r = call_gemini_with_quota(
-            url=url,
+            model=model_config["name"],
             payload=payload,
             timeout=model_config["timeout"],
             request_type="vision"
@@ -18370,6 +18663,13 @@ async def split_and_extract_invoices(
     try:
         await asyncio.wait_for(request_processing_semaphore.acquire(), timeout=REQUEST_QUEUE_TIMEOUT)
         slot_acquired = True
+        if OCR_SEMAPHORE_LOGGING_ENABLED:
+            with request_queue_lock:
+                log_semaphore_acquire(
+                    "request_processing",
+                    active_requests + 1,
+                    waiting_requests,
+                )
     except asyncio.TimeoutError:
         with request_queue_lock:
             waiting_requests = max(0, waiting_requests - 1)
@@ -18385,16 +18685,27 @@ async def split_and_extract_invoices(
 
     logger.info(
         f"📥 Request admitted. queued_ahead={queued_ahead}, wait={queue_wait_seconds}s, active={active_requests}")
-    begin_request_progress(
+    request_id = begin_request_progress(
         source_filename=source_filename,
         batch_id=batch_id,
         stage="request_admitted",
     )
+    _ocr_phase_start = time.monotonic()
+    _request_summary: Dict[str, Any] = {
+        "pages_processed": 0,
+        "ocr_duration_seconds": 0.0,
+        "gpt_duration_seconds": 0.0,
+        "cache_hits": 0,
+        "cache_misses": 0,
+        "total_execution_seconds": 0.0,
+    }
+    _gpt_metrics_offset = GPT_METRICS.record_count()
 
     container_name = (blob_container.strip()
                       if blob_container else None) or AZURE_CONTAINER_NAME
     fd, temp_path = tempfile.mkstemp(suffix=file_extension)
     os.close(fd)
+    register_watchdog_temp_file(temp_path)
     doc = None
     start_time = datetime.now()
     total_pages_count = 0
@@ -18450,6 +18761,7 @@ async def split_and_extract_invoices(
             pdf_path = temp_path.replace(file_extension, '.pdf')
             img.save(pdf_path, 'PDF', resolution=100.0)
             img.close()
+            register_watchdog_temp_file(pdf_path)
             print(f"✅ Converted")
 
         doc = fitz.open(pdf_path)
@@ -18471,24 +18783,34 @@ async def split_and_extract_invoices(
             page=0,
             total_pages=total_pages_count,
         )
+        _ocr_worker_ctx = copy_context()
         with ThreadPoolExecutor(max_workers=ocr_pool_workers) as executor:
             futures = [
-                (i, executor.submit(extract_full_invoice_data_combined,
-                 doc.load_page(i), None, pdf_path, i, ocr_stats, ocr_stats_lock))
+                (i, executor.submit(
+                    _ocr_worker_ctx.run,
+                    extract_full_invoice_data_combined,
+                    doc.load_page(i), None, pdf_path, i, ocr_stats, ocr_stats_lock,
+                ))
                 for i in range(total_pages_count)
             ]
             page_results = [None] * total_pages_count
-            for i, future in futures:
-                try:
-                    page_results[i] = future.result(timeout=120)
-                except Exception as e:
-                    logger.error(f"Page {i+1} failed: {e}")
+            collected = collect_page_futures(
+                futures,
+                timeout_seconds=OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
+                request_id=request_id,
+            )
+            for idx, (i, _) in enumerate(futures):
+                result = collected[idx] if idx < len(collected) else None
+                if result is None:
+                    logger.error(f"Page {i+1} failed or timed out")
                     page_results[i] = {
                         "invoice_no": None,
                         "full_data": None,
                         "ocr_text": "",
                         "ocr_method": "failed"
                     }
+                else:
+                    page_results[i] = result
                 page_inv = None
                 if page_results[i]:
                     page_inv = page_results[i].get("invoice_no")
@@ -18504,6 +18826,9 @@ async def split_and_extract_invoices(
             page=total_pages_count,
             total_pages=total_pages_count,
         )
+        _request_summary["ocr_duration_seconds"] = round(
+            time.monotonic() - _ocr_phase_start, 2)
+        _request_summary["pages_processed"] = total_pages_count
 
         # ✅ MEM: the ThreadPoolExecutor + all rendered pixmaps/OCR arrays for this
         #         run are now out of scope. Force a collection before the
@@ -19265,6 +19590,14 @@ async def split_and_extract_invoices(
         print()
 
         update_request_progress("response_generated", force_log=True)
+        _gpt_snap = GPT_METRICS.snapshot_since(_gpt_metrics_offset)
+        _request_summary["cache_hits"] = _gpt_snap.get("cache_hits", 0)
+        _request_summary["cache_misses"] = _gpt_snap.get("cache_misses", 0)
+        _request_summary["gpt_duration_seconds"] = round(
+            _gpt_snap.get("total_gpt_response_ms", 0.0) / 1000.0, 2)
+        _request_summary["total_execution_seconds"] = round(
+            (datetime.now() - start_time).total_seconds(), 2)
+        update_request_progress("request_completed", force_log=True)
         return JSONResponse(response)
 
     except Exception as e:
@@ -19275,15 +19608,23 @@ async def split_and_extract_invoices(
             request_processing_semaphore.release()
             with request_queue_lock:
                 active_requests = max(0, active_requests - 1)
+                if OCR_SEMAPHORE_LOGGING_ENABLED:
+                    log_semaphore_release(
+                        "request_processing",
+                        active_requests,
+                        waiting_requests,
+                    )
 
-        clear_request_progress()
+        clear_request_progress(_request_summary)
 
         if doc:
             doc.close()
         if os.path.exists(temp_path):
             os.remove(temp_path)
+            unregister_watchdog_temp_file(temp_path)
         if pdf_path != temp_path and os.path.exists(pdf_path):
             os.remove(pdf_path)
+            unregister_watchdog_temp_file(pdf_path)
         gc.collect()
 
 
@@ -19914,6 +20255,20 @@ async def health():
         "current_model": get_current_model_config()["name"],
         **runtime,
     }
+
+
+@app.get("/live")
+async def live():
+    """Non-blocking liveness probe — process is running."""
+    return {"alive": True}
+
+
+@app.get("/ready")
+async def ready():
+    """Non-blocking readiness probe (lightweight resource snapshot)."""
+    runtime = get_runtime_health_snapshot()
+    return get_ready_snapshot(runtime)
+
 
 if __name__ == "__main__":
     import argparse
