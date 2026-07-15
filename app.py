@@ -1371,6 +1371,30 @@ def try_extract_invoice_from_text(text: str) -> Optional[str]:
                     f"✅ ACCEPTED invoice# from INV.NO: label: '{candidate}'")
                 return candidate
 
+    # YEN-PHARMA / Yenepoya: short INV.NO like 1753 — avoid capturing DL.No. KA-MN*
+    if re.search(
+        r'YEN[\-\s]?PHARMA|YENEPOYA\s+PHARMACEUTICALS',
+        text_norm,
+        re.IGNORECASE,
+    ):
+        _yen_inv_patterns = (
+            r'\bINV\.NO:\s*(\d{1,8})\b',
+            r'\bINV\s*NO\s+(\d{1,8})\s*(?:DATE|Page)\b',
+            # Column OCR: "1753 12/05/2026 DATE : INV.NO:"
+            r'\b(\d{3,6})\s+\d{1,2}/\d{1,2}/\d{2,4}\s+DATE\s*:?\s*INV\.?\s*NO',
+            # Column OCR: "DATE: 1753 INV NO"
+            r'\bDATE:\s*(\d{3,6})\s+INV\s*NO\b',
+        )
+        for _yen_pat in _yen_inv_patterns:
+            _yen_m = re.search(_yen_pat, text_norm, re.IGNORECASE)
+            if not _yen_m:
+                continue
+            candidate = normalize_invoice_number(_yen_m.group(1))
+            if candidate and not _is_suspicious_invoice_number(candidate):
+                logger.info(
+                    f"✅ ACCEPTED invoice# from YEN-PHARMA INV.NO pattern: '{candidate}'")
+                return candidate
+
     # Prefer high-confidence long IDs next (common for credit/tax invoices)
     high_confidence_id = _extract_high_confidence_long_id()
     if high_confidence_id:
@@ -1680,11 +1704,23 @@ def try_extract_all_invoices_from_text(text: str) -> List[str]:
     invoices_found = []
 
     # ✅ PRIORITY 1: Look for explicit "Inv No:" or "Invoice No:" labels (most reliable)
-    inv_label_pattern = r'(?:Inv\s*No\.?|Invoice\s*No\.?|Invoice\s*Number)\s*[:=\s]+([A-Z0-9\/-]{4,14})'
+    # Include INV.NO: (period between INV and NO) used by YEN-PHARMA / Medibill headers.
+    inv_label_pattern = (
+        r'(?:Inv\.?\s*No\.?|Invoice\s*No\.?|Invoice\s*Number)\s*[:=\s]+([A-Z0-9\/-]{4,14})'
+    )
     inv_label_matches = re.finditer(
         inv_label_pattern, text_norm, re.IGNORECASE)
+    _label_invalid = {
+        "DATE", "DAYS", "DAY", "AMOUNT", "TOTAL", "VALUE", "TYPE", "TY",
+        "PAGE", "CODE", "COPY", "ORIGINAL", "CREDIT", "DEBIT", "BILL",
+    }
     for match in inv_label_matches:
         invoice_num = match.group(1).strip(".,;:-_/")
+        # Require a digit — Outstanding headers like "Inv No. Date Amount" are not invoices.
+        if not re.search(r'\d', invoice_num):
+            continue
+        if invoice_num.upper() in _label_invalid:
+            continue
         if 4 <= len(invoice_num) <= 14 and invoice_num not in invoices_found:
             logger.info(f"   🔍 Found invoice via label: {invoice_num}")
             invoices_found.append(invoice_num)
@@ -2635,6 +2671,166 @@ def _parse_ocr_numeric_token(token: str) -> Optional[float]:
         return None
 
 
+def ocr_suggests_yen_pharma(ocr_text: str) -> bool:
+    """Detect YEN-PHARMA / Yenepoya Pharmaceuticals SalePrint invoices."""
+    if not ocr_text:
+        return False
+    return bool(re.search(
+        r'YEN[\-\s]?PHARMA|YENEPOYA\s+PHARMACEUTICALS',
+        ocr_text,
+        re.IGNORECASE,
+    ))
+
+
+def extract_yen_pharma_line_items_from_ocr(ocr_text: str) -> List[Dict]:
+    """
+    Parse YEN-PHARMA SalePrint table rows from OCR.
+
+    Example:
+    ZYDUS 1100 AMLODAC 5 TAB 30'S S 4.00 80.01IB00241A# 12 /27 43.93 48323.00 0.00 48323.00 5 300490
+    """
+    if not ocr_text or not ocr_suggests_yen_pharma(ocr_text):
+        return []
+
+    row_re = re.compile(
+        r'(?m)^([A-Z][A-Z0-9]{1,7})\s+(\d{1,5})\s+'
+        r'(.+?)\s+'
+        r'S\*?\s+'
+        r'([\d.]+)\s+'
+        r'([\d.]+)'
+        r'([A-Z][A-Z0-9]+#)\s+'
+        r'(\d{1,2})\s*/\s*(\d{2})\s+'
+        r'([\d.]+)\s+'
+        r'([\d.]+)\s+'
+        r'([\d.]+)\s+'
+        r'([\d.]+)\s+'
+        r'(\d{1,2})\s+'
+        r'(\d{6,8})\b'
+    )
+    pack_re = re.compile(
+        r"\s+(?:DO?\d+['\u2019`]?S|\d+(?:X\d+)?['\u2019`]?S|1\s*VIAL|\d+\s*MDI?|\d+\s*ML|\d+\s*GM)\s*$",
+        re.IGNORECASE,
+    )
+
+    items: List[Dict] = []
+    seen_batches = set()
+    for match in row_re.finditer(ocr_text):
+        mfg = match.group(1).strip()
+        qty = match.group(2).strip()
+        product = pack_re.sub("", match.group(3).strip()).strip()
+        # Drop trailing customer-address fragments glued onto some OCR lines
+        product = re.split(
+            r'\s+(?:YENEPOYA|DOOR\s+NO|PHONE|MOBILE|CUST\s+CODE|AREA\s+CODE|DERALAKATTE)\b',
+            product,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0].strip()
+        if not product or len(product) < 3:
+            continue
+        if re.fullmatch(r'S\s*\d{1,5}', product, re.IGNORECASE):
+            continue
+
+        disc = match.group(4)
+        mrp = match.group(5)
+        batch = match.group(6)
+        exp_m = match.group(7)
+        exp_y = match.group(8)
+        rate = match.group(9)
+        value = match.group(10)
+        hsn = match.group(14)
+
+        batch_key = re.sub(r'[^A-Z0-9]', '', batch.upper())
+        if batch_key in seen_batches:
+            continue
+        seen_batches.add(batch_key)
+
+        items.append({
+            "product_description": product,
+            "quantity": qty,
+            "unit_price": rate,
+            "total_amount": value,
+            "hsn_code": hsn,
+            "lot_batch_number": batch,
+            "additional_fields": {
+                "mrp": mrp,
+                "mfg": mfg,
+                "expiry_date": f"{exp_m.zfill(2)}/{exp_y}",
+                "free_quantity": "0",
+                "discount": disc,
+            },
+            "recovered_from_ocr": True,
+        })
+
+    return items
+
+
+def recover_yen_pharma_line_items_from_ocr(
+    existing_items: List[Dict], ocr_text: str
+) -> List[Dict]:
+    """
+    YEN-PHARMA only: drop schedule+qty phantoms (e.g. 'S 1100') and append
+    SalePrint table rows missing from Gemini output.
+    """
+    if not ocr_suggests_yen_pharma(ocr_text):
+        return existing_items
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    cleaned: List[Dict] = []
+    for item in existing_items or []:
+        desc = str(item.get("product_description", "") or "").strip()
+        if re.fullmatch(r'S\s*\d{1,5}', desc, re.IGNORECASE):
+            logger.info(
+                f"⏭️ YEN-PHARMA: dropping schedule+qty phantom product '{desc}'")
+            continue
+        cleaned.append(item)
+
+    parsed = extract_yen_pharma_line_items_from_ocr(ocr_text)
+    if not parsed:
+        logger.info("⏭️ YEN-PHARMA: no SalePrint table rows parsed from OCR")
+        return cleaned
+
+    existing_batches = {
+        _batch_key(it.get("lot_batch_number", ""))
+        for it in cleaned
+        if _batch_key(it.get("lot_batch_number", ""))
+    }
+    existing_names = set()
+    for it in cleaned:
+        desc = re.sub(r'\s+', ' ', str(it.get("product_description", "")).upper()).strip()
+        if desc:
+            existing_names.add(desc)
+
+    added = 0
+    for item in parsed:
+        bk = _batch_key(item.get("lot_batch_number", ""))
+        if bk and bk in existing_batches:
+            continue
+        desc = re.sub(
+            r'\s+', ' ', str(item.get("product_description", "")).upper()
+        ).strip()
+        if desc and any(desc in e or e in desc for e in existing_names):
+            # Same product name without batch match — still add when batch differs
+            # (multi-batch same SKU is common on YEN-PHARMA invoices).
+            if not bk:
+                continue
+        cleaned.append(item)
+        if bk:
+            existing_batches.add(bk)
+        if desc:
+            existing_names.add(desc)
+        added += 1
+        logger.warning(
+            f"🔄 Recovered (YEN-PHARMA): {item.get('product_description')} "
+            f"(qty={item.get('quantity')}, batch={item.get('lot_batch_number')})"
+        )
+
+    if added:
+        logger.info(f"✅ YEN-PHARMA recovered {added} missing line item(s) from OCR")
+    return cleaned
+
+
 def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) -> List[Dict]:
     """
     🔧 FIX 9: Parse OCR text to recover line items that Gemini missed.
@@ -2653,6 +2849,14 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
             "⏭️ Skipping OCR missing-item recovery for JACKSON MEDICALS (FIX12j)"
         )
         return existing_items
+
+    # YEN-PHARMA SalePrint: pipe-table OCR invents 'S 1100' products from schedule+qty;
+    # use dedicated SalePrint row parser instead of generic recovery.
+    if ocr_suggests_yen_pharma(ocr_text):
+        logger.info(
+            "⏭️ Using YEN-PHARMA SalePrint OCR recovery (skip generic FIX 9)"
+        )
+        return recover_yen_pharma_line_items_from_ocr(existing_items, ocr_text)
 
     def _extract_declared_product_count(text: str) -> Optional[int]:
         """Read declared product count from invoice footer (e.g., 'Total Prod : 8')."""
@@ -6050,6 +6254,428 @@ def fix_novacare_vision_null_rate(items, invoice_summary: dict, ocr_text: str = 
     return items
 
 
+def ocr_suggests_chaitanya_bensus_pharma(ocr_text: str) -> bool:
+    """Detect CHAITANYA PHARMA / BENSUS PHARMA Tax Inv. layout."""
+    if not ocr_text:
+        return False
+    text_u = ocr_text.upper()
+    return (
+        ("CHAITANYA PHARMA" in text_u or "BENSUS PHARMA" in text_u)
+        and bool(re.search(r'Tax\s*Inv\.?\s*No\.?', ocr_text, re.IGNORECASE))
+    )
+
+
+def fix_chaitanya_pharma_line_items_from_ocr(items, ocr_text: str) -> list:
+    """
+    CHAITANYA/BENSUS Tax Inv. only:
+    - Gemini maps FREE column (0) as quantity; recover qty from VALUE/RATE.
+    - Gemini may set unit_price = NET/qty; restore RATE column instead.
+    - Pack token PEN can fuse into product (PENSEMAGLYN … PEN → SEMAGLYN … PEN).
+    """
+    if not items or not ocr_suggests_chaitanya_bensus_pharma(ocr_text):
+        return items
+
+    logger.info(
+        "🔧 FIX: CHAITANYA/BENSUS Tax Inv. — correcting qty/rate/product from OCR rows"
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _find_row(batch: str) -> Optional[str]:
+        bk = _batch_key(batch)
+        if not bk:
+            return None
+        for line in (ocr_text or "").splitlines():
+            if bk and _batch_key(line).find(bk) >= 0 and re.search(
+                r'\d+\.\d{2}', line
+            ):
+                return line
+        return None
+
+    def _fix_pen_fused_name(name: str) -> str:
+        desc = str(name or "").strip()
+        m = re.match(r'^(PEN)([A-Z][A-Z0-9].+)$', desc, re.IGNORECASE)
+        if not m:
+            return desc
+        rest = m.group(2).strip()
+        # "PENSEMAGLYN INJ PEN" → "SEMAGLYN INJ PEN"
+        if re.search(r'\bPEN\b', rest, re.IGNORECASE) or re.search(
+            r'\b(?:INJ|INJECTION|TAB|CAP)\b', rest, re.IGNORECASE
+        ):
+            return rest
+        return desc
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        row = _find_row(batch)
+        if not row:
+            cur_desc = str(item.get("product_description", "") or "").strip()
+            cleaned = _clean_chaitanya_product_name(cur_desc)
+            if cleaned != cur_desc:
+                item["product_description"] = cleaned
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS product '{cur_desc}' → '{cleaned}'"
+                )
+            continue
+
+        # Tail: MRP RATE VALUE DIS% GST% NET
+        nums = re.findall(r'\d+\.\d{2}', row)
+        if len(nums) >= 6:
+            try:
+                mrp = float(nums[-6])
+                rate = float(nums[-5])
+                value = float(nums[-4])
+            except ValueError:
+                mrp = rate = value = 0.0
+        else:
+            mrp = rate = value = 0.0
+
+        try:
+            cur_qty = float(
+                normalize_numeric_value(str(item.get("quantity", "") or "")) or 0
+            )
+        except Exception:
+            cur_qty = 0.0
+
+        try:
+            cur_rate = float(
+                normalize_numeric_value(str(item.get("unit_price", "") or "")) or 0
+            )
+        except Exception:
+            cur_rate = 0.0
+
+        if rate > 0 and value > 0:
+            qty_from_value = int(round(value / rate))
+            if 1 <= qty_from_value <= 99999:
+                qty_wrong = cur_qty <= 0 or abs(cur_qty * rate - value) / value > 0.05
+                if qty_wrong:
+                    old_qty = item.get("quantity")
+                    item["quantity"] = str(qty_from_value)
+                    cur_qty = float(qty_from_value)
+                    logger.warning(
+                        f"⚠️ CHAITANYA/BENSUS qty '{old_qty}' → '{qty_from_value}' "
+                        f"for '{str(item.get('product_description', ''))[:40]}' "
+                        f"(value/rate={value}/{rate})"
+                    )
+
+            # Prefer RATE column; Gemini often uses NET/qty after discount.
+            rate_wrong = cur_rate <= 0 or abs(cur_rate - rate) > 0.02
+            if rate_wrong:
+                old_rate = item.get("unit_price")
+                item["unit_price"] = f"{rate:.2f}"
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS unit_price '{old_rate}' → '{rate:.2f}' "
+                    f"for '{str(item.get('product_description', ''))[:40]}'"
+                )
+
+            af = item.get("additional_fields")
+            if not isinstance(af, dict):
+                af = {}
+                item["additional_fields"] = af
+            if mrp > 0 and not str(af.get("mrp", "") or "").strip():
+                af["mrp"] = f"{mrp:.2f}"
+
+        # Description between FREE(0) and HSN — pack may be glued to product letters.
+        mid_m = re.search(
+            rf'\b0\s+(.+?)\s+(?:300\d{{5}}|330\d{{5}}|9018\d{{2,4}})\s+{re.escape(batch)}\b',
+            row,
+            re.IGNORECASE,
+        )
+        if mid_m:
+            pack, ocr_desc = _split_chaitanya_pack_product(mid_m.group(1).strip())
+            ocr_desc = _clean_chaitanya_product_name(ocr_desc)
+            cur_desc = str(item.get("product_description", "") or "").strip()
+            cleaned_cur = _clean_chaitanya_product_name(cur_desc)
+            preferred = ocr_desc or cleaned_cur
+            # Prefer cleaned Gemini name if OCR still carries pack junk (* / leading digits).
+            if (
+                preferred
+                and cleaned_cur
+                and re.search(r'[\d*]', preferred)
+                and not re.search(r'[\d*]', cleaned_cur)
+            ):
+                preferred = cleaned_cur
+            if preferred and preferred != cur_desc:
+                item["product_description"] = preferred
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS product '{cur_desc}' → '{preferred}'"
+                    + (f" (pack={pack})" if pack else "")
+                )
+            elif cleaned_cur != cur_desc:
+                item["product_description"] = cleaned_cur
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS product '{cur_desc}' → '{cleaned_cur}'"
+                )
+        else:
+            cur_desc = str(item.get("product_description", "") or "").strip()
+            cleaned = _clean_chaitanya_product_name(cur_desc)
+            if cleaned != cur_desc:
+                item["product_description"] = cleaned
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS product '{cur_desc}' → '{cleaned}'"
+                )
+
+    return items
+
+
+def _split_chaitanya_pack_product(mid: str) -> tuple:
+    """Split FREE-following PKG+DESCRIPTION blob into (pack, product)."""
+    text = re.sub(r'\s+', ' ', str(mid or "").strip())
+    if not text:
+        return "", ""
+
+    # Glued pack ending with ML/GM/'S then product letters:
+    # "1MLAMNPUCOXIA INJ"
+    glued_unit = re.match(
+        r'^((?:\d+(?:\*\d+)+(?:\*\d+\.\d+)?|\d+)(?:ML|GM|[\'`\u2019]?S))'
+        r'([A-Z].+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if glued_unit:
+        return glued_unit.group(1), glued_unit.group(2).strip()
+
+    # OCR "'S" as "*s" glued: "10*15*sTENGLYN TAB"
+    glued_star_s = re.match(
+        r'^(\d+(?:\*\d+)+\*[\'`\u2019]?[Ss])([A-Z].+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if glued_star_s:
+        return glued_star_s.group(1), glued_star_s.group(2).strip()
+
+    # Glued numeric pack with no unit suffix: "5*2*7*2MDLERIPHYLLIN INJ"
+    glued_nums = re.match(
+        r'^(\d+(?:\*\d+)+(?:\*\d+\.\d+)?)([A-Z]{3,}.+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if glued_nums:
+        return glued_nums.group(1), glued_nums.group(2).strip()
+
+    # Space-separated pack token then product
+    spaced = re.match(
+        r'^('
+        r'\d+(?:\*\d+)+(?:\*\d+\.\d+)?'   # 5*2*7*2 / 4*5*2.5
+        r'|\d+\*\d+[\'`\u2019]?S?'         # 15*10'S
+        r'|\d+[\'`\u2019]?S'
+        r'|\d+\s*ML'
+        r'|\d+\s*GM'
+        r'|\d+\s+G\b'
+        r'|\d+\s*VIAL'
+        r'|\d{1,4}'                         # bare PKG: "10 ATORVA 80 TAB"
+        r')\s+(.+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if spaced:
+        return spaced.group(1).strip(), spaced.group(2).strip()
+
+    return "", text
+
+
+def _clean_chaitanya_product_name(name: str) -> str:
+    """CHAITANYA/BENSUS OCR cleanup for fused pack/MFG fragments in product names."""
+    n = str(name or "").strip()
+    if not n:
+        return n
+
+    n = re.sub(r'^T(?=VINGLYN\b)', '', n, flags=re.IGNORECASE)
+    # Pack residues fused onto product start
+    n = re.sub(
+        r'^\d+(?:\*\d+)+(?:\*\d+\.\d+)?(?:ML|GM|[\'`\u2019]?S)?(?=[A-Z])',
+        '',
+        n,
+        flags=re.IGNORECASE,
+    )
+    n = re.sub(
+        r'^\d+(?:\*\d+)+\*[\'`\u2019]?[Ss](?=[A-Z])',
+        '',
+        n,
+        flags=re.IGNORECASE,
+    )
+    n = re.sub(r'^\d{1,4}\s+(?=[A-Z])', '', n)  # "10 ATORVA…"
+    n = re.sub(r'^(?:ML|GM)(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)
+
+    # Known OCR merges on this format (S_5090 / BENSUS Tax Inv.)
+    n = re.sub(r'^MCOLM(?=BIMIST\b)', 'COM', n, flags=re.IGNORECASE)  # MCOLMBIMIST
+    # "…2ML"+"DERIPHYLLIN" OCR'd as MDLERIPHYLLIN (MLD → MDL)
+    n = re.sub(r'^MDL(?=ERIPHYLLIN\b)', 'D', n, flags=re.IGNORECASE)
+    n = re.sub(r'^AMNP(?=UCOXIA\b)', 'N', n, flags=re.IGNORECASE)  # AMNPUCOXIA → NUCOXIA
+    n = re.sub(r'^SUPP(?=JONAC\b)', '', n, flags=re.IGNORECASE)      # SUPPJONAC
+    n = re.sub(r'\bSPARY\b', 'SPRAY', n, flags=re.IGNORECASE)
+
+    # PEN pack fused into SEMAGLYN
+    m = re.match(r'^(PEN)([A-Z][A-Z0-9].+)$', n, re.IGNORECASE)
+    if m:
+        rest = m.group(2).strip()
+        if re.search(r'\bPEN\b', rest, re.IGNORECASE) or re.search(
+            r'\b(?:INJ|INJECTION|TAB|CAP)\b', rest, re.IGNORECASE
+        ):
+            n = rest
+
+    return re.sub(r'\s+', ' ', n).strip()
+
+
+def ocr_suggests_trilok_enterprises(ocr_text: str) -> bool:
+    """Detect TRILOK ENTERPRISES MARG invoices (e.g. WELLNESS FOREVER)."""
+    if not ocr_text:
+        return False
+    return bool(re.search(r'TRILOK\s+ENTERPRISES', ocr_text, re.IGNORECASE))
+
+
+def fix_trilok_enterprises_product_names_from_ocr(items, ocr_text: str) -> list:
+    """
+    TRILOK ENTERPRISES only: HSN | MFG | PRODUCT | PACK layout.
+
+    Gemini often fuses MFG + PRODUCT + PACK → "GER CINTODAC CAP 10'S"
+    or leaves pack on the name → "XYLOCAINE 2% JELLY 30 G".
+    Restore product_description to PRODUCT only.
+    """
+    if not items or not ocr_suggests_trilok_enterprises(ocr_text):
+        return items
+
+    has_mfg_product_header = bool(re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b|\bMFG\b\s+PRODUCT\s+PACK\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if not has_mfg_product_header and "MARG ERP" not in ocr_text.upper():
+        return items
+
+    logger.info(
+        "🔧 FIX: TRILOK ENTERPRISES — stripping MFG/PACK from product descriptions"
+    )
+
+    _not_mfg = {
+        "TAB", "CAP", "INJ", "SYP", "GEL", "AMP", "BTL", "MG", "ML", "GM",
+        "THE", "AND", "FOR", "NEW",
+    }
+    # Pack column forms seen on TRILOK/MARG Nano bills.
+    # Avoid `\d+\s*G` matching strength like "500 MG".
+    _pack_pat = (
+        r"(?:"
+        r"\d+[\'`\u2019]?S"
+        r"|\d+\s*[Xx]\s*\d+"
+        r"|\d+\s+G\b"
+        r"|\d+\s*GM\b"
+        r"|\d+\s*ML\b"
+        r")"
+    )
+
+    row_re = re.compile(
+        rf'\b(30\d{{6}})\s+([A-Z]{{2,8}})\s+(.+?)\s+({_pack_pat})\s+'
+        rf'([A-Z][A-Z0-9]{{4,14}})\b',
+        re.IGNORECASE,
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _clean_product_typos(name: str) -> str:
+        cleaned = str(name or "").strip()
+        # Common OCR typo on this format
+        cleaned = re.sub(r'\bSPARY\b', 'SPRAY', cleaned, flags=re.IGNORECASE)
+        return cleaned
+
+    def _apply_name(item: dict, product: str, mfg: str = "", pack: str = "") -> None:
+        product = _clean_product_typos(product)
+        desc = str(item.get("product_description", "") or "").strip()
+        if not product or product.upper() == desc.upper():
+            # Still fix SPARY typo in-place
+            fixed = _clean_product_typos(desc)
+            if fixed != desc:
+                item["product_description"] = fixed
+                logger.warning(f"⚠️ TRILOK product '{desc}' → '{fixed}'")
+            if mfg or pack:
+                af = item.get("additional_fields")
+                if not isinstance(af, dict):
+                    af = {}
+                    item["additional_fields"] = af
+                if mfg and not str(af.get("mfg", "") or "").strip():
+                    af["mfg"] = mfg
+                if pack and not str(af.get("pack", "") or "").strip():
+                    af["pack"] = pack
+            return
+        old = desc
+        item["product_description"] = product
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+            item["additional_fields"] = af
+        if mfg and not str(af.get("mfg", "") or "").strip():
+            af["mfg"] = mfg
+        if pack and not str(af.get("pack", "") or "").strip():
+            af["pack"] = pack
+        logger.warning(
+            f"⚠️ TRILOK product '{old}' → '{product}'"
+            + (f" (mfg={mfg}, pack={pack})" if mfg or pack else "")
+        )
+
+    batch_to_product = {}
+    for match in row_re.finditer(ocr_text or ""):
+        mfg = match.group(2).strip().upper()
+        product = match.group(3).strip()
+        pack = re.sub(r'\s+', ' ', match.group(4).strip())
+        batch = match.group(5).strip()
+        if mfg in _not_mfg or not product:
+            continue
+        product = re.sub(
+            rf"\s+{re.escape(pack)}\s*$", "", product, flags=re.IGNORECASE
+        ).strip()
+        product = _clean_product_typos(product)
+        if product:
+            batch_to_product[_batch_key(batch)] = (product, mfg, pack)
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        desc = str(item.get("product_description", "") or "").strip()
+        bk = _batch_key(batch)
+
+        if bk and bk in batch_to_product:
+            product, mfg, pack = batch_to_product[bk]
+            _apply_name(item, product, mfg=mfg, pack=pack)
+            continue
+
+        # Fallback: "GER CINTODAC CAP 10'S" / "GER XYLOCAINE 2% JELLY 30 G"
+        m = re.match(
+            rf"^([A-Z]{{2,8}})\s+(.+?)\s+({_pack_pat})\s*$",
+            desc,
+            re.IGNORECASE,
+        )
+        if m and m.group(1).upper() not in _not_mfg:
+            _apply_name(
+                item,
+                m.group(2).strip(),
+                mfg=m.group(1).strip().upper(),
+                pack=re.sub(r'\s+', ' ', m.group(3).strip()),
+            )
+            continue
+
+        # Pack still glued after MFG already stripped: "XYLOCAINE 2% JELLY 30 G"
+        m2 = re.match(rf"^(.+?)\s+({_pack_pat})\s*$", desc, re.IGNORECASE)
+        if m2 and re.search(r'[A-Z]{3,}', m2.group(1), re.IGNORECASE):
+            _apply_name(
+                item,
+                m2.group(1).strip(),
+                pack=re.sub(r'\s+', ' ', m2.group(2).strip()),
+            )
+            continue
+
+        fixed = _clean_product_typos(desc)
+        if fixed != desc:
+            item["product_description"] = fixed
+            logger.warning(f"⚠️ TRILOK product '{desc}' → '{fixed}'")
+
+    return items
+
+
 def fix_rajesh_pharma_product_names_from_ocr(items, ocr_text: str) -> list:
     """
     FIX 12h: Strip Mfr/Pack prefixes from product_description for RAJESH PHARMA
@@ -8234,13 +8860,37 @@ def _looks_like_hsn_code(value: str, ocr_text: str = "") -> bool:
 
     if ocr_text and _is_invoice_no_label_anchored(compact, ocr_text):
         text_norm_beta = normalize_text_for_search(ocr_text)
-        if re.search(r'BETA\s+AGENCIES', text_norm_beta, re.IGNORECASE):
+        if re.search(
+            r'BETA\s+AGENCIES|YEN[\-\s]?PHARMA|YENEPOYA\s+PHARMACEUTICALS',
+            text_norm_beta,
+            re.IGNORECASE,
+        ):
             return False
 
     if not ocr_text:
         return False
 
     text_norm = normalize_text_for_search(ocr_text)
+
+    # YEN-PHARMA column OCR often splits INV.NO from digits; do not treat as HSN.
+    if (
+        compact.isdigit()
+        and 3 <= len(compact) <= 6
+        and re.search(
+            r'YEN[\-\s]?PHARMA|YENEPOYA\s+PHARMACEUTICALS',
+            text_norm,
+            re.IGNORECASE,
+        )
+    ):
+        if re.search(
+            rf'\b{re.escape(compact)}\s+\d{{1,2}}/\d{{1,2}}/\d{{2,4}}\s+DATE\s*:?\s*INV\.?\s*NO'
+            rf'|\bDATE:\s*{re.escape(compact)}\s+INV\s*NO\b'
+            rf'|\bINV\.NO:\s*{re.escape(compact)}\b'
+            rf'|\bINV\s*NO\s+{re.escape(compact)}\b',
+            text_norm,
+            re.IGNORECASE,
+        ):
+            return False
 
     if len(compact) == 4:
         has_hsn_header = bool(
@@ -14147,6 +14797,10 @@ def enforce_schema(raw_data):
     processed_items = fix_rajesh_pharma_product_names_from_ocr(
         processed_items, ocr_text)
 
+    # TRILOK ENTERPRISES: HSN MFG PRODUCT PACK — strip fused MFG/PACK from description
+    processed_items = fix_trilok_enterprises_product_names_from_ocr(
+        processed_items, ocr_text)
+
     _customer_name = template["data"]["invoice_summary"].get("customer", "")
     _vendor_name = template["data"]["invoice_summary"].get("vendor", "")
 
@@ -14282,6 +14936,10 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
     processed_items = fix_marg_erp_qty_rate_from_ocr(
+        processed_items, ocr_text)
+
+    # CHAITANYA/BENSUS Tax Inv.: FREE mapped as qty; PEN pack fused into product name
+    processed_items = fix_chaitanya_pharma_line_items_from_ocr(
         processed_items, ocr_text)
 
     # 🔧 FIX 12: Correct Partap/PDFPlumber OCR row issues (missing leading letter, wrong recovered qty/rate)
