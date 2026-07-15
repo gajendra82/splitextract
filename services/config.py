@@ -81,17 +81,8 @@ class ExtractionConfig:
     )
 
     # LLM providers
-    enable_text_model: bool = field(
-        default_factory=lambda: _env_bool("ENABLE_TEXT_MODEL", True)
-    )
     enable_vision_fallback: bool = field(
         default_factory=lambda: _env_bool("ENABLE_VISION_FALLBACK", True)
-    )
-    text_provider: str = field(
-        default_factory=lambda: os.getenv("TEXT_PROVIDER", "openai").strip().lower()
-    )
-    text_model: str = field(
-        default_factory=lambda: os.getenv("TEXT_MODEL", "gpt-5.5-mini").strip()
     )
     vision_provider: str = field(
         default_factory=lambda: os.getenv("VISION_PROVIDER", "gemini").strip().lower()
@@ -118,30 +109,6 @@ class ExtractionConfig:
         default_factory=lambda: os.getenv(
             "GOOGLE_APPLICATION_CREDENTIALS", ""
         ).strip()
-    )
-
-    # GPT cost optimization (all default off — no behaviour change)
-    enable_gpt_cache: bool = field(
-        default_factory=lambda: _env_bool("ENABLE_GPT_CACHE", False)
-    )
-    enable_ocr_normalization: bool = field(
-        default_factory=lambda: _env_bool("ENABLE_OCR_NORMALIZATION", False)
-    )
-    enable_gpt_token_logging: bool = field(
-        default_factory=lambda: _env_bool("ENABLE_GPT_TOKEN_LOGGING", False)
-    )
-    gpt_cache_ttl_seconds: int = field(
-        default_factory=lambda: _env_int("GPT_CACHE_TTL_SECONDS", 86400)
-    )
-    gpt_cache_dir: str = field(
-        default_factory=lambda: os.getenv(
-            "GPT_CACHE_DIR",
-            os.path.join(os.getcwd(), ".gpt_cache"),
-        ).strip()
-    )
-
-    openai_api_key: str = field(
-        default_factory=lambda: os.getenv("OPENAI_API_KEY", "").strip()
     )
 
     # Retry / timeout
