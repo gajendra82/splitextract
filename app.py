@@ -6494,6 +6494,199 @@ def fix_novacare_vision_null_rate(items, invoice_summary: dict, ocr_text: str = 
     return items
 
 
+def ocr_suggests_satiija_distributors(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect M/S SATIJA DISTRIBUTORS GST invoice (OldMRP MRP Qty Free Rate layout)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    return "SATIJA" in blob and "DISTRIBUTOR" in blob
+
+
+def fix_satiija_distributors_rate_from_ocr(
+    items,
+    ocr_text: str = "",
+    vendor: str = "",
+    invoice_summary: dict = None,
+) -> list:
+    """
+    SATIJA DISTRIBUTORS only:
+    - Gemini often maps OldMRP as unit_price instead of the Rate column.
+    - OCR path: recover Rate/Gross from batch-anchored table rows.
+    - Vision path (no OCR): when Dis%/Sch% are present, derive Rate from OldMRP.
+    """
+    if not items or not ocr_suggests_satiija_distributors(ocr_text, vendor):
+        return items
+
+    logger.info(
+        "🔧 FIX: SATIJA DISTRIBUTORS — correcting Rate vs OldMRP from OCR/discounts"
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _parse_row_after_batch(line: str, batch: str):
+        if not line or not batch:
+            return None, None
+        if _batch_key(batch) not in _batch_key(line):
+            return None, None
+        m = re.search(
+            rf'\b{re.escape(batch)}\s+'
+            r'(?:\d{1,2}/\d{2,4}\s+)?'
+            r'(?P<old_mrp>\d+\.\d{2})\s+'
+            r'(?P<mrp>\d+\.\d{2})\s+'
+            r'(?P<qty>\d+(?:\.\d{2})?)\s+'
+            r'(?P<free>\d+(?:\.\d{2})?)\s+'
+            r'(?P<rate>\d+\.\d{2})\s+'
+            r'(?P<disc>\d+\.\d{2})\s+'
+            r'(?P<sch>\d+\.\d{2})\s+'
+            r'(?P<gst>\d+\.\d{2})\s+'
+            r'(?P<gross>\d+\.\d{2})\b',
+            line,
+            re.IGNORECASE,
+        )
+        if not m:
+            return None, None
+        try:
+            qty = float(m.group("qty"))
+            rate = float(m.group("rate"))
+            gross = float(m.group("gross"))
+        except (TypeError, ValueError):
+            return None, None
+        if qty > 0 and rate > 0 and gross > 0:
+            if abs((qty * rate) - gross) / max(gross, 1.0) <= 0.05:
+                return rate, gross
+        return None, None
+
+    def _rate_from_oldmrp_discounts(unit_price: float, dis_pct: float, sch_pct: float) -> float:
+        rate = float(unit_price)
+        for pct in (dis_pct, sch_pct):
+            if pct and pct > 0:
+                rate *= (1.0 - pct / 100.0)
+        return rate
+
+    ocr_has_rows = False
+    if ocr_text and ocr_text.strip():
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            batch = str(item.get("lot_batch_number", "") or "").strip()
+            if not batch:
+                continue
+            rate = gross = None
+            for line in ocr_text.splitlines():
+                rate, gross = _parse_row_after_batch(line, batch)
+                if rate:
+                    break
+            if not rate:
+                continue
+            ocr_has_rows = True
+            try:
+                cur = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+            except Exception:
+                cur = 0.0
+            if abs(cur - rate) > 0.02:
+                old = item.get("unit_price")
+                item["unit_price"] = f"{rate:.2f}"
+                logger.warning(
+                    f"⚠️ SATIJA unit_price '{old}' → '{item['unit_price']}' "
+                    f"for '{str(item.get('product_description', ''))[:40]}'"
+                )
+            if gross:
+                try:
+                    qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+                except Exception:
+                    qty = 0.0
+                if qty > 0:
+                    old_total = item.get("total_amount")
+                    item["total_amount"] = f"{gross:.2f}"
+                    af = item.get("additional_fields")
+                    if not isinstance(af, dict):
+                        af = {}
+                    af["gross_amount"] = f"{gross:.2f}"
+                    item["additional_fields"] = af
+                    if str(old_total) != str(item["total_amount"]):
+                        logger.warning(
+                            f"⚠️ SATIJA total_amount '{old_total}' → '{item['total_amount']}' "
+                            f"for '{str(item.get('product_description', ''))[:40]}'"
+                        )
+
+    if ocr_has_rows:
+        return items
+
+    # Vision path: OldMRP stored as unit_price; Dis%/Sch% reduce it to Rate.
+    # Skip when line gross totals already match invoice taxable (Rate already extracted).
+    invoice_taxable = 0.0
+    if isinstance(invoice_summary, dict):
+        try:
+            inv_total = float(
+                normalize_numeric_value(str(invoice_summary.get("total", "") or "0"))
+            )
+            if inv_total > 0:
+                invoice_taxable = inv_total / 1.05
+        except Exception:
+            invoice_taxable = 0.0
+    if invoice_taxable > 0:
+        try:
+            sum_lines = sum(
+                float(normalize_numeric_value(str(it.get("total_amount", "0"))))
+                for it in items
+                if isinstance(it, dict)
+            )
+        except Exception:
+            sum_lines = 0.0
+        if sum_lines > 0 and abs(sum_lines - invoice_taxable) / invoice_taxable <= 0.03:
+            return items
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            continue
+        try:
+            dis = float(normalize_numeric_value(str(af.get("discount_percentage", "") or "0")))
+        except Exception:
+            dis = 0.0
+        try:
+            sch = float(normalize_numeric_value(
+                str(af.get("sch_percentage", af.get("scheme_percentage", "")) or "0")
+            ))
+        except Exception:
+            sch = 0.0
+        if dis <= 0 and sch <= 0:
+            continue
+        try:
+            cur = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+            qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+        except Exception:
+            continue
+        if cur <= 0 or qty <= 0:
+            continue
+        rate = _rate_from_oldmrp_discounts(cur, dis, sch)
+        if rate <= 0:
+            continue
+        mrp = 0.0
+        try:
+            if af.get("mrp") not in (None, ""):
+                mrp = float(normalize_numeric_value(str(af.get("mrp"))))
+        except Exception:
+            mrp = 0.0
+        if mrp > 0 and rate >= mrp * 1.02:
+            continue
+        if abs(cur - rate) <= 0.02:
+            continue
+        old = item.get("unit_price")
+        item["unit_price"] = f"{rate:.2f}"
+        rounded_rate = float(item["unit_price"])
+        item["total_amount"] = f"{qty * rounded_rate:.2f}"
+        af["gross_amount"] = item["total_amount"]
+        item["additional_fields"] = af
+        logger.warning(
+            f"⚠️ SATIJA vision unit_price '{old}' → '{item['unit_price']}' "
+            f"(Dis%={dis}, Sch%={sch}) for '{str(item.get('product_description', ''))[:40]}'"
+        )
+
+    return items
+
+
 def ocr_suggests_chaitanya_bensus_pharma(ocr_text: str) -> bool:
     """Detect CHAITANYA PHARMA / BENSUS PHARMA Tax Inv. layout."""
     if not ocr_text:
@@ -6679,6 +6872,39 @@ def _split_chaitanya_pack_product(mid: str) -> tuple:
     if glued_unit:
         return glued_unit.group(1), glued_unit.group(2).strip()
 
+    # Pack ending with abbreviated M (e.g. 3M) fused to product: "5*10*3MILNAC INJ"
+    glued_digit_m = re.match(
+        r'^((?:\d+(?:\*\d+)+)+M)([A-Z].+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if glued_digit_m:
+        product_part = glued_digit_m.group(2).strip()
+        # Avoid stealing "M" from MDLERIPHYLLIN on 5*2*7*2MDLERIPHYLLIN rows.
+        if not re.match(r'^D[LME]', product_part, re.IGNORECASE):
+            return glued_digit_m.group(1), product_part
+
+    # Pack "'S TIN" fused to product: "14'S TINPROVIDAC CAP"
+    tin_glued = re.match(
+        r'^(\d+[\'`\u2019]?S\s*TIN)([A-Z].+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if tin_glued:
+        return tin_glued.group(1).strip(), tin_glued.group(2).strip()
+
+    # Pack quote fused to product: "15*2*10'STRAMAZAC 50 MG CAP"
+    glued_quote_s = re.match(
+        r"^(\d+(?:\*\d+)+[\'`\u2019])([Ss]?[A-Z].+)$",
+        text,
+        re.IGNORECASE,
+    )
+    if glued_quote_s:
+        product = glued_quote_s.group(2).strip()
+        if product[:1] in ("S", "s"):
+            product = product[1:].lstrip()
+        return glued_quote_s.group(1), product
+
     # OCR "'S" as "*s" glued: "10*15*sTENGLYN TAB"
     glued_star_s = re.match(
         r'^(\d+(?:\*\d+)+\*[\'`\u2019]?[Ss])([A-Z].+)$',
@@ -6715,6 +6941,15 @@ def _split_chaitanya_pack_product(mid: str) -> tuple:
     if spaced:
         return spaced.group(1).strip(), spaced.group(2).strip()
 
+    # "14'S TIN PROVIDAC CAP" — TIN is pack residue, not part of product name
+    tin_spaced = re.match(
+        r"^(\d+[\'`\u2019]?S\s+TIN)\s+(.+)$",
+        text,
+        re.IGNORECASE,
+    )
+    if tin_spaced:
+        return tin_spaced.group(1).strip(), tin_spaced.group(2).strip()
+
     return "", text
 
 
@@ -6747,6 +6982,11 @@ def _clean_chaitanya_product_name(name: str) -> str:
     n = re.sub(r'^MDL(?=ERIPHYLLIN\b)', 'D', n, flags=re.IGNORECASE)
     n = re.sub(r'^AMNP(?=UCOXIA\b)', 'N', n, flags=re.IGNORECASE)  # AMNPUCOXIA → NUCOXIA
     n = re.sub(r'^SUPP(?=JONAC\b)', '', n, flags=re.IGNORECASE)      # SUPPJONAC
+    # S 21074 / pdfplumber: 3M+INAC → MILNAC, 14'S TIN+PROVIDAC, 10'+TRAMAZAC
+    n = re.sub(r'^MILNAC\b', 'INAC', n, flags=re.IGNORECASE)
+    n = re.sub(r'^ILNAC\b', 'INAC', n, flags=re.IGNORECASE)
+    n = re.sub(r'^TIN(?=PROVIDAC\b)', '', n, flags=re.IGNORECASE)
+    n = re.sub(r"^['`\u2019]?STRAMAZAC\b", 'TRAMAZAC', n, flags=re.IGNORECASE)
     n = re.sub(r'\bSPARY\b', 'SPRAY', n, flags=re.IGNORECASE)
 
     # PEN pack fused into SEMAGLYN
@@ -15198,6 +15438,14 @@ def enforce_schema(raw_data):
     processed_items = fix_novacare_vision_null_rate(
         processed_items, template["data"]["invoice_summary"], ocr_text)
 
+    # SATIJA DISTRIBUTORS: OldMRP mapped as unit_price instead of Rate column
+    processed_items = fix_satiija_distributors_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        _vendor_name,
+        template["data"].get("invoice_summary"),
+    )
+
     # 🔧 FIX 12a: Drop OCR-recovered company-header fragments added as product rows
     # (e.g., "CURTIS DRUG POINT" with batch tokens like LTD/COM and no qty/rate/amount).
     try:
@@ -19020,6 +19268,29 @@ CORRECT Extraction:
 ⚠️ NOTE: Rate × Qty should ≈ Total: 137.18 × 60 = 8230.80 ≈ 8229.60 ✓
 ⚠️ CGST% and SGST% (2.50) are TAX PERCENTAGES, NOT prices!
 
+**SCENARIO 9b: SATIJA DISTRIBUTORS / GST Invoice (CREDIT)** (Has S. Mfg Product Name Pack HSN Batch No Exp. OldMRP MRP Qty Free Rate Dis% Sch% GST% Gross)
+Table structure: | S. | Mfg | Product Name | Pack | HSN | Batch No | Exp. | OldMRP | MRP | Qty | Free | Rate | Dis% | Sch% | GST% | Gross |
+
+⚠️ CRITICAL - OldMRP IS NOT unit_price:
+- **unit_price** = "Rate" column (AFTER Qty and Free columns)
+- **additional_fields.mrp** = "MRP" column (always >= Rate)
+- **additional_fields.discount_percentage** = "Dis%" column
+- **additional_fields.sch_percentage** = "Sch%" column
+- **total_amount** = "Gross" column (Qty × Rate, before GST)
+- OldMRP appears BEFORE MRP — NEVER map OldMRP to unit_price
+
+Example Row: | 1 | EMAMI | THROMBOPHOB OINT | 20 GMS | 30049099 | IB00933A | 3/29 | 160.38 | 236.80 | 480.00 | 0 | 146.28 | 8.75 | 0.00 | 5.00 | 70214.40 |
+
+CORRECT Extraction:
+- unit_price: "146.28" ← Rate column
+- additional_fields.mrp: "236.80" ← MRP column
+- additional_fields.discount_percentage: "8.75" ← Dis% column
+- additional_fields.sch_percentage: "0.00" ← Sch% column
+- total_amount: "70214.40" ← Gross column
+WRONG: unit_price: "160.38" (OldMRP) or "236.80" (MRP)
+
+⚠️ NOTE: Rate × Qty should ≈ Gross: 146.28 × 480 = 70214.40 ✓
+
 **SCENARIO 10: Structured e-Invoice / GST Portal Format** (Multi-line items with explicit labels like Quantity:, Unit Price:, Batch:)
 This format is used in e-invoices generated via GST portal or ERP systems like Tally.
 Each line item spans MULTIPLE LINES:
@@ -20037,6 +20308,29 @@ CORRECT Extraction:
 
 ⚠️ NOTE: Rate × Qty should ≈ Total: 137.18 × 60 = 8230.80 ≈ 8229.60 ✓
 ⚠️ CGST% and SGST% (2.50) are TAX PERCENTAGES, NOT prices!
+
+**SCENARIO 9b: SATIJA DISTRIBUTORS / GST Invoice (CREDIT)** (Has S. Mfg Product Name Pack HSN Batch No Exp. OldMRP MRP Qty Free Rate Dis% Sch% GST% Gross)
+Table structure: | S. | Mfg | Product Name | Pack | HSN | Batch No | Exp. | OldMRP | MRP | Qty | Free | Rate | Dis% | Sch% | GST% | Gross |
+
+⚠️ CRITICAL - OldMRP IS NOT unit_price:
+- **unit_price** = "Rate" column (AFTER Qty and Free columns)
+- **additional_fields.mrp** = "MRP" column (always >= Rate)
+- **additional_fields.discount_percentage** = "Dis%" column
+- **additional_fields.sch_percentage** = "Sch%" column
+- **total_amount** = "Gross" column (Qty × Rate, before GST)
+- OldMRP appears BEFORE MRP — NEVER map OldMRP to unit_price
+
+Example Row: | 1 | EMAMI | THROMBOPHOB OINT | 20 GMS | 30049099 | IB00933A | 3/29 | 160.38 | 236.80 | 480.00 | 0 | 146.28 | 8.75 | 0.00 | 5.00 | 70214.40 |
+
+CORRECT Extraction:
+- unit_price: "146.28" ← Rate column
+- additional_fields.mrp: "236.80" ← MRP column
+- additional_fields.discount_percentage: "8.75" ← Dis% column
+- additional_fields.sch_percentage: "0.00" ← Sch% column
+- total_amount: "70214.40" ← Gross column
+WRONG: unit_price: "160.38" (OldMRP) or "236.80" (MRP)
+
+⚠️ NOTE: Rate × Qty should ≈ Gross: 146.28 × 480 = 70214.40 ✓
 
 **SCENARIO 10: Structured e-Invoice / GST Portal Format** (Multi-line items with explicit labels like Quantity:, Unit Price:, Batch:)
 Each line item spans MULTIPLE LINES:
