@@ -124,6 +124,35 @@ class TestChaitanyaPharmaLineItems(unittest.TestCase):
         self.assertEqual(by_batch["IB00722A"], "CLOPITORVA 20 CAP")
         self.assertEqual(by_batch["IB00537A"], "TENGLYN TAB")
 
+    def test_s21074_pack_fused_product_names(self):
+        """S 21074: pdfplumber glues PKG into product (3MILNAC, TINPROVIDAC, 'STRAMAZAC)."""
+        ocr = """
+        TAX INVOICE
+        CHAITANYA PHARMA
+        BENSUS PHARMA Tax Inv. No.: S 21074
+        MFD. QTY FREEPKG DESCRIPTION HSN Code BATCH # EXP MRP RATE VALUE DIS% GST%NET AMOUNT
+        ZYDUS CRZ5A0 0 5*10*3MILNAC INJ 30049059 *NA00385A 10/28 5.40 4.10 205.00 6.00 5.00 202.34 Bill No.
+        ZYDUS CRZ1A0 0 14'S TINPROVIDAC CAP 30049099 *IA0789A 10/27 496.44 327.98 3279.80 6.00 5.00 3237.17 21074
+        ZYDUS CR1Z0A0 0 10*15'S PANTODAC DSR CAP 30049099 *IA01873A 10/27 299.40 171.33 17133.00 6.00 5.00 16910.28 16-02-2026
+        ZYDUS CRZ3A0 0 15*2*10'STRAMAZAC 50 MG CAP 30049069 *IA01885A 05/28 51.45 37.28 1118.40 6.00 5.00 1103.86 Bill No.
+        """
+        items = [
+            {"product_description": "MILNAC INJ", "lot_batch_number": "*NA00385A",
+             "quantity": "50", "unit_price": "4.10", "total_amount": "205.00"},
+            {"product_description": "TINPROVIDAC CAP", "lot_batch_number": "*IA0789A",
+             "quantity": "10", "unit_price": "327.98", "total_amount": "3279.80"},
+            {"product_description": "PANTODAC DSR CAP", "lot_batch_number": "*IA01873A",
+             "quantity": "100", "unit_price": "171.33", "total_amount": "17133.00"},
+            {"product_description": "'STRAMAZAC 50 MG CAP", "lot_batch_number": "*IA01885A",
+             "quantity": "30", "unit_price": "37.28", "total_amount": "1118.40"},
+        ]
+        out = fix_chaitanya_pharma_line_items_from_ocr(items, ocr)
+        by_batch = {i["lot_batch_number"]: i["product_description"] for i in out}
+        self.assertEqual(by_batch["*NA00385A"], "INAC INJ")
+        self.assertEqual(by_batch["*IA0789A"], "PROVIDAC CAP")
+        self.assertEqual(by_batch["*IA01873A"], "PANTODAC DSR CAP")
+        self.assertEqual(by_batch["*IA01885A"], "TRAMAZAC 50 MG CAP")
+
 
 if __name__ == "__main__":
     unittest.main()
