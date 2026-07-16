@@ -2682,12 +2682,180 @@ def ocr_suggests_yen_pharma(ocr_text: str) -> bool:
     ))
 
 
+def _strip_yen_pharma_mfr_suffix(product: str, mfr_codes: Optional[set] = None) -> str:
+    """Strip trailing MFR-column codes fused into product names (CAD / CADI / ZYDU)."""
+    cleaned = re.sub(r'\s+', ' ', str(product or "")).strip()
+    if not cleaned:
+        return cleaned
+    # Common SalePrint MFR abbreviations for this vendor layout
+    cleaned = re.sub(
+        r'\s+(?:CADI?|GE\d|ZYDU|ZYDUS|ABBO|TORR(?:ENT)?|INTAS|ALKEM|USV|'
+        r'LUPIN|CIPLA|SUNP?|MANKIND|MACLEODS?)\s*$',
+        '',
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    if mfr_codes:
+        parts = cleaned.split()
+        if len(parts) >= 2 and parts[-1].upper() in mfr_codes:
+            cleaned = ' '.join(parts[:-1]).strip()
+    return cleaned
+
+
+def _extract_yen_pharma_columnar_line_items(ocr_text: str) -> List[Dict]:
+    """
+    Parse YEN-PHARMA SalePrint rows from fragmented PDF text.
+
+    Native text order per row (KA-MN2 / INV layout):
+      MRP, DESCRIPTION, RATE, EXP_MM, BATCH#, VALUE, GST%, /S, PACK, MFR, EXP_YY, HSN, QTY, ...
+    Gemini often only sees page 1 and also fuses MFR (CADI) onto the product name.
+    """
+    if not ocr_text:
+        return []
+    # Only for DESCRIPTION…MFR SalePrint tables (not the older single-line ZYDUS layout)
+    if not re.search(
+        r'\bDESCRIPTION\b.*\b(?:PACK|QTY)\b.*\bMFR\b|\bMFR\b.*\bDESCRIPTION\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ):
+        # Soft gate: many batch# tokens + Pack/MFR cues
+        if not (
+            ocr_text.count('#') >= 8
+            and re.search(r'\b(?:PACK|QTY|MFR)\b', ocr_text, re.IGNORECASE)
+        ):
+            return []
+
+    lines = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
+    # Full-line header/footer labels only — do not reject product names that
+    # merely contain words like PACK (e.g. "NASOCLEAR REFIL PACK").
+    skip_name = re.compile(
+        r'^(?:YENEPOYA(?:\s+HOSPITAL)?(?:\s+PHARMA)?|PHONE|MOBILE|GST(?:\s*NO\.?)?|'
+        r'PAGE(?:\s+\d+\s+OF\s+\d+)?|DOOR\s+NO.*|AREA(?:\s*CODE)?|CUST(?:\s*CODE)?|'
+        r'CREDIT|INV\.?\s*NO\.?|DATE|DESCRIPTION|PACK|QTY|MFR|VALUE|RATE|BATCH|'
+        r'HSN|RCK|SCM|TOTAL|NET(?:\s*AMOUNT)?|GROSS|RUPEES.*|CONTINUE\s+TO\s+NEXT.*|'
+        r'BILL\s+SUMMARY|GST\s+SUMMARY|AUTHORISED\s+SIGNATORY|ITEM\s+\d+|COIN|TCS|'
+        r'REP\s*:.*|DC\s*NOTES?|CR\.?\s*NOTES?|DB\.?\s*NOTES?|ADD\s*USER|EDIT\s*USER|'
+        r'LAST\s*PAYMENT.*|PLACE\s*OF|SUPPLY|CONTACT|TAX\s*INVOICE|DERALAKATTE|'
+        r'ZULEKHA.*|.*COLLEGE.*|OUTSTANDING\s+DETAILS|FLASH\s*:?|CANARA\s+BANK.*|'
+        r'MOBILE|PHONE|SUMMARY|IRN|ACK\s*NO\.?)$',
+        re.IGNORECASE,
+    )
+    batch_idxs = [
+        i for i, ln in enumerate(lines)
+        if re.fullmatch(r'[A-Z0-9][A-Z0-9.\-]*#', ln)
+    ]
+    items: List[Dict] = []
+    seen_batches = set()
+    for bi in batch_idxs:
+        name = None
+        name_i = None
+        for j in range(bi - 1, max(-1, bi - 8), -1):
+            s = lines[j]
+            if not re.search(r'[A-Za-z]{3,}', s) or len(s) < 4:
+                continue
+            if re.fullmatch(r'[A-Z0-9]{2,6}', s):
+                continue
+            if skip_name.match(s) or re.fullmatch(r'[\d./\s%]+', s):
+                continue
+            name, name_i = s, j
+            break
+        if name_i is None or name is None:
+            continue
+        rate = (
+            lines[name_i + 1]
+            if name_i + 1 < len(lines) and re.fullmatch(r'\d+\.\d{2}', lines[name_i + 1])
+            else None
+        )
+        mrp = (
+            lines[name_i - 1]
+            if name_i > 0 and re.fullmatch(r'\d+\.\d{2}', lines[name_i - 1])
+            else None
+        )
+        batch = lines[bi]
+        value = (
+            lines[bi + 1]
+            if bi + 1 < len(lines) and re.fullmatch(r'\d+\.\d{2}', lines[bi + 1])
+            else None
+        )
+        if not rate or not value:
+            continue
+        mfr = None
+        hsn = None
+        qty = None
+        pack = None
+        exp_y = None
+        for j in range(bi + 2, min(len(lines), bi + 16)):
+            s = lines[j]
+            if (
+                mfr is None
+                and re.fullmatch(r'[A-Z]{2,5}\d?', s)
+                and s not in {'GST', 'SCM', 'RCK', 'YGP', 'HSN', 'MFR', 'INV'}
+            ):
+                if j > 0 and not re.fullmatch(r'[A-Z0-9]{2,6}', lines[j - 1]):
+                    pack = lines[j - 1]
+                mfr = s
+            if hsn is None and re.fullmatch(r'\d{6,8}', s):
+                hsn = s
+                if j > 0 and re.fullmatch(r'\d{2}', lines[j - 1]):
+                    exp_y = lines[j - 1]
+                for k in range(j + 1, min(len(lines), j + 4)):
+                    if re.fullmatch(r'\d{1,5}', lines[k]):
+                        qty = lines[k]
+                        break
+                break
+        if not qty:
+            continue
+        try:
+            q_f = float(qty)
+            r_f = float(rate)
+            v_f = float(value)
+        except Exception:
+            continue
+        if q_f <= 0 or r_f <= 0 or v_f < 1:
+            continue
+        if abs(q_f * r_f - v_f) / max(v_f, 1.0) > 0.03:
+            continue
+
+        batch_key = re.sub(r'[^A-Z0-9]', '', batch.upper())
+        if not batch_key or batch_key in seen_batches:
+            continue
+        seen_batches.add(batch_key)
+
+        product = _strip_yen_pharma_mfr_suffix(name, {mfr} if mfr else None)
+        exp_m = None
+        if name_i + 2 < bi and re.fullmatch(r'\d{1,2}', lines[name_i + 2]):
+            exp_m = lines[name_i + 2]
+        expiry = ""
+        if exp_m and exp_y:
+            expiry = f"{exp_m.zfill(2)}/{exp_y}"
+
+        items.append({
+            "product_description": product,
+            "quantity": str(int(q_f)) if abs(q_f - int(q_f)) < 0.01 else qty,
+            "unit_price": f"{r_f:.2f}",
+            "total_amount": f"{v_f:.2f}",
+            "hsn_code": hsn or "",
+            "lot_batch_number": batch,
+            "additional_fields": {
+                "mrp": mrp or "",
+                "mfg": mfr or "",
+                "expiry_date": expiry,
+                "free_quantity": "0",
+                "pack": pack or "",
+            },
+            "recovered_from_ocr": True,
+        })
+    return items
+
+
 def extract_yen_pharma_line_items_from_ocr(ocr_text: str) -> List[Dict]:
     """
     Parse YEN-PHARMA SalePrint table rows from OCR.
 
-    Example:
+    Example (single-line OCR):
     ZYDUS 1100 AMLODAC 5 TAB 30'S S 4.00 80.01IB00241A# 12 /27 43.93 48323.00 0.00 48323.00 5 300490
+
+    Also supports fragmented native PDF text (DESCRIPTION/PACK/QTY/MFR columns).
     """
     if not ocr_text or not ocr_suggests_yen_pharma(ocr_text):
         return []
@@ -2725,6 +2893,7 @@ def extract_yen_pharma_line_items_from_ocr(ocr_text: str) -> List[Dict]:
             maxsplit=1,
             flags=re.IGNORECASE,
         )[0].strip()
+        product = _strip_yen_pharma_mfr_suffix(product, {mfg.upper()} if mfg else None)
         if not product or len(product) < 3:
             continue
         if re.fullmatch(r'S\s*\d{1,5}', product, re.IGNORECASE):
@@ -2761,6 +2930,50 @@ def extract_yen_pharma_line_items_from_ocr(ocr_text: str) -> List[Dict]:
             "recovered_from_ocr": True,
         })
 
+    # Columnar SalePrint (INV 2530 / KA-MN2 style): merge any batches not already found
+    for item in _extract_yen_pharma_columnar_line_items(ocr_text):
+        batch_key = re.sub(
+            r'[^A-Z0-9]', '', str(item.get("lot_batch_number", "")).upper()
+        )
+        if not batch_key or batch_key in seen_batches:
+            continue
+        seen_batches.add(batch_key)
+        items.append(item)
+
+    return items
+
+
+def fix_yen_pharma_product_names_from_ocr(
+    items: List[Dict], ocr_text: str = ""
+) -> List[Dict]:
+    """YEN-PHARMA: remove MFR-column suffixes (CAD/CADI/ZYDU) from product names."""
+    if not items or not ocr_suggests_yen_pharma(ocr_text):
+        return items
+    mfr_codes = {
+        m.upper()
+        for m in re.findall(r'(?m)^([A-Z]{2,5}\d?)$', ocr_text or "")
+        if m.upper() not in {
+            'GST', 'SCM', 'RCK', 'YGP', 'INV', 'HSN', 'MFR', 'PACK', 'QTY',
+            'CREDIT', 'FLASH', 'SUSH', 'ITEM', 'TIME', 'COIN', 'TCS', 'NET',
+            'GROSS', 'TOTAL', 'PHONE', 'MOBILE', 'AREA', 'CUST', 'CODE',
+        }
+    }
+    for item in items:
+        desc = str(item.get("product_description", "") or "")
+        cleaned = _strip_yen_pharma_mfr_suffix(desc, mfr_codes)
+        if cleaned and cleaned != desc.strip():
+            af = item.get("additional_fields")
+            if not isinstance(af, dict):
+                af = {}
+                item["additional_fields"] = af
+            stripped = desc.strip()[len(cleaned):].strip()
+            if stripped and not str(af.get("mfg", "") or "").strip():
+                af["mfg"] = stripped.split()[-1].upper()
+            logger.info(
+                f"🔧 YEN-PHARMA: stripped MFR suffix from product "
+                f"'{desc.strip()}' → '{cleaned}'"
+            )
+            item["product_description"] = cleaned
     return items
 
 
@@ -2786,10 +2999,37 @@ def recover_yen_pharma_line_items_from_ocr(
             continue
         cleaned.append(item)
 
+    cleaned = fix_yen_pharma_product_names_from_ocr(cleaned, ocr_text)
+
     parsed = extract_yen_pharma_line_items_from_ocr(ocr_text)
     if not parsed:
         logger.info("⏭️ YEN-PHARMA: no SalePrint table rows parsed from OCR")
         return cleaned
+
+    parsed_by_batch = {
+        _batch_key(it.get("lot_batch_number", "")): it
+        for it in parsed
+        if _batch_key(it.get("lot_batch_number", ""))
+    }
+
+    # Sync Vision rows that share a batch with OCR (fixes CAD/MFR fused names)
+    for item in cleaned:
+        bk = _batch_key(item.get("lot_batch_number", ""))
+        if not bk or bk not in parsed_by_batch:
+            continue
+        ocr_item = parsed_by_batch[bk]
+        ocr_name = str(ocr_item.get("product_description", "") or "").strip()
+        cur_name = str(item.get("product_description", "") or "").strip()
+        if ocr_name and ocr_name.upper() != cur_name.upper():
+            item["product_description"] = ocr_name
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+            item["additional_fields"] = af
+        ocr_af = ocr_item.get("additional_fields") or {}
+        # Prefer OCR MFR column (CADI) over truncated Vision suffix (CAD)
+        if ocr_af.get("mfg"):
+            af["mfg"] = ocr_af.get("mfg")
 
     existing_batches = {
         _batch_key(it.get("lot_batch_number", ""))
@@ -20856,11 +21096,13 @@ async def split_and_extract_invoices(
             page=0,
             total_pages=total_pages_count,
         )
-        _ocr_worker_ctx = copy_context()
         with ThreadPoolExecutor(max_workers=ocr_pool_workers) as executor:
+            # Fresh copy_context() per page — a shared Context cannot be
+            # re-entered by parallel workers ("cannot enter context: already entered"),
+            # which previously left pages 2+ with empty OCR on multipage invoices.
             futures = [
                 (i, executor.submit(
-                    _ocr_worker_ctx.run,
+                    copy_context().run,
                     extract_full_invoice_data_combined,
                     doc.load_page(i), None, pdf_path, i, ocr_stats, ocr_stats_lock,
                 ))
@@ -20876,11 +21118,18 @@ async def split_and_extract_invoices(
                 result = collected[idx] if idx < len(collected) else None
                 if result is None:
                     logger.error(f"Page {i+1} failed or timed out")
+                    # Last-resort: native PDF text so multipage grouping still
+                    # merges product rows when a worker fails.
+                    fallback_ocr = ""
+                    try:
+                        fallback_ocr = doc.load_page(i).get_text("text") or ""
+                    except Exception:
+                        fallback_ocr = ""
                     page_results[i] = {
                         "invoice_no": None,
                         "full_data": None,
-                        "ocr_text": "",
-                        "ocr_method": "failed"
+                        "ocr_text": fallback_ocr,
+                        "ocr_method": "failed_pymupdf_fallback"
                     }
                 else:
                     page_results[i] = result
