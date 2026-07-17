@@ -1,7 +1,11 @@
 """CHAITANYA/BENSUS Tax Inv. line-item corrections."""
 import unittest
 
-from app import fix_chaitanya_pharma_line_items_from_ocr
+from app import (
+    fix_chaitanya_pharma_line_items_from_ocr,
+    fix_chaitanya_pharma_qty_net_vs_value_fallback,
+    fix_chaitanya_pharma_leading_pack_product_fallback,
+)
 
 
 CHAITANYA_OCR = """
@@ -152,6 +156,93 @@ class TestChaitanyaPharmaLineItems(unittest.TestCase):
         self.assertEqual(by_batch["*IA0789A"], "PROVIDAC CAP")
         self.assertEqual(by_batch["*IA01873A"], "PANTODAC DSR CAP")
         self.assertEqual(by_batch["*IA01885A"], "TRAMAZAC 50 MG CAP")
+
+    def test_s5090_qty_fallback_net_over_rate_vs_value(self):
+        """S 5090: Gemini qty=round(NET/RATE)=148; true QTY=VALUE/RATE=150."""
+        ocr = """
+        TAX INVOICE
+        CHAITANYA PHARMA
+        BENSUS PHARMA Tax Inv. No.: S 5090
+        MFD. QTY FREEPKG DESCRIPTION HSN Code BATCH # EXP MRP RATE VALUE DIS% GST%NET AMOUNT
+        ZYDUS CR1Z5A0 0 2ML NOZIA INJ 30049099 CTC1002 04/28 75.69 51.85 7777.50 6.00 5.00 7676.39 Ser/ Bill
+        ZYDUS ME1D5I0 0 10*15*sTENGLYN TAB 30049099 IB00537A 01/28 176.89 100.98 15147.00 6.00 5.00 14950.08
+        ZYDUS CAR50D 0 10*15 TVINGLYN M 500 30049099 AXC1012 02/28 173.04 98.96 4948.00 6.00 5.00 4883.68 Bill No.
+        """
+        items = [
+            {
+                "product_description": "NOZIA INJ",
+                "quantity": "148",
+                "unit_price": "51.85",
+                "total_amount": "7676.39",
+                "lot_batch_number": "CTC1002",
+            },
+            {
+                "product_description": "TENGLYN TAB",
+                "quantity": "148",
+                "unit_price": "100.98",
+                "total_amount": "14950.08",
+                "lot_batch_number": "IB00537A",
+            },
+            {
+                # Already correct — must not change
+                "product_description": "VINGLYN M 500",
+                "quantity": "50",
+                "unit_price": "98.96",
+                "total_amount": "4883.68",
+                "lot_batch_number": "AXC1012",
+            },
+        ]
+        # Primary fixer leaves 148 (error ~1.3% < 5%)
+        primary = fix_chaitanya_pharma_line_items_from_ocr(
+            [dict(i) for i in items], ocr
+        )
+        self.assertEqual(primary[0]["quantity"], "148")
+        self.assertEqual(primary[1]["quantity"], "148")
+
+        out = fix_chaitanya_pharma_qty_net_vs_value_fallback(primary, ocr)
+        self.assertEqual(out[0]["quantity"], "150")
+        self.assertEqual(out[1]["quantity"], "150")
+        self.assertEqual(out[2]["quantity"], "50")
+
+    def test_s6240_leading_15c_pack_stripped_from_product(self):
+        """S 6240: PKG '15C' left prefixed on ATORVA GOLD 20."""
+        ocr = """
+        TAX INVOICE
+        CHAITANYA PHARMA
+        BENSUS PHARMA Tax Inv. No.: S 6240
+        MFD. QTY FREEPKG DESCRIPTION HSN Code BATCH # EXP MRP RATE VALUE DIS% GST%NET AMOUNT
+        ZYDUS ME3D0I 0 15C ATORVA GOLD 20 30049099 26S2GCA056 06/27 145.45 96.09 2882.70 6.00 5.00 2845.22 Bill No.
+        ZYDUS ME9D0I 0 10'S ATORVA GOLD 10 TAB 30049099 26S2GCA137 01/28 71.74 42.74 3846.60 6.00 5.00 3796.60
+        """
+        items = [
+            {
+                "product_description": "15C ATORVA GOLD 20",
+                "quantity": "30",
+                "unit_price": "96.09",
+                "total_amount": "2845.22",
+                "lot_batch_number": "26S2GCA056",
+            },
+            {
+                "product_description": "ATORVA GOLD 10 TAB",
+                "quantity": "90",
+                "unit_price": "42.74",
+                "total_amount": "3796.60",
+                "lot_batch_number": "26S2GCA137",
+            },
+        ]
+        primary = fix_chaitanya_pharma_line_items_from_ocr(
+            [dict(i) for i in items], ocr
+        )
+        # Primary may already fix via pack split; fallback must leave correct names.
+        out = fix_chaitanya_pharma_leading_pack_product_fallback(primary, ocr)
+        self.assertEqual(out[0]["product_description"], "ATORVA GOLD 20")
+        self.assertEqual(out[1]["product_description"], "ATORVA GOLD 10 TAB")
+
+        # Fallback alone (no primary) still strips leading 15C
+        lone = fix_chaitanya_pharma_leading_pack_product_fallback(
+            [dict(i) for i in items], ocr
+        )
+        self.assertEqual(lone[0]["product_description"], "ATORVA GOLD 20")
 
 
 if __name__ == "__main__":
