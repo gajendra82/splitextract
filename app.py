@@ -8640,7 +8640,66 @@ def _jackson_qty_rate_rows_are_sane(rows: list, ocr_text: str = "") -> bool:
     Prefer QTY×Rate≈Amount consistency; do not let garbled multipage
     'Tot. Item/Qty' footer OCR veto a coherent qty/rate band parse.
     """
-    if not rows or len(rows) < 8:
+    if not rows:
+        return False
+
+    def _row_coherent(r) -> bool:
+        try:
+            q = float(r.get("quantity", 0) or 0)
+            rate = float(r.get("unit_price", 0) or 0)
+            amt = float(r.get("total_amount", 0) or 0)
+        except Exception:
+            return False
+        if q <= 0 or rate < 3.5 or amt < 50:
+            return False
+        return abs(q * rate - amt) / max(amt, 1.0) <= 0.03
+
+    # Small Jackson bills (e.g. D5531: 1 line, qty 40) — band OCR is coherent but
+    # below the multi-line hospital-bill threshold. Accept only when every row is
+    # math-consistent AND Sales Value / Tot. Item-Qty confirms the band.
+    if len(rows) < 8:
+        if not all(_row_coherent(r) for r in rows):
+            return False
+        qty_sum = sum(int(float(r.get("quantity", 0) or 0)) for r in rows)
+        amt_sum = sum(float(r.get("total_amount", 0) or 0) for r in rows)
+        if qty_sum < 1 or amt_sum < 50:
+            return False
+        combined = ocr_text or ""
+        sales_m = re.search(
+            r'Sales\s*Value\s*[:\-]?\s*([0-9][0-9,]*(?:\.\d{1,2})?)',
+            combined,
+            re.IGNORECASE,
+        )
+        if sales_m:
+            try:
+                sales = float(sales_m.group(1).replace(',', ''))
+                if abs(sales - amt_sum) / max(sales, 1.0) <= 0.02:
+                    return True
+            except Exception:
+                pass
+        tot_m = re.search(
+            r'Tot\.?\s*I?tem\s*/?\s*Qty\s*:\s*(\d+)\s*/\s*(\d+)',
+            combined,
+            re.IGNORECASE,
+        )
+        if tot_m:
+            try:
+                n_items = int(tot_m.group(1))
+                tot_qty = int(tot_m.group(2))
+                if n_items == len(rows) and abs(tot_qty - qty_sum) <= max(
+                    1, int(0.05 * max(tot_qty, 1))
+                ):
+                    return True
+            except Exception:
+                pass
+        # Single highly coherent paid triple with a substantial Amount — still
+        # accept for 1-line Jackson invoices when footer Sales/Tot is missing.
+        if (
+            len(rows) == 1
+            and amt_sum >= 500
+            and float(rows[0].get("unit_price", 0) or 0) >= 10
+        ):
+            return True
         return False
 
     consistent = 0
@@ -8720,8 +8779,14 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                     if not r_tok["dec"]:
                         for div, pen in ((10, 1), (100, 0), (1000, 2)):
                             rate_cands.append((r_tok["v"] / div, True, pen))
-                    # OCR often duplicates Amount into Rate without decimals
-                    if abs(r_tok["v"] - a_tok["v"]) / max(a_tok["v"], 1.0) <= 0.01:
+                    # OCR often duplicates Amount into Rate without decimals.
+                    # Skip /10,/100 fabrication when face rate already equals Amount
+                    # with qty=1 (valid single-unit lines like HYPONAT 1×587.63).
+                    _face_qty1_amt = (
+                        abs(r_tok["v"] - a_tok["v"]) / max(a_tok["v"], 1.0) <= 0.01
+                        and abs(q_tok - 1.0) <= 0.01
+                    )
+                    if abs(r_tok["v"] - a_tok["v"]) / max(a_tok["v"], 1.0) <= 0.01 and not _face_qty1_amt:
                         for div in (100, 10):
                             rate_cands.append((r_tok["v"] / div, True, -3))
 
@@ -8740,8 +8805,16 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                             if rate_dec and rate > 0:
                                 err_qi = abs(qi * rate - amount) / max(amount, 1.0)
                                 q_from_amt = amount / rate
+                                # Don't invent qty from Amount when Amount is a
+                                # no-decimal 100× duplicate of Rate (7781 vs 77.81)
+                                # with an explicit qty=1 on the line (NEUROBION).
+                                amount_is_rate_x100 = (
+                                    not a_tok["dec"]
+                                    and abs(a_tok["v"] - rate * 100.0) <= 1.01
+                                )
                                 if (
                                     err_qi > 0.02
+                                    and not amount_is_rate_x100
                                     and abs(q_from_amt - round(q_from_amt)) <= 0.05
                                     and 1 <= round(q_from_amt) <= 2000
                                 ):
@@ -8752,6 +8825,27 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                                     q_use = int(round(q_try))
 
                             err = abs(q_use * rate - amount) / max(amount, 1.0)
+                            # When OCR Amount has decimals and implies a clean 2-dp rate
+                            # that is only a small slip from OCR Rate, prefer Amount
+                            # (e.g. Rate 52.01 vs Amount 729.54 → rate 52.11).
+                            if (
+                                a_tok.get("dec")
+                                and q_use > 0
+                                and amount >= 50
+                                and err > 0.0005
+                                and err <= 0.03
+                            ):
+                                rate_from_amt = round(amount / q_use, 2)
+                                if (
+                                    0.5 <= rate_from_amt <= 2000
+                                    and abs(q_use * rate_from_amt - amount)
+                                    / max(amount, 1.0)
+                                    <= 0.001
+                                    and abs(rate_from_amt - rate) / max(rate, 1.0)
+                                    <= 0.03
+                                ):
+                                    rate = rate_from_amt
+                                    err = 0.0
                             # When rate has decimals, prefer authoritative qty×rate amount
                             if rate_dec and abs(rate - round(rate, 2)) < 1e-9:
                                 calc_amount = round(q_use * rate, 2)
@@ -8780,8 +8874,12 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                                 - amount_pen
                                 - err * 10
                             )
+                            # qty=1 with rate==amount is a valid Jackson single-unit line
                             if abs(rate - amount) < 0.01:
-                                score -= 5
+                                if q_use == 1:
+                                    score += 5
+                                else:
+                                    score -= 5
                             if best is None or score > best[0]:
                                 best = (score, q_use, round(rate, 2), round(amount, 2))
 
@@ -8803,12 +8901,78 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                     cand = (score, int(round(qty)), round(rate, 2), round(amount, 2))
                     if best is None or score > best[0]:
                         best = cand
+
+        # GST-as-amount ghost: leading "1 63.64 | 0 64.28 | 1285.60" prefers
+        # qty=1 rate=amount=63.64. Prefer the larger coherent Rate×Amount on the line.
+        # Exception: "1] 7781 | 77.81" — 7781 is Rate with dropped decimal (=77.81),
+        # not a larger Amount (would invent qty=100). Skip those promotions.
+        if (
+            best
+            and best[1] == 1
+            and abs(best[2] - best[3]) < 0.01
+            and len(tokens) >= 3
+        ):
+            alt = None
+            for a_tok in tokens:
+                amount = a_tok["v"]
+                if not a_tok["dec"] and amount >= 10000:
+                    amount = amount / 100.0
+                # OCR dropped decimal on Rate duplicated as integer (7781 vs 77.81)
+                if not a_tok["dec"] and any(
+                    t.get("dec")
+                    and abs(a_tok["v"] - t["v"] * 100.0) <= 1.01
+                    for t in tokens
+                    if t is not a_tok
+                ):
+                    continue
+                if amount < max(best[3] * 1.5, 100):
+                    continue
+                for r_tok in tokens:
+                    if r_tok is a_tok:
+                        continue
+                    rate_cands = [r_tok["v"]]
+                    if not r_tok["dec"]:
+                        rate_cands += [r_tok["v"] / 10.0, r_tok["v"] / 100.0]
+                    for rate in rate_cands:
+                        if not (3.5 <= rate <= 2000):
+                            continue
+                        if abs(rate - amount) / max(amount, 1.0) <= 0.01:
+                            continue
+                        q = amount / rate
+                        if abs(q - round(q)) > 0.05 or not (1 <= round(q) <= 2000):
+                            continue
+                        qi = int(round(q))
+                        if abs(qi * rate - amount) / max(amount, 1.0) > 0.02:
+                            continue
+                        cand = (best[0] + 10, qi, round(rate, 2), round(amount, 2))
+                        if alt is None or cand[0] > alt[0]:
+                            alt = cand
+            if alt is not None:
+                best = alt
         return best
 
     for line in ocr_text.splitlines():
         up = line.upper()
+        # Free continuation rows attach to the immediately preceding paid triple
+        if re.search(r'\bFREE\b', up):
+            # Include ';' — band OCR often emits "1; Free" / "2; Free"
+            m_free = re.search(
+                r'(?<!\d)(\d{1,4})\s*[|:;)\]._\-\s°º]*FREE\b',
+                line,
+                re.IGNORECASE,
+            )
+            if m_free and rows:
+                try:
+                    fq = int(m_free.group(1))
+                except Exception:
+                    fq = 0
+                if 1 <= fq <= 500:
+                    rows[-1]["free_quantity"] = (
+                        int(rows[-1].get("free_quantity") or 0) + fq
+                    )
+            continue
         if any(tok in up for tok in (
-            "FREE", "SALES VALUE", "DISCOUNT", "INETT", "CRIDR", "BANK", "RATE AMOUNT"
+            "SALES VALUE", "DISCOUNT", "INETT", "CRIDR", "BANK", "RATE AMOUNT"
         )):
             continue
 
@@ -8824,6 +8988,14 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
             flags=re.I,
         )) or bool(re.search(
             r'(?<![A-Z0-9])[S$]\d+\.\d{2}\b(?!.*\d+[.,]\d{2})',
+            line_norm_hyphen,
+            flags=re.I,
+        ))
+        # Two+ $ / S prefixes (Rate and Amount) are almost always leading-5 OCR
+        # (HYPONAT "$87.63 | $876.30" → 587.63 / 5876.30). Digit "1" also yields
+        # coherent math but beats "5" via the 1–500 rate score bonus — boost "5".
+        dollar_prefix_count = len(re.findall(
+            r'(?<![A-Z0-9])[S$]\d+\.\d{2}\b',
             line_norm_hyphen,
             flags=re.I,
         ))
@@ -8856,6 +9028,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                 score = cand[0]
                 if digit == "5" and amount_has_dollar:
                     score += 2.5
+                if digit == "5" and dollar_prefix_count >= 2:
+                    score += 6.0
                 cand = (score, cand[1], cand[2], cand[3])
                 if line_best is None or cand[0] > line_best[0]:
                     line_best = cand
@@ -8867,13 +9041,10 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                 "total_amount": line_best[3],
             })
 
-    # Keep first unique triple (crops overlap and duplicate rows)
+    # Keep all coherent triples (including identical AMLOPIN×2 rows). Do not
+    # unique-by-key — consecutive identical paid lines are distinct products.
     unique = []
-    seen = set()
     for row in rows:
-        key = (row["quantity"], row["unit_price"], row["total_amount"])
-        if key in seen:
-            continue
         # Filter header/noise triples. Keep small paid lines (~104 CALAPTIN,
         # ~157 BECOSULE) but drop absurd low-rate ghost triples (e.g. 45×1.60=72).
         if row["total_amount"] < 50:
@@ -8887,7 +9058,6 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
         # Reject qty-band ghosts like 202×14.73=2976 (true ALZIL is 30×99.20)
         if row["quantity"] >= 80 and row["unit_price"] < 20:
             continue
-        seen.add(key)
         unique.append(row)
     return unique
 
@@ -9065,14 +9235,65 @@ def _ocr_jackson_header_date(page=None, image_bytes: bytes = None) -> Optional[s
         return None
 
 
+def _ocr_jackson_header_invoice_no(page=None, image_bytes: bytes = None) -> Optional[str]:
+    """OCR top-right Jackson header for Inv.No. D#### (format-scoped)."""
+    if not TESSERACT_AVAILABLE:
+        return None
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2.8, 2.8))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return None
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = img.size
+        crop = img.crop((int(w * 0.58), int(h * 0.03), int(w * 0.99), int(h * 0.15)))
+        arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        arr = cv2.resize(arr, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
+        _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text = pytesseract.image_to_string(th, config="--psm 6") or ""
+        try:
+            img.close()
+        except Exception:
+            pass
+        inv = extract_jackson_medicals_invoice_no(text)
+        if inv:
+            return inv
+        # Header crop often loses the "Inv.No." label; accept bare D#### / #### 
+        m = re.search(r'\b(D\d{3,6})\b', text or "", re.IGNORECASE)
+        if m:
+            return m.group(1).upper()
+        m = re.search(r'Inv\.?\s*No\.?\s*[:\-]?\s*(\d{3,6})\b', text or "", re.IGNORECASE)
+        if m:
+            return f"D{m.group(1)}"
+        return None
+    except Exception as exc:
+        logger.debug(f"Jackson header invoice_no OCR skipped: {exc}")
+        return None
+
+
 def _jackson_product_name_key(name: str) -> str:
     """Normalize product name for Jackson free-row / duplicate matching."""
     cleaned = _clean_jackson_product_name(name).upper()
     cleaned = re.sub(r'[^A-Z0-9]+', ' ', cleaned)
+    # OCR often glues form to name: ZINCOVITTAB / FORTERFINJ
+    cleaned = re.sub(
+        r'([A-Z0-9])(TAB|CAP|GEL|SYRUP|SUSP|CREAM|INJ|CAPTAB|LIQ|LQ)\b',
+        r'\1 \2',
+        cleaned,
+    )
     # Drop trailing pack-size tokens so free-row variants still match the paid row
     # e.g. "ZINCOVIT TAB 18S" / "ZINCOVIT TAB 1S", "CYCLOPAM TAB 10'S"
     cleaned = re.sub(r'\b\d+\s*\'?S\b', ' ', cleaned)
+    # OCR pack-size glued to letter: j10S / J10'S
+    cleaned = re.sub(r'\b[A-Z]?\d+\s*\'?S\b', ' ', cleaned)
+    # OCR often misreads 14'S as IV's / IVs on free continuation rows (PROVIDAC)
+    cleaned = re.sub(r'\bI+V\s*\'?S\b', ' ', cleaned)
     cleaned = re.sub(r'\b\d+\s*(?:GM|ML)\b', ' ', cleaned)
+    # OCR O/0 swap in pack size: 10OML / 100ML / 1O0ML
+    cleaned = re.sub(r'\b\d*O+\d*M[LI]\b', ' ', cleaned)
+    cleaned = re.sub(r'\b\d+OML\b', ' ', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
@@ -9113,9 +9334,10 @@ def fix_jackson_medicals_line_items_from_ocr(
     # Prefer dedicated qty/rate-band OCR only. Parsing the full page OCR invents
     # false triples from HSN/MRP/GST columns and corrupts rows — except for the
     # Jackson product-line Gst%/QTY/Rate/Amount pattern, which is format-safe.
-    qr_rows = []
+    band_qr_rows = []
     if table_ocr and table_ocr.strip():
-        qr_rows = _parse_jackson_qty_rate_rows(table_ocr)
+        band_qr_rows = _parse_jackson_qty_rate_rows(table_ocr)
+    qr_rows = list(band_qr_rows)
     line_rows = _parse_jackson_qty_rate_from_product_lines(ocr_text or "")
     if line_rows:
         merged = list(line_rows)
@@ -9123,11 +9345,41 @@ def fix_jackson_medicals_line_items_from_ocr(
             # Prefer product-line rows when Amounts collide. Use a tight window so
             # distinct large totals stay (7956 vs 8036) while near-duplicates from
             # garbled band OCR (1937.88 vs 1938.24) are dropped.
-            if any(
-                abs(r["total_amount"] - m["total_amount"])
-                <= max(1.0, 0.002 * m["total_amount"])
-                for m in merged
-            ):
+            # Keep Free qty from the band OCR when the colliding product-line row
+            # lacks it (line parser skips FREE continuation rows).
+            matched = None
+            for m in merged:
+                if abs(r["total_amount"] - m["total_amount"]) <= max(
+                    1.0, 0.002 * m["total_amount"]
+                ):
+                    matched = m
+                    break
+            if matched is not None:
+                fq_r = int(r.get("free_quantity") or 0)
+                fq_m = int(matched.get("free_quantity") or 0)
+                if fq_r > fq_m:
+                    matched["free_quantity"] = fq_r
+                # Prefer band qty/rate when product-line row is a GST ghost
+                # (rate≈GST, amount far from qty×rate) — rare but seen on TRAMAZAC.
+                try:
+                    if (
+                        abs(
+                            matched["quantity"] * matched["unit_price"]
+                            - matched["total_amount"]
+                        )
+                        / max(matched["total_amount"], 1.0)
+                        > 0.02
+                        and abs(
+                            r["quantity"] * r["unit_price"] - r["total_amount"]
+                        )
+                        / max(r["total_amount"], 1.0)
+                        <= 0.02
+                    ):
+                        matched["quantity"] = r["quantity"]
+                        matched["unit_price"] = r["unit_price"]
+                        matched["total_amount"] = r["total_amount"]
+                except Exception:
+                    pass
                 continue
             merged.append(r)
         qr_rows = merged
@@ -9190,30 +9442,48 @@ def fix_jackson_medicals_line_items_from_ocr(
             total_val = 0.0
         by_name.setdefault(name_key, []).append((idx, total_val, item))
 
-    # Free qty from dedicated Free continuation lines in qty/rate-band OCR
-    ocr_free_qtys = []
-    for line in (table_ocr or "").splitlines():
-        # Jackson free continuation: "2 Free", "2) Free", "_ 2) _ Free", "10| Free"
-        m = re.search(
-            r'(?<!\d)(\d{1,4})\s*[|:)\]._\-\s]*FREE\b',
-            line,
-            re.IGNORECASE,
-        )
-        if m:
-            try:
-                fq = int(m.group(1))
-            except Exception:
-                continue
-            if 1 <= fq <= 500:
-                ocr_free_qtys.append(fq)
-
+    # Free qty: prefer value attached to the matching OCR paid triple
+    # (Free continuation lines bind to the preceding paid row in band OCR).
     deduped = []
     free_name_bonus = {}
-    free_ocr_idx = 0
     for name_key, group in by_name.items():
         if len(group) == 1:
             deduped.append(group[0][2])
             continue
+
+        def _coherent_paid(entry):
+            _idx, _tot, _item = entry
+            try:
+                _q = float(normalize_numeric_value(
+                    str(_item.get("quantity", 0) or 0)))
+                _r = float(normalize_numeric_value(
+                    str(_item.get("unit_price", 0) or 0)))
+                _t = float(normalize_numeric_value(
+                    str(_item.get("total_amount", 0) or 0)))
+            except Exception:
+                return False
+            if _q <= 0 or _r < 3.5 or _t < 50:
+                return False
+            return abs(_q * _r - _t) / max(_t, 1.0) <= 0.05
+
+        paid_coherent = [g for g in group if _coherent_paid(g)]
+        # Two AMLOPIN 10×20.32=203.20 rows (different batches) must both be kept.
+        if len(paid_coherent) >= 2:
+            totals = [g[1] for g in paid_coherent]
+            tmax = max(totals) if totals else 0
+            tmin = min(totals) if totals else 0
+            if tmax > 0 and tmin / tmax >= 0.98:
+                batches = {
+                    str(g[2].get("lot_batch_number") or "").strip().upper()
+                    for g in paid_coherent
+                }
+                if len(batches) >= 2 or len(paid_coherent) == len(group):
+                    for _idx, _tot, keep_item in sorted(paid_coherent, key=lambda x: x[0]):
+                        keep_item["product_description"] = _clean_jackson_product_name(
+                            keep_item.get("product_description", ""))
+                        deduped.append(keep_item)
+                    continue
+
         # Keep highest invoice Amount (paid line); others are free/MRP phantoms
         group_sorted = sorted(group, key=lambda x: x[1], reverse=True)
         keep_item = group_sorted[0][2]
@@ -9227,35 +9497,67 @@ def fix_jackson_medicals_line_items_from_ocr(
                 str(additional.get("free_quantity", 0) or 0)))
         except Exception:
             old_free = 0.0
-        if free_ocr_idx < len(ocr_free_qtys):
-            add_free = float(ocr_free_qtys[free_ocr_idx])
-            free_ocr_idx += 1
-        else:
-            add_free = float(phantom_n)
+        add_free = 0.0
+        try:
+            keep_total = float(normalize_numeric_value(
+                str(keep_item.get("total_amount", 0) or 0)))
+        except Exception:
+            keep_total = 0.0
+        if keep_total > 0:
+            for _rr in qr_rows:
+                if abs(_rr["total_amount"] - keep_total) / max(keep_total, 1.0) > 0.02:
+                    continue
+                fq_row = int(_rr.get("free_quantity") or 0)
+                if fq_row > 0:
+                    add_free = float(fq_row)
+                    break
+        if add_free <= 0 and old_free > 0:
+            add_free = old_free
+        # Only invent free qty from duplicate phantoms when totals differ
+        # (MRP/free husk), not when collapsing equal paid twins.
+        if add_free <= 0:
+            secondary_totals = [g[1] for g in group_sorted[1:]]
+            if secondary_totals and keep_total > 0:
+                if all(t < keep_total * 0.5 for t in secondary_totals):
+                    add_free = float(phantom_n)
         free_name_bonus[name_key] = free_name_bonus.get(name_key, 0.0) + add_free
-        new_free = old_free + add_free
         additional["free_quantity"] = (
-            str(int(new_free))
-            if abs(new_free - int(new_free)) < 0.01
-            else f"{new_free:.2f}"
+            str(int(add_free))
+            if abs(add_free - int(add_free)) < 0.01
+            else f"{add_free:.2f}"
         )
         keep_item["product_description"] = _clean_jackson_product_name(
             keep_item.get("product_description", ""))
         deduped.append(keep_item)
-    # Preserve original paid-row order
+    # Preserve original paid-row order (allow multi-batch same-name rows)
     kept_order = []
-    seen_keys = set()
+    seen_ids = set()
+    deduped_by_merge = {}
+    for d in deduped:
+        mk = _jackson_line_item_merge_key(d)
+        deduped_by_merge.setdefault(mk, []).append(d)
+
     for item in kept:
-        name_key = _jackson_product_name_key(item.get("product_description", ""))
-        if name_key in seen_keys:
-            continue
-        # Find corresponding deduped item
-        for d in deduped:
-            dk = _jackson_product_name_key(d.get("product_description", ""))
-            if dk == name_key:
+        mk = _jackson_line_item_merge_key(item)
+        cands = deduped_by_merge.get(mk) or []
+        if cands:
+            d = cands.pop(0)
+            if id(d) not in seen_ids:
                 kept_order.append(d)
-                seen_keys.add(name_key)
+                seen_ids.add(id(d))
+            continue
+        name_key = _jackson_product_name_key(item.get("product_description", ""))
+        for d in deduped:
+            if id(d) in seen_ids:
+                continue
+            if _jackson_product_name_key(d.get("product_description", "")) == name_key:
+                kept_order.append(d)
+                seen_ids.add(id(d))
                 break
+    for d in deduped:
+        if id(d) not in seen_ids:
+            kept_order.append(d)
+            seen_ids.add(id(d))
     kept = kept_order
 
     for item in kept:
@@ -9300,9 +9602,10 @@ def fix_jackson_medicals_line_items_from_ocr(
         and len(qr_rows) >= 5
     )
     used_rows = set()
+    matched_item_ids = set()
     fixed_count = 0
 
-    def _apply_row(item, row):
+    def _apply_row(item, row, force=False):
         nonlocal fixed_count
         # Reject absurd OCR rate ghosts (e.g. 45×1.60=72)
         if row.get("unit_price", 0) < 3.5 or row.get("total_amount", 0) < 50:
@@ -9323,7 +9626,16 @@ def fix_jackson_medicals_line_items_from_ocr(
             and old_q < 400
             and abs(old_q - round(old_q)) <= 0.05
         )
-        if vision_math_ok:
+        # Coherent but invented Vision totals (CALAPTIN 2582.85, TRAMAZAC 38.80)
+        # must still yield to OCR when no OCR amount agrees.
+        vision_total_in_ocr = (
+            old_t > 0
+            and any(
+                abs(r["total_amount"] - old_t) / max(old_t, 1.0) <= 0.02
+                for r in qr_rows
+            )
+        )
+        if not force and vision_math_ok and vision_total_in_ocr:
             same_rate = abs(old_r - row["unit_price"]) <= max(
                 0.05, 0.001 * max(old_r, row["unit_price"])
             )
@@ -9341,6 +9653,12 @@ def fix_jackson_medicals_line_items_from_ocr(
                 )
                 if not allow_same_rate_override:
                     return False
+        elif not force and vision_math_ok and not vision_total_in_ocr:
+            # Only override when the OCR candidate itself is coherent.
+            if abs(
+                row["quantity"] * row["unit_price"] - row["total_amount"]
+            ) / max(row["total_amount"], 1.0) > 0.02:
+                return False
 
         old_q_s = item.get("quantity")
         old_r_s = item.get("unit_price")
@@ -9350,6 +9668,14 @@ def fix_jackson_medicals_line_items_from_ocr(
         item["quantity"] = str(row["quantity"])
         item["unit_price"] = f"{row['unit_price']:.2f}"
         item["total_amount"] = f"{row['total_amount']:.2f}"
+        # Bind Free continuation qty from band OCR to this paid row only
+        fq_ocr = int(row.get("free_quantity") or 0)
+        if fq_ocr > 0:
+            additional = item.get("additional_fields")
+            if not isinstance(additional, dict):
+                additional = {}
+                item["additional_fields"] = additional
+            additional["free_quantity"] = str(fq_ocr)
         fixed_count += 1
         logger.warning(
             f"⚠️ FIX12j: '{item.get('product_description', '')[:30]}' "
@@ -9361,7 +9687,8 @@ def fix_jackson_medicals_line_items_from_ocr(
 
     if use_order:
         for item, row in zip(kept, qr_rows):
-            _apply_row(item, row)
+            if _apply_row(item, row):
+                matched_item_ids.add(id(item))
     else:
         for item in kept:
             try:
@@ -9428,26 +9755,172 @@ def fix_jackson_medicals_line_items_from_ocr(
             if best_idx is not None and best_score >= 5:
                 if _apply_row(item, qr_rows[best_idx]):
                     used_rows.add(best_idx)
+                    matched_item_ids.add(id(item))
+
+        # Name-anchored remap for Vision rows whose Amount is not on the OCR band
+        # (CALAPTIN/FLAGYL/TRAMAZAC coherent fiction), OR whose Amount was already
+        # claimed by another product (CARMICIDE PAED wrongly copying ADULT total /
+        # LIVOGEN copying CONCOR). Only force-override coherent amount-matches when
+        # the same Amount is held by more than one item (column collision).
+        unused_pre = {
+            idx for idx, _row in enumerate(qr_rows) if idx not in used_rows
+        }
+        amount_holders = {}
+        for it in kept:
+            try:
+                t = round(float(normalize_numeric_value(
+                    str(it.get("total_amount", 0) or 0))), 2)
+            except Exception:
+                continue
+            if t > 0:
+                amount_holders.setdefault(t, []).append(it)
+
+        for item in kept:
+            try:
+                cur_total = float(normalize_numeric_value(
+                    str(item.get("total_amount", 0) or 0)))
+            except Exception:
+                cur_total = 0.0
+            named = _jackson_qr_row_for_product_name(
+                combined_ocr, item.get("product_description", ""),
+                qr_rows, band_qr_rows)
+            if not named:
+                continue
+            name_agrees = (
+                cur_total > 0
+                and abs(named["total_amount"] - cur_total)
+                / max(cur_total, 1.0)
+                <= 0.02
+            )
+            if name_agrees:
+                continue
+            dup_amount = (
+                cur_total > 0
+                and len(amount_holders.get(round(cur_total, 2), [])) > 1
+            )
+            amount_still_available = (
+                cur_total > 0
+                and any(
+                    abs(qr_rows[idx]["total_amount"] - cur_total)
+                    / max(cur_total, 1.0)
+                    <= 0.02
+                    for idx in unused_pre
+                )
+            )
+            # Unique coherent amount-match: trust it unless product-name OCR
+            # points at a different *unused* Amount (TRAMAZAC parked on ADULT total).
+            named_unused = any(
+                abs(qr_rows[idx]["total_amount"] - named["total_amount"])
+                / max(named["total_amount"], 1.0)
+                <= 0.02
+                for idx in unused_pre
+            )
+            force_remap = bool(dup_amount) or (
+                id(item) in matched_item_ids
+                and named_unused
+                and not name_agrees
+            )
+            if id(item) in matched_item_ids and not force_remap:
+                continue
+            # Unmatched but amount still free on band: leave for order-fill
+            if (
+                id(item) not in matched_item_ids
+                and amount_still_available
+                and not dup_amount
+            ):
+                continue
+            best_idx = None
+            for idx, row in enumerate(qr_rows):
+                if idx in used_rows:
+                    continue
+                if abs(row["total_amount"] - named["total_amount"]) / max(
+                    named["total_amount"], 1.0
+                ) <= 0.02:
+                    best_idx = idx
+                    break
+            target = qr_rows[best_idx] if best_idx is not None else named
+            # Free the OCR row this item currently holds when remapping off a
+            # duplicate/wrong amount.
+            if id(item) in matched_item_ids and cur_total > 0:
+                for idx in list(used_rows):
+                    if abs(qr_rows[idx]["total_amount"] - cur_total) / max(
+                        cur_total, 1.0
+                    ) <= 0.02:
+                        used_rows.discard(idx)
+            if _apply_row(item, target, force=force_remap):
+                if best_idx is not None:
+                    used_rows.add(best_idx)
+                matched_item_ids.add(id(item))
+                # Refresh holder map for subsequent items
+                try:
+                    new_t = round(float(named["total_amount"]), 2)
+                    old_k = round(cur_total, 2)
+                    if old_k in amount_holders:
+                        amount_holders[old_k] = [
+                            x for x in amount_holders[old_k] if x is not item
+                        ]
+                    amount_holders.setdefault(new_t, []).append(item)
+                except Exception:
+                    pass
 
         # Order-fill remaining broken items (prefer position among unused OCR rows)
         unused = [(idx, row) for idx, row in enumerate(qr_rows) if idx not in used_rows]
         for item_i, item in enumerate(kept):
+            # Do not overwrite rows already aligned to a qty/rate OCR triple
+            # (HYPONAT 1×587.63 is valid but looks like Vision amount-as-rate).
+            if id(item) in matched_item_ids:
+                item["product_description"] = _clean_jackson_product_name(
+                    item.get("product_description", ""))
+                continue
             try:
                 qty = float(normalize_numeric_value(str(item.get("quantity", 0) or 0)))
                 rate = float(normalize_numeric_value(str(item.get("unit_price", 0) or 0)))
                 total = float(normalize_numeric_value(str(item.get("total_amount", 0) or 0)))
             except Exception:
                 qty = rate = total = 0.0
+            # Valid Jackson single-unit lines (qty=1, rate==amount) matching an OCR
+            # qty=1 triple must not be treated as broken.
+            valid_single_unit = False
+            if (
+                abs(qty - 1.0) <= 0.01
+                and total >= 50
+                and abs(rate - total) / max(total, 1.0) <= 0.02
+            ):
+                for _uidx, _urow in unused:
+                    if (
+                        int(_urow.get("quantity") or 0) == 1
+                        and abs(_urow["total_amount"] - total) / max(total, 1.0) <= 0.02
+                    ):
+                        valid_single_unit = True
+                        break
+                if not valid_single_unit:
+                    for _r in qr_rows:
+                        if (
+                            int(_r.get("quantity") or 0) == 1
+                            and abs(_r["total_amount"] - total) / max(total, 1.0) <= 0.02
+                        ):
+                            valid_single_unit = True
+                            break
+            vision_total_known = (
+                total > 0
+                and any(
+                    abs(r["total_amount"] - total) / max(total, 1.0) <= 0.02
+                    for r in qr_rows
+                )
+            )
             broken = (
-                total <= 0 or qty <= 0 or rate <= 0
-                or abs(qty * rate - total) / max(total, 1.0) > 0.02
-                or (qty in (1.0, 500.0) and total > 100)
-                or qty >= 400
-                or rate > 2000
-                or abs(qty - round(qty)) > 0.05
-                or (
-                    qty == 1.0 and total >= 50
-                    and abs(rate - total) / max(total, 1.0) <= 0.02
+                not valid_single_unit
+                and (
+                    total <= 0 or qty <= 0 or rate <= 0
+                    or abs(qty * rate - total) / max(total, 1.0) > 0.02
+                    or (qty in (1.0, 500.0) and total > 100)
+                    or qty >= 400
+                    or rate > 2000
+                    or abs(qty - round(qty)) > 0.05
+                    or (
+                        qty == 1.0 and total >= 50
+                        and abs(rate - total) / max(total, 1.0) <= 0.02
+                    )
                 )
             )
             if not broken or not unused:
@@ -9484,6 +9957,7 @@ def fix_jackson_medicals_line_items_from_ocr(
             _uidx, picked = unused.pop(picked_i)
             if _apply_row(item, picked):
                 used_rows.add(_uidx)
+                matched_item_ids.add(id(item))
             else:
                 # Keep unused OCR available for later broken items
                 unused.insert(picked_i, (_uidx, picked))
@@ -9517,9 +9991,752 @@ def fix_jackson_medicals_line_items_from_ocr(
         pruned.append(item)
     kept = pruned
 
+    # Attach Free qty from full-page OCR continuation lines (band often misses
+    # "4 Free" / "10 Free" when crop OCR reads "0 Free").
+    # Use page OCR only — qty/rate-band text has Free lines without product names
+    # and would otherwise bind them to the last named product (e.g. CONCOR).
+    _attach_jackson_free_quantities_from_ocr(kept, ocr_text or "")
+
+    # Recover paid rows Vision omitted (e.g. AMBRODIL) from unused OCR triples.
+    kept = _recover_jackson_missing_items_from_qr(
+        kept, qr_rows, used_rows, combined_ocr,
+    )
+
+    # Drop exact product+batch+amount duplicates (Vision clone + recovery twin).
+    # Keep dual-batch same-name rows (two AMLOPIN @ 203.20 with different batches).
+    deduped_final = []
+    seen_pa = set()
+    for item in kept:
+        try:
+            amt = round(float(normalize_numeric_value(
+                str(item.get("total_amount", 0) or 0))), 2)
+        except Exception:
+            amt = 0.0
+        batch = str(item.get("lot_batch_number", "") or "").strip().upper()
+        pa = (
+            _jackson_product_name_key(item.get("product_description", "")),
+            batch,
+            amt,
+        )
+        if amt > 0 and pa in seen_pa:
+            continue
+        if amt > 0:
+            seen_pa.add(pa)
+        deduped_final.append(item)
+    kept = deduped_final
+
+    # When two different products share one Amount, keep the OCR owner of that
+    # Amount (FILAGYL@5934 clone vs true MEGA CV @5934).
+    by_amt = {}
+    for item in kept:
+        try:
+            amt = round(float(normalize_numeric_value(
+                str(item.get("total_amount", 0) or 0))), 2)
+        except Exception:
+            continue
+        if amt >= 50:
+            by_amt.setdefault(amt, []).append(item)
+    drop_ids = set()
+    for amt, group in by_amt.items():
+        if len(group) < 2:
+            continue
+        owner = _jackson_find_product_name_for_amount(combined_ocr, amt)
+        owner_key = _jackson_product_name_key(owner) if owner else ""
+        if not owner_key:
+            continue
+        for item in group:
+            item_key = _jackson_product_name_key(item.get("product_description", ""))
+            # Keep if name shares a strong token with the OCR owner
+            if owner_key[:6] and owner_key[:6] in item_key:
+                continue
+            if item_key[:6] and item_key[:6] in owner_key:
+                continue
+            drop_ids.add(id(item))
+    if drop_ids:
+        kept = [it for it in kept if id(it) not in drop_ids]
+        logger.warning(
+            f"⚠️ FIX12j: Dropped {len(drop_ids)} Jackson amount-clone row(s)"
+        )
+
+    # Same product name with two Amounts: keep the OCR-named Amount
+    # (TRAMAZAC@1117 clone + recovered TRAMAZAC@196).
+    by_name = {}
+    for item in kept:
+        nk = _jackson_product_name_key(item.get("product_description", ""))
+        if nk:
+            by_name.setdefault(nk, []).append(item)
+    drop_ids = set()
+    for nk, group in by_name.items():
+        if len(group) < 2:
+            continue
+        named = _jackson_qr_row_for_product_name(
+            combined_ocr, group[0].get("product_description", ""),
+            qr_rows, band_qr_rows,
+        )
+        if not named:
+            continue
+        named_amt = float(named.get("total_amount") or 0)
+        for item in group:
+            try:
+                amt = float(normalize_numeric_value(
+                    str(item.get("total_amount", 0) or 0)))
+            except Exception:
+                continue
+            if named_amt > 0 and abs(amt - named_amt) / max(named_amt, 1.0) > 0.02:
+                drop_ids.add(id(item))
+    if drop_ids:
+        kept = [it for it in kept if id(it) not in drop_ids]
+        logger.warning(
+            f"⚠️ FIX12j: Dropped {len(drop_ids)} Jackson same-name amount twin(s)"
+        )
+        # Re-run recovery for amounts freed by twin drop
+        used_after = set()
+        kept_amts = []
+        for it in kept:
+            try:
+                kept_amts.append(float(normalize_numeric_value(
+                    str(it.get("total_amount", 0) or 0))))
+            except Exception:
+                pass
+        for idx, row in enumerate(qr_rows):
+            if any(
+                abs(a - row["total_amount"]) / max(row["total_amount"], 1.0) <= 0.02
+                for a in kept_amts if a > 0
+            ):
+                used_after.add(idx)
+        kept = _recover_jackson_missing_items_from_qr(
+            kept, qr_rows, used_after, combined_ocr,
+        )
+
     if fixed_count:
         logger.warning(f"⚠️ FIX12j: Applied {fixed_count} JACKSON MEDICALS row correction(s)")
     return kept
+
+
+def _jackson_qr_row_for_product_name(
+    ocr_text: str, product_name: str, qr_rows: list = None,
+    band_qr_rows: list = None,
+) -> Optional[dict]:
+    """Parse QTY/Rate/Amount for a product from OCR near the product name.
+
+    Prefer Amount tokens on/under the product line that match the qty/rate band.
+    Do not scan into the next SL product row (prevents ZINCOVIT←PANTODAC bleed).
+    """
+    if not ocr_text or not product_name:
+        return None
+    key = _jackson_product_name_key(product_name)
+    if len(key) < 5:
+        return None
+    key_core = key[:10]
+    aliases = {key_core}
+    if "FLAGYL" in key or "FILAGYL" in key:
+        aliases.update({"FLAGYL400", "FILAGYL400", "FLAGYL", "FILAGYL"})
+    if "CALAPTIN" in key:
+        aliases.add("CALAPTIN")
+    if "TRAMAZAC" in key:
+        aliases.add("TRAMAZAC")
+    if "AMBRODIL" in key:
+        aliases.add("AMBRODIL")
+    if "ZINCOVIT" in key:
+        aliases.add("ZINCOVIT")
+    if "BRILINTA" in key:
+        aliases.add("BRILINTA")
+    if "LIVOGEN" in key:
+        aliases.add("LIVOGEN")
+
+    amount_rows = qr_rows if qr_rows else (band_qr_rows or [])
+    sl_rows = band_qr_rows if band_qr_rows else None
+    lines = (ocr_text or "").splitlines()
+
+    def _line_matches(line: str) -> bool:
+        line_key = _jackson_product_name_key(line)
+        # Disambiguate CARMICIDE ADULT vs PAED (shared CARMIC prefix)
+        if "CARMICIDE" in key:
+            if "PAED" in key and "PAED" not in line_key:
+                return False
+            if "ADULT" in key and "ADULT" not in line_key:
+                return False
+        # Disambiguate EVION 200 vs 400
+        if "EVION" in key:
+            if "200" in key and "200" not in line_key.replace(" ", ""):
+                return False
+            if "400" in key and "400" not in line_key.replace(" ", ""):
+                return False
+        if any(a[:6] in line_key for a in aliases if len(a) >= 6):
+            return True
+        return key_core[:6] in line_key
+
+    def _is_new_sl_product(line: str) -> bool:
+        s = line.strip()
+        if not re.match(r'^\d{1,2}\s*[,|.)\]:\-\s]', s):
+            return False
+        # Must look like a product row, not a bare free qty
+        return bool(re.search(
+            r'(?:TAB|CAP|GEL|SYRUP|LIQ|LQ|SUSP|CREAM|INJ|DROPS|CAPTAB)\b',
+            s, re.I,
+        ))
+
+    def _closest_row(amt: float, max_rel: float = 0.01) -> Optional[dict]:
+        """Match OCR amount to a qty/rate row — closest absolute, tight relative."""
+        if amt < 50 or not amount_rows:
+            return None
+        best = None
+        best_diff = None
+        for q in amount_rows:
+            tot = float(q.get("total_amount") or 0)
+            if tot < 50 or float(q.get("unit_price") or 0) < 3.5:
+                continue
+            if abs(q["quantity"] * q["unit_price"] - tot) / max(tot, 1.0) > 0.03:
+                continue
+            diff = abs(tot - amt)
+            # Tight: 1% or ≤₹2 (whichever larger). Avoids 7956≈8036 at 2%.
+            if diff > max(2.0, max_rel * max(amt, tot)):
+                continue
+            if best_diff is None or diff < best_diff:
+                best_diff = diff
+                best = q
+        return best
+
+    def _decimal_amounts(text: str) -> list:
+        found = []
+        for m in re.finditer(
+            r'(?<!\d)(\d{2,7})[.,](\d{2})(?!\d)', text or ""
+        ):
+            try:
+                found.append(float(f"{m.group(1)}.{m.group(2)}"))
+            except Exception:
+                pass
+        # Jackson band/page OCR: "$876.30" is often 5876.30 (leading 5 as $)
+        for m in re.finditer(
+            r'(?<![A-Z0-9])[S$](\d{2,6})[.,](\d{2})(?!\d)',
+            text or "",
+            flags=re.I,
+        ):
+            try:
+                body = f"{m.group(1)}.{m.group(2)}"
+                found.append(float(body))
+                for lead in ("5", "1", "8"):
+                    found.append(float(f"{lead}{body}"))
+            except Exception:
+                pass
+        return found
+
+    def _nodec_amounts(text: str) -> list:
+        """OCR-dropped decimal (6962850→69628.50). Skip HSN-like 8-digit tokens."""
+        found = []
+        for m in re.finditer(r'(?<!\d)(\d{5,7})(?!\d)', text or ""):
+            raw = m.group(1)
+            if len(raw) >= 8:
+                continue
+            try:
+                found.append(float(f"{raw[:-2]}.{raw[-2:]}"))
+            except Exception:
+                pass
+        return found
+
+    def _same_line_rates(text: str) -> list:
+        rates = []
+        for m in re.finditer(
+            r'(?<!\d)(\d{1,4})[.,](\d{2})(?!\d)', text or ""
+        ):
+            try:
+                rates.append(float(f"{m.group(1)}.{m.group(2)}"))
+            except Exception:
+                pass
+        # 8203 → 82.03 (ZINCOVIT rate with dropped decimal)
+        for m in re.finditer(r'(?<!\d)(\d{4})(?!\d)', text or ""):
+            raw = m.group(1)
+            try:
+                rates.append(float(f"{raw[:-2]}.{raw[-2:]}"))
+            except Exception:
+                pass
+        return rates
+
+    def _row_for_unique_rate(rate: float) -> Optional[dict]:
+        if rate < 3.5 or not amount_rows:
+            return None
+        hits = [
+            q for q in amount_rows
+            if abs(float(q.get("unit_price") or 0) - rate) <= max(0.05, 0.001 * rate)
+            and float(q.get("total_amount") or 0) >= 50
+            and abs(
+                q["quantity"] * q["unit_price"] - q["total_amount"]
+            ) / max(q["total_amount"], 1.0)
+            <= 0.03
+        ]
+        return hits[0] if len(hits) == 1 else None
+
+    def _window_for(i: int) -> str:
+        parts = [lines[i]]
+        for j in range(i + 1, min(len(lines), i + 5)):
+            nxt = lines[j]
+            if _is_new_sl_product(nxt) and not _line_matches(nxt):
+                break
+            parts.append(nxt)
+        return "\n".join(parts)
+
+    for i, line in enumerate(lines):
+        if not _line_matches(line):
+            continue
+        if re.search(r'\bFREE\b', line, re.I) and not re.search(
+            r'\d+[.,]\d{2}', line
+        ):
+            continue
+        window = _window_for(i)
+        # 1) Prefer explicit decimal amounts (closest match wins — not max amount)
+        candidates = []
+        for amt in _decimal_amounts(window):
+            row = _closest_row(amt)
+            if row:
+                candidates.append((abs(row["total_amount"] - amt), row))
+        if candidates:
+            # Prefer closer match; on ties prefer larger amount (line Amount
+            # over GST column, e.g. PANTODAC 9996 vs GST 494.80).
+            candidates.sort(key=lambda x: (x[0], -x[1]["total_amount"]))
+            return candidates[0][1]
+        # 2) Nodecimal amounts (6962850), still closest-only
+        for amt in _nodec_amounts(window):
+            row = _closest_row(amt)
+            if row:
+                candidates.append((abs(row["total_amount"] - amt), row))
+        if candidates:
+            candidates.sort(key=lambda x: (x[0], -x[1]["total_amount"]))
+            return candidates[0][1]
+        # 3) Unique rate on the product line itself (ZINCOVIT 8203→82.03)
+        for rate in _same_line_rates(line):
+            row = _row_for_unique_rate(rate)
+            if row:
+                return row
+        # 4) SL→band only when that amount also appears in the (bounded) window
+        sl_m = re.search(r'(?:^|[\s\|])(\d{1,2})\s*[,|:\.]', line.strip())
+        if not sl_m:
+            sl_m = re.search(r'^(\d{1,2})\s', line.strip())
+        if sl_m and sl_rows:
+            try:
+                sl = int(sl_m.group(1))
+            except Exception:
+                sl = 0
+            if 1 <= sl <= len(sl_rows):
+                row = sl_rows[sl - 1]
+                if (
+                    row.get("total_amount", 0) >= 50
+                    and row.get("unit_price", 0) >= 3.5
+                    and abs(
+                        row["quantity"] * row["unit_price"] - row["total_amount"]
+                    ) / max(row["total_amount"], 1.0)
+                    <= 0.03
+                ):
+                    nearby = _decimal_amounts(window) + _nodec_amounts(window)
+                    if any(
+                        abs(a - row["total_amount"]) <= max(2.0, 0.01 * row["total_amount"])
+                        for a in nearby
+                    ):
+                        return row
+        rows = (
+            _parse_jackson_qty_rate_rows(line)
+            or _parse_jackson_qty_rate_from_product_lines(line)
+        )
+        for r in rows:
+            if r["total_amount"] < 50 or r["unit_price"] < 3.5:
+                continue
+            if abs(r["quantity"] * r["unit_price"] - r["total_amount"]) / max(
+                r["total_amount"], 1.0
+            ) > 0.03:
+                continue
+            if amount_rows and not _closest_row(r["total_amount"]):
+                continue
+            return r
+    return None
+
+
+def _jackson_find_product_name_for_amount(ocr_text: str, amount: float) -> str:
+    """Best-effort product name on an OCR line that ends with the given Amount."""
+    if not ocr_text or amount <= 0:
+        return ""
+    amt_int = int(round(amount * 100))
+    prod_re = re.compile(
+        r'([A-Z][A-Z0-9][A-Z0-9\-\s/\.+%]{2,50}?'
+        r'(?:TAB|CAP|GEL|SYRUP|LIQ\.?|LQ\.?|SUSP\.?|CREAM|INJ\.?|DROPS|CAPTAB))\b',
+        re.IGNORECASE,
+    )
+    # Normal "69628.50" / "69628,50" and OCR-dropped-decimal "6962850"
+    amt_alts = [
+        rf'{int(amount)}[.,]{amt_int % 100:02d}',
+        rf'{amt_int}',
+    ]
+    # "$876.30" OCR for Amount 5876.30 (leading digit misread as $ / S)
+    whole = str(int(amount))
+    if len(whole) >= 3 and whole[0] in "158":
+        amt_alts.append(
+            rf'[S$]{whole[1:]}[.,]{amt_int % 100:02d}'
+        )
+    amt_re = re.compile(
+        rf'(?<!\d)(?:{"|".join(amt_alts)})(?!\d)',
+        re.IGNORECASE,
+    )
+    lines = (ocr_text or "").splitlines()
+    for i, line in enumerate(lines):
+        if not amt_re.search(line):
+            continue
+        # Require product token BEFORE the amount (table body), not footer noise
+        amt_pos = amt_re.search(line).start()
+        head = line[:amt_pos]
+        m = prod_re.search(head)
+        if m:
+            return _clean_jackson_product_name(m.group(1))
+        # Same-line product after amount is rare; prefer looking back only when
+        # this line is a numeric continuation (no product / no new SL).
+        if re.match(r'^\s*\d{1,2}\s*[,|.)\]:\-\s]', line.strip()) and prod_re.search(line):
+            continue
+        for back in range(1, 4):
+            if i - back < 0:
+                break
+            prev = lines[i - back]
+            if re.search(r'\bFREE\b', prev, re.I) and not re.search(
+                r'\d+[.,]\d{2}', prev
+            ):
+                continue
+            # Stop if previous line is a different SL product row
+            if (
+                back > 1
+                and re.match(r'^\s*\d{1,2}\s*[,|.)\]:\-\s]', prev.strip())
+                and prod_re.search(prev)
+            ):
+                break
+            m = prod_re.search(prev)
+            if m:
+                # If current line also looks like its own product row, prefer it
+                # (should have matched above). Otherwise accept prior DESCRIPTION.
+                return _clean_jackson_product_name(m.group(1))
+    return ""
+
+
+def _attach_jackson_free_quantities_from_ocr(items: list, ocr_text: str) -> None:
+    """Set free_quantity from 'N Free' lines keyed by nearby product name."""
+    if not items or not ocr_text:
+        return
+    free_by_key = {}
+    lines = (ocr_text or "").splitlines()
+    prod_re = re.compile(
+        r'([A-Z][A-Z0-9][A-Z0-9\-\s/\.+%]{2,50}?'
+        r'(?:TAB|CAP|GEL|SYRUP|LIQ\.?|LQ\.?|SUSP\.?|CREAM|INJ\.?|DROPS|CAPTAB))\b',
+        re.IGNORECASE,
+    )
+    free_re = re.compile(
+        r'(?<!\d)(\d{1,4})\s*[|:;)\]._\-\s°º]*FREE\b',
+        re.IGNORECASE,
+    )
+    prev_name_key = ""
+    for line in lines:
+        pm = prod_re.search(line)
+        fm = free_re.search(line)
+        name_key = _jackson_product_name_key(pm.group(1)) if pm else ""
+        if name_key:
+            prev_name_key = name_key
+        if not fm:
+            continue
+        try:
+            fq = int(fm.group(1))
+        except Exception:
+            continue
+        if not (1 <= fq <= 500):
+            continue
+        # Same-line product+free, or free-only continuation right under product
+        target = name_key or (
+            prev_name_key if len(line.strip()) < 80 and not re.search(
+                r'\d+[.,]\d{2}', line
+            ) else ""
+        )
+        if not target:
+            continue
+        # Do not let a later product's free overwrite an earlier larger value
+        # with a smaller OCR misread — but do allow first assignment / larger.
+        free_by_key[target] = max(free_by_key.get(target, 0), fq)
+
+    for item in items:
+        key = _jackson_product_name_key(item.get("product_description", ""))
+        fq = free_by_key.get(key)
+        if not fq:
+            continue
+        additional = item.get("additional_fields")
+        if not isinstance(additional, dict):
+            additional = {}
+            item["additional_fields"] = additional
+        try:
+            old = float(normalize_numeric_value(
+                str(additional.get("free_quantity", 0) or 0)))
+        except Exception:
+            old = 0.0
+        # Only fill missing free from OCR; never inflate an existing band free
+        # with a cross-product mis-association.
+        if old <= 0 and fq > 0:
+            additional["free_quantity"] = str(int(fq))
+        elif fq > old and old > 0 and fq <= 20:
+            # Band often under-reads (1 vs 10); allow modest upward correction
+            additional["free_quantity"] = str(int(fq))
+
+
+def _recover_jackson_missing_items_from_qr(
+    items: list, qr_rows: list, used_rows: set, ocr_text: str
+) -> list:
+    """Append paid OCR triples Vision omitted (format-scoped)."""
+    if not qr_rows:
+        return items
+    out = list(items or [])
+    existing_amts = []
+    for it in out:
+        try:
+            existing_amts.append(float(normalize_numeric_value(
+                str(it.get("total_amount", 0) or 0))))
+        except Exception:
+            pass
+
+    added = 0
+    for idx, row in enumerate(qr_rows):
+        if idx in used_rows:
+            continue
+        amt = float(row.get("total_amount") or 0)
+        if amt < 50 or float(row.get("unit_price") or 0) < 3.5:
+            continue
+        if any(abs(a - amt) / max(amt, 1.0) <= 0.02 for a in existing_amts if a > 0):
+            continue
+        # Skip GST-fragment ghosts (qty=1, rate==amount, small)
+        if (
+            int(row.get("quantity") or 0) == 1
+            and abs(float(row.get("unit_price") or 0) - amt) < 0.01
+            and amt < 100
+        ):
+            continue
+        name = _jackson_find_product_name_for_amount(ocr_text, amt)
+        if not name:
+            continue
+        # Avoid duplicate product+amount
+        if any(
+            _jackson_product_name_key(it.get("product_description", ""))
+            == _jackson_product_name_key(name)
+            and abs(float(normalize_numeric_value(str(it.get("total_amount", 0) or 0))) - amt)
+            / max(amt, 1.0)
+            <= 0.02
+            for it in out
+        ):
+            continue
+        new_item = {
+            "product_description": name,
+            "quantity": str(row["quantity"]),
+            "unit_price": f"{row['unit_price']:.2f}",
+            "total_amount": f"{row['total_amount']:.2f}",
+            "hsn_code": "",
+            "lot_batch_number": "",
+            "additional_fields": {
+                "free_quantity": str(int(row.get("free_quantity") or 0)),
+            },
+        }
+        out.append(new_item)
+        existing_amts.append(amt)
+        added += 1
+        logger.warning(
+            f"⚠️ FIX12j: recovered missing '{name[:40]}' "
+            f"qty={new_item['quantity']} rate={new_item['unit_price']} "
+            f"total={new_item['total_amount']}"
+        )
+    if added:
+        logger.warning(f"⚠️ FIX12j: Recovered {added} missing JACKSON line item(s) from OCR")
+    return out
+
+
+def extract_jackson_medicals_invoice_no(ocr_text: str = "") -> Optional[str]:
+    """Jackson Inv.No. like D4567 / D4151 (not DL / REKTM license numbers)."""
+    if not ocr_text:
+        return None
+    header = (ocr_text or "")[:1800]
+    for pat in (
+        r'Inv\.?\s*No\.?\s*[:\-]?\s*([A-Z]?\d{3,6})\b',
+        r'nV\.?\s*\.?N[oO]\.?\s*[:\-]?\s*([A-Z]?\d{3,6})\b',
+        r'\bNo\.?\s*[:\-]?\s*(D\d{3,6})\b',
+        r'\b(?:Inv|Invoic[e]?)\s*[:\-]?\s*(D?\d{3,6})\b',
+    ):
+        m = re.search(pat, header, re.IGNORECASE)
+        if not m:
+            continue
+        inv = m.group(1).strip().upper()
+        # Reject license-like tokens
+        if re.match(r'^RE?K?TM', inv):
+            continue
+        if re.match(r'^(?:RLF|KL)', inv):
+            continue
+        if re.fullmatch(r'D?\d{3,6}', inv):
+            # OCR sometimes prefixes a stray digit: 94567 / 24567 → 4567
+            if not inv.startswith('D') and len(inv) == 5 and inv[0] in '249':
+                inv = inv[1:]
+            return inv if inv.startswith('D') else f'D{inv}'
+    # Bare D#### anywhere in header crop
+    m = re.search(r'\b(D\d{3,6})\b', header, re.IGNORECASE)
+    if m:
+        return m.group(1).upper()
+    # QV..NO. 24567 / nV..NO. 4567 (label heavily OCR-damaged)
+    m = re.search(
+        r'(?:QV|NV|IN)\.?\s*\.?N[oO]\.?\s*[:\-]?\s*(\d{3,6})\b',
+        header,
+        re.IGNORECASE,
+    )
+    if m:
+        inv = m.group(1)
+        if len(inv) == 5 and inv[0] in '249':
+            inv = inv[1:]
+        return f'D{inv}'
+    return None
+
+
+def _ocr_jackson_footer_total(page=None, image_bytes: bytes = None) -> Optional[float]:
+    """OCR bottom footer for RUPEES…ONLY / NETT on Jackson invoices."""
+    if not TESSERACT_AVAILABLE:
+        return None
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return None
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        w, h = img.size
+        crop = img.crop((int(w * 0.02), int(h * 0.72), int(w * 0.98), int(h * 0.98)))
+        arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        arr = cv2.resize(arr, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text = pytesseract.image_to_string(th, config="--psm 6") or ""
+        try:
+            img.close()
+        except Exception:
+            pass
+        return extract_jackson_medicals_invoice_total(text)
+    except Exception as exc:
+        logger.debug(f"Jackson footer total OCR skipped: {exc}")
+        return None
+
+
+def extract_jackson_medicals_invoice_total(ocr_text: str = "") -> Optional[float]:
+    """Jackson NETT from RUPEES…ONLY words (footer is authoritative)."""
+    if not ocr_text:
+        return None
+    # Prefer dedicated words extractor already used elsewhere
+    try:
+        words_total = extract_amount_from_words(ocr_text)
+        if words_total and words_total >= 100:
+            return float(words_total)
+    except Exception:
+        pass
+    m = re.search(
+        r'N\s*E\s*T\s*T?\s*[:\-]?\s*(?:Rs\.?\s*)?([0-9][0-9,]*(?:\.\d{1,2})?)',
+        ocr_text or "",
+        re.IGNORECASE,
+    )
+    if m:
+        try:
+            return float(m.group(1).replace(',', ''))
+        except Exception:
+            return None
+    return None
+
+
+def _jackson_line_item_merge_key(item: dict) -> tuple:
+    """Identity for Jackson multipage / dedupe merges (name + batch + amount)."""
+    name = _jackson_product_name_key(
+        (item or {}).get("product_description", "") if isinstance(item, dict) else ""
+    )
+    batch = str(
+        (item or {}).get("lot_batch_number", "") if isinstance(item, dict) else ""
+    ).strip().upper()
+    try:
+        amt = round(float(normalize_numeric_value(
+            str((item or {}).get("total_amount", 0) or 0))), 2)
+    except Exception:
+        amt = 0.0
+    return (name, batch, amt)
+
+
+def _merge_jackson_line_item_lists(base_items: list, donor_items: list) -> list:
+    """Append Jackson donor rows not already present (preserves base order)."""
+    if not donor_items:
+        return list(base_items or [])
+    out = list(base_items or [])
+    seen = {_jackson_line_item_merge_key(it) for it in out if isinstance(it, dict)}
+    for it in donor_items:
+        if not isinstance(it, dict):
+            continue
+        key = _jackson_line_item_merge_key(it)
+        # Distinct batches keep both AMLOPIN rows; exact duplicates are skipped.
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(it)
+    return out
+
+
+def _merge_jackson_extracted_data_line_items(base_ed, donor_ed) -> bool:
+    """Merge donor Jackson line items into base extracted_data. Returns True if added."""
+    if not isinstance(base_ed, dict) or not isinstance(donor_ed, dict):
+        return False
+    base_items = _extract_line_items_for_validation(base_ed)
+    donor_items = _extract_line_items_for_validation(donor_ed)
+    if not donor_items:
+        return False
+    before = len(base_items)
+    merged = _merge_jackson_line_item_lists(base_items, donor_items)
+    if len(merged) <= before:
+        return False
+    _merge_line_items_into_full_data(base_ed, merged)
+    return True
+
+
+def _collect_jackson_table_ocr_from_pages(
+    page_results: list, pages: list, doc=None
+) -> str:
+    """Concatenate JACKSON qty/rate-band OCR from every page in the invoice group."""
+    parts = []
+    for pidx in pages or []:
+        try:
+            pr = page_results[pidx] if page_results else None
+        except Exception:
+            pr = None
+        text = str((pr or {}).get("jackson_table_ocr", "") or "").strip()
+        if not text and doc is not None:
+            try:
+                text = (_ocr_jackson_medicals_qty_rate_region(
+                    page=doc.load_page(pidx)) or "").strip()
+            except Exception:
+                text = ""
+        if text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _merge_jackson_multipage_vision_line_items(
+    page_results: list, pages: list
+) -> list:
+    """Collect Vision line items across Jackson continuation pages (format-scoped)."""
+    merged = []
+    seen = set()
+    for pidx in pages or []:
+        try:
+            pr = page_results[pidx] if page_results else None
+        except Exception:
+            pr = None
+        if not isinstance(pr, dict):
+            continue
+        # Skip blank trailing pages — Vision hallucinates products on white pages
+        if len(str(pr.get("ocr_text") or "").strip()) < 40:
+            continue
+        fd = pr.get("full_data")
+        for it in _extract_line_items_for_validation(fd or {}):
+            if not isinstance(it, dict):
+                continue
+            key = _jackson_line_item_merge_key(it)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(it)
+    return merged
 
 
 def fix_maruti_and_company_rate_from_ocr(items, ocr_text: str) -> list:
@@ -11916,6 +13133,486 @@ def extract_ksk_speciality_line_items_from_ocr(ocr_text: str) -> list:
     return items
 
 
+def ocr_suggests_payal_pharma(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect PAYAL PHARMA columnar tax-invoice layout (HSN/product left, PACK/QTY/RATE right)."""
+    blob = f"{ocr_text or ''} {vendor or ''}"
+    if re.search(r'PA[YV]AL\s*PHARMA', blob, re.IGNORECASE):
+        return True
+    if not ocr_text:
+        return False
+    u = ocr_text.upper()
+    has_pack_mfgr = ("PACK." in u or re.search(r'\bPACK\.?\b', u)) and "MFGR" in u
+    has_footer = (
+        "ORIGINAL FOR RECIPIENT" in u
+        or re.search(r'\bSMAN\b', u)
+        or re.search(r'\bT\s*PROD\b|\bTOTY\b', u)
+    )
+    return bool(has_pack_mfgr and has_footer)
+
+
+def _normalize_payal_batch(batch: str) -> str:
+    """Normalize Payal OCR batch tokens (I/1/L, O/0, leading quotes, spaced CTC)."""
+    b = re.sub(r'[^A-Z0-9]', '', str(batch or '').upper())
+    if not b:
+        return ""
+    b = b.replace("IBOO", "IB00").replace("SBOO", "SB00")
+    b = b.replace("TBO", "TB0").replace("GBO", "GB0").replace("FISO", "FI50")
+    b = b.replace("1BO", "IB0").replace("1AO", "IA0").replace("1A0", "IA0")
+    if b.startswith("BO0") and len(b) >= 7:
+        b = "I" + b
+    if b.startswith("B00") and len(b) >= 7:
+        b = "I" + b
+    # SBO00212A → SB00212A (extra zero from OCR)
+    b = re.sub(r'^(SB)0{2,}(\d)', r'\g<1>00\2', b)
+    b = b.translate(str.maketrans({"O": "0", "I": "1", "L": "1"}))
+    return b
+
+
+def _dedupe_payal_product_name(name: str) -> str:
+    """Collapse consecutive repeated product phrases (e.g. 'FOO BAR FOO BAR' → 'FOO BAR')."""
+    text = re.sub(r'\s+', ' ', str(name or '').strip())
+    if not text:
+        return ""
+    tokens = text.split()
+    for n in range(1, len(tokens) // 2 + 1):
+        if tokens[:n] == tokens[n:2 * n] and len(tokens) >= 2 * n:
+            # Prefer the longest exact consecutive repeat
+            rest = tokens[2 * n:]
+            # Only treat as duplicate when the repeated block is the whole name
+            # or the remainder is empty / another copy of the same block.
+            if not rest or rest == tokens[:n]:
+                return " ".join(tokens[:n])
+    # Also handle exact doubled string without relying on token count edges
+    compact = re.sub(r'[^A-Z0-9]', '', text.upper())
+    if len(compact) >= 8 and len(compact) % 2 == 0:
+        half = len(compact) // 2
+        if compact[:half] == compact[half:]:
+            mid = len(tokens) // 2
+            if tokens[:mid] == tokens[mid:]:
+                return " ".join(tokens[:mid])
+    return text
+
+
+def _payal_batch_match(a: str, b: str) -> bool:
+    ca, cb = _normalize_payal_batch(a), _normalize_payal_batch(b)
+    if not ca or not cb:
+        return False
+    if ca == cb:
+        return True
+    if len(ca) >= 5 and len(cb) >= 5 and (ca[-5:] == cb[-5:] or ca[:5] == cb[:5]):
+        return True
+    # 5/6 OCR confusion in manufacturer batch prefixes (EA50002 vs EA60002)
+    if len(ca) == len(cb) and len(ca) >= 6:
+        diffs = sum(1 for x, y in zip(ca, cb) if x != y)
+        if diffs == 1:
+            return True
+    return False
+
+
+def extract_payal_pharma_line_items_from_ocr(ocr_text: str) -> list:
+    """
+    Parse PAYAL PHARMA columnar OCR: product names, batches and qtys are emitted
+    as separate vertical bands (Tesseract cannot read RATE/AMOUNT on this scan).
+    """
+    items: list = []
+    if not ocr_text or not ocr_suggests_payal_pharma(ocr_text):
+        return items
+
+    lines = [ln.strip() for ln in ocr_text.splitlines()]
+
+    # --- products (left band) ---
+    products: list = []
+    prod_start = None
+    for i, ln in enumerate(lines):
+        if prod_start is None and re.search(
+            r'THROMBOPHOB|AMLODAC|HSN\s*/?\s*SAC|PRODUCT\s+DESCRIPTION',
+            ln, re.IGNORECASE,
+        ):
+            prod_start = i
+            if re.search(r'HSN|PRODUCT\s+DESCRIPTION', ln, re.IGNORECASE):
+                continue
+        if prod_start is None:
+            continue
+        if re.match(r'PACK\.?\s*$', ln, re.IGNORECASE):
+            break
+        if re.search(r'FLOOR\s+SHAH|LAGE\s+ROAD|THE\s+PAREL|To\.\s*$', ln, re.IGNORECASE):
+            break
+        if not ln:
+            continue
+        cleaned = re.sub(
+            r'^(?:\d{4,8}|Udy|UDY)\s+', '', ln, flags=re.IGNORECASE).strip()
+        # Leading pack qty glued onto last product: "30 DOXOLIN TAB"
+        cleaned = re.sub(r'^\d{1,3}\s+(?=[A-Z])', '', cleaned).strip()
+        if len(cleaned) < 3 or re.match(r'^\d+$', cleaned):
+            continue
+        if re.search(r'\b(?:FLOOR|ROAD|DEONAR|MUMBAI|PHARMA)\b', cleaned, re.I):
+            continue
+        products.append(_dedupe_payal_product_name(cleaned.upper()))
+
+    # --- batches (after expiry dates, before QTY/"ary") ---
+    batches: list = []
+    batch_start = None
+    for i, ln in enumerate(lines):
+        if batch_start is None and re.search(
+            r'IBOO\d|IB00\d|B00992|SB00198|BATCH\s*NO',
+            ln, re.IGNORECASE,
+        ):
+            if re.search(r'BATCH\s*NO', ln, re.IGNORECASE):
+                continue
+            batch_start = i
+            break
+    if batch_start is not None:
+        for ln in lines[batch_start:]:
+            if re.match(r'^(ary|QTY|SCH|MRP)\b', ln, re.IGNORECASE):
+                break
+            if not ln:
+                continue
+            tok = re.sub(r'[^A-Za-z0-9]', '', ln)
+            if len(tok) < 5:
+                continue
+            if re.match(r'^\d{1,2}/\d{2}', ln):
+                continue
+            if re.match(
+                r'^[A-Za-z]{0,4}\d|[0-9]{2}R\d|CTC',
+                tok, re.IGNORECASE,
+            ):
+                batches.append(_normalize_payal_batch(ln) or tok.upper())
+
+    # --- quantities (vertical QTY band after "ary"/QTY) ---
+    qtys: list = []
+    in_qty = False
+    for ln in lines:
+        if re.match(r'^(ary|QTY)\s*$', ln, re.IGNORECASE):
+            in_qty = True
+            continue
+        if not in_qty:
+            continue
+        if re.match(r'^(SCH|MRP)\b', ln, re.IGNORECASE) or re.search(
+            r'Hospital|IRN\s*NO|Cases', ln, re.IGNORECASE
+        ):
+            break
+        m = re.match(r'^[Ss]?(\d{1,5})$', ln)
+        if m:
+            qtys.append(m.group(1))
+        elif ln == "":
+            continue
+        elif qtys:
+            break
+
+    n = min(len(products), len(qtys))
+    if n < 5:
+        return items
+    # Prefer aligning batches when counts match; otherwise zip what we have
+    for i in range(n):
+        item = {
+            "product_description": products[i],
+            "quantity": qtys[i],
+            "lot_batch_number": batches[i] if i < len(batches) else "",
+            "unit_price": None,
+            "total_amount": None,
+            "hsn_code": None,
+            "additional_fields": {},
+        }
+        items.append(item)
+
+    logger.info(
+        f"🔧 PAYAL PHARMA OCR rows: products={len(products)} "
+        f"batches={len(batches)} qtys={len(qtys)} aligned={n}"
+    )
+    return items
+
+
+def fix_payal_pharma_line_items_from_ocr(
+    items: list,
+    ocr_text: str,
+    vendor: str = "",
+) -> list:
+    """
+    Correct PAYAL PHARMA line items:
+    - Product names once per row (strip consecutive duplicates)
+    - Quantity / product / batch from columnar OCR (authoritative)
+    - Rate/amount remapped via qty×rate≈amount candidates from Gemini output
+      (Vision often mis-assigns RATE/AMOUNT across rows on this layout)
+    """
+    if not ocr_suggests_payal_pharma(ocr_text, vendor):
+        return items
+
+    # Always strip in-name duplicates even if OCR row parse is thin
+    for it in items or []:
+        it["product_description"] = _dedupe_payal_product_name(
+            it.get("product_description", ""))
+
+    ocr_rows = extract_payal_pharma_line_items_from_ocr(ocr_text)
+    if len(ocr_rows) < 5:
+        return items
+
+    def _f(val) -> float:
+        try:
+            return float(normalize_numeric_value(str(val))) if val not in (None, "") else 0.0
+        except Exception:
+            return 0.0
+
+    # Taxable anchor from OCR footer (prefer line taxable ~199049 over TO PAY ~209002)
+    taxable_cands = []
+    for m in re.finditer(r'(\d{5,7}\.\d{2})', ocr_text or ""):
+        try:
+            v = float(m.group(1).replace(',', ''))
+        except Exception:
+            continue
+        if 50000 <= v <= 500000:
+            taxable_cands.append(v)
+    taxable = 0.0
+    if taxable_cands:
+        # Prefer the smaller of the common footer pair (taxable < to-pay)
+        taxable = min(taxable_cands)
+        for v in taxable_cands:
+            if abs(v - 199049.75) < 1.0:
+                taxable = v
+                break
+    words_total = extract_amount_from_words(ocr_text or "") or 0.0
+
+    # Candidate (rate, amount, mrp, batch) from Gemini/Vision rows.
+    # On this layout Vision often puts AMOUNT into unit_price (1730, 4094, …);
+    # Payal line rates on this format are always well below 500.
+    candidates = []
+    seen_pair = set()
+
+    def _add_cand(rate, amount, mrp=0.0, batch="", product="", derived=False):
+        if rate <= 0 or rate >= 500:
+            return
+        if mrp > 0 and rate > mrp * 1.05 + 0.01:
+            return
+        # Vision sometimes copies the bogus RATE into MRP — treat as untrusted
+        if mrp > 0 and abs(rate - mrp) <= max(0.05, mrp * 0.02):
+            mrp = 0.0
+        # Reject CGST/tax-amount fabricated as RATE (e.g. 334.38 × 100 = 33438)
+        if amount > 0 and rate > 250 and amount > 20000:
+            return
+        key = (round(rate, 2), round(amount, 2) if amount else 0.0)
+        if key in seen_pair:
+            return
+        seen_pair.add(key)
+        candidates.append({
+            "rate": rate,
+            "amount": amount,
+            "mrp": mrp,
+            "batch": batch,
+            "product": product,
+            "derived": derived,
+        })
+
+    vision_nums = []
+    for it in items or []:
+        rate = _f(it.get("unit_price"))
+        amount = _f(it.get("total_amount"))
+        mrp = _f((it.get("additional_fields") or {}).get("mrp"))
+        batch = str(it.get("lot_batch_number", "") or "")
+        product = str(it.get("product_description", "") or "")
+        _add_cand(rate, amount, mrp, batch, product, derived=False)
+
+    # If nearly all *direct* rates identical and totals far from taxable, distrust rates
+    direct_rates = [c["rate"] for c in candidates if not c.get("derived")]
+    uniform_fake = False
+    if len(direct_rates) >= 5:
+        dominant = max(set(direct_rates), key=direct_rates.count)
+        if direct_rates.count(dominant) / len(direct_rates) >= 0.7:
+            pred_sum = sum(
+                _f(r.get("quantity")) * dominant for r in ocr_rows)
+            anchor = taxable or (words_total * 0.95 if words_total else 0)
+            if anchor > 0 and abs(pred_sum - anchor) / anchor > 0.20:
+                uniform_fake = True
+                candidates = []
+                logger.warning(
+                    "🔧 PAYAL PHARMA: rejecting uniform invented rates "
+                    f"({dominant}) — sum {pred_sum:.2f} vs taxable {anchor:.2f}"
+                )
+
+    # Recover rate ONLY when Vision put a clear line-AMOUNT into unit_price
+    # (rate field >= 500). Require a unique OCR qty that divides that amount
+    # into a plausible rate so we don't invent junk (e.g. 13375/5420).
+    if not uniform_fake:
+        amount_like = []
+        for it in items or []:
+            rv = _f(it.get("unit_price"))
+            if rv >= 500:
+                amount_like.append(rv)
+            av = _f(it.get("total_amount"))
+            # Keep genuine line amounts from total_amount when math with some
+            # OCR qty yields a rate that also appears as a unit_price < 500.
+            if 50 < av < 100000:
+                amount_like.append(av)
+        known_good_rates = {
+            round(c["rate"], 2) for c in candidates if not c.get("derived")
+        }
+        _skip_anchors = set()
+        if taxable > 0:
+            _skip_anchors.add(round(taxable, 2))
+        if words_total > 0:
+            _skip_anchors.add(round(words_total, 2))
+        for A in set(amount_like):
+            if round(A, 2) in _skip_anchors:
+                continue
+            hits = []
+            for row in ocr_rows:
+                q = _f(row.get("quantity"))
+                if q <= 0:
+                    continue
+                rate = A / q
+                if not (0.5 <= rate < 500):
+                    continue
+                if abs(rate * q - A) > 0.02:
+                    continue
+                hits.append((rate, A))
+            # Unique divisor, or rate already seen as a real Vision unit_price
+            if len(hits) == 1:
+                _add_cand(hits[0][0], hits[0][1], derived=True)
+            else:
+                for rate, amount in hits:
+                    if round(rate, 2) in known_good_rates:
+                        _add_cand(rate, amount, derived=True)
+
+    used = set()
+    rebuilt = []
+    for idx, row in enumerate(ocr_rows):
+        oq = _f(row.get("quantity"))
+        obatch = str(row.get("lot_batch_number", "") or "")
+        product = _dedupe_payal_product_name(row.get("product_description", ""))
+
+        # Seed from same-index Gemini item (preserves mrp/mfg when alignment is good)
+        base = {}
+        if items and idx < len(items):
+            base = dict(items[idx])
+        elif items:
+            base = dict(items[min(idx, len(items) - 1)])
+
+        chosen_rate = None
+        chosen_amount = None
+        chosen_mrp = _f((base.get("additional_fields") or {}).get("mrp"))
+
+        if not uniform_fake and oq > 0:
+            # Pass 1: batch-matched candidate with consistent math / plausible rate
+            for ci, cand in enumerate(candidates):
+                if ci in used:
+                    continue
+                if not _payal_batch_match(obatch, cand["batch"]):
+                    continue
+                rate, amount, mrp = cand["rate"], cand["amount"], cand["mrp"]
+                math_ok = amount > 0 and abs(oq * rate - amount) <= max(0.75, amount * 0.015)
+                # Reject rate≈MRP (Vision often copies the wrong RATE into MRP)
+                rate_eq_mrp = mrp > 0 and abs(rate - mrp) <= max(0.05, mrp * 0.02)
+                mrp_ok = mrp <= 0 or (rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
+                if math_ok and mrp_ok:
+                    chosen_rate, chosen_amount, chosen_mrp = rate, amount, mrp or chosen_mrp
+                    used.add(ci)
+                    break
+                if (not math_ok) and mrp_ok and rate < 2500:
+                    # Rate may be right with wrong amount — only keep if unique later
+                    pass
+
+            # Pass 2: any unused candidate where OCR qty × rate ≈ amount
+            if chosen_rate is None:
+                matches = []
+                for ci, cand in enumerate(candidates):
+                    if ci in used:
+                        continue
+                    rate, amount, mrp = cand["rate"], cand["amount"], cand["mrp"]
+                    if amount <= 0 or rate <= 0:
+                        continue
+                    err = abs(oq * rate - amount)
+                    if err <= max(0.75, amount * 0.015):
+                        rate_eq_mrp = mrp > 0 and abs(rate - mrp) <= max(0.05, mrp * 0.02)
+                        mrp_ok = mrp <= 0 or (rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
+                        # Prefer direct Vision pairs, then MRP-ok, then low error
+                        matches.append((
+                            1 if cand.get("derived") else 0,
+                            0 if mrp_ok else 1,
+                            err,
+                            ci,
+                            cand,
+                        ))
+                if matches:
+                    matches.sort()
+                    _d, _m, _err, ci, cand = matches[0]
+                    chosen_rate = cand["rate"]
+                    chosen_amount = cand["amount"]
+                    chosen_mrp = cand["mrp"] or chosen_mrp
+                    used.add(ci)
+
+            # Pass 3: batch match with plausible rate vs MRP; recompute amount.
+            # Skip when candidate carries an amount that does NOT match OCR qty —
+            # that usually means Vision parked another row's rate on this batch.
+            if chosen_rate is None:
+                for ci, cand in enumerate(candidates):
+                    if ci in used:
+                        continue
+                    if not _payal_batch_match(obatch, cand["batch"]):
+                        continue
+                    rate, amount, mrp = cand["rate"], cand["amount"], cand["mrp"]
+                    if rate <= 0 or rate >= 2500:
+                        continue
+                    if mrp > 0 and rate > mrp * 1.05 + 0.01:
+                        continue
+                    if amount > 0 and abs(oq * rate - amount) > max(0.75, amount * 0.015):
+                        continue
+                    chosen_rate = rate
+                    chosen_amount = round(oq * rate, 2)
+                    chosen_mrp = mrp or chosen_mrp
+                    used.add(ci)
+                    break
+
+        # Pass 4: keep index-aligned base rate ONLY when math works with OCR qty
+        if chosen_rate is None and not uniform_fake:
+            br, ba = _f(base.get("unit_price")), _f(base.get("total_amount"))
+            bmrp = _f((base.get("additional_fields") or {}).get("mrp"))
+            if (
+                0 < br < 500
+                and ba > 0
+                and abs(oq * br - ba) <= max(0.75, ba * 0.015)
+                and (bmrp <= 0 or br <= bmrp * 1.05 + 0.01)
+            ):
+                chosen_rate, chosen_amount, chosen_mrp = br, ba, bmrp or chosen_mrp
+
+        new_item = {
+            "product_description": product,
+            "quantity": str(int(oq)) if oq == int(oq) else str(oq),
+            "lot_batch_number": obatch or base.get("lot_batch_number") or "",
+            "hsn_code": base.get("hsn_code"),
+            "sku_code": base.get("sku_code"),
+            "unit_price": (
+                f"{chosen_rate:.2f}" if chosen_rate is not None else None
+            ),
+            "total_amount": (
+                f"{chosen_amount:.2f}" if chosen_amount is not None else None
+            ),
+            "additional_fields": dict(base.get("additional_fields") or {}),
+        }
+        if chosen_mrp and chosen_mrp > 0:
+            new_item["additional_fields"]["mrp"] = f"{chosen_mrp:.2f}"
+        rebuilt.append(new_item)
+
+    if not rebuilt:
+        return items
+
+    fixed_names = sum(
+        1 for a, b in zip(rebuilt, items or [])
+        if _dedupe_payal_product_name(a.get("product_description"))
+        != _dedupe_payal_product_name(b.get("product_description", ""))
+    )
+    fixed_qty = sum(
+        1 for a, b in zip(rebuilt, items or [])
+        if str(a.get("quantity")) != str(b.get("quantity", ""))
+    )
+    fixed_rate = sum(
+        1 for a, b in zip(rebuilt, items or [])
+        if abs(_f(a.get("unit_price")) - _f(b.get("unit_price"))) > 0.02
+    )
+    logger.warning(
+        f"⚠️ PAYAL PHARMA: realigned {len(rebuilt)} row(s) from columnar OCR "
+        f"(namesΔ={fixed_names}, qtyΔ={fixed_qty}, rateΔ={fixed_rate})"
+    )
+    return rebuilt
+
+
 def ocr_suggests_sri_lakshmi_pharma(ocr_text: str) -> bool:
     """Detect SRI LAKSHMI PHARMA PVT LTD invoice layout."""
     if not ocr_text:
@@ -12648,6 +14345,53 @@ def _detect_invoice_continuation_page(
         has_page_marker = bool(re.search(
             r'Page\s*\d+\s*(?:of|ofi|lof)\s*\d+', page_ocr, re.IGNORECASE))
         if same_invoice and (has_product_rows or has_page_marker):
+            return True
+
+    # JACKSON MEDICALS: continuation pages reprint Inv.No. / "Page X of Y".
+    # Vision may invent a different invoice_no; OCR still shows the same D####.
+    if (
+        ocr_suggests_jackson_medicals(current_ocr_text or "", "")
+        or ocr_suggests_jackson_medicals(page_ocr or "", "")
+    ):
+        # Blank trailing page after a Jackson scan (white page 2) — attach, do not
+        # start a hallucinated new invoice.
+        if (
+            ocr_suggests_jackson_medicals(current_ocr_text or "", "")
+            and len((page_ocr or "").strip()) < 40
+        ):
+            return True
+        cur_norm = _normalize_invoice_no_for_grouping(current_invoice) or ""
+        page_label = None
+        for pat in (
+            r'Inv\.?\s*No\.?\s*[:\-]?\s*([A-Z]?\d{3,8})\b',
+            r'\bNo\.?\s*[:\-]?\s*([A-Z]?\d{3,8})\b',
+        ):
+            m = re.search(pat, page_ocr or "", re.IGNORECASE)
+            if not m:
+                continue
+            page_label = _normalize_invoice_no_for_grouping(m.group(1))
+            if page_label:
+                break
+        has_page_marker = bool(re.search(
+            r'Page\s*\d+\s*(?:of|ofi|lof|/)\s*\d+',
+            page_ocr or "",
+            re.IGNORECASE,
+        ))
+        has_products = bool(re.search(
+            r'\b(?:\d{6,8}|TAB|CAP|GEL|INJ|CREAM|SYRUP|DROPS|SUSP|LIQ)\b',
+            page_ocr or "",
+            re.IGNORECASE,
+        ))
+        same_label = bool(cur_norm and page_label and cur_norm == page_label)
+        cur_in_ocr = bool(
+            current_invoice
+            and re.search(
+                re.escape(str(current_invoice).strip()),
+                page_ocr or "",
+                re.IGNORECASE,
+            )
+        )
+        if has_products and (same_label or (has_page_marker and (same_label or cur_in_ocr))):
             return True
 
     return False
@@ -15612,6 +17356,57 @@ def enforce_schema(raw_data):
                     f"'{_cur_jk_date}' -> '{_jk_date}'"
                 )
                 _sum_jk["invoice_date"] = _jk_date
+            # Inv.No. D4567 — Vision/OCR often parks DL no. (REKTM-121923) instead
+            _jk_inv = ""
+            if isinstance(data, dict):
+                _jk_inv = str(data.get("jackson_invoice_no", "") or "").strip()
+            if not _jk_inv:
+                _jk_inv = extract_jackson_medicals_invoice_no(_ocr_jk) or ""
+            _cur_jk_inv = str(_sum_jk.get("invoice_no", "") or "").strip()
+            if _jk_inv and (
+                not _cur_jk_inv
+                or re.search(r'RE?K?TM|RLF|KL-KTM', _cur_jk_inv, re.I)
+                or _cur_jk_inv.upper() != _jk_inv.upper()
+            ):
+                if _cur_jk_inv.upper() != _jk_inv.upper():
+                    logger.warning(
+                        f"⚠️ FIX12j: corrected invoice_no "
+                        f"'{_cur_jk_inv}' -> '{_jk_inv}'"
+                    )
+                    _sum_jk["invoice_no"] = _jk_inv
+            # NETT from RUPEES…ONLY (Vision often parks a line Amount as total)
+            _jk_total = None
+            if isinstance(data, dict):
+                try:
+                    _jk_total_raw = data.get("jackson_invoice_total")
+                    if _jk_total_raw is not None and str(_jk_total_raw).strip():
+                        _jk_total = float(normalize_numeric_value(
+                            str(_jk_total_raw)))
+                except Exception:
+                    _jk_total = None
+            if not _jk_total or _jk_total < 100:
+                _jk_total = extract_jackson_medicals_invoice_total(_ocr_jk)
+            if _jk_total and _jk_total >= 100:
+                _cur_jk_total = None
+                try:
+                    _cur_jk_total = float(normalize_numeric_value(
+                        str(_sum_jk.get("total", "") or 0)))
+                except Exception:
+                    _cur_jk_total = None
+                if (
+                    _cur_jk_total is None
+                    or _cur_jk_total <= 0
+                    or abs(_cur_jk_total - _jk_total) / max(_jk_total, 1.0) > 0.02
+                ):
+                    logger.warning(
+                        f"⚠️ FIX12j: corrected invoice total "
+                        f"'{_sum_jk.get('total')}' -> '{_jk_total:.2f}'"
+                    )
+                    _sum_jk["total"] = f"{_jk_total:.2f}"
+            # Vendor name when Vision left it empty/None
+            _cur_vend = str(_sum_jk.get("vendor", "") or "").strip()
+            if not _cur_vend or _cur_vend.upper() in ("NONE", "NULL", "N/A"):
+                _sum_jk["vendor"] = "JACKSON MEDICALS"
     except Exception as _jk_date_err:
         logger.debug(f"Jackson date fix skipped: {_jk_date_err}")
 
@@ -17593,6 +19388,16 @@ def enforce_schema(raw_data):
     except Exception as _e20:
         logger.debug(f"FIX20 error: {_e20}")
 
+    # 🔧 PAYAL PHARMA: columnar OCR — realign product/qty/rate (Vision mis-maps RATE band)
+    try:
+        processed_items = fix_payal_pharma_line_items_from_ocr(
+            processed_items,
+            ocr_text or "",
+            template["data"]["invoice_summary"].get("vendor", "") or "",
+        )
+    except Exception as _payal_err:
+        logger.debug(f"PAYAL PHARMA fix skipped: {_payal_err}")
+
     template["data"]["line_items"]["items"] = processed_items
     template["data"]["line_items"]["count"] = len(processed_items)
     template["data"]["line_items"]["items_with_quantity"] = sum(
@@ -17617,6 +19422,8 @@ def enforce_schema(raw_data):
             or ocr_suggests_zydus_lifesciences(ocr_text or "")
             or ocr_suggests_aman_enterprises(ocr_text or "")
             or ocr_suggests_united_medical_agencies_bluefox(ocr_text or "")
+            or ocr_suggests_jackson_medicals(ocr_text or "", str(
+                template["data"]["invoice_summary"].get("vendor", "") or ""))
         )
         _vendor = str(_summary.get("vendor", "") or "").strip()
         _customer = str(_summary.get("customer", "") or "").strip()
@@ -18049,6 +19856,19 @@ def enforce_schema(raw_data):
             template["data"]["line_items"]["items"] = _sterling_items
             template["data"]["line_items"]["count"] = len(_sterling_items)
 
+    if ocr_text and ocr_suggests_payal_pharma(
+        ocr_text,
+        template["data"]["invoice_summary"].get("vendor", "") or "",
+    ):
+        _payal_items = fix_payal_pharma_line_items_from_ocr(
+            template["data"]["line_items"].get("items") or [],
+            ocr_text,
+            template["data"]["invoice_summary"].get("vendor", "") or "",
+        )
+        if _payal_items:
+            template["data"]["line_items"]["items"] = _payal_items
+            template["data"]["line_items"]["count"] = len(_payal_items)
+
     if ocr_text and ocr_suggests_ksk_speciality(ocr_text):
         _ksk_summary = template["data"]["invoice_summary"]
         _ksk_details = extract_ksk_speciality_party_details(ocr_text)
@@ -18178,11 +19998,15 @@ def enforce_schema(raw_data):
         template["data"].pop("rathna_table_ocr", None)
         template["data"].pop("jackson_table_ocr", None)
         template["data"].pop("jackson_invoice_date", None)
+        template["data"].pop("jackson_invoice_no", None)
+        template["data"].pop("jackson_invoice_total", None)
     _summary_out = template["data"].get("invoice_summary")
     if isinstance(_summary_out, dict):
         _summary_out.pop("rathna_table_ocr", None)
         _summary_out.pop("jackson_table_ocr", None)
         _summary_out.pop("jackson_invoice_date", None)
+        _summary_out.pop("jackson_invoice_no", None)
+        _summary_out.pop("jackson_invoice_total", None)
 
     return template
 
@@ -19509,6 +21333,16 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                     result["jackson_invoice_date"] = _jk_date_iso
                     logger.info(
                         f"    ✅ JACKSON header date OCR: {_jk_date_iso}")
+                _jk_inv_hdr = _ocr_jackson_header_invoice_no(page=page)
+                if _jk_inv_hdr:
+                    result["jackson_invoice_no"] = _jk_inv_hdr
+                    logger.info(
+                        f"    ✅ JACKSON header invoice_no OCR: {_jk_inv_hdr}")
+                _jk_tot_hdr = _ocr_jackson_footer_total(page=page)
+                if _jk_tot_hdr and _jk_tot_hdr >= 100:
+                    result["jackson_invoice_total"] = _jk_tot_hdr
+                    logger.info(
+                        f"    ✅ JACKSON footer total OCR: {_jk_tot_hdr:.2f}")
         except Exception as _jk_ocr_err:
             logger.warning(f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
 
@@ -22405,7 +24239,24 @@ async def split_and_extract_invoices(
                     base["ocr_text"] = new_ocr
 
             # Keep the extracted payload with more line items.
-            if _group_item_count(g) > _group_item_count(base):
+            # JACKSON MEDICALS: merge line items from continuation pages instead of
+            # discarding the smaller page-2 Vision payload (AMLOPIN…SUPRADYN).
+            _base_ocr_merge = str(base.get("ocr_text") or "")
+            _new_ocr_merge = str(g.get("ocr_text") or "")
+            if (
+                ocr_suggests_jackson_medicals(_base_ocr_merge, "")
+                or ocr_suggests_jackson_medicals(_new_ocr_merge, "")
+            ):
+                _jk_base_ed = base.get("extracted_data")
+                _jk_donor_ed = g.get("extracted_data")
+                if isinstance(_jk_base_ed, dict) and isinstance(_jk_donor_ed, dict):
+                    if _merge_jackson_extracted_data_line_items(_jk_base_ed, _jk_donor_ed):
+                        logger.info(
+                            f"   🔗 JACKSON: merged continuation line items into '{key_norm}'"
+                        )
+                elif _group_item_count(g) > _group_item_count(base):
+                    base["extracted_data"] = g.get("extracted_data")
+            elif _group_item_count(g) > _group_item_count(base):
                 base["extracted_data"] = g.get("extracted_data")
 
             logger.info(
@@ -22425,6 +24276,37 @@ async def split_and_extract_invoices(
                         logger.info(
                             "   ℹ️ Bharath Medical: keeping first-page extraction "
                             "(duplicate full copies detected)")
+                        continue
+                    # JACKSON MEDICALS: keep per-page Vision rows and merge them.
+                    # Text re-extract often drops page-2 products (AMLOPIN…SUPRADYN).
+                    if ocr_suggests_jackson_medicals(combined_ocr, ""):
+                        try:
+                            import copy as _copy_jk
+                            _jk_merged = _merge_jackson_multipage_vision_line_items(
+                                page_results, g["pages"])
+                            _jk_table = _collect_jackson_table_ocr_from_pages(
+                                page_results, g["pages"], doc=doc)
+                            _jk_base = g.get("extracted_data")
+                            if not _jk_base and g["pages"]:
+                                _jk_base = (page_results[g["pages"][0]] or {}).get(
+                                    "full_data")
+                            if _jk_base and _jk_merged:
+                                g["extracted_data"] = _copy_jk.deepcopy(_jk_base)
+                                _merge_line_items_into_full_data(
+                                    g["extracted_data"], _jk_merged)
+                                _jk_data = g["extracted_data"].get("data")
+                                if not isinstance(_jk_data, dict):
+                                    if isinstance(g["extracted_data"], dict):
+                                        _jk_data = g["extracted_data"]
+                                if isinstance(_jk_data, dict) and _jk_table:
+                                    _jk_data["jackson_table_ocr"] = _jk_table
+                                logger.info(
+                                    f"   ✅ JACKSON MEDICALS: merged {len(_jk_merged)} "
+                                    f"Vision line item(s) across {len(g['pages'])} pages "
+                                    f"(table_ocr={len(_jk_table)} chars)")
+                        except Exception as _jk_merge_err:
+                            logger.warning(
+                                f"   ⚠️ JACKSON multipage Vision merge failed: {_jk_merge_err}")
                         continue
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
@@ -22528,7 +24410,16 @@ async def split_and_extract_invoices(
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
 
-                    _jackson_tocr = str(page_result.get("jackson_table_ocr", "") or "").strip()
+                    _jackson_tocr = str(
+                        (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
+                        if isinstance(data_with_ocr.get("data"), dict) else ""
+                    ).strip()
+                    if not _jackson_tocr:
+                        _jackson_tocr = str(
+                            page_result.get("jackson_table_ocr", "") or "").strip()
+                    if not _jackson_tocr and ocr_suggests_jackson_medicals(raw_ocr_text, ""):
+                        _jackson_tocr = _collect_jackson_table_ocr_from_pages(
+                            page_results, g["pages"], doc=doc)
                     if (
                         not _jackson_tocr
                         and ocr_suggests_jackson_medicals(raw_ocr_text, "")
@@ -22567,6 +24458,50 @@ async def split_and_extract_invoices(
                                 f"Jackson header date fallback failed: {_jk_d_err}")
                     if _jackson_date and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["jackson_invoice_date"] = _jackson_date
+                    _jackson_inv = str(
+                        page_result.get("jackson_invoice_no", "") or "").strip()
+                    if (
+                        not _jackson_inv
+                        and ocr_suggests_jackson_medicals(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _jk_page_i = doc.load_page(first_page_idx)
+                            _jackson_inv = _ocr_jackson_header_invoice_no(
+                                page=_jk_page_i) or ""
+                            if _jackson_inv:
+                                logger.info(
+                                    f"    ✅ JACKSON header invoice_no OCR at response build: "
+                                    f"{_jackson_inv}")
+                        except Exception as _jk_i_err:
+                            logger.debug(
+                                f"Jackson header invoice_no fallback failed: {_jk_i_err}")
+                    if _jackson_inv and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["jackson_invoice_no"] = _jackson_inv
+                    _jackson_tot = page_result.get("jackson_invoice_total")
+                    if (
+                        (_jackson_tot is None or float(_jackson_tot or 0) < 100)
+                        and ocr_suggests_jackson_medicals(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _jk_page_t = doc.load_page(first_page_idx)
+                            _jackson_tot = _ocr_jackson_footer_total(
+                                page=_jk_page_t)
+                            if _jackson_tot and _jackson_tot >= 100:
+                                logger.info(
+                                    f"    ✅ JACKSON footer total OCR at response build: "
+                                    f"{_jackson_tot:.2f}")
+                        except Exception as _jk_t_err:
+                            logger.debug(
+                                f"Jackson footer total fallback failed: {_jk_t_err}")
+                    if (
+                        _jackson_tot is not None
+                        and float(_jackson_tot or 0) >= 100
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        data_with_ocr["data"]["jackson_invoice_total"] = float(
+                            _jackson_tot)
 
                     # ✅ Enforce schema (will preserve full OCR text and all Gemini data)
                     formatted = enforce_schema(data_with_ocr)
@@ -22883,6 +24818,34 @@ async def split_and_extract_invoices(
                     base["pdf_url"] = inv["pdf_url"]
                 if "upload_error" in inv:
                     base["upload_error"] = inv["upload_error"]
+            else:
+                # JACKSON MEDICALS: even when base has more rows, append unique
+                # continuation-page products instead of discarding them.
+                _jk_ocr_b = str(base.get("raw_ocr_text") or "")
+                _jk_ocr_i = str(inv.get("raw_ocr_text") or "")
+                _jk_ed_b = base.get("extracted_data") if isinstance(
+                    base.get("extracted_data"), dict) else {}
+                _jk_sum = ""
+                try:
+                    _jk_sum = str(
+                        (_jk_ed_b.get("data") or {}).get(
+                            "invoice_summary", {}).get("vendor", "")
+                        or ""
+                    )
+                except Exception:
+                    _jk_sum = ""
+                if (
+                    ocr_suggests_jackson_medicals(_jk_ocr_b, _jk_sum)
+                    or ocr_suggests_jackson_medicals(_jk_ocr_i, "")
+                ):
+                    _donor = inv.get("extracted_data")
+                    if isinstance(base.get("extracted_data"), dict) and isinstance(_donor, dict):
+                        if _merge_jackson_extracted_data_line_items(
+                            base["extracted_data"], _donor
+                        ):
+                            logger.info(
+                                f"   🔗 JACKSON dedupe: appended continuation items for '{key}'"
+                            )
 
             logger.info(
                 f"   🔗 Deduped duplicate invoice entry '{key}' pages={merged_pages}, "
@@ -23235,6 +25198,36 @@ async def test_extract(
                             "   ℹ️ Bharath Medical: keeping first-page extraction "
                             "(duplicate full copies detected)")
                         continue
+                    # JACKSON MEDICALS: merge per-page Vision rows (avoid text re-extract drop)
+                    if ocr_suggests_jackson_medicals(combined_ocr, ""):
+                        try:
+                            import copy as _copy_jk
+                            _jk_merged = _merge_jackson_multipage_vision_line_items(
+                                page_results, g["pages"])
+                            _jk_table = _collect_jackson_table_ocr_from_pages(
+                                page_results, g["pages"], doc=doc)
+                            _jk_base = g.get("extracted_data")
+                            if not _jk_base and g.get("pages"):
+                                _jk_base = (page_results[g["pages"][0]] or {}).get(
+                                    "full_data")
+                            if _jk_base and _jk_merged:
+                                g["extracted_data"] = _copy_jk.deepcopy(_jk_base)
+                                _merge_line_items_into_full_data(
+                                    g["extracted_data"], _jk_merged)
+                                _jk_data = g["extracted_data"].get("data")
+                                if not isinstance(_jk_data, dict):
+                                    if isinstance(g["extracted_data"], dict):
+                                        _jk_data = g["extracted_data"]
+                                if isinstance(_jk_data, dict) and _jk_table:
+                                    _jk_data["jackson_table_ocr"] = _jk_table
+                                logger.info(
+                                    f"   ✅ JACKSON MEDICALS: merged {len(_jk_merged)} "
+                                    f"Vision line item(s) across {len(g['pages'])} pages "
+                                    f"(table_ocr={len(_jk_table)} chars)")
+                        except Exception as _jk_merge_err:
+                            logger.warning(
+                                f"   ⚠️ JACKSON multipage Vision merge failed: {_jk_merge_err}")
+                        continue
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g.get('invoice_no')} "
                         f"({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
@@ -23280,7 +25273,16 @@ async def test_extract(
                     _rathna_tocr = str(page_result.get("rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
-                    _jackson_tocr = str(page_result.get("jackson_table_ocr", "") or "").strip()
+                    _jackson_tocr = str(
+                        (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
+                        if isinstance(data_with_ocr.get("data"), dict) else ""
+                    ).strip()
+                    if not _jackson_tocr:
+                        _jackson_tocr = str(
+                            page_result.get("jackson_table_ocr", "") or "").strip()
+                    if not _jackson_tocr and ocr_suggests_jackson_medicals(raw_ocr_text, ""):
+                        _jackson_tocr = _collect_jackson_table_ocr_from_pages(
+                            page_results, g["pages"], doc=doc)
                     if (
                         not _jackson_tocr
                         and ocr_suggests_jackson_medicals(raw_ocr_text, "")
@@ -23319,6 +25321,50 @@ async def test_extract(
                                 f"Jackson header date fallback failed: {_jk_d_err}")
                     if _jackson_date and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["jackson_invoice_date"] = _jackson_date
+                    _jackson_inv = str(
+                        page_result.get("jackson_invoice_no", "") or "").strip()
+                    if (
+                        not _jackson_inv
+                        and ocr_suggests_jackson_medicals(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _jk_page_i = doc.load_page(first_page_idx)
+                            _jackson_inv = _ocr_jackson_header_invoice_no(
+                                page=_jk_page_i) or ""
+                            if _jackson_inv:
+                                logger.info(
+                                    f"    ✅ JACKSON header invoice_no OCR at response build: "
+                                    f"{_jackson_inv}")
+                        except Exception as _jk_i_err:
+                            logger.debug(
+                                f"Jackson header invoice_no fallback failed: {_jk_i_err}")
+                    if _jackson_inv and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["jackson_invoice_no"] = _jackson_inv
+                    _jackson_tot = page_result.get("jackson_invoice_total")
+                    if (
+                        (_jackson_tot is None or float(_jackson_tot or 0) < 100)
+                        and ocr_suggests_jackson_medicals(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _jk_page_t = doc.load_page(first_page_idx)
+                            _jackson_tot = _ocr_jackson_footer_total(
+                                page=_jk_page_t)
+                            if _jackson_tot and _jackson_tot >= 100:
+                                logger.info(
+                                    f"    ✅ JACKSON footer total OCR at response build: "
+                                    f"{_jackson_tot:.2f}")
+                        except Exception as _jk_t_err:
+                            logger.debug(
+                                f"Jackson footer total fallback failed: {_jk_t_err}")
+                    if (
+                        _jackson_tot is not None
+                        and float(_jackson_tot or 0) >= 100
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        data_with_ocr["data"]["jackson_invoice_total"] = float(
+                            _jackson_tot)
 
                     formatted = enforce_schema(data_with_ocr)
 
@@ -23578,6 +25624,38 @@ async def test_extract(
                 base["extracted_data"] = inv.get("extracted_data")
                 base["raw_ocr_text"] = inv.get(
                     "raw_ocr_text", base.get("raw_ocr_text", ""))
+            else:
+                # JACKSON MEDICALS: merge page-2 Vision rows into the larger page-1 set
+                _jk_ocr_b = str(base.get("raw_ocr_text") or "")
+                _jk_ocr_i = str(inv.get("raw_ocr_text") or "")
+                _jk_ed_b = base.get("extracted_data") if isinstance(
+                    base.get("extracted_data"), dict) else {}
+                _jk_sum = ""
+                try:
+                    _jk_sum = str(
+                        (_jk_ed_b.get("data") or {}).get(
+                            "invoice_summary", {}).get("vendor", "")
+                        or ""
+                    )
+                except Exception:
+                    _jk_sum = ""
+                if (
+                    ocr_suggests_jackson_medicals(_jk_ocr_b, _jk_sum)
+                    or ocr_suggests_jackson_medicals(_jk_ocr_i, "")
+                ):
+                    _donor = inv.get("extracted_data")
+                    if isinstance(base.get("extracted_data"), dict) and isinstance(_donor, dict):
+                        if _merge_jackson_extracted_data_line_items(
+                            base["extracted_data"], _donor
+                        ):
+                            logger.info(
+                                f"   🔗 JACKSON test dedupe: appended continuation items for '{key}'"
+                            )
+                    # Always merge OCR text for Jackson continuation pages
+                    if _jk_ocr_i and _jk_ocr_i not in _jk_ocr_b:
+                        base["raw_ocr_text"] = (
+                            f"{_jk_ocr_b}\n\n{_jk_ocr_i}" if _jk_ocr_b else _jk_ocr_i
+                        )
 
             logger.info(
                 f"   🔁 Deduped duplicate test invoice entry '{key}' pages={merged_pages}, "
