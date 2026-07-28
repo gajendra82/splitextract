@@ -6873,6 +6873,188 @@ def fix_chaitanya_pharma_line_items_from_ocr(items, ocr_text: str) -> list:
     return items
 
 
+def fix_chaitanya_pharma_qty_net_vs_value_fallback(items, ocr_text: str) -> list:
+    """
+    CHAITANYA/BENSUS Tax Inv. fallback (e.g. S_5090):
+
+    When QTY is missing/garbled in OCR, Gemini often sets quantity = round(NET/RATE)
+    (post-discount), while the true QTY is VALUE/RATE. The primary fixer only
+    corrects when qty×rate vs VALUE error exceeds 5%; NET-derived qty can be
+    only ~1% off (e.g. 148 vs 150) and is left wrong.
+
+    This fallback restores qty from VALUE/RATE when:
+    - VALUE/RATE is a clean integer, and
+    - current qty matches NET/RATE (or differs from VALUE/RATE), and
+    - current qty × RATE does not equal VALUE.
+    """
+    if not items or not ocr_suggests_chaitanya_bensus_pharma(ocr_text):
+        return items
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _find_row(batch: str) -> Optional[str]:
+        bk = _batch_key(batch)
+        if not bk:
+            return None
+        for line in (ocr_text or "").splitlines():
+            if _batch_key(line).find(bk) >= 0 and re.search(r'\d+\.\d{2}', line):
+                return line
+        return None
+
+    logger.info(
+        "🔧 FIX: CHAITANYA/BENSUS fallback — qty from VALUE/RATE when NET/RATE was used"
+    )
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        row = _find_row(batch)
+        if not row:
+            continue
+
+        # Tail: MRP RATE VALUE DIS% GST% NET
+        nums = re.findall(r'\d+\.\d{2}', row)
+        if len(nums) < 6:
+            continue
+        try:
+            rate = float(nums[-5])
+            value = float(nums[-4])
+            net = float(nums[-1])
+        except ValueError:
+            continue
+        if rate <= 0 or value <= 0:
+            continue
+
+        qty_from_value = value / rate
+        qty_value_int = int(round(qty_from_value))
+        if abs(qty_from_value - qty_value_int) > 0.02:
+            continue
+        if not (1 <= qty_value_int <= 99999):
+            continue
+
+        try:
+            cur_qty = float(
+                normalize_numeric_value(str(item.get("quantity", "") or "")) or 0
+            )
+        except Exception:
+            cur_qty = 0.0
+        if cur_qty <= 0:
+            continue
+        if abs(cur_qty - qty_value_int) < 0.01:
+            continue
+
+        # Only override when current qty looks like NET/RATE (post-discount)
+        # or clearly fails VALUE = RATE × QTY.
+        qty_from_net = net / rate if net > 0 else 0.0
+        matches_net_qty = (
+            qty_from_net > 0 and abs(cur_qty - round(qty_from_net)) < 0.51
+        )
+        value_err = abs(cur_qty * rate - value) / value
+        if not matches_net_qty and value_err <= 0.005:
+            continue
+
+        old_qty = item.get("quantity")
+        item["quantity"] = str(qty_value_int)
+        logger.warning(
+            f"⚠️ CHAITANYA/BENSUS qty fallback '{old_qty}' → '{qty_value_int}' "
+            f"for '{str(item.get('product_description', ''))[:40]}' "
+            f"(VALUE/RATE={value}/{rate}, NET={net})"
+        )
+
+    return items
+
+
+def fix_chaitanya_pharma_leading_pack_product_fallback(items, ocr_text: str) -> list:
+    """
+    CHAITANYA/BENSUS fallback (e.g. S_6240):
+
+    PKG tokens like "15C" can remain prefixed on product_description when Gemini
+    copies FREE/PKG+DESCRIPTION, or when the primary OCR mid-split misses the
+    abbreviated pack form. Strip leading pack residues and, when possible,
+    restore DESCRIPTION from the batch-anchored OCR row.
+    """
+    if not items or not ocr_suggests_chaitanya_bensus_pharma(ocr_text):
+        return items
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _find_row(batch: str) -> Optional[str]:
+        bk = _batch_key(batch)
+        if not bk:
+            return None
+        for line in (ocr_text or "").splitlines():
+            if _batch_key(line).find(bk) >= 0 and re.search(r'\d+\.\d{2}', line):
+                return line
+        return None
+
+    logger.info(
+        "🔧 FIX: CHAITANYA/BENSUS fallback — strip leading PKG from product names"
+    )
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        cur_desc = str(item.get("product_description", "") or "").strip()
+        if not cur_desc:
+            continue
+
+        preferred = ""
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        row = _find_row(batch) if batch else None
+        if row:
+            mid_m = re.search(
+                rf'\b0\s+(.+?)\s+(?:300\d{{5}}|330\d{{5}}|9018\d{{2,4}})\s+'
+                rf'{re.escape(batch)}\b',
+                row,
+                re.IGNORECASE,
+            )
+            if mid_m:
+                _pack, ocr_desc = _split_chaitanya_pack_product(mid_m.group(1).strip())
+                preferred = _clean_chaitanya_product_name(ocr_desc)
+
+        cleaned = _clean_chaitanya_product_name(cur_desc)
+        # Prefer OCR-derived name when it no longer starts with a pack token.
+        candidate = preferred or cleaned
+        if not candidate or candidate.upper() == cur_desc.upper():
+            if cleaned != cur_desc:
+                item["product_description"] = cleaned
+                logger.warning(
+                    f"⚠️ CHAITANYA/BENSUS pack fallback '{cur_desc}' → '{cleaned}'"
+                )
+            continue
+
+        # Only replace when current name still looks pack-prefixed or OCR is cleaner.
+        cur_has_pack_prefix = bool(
+            re.match(
+                r'^\d+(?:C\b|[\'`\u2019]?S\b|\*|ML\b|GM\b)',
+                cur_desc,
+                re.IGNORECASE,
+            )
+        )
+        cand_has_pack_prefix = bool(
+            re.match(
+                r'^\d+(?:C\b|[\'`\u2019]?S\b|\*|ML\b|GM\b)',
+                candidate,
+                re.IGNORECASE,
+            )
+        )
+        if cur_has_pack_prefix and not cand_has_pack_prefix:
+            item["product_description"] = candidate
+            logger.warning(
+                f"⚠️ CHAITANYA/BENSUS pack fallback '{cur_desc}' → '{candidate}'"
+            )
+        elif cleaned != cur_desc:
+            item["product_description"] = cleaned
+            logger.warning(
+                f"⚠️ CHAITANYA/BENSUS pack fallback '{cur_desc}' → '{cleaned}'"
+            )
+
+    return items
+
+
 def _split_chaitanya_pack_product(mid: str) -> tuple:
     """Split FREE-following PKG+DESCRIPTION blob into (pack, product)."""
     text = re.sub(r'\s+', ' ', str(mid or "").strip())
@@ -6947,6 +7129,7 @@ def _split_chaitanya_pack_product(mid: str) -> tuple:
         r'\d+(?:\*\d+)+(?:\*\d+\.\d+)?'   # 5*2*7*2 / 4*5*2.5
         r'|\d+\*\d+[\'`\u2019]?S?'         # 15*10'S
         r'|\d+[\'`\u2019]?S'
+        r'|\d+C\b'                          # 15C (S_6240 PKG abbrev)
         r'|\d+\s*ML'
         r'|\d+\s*GM'
         r'|\d+\s+G\b'
@@ -6958,6 +7141,15 @@ def _split_chaitanya_pack_product(mid: str) -> tuple:
     )
     if spaced:
         return spaced.group(1).strip(), spaced.group(2).strip()
+
+    # "15CATORVA GOLD 20" — C pack glued with no space
+    glued_c = re.match(
+        r'^(\d+C)([A-Z]{3,}.+)$',
+        text,
+        re.IGNORECASE,
+    )
+    if glued_c:
+        return glued_c.group(1), glued_c.group(2).strip()
 
     # "14'S TIN PROVIDAC CAP" — TIN is pack residue, not part of product name
     tin_spaced = re.match(
@@ -6992,6 +7184,8 @@ def _clean_chaitanya_product_name(name: str) -> str:
         flags=re.IGNORECASE,
     )
     n = re.sub(r'^\d{1,4}\s+(?=[A-Z])', '', n)  # "10 ATORVA…"
+    n = re.sub(r'^\d+C\s+(?=[A-Z])', '', n, flags=re.IGNORECASE)  # "15C ATORVA…" (S_6240)
+    n = re.sub(r'^\d+C(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)  # "15CATORVA…"
     n = re.sub(r'^(?:ML|GM)(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)
 
     # Known OCR merges on this format (S_5090 / BENSUS Tax Inv.)
@@ -7173,6 +7367,505 @@ def fix_trilok_enterprises_product_names_from_ocr(items, ocr_text: str) -> list:
         if fixed != desc:
             item["product_description"] = fixed
             logger.warning(f"⚠️ TRILOK product '{desc}' → '{fixed}'")
+
+    return items
+
+
+def fix_trilok_enterprises_mfg_prefix_product_fallback(items, ocr_text: str) -> list:
+    """
+    TRILOK ENTERPRISES fallback (e.g. TS02507 WELLNESS):
+
+    When PRODUCT itself contains a pack-like token (BOLDINE 10GM POWDER) and the
+    PACK column repeats the same token (10GM), the primary row regex can latch
+    onto the inner 10GM and treat POWDER as BATCH — leaving MFG fused on the
+    description ("GLE BOLDINE 10GM POWDER").
+
+    Re-parse rows requiring EXP after BATCH, and strip a leading MFG code when
+    OCR confirms MFG + product + pack + batch + exp.
+    """
+    if not items or not ocr_suggests_trilok_enterprises(ocr_text):
+        return items
+
+    has_mfg_product_header = bool(re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b|\bMFG\b\s+PRODUCT\s+PACK\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if not has_mfg_product_header and "MARG ERP" not in (ocr_text or "").upper():
+        return items
+
+    logger.info(
+        "🔧 FIX: TRILOK fallback — MFG prefix when product embeds pack-like token"
+    )
+
+    _not_mfg = {
+        "TAB", "CAP", "INJ", "SYP", "GEL", "AMP", "BTL", "MG", "ML", "GM",
+        "THE", "AND", "FOR", "NEW", "POWDER", "OINT", "OINTMENT",
+    }
+    _pack_pat = (
+        r"(?:"
+        r"\d+[\'`\u2019]?S"
+        r"|\d+\s*[Xx]\s*\d+"
+        r"|\d+\s+G\b"
+        r"|\d+\s*GM\b"
+        r"|\d+\s*ML\b"
+        r")"
+    )
+    # Require EXP after BATCH so inner pack tokens in PRODUCT are not mistaken
+    # for PACK+BATCH (e.g. BOLDINE 10GM POWDER 10GM N4360001 12/28).
+    row_re = re.compile(
+        rf'\b(30\d{{4,8}})\s+([A-Z]{{2,8}})\s+(.+?)\s+({_pack_pat})\s+'
+        rf'([A-Z][A-Z0-9]{{4,14}})\s+(\d{{1,2}}/\d{{2}})\b',
+        re.IGNORECASE,
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _clean_product_typos(name: str) -> str:
+        cleaned = str(name or "").strip()
+        cleaned = re.sub(r'\bSPARY\b', 'SPRAY', cleaned, flags=re.IGNORECASE)
+        return cleaned
+
+    batch_to_product = {}
+    for match in row_re.finditer(ocr_text or ""):
+        mfg = match.group(2).strip().upper()
+        product = match.group(3).strip()
+        pack = re.sub(r'\s+', ' ', match.group(4).strip())
+        batch = match.group(5).strip()
+        if mfg in _not_mfg or not product:
+            continue
+        product = re.sub(
+            rf"\s+{re.escape(pack)}\s*$", "", product, flags=re.IGNORECASE
+        ).strip()
+        product = _clean_product_typos(product)
+        if product:
+            batch_to_product[_batch_key(batch)] = (product, mfg, pack)
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        desc = str(item.get("product_description", "") or "").strip()
+        bk = _batch_key(batch)
+
+        if bk and bk in batch_to_product:
+            product, mfg, pack = batch_to_product[bk]
+            if product and product.upper() != desc.upper():
+                old = desc
+                item["product_description"] = product
+                af = item.get("additional_fields")
+                if not isinstance(af, dict):
+                    af = {}
+                    item["additional_fields"] = af
+                if mfg and not str(af.get("mfg", "") or "").strip():
+                    af["mfg"] = mfg
+                if pack and not str(af.get("pack", "") or "").strip():
+                    af["pack"] = pack
+                logger.warning(
+                    f"⚠️ TRILOK mfg-fallback '{old}' → '{product}' "
+                    f"(mfg={mfg}, pack={pack})"
+                )
+            continue
+
+        # Description-only: strip leading MFG when OCR shows MFG + desc near batch
+        m = re.match(r'^([A-Z]{2,8})\s+(.+)$', desc, re.IGNORECASE)
+        if not m or m.group(1).upper() in _not_mfg:
+            continue
+        mfg = m.group(1).strip().upper()
+        rest = m.group(2).strip()
+        if not rest or not re.search(r'[A-Z]{3,}', rest, re.IGNORECASE):
+            continue
+        if not batch:
+            continue
+        # Confirm on OCR: MFG ... batch with expiry nearby
+        confirm = re.search(
+            rf'\b{re.escape(mfg)}\s+{re.escape(rest)}\b.*?{_batch_key(batch)}'
+            rf'|\b{re.escape(mfg)}\s+.{{0,80}}?\b{re.escape(batch)}\s+\d{{1,2}}/\d{{2}}\b',
+            ocr_text or "",
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not confirm:
+            # Looser: line contains mfg, rest tokens, and batch
+            rest_key = re.sub(r'[^A-Z0-9]', '', rest.upper())
+            found = False
+            for line in (ocr_text or "").splitlines():
+                lu = _batch_key(line)
+                if (
+                    _batch_key(batch) in lu
+                    and _batch_key(mfg) in lu
+                    and rest_key
+                    and rest_key[:8] in lu
+                    and re.search(r'\d{1,2}/\d{2}', line)
+                ):
+                    found = True
+                    break
+            if not found:
+                continue
+        old = desc
+        item["product_description"] = _clean_product_typos(rest)
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+            item["additional_fields"] = af
+        if not str(af.get("mfg", "") or "").strip():
+            af["mfg"] = mfg
+        logger.warning(
+            f"⚠️ TRILOK mfg-fallback '{old}' → '{item['product_description']}' "
+            f"(mfg={mfg})"
+        )
+
+    return items
+
+
+def fix_trilok_enterprises_embedded_pack_in_product_fallback(
+    items, ocr_text: str
+) -> list:
+    """
+    TRILOK ENTERPRISES fallback (e.g. TS02507 PROVIDIP):
+
+    Some product names include the pack size (PROVIDIP OINMENT 15GM) while the
+    PACK column repeats the same token (15GM 15GM). The primary fixer strips the
+    trailing pack from PRODUCT, leaving "PROVIDIP OINMENT".
+
+    When OCR shows duplicated pack before BATCH (`… 15GM 15GM PR25007`), restore
+    that pack onto product_description. Does not affect rows with a single pack
+    token (e.g. T-BACT OINT 5GM Y53F).
+    """
+    if not items or not ocr_suggests_trilok_enterprises(ocr_text):
+        return items
+
+    has_mfg_product_header = bool(re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b|\bMFG\b\s+PRODUCT\s+PACK\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if not has_mfg_product_header and "MARG ERP" not in (ocr_text or "").upper():
+        return items
+
+    logger.info(
+        "🔧 FIX: TRILOK fallback — restore embedded pack duplicated in OCR product"
+    )
+
+    _pack_pat = (
+        r"(?:"
+        r"\d+[\'`\u2019]?S"
+        r"|\d+\s*[Xx]\s*\d+"
+        r"|\d+\s+G\b"
+        r"|\d+\s*GM\b"
+        r"|\d+\s*ML\b"
+        r")"
+    )
+    # PRODUCT… PACK PACK BATCH EXP  (pack appears twice)
+    dup_re = re.compile(
+        rf'([A-Z][A-Z0-9 %./\-]{{2,80}}?)\s+'
+        rf'({_pack_pat})\s+\2\s+'
+        rf'([A-Z][A-Z0-9]{{4,14}})\s+(\d{{1,2}}/\d{{2}})\b',
+        re.IGNORECASE,
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _norm_pack(value: str) -> str:
+        return re.sub(r'\s+', '', str(value or '').upper())
+
+    batch_to_full_name = {}
+    for match in dup_re.finditer(ocr_text or ""):
+        raw_product = match.group(1).strip()
+        pack = re.sub(r'\s+', ' ', match.group(2).strip())
+        batch = match.group(3).strip()
+        # Drop leading MFG token if present (ALK PROVIDIP OINMENT)
+        raw_product = re.sub(
+            r'^(?:30\d{4,8}\s+)?[A-Z]{2,8}\s+',
+            '',
+            raw_product,
+            count=1,
+            flags=re.IGNORECASE,
+        ).strip()
+        if not raw_product or not pack:
+            continue
+        full_name = f"{raw_product} {pack}".strip()
+        full_name = re.sub(r'\s+', ' ', full_name)
+        batch_to_full_name[_batch_key(batch)] = (full_name, pack)
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        desc = str(item.get("product_description", "") or "").strip()
+        if not batch or not desc:
+            continue
+        bk = _batch_key(batch)
+        if bk not in batch_to_full_name:
+            continue
+        full_name, pack = batch_to_full_name[bk]
+        if desc.upper() == full_name.upper():
+            continue
+        # Only restore when current name is missing the trailing pack
+        if _norm_pack(desc).endswith(_norm_pack(pack)):
+            continue
+        # Current desc should be the product stem (full_name without trailing pack)
+        stem = re.sub(
+            rf'\s+{re.escape(pack)}\s*$', '', full_name, flags=re.IGNORECASE
+        ).strip()
+        if _batch_key(desc) != _batch_key(stem) and desc.upper() not in full_name.upper():
+            # Allow match when desc is stem ignoring spaces/punct
+            if _batch_key(desc) not in _batch_key(stem):
+                continue
+        old = desc
+        item["product_description"] = full_name
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+            item["additional_fields"] = af
+        if pack and not str(af.get("pack", "") or "").strip():
+            af["pack"] = pack
+        logger.warning(
+            f"⚠️ TRILOK embedded-pack fallback '{old}' → '{full_name}' (pack={pack})"
+        )
+
+    return items
+
+
+def fix_trilok_enterprises_ocr_garbage_product_fallback(
+    items, ocr_text: str
+) -> list:
+    """
+    TRILOK ENTERPRISES fallback (e.g. TS02702 XYLOMIST):
+
+    When PACK is glued to PRODUCT with '*' (DROPS*10ML) or Gemini pastes the
+    entire OCR numeric tail into product_description, restore PRODUCT from the
+    batch-anchored OCR row. Allows '*' / missing space before PACK.
+    """
+    if not items or not ocr_suggests_trilok_enterprises(ocr_text):
+        return items
+
+    has_mfg_product_header = bool(re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b|\bMFG\b\s+PRODUCT\s+PACK\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if not has_mfg_product_header and "MARG ERP" not in (ocr_text or "").upper():
+        return items
+
+    def _looks_garbage(desc: str) -> bool:
+        d = str(desc or "").strip()
+        if not d:
+            return False
+        money = re.findall(r'\d+\.\d{2}', d)
+        if len(money) >= 2:
+            return True
+        if re.search(r'\b\d{1,2}/\d{2}\b', d) and money:
+            return True
+        # Glued pack still on name plus batch/rate tail
+        if re.search(
+            r'\*\s*\d+\s*(?:ML|GM|S)\b.*\b[A-Z]{1,3}\d{4,}',
+            d,
+            re.IGNORECASE,
+        ):
+            return True
+        if len(d) > 55 and re.search(r'\d+\.\d{2}', d):
+            return True
+        return False
+
+    logger.info(
+        "🔧 FIX: TRILOK fallback — recover product when description has OCR row junk"
+    )
+
+    _not_mfg = {
+        "TAB", "CAP", "INJ", "SYP", "GEL", "AMP", "BTL", "MG", "ML", "GM",
+        "THE", "AND", "FOR", "NEW", "POWDER", "OINT", "OINTMENT",
+    }
+    _pack_pat = (
+        r"(?:"
+        r"\d+[\'`\u2019]?S"
+        r"|\d+\s*[Xx]\s*\d+"
+        r"|\d+\s+G\b"
+        r"|\d+\s*GM\b"
+        r"|\d+\s*ML\b"
+        r")"
+    )
+    # Allow '*' or missing space between PRODUCT and PACK: DROPS*10ML
+    row_re = re.compile(
+        rf'\b(30\d{{4,8}})\s+([A-Z]{{2,8}})\s+(.+?)[\s*]+({_pack_pat})\s+'
+        rf'([A-Z][A-Z0-9]{{4,14}})\s+(\d{{1,2}}/\d{{2}})\b',
+        re.IGNORECASE,
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _clean_product(name: str) -> str:
+        cleaned = str(name or "").strip()
+        cleaned = re.sub(r'\*+\s*$', '', cleaned).strip()
+        cleaned = re.sub(r'\bSPARY\b', 'SPRAY', cleaned, flags=re.IGNORECASE)
+        return re.sub(r'\s+', ' ', cleaned).strip()
+
+    batch_to_product = {}
+    for match in row_re.finditer(ocr_text or ""):
+        mfg = match.group(2).strip().upper()
+        product = match.group(3).strip()
+        pack = re.sub(r'\s+', ' ', match.group(4).strip())
+        batch = match.group(5).strip()
+        if mfg in _not_mfg or not product:
+            continue
+        # Prefer spaced product form over glued '*pack' form when both exist
+        product = re.sub(r'[\s*]+$', '', product).strip()
+        product = _clean_product(product)
+        if not product:
+            continue
+        bk = _batch_key(batch)
+        prev = batch_to_product.get(bk)
+        # Prefer name without digits-only tail / shorter clean name without pack glue
+        if prev is None or (
+            '*' not in product and (prev[0].find('*') >= 0 or len(product) < len(prev[0]))
+        ):
+            batch_to_product[bk] = (product, mfg, pack)
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("product_description", "") or "").strip()
+        if not _looks_garbage(desc):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        bk = _batch_key(batch)
+        if not bk or bk not in batch_to_product:
+            continue
+        product, mfg, pack = batch_to_product[bk]
+        if not product or product.upper() == desc.upper():
+            continue
+        old = desc
+        item["product_description"] = product
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+            item["additional_fields"] = af
+        if mfg and not str(af.get("mfg", "") or "").strip():
+            af["mfg"] = mfg
+        if pack and not str(af.get("pack", "") or "").strip():
+            af["pack"] = pack
+        logger.warning(
+            f"⚠️ TRILOK ocr-garbage fallback '{old[:50]}…' → '{product}' "
+            f"(mfg={mfg}, pack={pack})"
+        )
+
+    return items
+
+
+def fix_trilok_enterprises_overlap_pack_product_fallback(
+    items, ocr_text: str
+) -> list:
+    """
+    TRILOK ENTERPRISES fallback (e.g. TS03070 XYLOMIST):
+
+    Recipient/supplier copy text overlap can fuse PACK into PRODUCT, e.g.
+    ``DROP* 10ML`` → ``DROP1*0ML`` (leading '1' of 10ML merges into DROP*,
+    pack becomes 0ML). Restore PRODUCT without the fused digit and pack as
+    ``10ML`` / ``10GM`` when OCR shows that pattern for the item batch.
+    """
+    if not items or not ocr_suggests_trilok_enterprises(ocr_text):
+        return items
+
+    has_mfg_product_header = bool(re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b|\bMFG\b\s+PRODUCT\s+PACK\b',
+        ocr_text,
+        re.IGNORECASE | re.DOTALL,
+    ))
+    if not has_mfg_product_header and "MARG ERP" not in (ocr_text or "").upper():
+        return items
+
+    logger.info(
+        "🔧 FIX: TRILOK fallback — repair PRODUCT/PACK overlap (DROP1*0ML → DROP + 10ML)"
+    )
+
+    _not_mfg = {
+        "TAB", "CAP", "INJ", "SYP", "GEL", "AMP", "BTL", "MG", "ML", "GM",
+        "THE", "AND", "FOR", "NEW", "POWDER", "OINT", "OINTMENT", "DROP", "DROPS",
+    }
+    # PRODUCT… <digit>*0ML|0GM BATCH EXP  (overlap of *pack)
+    overlap_re = re.compile(
+        rf'\b(30\d{{4,8}})\s+([A-Z]{{2,8}})\s+(.+?)(\d)\*(0(?:ML|GM))\s+'
+        rf'([A-Z][A-Z0-9]{{4,14}})\s+(\d{{1,2}}/\d{{2}})\b',
+        re.IGNORECASE,
+    )
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _clean_product(name: str) -> str:
+        cleaned = str(name or "").strip()
+        cleaned = re.sub(r'\*+\s*$', '', cleaned).strip()
+        cleaned = re.sub(r'\bSPARY\b', 'SPRAY', cleaned, flags=re.IGNORECASE)
+        return re.sub(r'\s+', ' ', cleaned).strip()
+
+    batch_to_fix = {}
+    for match in overlap_re.finditer(ocr_text or ""):
+        mfg = match.group(2).strip().upper()
+        product = match.group(3).strip()
+        fused_digit = match.group(4)
+        zero_pack = match.group(5).strip().upper()  # 0ML / 0GM
+        batch = match.group(6).strip()
+        if mfg in _not_mfg or not product:
+            continue
+        # Reconstruct pack: '1' + '0ML' → '10ML'
+        pack = f"{fused_digit}{zero_pack}"
+        product = _clean_product(product)
+        if not product or not re.match(r'^\d+(?:ML|GM)$', pack, re.IGNORECASE):
+            continue
+        batch_to_fix[_batch_key(batch)] = (product, mfg, pack)
+
+    # Also repair description-only DROP1 / TAB1 when batch maps from OCR overlap
+    trailing_digit_re = re.compile(
+        r'^(?P<stem>.+?(?:DROP|DROPS|TAB|CAP|OINT|GEL|JELLY|INJ|SYP|POWDER))(?P<digit>\d)$',
+        re.IGNORECASE,
+    )
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = str(item.get("lot_batch_number", "") or "").strip()
+        desc = str(item.get("product_description", "") or "").strip()
+        bk = _batch_key(batch)
+        if not bk or bk not in batch_to_fix:
+            continue
+        product, mfg, pack = batch_to_fix[bk]
+
+        needs_fix = False
+        if desc.upper() != product.upper():
+            needs_fix = True
+        af = item.get("additional_fields") if isinstance(item.get("additional_fields"), dict) else {}
+        cur_pack = str((af or {}).get("pack", "") or "").strip().upper().replace(" ", "")
+        if cur_pack in {"0ML", "0GM", "ML", "GM"} or (
+            cur_pack and cur_pack != pack.upper().replace(" ", "")
+            and re.match(r'^0?(?:ML|GM)$', cur_pack)
+        ):
+            needs_fix = True
+        # DROP1 style residue even if OCR product already cleaned elsewhere
+        if trailing_digit_re.match(desc):
+            needs_fix = True
+            m = trailing_digit_re.match(desc)
+            if m and _clean_product(m.group("stem")).upper() == product.upper():
+                product = _clean_product(m.group("stem"))
+
+        if not needs_fix:
+            continue
+        if desc.upper() == product.upper() and cur_pack == pack.upper().replace(" ", ""):
+            continue
+
+        old = desc
+        item["product_description"] = product
+        if not isinstance(af, dict):
+            af = {}
+        item["additional_fields"] = af
+        af["pack"] = pack
+        if mfg and not str(af.get("mfg", "") or "").strip():
+            af["mfg"] = mfg
+        logger.warning(
+            f"⚠️ TRILOK overlap-pack fallback '{old}' → '{product}' "
+            f"(pack={pack}, mfg={mfg})"
+        )
 
     return items
 
@@ -15337,6 +16030,22 @@ def enforce_schema(raw_data):
     processed_items = fix_trilok_enterprises_product_names_from_ocr(
         processed_items, ocr_text)
 
+    # TRILOK fallback: MFG left on name when PRODUCT embeds pack-like token (10GM POWDER)
+    processed_items = fix_trilok_enterprises_mfg_prefix_product_fallback(
+        processed_items, ocr_text)
+
+    # TRILOK fallback: restore pack in name when OCR duplicates pack (15GM 15GM)
+    processed_items = fix_trilok_enterprises_embedded_pack_in_product_fallback(
+        processed_items, ocr_text)
+
+    # TRILOK fallback: recover product when Gemini pasted OCR row junk / glued *PACK
+    processed_items = fix_trilok_enterprises_ocr_garbage_product_fallback(
+        processed_items, ocr_text)
+
+    # TRILOK fallback: DROP* 10ML overlapped as DROP1*0ML
+    processed_items = fix_trilok_enterprises_overlap_pack_product_fallback(
+        processed_items, ocr_text)
+
     _customer_name = template["data"]["invoice_summary"].get("customer", "")
     _vendor_name = template["data"]["invoice_summary"].get("vendor", "")
 
@@ -15477,6 +16186,14 @@ def enforce_schema(raw_data):
 
     # CHAITANYA/BENSUS Tax Inv.: FREE mapped as qty; PEN pack fused into product name
     processed_items = fix_chaitanya_pharma_line_items_from_ocr(
+        processed_items, ocr_text)
+
+    # CHAITANYA/BENSUS fallback: qty from NET/RATE (e.g. 148) vs true VALUE/RATE (150)
+    processed_items = fix_chaitanya_pharma_qty_net_vs_value_fallback(
+        processed_items, ocr_text)
+
+    # CHAITANYA/BENSUS fallback: leading PKG like "15C" left in product_description
+    processed_items = fix_chaitanya_pharma_leading_pack_product_fallback(
         processed_items, ocr_text)
 
     # 🔧 FIX 12: Correct Partap/PDFPlumber OCR row issues (missing leading letter, wrong recovered qty/rate)
