@@ -22,3 +22,6 @@ logs/
 .gpt_cache/
 .DS_Store
 Thumbs.db
+
+# Vertex / GCP service account keys
+credentials/
