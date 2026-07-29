@@ -14572,6 +14572,125 @@ def extract_novacare_del_invoice_date(
     return _context_april_date_fallback()
 
 
+def extract_trust_pharmaceuticals_invoice_date(
+    ocr_text: str, *, known_trust: bool = False
+) -> Optional[str]:
+    """
+    TRUST PHARMACEUTICALS: read date after 'Invoice Date' only.
+    OCR often uses a curly quote or '>' instead of ':' (e.g. "Invoice Date ‘13-06-26"
+    / "Invoice Date > 13-06-26"), and a drug-license date like "26/03/2024" appears
+    immediately before the label — the generic pre-label window would pick that wrong date.
+    Vendor name may also be split across columns ("TRUST ... PHARMACEUTICALS").
+    """
+    if not ocr_text:
+        return None
+    if not known_trust and not _ocr_suggests_trust_pharmaceuticals(ocr_text):
+        return None
+
+    normalized = ocr_text.replace('\n', ' ')
+    # 2-digit day/month; allow day 40-49 so OCR "41-06-26" (1→4) can be corrected.
+    # Optional leading junk digits handle "Invoice Date 5413-06-26".
+    date_token = (
+        r'(?:\d{0,4})?'
+        r'([0-9]\d)[\-/\.\\ ]([01]\d)[\-/\.\\ ]((?:19|20)?\d{2})\b'
+    )
+
+    def _is_dl_print_date(iso: str) -> bool:
+        # Static DL print date on this format (26/03/****) — never the invoice date
+        return bool(iso and iso[5:7] == "03" and iso[8:10] == "26")
+
+    def _to_iso(day: int, month: int, year: int) -> Optional[str]:
+        if not (1 <= day <= 31 and 1 <= month <= 12 and 2000 <= year <= 2099):
+            return None
+        try:
+            return datetime(year, month, day).strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+
+    def _parse(match) -> Optional[str]:
+        day = int(match.group(1))
+        month = int(match.group(2))
+        year_raw = match.group(3)
+        year = int(year_raw) if len(year_raw) == 4 else (2000 + int(year_raw))
+        iso = _to_iso(day, month, year)
+        if iso and not _is_dl_print_date(iso):
+            return iso
+        # OCR often misreads leading '1' as '4' (e.g. 11-06-26 → 41-06-26)
+        if 40 <= day <= 49:
+            alt = _to_iso(day - 30, month, year)
+            if alt and not _is_dl_print_date(alt):
+                return alt
+        return None
+
+    def _first_date_after(label_pat: str) -> Optional[str]:
+        # Scan only AFTER the label so pre-label DL dates are ignored.
+        label_m = re.search(label_pat, normalized, re.IGNORECASE)
+        if not label_m:
+            return None
+        window = normalized[label_m.end(): label_m.end() + 120]
+        for m in re.finditer(date_token, window):
+            iso = _parse(m)
+            if iso:
+                return iso
+        return None
+
+    inv_iso = _first_date_after(r'Invoice\s*Date')
+    if inv_iso:
+        return inv_iso
+
+    # Same calendar day often also printed as Order Date on this format
+    order_iso = _first_date_after(r'Order\s*Date')
+    if order_iso:
+        return order_iso
+
+    # Stub line: "InvNo 26000730030793 11-06-26"
+    invno_m = re.search(
+        rf'Inv\.?\s*No\.?\s*\d{{10,}}\s+{date_token}',
+        normalized,
+        re.IGNORECASE,
+    )
+    if invno_m:
+        iso = _parse(invno_m)
+        if iso:
+            return iso
+
+    # ACK Date with 4-digit year (OCR sometimes misreads ACK as KCK).
+    # Prefer last — ACK can be the next calendar day after the invoice date.
+    ack_iso = _first_date_after(r'(?:ACK|KCK)\s*Date')
+    if ack_iso:
+        return ack_iso
+
+    return None
+
+
+def _ocr_suggests_trust_pharmaceuticals(ocr_text: str) -> bool:
+    """True when OCR indicates TRUST PHARMACEUTICALS (even if the name is split)."""
+    if not ocr_text:
+        return False
+    if re.search(r'TRUST\s+PHARMACEUTICALS', ocr_text, re.IGNORECASE):
+        return True
+    # Vendor name often split across header columns by OCR
+    if re.search(r'TRUST.{0,80}PHARMACEUTICALS', ocr_text, re.IGNORECASE | re.DOTALL):
+        return True
+    if re.search(r'trustpharmaceuticals\s*@', ocr_text, re.IGNORECASE):
+        return True
+    # Vendor GSTIN unique to this format (allow OCR tail noise like 12E vs 1ZE)
+    if re.search(r'\b32AAVFT0120H', ocr_text, re.IGNORECASE):
+        return True
+    return False
+
+
+def _is_trust_pharmaceuticals_invoice(
+    ocr_text: str = "", vendor: str = "", vendor_gstin: str = ""
+) -> bool:
+    """Detect TRUST PHARMACEUTICALS from OCR and/or Gemini summary fields."""
+    if vendor and re.search(r'TRUST\s+PHARMACEUTICALS', str(vendor), re.IGNORECASE):
+        return True
+    if vendor_gstin and re.search(r'AAVFT0120H', str(vendor_gstin), re.IGNORECASE):
+        return True
+    return _ocr_suggests_trust_pharmaceuticals(ocr_text)
+
+
 def extract_invoice_date_from_ocr_header(ocr_text: str) -> Optional[str]:
     """Extract invoice date from OCR header, handling noisy day like '284 01-2026'."""
     if not ocr_text:
@@ -14595,6 +14714,13 @@ def extract_invoice_date_from_ocr_header(ocr_text: str) -> Optional[str]:
         return _to_iso(day, month, year)
 
     date_token = r'([0-3]?\d)[\-/\.\\ ]([01]?\d)[\-/\.\\ ]((?:19|20)?\d{2})'
+
+    # TRUST PHARMACEUTICALS before generic Inv Date scan (avoids DL date before label)
+    trust_iso = extract_trust_pharmaceuticals_invoice_date(ocr_text)
+    if trust_iso:
+        logger.info(
+            f"✅ OCR fallback invoice date selected (TRUST PHARMACEUTICALS): {trust_iso}")
+        return trust_iso
 
     # Priority: explicit Inv Date/Data label (R.K. Pharma, YASH AGENCIES, etc.)
     inv_date_label_m = re.search(
@@ -17466,6 +17592,44 @@ def enforce_schema(raw_data):
                 _sum_am["invoice_date"] = _am_iso
     except Exception as _am_date_err:
         logger.debug(f"ADARSH MEDICO date fix skipped: {_am_date_err}")
+
+    # TRUST PHARMACEUTICALS: prefer Invoice Date / ACK Date over nearby DL dates
+    try:
+        _sum_trust = template["data"]["invoice_summary"]
+        _vend_trust = str(_sum_trust.get("vendor", "") or "")
+        _gstin_trust = str(_sum_trust.get("vendor_gstin", "") or "")
+        if _is_trust_pharmaceuticals_invoice(
+            ocr_text=ocr_text or "",
+            vendor=_vend_trust,
+            vendor_gstin=_gstin_trust,
+        ):
+            _trust_iso = extract_trust_pharmaceuticals_invoice_date(
+                ocr_text or "", known_trust=True
+            )
+            _cur_trust_date = str(_sum_trust.get("invoice_date", "") or "").strip()
+            # Only override when empty or the known DL print date (26/03/****).
+            # Garbled full-page OCR must not replace an already-corrected crop date.
+            _cur_is_dl = bool(
+                re.match(r'^\d{4}-\d{2}-\d{2}$', _cur_trust_date)
+                and _cur_trust_date[5:7] == "03"
+                and _cur_trust_date[8:10] == "26"
+            )
+            if (
+                _trust_iso
+                and not (_trust_iso[5:7] == "03" and _trust_iso[8:10] == "26")
+                and _trust_iso != _cur_trust_date
+                and (
+                    not _cur_trust_date
+                    or _cur_is_dl
+                    or not re.match(r'^\d{4}-\d{2}-\d{2}$', _cur_trust_date)
+                )
+            ):
+                logger.warning(
+                    f"⚠️ FIX TRUST PHARMACEUTICALS: corrected invoice_date "
+                    f"'{_cur_trust_date}' -> '{_trust_iso}'")
+                _sum_trust["invoice_date"] = _trust_iso
+    except Exception as _trust_date_err:
+        logger.debug(f"TRUST PHARMACEUTICALS date fix skipped: {_trust_date_err}")
 
     # NOVACARE DEL-26-*: always prefer 'No. DEL-26-#### Date' over Vision due-date confusion
     try:
@@ -20556,6 +20720,57 @@ def _recover_del_26_invoice_date_from_header(page, page_num: Optional[int] = Non
         return None
 
 
+def _recover_trust_pharmaceuticals_invoice_date_from_header(
+    page, page_num: Optional[int] = None
+) -> Optional[str]:
+    """
+    TRUST PHARMACEUTICALS: Vision often picks the DL print date (26/03/2024) and full-page
+    Tesseract may be upside-down/rotated. Re-OCR a header crop across rotations and read
+    only the date after 'Invoice Date' / 'ACK Date'.
+    """
+    try:
+        if not TESSERACT_AVAILABLE:
+            return None
+
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))
+        img_bytes = pix.tobytes("png")
+        pix = None
+
+        base = PILImage.open(io.BytesIO(img_bytes))
+        del img_bytes
+
+        cfg = "--psm 6"
+        for rot in (0, 90, 180, 270):
+            img = base.rotate(-rot, expand=True) if rot else base
+            w, h = img.size
+            # Header band covers Tax Inv.No / Invoice Date / Time
+            crop = img.crop((0, 0, w, int(h * 0.40)))
+            if rot and img is not base:
+                img.close()
+
+            with tesseract_ocr_slot("trust_pharma_date_crop"):
+                crop_text = run_tesseract_call(
+                    lambda c=crop: pytesseract.image_to_string(c, config=cfg),
+                    label="trust_pharma_date_crop",
+                    page=page_num,
+                )
+            crop.close()
+
+            iso = extract_trust_pharmaceuticals_invoice_date(
+                str(crop_text or ""), known_trust=True
+            )
+            if iso and not (iso[5:7] == "03" and iso[8:10] == "26"):
+                base.close()
+                return iso
+
+        base.close()
+    except Exception as e:
+        logger.debug(f"TRUST PHARMACEUTICALS date crop recovery skipped: {e}")
+        return None
+
+    return None
+
+
 def _count_extracted_line_items(full_data) -> int:
     """Return number of line items in a Gemini full_data payload."""
     if not isinstance(full_data, dict):
@@ -21455,6 +21670,61 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _del_fix_err:
             logger.debug(
                 f"DEL-26 Vision date override skipped: {_del_fix_err}")
+
+        # TRUST PHARMACEUTICALS: Vision often picks DL print date 26/03/2024
+        try:
+            if isinstance(result.get("full_data"), dict):
+                _fd_tr = result["full_data"]
+                _d_tr = _fd_tr.get("data", _fd_tr) if isinstance(
+                    _fd_tr, dict) else None
+                if isinstance(_d_tr, dict):
+                    _sum_tr = _d_tr.get("invoice_summary", _d_tr)
+                    _vend_tr = str(_sum_tr.get("vendor", "") or "").strip()
+                    _gstin_tr = str(_sum_tr.get("vendor_gstin", "") or "").strip()
+                    _ocr_tr = result.get("ocr_text") or fallback_ocr_text or ""
+                    if _is_trust_pharmaceuticals_invoice(
+                        ocr_text=_ocr_tr,
+                        vendor=_vend_tr,
+                        vendor_gstin=_gstin_tr,
+                    ):
+                        def _is_trust_dl_date(iso: str) -> bool:
+                            return bool(
+                                iso
+                                and re.match(r'^\d{4}-\d{2}-\d{2}$', iso)
+                                and iso[5:7] == "03"
+                                and iso[8:10] == "26"
+                            )
+
+                        _trust_iso = extract_trust_pharmaceuticals_invoice_date(
+                            _ocr_tr, known_trust=True
+                        )
+                        if not _trust_iso or _is_trust_dl_date(_trust_iso):
+                            _trust_iso = _recover_trust_pharmaceuticals_invoice_date_from_header(
+                                page, page_num=page_num
+                            )
+                        _cur_tr = str(_sum_tr.get("invoice_date", "") or "").strip()
+                        if (
+                            _trust_iso
+                            and not _is_trust_dl_date(_trust_iso)
+                            and _trust_iso != _cur_tr
+                        ):
+                            logger.warning(
+                                f"⚠️ FIX TRUST PHARMACEUTICALS: corrected invoice_date "
+                                f"'{_cur_tr}' -> '{_trust_iso}'"
+                            )
+                            _sum_tr["invoice_date"] = _trust_iso
+                            try:
+                                _yy = int(_trust_iso[:4])
+                                _mm = int(_trust_iso[5:7])
+                                _dd = int(_trust_iso[8:10])
+                                _sum_tr["invoice_date_raw"] = (
+                                    f"{_dd:02d}-{_mm:02d}-{_yy}"
+                                )
+                            except Exception:
+                                pass
+        except Exception as _trust_fix_err:
+            logger.debug(
+                f"TRUST PHARMACEUTICALS Vision date override skipped: {_trust_fix_err}")
 
     if (not result or not result.get("full_data")) and _tesseract_gemini_fallback:
         logger.warning(
