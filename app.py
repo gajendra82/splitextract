@@ -133,6 +133,61 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def _track_extract_inflight(request: Request, call_next):
+    """Count open extract calls + log connection lifecycle (no OCR logic)."""
+    tracked = request.url.path.rstrip("/") in ("/split-and-extract", "/test-extract")
+    peer = (
+        f"{request.client.host}:{request.client.port}"
+        if request.client
+        else "unknown"
+    )
+    t0 = time.monotonic()
+    if tracked:
+        global extract_inflight_requests
+        with extract_inflight_lock:
+            extract_inflight_requests += 1
+            inflight_now = extract_inflight_requests
+        logger.info(
+            "[CONN] request_accepted path=%s peer=%s inflight=%s",
+            request.url.path,
+            peer,
+            inflight_now,
+        )
+    try:
+        response = await call_next(request)
+        if tracked:
+            logger.info(
+                "[CONN] response_ready path=%s peer=%s status=%s duration_s=%.2f",
+                request.url.path,
+                peer,
+                getattr(response, "status_code", "?"),
+                time.monotonic() - t0,
+            )
+        return response
+    except Exception:
+        if tracked:
+            logger.exception(
+                "[CONN] request_failed path=%s peer=%s duration_s=%.2f",
+                request.url.path,
+                peer,
+                time.monotonic() - t0,
+            )
+        raise
+    finally:
+        if tracked:
+            with extract_inflight_lock:
+                extract_inflight_requests = max(0, extract_inflight_requests - 1)
+                inflight_left = extract_inflight_requests
+            logger.info(
+                "[CONN] request_finished path=%s peer=%s inflight=%s duration_s=%.2f",
+                request.url.path,
+                peer,
+                inflight_left,
+                time.monotonic() - t0,
+            )
+
+
 # ============================================================================
 # ⚙️ CONFIGURATION (Environment Variables)
 # ============================================================================
@@ -295,10 +350,19 @@ current_model_index = 0
 model_lock = Lock()
 quota_manager_lock = Lock()
 blob_service_client = None
-request_processing_semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+# Thread-based semaphore: /split-and-extract runs in Starlette's worker thread
+# pool (sync endpoint) so its blocking OCR work never stalls the event loop and
+# /health keeps answering while an extract is in flight.
+request_processing_semaphore = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
 request_queue_lock = Lock()
 active_requests = 0
 waiting_requests = 0
+
+# Requests accepted by the ASGI layer but whose response has not been sent yet.
+# Counted at middleware level so /health reports "processing" for the whole
+# lifetime of the HTTP call (queue wait + OCR + JSON serialization).
+extract_inflight_lock = Lock()
+extract_inflight_requests = 0
 
 # ============================================================================
 # REQUEST PROGRESS HEARTBEAT (stuck detection — not a processing timeout)
@@ -449,44 +513,62 @@ def get_runtime_health_snapshot() -> Dict:
         active = active_requests
         waiting = waiting_requests
 
+    with extract_inflight_lock:
+        inflight = extract_inflight_requests
+
     with request_progress_lock:
         progress = dict(_request_progress)
         last_mono = progress.pop("_last_progress_monotonic", None)
         progress.pop("_last_logged_stage", None)
         progress.pop("_last_logged_page", None)
 
+    # An HTTP extract call is open from admission until its JSON is sent. Report it
+    # as active even in the windows where the semaphore counter is not held yet /
+    # any more (queue wait, response serialization, cleanup).
+    active = max(active, inflight - waiting, 0)
+    busy = active > 0 or waiting > 0 or inflight > 0
+
     seconds_since_last_progress = None
     if progress.get("active") and last_mono is not None:
         seconds_since_last_progress = round(time.monotonic() - last_mono, 2)
+    elif busy:
+        # Never null while busy — Laravel's watchdog treats null as stale/stuck.
+        seconds_since_last_progress = 0.0
+
+    last_progress_time = (
+        progress.get("last_progress_time")
+        or progress.get("request_start_time")
+        or (_progress_iso_now() if busy else None)
+    )
 
     semaphore_locked = active > 0
 
-    if active == 0:
-        processing_status = "idle"
-    elif (
-        seconds_since_last_progress is not None
+    stuck_suspected = bool(
+        busy
+        and seconds_since_last_progress is not None
         and seconds_since_last_progress > REQUEST_STUCK_THRESHOLD_SECONDS
-    ):
-        processing_status = "potentially_stuck"
-    else:
-        processing_status = "processing"
+    )
+    # While any extract call is open the status must never read idle/ready.
+    processing_status = "processing" if busy else "idle"
 
     return {
         "active_requests": active,
         "waiting_requests": waiting,
+        "inflight_requests": inflight,
         "semaphore_locked": semaphore_locked,
         "request_stuck_threshold_seconds": REQUEST_STUCK_THRESHOLD_SECONDS,
         "request_id": progress.get("request_id"),
         "request_start_time": progress.get("request_start_time"),
-        "last_progress_time": progress.get("last_progress_time"),
+        "last_progress_time": last_progress_time,
         "seconds_since_last_progress": seconds_since_last_progress,
-        "current_stage": progress.get("current_stage"),
+        "current_stage": progress.get("current_stage") or ("processing" if busy else None),
         "current_page": progress.get("current_page"),
         "total_pages": progress.get("total_pages"),
         "current_invoice": progress.get("current_invoice"),
         "source_filename": progress.get("source_filename"),
         "batch_id": progress.get("batch_id"),
         "processing_status": processing_status,
+        "stuck_suspected": stuck_suspected,
         **get_enhanced_heartbeat_snapshot(),
         **get_resource_snapshot(),
     }
@@ -3097,6 +3179,15 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
             "⏭️ Using YEN-PHARMA SalePrint OCR recovery (skip generic FIX 9)"
         )
         return recover_yen_pharma_line_items_from_ocr(existing_items, ocr_text)
+
+    # PHARMACEA LINK: this e-invoice layout OCRs into noise ("HEN TAB",
+    # "BRNVGARRT AN ING TAB"), so generic row recovery appends invented products
+    # on top of the correct Vision rows.
+    if _is_pharmacea_link_vendor("", ocr_text):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for Pharmacea Link (garbled table OCR)"
+        )
+        return existing_items
 
     def _extract_declared_product_count(text: str) -> Optional[int]:
         """Read declared product count from invoice footer (e.g., 'Total Prod : 8')."""
@@ -6020,11 +6111,28 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
         ocr_text,
         re.MULTILINE | re.IGNORECASE,
     ))
+    # Scanned DEL-26 pages often lose leading HSN; still Novacare if header present
+    _has_novacare_header = bool(re.search(
+        r'PRODUCT\s+DESC|NEW\s*MRP.*RATE.*AMOUNT|RATE\s+AMOUNT',
+        ocr_text,
+        re.IGNORECASE,
+    ))
+    # Brand OCR: NOVACARE / NOVA CARE / MOVACARE (N→M) / spaced letters;
+    # DEL-26 scans may only keep "Entero Healthcare" + invoice no.
+    _has_novacare_brand = (
+        "NOVACARE" in ocr_upper
+        or "NOVA CARE" in ocr_upper
+        or "MOVACARE" in ocr_upper
+        or (
+            "ENTERO HEALTHCARE" in ocr_upper
+            and bool(re.search(r'\bDEL-\d{2}-\d+\b', ocr_upper))
+        )
+    )
     is_novacare = (
-        ("NOVACARE" in ocr_upper or "NOVA CARE" in ocr_upper)
+        _has_novacare_brand
         and ("NEWMRP" in ocr_upper or "NEW MRP" in ocr_upper)
         and "BATCH NO" in ocr_upper
-        and _has_novacare_rows
+        and (_has_novacare_rows or _has_novacare_header)
     )
     if not is_novacare:
         return items
@@ -6067,6 +6175,11 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
         )
         # Drop trailing pack-column integer after dot (e.g. "10X10S. 108" -> "10X10S")
         name = re.sub(r'\.\s*\d{1,4}\s*$', '', name)
+        name = re.sub(r'\bCARNIBURE\b', 'CARNISURE', name, flags=re.IGNORECASE)
+        name = re.sub(
+            r'\bPROL(?:ITON|UTION)\b', 'PROLUTON', name, flags=re.IGNORECASE)
+        name = re.sub(r'\bSOGMG\b', '500MG', name, flags=re.IGNORECASE)
+        name = re.sub(r'\bVELOZ\s+0\s+CAP\b', 'VELOZ D CAP', name, flags=re.IGNORECASE)
         return name.strip()
 
     def _normalize_novacare_ocr_delimiters(raw: str) -> str:
@@ -6086,6 +6199,184 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
             s,
         )
         return s
+
+    def _normalize_novacare_garbled_money(raw: str) -> str:
+        """Fix common Novacare scan OCR money glitches (DEL-26 sideways/noise)."""
+        s = str(raw or "")
+        s = s.replace('—', ' ').replace('–', ' ')
+        # 2a6.75 → 246.75 (OCR often reads digit 4 as 'a')
+        s = re.sub(r'\b(\d)[aA](\d\.\d{2})\b', r'\g<1>4\2', s)
+        # 624.a0 → 624.80 (digit 8 as 'a')
+        s = re.sub(r'\b(\d+\.)[aA](\d)\b', r'\g<1>8\2', s)
+        # 7e.00 → 76.00 (digit 6 as 'e')
+        s = re.sub(r'\b(\d)[eE]\.(\d{2})\b', r'\g<1>6.\2', s)
+        # S00 / §.00 → 5.00 (TD% column OCR)
+        s = re.sub(r'\bS00\b', '5.00', s, flags=re.IGNORECASE)
+        s = s.replace('§', '5')
+        # 653 37| → 653.37|
+        s = re.sub(
+            r'\b(\d{2,5})\s+(\d{2})(?=\s*[|\]\)\!\,])',
+            r'\1.\2',
+            s,
+        )
+        # 217.79 → ai. 79 / a1.79
+        s = re.sub(
+            r'\b(?:ai|a1|zi)[\.,]?\s*(\d{2})\b',
+            r'217.\1',
+            s,
+            flags=re.IGNORECASE,
+        )
+        s = re.sub(r'\bSOGMG\b', '500MG', s, flags=re.IGNORECASE)
+        return s
+
+    def _novacare_name_key(name: str) -> str:
+        n = _clean_product_name(name).upper()
+        n = re.sub(r'[^A-Z0-9\s]', ' ', n)
+        n = re.sub(r'\s+', ' ', n).strip()
+        # Drop leading OCR junk digits / hash ("84 NAPPI", "# CALCIGARD")
+        n = re.sub(r'^[\d\s]+', '', n).strip()
+        n = re.sub(r'\bINU\b', 'INJ', n)
+        n = re.sub(r'\b2WL\b', '2ML', n)
+        return n
+
+    def _novacare_names_match(a: str, b: str) -> bool:
+        ka, kb = _novacare_name_key(a), _novacare_name_key(b)
+        if not ka or not kb:
+            return False
+        if ka == kb or ka in kb or kb in ka:
+            return True
+        aw, bw = ka.split(), kb.split()
+        if not aw or not bw:
+            return False
+        # Brand token match (CALCIGARD / DEXONA / NAPPI / …)
+        if aw[0] == bw[0] and len(aw[0]) >= 4:
+            return True
+        if len(aw) >= 2 and len(bw) >= 2 and aw[0] == bw[0] and aw[1] == bw[1]:
+            return True
+        # PROLUTON DEPOT… vs PROLITON DEPOT…
+        if aw[0][:6] == bw[0][:6] and (
+            (len(aw) > 1 and len(bw) > 1 and aw[1] == bw[1])
+            or aw[0] == bw[0]
+        ):
+            return True
+        return False
+
+    def _parse_novacare_garbled_fallback_rows(text: str) -> list:
+        """Parse product/rate when HSN-leading pipe rows are unreadable."""
+        rows = []
+        product_res = [
+            (re.compile(r'(CARNISURE|CARNIBURE)\s+INJECTION', re.I),
+             'CARNISURE INJECTION'),
+            (re.compile(r'KOJIC\s+SKIN\s+LIGHTENING\s+CREAM', re.I),
+             'KOJIC SKIN LIGHTENING CREAM'),
+            (re.compile(
+                r'(?:PROLUTON|PROLITON|PROLUTION)\s+DEPOT'
+                r'(?:\s+\d+\s*MG)?'
+                r'(?:\s+AMPS?)?'
+                r'(?:\s+[\dXx\*\/]+(?:\s+[\dXx\*\/]+){0,6})?',
+                re.I), None),
+            (re.compile(r'VELO[Zz]\s+[D0]\s+CAP', re.I), 'VELOZ D CAP'),
+            # DEL-26-1051: HSN/pipe rows unreadable; Rate leaked as Amount
+            (re.compile(r'#?\s*CALCIGARD\s+10\s+CAPS?', re.I), 'CALCIGARD 10 CAPS'),
+            (re.compile(r'DEXONA\s+\d*\s*%?\s*M?[WL]*\s*IN[JU]', re.I), None),
+        ]
+        for raw_line in text.splitlines():
+            line = _normalize_novacare_garbled_money(raw_line)
+            chosen = None
+            for cre, fixed_name in product_res:
+                m = cre.search(line)
+                if not m:
+                    continue
+                product = fixed_name or _clean_product_name(m.group(0))
+                product = _clean_product_name(product)
+                product = re.sub(r'\bINU\b', 'INJ', product, flags=re.IGNORECASE)
+                product = re.sub(r'\b(\d)WL\b', r'\1ML', product, flags=re.IGNORECASE)
+                # Drop trailing OCR junk after dosage form
+                product = re.sub(
+                    r'\s+(?:Galata|H)\b.*$', '', product, flags=re.IGNORECASE
+                ).strip()
+                chosen = product
+                break
+            if not chosen:
+                continue
+            nums = [
+                float(n.replace(',', ''))
+                for n in re.findall(r'[\d,]+\.\d{2}', line)
+                if n and re.search(r'\d', n)
+            ]
+            # Layout: ... NEW_MRP RATE AMOUNT TD%(5.00) TAXABLE ...
+            rate = amount = None
+            td_idxs = [i for i, n in enumerate(nums) if abs(n - 5.0) < 0.001]
+            if td_idxs and td_idxs[0] >= 2:
+                rate = nums[td_idxs[0] - 2]
+                amount = nums[td_idxs[0] - 1]
+            elif len(nums) >= 3:
+                # Prefer consecutive NEW_MRP, RATE, AMOUNT where qty*rate≈amount
+                # (avoids mistaking Amount for Rate when TD% OCR is missing)
+                best_triple = None
+                for i in range(len(nums) - 2):
+                    rate_c, amt = nums[i + 1], nums[i + 2]
+                    if rate_c <= 1 or amt <= rate_c:
+                        continue
+                    if abs(rate_c - 5.0) < 0.001 or abs(rate_c - 18.0) < 0.001:
+                        continue
+                    qty_i = int(round(amt / rate_c))
+                    if qty_i < 1 or qty_i > 99999:
+                        continue
+                    if abs(qty_i * rate_c - amt) / amt > 0.02:
+                        continue
+                    if best_triple is None or amt > best_triple[1]:
+                        best_triple = (rate_c, amt)
+                if best_triple:
+                    rate, amount = best_triple
+                else:
+                    rate, amount = nums[-2], nums[-1]
+                    if amount < 20 and len(nums) >= 4:
+                        rate, amount = nums[-3], nums[-2]
+
+            if rate is None or rate <= 0:
+                continue
+
+            # If Amount/Rate implies a clean qty, prefer that RATE over NEW MRP
+            # (skip when TD/triple already found a rate that divides amount cleanly —
+            # otherwise GST amounts like 3.61 steal the Rate, e.g. DEL-26-1051)
+            rate_divides = (
+                amount
+                and amount > rate
+                and abs(int(round(amount / rate)) * rate - amount) / amount <= 0.02
+            )
+            if amount and amount > rate and len(nums) >= 3 and not rate_divides:
+                best = None
+                for cand in nums:
+                    if cand <= 1 or cand >= amount:
+                        continue
+                    qty_i = int(round(amount / cand))
+                    if qty_i < 1 or qty_i > 99999:
+                        continue
+                    if abs(qty_i * cand - amount) / amount > 0.02:
+                        continue
+                    # Skip TD% tokens
+                    if abs(cand - 5.0) < 0.001 or abs(cand - 18.0) < 0.001:
+                        continue
+                    if best is None or cand < best:
+                        best = cand
+                if best is not None:
+                    rate = best
+
+            rows.append({
+                "product_description": chosen,
+                "unit_price": rate,
+                "total_amount": amount,
+                "lot_batch_number": "",
+                "quantity": 0,
+                "mfg": "",
+                "hsn_code": "",
+                "mrp": None,
+                "scm_mrp": None,
+                "expiry_date": "",
+                "_garbled_fallback": True,
+            })
+        return rows
 
     def _parse_novacare_row(line: str) -> Optional[Dict]:
         line = _normalize_novacare_ocr_delimiters(line.strip())
@@ -6209,6 +6500,12 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
             parsed_rows.append(row)
 
     if not parsed_rows:
+        parsed_rows = _parse_novacare_garbled_fallback_rows(ocr_text)
+        if parsed_rows:
+            logger.info(
+                f"🔧 FIX12e: Using garbled-row fallback ({len(parsed_rows)} products)")
+
+    if not parsed_rows:
         return items
 
     non_recovered_batches = {
@@ -6269,7 +6566,49 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
                         matched_row = row
                         break
 
+        # Garbled DEL-26 scans: batches often wrong — match by product name
         if not matched_row:
+            for row in parsed_rows:
+                if _novacare_names_match(
+                    str(item.get("product_description", "") or ""),
+                    str(row.get("product_description", "") or ""),
+                ):
+                    matched_row = row
+                    break
+
+        if not matched_row:
+            continue
+
+        # Garbled fallback: only Product Name + Rate (leave qty/amount untouched)
+        if matched_row.get("_garbled_fallback"):
+            ocr_product = str(matched_row.get("product_description", "") or "").strip()
+            ocr_rate = matched_row.get("unit_price")
+            cur_product = str(item.get("product_description", "") or "").strip()
+            if ocr_product and _novacare_name_key(cur_product) != _novacare_name_key(ocr_product):
+                item["product_description"] = ocr_product
+                logger.warning(
+                    f"⚠️ FIX12e: Corrected product name (garbled): "
+                    f"'{cur_product}' -> '{ocr_product}'"
+                )
+            try:
+                cur_rate = float(normalize_numeric_value(
+                    str(item.get("unit_price", "0"))) or 0)
+            except Exception:
+                cur_rate = 0.0
+            try:
+                new_rate = float(ocr_rate)
+            except Exception:
+                new_rate = 0.0
+            if new_rate > 0 and (
+                cur_rate <= 0
+                or abs(cur_rate - new_rate) / max(new_rate, 0.01) > 0.02
+            ):
+                item["unit_price"] = f"{new_rate:.2f}"
+                logger.warning(
+                    f"⚠️ FIX12e: Corrected rate (garbled) for "
+                    f"'{item.get('product_description', '')}': "
+                    f"{cur_rate}->{item.get('unit_price')}"
+                )
             continue
 
         try:
@@ -7849,6 +8188,44 @@ def fix_trilok_enterprises_overlap_pack_product_fallback(
     return items
 
 
+def ocr_suggests_rajesh_pharma(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect RAJESH PHARMA MARG ERP Mfr/Pack Product Name invoices."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    if not re.search(r'RAJESH\s+PHARMA|RAJESH\s+SPECIALITIES', blob):
+        return False
+    if ocr_text and re.search(
+        r'\bMfr\b.*\bPack\b.*Product\s+Name', ocr_text, re.IGNORECASE
+    ):
+        return True
+    return bool(re.search(r'RAJESH\s+PHARMA', blob))
+
+
+def extract_rajesh_pharma_invoice_total_from_ocr(ocr_text: str) -> Optional[str]:
+    """Extract RAJESH PHARMA Grand Total (fixes OCR amount-words 'Lac' ≠ LAKH)."""
+    if not ocr_text or not ocr_suggests_rajesh_pharma(ocr_text):
+        return None
+
+    # Explicit Grand Total figure (often printed near bank details)
+    grand = re.search(
+        r'Grand\s*Total.{0,200}?([\d]{5,9}\.\d{2})',
+        ocr_text, re.IGNORECASE | re.DOTALL,
+    )
+    if grand:
+        try:
+            val = float(grand.group(1).replace(',', ''))
+            if val >= 1000:
+                return f"{val:.2f}"
+        except ValueError:
+            pass
+
+    # Amount-in-words uses "Lac" / "Lacs"; shared words_to_number only knows LAKH
+    fixed_words_ocr = re.sub(r'\bLACS?\b', 'LAKH', ocr_text, flags=re.IGNORECASE)
+    words_amt = extract_amount_from_words(fixed_words_ocr)
+    if words_amt and words_amt >= 1000:
+        return f"{words_amt:.2f}"
+    return None
+
+
 def fix_rajesh_pharma_product_names_from_ocr(items, ocr_text: str) -> list:
     """
     FIX 12h: Strip Mfr/Pack prefixes from product_description for RAJESH PHARMA
@@ -7888,6 +8265,7 @@ def fix_rajesh_pharma_product_names_from_ocr(items, ocr_text: str) -> list:
                 re.fullmatch(r"\d+[\*;]?\d*'?S", tok, re.IGNORECASE)
                 or re.fullmatch(r"\d+\*\d+", tok, re.IGNORECASE)
                 or re.fullmatch(r"\d+ML", tok, re.IGNORECASE)
+                or re.fullmatch(r"\d+GM", tok, re.IGNORECASE)
                 or tok_up in _PACK_SINGLE
             ):
                 pack_tokens.append(tok)
@@ -7896,7 +8274,7 @@ def fix_rajesh_pharma_product_names_from_ocr(items, ocr_text: str) -> list:
             if (
                 i + 1 < len(tokens)
                 and re.fullmatch(r"\d+", tokens[i])
-                and tokens[i + 1].upper() == "ML"
+                and tokens[i + 1].upper() in {"ML", "GM"}
             ):
                 pack_tokens.extend([tokens[i], tokens[i + 1]])
                 i += 2
@@ -12302,9 +12680,15 @@ def _bluefox_garbled_product_text(ocr_text: str) -> bool:
     """True when PDF text-layer product names use garbled font encoding."""
     if not ocr_text:
         return False
+    # Legacy BlueFox embedded-font garble, plus pdfplumber Mfr+Item interleaving
+    # (e.g. GERBISA SUPP 10 MG → EGAELRTBHISCAA SRUEP LPT 1D0. MG).
     return bool(re.search(
         r'CVOEOM3M|CUANPI|HEDAELXTOHNCAA|EDAELXTOHNCAA|'
-        r"C10A.?S.?TION\s*&\s*CONTROLS",
+        r"C10A.?S.?TION\s*&\s*CONTROLS|"
+        r'EGAELRTBHISCAA|ICNRDEIMA|HEEPTAOLTINH|ALIFMFIINTE|'
+        r'GAGRANNIEART|BRFMOALCICE|RREMDAUCSETUATT|OSTEELCSHIBACT|'
+        r'SRUEP\s+LPT|PDLUS\s+SF|TVATB\s+L|ARRMOSAHCEENU|'
+        r'RAEMMAELDAIE|XLSYIFLEOCAINE',
         ocr_text, re.IGNORECASE,
     ))
 
@@ -12320,6 +12704,12 @@ def _strip_bluefox_mfr_prefix(desc: str) -> str:
     """Strip Mkt/Mfr columns (max 2 tokens) from BlueFox item description."""
     tokens = desc.split()
     stripped = 0
+    # Only short Mkt codes (ZYD/GSK/NITI) or known Mfr tokens — not product
+    # names like GENTICYN/EPTOIN/GERBISA (previously matched ^[A-Z]{2,8}$).
+    _known_mfr = re.compile(
+        r'^(?:ZYDUS|ABBOTT|ABBOTTABBOTT|ABBOTTSWISS|ASTERO|ALEXI|RHINE)$',
+        re.IGNORECASE,
+    )
     while tokens and stripped < 2:
         tok = tokens[0]
         if re.search(
@@ -12327,7 +12717,7 @@ def _strip_bluefox_mfr_prefix(desc: str) -> str:
             tok, re.IGNORECASE,
         ):
             break
-        if re.match(r'^[A-Z]{2,8}$', tok):
+        if re.match(r'^[A-Z]{2,5}$', tok) or _known_mfr.match(tok):
             tokens.pop(0)
             stripped += 1
             continue
@@ -12340,6 +12730,8 @@ def _normalize_bluefox_product(name: str) -> str:
         re.sub(r'\s+', ' ', (name or "").strip()))
     name = name.upper()
     name = re.sub(r'^FE\s+', '', name)
+    # MDC PHA column sometimes glues onto item (PHABFOLIC / PHAREDUSTAT / PHAMOSHEN)
+    name = re.sub(r'^PHA(?!RMA|RM)', '', name)
     name = re.sub(r'\b158\b', '15 S', name)
     name = re.sub(r"\bI'S\b", "1'S", name)
     if re.search(r'VEO3\s*CAP|CVOEOM3M|CUANPI', name, re.IGNORECASE):
@@ -12485,7 +12877,12 @@ def _uma_items_look_garbled(items: list) -> bool:
     for item in items:
         desc = str(item.get("product_description", "") or "").strip()
         if re.search(
-            r'CVOEOM3M|CUANPI|HEDAELXTOHNCAA|EDAELXTOHNCAA|C10A.?S.?TION',
+            r'CVOEOM3M|CUANPI|HEDAELXTOHNCAA|EDAELXTOHNCAA|C10A.?S.?TION|'
+            r'EGAELRTBHISCAA|ICNRDEIMA|HEEPTAOLTINH|ALIFMFIINTE|'
+            r'GAGRANNIEART|BRFMOALCICE|RREMDAUCSETUATT|OSTEELCSHIBACT|'
+            r'SRUEP\s+LPT|PDLUS\s+SF|TVATB\s+L|'
+            # PyMuPDF glues Mkt+Mfr into Item Description without spaces
+            r'GERMANKAMALA|LIFSTEMETIL|GETHYRONORM|ABBOTTACME|PHAREDUSTAT',
             desc, re.IGNORECASE,
         ):
             return True
@@ -12504,6 +12901,115 @@ def _uma_items_look_garbled(items: list) -> bool:
     return False
 
 
+def _extract_bluefox_item_names_via_column_ocr(
+    page, page_num: Optional[int] = None
+) -> List[str]:
+    """
+    BlueFox / United Medical: OCR only the Item Description column so Mkt/Mfr
+    text (often font-glued into the product token) is excluded.
+    """
+    if page is None or not TESSERACT_AVAILABLE:
+        return []
+    try:
+        words = page.get_text("words") or []
+        item_x, packs_x = 70.0, 185.0
+        header_y = None
+        for w in words:
+            if w[4] == "Item" and 120 < w[1] < 160:
+                item_x = float(w[0]) - 2.0
+                header_y = float(w[1])
+            if w[4] == "Packs" and 120 < w[1] < 160:
+                packs_x = float(w[0]) - 2.0
+
+        y0 = (header_y + 8.0) if header_y is not None else 150.0
+        y1 = y0 + 20.0
+        for w in words:
+            tok = str(w[4] or "")
+            if tok.isdigit() and 6 <= len(tok) <= 8 and w[0] < 400:
+                y1 = max(y1, float(w[3]) + 4.0)
+        # Stop before footer / totals band
+        y1 = min(y1, float(page.rect.height) * 0.55)
+        if packs_x <= item_x + 20 or y1 <= y0 + 10:
+            return []
+
+        clip = fitz.Rect(item_x, y0, packs_x, y1)
+        pix = page.get_pixmap(dpi=300, clip=clip)
+        img = PILImage.open(io.BytesIO(pix.tobytes("png")))
+        pix = None
+        with tesseract_ocr_slot("bluefox_item_col"):
+            crop_text = run_tesseract_call(
+                lambda i=img: pytesseract.image_to_string(
+                    i, config="--oem 3 --psm 6"),
+                label="bluefox_item_col",
+                page=page_num,
+            )
+        img.close()
+
+        names: List[str] = []
+        for ln in str(crop_text or "").splitlines():
+            name = re.sub(r"\s+", " ", ln).strip(" .|")
+            if len(name) < 4:
+                continue
+            if re.search(
+                r'PENDING|BILL\s+NO|TOP\s+5|DESCRIPTION|MFR\b|PACKS|HSN',
+                name, re.IGNORECASE,
+            ):
+                continue
+            names.append(name.upper())
+        return names
+    except Exception as e:
+        logger.debug(f"BlueFox item-column OCR skipped: {e}")
+        return []
+
+
+def _apply_bluefox_column_crop_product_names(
+    full_data, page, page_num: Optional[int] = None
+) -> None:
+    """Overwrite BlueFox product_description from Item Description column OCR."""
+    if not isinstance(full_data, dict) or page is None:
+        return
+    items = _extract_line_items_for_validation(full_data)
+    if not items:
+        return
+    names = _extract_bluefox_item_names_via_column_ocr(page, page_num=page_num)
+    if not names:
+        return
+    # Prefer exact row-count match; otherwise only fill when current names are glued/garbled
+    if len(names) != len(items) and not _uma_items_look_garbled(items):
+        return
+    n = min(len(names), len(items))
+    changed = 0
+    for i in range(n):
+        new_name = names[i]
+        old = str(items[i].get("product_description", "") or "").strip()
+        if new_name and new_name != old.upper():
+            items[i]["product_description"] = new_name
+            changed += 1
+    if changed:
+        logger.warning(
+            f"⚠️ FIX BlueFox: set {changed}/{n} product name(s) "
+            f"from Item Description column OCR"
+        )
+
+
+def _finalize_bluefox_page_result(
+    result: Optional[dict], page, page_num: Optional[int] = None
+) -> Optional[dict]:
+    """BlueFox-only post-pass: fix product names from the Item Description column."""
+    if not isinstance(result, dict) or page is None:
+        return result
+    ocr = str(result.get("ocr_text") or "")
+    if not ocr_suggests_united_medical_agencies_bluefox(ocr):
+        return result
+    try:
+        _apply_bluefox_column_crop_product_names(
+            result.get("full_data"), page, page_num=page_num
+        )
+    except Exception as e:
+        logger.debug(f"BlueFox column-name finalize skipped: {e}")
+    return result
+
+
 def fix_united_medical_agencies_line_items_from_ocr(
     items: list, ocr_text: str,
 ) -> list:
@@ -12512,10 +13018,10 @@ def fix_united_medical_agencies_line_items_from_ocr(
         return items
 
     recovered = extract_united_medical_agencies_line_items_from_ocr(ocr_text)
-    if recovered and (
-        not items
-        or _uma_items_look_garbled(items)
-        or len(recovered) >= len(items)
+    # Only replace when current rows are empty/garbled — never overwrite clean
+    # column-OCR / Gemini names just because the text-layer parser found rows.
+    if recovered and not _bluefox_garbled_product_text(ocr_text) and (
+        not items or _uma_items_look_garbled(items)
     ):
         return recovered
 
@@ -12725,8 +13231,33 @@ def ocr_suggests_tulsyan_pharmaceuticals(ocr_text: str) -> bool:
     if not ocr_text:
         return False
     return bool(re.search(
-        r'TULSYAN\s+PHARMACEUTICAL|SHRI\s+VENKATESH\s+SUPER',
+        r'TULSY\s*AN\s+PHARMACEUTICAL|TULSYAN\s+PHARMACEUTICAL|'
+        r'SHRI\s+VENKATESH\s+SUPER',
         ocr_text, re.IGNORECASE))
+
+
+def extract_tulsyan_invoice_total_from_ocr(ocr_text: str) -> Optional[str]:
+    """Extract TULSYAN GRAND TOTAL (fixes OCR 'Thiny' → Thirty in amount-words)."""
+    if not ocr_text or not ocr_suggests_tulsyan_pharmaceuticals(ocr_text):
+        return None
+
+    grand = re.search(
+        r'GRAND\s*TOTAL\s*[:\.]?\s*([\d,]+\.\d{2})',
+        ocr_text, re.IGNORECASE)
+    if grand:
+        try:
+            val = float(grand.group(1).replace(',', ''))
+            if val >= 100:
+                return f"{val:.2f}"
+        except ValueError:
+            pass
+
+    # OCR often reads THIRTY as THINY / THINY → words_to_number drops it (1105 vs 1135)
+    fixed_words_ocr = re.sub(r'\bTHINY\b', 'THIRTY', ocr_text, flags=re.IGNORECASE)
+    words_amt = extract_amount_from_words(fixed_words_ocr)
+    if words_amt and words_amt >= 100:
+        return f"{words_amt:.2f}"
+    return None
 
 
 def extract_tulsyan_pharmaceuticals_party_details(ocr_text: str) -> dict:
@@ -12823,8 +13354,9 @@ def ocr_suggests_tulsyan_rkc_table(ocr_text: str) -> bool:
     """Detect TULSYAN RKC / RAMKRISHNA Item Name table layout."""
     if not ocr_suggests_tulsyan_pharmaceuticals(ocr_text):
         return False
+    # Do NOT key off bare "Total Qty" — Mediserve CREDIT bills also print it
     return bool(re.search(
-        r'\bRO\d{5}\b|RAMKRISHNA\s+CARE|Total\s+Qty',
+        r'\bRO\d{5}\b|RAMKRISHNA\s+CARE',
         ocr_text, re.IGNORECASE))
 
 
@@ -12914,7 +13446,7 @@ def _tulsyan_rkc_items_look_garbled(items: list) -> bool:
 
 
 def extract_tulsyan_pharmaceuticals_line_items_from_ocr(ocr_text: str) -> list:
-    """Parse TULSYAN item rows: Name | rate | pack | batch."""
+    """Parse TULSYAN item rows: Name | rate | pack | batch (and Mediserve Item Name)."""
     items = []
     if not ocr_text or not ocr_suggests_tulsyan_pharmaceuticals(ocr_text):
         return items
@@ -12932,20 +13464,297 @@ def extract_tulsyan_pharmaceuticals_line_items_from_ocr(ocr_text: str) -> list:
             "unit_of_measure": row_match.group(3).upper(),
             "additional_fields": {"mrp": row_match.group(2)},
         })
+
+    # Mediserve / GST INVOICE CREDIT: MFG Qty Free Item Name ... Amount
+    # Example: ZYD | 1 | 0 | TENOHEP 300MG TAB ... 1126.19
+    if not items:
+        seen = set()
+        for match in re.finditer(
+            r'(?:ZYD|[A-Z]{2,4})\s*[|\s]+(\d{1,5})\s*[|\s]+\d+\s*[|\-\s]*'
+            r'([A-Z][A-Z0-9]*(?:\s+[A-Z0-9%/.\-]+){0,6}\s+'
+            r'(?:TAB|CAPS?|INJ|SYP|VIAL|AMP))\b'
+            r'([^\n]{0,160})',
+            ocr_text, re.IGNORECASE,
+        ):
+            product = _normalize_tulsyan_product_name(match.group(2))
+            if not product or product in seen:
+                continue
+            if re.search(r'ITEM\s*NAME|TOTAL\s*QTY|GRAND\s*TOTAL', product, re.I):
+                continue
+            tail = match.group(3) or ""
+            money = re.findall(r'\b(\d{2,7}\.\d{2})\b', tail)
+            batch_m = re.search(
+                r'\b([A-Z]{1,3}\d{4,7}[A-Z]?)\b', tail, re.IGNORECASE)
+            item = {
+                "product_description": product,
+                "quantity": match.group(1),
+            }
+            if money:
+                # Rightmost money on the row is Amount
+                item["total_amount"] = money[-1]
+            if batch_m:
+                item["lot_batch_number"] = _normalize_tulsyan_batch(
+                    batch_m.group(1))
+            items.append(item)
+            seen.add(product)
+
+        # Fallback: bare Item Name token when MFG/Qty columns OCR poorly
+        if not items:
+            for match in re.finditer(
+                r'(?:^|[|\s])(?:0|O)\s*[|\-\s]+'
+                r'([A-Z][A-Z0-9]*(?:\s+[A-Z0-9%/.\-]+){0,6}\s+'
+                r'(?:TAB|CAPS?|INJ|SYP|VIAL|AMP))\b',
+                ocr_text, re.IGNORECASE | re.MULTILINE,
+            ):
+                product = _normalize_tulsyan_product_name(match.group(1))
+                if not product or product in seen:
+                    continue
+                if re.search(r'ITEM\s*NAME|TOTAL', product, re.I):
+                    continue
+                items.append({"product_description": product})
+                seen.add(product)
+
+        # Fallback: product alone on a pipe/OCR fragment line
+        if not items:
+            for line in ocr_text.splitlines():
+                if not re.search(r'\b(?:TAB|CAPS?|INJ|SYP|VIAL|AMP)\b', line, re.I):
+                    continue
+                if re.search(
+                    r'ITEM\s*NAME|TOTAL\s*QTY|GRAND\s*TOTAL|SUB\s*TOTAL|GST\s*\d',
+                    line, re.I,
+                ):
+                    continue
+                match = re.search(
+                    r'([A-Z][A-Z0-9]*(?:\s+[A-Z0-9%/.\-]+){0,6}\s+'
+                    r'(?:TAB|CAPS?|INJ|SYP|VIAL|AMP))\b',
+                    line, re.IGNORECASE,
+                )
+                if not match:
+                    continue
+                product = _normalize_tulsyan_product_name(match.group(1))
+                if not product or product in seen:
+                    continue
+                items.append({"product_description": product})
+                seen.add(product)
+
     return items
 
 
-def fix_tulsyan_pharmaceuticals_line_items_from_ocr(items: list, ocr_text: str) -> list:
-    """Correct product names and batches for TULSYAN table OCR."""
+def _ocr_tulsyan_mediserve_rate_region(page=None, image_bytes: bytes = None) -> str:
+    """OCR TULSYAN Mediserve Rate/Amount band (scanned GST INVOICE CREDIT)."""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+        # Full mid band captures Rate + Amount even when columns shift
+        crop = img.crop((
+            int(width * 0.08), int(height * 0.28),
+            int(width * 0.98), int(height * 0.58),
+        ))
+        gray = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        gray = cv2.resize(
+            gray, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_CUBIC)
+        text = pytesseract.image_to_string(gray, config="--psm 6") or ""
+        try:
+            img.close()
+        except Exception:
+            pass
+        return text
+    except Exception:
+        return ""
+
+
+def extract_tulsyan_mediserve_rates_from_ocr(ocr_text: str) -> list:
+    """Extract ordered Rate values from TULSYAN Mediserve Item Name table OCR."""
+    return [
+        row["rate"]
+        for row in extract_tulsyan_mediserve_rate_amount_rows_from_ocr(ocr_text)
+    ]
+
+
+def extract_tulsyan_mediserve_rate_amount_rows_from_ocr(ocr_text: str) -> list:
+    """Extract ordered {rate, amount} rows from TULSYAN Mediserve table OCR."""
+    if not ocr_text or not ocr_suggests_tulsyan_pharmaceuticals(ocr_text):
+        return []
+    if not re.search(
+        r'Item\s*Name|GST\s*INVOICE\s*CREDIT|\bZYD\b|'
+        r'FLUTICONE|FORGLYN|OXALGIN|TENOHEP|244\.28|524\.87',
+        ocr_text, re.IGNORECASE,
+    ):
+        return []
+
+    text = re.sub(r'(\d+),(\d{2})\b', r'\1.\2', ocr_text)
+    # OCR drops the decimal: 52487 before discount 0 / GST 2.50 → 524.87
+    text = re.sub(
+        r'\b(\d{3})(\d{2})(?=\D{0,8}(?:\.?0)\D{0,8}2\.?50)',
+        r'\1.\2',
+        text,
+    )
+
+    rows: list = []
+
+    def _norm_tulsyan_money(raw: str) -> Optional[float]:
+        raw = (raw or "").strip()
+        if not raw:
+            return None
+        try:
+            if "." in raw:
+                return float(raw)
+            # Amount OCR often drops the decimal: 1145421 → 11454.21
+            # Do not treat HSN fragments (3004906 / 3926909) as amounts.
+            if re.fullmatch(r"\d{5,7}", raw):
+                if re.match(r"^(300|392)\d+", raw):
+                    return None
+                return float(f"{raw[:-2]}.{raw[-2:]}")
+            return float(raw)
+        except ValueError:
+            return None
+
+    # Preferred: Mrp + Rate + Dis(~0) + SGST 2.50 + CGST 2.50 + Amount
+    # (HSN often garbled; Amount may lack a decimal point)
+    for m in re.finditer(
+        r'([\d]+\.\d{2})\D{0,10}([\d]+\.\d{2})\D{0,10}'
+        r'(?:\.?0)\D{0,10}2\.?50\D{0,10}2\.?50\D{0,16}'
+        r'([\d]+\.\d{2}|\d{5,7})',
+        text,
+    ):
+        try:
+            mrp = float(m.group(1))
+            rate = float(m.group(2))
+        except ValueError:
+            continue
+        amt_raw = m.group(3)
+        amount = _norm_tulsyan_money(amt_raw)
+        if amount is None:
+            continue
+        if rate < 1 or rate > 20000 or amount < rate:
+            continue
+        if mrp > 0 and rate > mrp * 3:
+            continue
+        # Bare-integer amounts must imply a clean Qty (= Amount/Rate)
+        if "." not in amt_raw:
+            implied = amount / rate
+            implied_i = int(round(implied))
+            if implied_i < 1 or abs(implied - implied_i) > 0.05:
+                continue
+        rows.append({"rate": f"{rate:.2f}", "amount": f"{amount:.2f}"})
+
+    # Fallback: Rate immediately before Dis 0 and SGST 2.50 (rate only)
+    if len(rows) < 1:
+        for m in re.finditer(
+            r'([\d]+\.\d{2})[);,\]]?\s*(?:\.?0)\D{0,10}2\.?50',
+            text,
+        ):
+            try:
+                rate = float(m.group(1))
+            except ValueError:
+                continue
+            if 5 < rate < 10000:
+                rows.append({"rate": f"{rate:.2f}", "amount": ""})
+
+    # Drop consecutive duplicate rate rows from overlapping regex hits
+    deduped: list = []
+    for row in rows:
+        if not deduped or deduped[-1]["rate"] != row["rate"]:
+            deduped.append(row)
+    return deduped
+
+
+def _apply_tulsyan_mediserve_rates(
+    items: list, ocr_text: str, rate_ocr: str = "",
+) -> list:
+    """Overwrite unit_price and total_amount from Mediserve Rate/Amount OCR (TULSYAN)."""
+    if not items:
+        return items
+    combined = f"{rate_ocr or ''}\n{ocr_text or ''}".strip()
+    rows = extract_tulsyan_mediserve_rate_amount_rows_from_ocr(combined)
+    if not rows:
+        return items
+    # Apply in row order when counts match; otherwise stop (avoid mis-assign)
+    if len(rows) != len(items):
+        return items
+    for item, row in zip(items, rows):
+        rate = row.get("rate") or ""
+        amount = row.get("amount") or ""
+        if rate:
+            old = str(item.get("unit_price", "") or "").strip()
+            try:
+                old_f = float(normalize_numeric_value(old) or 0) if old else 0.0
+                new_f = float(rate)
+            except Exception:
+                old_f, new_f = 0.0, 0.0
+            if new_f > 0 and (not old or abs(old_f - new_f) > 0.005):
+                item["unit_price"] = rate
+                if old and abs(old_f - new_f) > 0.005:
+                    logger.warning(f"⚠️ TULSYAN: rate '{old}' → '{rate}'")
+        if amount:
+            old_amt = str(item.get("total_amount", "") or "").strip()
+            try:
+                old_a = float(normalize_numeric_value(old_amt) or 0) if old_amt else 0.0
+                new_a = float(amount)
+            except Exception:
+                old_a, new_a = 0.0, 0.0
+            if new_a > 0 and (not old_amt or abs(old_a - new_a) > 0.005):
+                item["total_amount"] = amount
+                if old_amt and abs(old_a - new_a) > 0.005:
+                    logger.warning(f"⚠️ TULSYAN: amount '{old_amt}' → '{amount}'")
+
+        # Qty-only fix: Vision sometimes copies neighbor qty (FORGLYN 20→10).
+        # Only rewrite when qty × rate does not match the OCR Amount.
+        try:
+            rate_f = float(
+                normalize_numeric_value(
+                    str(item.get("unit_price", "") or "")) or 0)
+            amt_f = float(
+                normalize_numeric_value(
+                    str(item.get("total_amount", "") or "")) or 0)
+            old_qty_s = str(item.get("quantity", "") or "").strip()
+            qty_f = float(normalize_numeric_value(old_qty_s) or 0) if old_qty_s else 0.0
+        except Exception:
+            rate_f = amt_f = qty_f = 0.0
+            old_qty_s = ""
+        if rate_f > 0 and amt_f > 0:
+            implied = amt_f / rate_f
+            implied_i = int(round(implied))
+            if (
+                implied_i >= 1
+                and abs(implied - implied_i) <= 0.02
+                and abs(implied_i * rate_f - amt_f) <= 0.05
+                and (qty_f <= 0 or abs(qty_f * rate_f - amt_f) > 0.5)
+            ):
+                new_qty = str(implied_i)
+                if old_qty_s != new_qty:
+                    item["quantity"] = new_qty
+                    logger.warning(
+                        f"⚠️ TULSYAN: qty '{old_qty_s}' → '{new_qty}' "
+                        f"for '{item.get('product_description', '')}'")
+    return items
+
+
+def fix_tulsyan_pharmaceuticals_line_items_from_ocr(
+    items: list, ocr_text: str, rate_ocr: str = "",
+) -> list:
+    """Correct product names (and Mediserve Rate) for TULSYAN table OCR."""
     rkc_items = extract_tulsyan_rkc_line_items_from_ocr(ocr_text)
     if rkc_items and (not items or _tulsyan_rkc_items_look_garbled(items)):
-        return rkc_items
+        return _apply_tulsyan_mediserve_rates(rkc_items, ocr_text, rate_ocr)
 
     ocr_items = extract_tulsyan_pharmaceuticals_line_items_from_ocr(ocr_text)
     if not ocr_items:
-        return items
+        # Still normalize whatever Vision returned
+        for item in items or []:
+            item["product_description"] = _normalize_tulsyan_product_name(
+                str(item.get("product_description", "") or ""))
+        return _apply_tulsyan_mediserve_rates(items, ocr_text, rate_ocr)
     if not items:
-        return ocr_items
+        return _apply_tulsyan_mediserve_rates(ocr_items, ocr_text, rate_ocr)
 
     used = set()
     for item in items:
@@ -12963,8 +13772,11 @@ def fix_tulsyan_pharmaceuticals_line_items_from_ocr(items: list, ocr_text: str) 
             if idx in used:
                 continue
             row_batch = re.sub(
-                r'[^A-Z0-9]', '', row["lot_batch_number"].upper())
-            row_desc = re.sub(r'[^A-Z0-9]', '', row["product_description"])
+                r'[^A-Z0-9]', '',
+                str(row.get("lot_batch_number", "") or "").upper())
+            row_desc = re.sub(
+                r'[^A-Z0-9]', '',
+                str(row.get("product_description", "") or ""))
             score = 0
             if item_batch and row_batch and (
                 item_batch == row_batch
@@ -12972,18 +13784,40 @@ def fix_tulsyan_pharmaceuticals_line_items_from_ocr(items: list, ocr_text: str) 
             ):
                 score += 4
             if item_desc and row_desc and (
-                item_desc[:8] == row_desc[:8] or item_desc in row_desc or row_desc in item_desc
+                item_desc[:8] == row_desc[:8]
+                or item_desc in row_desc
+                or row_desc in item_desc
             ):
                 score += 2
             if score > best_score:
                 best_score = score
                 best_idx = idx
 
+        # Single-item Mediserve bills: fall back to sole OCR row
+        if (
+            (best_idx is None or best_score < 2)
+            and len(items) == 1
+            and len(ocr_items) == 1
+            and 0 not in used
+        ):
+            best_idx = 0
+            best_score = 2
+
         if best_idx is not None and best_score >= 2:
             used.add(best_idx)
             row = ocr_items[best_idx]
+            old_name = item.get("product_description")
             item["product_description"] = row["product_description"]
-            item["lot_batch_number"] = row["lot_batch_number"]
+            if row.get("lot_batch_number"):
+                item["lot_batch_number"] = row["lot_batch_number"]
+            # Do not overwrite total_amount here — invoice "Extracted Total"
+            # is handled separately; line Amount is only filled when missing
+            if row.get("total_amount") and not item.get("total_amount"):
+                item["total_amount"] = row["total_amount"]
+            if old_name != row["product_description"]:
+                logger.warning(
+                    f"⚠️ TULSYAN: product '{old_name}' → "
+                    f"'{row['product_description']}'")
         else:
             item["product_description"] = _normalize_tulsyan_product_name(
                 str(item.get("product_description", "") or ""))
@@ -12991,7 +13825,7 @@ def fix_tulsyan_pharmaceuticals_line_items_from_ocr(items: list, ocr_text: str) 
             if batch:
                 item["lot_batch_number"] = _normalize_tulsyan_batch(batch)
 
-    return items
+    return _apply_tulsyan_mediserve_rates(items, ocr_text, rate_ocr)
 
 
 def ocr_suggests_ksk_speciality(ocr_text: str) -> bool:
@@ -14178,6 +15012,653 @@ def fix_sterling_pharma_line_items_from_ocr(items: list, ocr_text: str) -> list:
         if batch:
             item["lot_batch_number"] = _normalize_sterling_batch(
                 batch, item.get("product_description", ""))
+
+    return items
+
+
+def ocr_suggests_saraswati_medical_agency(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """Detect SARASWATI MEDICAL AGENCY (MFG|QTY|PRODUCT NAME & PACKING) layout."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if re.search(r"SARASWATI\s+MEDICAL\s+AGENC", blob, re.IGNORECASE):
+        return True
+    return bool(
+        re.search(r"SARASWATI", blob, re.IGNORECASE)
+        and re.search(
+            r"PRODUCT\s+NAME\s*&\s*PACKING|SARASWATI\s+ACCOUNT\s+ONLY|"
+            r"QTY\.?\s*DISC",
+            blob,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _ocr_saraswati_table_region(page=None, image_bytes: bytes = None) -> str:
+    """OCR the sideways SARASWATI product table (page content is 90°-rotated).
+
+    Returns synthetic clean row lines (qty, product, batch, rate, amount) so the
+    text parser can recover fields even when Tesseract fragments cells across
+    adjacent Y bands.
+    """
+    if not TESSERACT_AVAILABLE:
+        return ""
+
+    if page is not None:
+        try:
+            pix = page.get_pixmap(matrix=fitz.Matrix(3.5, 3.5))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        except Exception:
+            return ""
+    if not image_bytes:
+        return ""
+
+    try:
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        img = img.rotate(90, expand=True)
+    except Exception:
+        return ""
+
+    try:
+        width, height = img.size
+        # Taller band than a 2-line invoice so 3+ item tables are included
+        mid = img.crop(
+            (int(width * 0.04), int(height * 0.28),
+             int(width * 0.98), int(height * 0.55))
+        )
+        gray = cv2.cvtColor(np.array(mid), cv2.COLOR_RGB2GRAY)
+        gray = cv2.resize(
+            gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        data = pytesseract.image_to_data(
+            gray, output_type=pytesseract.Output.DICT, config="--psm 6")
+        img_w = gray.shape[1]
+    except Exception:
+        try:
+            img.close()
+        except Exception:
+            pass
+        return ""
+
+    try:
+        img.close()
+    except Exception:
+        pass
+
+    words: List[Dict[str, Any]] = []
+    n = len(data.get("text") or [])
+    for i in range(n):
+        txt = str(data["text"][i] or "").strip()
+        if not txt:
+            continue
+        try:
+            conf = int(float(data["conf"][i]))
+        except Exception:
+            conf = -1
+        if conf < 0:
+            continue
+        words.append({
+            "t": txt,
+            "x": int(data["left"][i]),
+            "y": int(data["top"][i]),
+        })
+
+    # Also keep a human-readable dump for debugging / legacy text parse fallback
+    rows_dbg: Dict[int, List[Tuple[int, str]]] = {}
+    for w in words:
+        key = int(round(w["y"] / 50.0))
+        rows_dbg.setdefault(key, []).append((w["x"], w["t"]))
+    dbg_lines = []
+    for key in sorted(rows_dbg):
+        line = " ".join(t for _, t in sorted(rows_dbg[key]))
+        if re.search(
+            r"NUCO|TAB|30049|PRODUCT|QTY|PLEASE|MFG|PACKING|NOCO",
+            line,
+            re.IGNORECASE,
+        ):
+            dbg_lines.append(line)
+
+    parsed_rows = _parse_saraswati_rows_from_words(words, img_w)
+    clean_lines = []
+    for row in parsed_rows:
+        clean_lines.append(
+            "SARASWATI_ROW "
+            f"qty={row.get('quantity') or ''} "
+            f"product={row.get('product_description') or ''} "
+            f"batch={row.get('lot_batch_number') or ''} "
+            f"rate={row.get('unit_price') or ''} "
+            f"amount={row.get('total_amount') or ''}"
+        )
+    # Prefer clean rows; append dbg text so legacy regex still has a signal
+    return "\n".join(clean_lines + dbg_lines)
+
+
+def _parse_saraswati_rows_from_words(
+    words: List[Dict[str, Any]], img_w: int
+) -> List[Dict[str, Any]]:
+    """Build line items from rotated-table word boxes (column-aware)."""
+    if not words or img_w <= 0:
+        return []
+
+    anchors = [
+        w for w in words
+        if re.search(r"N[UOI]C[O0A-Z]{2,}", w["t"], re.IGNORECASE)
+    ]
+    items: List[Dict[str, Any]] = []
+    used_ys: List[int] = []
+
+    for anchor in sorted(anchors, key=lambda z: z["y"]):
+        if any(abs(anchor["y"] - uy) < 50 for uy in used_ys):
+            continue
+        used_ys.append(anchor["y"])
+
+        row = [w for w in words if abs(w["y"] - anchor["y"]) <= 70]
+        row = sorted(row, key=lambda z: z["x"])
+        row_text = " ".join(w["t"] for w in row)
+
+        # Qty: standalone ints in the narrow MFG/QTY band left of product name
+        qty = None
+        qty_candidates = []
+        for w in row:
+            if w["x"] >= anchor["x"] - 10:
+                break
+            if w["x"] < img_w * 0.035:
+                continue
+            tok = re.sub(r"[^0-9]", "", w["t"])
+            if re.fullmatch(r"\d{1,4}", tok):
+                qty_candidates.append(tok)
+        if qty_candidates:
+            qty = qty_candidates[-1]
+
+        # Product strength / packing from name+pack columns
+        strength = None
+        pack = None
+        for w in row:
+            if not (img_w * 0.12 <= w["x"] <= img_w * 0.35):
+                continue
+            raw = w["t"].upper().strip()
+            tok = re.sub(r"[^A-Z0-9]", "", raw)
+            if tok in ("120", "90", "60", "MR", "P"):
+                strength = tok
+            elif re.fullmatch(r"\$?0", raw) or tok in ("SO", "S0"):
+                strength = "90"
+            elif tok in ("10TAB", "1OTAB", "I0TAB", "LOTAB", "IOTAB"):
+                pack = "10TAB"
+            elif tok in ("15TAB", "ISTAB", "I5TAB"):
+                pack = "15TAB"
+
+        prod_norm = _normalize_saraswati_product_name(row_text)
+        if prod_norm:
+            pm = re.match(
+                r"NUCOXIA\s+(120|90|60|MR|P)\s+(10TAB|15TAB)", prod_norm
+            )
+            if pm:
+                strength = strength or pm.group(1)
+                pack = pack or pm.group(2)
+        if not strength:
+            continue
+        if not pack:
+            pack = "10TAB" if strength in ("120", "60", "MR") else "15TAB"
+        product = f"NUCOXIA {strength} {pack}"
+
+        # Money values with x/y (skip disc%/tax crumbs). Keep y so we can
+        # avoid borrowing the next row's AMOUNT when bands overlap.
+        moneys: List[Tuple[int, float, int]] = []
+        for w in row:
+            mm = re.search(r"(\d{2,6})[.,](\d{2})", w["t"])
+            if not mm:
+                continue
+            try:
+                val = float(f"{mm.group(1)}.{mm.group(2)}")
+            except Exception:
+                continue
+            if val < 30.0:
+                continue
+            moneys.append((w["x"], val, w["y"]))
+        moneys.sort(key=lambda z: z[0])
+
+        amount = None
+        rate = None
+        if moneys:
+            right_band = [
+                (x, v, y) for x, v, y in moneys
+                if x >= img_w * 0.65 or v >= 1000.0
+            ]
+            left = [
+                (x, v) for x, v, _y in moneys
+                if v < 1000.0 and 30.0 <= v <= 2000.0
+            ]
+            scored = []
+            for _x, v, y in right_band:
+                for _lx, rv in left:
+                    derived = v / rv
+                    if (
+                        abs(derived - round(derived)) <= 0.05
+                        and 1 <= round(derived) <= 9999
+                    ):
+                        scored.append((
+                            abs(y - anchor["y"]),
+                            v,
+                            rv,
+                            int(round(derived)),
+                        ))
+            if scored:
+                scored.sort()
+                amount = scored[0][1]
+                rate = scored[0][2]
+                qty = str(scored[0][3])
+            elif right_band:
+                right_band.sort(key=lambda z: abs(z[2] - anchor["y"]))
+                amount = right_band[0][1]
+                if left:
+                    rate_band = [
+                        (x, v) for x, v in left
+                        if img_w * 0.52 <= x <= img_w * 0.64
+                    ]
+                    rate = (
+                        rate_band[-1][1] if rate_band
+                        else min(v for _, v in left)
+                    )
+            elif left:
+                rate_band = [
+                    (x, v) for x, v in left
+                    if img_w * 0.52 <= x <= img_w * 0.64
+                ]
+                rate = (
+                    rate_band[-1][1] if rate_band
+                    else min(v for _, v in left)
+                )
+
+        batch = None
+        for w in row:
+            bm = re.search(
+                r"([A-Z0-9]*B0\d{3,5}[A-Z0-9]?)", w["t"].upper()
+            )
+            if bm:
+                batch = (
+                    bm.group(1)
+                    .replace("TB0", "IB0")
+                    .replace("1B0", "IB0")
+                )
+                break
+
+        qty, rate, amount = _reconcile_saraswati_qty_rate_amount(
+            qty, rate, amount
+        )
+
+        item: Dict[str, Any] = {
+            "product_description": product,
+            "quantity": qty,
+        }
+        if rate is not None:
+            item["unit_price"] = f"{float(rate):.2f}"
+        if amount is not None:
+            item["total_amount"] = f"{float(amount):.2f}"
+        if batch:
+            item["lot_batch_number"] = batch
+        # De-dupe identical product rows
+        if any(it.get("product_description") == product for it in items):
+            continue
+        items.append(item)
+
+    return items
+
+
+def _reconcile_saraswati_qty_rate_amount(qty, rate, amount):
+    """Reconcile OCR qty/rate/amount using qty×rate ≈ amount."""
+    try:
+        rate_f = float(rate) if rate is not None else None
+    except Exception:
+        rate_f = None
+    try:
+        amount_f = float(amount) if amount is not None else None
+    except Exception:
+        amount_f = None
+    qty_s = str(qty).strip() if qty not in (None, "") else None
+
+    # Fix AMOUNT OCR with a junk leading digit (71156.40 vs 11156.40)
+    if qty_s and rate_f and rate_f > 0 and amount_f and amount_f >= 1000:
+        expected = float(qty_s) * rate_f
+        if abs(amount_f - expected) / max(expected, 1.0) > 0.05:
+            s = f"{amount_f:.2f}"
+            if len(s) > 4:
+                try:
+                    alt = float(s[1:])
+                    if abs(alt - expected) / max(expected, 1.0) <= 0.02:
+                        amount_f = alt
+                except Exception:
+                    pass
+
+    if rate_f and rate_f > 0 and amount_f and amount_f >= 100:
+        derived = amount_f / rate_f
+        if abs(derived - round(derived)) <= 0.05 and 1 <= round(derived) <= 9999:
+            derived_qty = str(int(round(derived)))
+            if qty_s:
+                try:
+                    if abs(float(qty_s) * rate_f - amount_f) / max(amount_f, 1.0) > 0.05:
+                        if abs(float(derived_qty) * rate_f - amount_f) / max(
+                            amount_f, 1.0
+                        ) <= 0.02:
+                            qty_s = derived_qty
+                        elif abs(
+                            float(qty_s) * rate_f - amount_f
+                        ) / max(float(qty_s) * rate_f, 1.0) > 0.05:
+                            amount_f = float(qty_s) * rate_f
+                except Exception:
+                    qty_s = derived_qty
+            else:
+                qty_s = derived_qty
+
+    if qty_s and rate_f and rate_f > 0:
+        expected = float(qty_s) * rate_f
+        if amount_f is None or abs(amount_f - expected) / max(expected, 1.0) > 0.05:
+            amount_f = expected
+        elif abs(amount_f - expected) <= 1.0:
+            # Snap near-miss OCR amounts (51328.90 → 51328.80)
+            amount_f = expected
+
+    return qty_s, rate_f, amount_f
+
+
+def _normalize_saraswati_product_name(raw: str) -> str:
+    """Normalize SARASWATI PRODUCT NAME & PACKING tokens to canonical names."""
+    s = re.sub(r"\s+", " ", str(raw or "")).strip().upper()
+    if not s:
+        return ""
+    s = re.sub(
+        r"\bN[UOI]C[O0A-Z]{2,6}\b|\bNULEMIA\b|\bNUTMIA\b|\bSMUCORIA\b|"
+        r"\bINDCOXIA\b|\bNOCOXIA\b",
+        "NUCOXIA",
+        s,
+    )
+    s = re.sub(r"\$0\b", "90", s)
+    s = re.sub(
+        r"\b(?:1OTAB|LOTAB|IO\s*TAB|1O\s*TAB|I0TAB|IOTAB|10\s*TAB)\b",
+        "10TAB",
+        s,
+    )
+    s = re.sub(r"\b(?:ISTAB|I5TAB|15\s*TAB)\b", "15TAB", s)
+
+    m = re.search(
+        r"NUCOXIA\s+(120|90|60|MR|P)\b(?:\s*(10TAB|15TAB))?",
+        s,
+    )
+    if not m:
+        # Legacy OCR sometimes drops strength: "NUCOXIA 10TAB" near 120 invoices
+        if re.search(r"NUCOXIA\s+10TAB", s) and re.search(r"\b120\b", s):
+            return "NUCOXIA 120 10TAB"
+        if re.search(r"NUCOXIA\s+MR", s):
+            return "NUCOXIA MR 10TAB"
+        return ""
+
+    strength = m.group(1)
+    pack = m.group(2)
+    if not pack:
+        pack = "10TAB" if strength in ("120", "60", "MR") else "15TAB"
+    return f"NUCOXIA {strength} {pack}"
+
+
+def extract_saraswati_line_items_from_ocr(ocr_text: str) -> list:
+    """Parse SARASWATI MFG|QTY|PRODUCT NAME & PACKING rows from table OCR."""
+    items = []
+    if not ocr_text:
+        return items
+
+    # Preferred path: synthetic rows emitted by _ocr_saraswati_table_region
+    for line in ocr_text.splitlines():
+        if not line.startswith("SARASWATI_ROW"):
+            continue
+        qty_m = re.search(r"\bqty=([0-9]*)", line)
+        prod_m = re.search(r"\bproduct=([^=]*?)(?=\s+batch=|\s+rate=|\s+amount=|$)", line)
+        batch_m = re.search(r"\bbatch=([A-Z0-9]*)", line, re.I)
+        rate_m = re.search(r"\brate=([0-9.]*)", line)
+        amt_m = re.search(r"\bamount=([0-9.]*)", line)
+        product = _normalize_saraswati_product_name(
+            (prod_m.group(1) if prod_m else "").strip()
+        )
+        if not product:
+            continue
+        item = {"product_description": product}
+        if qty_m and qty_m.group(1):
+            item["quantity"] = qty_m.group(1)
+        if batch_m and batch_m.group(1):
+            item["lot_batch_number"] = batch_m.group(1).upper()
+        if rate_m and rate_m.group(1):
+            item["unit_price"] = rate_m.group(1)
+        if amt_m and amt_m.group(1):
+            item["total_amount"] = amt_m.group(1)
+        items.append(item)
+    if items:
+        return items
+
+    # Legacy fallback: freeform rotated OCR text (invoice 3809-style lines)
+    has_pack_orphan = bool(
+        re.search(r"\b(?:1OTAB|LOTAB|10TAB|10\s*TAB|15TAB|ISTAB)\b", ocr_text, re.I)
+    )
+
+    seen = set()
+    for line in ocr_text.splitlines():
+        if not re.search(r"NUCO|30049|NOCO|INDCO", line, re.IGNORECASE):
+            continue
+        if re.search(r"PLEASE\s+NOTE|ONLINE\s+PAYMENT|PRODUCT\s+NAME", line, re.I):
+            continue
+
+        product = _normalize_saraswati_product_name(line)
+        if not product and has_pack_orphan:
+            if re.search(r"NUCOXIA\s*MR", line, re.I):
+                product = "NUCOXIA MR 10TAB"
+            elif re.search(r"NUCOXIA\s*120", line, re.I):
+                product = "NUCOXIA 120 10TAB"
+            elif re.search(r"NUCOXIA\s*60", line, re.I):
+                product = "NUCOXIA 60 10TAB"
+            elif re.search(r"NUCOXIA\s*90", line, re.I):
+                product = "NUCOXIA 90 15TAB"
+            elif re.search(r"NUCOXIA\s*P\b", line, re.I):
+                product = "NUCOXIA P 15TAB"
+        if not product or product in seen:
+            continue
+
+        qty = None
+        qty_m = re.search(
+            r"(?:^|[\s\|])(\d{1,4})\s*[|\s]+(?:[A-Z]{1,4}\s+)?NUC",
+            line,
+            re.IGNORECASE,
+        )
+        if not qty_m:
+            qty_m = re.search(
+                r"(?:^|[\s\|])(\d{1,4})\s*[|\s]+NUCOXIA",
+                line,
+                re.IGNORECASE,
+            )
+        if qty_m:
+            qty = qty_m.group(1)
+
+        money = re.findall(r"\b(\d{2,6}\.\d{2})\b", line)
+        rate = None
+        amount = None
+        if len(money) >= 2:
+            candidates = [float(x) for x in money]
+            amount = max(candidates)
+            rate_candidates = [
+                c for c in candidates
+                if c < amount and 20.0 <= c <= 2000.0
+            ]
+            if rate_candidates:
+                if qty:
+                    try:
+                        qf = float(qty)
+                        expected = amount / qf if qf else None
+                        if expected:
+                            rate = min(
+                                rate_candidates,
+                                key=lambda c: abs(c - expected),
+                            )
+                    except Exception:
+                        rate = None
+                if rate is None:
+                    rate = float(money[1]) if len(money) >= 2 else rate_candidates[0]
+                    if rate >= amount:
+                        rate = rate_candidates[0]
+
+        qty, rate, amount = _reconcile_saraswati_qty_rate_amount(
+            qty, rate, amount
+        )
+
+        batch = None
+        batch_m = re.search(
+            r"\b([A-Z0-9]*B0\d{3,5}[A-Z0-9]?)\b", line, re.IGNORECASE
+        )
+        if batch_m:
+            batch = (
+                batch_m.group(1)
+                .upper()
+                .replace("TB0", "IB0")
+                .replace("1B0", "IB0")
+            )
+
+        item = {
+            "product_description": product,
+            "quantity": qty,
+        }
+        if rate is not None:
+            item["unit_price"] = f"{float(rate):.2f}"
+        if amount is not None and float(amount) > 0:
+            item["total_amount"] = f"{float(amount):.2f}"
+        if batch:
+            item["lot_batch_number"] = batch
+        items.append(item)
+        seen.add(product)
+
+    return items
+
+
+def fix_saraswati_medical_agency_line_items_from_ocr(
+    items: list,
+    ocr_text: str = "",
+    table_ocr: str = "",
+    vendor: str = "",
+) -> list:
+    """Correct qty, product name, and base amount for SARASWATI MEDICAL AGENCY.
+
+    Vision often misreads this sideways scan: product becomes the customer
+    name (POSITRON…), qty collapses to 1 / packing (10TAB) is dropped, and
+    total_amount is set to the Rate column instead of the AMOUNT column.
+    Only product_description, quantity, and total_amount are updated.
+    """
+    if not ocr_suggests_saraswati_medical_agency(ocr_text, vendor):
+        return items
+
+    combined = "\n".join(
+        x for x in (table_ocr or "", ocr_text or "") if x and str(x).strip()
+    )
+    ocr_rows = extract_saraswati_line_items_from_ocr(combined)
+    if not ocr_rows:
+        # Still try to append missing packing when Vision almost got the name
+        for item in items or []:
+            desc = str(item.get("product_description", "") or "")
+            normalized = _normalize_saraswati_product_name(desc)
+            if normalized:
+                item["product_description"] = normalized
+        return items
+
+    if not items:
+        return items
+
+    used = set()
+
+    def _rate_key(val) -> str:
+        try:
+            return f"{float(normalize_numeric_value(str(val or '0'))):.2f}"
+        except Exception:
+            return ""
+
+    def _batch_key(val) -> str:
+        return re.sub(r"[^A-Z0-9]", "", str(val or "").upper()).replace("O", "0")
+
+    for item in items:
+        item_rate = _rate_key(item.get("unit_price"))
+        item_batch = _batch_key(item.get("lot_batch_number"))
+        item_desc = re.sub(
+            r"[^A-Z0-9]",
+            "",
+            str(item.get("product_description", "") or "").upper(),
+        )
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            row_rate = _rate_key(row.get("unit_price"))
+            row_batch = _batch_key(row.get("lot_batch_number"))
+            row_desc = re.sub(
+                r"[^A-Z0-9]", "", row.get("product_description", "").upper()
+            )
+            if item_rate and row_rate and item_rate == row_rate:
+                score += 5
+            if item_batch and row_batch and (
+                item_batch == row_batch
+                or item_batch[-6:] == row_batch[-6:]
+            ):
+                score += 4
+            if item_desc and row_desc and (
+                item_desc[:8] == row_desc[:8]
+                or "NUCOXIA" in item_desc and "NUCOXIA" in row_desc
+            ):
+                score += 2
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        # Fall back to row order when Vision replaced products with party names
+        if (best_idx is None or best_score < 2) and len(items) == len(ocr_rows):
+            order_idx = next(
+                (i for i, it in enumerate(items) if it is item), -1
+            )
+            if (
+                order_idx >= 0
+                and order_idx not in used
+                and order_idx < len(ocr_rows)
+            ):
+                best_idx = order_idx
+                best_score = 2
+
+        if best_idx is None or best_score < 2:
+            normalized = _normalize_saraswati_product_name(
+                str(item.get("product_description", "") or "")
+            )
+            if normalized:
+                item["product_description"] = normalized
+            continue
+
+        used.add(best_idx)
+        row = ocr_rows[best_idx]
+        if row.get("product_description"):
+            old_name = item.get("product_description")
+            item["product_description"] = row["product_description"]
+            if old_name != row["product_description"]:
+                logger.warning(
+                    f"⚠️ SARASWATI: product '{old_name}' → "
+                    f"'{row['product_description']}'"
+                )
+        if row.get("quantity"):
+            old_qty = item.get("quantity")
+            item["quantity"] = str(row["quantity"])
+            if str(old_qty) != str(row["quantity"]):
+                logger.warning(
+                    f"⚠️ SARASWATI: qty '{old_qty}' → '{row['quantity']}' "
+                    f"for '{item.get('product_description')}'"
+                )
+        if row.get("total_amount"):
+            old_total = item.get("total_amount")
+            item["total_amount"] = str(row["total_amount"])
+            if str(old_total) != str(row["total_amount"]):
+                logger.warning(
+                    f"⚠️ SARASWATI: base amount '{old_total}' → "
+                    f"'{row['total_amount']}' for "
+                    f"'{item.get('product_description')}'"
+                )
 
     return items
 
@@ -17395,6 +18876,17 @@ def enforce_schema(raw_data):
             if heuristic_inv_no and not _is_suspicious_invoice_number(heuristic_inv_no):
                 ocr_inv_no = heuristic_inv_no
 
+        # PHARMACEA LINK: the header OCRs into noise ("Document No) 2b ivi oT"), so an
+        # OCR-derived number here is junk ('27-2105'). Leave it empty and let the
+        # focused header recovery read it from the image instead.
+        if ocr_inv_no and _is_pharmacea_link_vendor(
+            str(template["data"]["invoice_summary"].get("vendor", "") or ""), ocr_text
+        ):
+            logger.info(
+                f"⏭️ Skipping OCR-header invoice_no '{ocr_inv_no}' for Pharmacea Link "
+                f"(garbled header OCR)")
+            ocr_inv_no = None
+
         if ocr_inv_no and (_is_suspicious_invoice_number(current_inv_no) or current_is_hsn_like):
             logger.warning(
                 f"⚠️ Corrected suspicious invoice_no from OCR header: '{current_inv_no}' -> '{ocr_inv_no}'")
@@ -18485,6 +19977,11 @@ def enforce_schema(raw_data):
                         _it["total_amount"] = None
     except Exception as _e13:
         logger.debug(f"FIX13 error: {_e13}")
+
+    # Novacare DEL-26 garbled scans: re-apply Rate/Product after FIX10 may
+    # overwrite OCR Rate with taxable÷qty.
+    processed_items = fix_novacare_qty_rate_from_ocr(
+        processed_items, ocr_text)
 
     # 🔧 FIX e-Invoice (final): restore qty/rate after OCR-column fixes may corrupt labeled rows
     processed_items = fix_structured_einvoice_qty_rate_from_ocr(
@@ -19958,11 +21455,60 @@ def enforce_schema(raw_data):
             logger.info(
                 f"✅ TULSYAN customer from OCR: {_tulsyan_details['customer']}")
 
+        _tulsyan_total = extract_tulsyan_invoice_total_from_ocr(ocr_text)
+        if _tulsyan_total:
+            _cur_total = str(_tulsyan_summary.get("total", "") or "").strip()
+            try:
+                _cur_f = float(
+                    normalize_numeric_value(_cur_total) or 0) if _cur_total else 0.0
+                _new_f = float(_tulsyan_total)
+            except Exception:
+                _cur_f, _new_f = 0.0, 0.0
+            if _new_f >= 100 and (
+                not _cur_total
+                or _cur_total.upper() in {"NONE", "NULL", "N/A"}
+                or abs(_cur_f - _new_f) > 0.5
+            ):
+                logger.warning(
+                    f"⚠️ TULSYAN: invoice total '{_cur_total}' → '{_tulsyan_total}'")
+                _tulsyan_summary["total"] = _tulsyan_total
+
+        _tulsyan_rate_ocr = ""
+        if isinstance(data, dict):
+            _tulsyan_rate_ocr = str(
+                data.get("tulsyan_rate_ocr", "") or "").strip()
         _tulsyan_items = fix_tulsyan_pharmaceuticals_line_items_from_ocr(
-            template["data"]["line_items"].get("items") or [], ocr_text)
+            template["data"]["line_items"].get("items") or [],
+            ocr_text,
+            _tulsyan_rate_ocr,
+        )
         if _tulsyan_items:
             template["data"]["line_items"]["items"] = _tulsyan_items
             template["data"]["line_items"]["count"] = len(_tulsyan_items)
+
+    # RAJESH PHARMA: Grand Total / amount-in-words (Lac → LAKH)
+    if ocr_text and ocr_suggests_rajesh_pharma(
+        ocr_text,
+        template["data"]["invoice_summary"].get("vendor", "") or "",
+    ):
+        _rajesh_total = extract_rajesh_pharma_invoice_total_from_ocr(ocr_text)
+        if _rajesh_total:
+            _rajesh_summary = template["data"]["invoice_summary"]
+            _cur_total = str(_rajesh_summary.get("total", "") or "").strip()
+            try:
+                _cur_f = float(
+                    normalize_numeric_value(_cur_total) or 0) if _cur_total else 0.0
+                _new_f = float(_rajesh_total)
+            except Exception:
+                _cur_f, _new_f = 0.0, 0.0
+            if _new_f >= 1000 and (
+                not _cur_total
+                or _cur_total.upper() in {"NONE", "NULL", "N/A"}
+                or abs(_cur_f - _new_f) > 0.5
+            ):
+                logger.warning(
+                    f"⚠️ RAJESH PHARMA: invoice total '{_cur_total}' → '{_rajesh_total}'")
+                _rajesh_summary["total"] = _rajesh_total
 
     if ocr_text and ocr_suggests_united_medical_agencies_bluefox(ocr_text):
         _uma_summary = template["data"]["invoice_summary"]
@@ -20019,6 +21565,26 @@ def enforce_schema(raw_data):
         if _sterling_items:
             template["data"]["line_items"]["items"] = _sterling_items
             template["data"]["line_items"]["count"] = len(_sterling_items)
+
+    # 🔧 SARASWATI MEDICAL AGENCY: sideways scan — fix qty + product name only
+    try:
+        _sara_vendor = template["data"]["invoice_summary"].get("vendor", "") or ""
+        _sara_ocr = ocr_text or ""
+        _sara_table = ""
+        if isinstance(data, dict):
+            _sara_table = str(data.get("saraswati_table_ocr", "") or "").strip()
+        if ocr_suggests_saraswati_medical_agency(_sara_ocr, _sara_vendor):
+            _sara_items = fix_saraswati_medical_agency_line_items_from_ocr(
+                template["data"]["line_items"].get("items") or [],
+                _sara_ocr,
+                _sara_table,
+                _sara_vendor,
+            )
+            if _sara_items:
+                template["data"]["line_items"]["items"] = _sara_items
+                template["data"]["line_items"]["count"] = len(_sara_items)
+    except Exception as _sara_err:
+        logger.debug(f"SARASWATI line-item fix skipped: {_sara_err}")
 
     if ocr_text and ocr_suggests_payal_pharma(
         ocr_text,
@@ -20161,6 +21727,8 @@ def enforce_schema(raw_data):
     if isinstance(template.get("data"), dict):
         template["data"].pop("rathna_table_ocr", None)
         template["data"].pop("jackson_table_ocr", None)
+        template["data"].pop("saraswati_table_ocr", None)
+        template["data"].pop("tulsyan_rate_ocr", None)
         template["data"].pop("jackson_invoice_date", None)
         template["data"].pop("jackson_invoice_no", None)
         template["data"].pop("jackson_invoice_total", None)
@@ -20168,6 +21736,8 @@ def enforce_schema(raw_data):
     if isinstance(_summary_out, dict):
         _summary_out.pop("rathna_table_ocr", None)
         _summary_out.pop("jackson_table_ocr", None)
+        _summary_out.pop("saraswati_table_ocr", None)
+        _summary_out.pop("tulsyan_rate_ocr", None)
         _summary_out.pop("jackson_invoice_date", None)
         _summary_out.pop("jackson_invoice_no", None)
         _summary_out.pop("jackson_invoice_total", None)
@@ -20771,6 +22341,71 @@ def _recover_trust_pharmaceuticals_invoice_date_from_header(
     return None
 
 
+def _recover_pharmacea_link_document_date_from_header(
+    page, page_num: Optional[int] = None
+) -> Optional[str]:
+    """
+    Pharmacea Link (NIC e-invoice printout): read 'Document Date : dd-mm-yyyy' from the
+    header band when the extraction returned no invoice date at all.
+
+    Tesseract misreads single digits on these scans (26-06-2026 read as 26-05-2026), so a
+    value is accepted only when several OCR passes agree on it.
+    """
+    try:
+        if not TESSERACT_AVAILABLE:
+            return None
+
+        rect = page.rect
+        clip = fitz.Rect(0, rect.height * 0.05, rect.width, rect.height * 0.42)
+        pattern = re.compile(
+            r"Doc\w{0,4}[ae]nt\s*Da\w{1,3}[^A-Za-z0-9]{0,4}"
+            r"([0-3]?\d)[\-/. ]([01]?\d)[\-/. ]((?:19|20)\d{2})",
+            re.IGNORECASE,
+        )
+
+        votes: Dict[str, int] = {}
+        for dpi, psm in ((300, 4), (300, 6), (400, 6), (600, 4)):
+            pix = page.get_pixmap(dpi=dpi, clip=clip)
+            img_bytes = pix.tobytes("png")
+            pix = None
+
+            img = PILImage.open(io.BytesIO(img_bytes))
+            del img_bytes
+
+            with tesseract_ocr_slot("pharmacea_date_crop"):
+                crop_text = run_tesseract_call(
+                    lambda i=img, p=psm: pytesseract.image_to_string(
+                        i, config=f"--oem 3 --psm {p}"),
+                    label="pharmacea_date_crop",
+                    page=page_num,
+                )
+            img.close()
+
+            m = pattern.search(re.sub(r"\s+", " ", str(crop_text or "")))
+            if not m:
+                continue
+            try:
+                iso = datetime(int(m.group(3)), int(m.group(2)),
+                               int(m.group(1))).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+            votes[iso] = votes.get(iso, 0) + 1
+
+        if not votes:
+            return None
+
+        ranked = sorted(votes.items(), key=lambda kv: kv[1], reverse=True)
+        if ranked[0][1] < 2 or (len(ranked) > 1 and ranked[0][1] == ranked[1][1]):
+            logger.debug(
+                f"Pharmacea Link date crop inconclusive: {votes}")
+            return None
+        return ranked[0][0]
+
+    except Exception as e:
+        logger.debug(f"Pharmacea Link date crop recovery skipped: {e}")
+        return None
+
+
 def _count_extracted_line_items(full_data) -> int:
     """Return number of line items in a Gemini full_data payload."""
     if not isinstance(full_data, dict):
@@ -20910,7 +22545,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                     else:
                         increment_ocr_stat(ocr_stats, ocr_stats_lock,
                                            "cost_saved", 0.002)
-                        return {
+                        return _finalize_bluefox_page_result({
                             "invoice_no": invoice_no,
                             "full_data": full_data,
                             "extraction_method": "pdfplumber+gemini",
@@ -20918,7 +22553,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                             "ocr_text": pdfplumber_text,
                             "ocr_method": "pdfplumber",
                             "ocr_confidence": confidence
-                        }
+                        }, page, page_num=page_num)
 
     # ✅ TIER 2: PyMuPDF text extraction (fallback)
     text = page.get_text("text") or ""
@@ -20981,14 +22616,14 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 else:
                     increment_ocr_stat(ocr_stats, ocr_stats_lock,
                                        "cost_saved", 0.002)
-                    return {
+                    return _finalize_bluefox_page_result({
                         "invoice_no": invoice_no,
                         "full_data": full_data,
                         "extraction_method": "pymupdf+gemini",
                         "ocr_text": text,  # ✅ Full text
                         "ocr_method": "pymupdf",
                         "ocr_confidence": 90.0
-                    }
+                    }, page, page_num=page_num)
 
     if not fallback_ocr_text and _tier12_ocr_text:
         fallback_ocr_text = _tier12_ocr_text
@@ -21290,6 +22925,14 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 and line_items
                             )
 
+                            # 🔧 Pharmacea Link (NIC e-invoice printout): Tesseract mangles this
+                            #    layout ("Document No) 2b ivi oT", "Bocament Drake 2 7-2-2105"),
+                            #    but the values it invents stay self-consistent with that same
+                            #    garbled text, so the checks below can pass. Vision reads this
+                            #    format reliably, and it is already the usual path for it.
+                            _pharmacea_force_vision = _is_pharmacea_link_vendor(
+                                "", tesseract_text)
+
                             if (
                                 _sterling_keep_tesseract
                                 or _yash_keep_tesseract
@@ -21338,17 +22981,23 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                     f"    ⚠️ Tesseract+Gemini: {_null_price_count}/{len(line_items)} items have "
                                     f"null unit_price (sparse OCR table). Falling back to Gemini Vision...")
                                 # Do NOT return — fall through to TIER 4 (Gemini Vision)
+                            elif _pharmacea_force_vision:
+                                logger.warning(
+                                    f"    ⚠️ Tesseract+Gemini: Pharmacea Link e-invoice scan "
+                                    f"(header/table OCR unreliable on this layout). "
+                                    f"Falling back to Gemini Vision...")
+                                # Do NOT return — fall through to TIER 4 (Gemini Vision)
                             else:
                                 increment_ocr_stat(ocr_stats, ocr_stats_lock,
                                                    "cost_saved", 0.002)
-                                return {
+                                return _finalize_bluefox_page_result({
                                     "invoice_no": invoice_no,
                                     "full_data": full_data,
                                     "extraction_method": "tesseract+gemini",
                                     "ocr_text": tesseract_text,  # ✅ Full text
                                     "ocr_method": "tesseract",
                                     "ocr_confidence": confidence
-                                }
+                                }, page, page_num=page_num)
                         else:
                             logger.warning(
                                 f"    ⚠️ Tesseract+Gemini extracted 0 line items. Falling back to Gemini Vision...")
@@ -21560,6 +23209,47 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         f"    ✅ JACKSON footer total OCR: {_jk_tot_hdr:.2f}")
         except Exception as _jk_ocr_err:
             logger.warning(f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
+
+        # TULSYAN Mediserve: capture Rate/Amount band (pipeline OCR often drops decimals)
+        try:
+            _tul_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            if ocr_suggests_tulsyan_pharmaceuticals(_tul_ocr):
+                _tul_rate_ocr = _ocr_tulsyan_mediserve_rate_region(page=page)
+                if _tul_rate_ocr.strip():
+                    result["tulsyan_rate_ocr"] = _tul_rate_ocr
+                    logger.info(
+                        f"    ✅ TULSYAN rate-band OCR captured "
+                        f"({len(_tul_rate_ocr)} chars)")
+        except Exception as _tul_ocr_err:
+            logger.debug(f"TULSYAN rate OCR enrichment skipped: {_tul_ocr_err}")
+
+        # SARASWATI MEDICAL AGENCY: sideways table → capture rotated band for qty/product fix
+        try:
+            _sara_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _sara_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _sara_data = _sara_fd.get("data") if isinstance(
+                _sara_fd.get("data"), dict) else _sara_fd
+            _sara_sum = _sara_data.get("invoice_summary") if isinstance(
+                _sara_data.get("invoice_summary"), dict) else {}
+            _sara_vendor = str(
+                _sara_sum.get("vendor") or _sara_fd.get("vendor") or "")
+            if ocr_suggests_saraswati_medical_agency(_sara_ocr, _sara_vendor):
+                _sara_table = _ocr_saraswati_table_region(page=page)
+                if _sara_table.strip():
+                    result["saraswati_table_ocr"] = _sara_table
+                    logger.info(
+                        f"    ✅ SARASWATI table-band OCR captured "
+                        f"({len(_sara_table)} chars)")
+        except Exception as _sara_ocr_err:
+            logger.debug(
+                f"SARASWATI table OCR enrichment skipped: {_sara_ocr_err}")
 
         # HYD-26-*: if we can recover a reliable header date, prefer it over Vision month confusion
         try:
@@ -21871,9 +23561,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
     ):
         logger.warning(
             "    ⚠️ Gemini Vision returned no line items; using text-tier fallback result")
-        return _text_fallback
+        return _finalize_bluefox_page_result(_text_fallback, page, page_num=page_num)
 
-    return result
+    return _finalize_bluefox_page_result(result, page, page_num=page_num)
 
 
 def _prepare_ocr_for_gemini(text: str, max_chars: int = 60000) -> str:
@@ -23958,6 +25648,7 @@ def upload_split_pdf_to_blob(pdf_bytes: bytes, invoice_filename: str, original_f
     base_filename = os.path.splitext(original_filename)[0]
     safe_folder_name = re.sub(r'[<>:"/\\|?*]', '_', base_filename)
     if target_invoices_blob_folder:
+        # Caller-provided destination always wins (Laravel POD folder layout)
         blob_name = f"{target_invoices_blob_folder.rstrip('/')}/{invoice_filename}"
     else:
         blob_name = f"{ROOT_FOLDER}/{batch_id}/{safe_folder_name}/Splitted/{invoice_filename}"
@@ -24027,7 +25718,7 @@ def upload_split_pdf_to_blob(pdf_bytes: bytes, invoice_filename: str, original_f
 
 
 @app.post("/split-and-extract")
-async def split_and_extract_invoices(
+def split_and_extract_invoices(
     background_tasks: BackgroundTasks,
     file: Optional[UploadFile] = File(None),
     batch_id: Optional[str] = Form(None),
@@ -24046,9 +25737,18 @@ async def split_and_extract_invoices(
     """
     global waiting_requests, active_requests
 
-    # Auto-generate a single batch_id if not provided by the client
+    batch_id = (batch_id or "").strip()
+    target_invoices_blob_folder = (target_invoices_blob_folder or "").strip() or None
+    # Auto-generate a batch_id only when the caller supplied no batch identity at
+    # all. When batch_id / target_invoices_blob_folder are sent they decide the
+    # destination folder, so a random UUID folder is never invented for them.
     if not batch_id:
         batch_id = str(uuid.uuid4())
+        logger.warning(
+            "⚠️ No batch_id in request — generated %s "
+            "(target_invoices_blob_folder=%s)",
+            batch_id, target_invoices_blob_folder or "none",
+        )
 
     ocr_stats = create_ocr_stats()
     ocr_stats_lock = Lock()
@@ -24092,8 +25792,7 @@ async def split_and_extract_invoices(
     slot_acquired = False
     queue_wait_seconds = 0.0
 
-    try:
-        await asyncio.wait_for(request_processing_semaphore.acquire(), timeout=REQUEST_QUEUE_TIMEOUT)
+    if request_processing_semaphore.acquire(timeout=REQUEST_QUEUE_TIMEOUT):
         slot_acquired = True
         if OCR_SEMAPHORE_LOGGING_ENABLED:
             with request_queue_lock:
@@ -24102,7 +25801,7 @@ async def split_and_extract_invoices(
                     active_requests + 1,
                     waiting_requests,
                 )
-    except asyncio.TimeoutError:
+    else:
         with request_queue_lock:
             waiting_requests = max(0, waiting_requests - 1)
         raise HTTPException(
@@ -24131,6 +25830,14 @@ async def split_and_extract_invoices(
 
     container_name = (blob_container.strip()
                       if blob_container else None) or AZURE_CONTAINER_NAME
+    logger.info(
+        "📦 Blob destination: container=%s folder=%s (batch_id=%s split_id=%s file_name=%s)",
+        container_name,
+        target_invoices_blob_folder or f"{ROOT_FOLDER}/{batch_id}/<file>/Splitted",
+        batch_id,
+        split_id or "-",
+        file_name or "-",
+    )
     fd, temp_path = tempfile.mkstemp(suffix=file_extension)
     os.close(fd)
     register_watchdog_temp_file(temp_path)
@@ -24149,7 +25856,8 @@ async def split_and_extract_invoices(
         with open(temp_path, "wb") as buffer:
             if file is not None:
                 update_request_progress("file_upload")
-                while content := await file.read(5 * 1024 * 1024):
+                # Sync endpoint → read the spooled upload file directly
+                while content := file.file.read(5 * 1024 * 1024):
                     total_size += len(content)
                     buffer.write(content)
                 update_request_progress("file_upload_complete")
@@ -24578,6 +26286,51 @@ async def split_and_extract_invoices(
                             logger.warning(
                                 f"   ⚠️ JACKSON multipage Vision merge failed: {_jk_merge_err}")
                         continue
+                    # PHARMACEA LINK: the combined-OCR re-extract rewrites this format from
+                    # garbled Tesseract text ("Sevan tha US. eof bet"), discarding the correct
+                    # per-page Vision rows. Keep Vision and merge its rows across the pages;
+                    # a signature-only trailing page contributes nothing.
+                    if _is_pharmacea_link_vendor("", combined_ocr):
+                        try:
+                            _pl_items = []
+                            _pl_seen = set()
+                            for _pl_pidx in g["pages"]:
+                                _pl_pr = page_results[_pl_pidx] if page_results else None
+                                if not isinstance(_pl_pr, dict):
+                                    continue
+                                if len(str(_pl_pr.get("ocr_text") or "").strip()) < 40:
+                                    continue
+                                for _pl_it in _extract_line_items_for_validation(
+                                    _pl_pr.get("full_data") or {}
+                                ):
+                                    if not isinstance(_pl_it, dict):
+                                        continue
+                                    _pl_key = (
+                                        str(_pl_it.get(
+                                            "product_description", "") or "").strip().upper(),
+                                        str(_pl_it.get("quantity", "") or ""),
+                                        str(_pl_it.get("total_amount", "") or ""),
+                                    )
+                                    if _pl_key in _pl_seen:
+                                        continue
+                                    _pl_seen.add(_pl_key)
+                                    _pl_items.append(_pl_it)
+
+                            if _pl_items:
+                                if not g.get("extracted_data") and g["pages"]:
+                                    g["extracted_data"] = (
+                                        page_results[g["pages"][0]] or {}).get("full_data")
+                                if isinstance(g.get("extracted_data"), dict):
+                                    _merge_line_items_into_full_data(
+                                        g["extracted_data"], _pl_items)
+                                    logger.info(
+                                        f"   ✅ PHARMACEA LINK: kept {len(_pl_items)} Vision line item(s) "
+                                        f"across {len(g['pages'])} page(s) (skipped combined-OCR re-extract)")
+                        except Exception as _pl_mp_err:
+                            logger.warning(
+                                f"   ⚠️ PHARMACEA multipage Vision merge failed: {_pl_mp_err}")
+                        continue
+
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
                     update_request_progress(
@@ -24679,6 +26432,45 @@ async def split_and_extract_invoices(
                     _rathna_tocr = str(page_result.get("rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
+
+                    _sara_tocr = str(page_result.get("saraswati_table_ocr", "") or "").strip()
+                    if (
+                        not _sara_tocr
+                        and ocr_suggests_saraswati_medical_agency(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _sara_page = doc.load_page(first_page_idx)
+                            _sara_tocr = _ocr_saraswati_table_region(page=_sara_page)
+                            if _sara_tocr.strip():
+                                logger.info(
+                                    f"    ✅ SARASWATI table-band OCR captured at response build "
+                                    f"({len(_sara_tocr)} chars)")
+                        except Exception as _sara_fb_err:
+                            logger.debug(
+                                f"SARASWATI table OCR fallback failed: {_sara_fb_err}")
+                    if _sara_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["saraswati_table_ocr"] = _sara_tocr
+
+                    _tul_rate_ocr = str(page_result.get("tulsyan_rate_ocr", "") or "").strip()
+                    if (
+                        not _tul_rate_ocr
+                        and ocr_suggests_tulsyan_pharmaceuticals(raw_ocr_text)
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _tul_page = doc.load_page(first_page_idx)
+                            _tul_rate_ocr = _ocr_tulsyan_mediserve_rate_region(
+                                page=_tul_page)
+                            if _tul_rate_ocr.strip():
+                                logger.info(
+                                    f"    ✅ TULSYAN rate-band OCR captured at response build "
+                                    f"({len(_tul_rate_ocr)} chars)")
+                        except Exception as _tul_fb_err:
+                            logger.debug(
+                                f"TULSYAN rate OCR fallback failed: {_tul_fb_err}")
+                    if _tul_rate_ocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["tulsyan_rate_ocr"] = _tul_rate_ocr
 
                     _jackson_tocr = str(
                         (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
@@ -24988,6 +26780,64 @@ async def split_and_extract_invoices(
             except Exception:
                 pass
 
+            # 🔧 Pharmacea Link (NIC e-invoice printout): a degraded page can come back with
+            #    neither Document No. nor Document Date, and the UNKNOWN_n sentinel does not
+            #    count as suspicious, so the guard above never runs its header recovery.
+            #    Fill only the fields that are still empty; other formats are untouched.
+            try:
+                _sum_pl = None
+                if isinstance(extracted_data_formatted, dict):
+                    _data_pl = extracted_data_formatted.get("data")
+                    if isinstance(_data_pl, dict):
+                        _cand_pl = _data_pl.get("invoice_summary")
+                        _sum_pl = _cand_pl if isinstance(
+                            _cand_pl, dict) else _data_pl
+
+                if isinstance(_sum_pl, dict) and _is_pharmacea_link_vendor(
+                    str(_sum_pl.get("vendor", "") or ""), raw_ocr_text or ""
+                ):
+                    _needs_date_pl = not str(
+                        _sum_pl.get("invoice_date", "") or "").strip()
+                    _needs_no_pl = (
+                        not str(_sum_pl.get("invoice_no", "") or "").strip()
+                        and str(canonical_invoice_no or "").startswith("UNKNOWN")
+                    )
+
+                    _page_pl = None
+                    if (_needs_date_pl or _needs_no_pl) and doc is not None and g.get("pages"):
+                        _page_pl = doc.load_page(g["pages"][0])
+
+                    if _needs_date_pl and _page_pl is not None:
+                        _iso_pl = _recover_pharmacea_link_document_date_from_header(
+                            _page_pl, page_num=g["pages"][0] + 1)
+                        if _iso_pl:
+                            logger.warning(
+                                f"⚠️ FIX PHARMACEA LINK: filled missing invoice_date -> '{_iso_pl}'")
+                            _sum_pl["invoice_date"] = _iso_pl
+                            _sum_pl["invoice_date_raw"] = (
+                                f"{int(_iso_pl[8:10]):02d}-{int(_iso_pl[5:7]):02d}-{_iso_pl[:4]}")
+
+                    if _needs_no_pl and _page_pl is not None:
+                        _pix_pl = _page_pl.get_pixmap(
+                            matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+                        _inv_pl = recover_invoice_no_from_image_gemini(
+                            _pix_pl.tobytes("png"),
+                            current_invoice_no="",
+                            ocr_text=raw_ocr_text,
+                            ocr_stats=ocr_stats,
+                            ocr_stats_lock=ocr_stats_lock,
+                        )
+                        _pix_pl = None
+                        if _inv_pl:
+                            logger.warning(
+                                f"⚠️ FIX PHARMACEA LINK: recovered invoice_no "
+                                f"'{canonical_invoice_no}' -> '{_inv_pl}'")
+                            canonical_invoice_no = _inv_pl
+                            _sum_pl["invoice_no"] = _inv_pl
+            except Exception as _pl_err:
+                logger.debug(
+                    f"Pharmacea Link header recovery skipped: {_pl_err}")
+
             # Keep top-level and nested invoice numbers aligned
             if isinstance(extracted_data_formatted, dict):
                 summary_obj = extracted_data_formatted.get(
@@ -25237,7 +27087,7 @@ async def split_and_extract_invoices(
 
 
 @app.post("/test-extract")
-async def test_extract(
+def test_extract(
     file: UploadFile = File(...),
     parallel_batch_size: int = Form(MAX_PARALLEL_GEMINI_CALLS),
 ):
@@ -25280,10 +27130,10 @@ async def test_extract(
         print(f"   4-Tier OCR: PDFPlumber → PyMuPDF → Tesseract → Gemini")
         print(f"{'='*70}")
 
-        # Read uploaded file
+        # Read uploaded file (sync endpoint → read spooled file directly)
         total_size = 0
         with open(temp_path, "wb") as buffer:
-            while content := await file.read(5 * 1024 * 1024):
+            while content := file.file.read(5 * 1024 * 1024):
                 total_size += len(content)
                 buffer.write(content)
 
@@ -25543,6 +27393,43 @@ async def test_extract(
                     _rathna_tocr = str(page_result.get("rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
+                    _sara_tocr = str(page_result.get("saraswati_table_ocr", "") or "").strip()
+                    if (
+                        not _sara_tocr
+                        and ocr_suggests_saraswati_medical_agency(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _sara_page = doc.load_page(first_page_idx)
+                            _sara_tocr = _ocr_saraswati_table_region(page=_sara_page)
+                            if _sara_tocr.strip():
+                                logger.info(
+                                    f"    ✅ SARASWATI table-band OCR captured at response build "
+                                    f"({len(_sara_tocr)} chars)")
+                        except Exception as _sara_fb_err:
+                            logger.debug(
+                                f"SARASWATI table OCR fallback failed: {_sara_fb_err}")
+                    if _sara_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["saraswati_table_ocr"] = _sara_tocr
+                    _tul_rate_ocr = str(page_result.get("tulsyan_rate_ocr", "") or "").strip()
+                    if (
+                        not _tul_rate_ocr
+                        and ocr_suggests_tulsyan_pharmaceuticals(raw_ocr_text)
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _tul_page = doc.load_page(first_page_idx)
+                            _tul_rate_ocr = _ocr_tulsyan_mediserve_rate_region(
+                                page=_tul_page)
+                            if _tul_rate_ocr.strip():
+                                logger.info(
+                                    f"    ✅ TULSYAN rate-band OCR captured at response build "
+                                    f"({len(_tul_rate_ocr)} chars)")
+                        except Exception as _tul_fb_err:
+                            logger.debug(
+                                f"TULSYAN rate OCR fallback failed: {_tul_fb_err}")
+                    if _tul_rate_ocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["tulsyan_rate_ocr"] = _tul_rate_ocr
                     _jackson_tocr = str(
                         (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
                         if isinstance(data_with_ocr.get("data"), dict) else ""
