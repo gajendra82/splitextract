@@ -2590,6 +2590,261 @@ def fix_structured_einvoice_qty_rate_from_ocr(items, ocr_text: str):
     return items
 
 
+def _ocr_suggests_gst_portal_goods_details(ocr_text: str) -> bool:
+    """GST portal e-invoice PDF: Goods Details table (Qty + Free | Unit | Unit Price)."""
+    if not ocr_text:
+        return False
+    # Labeled Quantity:/Unit Price: rows are handled by fix_structured_einvoice_*
+    if re.search(r'Quantity:\s*\d', ocr_text, re.IGNORECASE):
+        return False
+    if not re.search(r'e-Invoice\s+Details', ocr_text, re.IGNORECASE):
+        return False
+    if not re.search(r'Goods\s+Details', ocr_text, re.IGNORECASE):
+        return False
+    # Header OCR often wraps: "Qty +" then next line "Free" / "Unit" then "Price (Rs)"
+    if not re.search(r'Qty\s*\+', ocr_text, re.IGNORECASE):
+        return False
+    if not (
+        re.search(r'Unit\s*Price', ocr_text, re.IGNORECASE)
+        or re.search(r'Price\s*\(Rs\)', ocr_text, re.IGNORECASE)
+    ):
+        return False
+    return True
+
+
+def _parse_gst_portal_goods_details_qty_rate_rows(ocr_text: str) -> list:
+    """Parse GST portal Goods Details rows: S.N. Product HSN Qty Unit Rate Discount Taxable ..."""
+    if not _ocr_suggests_gst_portal_goods_details(ocr_text):
+        return []
+
+    rows = []
+    patterns = [
+        re.compile(
+            r'(?m)^\s*\d+\s*\|\s*(.+?)\s*\|\s*(\d{4,8})\s*\|\s*'
+            r'([\d,]+\.\d{2})\s*\|\s*[A-Z]{2,5}\s*\|\s*'
+            r'([\d,]+\.\d{2})\s*\|\s*[\d,]+\.\d{2}\s*\|\s*'
+            r'([\d,]+\.\d{2})',
+            re.IGNORECASE,
+        ),
+        # Space / partial-pipe OCR:
+        # JAI10766 "30.00} OTH"; JAIO8555 "30042099) 50.00)"; JAI09541 "7 {LINID ... 60.00]"
+        # JAIO9711 "OTH | 3500.00"; JAIO6955 "300490 | 216.00" (pipe between HSN and Qty)
+        re.compile(
+            r'(?m)^\s*\d+\s*[|\{]?\s*(.+?)\s+(\d{4,8})\s*[\)\]\}|]?\s*'
+            r'([\d,]+\.\d{2})\s*[\)\]\}|]?\s*[A-Z]{2,5}\s*[|]?\s*'
+            r'([\d,]+\.\d{2})\s+[\d,]+\.\d{2}\s+'
+            r'([\d,]+\.\d{2})',
+            re.IGNORECASE,
+        ),
+    ]
+    seen = set()
+    for cre in patterns:
+        for match in cre.finditer(ocr_text):
+            product = re.sub(r'\s+', ' ', match.group(1)).strip()
+            hsn = match.group(2)
+            try:
+                qty = float(match.group(3).replace(',', ''))
+                rate = float(match.group(4).replace(',', ''))
+                taxable = float(match.group(5).replace(',', ''))
+            except Exception:
+                continue
+            if qty <= 0 or rate <= 0 or taxable <= 0:
+                continue
+            if abs(qty * rate - taxable) / taxable > 0.02:
+                continue
+            key = (hsn, round(qty, 2), round(rate, 2), round(taxable, 2))
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append({
+                "product_description": product,
+                "hsn_code": hsn,
+                "quantity": qty,
+                "unit_price": rate,
+            })
+    return rows
+
+
+def fix_gst_portal_einvoice_qty_rate_swap(items, ocr_text: str) -> list:
+    """
+    JAI MATADI / GST portal Goods Details:
+    1) Vision swapped Rate↔Qty → reassign both from OCR.
+    2) Vision left Qty blank but Rate correct (JAIO6955 DEXONA) → set Qty only.
+    """
+    if not items or not ocr_text:
+        return items
+
+    ocr_rows = _parse_gst_portal_goods_details_qty_rate_rows(ocr_text)
+    if not ocr_rows:
+        return items
+
+    def _norm_desc(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _names_match(a: str, b: str) -> bool:
+        if not a or not b:
+            return False
+        return a == b or a in b or b in a
+
+    def _fmt_qty(q: float) -> str:
+        if abs(q - round(q)) < 0.001:
+            return str(int(round(q)))
+        return f"{q:.2f}"
+
+    used = set()
+    for item in items:
+        item_hsn = str(item.get("hsn_code", "") or "").strip()
+        item_desc = _norm_desc(item.get("product_description", ""))
+        try:
+            cur_qty = float(normalize_numeric_value(
+                str(item.get("quantity", "0"))) or 0)
+        except Exception:
+            cur_qty = 0.0
+        try:
+            cur_rate = float(normalize_numeric_value(
+                str(item.get("unit_price", "0"))) or 0)
+        except Exception:
+            cur_rate = 0.0
+        if cur_qty <= 0 and cur_rate <= 0:
+            continue
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            if item_hsn and row["hsn_code"] == item_hsn:
+                score += 4
+            row_desc = _norm_desc(row["product_description"])
+            if _names_match(item_desc, row_desc):
+                score += 3
+            # Prefer rate agreement when restoring missing qty
+            if cur_rate > 0:
+                try:
+                    if abs(cur_rate - float(row["unit_price"])) / max(
+                        float(row["unit_price"]), 0.01
+                    ) <= 0.02:
+                        score += 5
+                except Exception:
+                    pass
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        if best_idx is None or best_score < 3:
+            if len(items) == len(ocr_rows) == 1:
+                best_idx = 0
+            else:
+                continue
+
+        row = ocr_rows[best_idx]
+        ocr_qty = row["quantity"]
+        ocr_rate = row["unit_price"]
+        row_desc = _norm_desc(row["product_description"])
+        name_ok = _names_match(item_desc, row_desc)
+
+        swapped = (
+            cur_qty > 0
+            and cur_rate > 0
+            and abs(cur_qty - ocr_rate) <= 0.05
+            and abs(cur_rate - ocr_qty) <= 0.05
+        )
+        # Qty missing/zero, Rate already correct — restore Qty only (JAIO6955)
+        missing_qty = (
+            cur_qty <= 0
+            and cur_rate > 0
+            and ocr_qty > 0
+            and abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) <= 0.02
+            and name_ok
+        )
+        if not swapped and not missing_qty:
+            continue
+
+        used.add(best_idx)
+        if swapped:
+            item["quantity"] = _fmt_qty(ocr_qty)
+            item["unit_price"] = f"{ocr_rate:.2f}"
+            logger.warning(
+                f"⚠️ GST portal Goods Details: swapped qty/rate for "
+                f"'{item.get('product_description', '')}': "
+                f"qty {cur_qty}->{item['quantity']}, "
+                f"rate {cur_rate}->{item['unit_price']}"
+            )
+        else:
+            item["quantity"] = _fmt_qty(ocr_qty)
+            logger.warning(
+                f"⚠️ GST portal Goods Details: restored missing qty for "
+                f"'{item.get('product_description', '')}': "
+                f"{cur_qty}->{item['quantity']} (rate unchanged {cur_rate})"
+            )
+
+    return items
+
+
+def dedupe_gst_portal_einvoice_recovered_items(items, ocr_text: str) -> list:
+    """
+    GST portal Goods Details: drop OCR-recovered duplicates of Vision rows.
+
+    recover_missing_items_from_ocr can re-add the same Goods Details line
+    (e.g. ABHOPE) when Vision already extracted it. Only removes recovered
+    rows that match an existing non-recovered item by product name + qty + rate.
+    """
+    if not items or not _ocr_suggests_gst_portal_goods_details(ocr_text):
+        return items
+
+    def _norm_desc(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _qty_rate(item):
+        try:
+            q = float(normalize_numeric_value(
+                str(item.get("quantity", "0"))) or 0)
+            r = float(normalize_numeric_value(
+                str(item.get("unit_price", "0"))) or 0)
+        except Exception:
+            return 0.0, 0.0
+        return q, r
+
+    bases = [it for it in items if not it.get("recovered_from_ocr")]
+    if not bases:
+        return items
+
+    kept = []
+    for it in items:
+        if not it.get("recovered_from_ocr"):
+            kept.append(it)
+            continue
+
+        desc = _norm_desc(it.get("product_description", ""))
+        q, r = _qty_rate(it)
+        is_dup = False
+        if desc and q > 0 and r > 0:
+            for base in bases:
+                bdesc = _norm_desc(base.get("product_description", ""))
+                if not bdesc:
+                    continue
+                if not (desc == bdesc or desc in bdesc or bdesc in desc):
+                    continue
+                bq, br = _qty_rate(base)
+                if bq <= 0 or br <= 0:
+                    continue
+                if abs(q - bq) <= 0.05 and abs(r - br) / max(br, 0.01) <= 0.02:
+                    is_dup = True
+                    break
+
+        if is_dup:
+            logger.warning(
+                f"⚠️ GST portal Goods Details: dropped recovered duplicate "
+                f"'{it.get('product_description', '')}' "
+                f"(qty={it.get('quantity')}, rate={it.get('unit_price')})"
+            )
+            continue
+        kept.append(it)
+
+    return kept
+
+
 def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
     """
     Remove OCR-fragment pseudo-items that have no structural fields and zero amount.
@@ -19209,6 +19464,9 @@ def enforce_schema(raw_data):
     processed_items = []
     # 🔧 FIX e-Invoice: correct qty/rate from Quantity:/Unit Price: before auto-fixes
     items = fix_structured_einvoice_qty_rate_from_ocr(items, ocr_text)
+    # GST portal Goods Details table: Rate/Qty column swap (JAI MATADI style)
+    items = fix_gst_portal_einvoice_qty_rate_swap(items, ocr_text)
+    items = dedupe_gst_portal_einvoice_recovered_items(items, ocr_text)
 
     for item in items:
         # Fix quantity/price swap
@@ -19568,6 +19826,9 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 9: Recover line items that Gemini missed but are visible in OCR
     processed_items = recover_missing_items_from_ocr(
+        processed_items, ocr_text)
+    # GST portal Goods Details: drop recovered duplicates of Vision rows
+    processed_items = dedupe_gst_portal_einvoice_recovered_items(
         processed_items, ocr_text)
 
     # 🔧 FIX 12g-b: Drop NATARAJ batch-as-product phantoms from pipe-table recovery
@@ -19985,6 +20246,10 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX e-Invoice (final): restore qty/rate after OCR-column fixes may corrupt labeled rows
     processed_items = fix_structured_einvoice_qty_rate_from_ocr(
+        processed_items, ocr_text)
+    processed_items = fix_gst_portal_einvoice_qty_rate_swap(
+        processed_items, ocr_text)
+    processed_items = dedupe_gst_portal_einvoice_recovered_items(
         processed_items, ocr_text)
 
     # 🔧 FIX 14: Strict fallback for Bharat Pharma invoice 008125.
