@@ -25,3 +25,6 @@ Thumbs.db
 
 # Vertex / GCP service account keys
 credentials/
+
+# Sales statement verification outputs
+output_sales_statements/

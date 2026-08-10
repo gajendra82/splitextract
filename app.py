@@ -3,6 +3,15 @@ from services.vertex_gemini_client import (
     generate_content_via_vertex,
     initialize_vertex_gemini_client,
 )
+from services.sales_statement_extractor import (
+    SUPPORTED_EXTENSIONS as SALES_STATEMENT_EXTENSIONS,
+    extract_sales_statement,
+)
+from services.file_type_detector import FileKind, FileTypeDetector
+from services.excel_invoice_extract import (
+    build_excel_ocr_text,
+    extract_invoices_from_excel,
+)
 from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
@@ -6936,7 +6945,8 @@ def fix_chaitanya_pharma_qty_net_vs_value_fallback(items, ocr_text: str) -> list
 
         try:
             cur_qty = float(
-                normalize_numeric_value(str(item.get("quantity", "") or "")) or 0
+                normalize_numeric_value(
+                    str(item.get("quantity", "") or "")) or 0
             )
         except Exception:
             cur_qty = 0.0
@@ -7012,7 +7022,8 @@ def fix_chaitanya_pharma_leading_pack_product_fallback(items, ocr_text: str) -> 
                 re.IGNORECASE,
             )
             if mid_m:
-                _pack, ocr_desc = _split_chaitanya_pack_product(mid_m.group(1).strip())
+                _pack, ocr_desc = _split_chaitanya_pack_product(
+                    mid_m.group(1).strip())
                 preferred = _clean_chaitanya_product_name(ocr_desc)
 
         cleaned = _clean_chaitanya_product_name(cur_desc)
@@ -7184,8 +7195,10 @@ def _clean_chaitanya_product_name(name: str) -> str:
         flags=re.IGNORECASE,
     )
     n = re.sub(r'^\d{1,4}\s+(?=[A-Z])', '', n)  # "10 ATORVA…"
-    n = re.sub(r'^\d+C\s+(?=[A-Z])', '', n, flags=re.IGNORECASE)  # "15C ATORVA…" (S_6240)
-    n = re.sub(r'^\d+C(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)  # "15CATORVA…"
+    # "15C ATORVA…" (S_6240)
+    n = re.sub(r'^\d+C\s+(?=[A-Z])', '', n, flags=re.IGNORECASE)
+    n = re.sub(r'^\d+C(?=[A-Z]{3,})', '', n,
+               flags=re.IGNORECASE)  # "15CATORVA…"
     n = re.sub(r'^(?:ML|GM)(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)
 
     # Known OCR merges on this format (S_5090 / BENSUS Tax Inv.)
@@ -7719,7 +7732,8 @@ def fix_trilok_enterprises_ocr_garbage_product_fallback(
         prev = batch_to_product.get(bk)
         # Prefer name without digits-only tail / shorter clean name without pack glue
         if prev is None or (
-            '*' not in product and (prev[0].find('*') >= 0 or len(product) < len(prev[0]))
+            '*' not in product and (prev[0].find('*')
+                                    >= 0 or len(product) < len(prev[0]))
         ):
             batch_to_product[bk] = (product, mfg, pack)
 
@@ -7835,8 +7849,10 @@ def fix_trilok_enterprises_overlap_pack_product_fallback(
         needs_fix = False
         if desc.upper() != product.upper():
             needs_fix = True
-        af = item.get("additional_fields") if isinstance(item.get("additional_fields"), dict) else {}
-        cur_pack = str((af or {}).get("pack", "") or "").strip().upper().replace(" ", "")
+        af = item.get("additional_fields") if isinstance(
+            item.get("additional_fields"), dict) else {}
+        cur_pack = str((af or {}).get("pack", "")
+                       or "").strip().upper().replace(" ", "")
         if cur_pack in {"0ML", "0GM", "ML", "GM"} or (
             cur_pack and cur_pack != pack.upper().replace(" ", "")
             and re.match(r'^0?(?:ML|GM)$', cur_pack)
@@ -21870,6 +21886,262 @@ def build_pdf_from_pages(src_doc: fitz.Document, page_indices: List[int]) -> byt
         out.close()
 
 
+def build_text_pdf_bytes(title: str, body: str) -> bytes:
+    """Build a minimal single-page PDF for Excel-derived invoices (blob naming stays *.pdf)."""
+    out = fitz.open()
+    try:
+        page = out.new_page(width=595, height=842)
+        text = f"{title}\n\n{(body or '')[:12000]}"
+        # insert_textbox wraps long lines; fall back to insert_text on failure
+        rect = fitz.Rect(36, 36, 559, 806)
+        try:
+            page.insert_textbox(rect, text, fontsize=9, fontname="helv")
+        except Exception:
+            page.insert_text((36, 50), text[:4000], fontsize=9, fontname="helv")
+        return out.tobytes(garbage=4, deflate=True)
+    finally:
+        out.close()
+
+
+def build_split_extract_response_from_excel(
+    *,
+    excel_path: str,
+    source_filename: str,
+    batch_id: Optional[str],
+    split_id: Optional[str],
+    file_name: Optional[str],
+    use_blob_storage: bool,
+    container_name: str,
+    target_invoices_blob_folder: Optional[str],
+    queued_ahead: int,
+    queue_wait_seconds: float,
+    start_time: datetime,
+    ocr_stats: Dict[str, float],
+) -> Dict[str, Any]:
+    """
+    Excel path for /split-and-extract.
+
+    Returns the SAME top-level JSON keys as the PDF/Image path so Laravel needs
+    no special handling. Extraction skips OCR/Gemini and uses structured parse.
+    """
+    update_request_progress("excel_parse_started")
+    parse_result = extract_invoices_from_excel(excel_path, source_filename)
+    excel_meta = parse_result.metadata.to_dict()
+
+    if not parse_result.success and not parse_result.invoices:
+        detail = parse_result.error or "Excel parse failed"
+        # Soft-fail empty/corrupt only when nothing usable was produced
+        raise HTTPException(status_code=400, detail=detail)
+
+    all_invoices: List[Dict[str, Any]] = []
+    for idx, raw_invoice in enumerate(parse_result.invoices):
+        group_invoice_no = str(raw_invoice.get("invoice_no") or "").strip() or f"UNKNOWN_{idx + 1}"
+        update_request_progress("excel_invoice_normalized", invoice=group_invoice_no)
+
+        ocr_text = build_excel_ocr_text(raw_invoice)
+        # Flat Gemini-compatible shape → shared enforce_schema
+        flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
+        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+
+        try:
+            formatted = enforce_schema(data_with_ocr)
+        except Exception as schema_err:
+            logger.error(
+                "Excel schema enforcement failed for %s: %s",
+                group_invoice_no,
+                schema_err,
+                exc_info=True,
+            )
+            formatted = {
+                "data": {
+                    "invoice_summary": {
+                        "customer": str(flat.get("customer", "") or ""),
+                        "customer_address": str(flat.get("customer_address", "") or ""),
+                        "customer_gstin": str(flat.get("customer_gstin", "") or ""),
+                        "invoice_date": str(flat.get("invoice_date", "") or ""),
+                        "invoice_no": group_invoice_no,
+                        "irn": str(flat.get("irn", "") or ""),
+                        "tax": str(flat.get("tax", "") or ""),
+                        "total": str(flat.get("total", "") or ""),
+                        "vendor": str(flat.get("vendor", "") or ""),
+                        "vendor_gstin": str(flat.get("vendor_gstin", "") or ""),
+                    },
+                    "line_items": {
+                        "count": len(flat.get("line_items") or []),
+                        "has_lot_batch_info": True,
+                        "has_quantity_info": True,
+                        "items": flat.get("line_items") or [],
+                        "items_with_lot_batch": 0,
+                        "items_with_quantity": 0,
+                        "standardized_columns": {},
+                        "title": "line items (with lot / batch)",
+                    },
+                    "ocr_text": ocr_text,
+                },
+                "message": "invoice processed successfully",
+                "status": "success",
+                "timestamp": "",
+                "user": "huggingface_user",
+            }
+
+        formatted["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        formatted["model_used"] = "excel_parser"
+        formatted["ocr_method"] = "excel"
+        formatted["confidence"] = 1.0
+
+        # Align nested invoice_no with group key
+        try:
+            summary_obj = formatted.get("data", {}).get("invoice_summary", {})
+            summary_invoice_no = str(summary_obj.get("invoice_no", "") or "").strip()
+            if summary_invoice_no:
+                group_invoice_no = summary_invoice_no
+            else:
+                summary_obj["invoice_no"] = group_invoice_no
+        except Exception:
+            pass
+
+        final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
+        safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
+        invoice_filename = f"invoice_{safe_name}.pdf"
+        pdf_bytes = build_text_pdf_bytes(f"Invoice {final_invoice_no}", ocr_text)
+
+        invoice_info: Dict[str, Any] = {
+            "invoice_no": final_invoice_no,
+            "pages": [1],
+            "num_pages": 1,
+            "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
+            "extracted_data": formatted,
+        }
+
+        if use_blob_storage:
+            try:
+                blob_info = upload_split_pdf_to_blob(
+                    pdf_bytes,
+                    invoice_filename,
+                    source_filename,
+                    batch_id,
+                    container_name,
+                    target_invoices_blob_folder,
+                )
+                invoice_info["storage"] = blob_info
+                invoice_info["pdf_url"] = blob_info["download_url"]
+                update_request_progress(
+                    "blob_upload_completed",
+                    invoice=final_invoice_no,
+                )
+            except Exception as e:
+                invoice_info["upload_error"] = str(e)
+                logger.warning(f"Blob upload failed (excel): {e}")
+
+        all_invoices.append(invoice_info)
+        del pdf_bytes
+
+    # Keep UNKNOWN_* separate (same dedupe policy as PDF path)
+    dedupe_map = {}
+    ordered_keys = []
+    unknown_entries = []
+    for inv in all_invoices:
+        inv_no = str(inv.get("invoice_no", "") or "").strip()
+        key = inv_no.upper()
+        if not key or key.startswith("UNKNOWN"):
+            unknown_entries.append(inv)
+            continue
+        if key not in dedupe_map:
+            dedupe_map[key] = inv
+            ordered_keys.append(key)
+            continue
+        base = dedupe_map[key]
+        if _invoice_item_count_for_dedupe(inv) > _invoice_item_count_for_dedupe(base):
+            dedupe_map[key] = inv
+    if dedupe_map:
+        all_invoices = [dedupe_map[k] for k in ordered_keys] + unknown_entries
+
+    total_time = (datetime.now() - start_time).total_seconds()
+    total_pages_count = max(len(all_invoices), 1)
+
+    invoices_filled = []
+    for inv in all_invoices:
+        storage = inv.get("storage", {})
+        blob_path = storage.get("blob_name", "")
+        inv_filename = blob_path.split(
+            "/")[-1] if blob_path else f"invoice_{inv.get('invoice_no', 'unknown')}.pdf"
+        invoices_filled.append({
+            "filename": inv_filename,
+            "blob_path": blob_path,
+            "url": storage.get("download_url", inv.get("pdf_url", "")),
+        })
+
+    # Identical top-level contract as PDF/Image responses
+    response = {
+        "success": True,
+        "batch_id": batch_id,
+        "split_id": split_id,
+        "file_name": file_name,
+        "Invoices": invoices_filled,
+        "queue": {
+            "queued_ahead_at_arrival": queued_ahead,
+            "wait_time_seconds": queue_wait_seconds,
+            "max_concurrent_requests": MAX_CONCURRENT_REQUESTS
+        },
+        "summary": {
+            "total_invoices": len(all_invoices),
+            "total_pages": total_pages_count,
+            "total_time_seconds": round(total_time, 2),
+            "was_image_converted": False,
+            # Excel-only extras (Laravel ignores unknown keys)
+            "source": "excel",
+            "excel_metadata": excel_meta,
+        },
+        "cost_optimization": {
+            "traditional_gemini_calls": 0,
+            "actual_gemini_calls": ocr_stats.get("total_gemini_calls", 0),
+            "calls_saved": 0,
+            "cost_saved_usd": 0.0,
+            "ocr_savings_percentage": 100.0
+        },
+        "ocr_statistics": {
+            "pdfplumber": 0,
+            "pymupdf": 0,
+            "tesseract": 0,
+            "gemini_vision": 0,
+            "gemini_text_api": 0,
+            "total_gemini_calls": 0,
+            "free_extractions": total_pages_count,
+            "ocr_time_seconds": round(excel_meta.get("processing_time", 0.0), 2)
+        },
+        "invoices": all_invoices
+    }
+
+    if parse_result.metadata.warnings:
+        logger.warning(
+            "Excel parse warnings (%s): %s",
+            len(parse_result.metadata.warnings),
+            parse_result.metadata.warnings[:10],
+        )
+
+    update_request_progress("excel_parse_complete", force_log=True)
+    logger.info(
+        "Excel split-and-extract complete: invoices=%s rows_processed=%s time=%.2fs",
+        len(all_invoices),
+        excel_meta.get("processed_rows"),
+        total_time,
+    )
+    return response
+
+
+def _invoice_item_count_for_dedupe(_invoice: dict) -> int:
+    if not isinstance(_invoice, dict):
+        return 0
+    _ed = _invoice.get("extracted_data")
+    if not isinstance(_ed, dict):
+        return 0
+    try:
+        _items = _extract_line_items_for_validation(_ed)
+        return len(_items) if isinstance(_items, list) else 0
+    except Exception:
+        return 0
+
+
 def get_blob_service_client(force_refresh: bool = False):
     global blob_service_client
     if not AZURE_AVAILABLE:
@@ -22031,7 +22303,8 @@ async def split_and_extract_invoices(
     source_filename = unquote(source_filename or "uploaded.pdf")
     filename_lower = source_filename.lower()
     SUPPORTED_EXTENSIONS = ['.pdf', '.png',
-                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp',
+                            '.xlsx', '.xls']
 
     file_extension = None
     for ext in SUPPORTED_EXTENSIONS:
@@ -22039,11 +22312,26 @@ async def split_and_extract_invoices(
             file_extension = ext
             break
 
+    # Content-type / magic fallback when extension missing from blob/URL names
+    if not file_extension:
+        content_type = getattr(file, "content_type", None) if file is not None else None
+        kind, detected_ext = FileTypeDetector().detect(
+            filename=source_filename,
+            content_type=content_type,
+        )
+        if kind == FileKind.EXCEL and detected_ext in {'.xlsx', '.xls'}:
+            file_extension = detected_ext
+        elif kind == FileKind.PDF:
+            file_extension = '.pdf'
+        elif kind == FileKind.IMAGE and detected_ext:
+            file_extension = detected_ext
+
     if not file_extension:
         raise HTTPException(status_code=400, detail="Unsupported format")
 
     is_image_file = file_extension in [
         '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+    is_excel_file = file_extension in ['.xlsx', '.xls']
 
     with request_queue_lock:
         waiting_requests += 1
@@ -22141,6 +22429,32 @@ async def split_and_extract_invoices(
 
         file_size_mb = total_size / (1024 * 1024)
         print(f"💾 File size: {file_size_mb:.2f}MB")
+
+        # ------------------------------------------------------------------
+        # Excel path — structured parse only (no OCR / no fitz). PDF & Image
+        # continue through the existing pipeline unchanged below.
+        # ------------------------------------------------------------------
+        if is_excel_file:
+            print(f"📊 Excel invoice extract: {source_filename}")
+            response = build_split_extract_response_from_excel(
+                excel_path=temp_path,
+                source_filename=source_filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name,
+                use_blob_storage=use_blob_storage,
+                container_name=container_name,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                queued_ahead=queued_ahead,
+                queue_wait_seconds=queue_wait_seconds,
+                start_time=start_time,
+                ocr_stats=ocr_stats,
+            )
+            update_request_progress("response_generated", force_log=True)
+            _request_summary["total_execution_seconds"] = round(
+                (datetime.now() - start_time).total_seconds(), 2)
+            update_request_progress("request_completed", force_log=True)
+            return JSONResponse(response)
 
         if is_image_file:
             print(f"🖼️  Converting image to PDF...")
@@ -23751,6 +24065,82 @@ async def ready():
     """Non-blocking readiness probe (lightweight resource snapshot)."""
     runtime = get_runtime_health_snapshot()
     return get_ready_snapshot(runtime)
+
+
+@app.post("/extract-sales-statement")
+async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
+    """Extract stock/sales statement data into a unified JSON schema.
+
+    Supports text, images, PDF, Word, Excel and HTML formats:
+    .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, .bmp, .tif, .tiff, .webp,
+    .htm, .html, .xls, .xlsx
+
+    Does not use the invoice OCR / split pipeline.
+    """
+    filename = file.filename or "upload"
+    # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
+    # when extension is missing or mismatched (e.g. .TXT, octet-stream upload).
+    content_type = (file.content_type or "").lower()
+    if "." not in filename:
+        if content_type.startswith("text/"):
+            filename = f"{filename}.txt"
+        elif content_type == "application/pdf":
+            filename = f"{filename}.pdf"
+        elif content_type in {"image/jpeg", "image/jpg"}:
+            filename = f"{filename}.jpg"
+        elif content_type == "image/png":
+            filename = f"{filename}.png"
+        elif content_type == "image/bmp":
+            filename = f"{filename}.bmp"
+        elif content_type in {"image/tiff", "image/tif"}:
+            filename = f"{filename}.tiff"
+        elif content_type == "image/webp":
+            filename = f"{filename}.webp"
+        elif content_type in {
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }:
+            filename = (
+                f"{filename}.docx"
+                if "openxmlformats" in content_type
+                else f"{filename}.doc"
+            )
+
+    ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
+    word_mime = content_type in {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",
+    }
+    # Allow through when extension unknown — extractor may sniff bytes
+    if ext and ext not in SALES_STATEMENT_EXTENSIONS:
+        # Still allow if content-type clearly indicates txt/image/Word/PDF
+        if not (
+            content_type.startswith("text/")
+            or content_type.startswith("image/")
+            or content_type == "application/pdf"
+            or word_mime
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported format '{ext}'. "
+                    f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
+                ),
+            )
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file")
+        result = extract_sales_statement(file_bytes, filename)
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Sales statement extraction failed for %s", filename)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
