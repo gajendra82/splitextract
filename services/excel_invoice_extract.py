@@ -67,6 +67,14 @@ _CANONICAL_FIELDS: Dict[str, Tuple[str, ...]] = {
         "bill to",
         "to party",
         "customername",
+        # GRN / hospital sales exports
+        "hospital",
+        "hospital name",
+        "hospitalname",
+        "institution",
+        "institution name",
+        "account name",
+        "account",
     ),
     "customer_address": (
         "customer address",
@@ -79,6 +87,9 @@ _CANONICAL_FIELDS: Dict[str, Tuple[str, ...]] = {
         "bill to address",
         "delivery address",
         "shipping address",
+        "hospital city",
+        "hospitalcity",
+        "hospital address",
     ),
     "customer_gstin": (
         "customer gstin",

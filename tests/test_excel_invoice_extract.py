@@ -67,6 +67,9 @@ class TestHeaderNormalizer(unittest.TestCase):
             "Customer": "customer",
             "Retailer": "customer",
             "Chemist": "customer",
+            "Hospital Name": "customer",
+            "Hospital": "customer",
+            "hospital_city": "customer_address",
             "Distributor": "vendor",
             "Stockist": "vendor",
             "Product": "product_description",
@@ -184,6 +187,46 @@ class TestExcelInvoiceExtract(unittest.TestCase):
         self.assertEqual(
             [len(inv["line_items"]) for inv in result.invoices[1:]], [1, 1]
         )
+
+    def test_hospital_name_column_maps_to_customer(self):
+        """GRN hospital sales sheets use Hospital Name instead of Customer."""
+        path = self._track(_write_xlsx([
+            [
+                "invoice_date",
+                "group_name",
+                "Hospital Name",
+                "hospital_city",
+                "product_name",
+                "quantity",
+                "invoice_number",
+            ],
+            [
+                "2026-05-05",
+                "HCG HOSPITAL",
+                "HCG YELAHANKA (NORTH BANGALORE)",
+                "BENGALURU",
+                "FLUTICONE NASAL SPRAY 12 ML",
+                1,
+                "VGP/27/4697",
+            ],
+            [
+                "2026-05-05",
+                "HCG HOSPITAL",
+                "HCG YELAHANKA (NORTH BANGALORE)",
+                "BENGALURU",
+                "OTHER PRODUCT",
+                2,
+                "VGP/27/4697",
+            ],
+        ]))
+        result = extract_invoices_from_excel(path, "ZYDUS.xlsx")
+        self.assertTrue(result.success)
+        self.assertEqual(len(result.invoices), 1)
+        inv = result.invoices[0]
+        self.assertEqual(inv["customer"], "HCG YELAHANKA (NORTH BANGALORE)")
+        self.assertEqual(inv["customer_address"], "BENGALURU")
+        self.assertEqual(inv["invoice_no"], "VGP/27/4697")
+        self.assertEqual(len(inv["line_items"]), 2)
 
     def test_invoice_number_column_still_wins_over_header_grouping(self):
         path = self._track(_write_xlsx([
