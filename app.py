@@ -1817,6 +1817,8 @@ def try_extract_all_invoices_from_text(text: str) -> List[str]:
             continue
         if invoice_num.upper() in _label_invalid:
             continue
+        if _looks_like_monetary_amount(invoice_num) or _is_suspicious_invoice_number(invoice_num):
+            continue
         if 4 <= len(invoice_num) <= 14 and invoice_num not in invoices_found:
             logger.info(f"   🔍 Found invoice via label: {invoice_num}")
             invoices_found.append(invoice_num)
@@ -11883,11 +11885,64 @@ def normalize_date_to_iso(date_string):
     return date_string
 
 
+def _looks_like_monetary_amount(value) -> bool:
+    """True when value is an amount (₹101,867.00), not an invoice number."""
+    if value is None:
+        return False
+    raw = str(value).strip()
+    if not raw:
+        return False
+
+    # Keep a copy before OCR currency→letter substitutions (normalize_invoice_number).
+    text = raw
+    # Currency tokens may be glued to digits (Rs101867.00) or spaced (Rs. 101,867.00).
+    text = re.sub(r'(?i)(?:rs\.?|inr|rupees?)', '', text)
+    text = re.sub(r'[₹$€£]', '', text)
+    text = text.replace('/-', '')
+    text = re.sub(r'\s+', '', text)
+    text = text.strip(".,;:-_")
+    if not text:
+        return False
+    # Letters mean a real invoice id (INV4567, 26CC812338), not money.
+    if re.search(r'[A-Za-z]', text):
+        return False
+
+    # Western thousands: 101,867.00 / 1,234,567.89
+    if re.fullmatch(r'\d{1,3}(?:,\d{3})+\.\d{2}', text):
+        return True
+    # Indian lakhs: 1,00,000.00 / 1,01,867.00 / 10,18,670.00
+    if re.fullmatch(r'\d{1,3}(?:,\d{2})+,\d{3}\.\d{2}', text):
+        return True
+    # Plain decimal money: 100.00 / 101867.00
+    if re.fullmatch(r'\d+\.\d{2}', text):
+        return True
+    return False
+
+
+def _valid_invoice_no_or_none(inv_no, ocr_text: str = "") -> Optional[str]:
+    """Reusable invoice-number gate: None if missing, suspicious, or money-like."""
+    if inv_no is None:
+        return None
+    text = str(inv_no).strip()
+    if not text or text.upper() in {"NONE", "NULL", "N/A", "NA", "NIL", ""}:
+        return None
+    if _looks_like_monetary_amount(text):
+        return None
+    if _is_suspicious_invoice_number(text):
+        return None
+    if ocr_text and _looks_like_hsn_code(text, ocr_text):
+        return None
+    return text
+
+
 def _is_suspicious_invoice_number(inv_no: str) -> bool:
     if not inv_no:
         return True
     value = str(inv_no).strip().upper()
     if not value:
+        return True
+
+    if _looks_like_monetary_amount(inv_no) or _looks_like_monetary_amount(value):
         return True
 
     compact = re.sub(r'[^A-Z0-9]', '', value)
@@ -12793,6 +12848,132 @@ def extract_aman_enterprises_party_details(ocr_text: str) -> dict:
     return details
 
 
+def ocr_suggests_quantum_health_care(ocr_text: str = "", vendor: str = "") -> bool:
+    """QUANTUM HEALTH CARE credit-bill layout (GSTIN 33AUMPA8021HIZY)."""
+    blob = f"{ocr_text or ''}\n{vendor or ''}"
+    if not blob.strip():
+        return False
+    if re.search(r'33AUMPA8021H[I1]ZY', blob, re.IGNORECASE):
+        return True
+    return bool(re.search(
+        r'QUANTUM\s*[\\/]?\s*H[EA]+\s*LTH\s*CARE|QUANTUM\s+HEALTH\s+CARE',
+        blob,
+        re.IGNORECASE,
+    ))
+
+
+def extract_quantum_health_care_customer_details(ocr_text: str) -> dict:
+    """
+    QUANTUM invoices print buyer under Invoice No / Invoice Date (no Bill To label).
+
+    Example:
+      Invoice No: 26-27D17619 Invoice Date: 28/05/2026
+      PHARMACY STORES-CMC HOSPITAL RANIPET CAMPUS
+      UNIT OF CMC VELLORE ASSOCIATION
+      ROOM NO-00D02,... CMC VELLORE-RANIPET CAMPUS,KILMINNAL
+    """
+    details: dict = {}
+    if not ocr_text or not ocr_suggests_quantum_health_care(ocr_text):
+        return details
+
+    lines = [re.sub(r'\s+', ' ', ln).strip(" |") for ln in ocr_text.splitlines()]
+    lines = [ln for ln in lines if ln]
+
+    inv_idx = -1
+    inv_line_re = re.compile(
+        r'Invoice\s*No\.?\s*:?\s*([A-Z0-9][A-Z0-9\-/]{4,20})',
+        re.IGNORECASE,
+    )
+    for idx, line in enumerate(lines):
+        if inv_line_re.search(line) and re.search(
+            r'Invoice\s*Date|Tnvoice\s*Date|Dalte|Page\s*No',
+            line,
+            re.IGNORECASE,
+        ):
+            inv_idx = idx
+            break
+    if inv_idx < 0:
+        for idx, line in enumerate(lines):
+            if inv_line_re.search(line):
+                inv_idx = idx
+                break
+    if inv_idx < 0:
+        return details
+
+    vendor_junk_re = re.compile(
+        r'QUANTUM|HEALTH\s*CARE|SAKTHI\s*NAGAR|VIRUDHAMBATTU|KATPADI|'
+        r'DLNO|D\.?L\.?\s*NO|GST\s*No|TAX\s*INVOICE|PLACE\s*OF\s*SUPPLY|'
+        r'TAMIL\s*NADU|TERMS\s*:|D-?CREDIT\s*BILL|PAGE\s*NO|EMAIL\s*ID|'
+        r'CELL\s*:|FSSAI|PROPRIETOR|ACCOUNT\s*NUMBER|AMOUNT\s*IN\s*WORDS|'
+        r'DESCRIPTION\s*OF\s*GOODS|ITEMS\s*:|BILYPSA|ENTEHEP|EXEMPTIA|'
+        r'DISCOUNT|HSN\b|FOR\s+QUANTUM|No\.?\s*26\b',
+        re.IGNORECASE,
+    )
+    stop_re = re.compile(
+        r'Description\s*of\s*Goods|ITEMS\s*:|Discount\s*(?:Percent|Amount)|'
+        r'HSN\b|Qty\b|BASE\s*:|BILYPSA|ENTEHEP|EXEMPTIA',
+        re.IGNORECASE,
+    )
+    buyer_hint_re = re.compile(
+        r'PHARMACY|HOSPITAL|CMC|ASSOCIATION|COLLEGE|CAMPUS|CLINIC|'
+        r'TRUST|MEDICAL|STORES?|UNIT\s+OF|RANIPET|CHITTOOR|VELLORE',
+        re.IGNORECASE,
+    )
+
+    def _clean_buyer_line(line: str) -> str:
+        line = re.split(
+            r'\s+(?:Code\b|_+\s*L\.?\s*no\.?|L\.?\s*no\.?|Gst\s*No|'
+            r'GSTIN|Order\s*No|DL\.?\s*No)\b',
+            line,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        line = re.sub(r'[\[\]\|].*$', '', line)
+        line = re.sub(r'\s+\d{2}[A-Z0-9]{13}\b.*$', '', line)
+        line = re.sub(r'\s+', ' ', line).strip(" ,.|-_'‘’“”()[]")
+        return line
+
+    name = ""
+    addr_parts = []
+    for line in lines[inv_idx + 1: inv_idx + 8]:
+        if stop_re.search(line):
+            break
+        cleaned = _clean_buyer_line(line)
+        if not cleaned or len(re.sub(r'[^A-Za-z]', '', cleaned)) < 6:
+            continue
+        if vendor_junk_re.search(cleaned) and not buyer_hint_re.search(cleaned):
+            continue
+        if not name:
+            if not buyer_hint_re.search(cleaned) and len(cleaned) < 12:
+                continue
+            name = cleaned
+            continue
+        if buyer_hint_re.search(cleaned) or re.search(
+            r'\d{3,}|ROAD|FLOOR|BLOCK|CAMPUS|VELLORE|CHITTOOR|RANIPET',
+            cleaned,
+            re.IGNORECASE,
+        ):
+            if cleaned.upper() not in name.upper() and cleaned not in addr_parts:
+                addr_parts.append(cleaned)
+        if len(addr_parts) >= 3:
+            break
+
+    if name:
+        details["customer"] = name
+    if addr_parts:
+        details["customer_address"] = ", ".join(addr_parts[:3])
+
+    vendor_gstin = "33AUMPA8021HIZY"
+    compact = re.sub(r'[^A-Z0-9]', '', ocr_text.upper())
+    for m in re.finditer(r'33[A-Z0-9]{13}', compact):
+        gstin = clean_gstin(m.group(0)[:15])
+        if not gstin or gstin == vendor_gstin:
+            continue
+        details["customer_gstin"] = gstin
+        break
+    return details
+
+
 def ocr_suggests_zydus_lifesciences(ocr_text: str) -> bool:
     """Detect Zydus Lifesciences Limited tax-invoice layout."""
     if not ocr_text:
@@ -12997,6 +13178,54 @@ def ocr_suggests_united_medical_agencies_bluefox(ocr_text: str) -> bool:
         re.search(r'UNITED\s+MEDICAL\s+AGENCIES', ocr_text, re.IGNORECASE)
         and re.search(r'BLUEFOX\s*SYSTEMS', ocr_text, re.IGNORECASE)
     )
+
+
+def ocr_suggests_sunanda_associates(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect SUNANDA ASSOCIATES (BlueFox) invoices. Does not match UMA."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    return bool(re.search(r'SUNANDA\s+ASSOCIATES', blob, re.IGNORECASE))
+
+
+def _strip_sunanda_mfr_prefix(desc: str) -> str:
+    """Strip Mfac/Mkt By leakage (GERMAI / ZYDUS / ZYDUS () from Item Description."""
+    name = re.sub(r'\s+', ' ', (desc or "").strip())
+    name = re.sub(r'^(?:GERMAI|ZYDUS)\b\s*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'^[\(/|]+\s*', '', name)
+    # Vision sometimes leaves a lone 'I' from "ZYDUS (" — not the I in IMEGLYN.
+    name = re.sub(r'^I\s+(?=[A-Z])', '', name, flags=re.IGNORECASE)
+    return name.strip(' .')
+
+
+def fix_sunanda_associates_product_names(
+    items: list, ocr_text: str = "", vendor: str = "",
+) -> list:
+    """SUNANDA-only: drop Mfr column text glued onto product_description."""
+    if not items or not ocr_suggests_sunanda_associates(ocr_text, vendor):
+        return items
+    changed = 0
+    kept = []
+    dropped = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        old = str(item.get("product_description", "") or "")
+        new = _strip_sunanda_mfr_prefix(old)
+        if new and new != old:
+            item["product_description"] = new
+            changed += 1
+        desc = str(item.get("product_description", "") or "")
+        # Vision/OCR sometimes invents a duplicate row starting with Rack+Mfr
+        # (e.g. "D337 ZYDUS1 OCU QRS 20MG TAB").
+        if re.match(r'^(?:\d{3,4}|[A-Z]\d{2,4})\s+ZYDUS', desc, re.IGNORECASE):
+            dropped += 1
+            continue
+        kept.append(item)
+    if changed or dropped:
+        logger.warning(
+            f"⚠️ FIX SUNANDA: stripped Mfr prefix from {changed} product name(s)"
+            + (f", dropped {dropped} rack-Mfr junk row(s)" if dropped else "")
+        )
+    return kept
 
 
 def _bluefox_garbled_product_text(ocr_text: str) -> bool:
@@ -16030,6 +16259,8 @@ def _resolve_page_invoice_for_grouping(
         return None
     if re.fullmatch(r'(19|20)\d{2}', inv_str):
         return None
+    if _looks_like_monetary_amount(inv_str) or _is_suspicious_invoice_number(inv_str):
+        return None
 
     norm = _normalize_invoice_no_for_grouping(inv_no)
     if not norm:
@@ -16044,46 +16275,307 @@ def _resolve_page_invoice_for_grouping(
     return norm
 
 
+def _sanitize_grouping_invoice_no(idx: int, inv_no, result=None):
+    """Drop money-like invoice numbers before page grouping."""
+    if inv_no is None:
+        inv_str = ""
+    else:
+        inv_str = str(inv_no).strip()
+    if inv_str and _looks_like_monetary_amount(inv_str):
+        logger.warning(
+            f"[Continuation] Page {idx + 1} candidate invoice_no={inv_str} "
+            f"rejected as money-like value.")
+        inv_no = None
+        inv_str = ""
+    if inv_no is None and isinstance(result, dict):
+        if _looks_like_monetary_amount(result.get("invoice_no")):
+            result["invoice_no"] = None
+        full_data = result.get("full_data")
+        if isinstance(full_data, dict):
+            if _looks_like_monetary_amount(full_data.get("invoice_no")):
+                full_data["invoice_no"] = None
+            summary = None
+            if isinstance(full_data.get("data"), dict):
+                summary = full_data["data"].get("invoice_summary")
+            elif isinstance(full_data.get("invoice_summary"), dict):
+                summary = full_data["invoice_summary"]
+            if isinstance(summary, dict) and _looks_like_monetary_amount(
+                summary.get("invoice_no")
+            ):
+                summary["invoice_no"] = None
+    return inv_no
+
+
+def _gstins_from_ocr_text(ocr_text: str) -> set:
+    if not ocr_text:
+        return set()
+    return set(re.findall(
+        r'\b\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]\b',
+        str(ocr_text).upper(),
+    ))
+
+
+def _invoice_summary_from_full_data(full_data) -> dict:
+    if not isinstance(full_data, dict):
+        return {}
+    data = full_data.get("data") if isinstance(full_data.get("data"), dict) else full_data
+    if isinstance(data, dict) and isinstance(data.get("invoice_summary"), dict):
+        return data["invoice_summary"]
+    return data if isinstance(data, dict) else {}
+
+
+def _party_fields_for_continuation(
+    full_data=None, ocr_text: str = "", previous_context=None,
+) -> dict:
+    """Invoice-level party hints from extracted data, optional previous_context, or OCR."""
+    out = {}
+    if isinstance(previous_context, dict):
+        for src, dst in (
+            ("invoice_number", "invoice_no"),
+            ("invoice_no", "invoice_no"),
+            ("invoice_date", "invoice_date"),
+            ("stockist", "vendor"),
+            ("vendor", "vendor"),
+            ("customer", "customer"),
+            ("hospital", "customer"),
+            ("vendor_gstin", "vendor_gstin"),
+            ("customer_gstin", "customer_gstin"),
+        ):
+            val = previous_context.get(src)
+            if val and not out.get(dst):
+                out[dst] = val
+    summary = _invoice_summary_from_full_data(full_data)
+    for key in ("invoice_no", "invoice_date", "vendor", "customer",
+                "vendor_gstin", "customer_gstin"):
+        val = summary.get(key)
+        if val and not out.get(key):
+            out[key] = val
+    if ocr_text and not out.get("vendor_gstin") and not out.get("customer_gstin"):
+        gstins = list(_gstins_from_ocr_text(ocr_text))
+        if gstins:
+            out.setdefault("_ocr_gstins", gstins)
+    return out
+
+
+def _page_has_conflicting_party(
+    current_ocr_text: str = "",
+    page_ocr: str = "",
+    current_full_data=None,
+    page_full_data=None,
+    previous_context=None,
+) -> bool:
+    """True when page 2+ clearly belongs to a different seller or customer."""
+    prev = _party_fields_for_continuation(
+        current_full_data, current_ocr_text, previous_context)
+    cur = _party_fields_for_continuation(page_full_data, page_ocr)
+
+    for key in ("customer", "vendor"):
+        left = str(prev.get(key) or "").strip()
+        right = str(cur.get(key) or "").strip()
+        if (
+            left and right
+            and not _looks_like_generic_party_name(left)
+            and not _looks_like_generic_party_name(right)
+            and not _party_names_equivalent(left, right)
+        ):
+            # Ignore Vision-only names that do not appear in page OCR.
+            page_key = _normalize_party_name(page_ocr or "")
+            right_key = _normalize_party_name(right)
+            if page_ocr and right_key and right_key not in page_key:
+                continue
+            return True
+
+    for key in ("customer_gstin", "vendor_gstin"):
+        left = re.sub(r'[^A-Z0-9]', '', str(prev.get(key) or "").upper())
+        right = re.sub(r'[^A-Z0-9]', '', str(cur.get(key) or "").upper())
+        if len(left) == 15 and len(right) == 15 and left != right:
+            return True
+
+    prev_gstins = _gstins_from_ocr_text(current_ocr_text)
+    page_gstins = _gstins_from_ocr_text(page_ocr)
+    if prev_gstins and page_gstins and page_gstins.isdisjoint(prev_gstins):
+        return True
+    return False
+
+
+def _page_has_new_invoice_header_block(page_ocr: str, current_invoice=None) -> bool:
+    """True when OCR shows a new invoice header (number/date + party block)."""
+    if not page_ocr:
+        return False
+    m = re.search(
+        r'(?:Invoice|Inv|Bill|Document)\s*(?:No\.?|Number)\s*[:\-]?\s*'
+        r'([A-Z0-9][A-Z0-9\-/]{2,20})',
+        page_ocr,
+        re.IGNORECASE,
+    )
+    if m:
+        candidate = m.group(1).strip(".,;:-_ ")
+        if (
+            re.search(r'\d', candidate)
+            and not _looks_like_monetary_amount(candidate)
+            and not _is_suspicious_invoice_number(candidate)
+        ):
+            cur_norm = _normalize_invoice_no_for_grouping(current_invoice)
+            cand_norm = _normalize_invoice_no_for_grouping(candidate)
+            if cur_norm and cand_norm and cur_norm == cand_norm:
+                return False
+            if cur_norm and cand_norm and cur_norm != cand_norm:
+                return True
+
+    has_date_label = bool(re.search(
+        r'(?:Invoice|Inv)\s*Date\s*[:\-]', page_ocr, re.IGNORECASE))
+    has_tax_header = bool(re.search(r'\bTAX\s*INVOICE\b', page_ocr, re.IGNORECASE))
+    has_seller = bool(re.search(
+        r'\b(?:Seller|Supplier|GSTIN)\b', page_ocr, re.IGNORECASE))
+    has_buyer = bool(re.search(
+        r'\b(?:Buyer|Bill\s*To|Ship\s*To)\b', page_ocr, re.IGNORECASE))
+    return bool(has_date_label and has_tax_header and has_seller and has_buyer)
+
+
+def _page_looks_like_line_item_continuation(page_ocr: str) -> bool:
+    if not page_ocr:
+        return False
+    if re.search(
+        r'\b(?:Quantity|Qty|HSN|Batch|Unit\s*Price|Gross\s*Amount|SI\s*NO\.?|'
+        r'Item\s*Description|Taxable\s*Value)\b',
+        page_ocr,
+        re.IGNORECASE,
+    ):
+        return True
+    if (
+        re.search(r'\b(?:TAB|CAP|INJ|SYRUP|CREAM|GEL|RESP|MG|ML)\b', page_ocr, re.I)
+        and re.search(r'\d+\.\d{2}', page_ocr)
+    ):
+        return True
+    return False
+
+
+def _page_total_matches_previous_invoice(
+    page_ocr: str,
+    current_ocr_text: str = "",
+    current_full_data=None,
+) -> bool:
+    """Supporting signal only: continuation page repeats the previous invoice total."""
+    def _amounts(text: str) -> set:
+        found = set()
+        for m in re.finditer(
+            r'(?<!\d)(\d{1,3}(?:,\d{3})+\.\d{2}|\d{1,3}(?:,\d{2})+,\d{3}\.\d{2})(?!\d)',
+            text or "",
+        ):
+            try:
+                found.add(round(float(m.group(1).replace(',', '')), 2))
+            except ValueError:
+                continue
+        return found
+
+    prev_total = None
+    summary = _invoice_summary_from_full_data(current_full_data)
+    raw_total = summary.get("total") if summary else None
+    try:
+        if raw_total not in (None, ""):
+            prev_total = round(float(str(raw_total).replace(',', '')), 2)
+    except (TypeError, ValueError):
+        prev_total = None
+    if prev_total is None:
+        m = re.search(
+            r'(?:Total\s+(?:Amount|Invoice\s+Value)|Invoice\s+Value)\s*[:\-]?\s*'
+            r'(\d{1,3}(?:,\d{3})+\.\d{2}|\d{1,3}(?:,\d{2})+,\d{3}\.\d{2})',
+            current_ocr_text or "",
+            re.IGNORECASE,
+        )
+        if m:
+            try:
+                prev_total = round(float(m.group(1).replace(',', '')), 2)
+            except ValueError:
+                prev_total = None
+    if prev_total is None:
+        return False
+    page_amounts = _amounts(page_ocr or "")
+    return prev_total in page_amounts
+
+
 def _should_attach_page_to_current_invoice_group(
     idx: int,
     inv_no,
     page_ocr: str,
     current_invoice,
     current_ocr_text: str = "",
+    page_full_data=None,
+    current_full_data=None,
+    previous_context=None,
 ) -> bool:
     """
     Return True when page idx should stay in the current invoice group.
 
     Rules:
-    1. Missing / empty page invoice → continuation
+    1. Missing / money-like / empty page invoice + continuation signals → attach
     2. Same normalized invoice as current group → continuation
     3. Footer/GSTIN numeric artifacts on page 2+ → continuation
-    4. Only a different valid normalized invoice → new group
+    4. Valid different invoice number, new header, or different party → new group
     """
     if idx <= 0:
         return False
 
+    if inv_no is not None and _looks_like_monetary_amount(inv_no):
+        logger.warning(
+            f"[Continuation] Page {idx + 1} candidate invoice_no={inv_no} "
+            f"rejected as money-like value.")
+        inv_no = None
+
     if _detect_invoice_continuation_page(
-        idx, inv_no, page_ocr, current_invoice, current_ocr_text
+        idx, inv_no, page_ocr, current_invoice, current_ocr_text,
+        page_full_data=page_full_data,
+        current_full_data=current_full_data,
+        previous_context=previous_context,
     ):
         return True
 
     resolved_norm = _resolve_page_invoice_for_grouping(idx, inv_no, page_ocr)
-    if resolved_norm is None:
-        return True
-
     current_norm = _normalize_invoice_no_for_grouping(current_invoice)
     if current_norm and resolved_norm == current_norm:
         return True
 
-    if not current_norm:
-        has_invoice_label = bool(re.search(
-            r'\b(?:invoice|inv|bill|document|tax\s+invoice|gst\s+invoice)\s*'
-            r'(?:no\.?|number|num|#)?\b',
-            page_ocr or "",
-            re.IGNORECASE,
-        ))
-        return not has_invoice_label
+    if resolved_norm and current_norm and resolved_norm != current_norm:
+        logger.info(
+            f"[Continuation] Page {idx + 1} has a valid different invoice number "
+            f"({inv_no}); treating as a new invoice.")
+        return False
+
+    if _page_has_conflicting_party(
+        current_ocr_text, page_ocr, current_full_data, page_full_data,
+        previous_context,
+    ):
+        logger.info(
+            f"[Continuation] Page {idx + 1} has a different customer/stockist; "
+            f"not attaching to {current_invoice}.")
+        return False
+
+    if _page_has_new_invoice_header_block(page_ocr or "", current_invoice):
+        logger.info(
+            f"[Continuation] Page {idx + 1} has a new invoice header; "
+            f"not attaching to {current_invoice}.")
+        return False
+
+    if resolved_norm is None:
+        logger.info(
+            f"[Continuation] Page {idx + 1} has no valid invoice header.")
+        if _page_looks_like_line_item_continuation(page_ocr or "") or len(
+            str(page_ocr or "").strip()
+        ) < 80:
+            logger.info(
+                f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
+            return True
+        if not current_norm:
+            has_invoice_label = bool(re.search(
+                r'\b(?:invoice|inv|bill|document|tax\s+invoice|gst\s+invoice)\s*'
+                r'(?:no\.?|number|num|#)?\b',
+                page_ocr or "",
+                re.IGNORECASE,
+            ))
+            return not has_invoice_label
+        logger.info(
+            f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
+        return True
 
     return False
 
@@ -16094,17 +16586,29 @@ def _detect_invoice_continuation_page(
     page_ocr: str,
     current_invoice,
     current_ocr_text: str = "",
+    page_full_data=None,
+    current_full_data=None,
+    previous_context=None,
 ) -> bool:
     """Return True when a page should attach to the current invoice group."""
     if current_invoice is None or idx <= 0:
         return False
 
     inv_no_str = str(inv_no).strip() if inv_no is not None else ""
+    if inv_no_str and _looks_like_monetary_amount(inv_no_str):
+        logger.warning(
+            f"[Continuation] Page {idx + 1} candidate invoice_no={inv_no_str} "
+            f"rejected as money-like value.")
+        inv_no = None
+        inv_no_str = ""
+
     is_year_like = bool(re.fullmatch(r'(19|20)\d{2}', inv_no_str))
     is_empty_invoice = (
         inv_no is None
+        or not inv_no_str
         or is_year_like
         or inv_no_str.upper() in ("NONE", "NULL", "N/A", "")
+        or _is_suspicious_invoice_number(inv_no_str)
     )
 
     is_signature_page = bool(re.search(
@@ -16119,7 +16623,28 @@ def _detect_invoice_continuation_page(
         re.IGNORECASE,
     ))
 
+    if _page_has_conflicting_party(
+        current_ocr_text, page_ocr, current_full_data, page_full_data,
+        previous_context,
+    ):
+        logger.info(
+            f"[Continuation] Page {idx + 1} has a different customer/stockist; "
+            f"not attaching to {current_invoice}.")
+        return False
+
+    if is_empty_invoice and _page_has_new_invoice_header_block(
+        page_ocr or "", current_invoice
+    ):
+        logger.info(
+            f"[Continuation] Page {idx + 1} has a new invoice header; "
+            f"not attaching to {current_invoice}.")
+        return False
+
     if is_empty_invoice and (is_signature_page or not has_invoice_label):
+        logger.info(
+            f"[Continuation] Page {idx + 1} has no valid invoice header.")
+        logger.info(
+            f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
         return True
 
     if current_invoice and inv_no:
@@ -16197,6 +16722,23 @@ def _detect_invoice_continuation_page(
         )
         if has_products and (same_label or (has_page_marker and (same_label or cur_in_ocr))):
             return True
+
+    if (
+        is_empty_invoice
+        and _page_looks_like_line_item_continuation(page_ocr or "")
+        and not _page_has_new_invoice_header_block(page_ocr or "", current_invoice)
+    ):
+        if _page_total_matches_previous_invoice(
+            page_ocr or "", current_ocr_text, current_full_data
+        ):
+            logger.info(
+                f"[Continuation] Page {idx + 1} total matches previous invoice "
+                f"(supporting signal).")
+        logger.info(
+            f"[Continuation] Page {idx + 1} has no valid invoice header.")
+        logger.info(
+            f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
+        return True
 
     return False
 
@@ -18503,6 +19045,65 @@ def enforce_schema(raw_data):
                                 _summary_sp["customer_gstin"] = _sp_customer_gstin
     except Exception as _sp_fix_err:
         logger.debug(f"Sterling Pharma party fix skipped: {_sp_fix_err}")
+
+    # ============================================================================
+    # 🔧 FIX: QUANTUM HEALTH CARE credit bills — buyer is unlabeled under Invoice No.
+    # Vision often returns empty customer on noisy scans (e.g. 26-27D17619) even
+    # though Tesseract shows PHARMACY STORES / CMC VELLORE on the same page.
+    # ============================================================================
+    try:
+        _summary_qhc = template["data"]["invoice_summary"]
+        _ocr_qhc = ocr_text or ""
+        _vendor_qhc = str(_summary_qhc.get("vendor", "") or "").strip()
+        if ocr_suggests_quantum_health_care(_ocr_qhc, _vendor_qhc):
+            _cur_customer_qhc = str(_summary_qhc.get(
+                "customer", "") or "").strip()
+            _cur_customer_addr_qhc = str(_summary_qhc.get(
+                "customer_address", "") or "").strip()
+            _need_qhc_customer = (
+                not _cur_customer_qhc or
+                _looks_like_generic_party_name(_cur_customer_qhc) or
+                _cur_customer_qhc.upper() in {"NONE", "NULL", "N/A"} or
+                (
+                    _vendor_qhc
+                    and _party_names_equivalent(_cur_customer_qhc, _vendor_qhc)
+                )
+            )
+            _need_qhc_address = not _cur_customer_addr_qhc
+            if _need_qhc_customer or _need_qhc_address:
+                _qhc_details = extract_quantum_health_care_customer_details(
+                    _ocr_qhc)
+                _qhc_name = str(_qhc_details.get("customer", "") or "").strip()
+                _qhc_addr = str(
+                    _qhc_details.get("customer_address", "") or "").strip()
+                _qhc_gstin = str(
+                    _qhc_details.get("customer_gstin", "") or "").strip()
+                if (
+                    _need_qhc_customer
+                    and _qhc_name
+                    and not _looks_like_generic_party_name(_qhc_name)
+                    and not (
+                        _vendor_qhc
+                        and _party_names_equivalent(_qhc_name, _vendor_qhc)
+                    )
+                ):
+                    _summary_qhc["customer"] = _qhc_name
+                    logger.warning(
+                        f"⚠️ FIX QUANTUM HEALTH CARE: recovered customer '{_qhc_name}'")
+                if _need_qhc_address and _qhc_addr:
+                    _summary_qhc["customer_address"] = _qhc_addr
+                    logger.warning(
+                        "⚠️ FIX QUANTUM HEALTH CARE: recovered customer_address")
+                if (
+                    _qhc_gstin
+                    and not str(_summary_qhc.get("customer_gstin", "") or "").strip()
+                    and _qhc_gstin != str(
+                        _summary_qhc.get("vendor_gstin", "") or ""
+                    ).strip().upper()
+                ):
+                    _summary_qhc["customer_gstin"] = _qhc_gstin
+    except Exception as _qhc_fix_err:
+        logger.debug(f"QUANTUM HEALTH CARE party fix skipped: {_qhc_fix_err}")
 
     # ============================================================================
     # 🔧 FIX: Rajagiri / Bruklyn pharmacy invoice — customer header, vendor footer
@@ -21898,6 +22499,17 @@ def enforce_schema(raw_data):
             logger.info(
                 "✅ United Medical Agencies line items recovered from OCR")
 
+    _sunanda_vendor = template["data"]["invoice_summary"].get("vendor", "") or ""
+    if ocr_suggests_sunanda_associates(ocr_text or "", _sunanda_vendor):
+        _sunanda_items = fix_sunanda_associates_product_names(
+            template["data"]["line_items"].get("items") or [],
+            ocr_text or "",
+            _sunanda_vendor,
+        )
+        if _sunanda_items:
+            template["data"]["line_items"]["items"] = _sunanda_items
+            template["data"]["line_items"]["count"] = len(_sunanda_items)
+
     if ocr_text and ocr_suggests_sterling_pharma_table(ocr_text):
         _sterling_items = fix_sterling_pharma_line_items_from_ocr(
             template["data"]["line_items"].get("items") or [], ocr_text)
@@ -23271,6 +23883,11 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                             #    format reliably, and it is already the usual path for it.
                             _pharmacea_force_vision = _is_pharmacea_link_vendor(
                                 "", tesseract_text)
+                            # SUNANDA ASSOCIATES BlueFox scans: Tesseract mangles Item
+                            # Description (ZYTANIK STAR ISXISS / ATOrvA s MG) while Vision
+                            # reads the table; UMA BlueFox detector does not match this vendor.
+                            _sunanda_force_vision = ocr_suggests_sunanda_associates(
+                                tesseract_text)
 
                             if (
                                 _sterling_keep_tesseract
@@ -23324,6 +23941,12 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 logger.warning(
                                     f"    ⚠️ Tesseract+Gemini: Pharmacea Link e-invoice scan "
                                     f"(header/table OCR unreliable on this layout). "
+                                    f"Falling back to Gemini Vision...")
+                                # Do NOT return — fall through to TIER 4 (Gemini Vision)
+                            elif _sunanda_force_vision:
+                                logger.warning(
+                                    f"    ⚠️ Tesseract+Gemini: SUNANDA ASSOCIATES BlueFox scan "
+                                    f"(Mfr column leaks into product names). "
                                     f"Falling back to Gemini Vision...")
                                 # Do NOT return — fall through to TIER 4 (Gemini Vision)
                             else:
@@ -25474,8 +26097,25 @@ Do not include ocr_text. Return ONLY JSON."""
             parsed.pop("ocr_text", None)
             if isinstance(parsed.get("data"), dict):
                 parsed["data"].pop("ocr_text", None)
+        inv_no = parsed.get("invoice_no", "") if isinstance(parsed, dict) else ""
+        if inv_no and _looks_like_monetary_amount(inv_no):
+            logger.warning(
+                f"[Continuation] Vision candidate invoice_no={inv_no} "
+                f"rejected as money-like value.")
+            inv_no = None
+            if isinstance(parsed, dict):
+                parsed["invoice_no"] = None
+                inv_summary = None
+                if isinstance(parsed.get("data"), dict):
+                    inv_summary = parsed["data"].get("invoice_summary")
+                elif isinstance(parsed.get("invoice_summary"), dict):
+                    inv_summary = parsed["invoice_summary"]
+                if isinstance(inv_summary, dict) and _looks_like_monetary_amount(
+                    inv_summary.get("invoice_no")
+                ):
+                    inv_summary["invoice_no"] = None
         return {
-            "invoice_no": parsed.get("invoice_no", ""),
+            "invoice_no": inv_no,
             "full_data": parsed,
             "extraction_method": "gemini_vision",
             "ocr_text": ""
@@ -26648,11 +27288,14 @@ def split_and_extract_invoices(
         for idx, result in enumerate(page_results):
             inv_no = result.get("invoice_no") if result else None
             page_ocr = result.get("ocr_text", "") if result else ""
+            page_full_data = result.get("full_data") if result else None
 
             if page_ocr and ocr_suggests_bharath_medical(page_ocr):
                 _bharath_inv = extract_bharath_medical_invoice_no(page_ocr)
                 if _bharath_inv:
                     inv_no = _bharath_inv
+
+            inv_no = _sanitize_grouping_invoice_no(idx, inv_no, result)
 
             # ✅ NEW: Detect if page contains MULTIPLE invoices
             multiple_invoices = try_extract_all_invoices_from_text(page_ocr)
@@ -26753,7 +27396,9 @@ def split_and_extract_invoices(
                 current_ocr_text = page_ocr  # ✅ Store first page OCR
             else:
                 if _should_attach_page_to_current_invoice_group(
-                    idx, inv_no, page_ocr, current_invoice, current_ocr_text
+                    idx, inv_no, page_ocr, current_invoice, current_ocr_text,
+                    page_full_data=page_full_data,
+                    current_full_data=current_data,
                 ):
                     logger.info(
                         f"   📎 Attaching Page {idx+1} to invoice "
@@ -27854,11 +28499,14 @@ def test_extract(
         for idx, result in enumerate(page_results):
             inv_no = result.get("invoice_no") if result else None
             page_ocr = result.get("ocr_text", "") if result else ""
+            page_full_data = result.get("full_data") if result else None
 
             if page_ocr and ocr_suggests_bharath_medical(page_ocr):
                 _bharath_inv = extract_bharath_medical_invoice_no(page_ocr)
                 if _bharath_inv:
                     inv_no = _bharath_inv
+
+            inv_no = _sanitize_grouping_invoice_no(idx, inv_no, result)
 
             # Check for multiple invoices on same page
             multiple_invoices = try_extract_all_invoices_from_text(page_ocr)
@@ -27924,7 +28572,9 @@ def test_extract(
                 current_ocr_text = page_ocr
             else:
                 if _should_attach_page_to_current_invoice_group(
-                    idx, inv_no, page_ocr, current_invoice, current_ocr_text
+                    idx, inv_no, page_ocr, current_invoice, current_ocr_text,
+                    page_full_data=page_full_data,
+                    current_full_data=current_data,
                 ):
                     logger.info(
                         f"   📎 Attaching Page {idx+1} to invoice "
