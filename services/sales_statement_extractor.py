@@ -1444,6 +1444,195 @@ def _extract_legacy_doc_text(file_bytes: bytes) -> str:
     return "\n".join(chunks)
 
 
+def _norm_docx_header(header: Any) -> str:
+    """Normalize Word table headers: 'Cr.Sch.Qty' / 'Op. Val' -> 'crschqty' / 'opval'."""
+    return re.sub(r"[^a-z0-9]", "", str(header or "").strip().lower())
+
+
+def _unglue_stock_sales_label(text: str) -> str:
+    """Insert spaces into glued Stock-and-Sales Detail Report labels."""
+    t = _clean_name(text)
+    if not t:
+        return t
+    replacements = (
+        (r"(?i)stockandsalesdetail", "Stock and Sales Detail"),
+        (r"(?i)stockandsales", "Stock and Sales"),
+        (r"(?i)\baurobindo(?=pharma)", "AUROBINDO "),
+        (r"(?i)pharma(?=ltd|limited)", "PHARMA "),
+        (r"(?i)\brajesh(?=medicos)", "RAJESH "),
+        (r"(?i)\bmedicos\s*-\s*", "MEDICOS - "),
+    )
+    for pat, repl in replacements:
+        t = re.sub(pat, repl, t)
+    return _clean_name(t)
+
+
+# Canonical Stock-and-Sales Detail Report columns (20-col Aurobindo / Medicos format)
+_STOCK_SALES_DETAIL_HEADER_ALIASES: Dict[str, Tuple[str, ...]] = {
+    "sl_no": ("slno", "sno", "srno"),
+    "product_name": ("item", "product", "productname", "particulars"),
+    "opening_qty": ("opqty", "openingqty", "opbal", "opbalqty"),
+    "opening_value": ("opval", "openingval", "openingvalue", "opvalue"),
+    "receipts_qty": ("pqty", "purchaseqty", "purqty", "receiptsqty"),
+    "purchase_scheme": ("psch", "purchasescheme", "pursch", "purchasesch"),
+    "purchase_value": ("pval", "purchaseval", "purchasevalue", "purval"),
+    "sales_qty": ("sqty", "saleqty", "salesqty"),
+    "sales_scheme": ("ssch", "salescheme", "salesscheme", "salesch"),
+    "sales_value": ("sval", "saleval", "salesval", "salesvalue"),
+    "break_sales_qty": ("brsqty", "brsaleqty", "breaksqty", "breakagesqty"),
+    "break_sales_value": ("brsval", "brsaleval", "breaksval", "breakagesval"),
+    "credit_qty": ("crqty", "creditqty", "crnoteqty"),
+    "credit_scheme_qty": ("crschqty", "creditschemeqty", "crsch"),
+    "credit_value": ("crval", "creditval", "creditvalue"),
+    "debit_qty": ("dbqty", "debitqty", "drqty"),
+    "debit_scheme_qty": ("dbschqty", "debitschemeqty", "dbsch", "drschqty"),
+    "debit_value": ("dbval", "debitval", "debitvalue", "drval"),
+    "closing_qty": ("clqty", "closingqty", "clqnt", "balqty", "closingbal"),
+    "closing_value": ("clval", "closingval", "closingvalue", "clvalue", "balval"),
+}
+
+
+def _map_stock_sales_detail_headers(headers: List[Any]) -> Dict[str, int]:
+    """Map normalized header cells onto canonical field names."""
+    mapping: Dict[str, int] = {}
+    for idx, header in enumerate(headers):
+        key = _norm_docx_header(header)
+        if not key:
+            continue
+        for field, aliases in _STOCK_SALES_DETAIL_HEADER_ALIASES.items():
+            if field in mapping:
+                continue
+            if key == field.replace("_", "") or key in aliases:
+                mapping[field] = idx
+                break
+    return mapping
+
+
+def _cell_at(cells: List[str], idx: Optional[int]) -> str:
+    if idx is None or idx < 0 or idx >= len(cells):
+        return ""
+    return str(cells[idx] if cells[idx] is not None else "").strip()
+
+
+def _parse_stock_sales_detail_total_row(
+    cells: List[str], colmap: Dict[str, int], result: Dict[str, Any]
+) -> None:
+    """Capture Total-row values so closing/sales match the printed report."""
+    def _val(field: str, fallback_idx: Optional[int] = None) -> Optional[float]:
+        raw = _cell_at(cells, colmap.get(field, fallback_idx))
+        return _to_nullable_float(raw) if raw not in (None, "") else None
+
+    sales = _val("sales_value", 9)
+    closing = _val("closing_value", 19)
+    if sales is not None:
+        result["totals"]["sales_value"] = sales
+    if closing is not None:
+        result["totals"]["closing_value"] = closing
+
+    extra = result["totals"].setdefault("extra", {})
+    extra["raw_total_row"] = cells
+    for field, fallback in (
+        ("opening_value", 3),
+        ("purchase_value", 6),
+        ("break_sales_value", 11),
+        ("credit_value", 14),
+        ("debit_value", 17),
+        ("opening_qty", 2),
+        ("receipts_qty", 4),
+        ("purchase_scheme", 5),
+        ("sales_qty", 7),
+        ("sales_scheme", 8),
+        ("break_sales_qty", 10),
+        ("credit_qty", 12),
+        ("credit_scheme_qty", 13),
+        ("debit_qty", 15),
+        ("debit_scheme_qty", 16),
+        ("closing_qty", 18),
+    ):
+        value = _val(field, fallback)
+        if value is not None:
+            extra[field] = value
+
+
+def _parse_stock_sales_detail_item_row(
+    cells: List[str], colmap: Dict[str, int]
+) -> Optional[Dict[str, Any]]:
+    """Build one line item with every Stock-and-Sales Detail column preserved."""
+    # Prefer header map; fall back to fixed 20-col positions used by this report.
+    positional = {
+        "sl_no": 0,
+        "product_name": 1,
+        "opening_qty": 2,
+        "opening_value": 3,
+        "receipts_qty": 4,
+        "purchase_scheme": 5,
+        "purchase_value": 6,
+        "sales_qty": 7,
+        "sales_scheme": 8,
+        "sales_value": 9,
+        "break_sales_qty": 10,
+        "break_sales_value": 11,
+        "credit_qty": 12,
+        "credit_scheme_qty": 13,
+        "credit_value": 14,
+        "debit_qty": 15,
+        "debit_scheme_qty": 16,
+        "debit_value": 17,
+        "closing_qty": 18,
+        "closing_value": 19,
+    }
+
+    def raw(field: str) -> str:
+        return _cell_at(cells, colmap.get(field, positional.get(field)))
+
+    product_name = _clean_name(raw("product_name").replace("\n", " ").replace("\r", " "))
+    sl_no = raw("sl_no")
+    if not product_name:
+        return None
+    # Skip repeated header rows inside later tables
+    if _norm_docx_header(product_name) in {"item", "product"}:
+        return None
+    if sl_no and not re.match(r"^\d+$", sl_no) and _norm_docx_header(sl_no) in {
+        "slno", "total", "sno"
+    }:
+        return None
+
+    item = empty_line_item()
+    item["product_name"] = product_name
+    item["opening_qty"] = _to_float(raw("opening_qty"))
+    item["receipts_qty"] = _to_float(raw("receipts_qty"))
+    item["sales_qty"] = _to_float(raw("sales_qty"))
+    item["sales_value"] = _to_float(raw("sales_value"))
+    item["closing_qty"] = _to_float(raw("closing_qty"))
+    item["closing_value"] = _to_float(raw("closing_value"))
+
+    # Keep every remaining numeric column (including zeros) for reconciliation.
+    extra_fields = (
+        "opening_value",
+        "purchase_scheme",
+        "purchase_value",
+        "sales_scheme",
+        "break_sales_qty",
+        "break_sales_value",
+        "credit_qty",
+        "credit_scheme_qty",
+        "credit_value",
+        "debit_qty",
+        "debit_scheme_qty",
+        "debit_value",
+    )
+    extra: Dict[str, Any] = {}
+    if sl_no:
+        extra["sl_no"] = sl_no
+    for field in extra_fields:
+        cell = raw(field)
+        # Always store when the column exists in the sheet (header or positional)
+        if field in colmap or len(cells) > positional[field]:
+            extra[field] = _to_float(cell) if cell != "" else 0.0
+    item["extra"] = extra
+    return item
+
+
 def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     from docx import Document
 
@@ -1455,10 +1644,10 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if not t:
             continue
         if re.search(r"Stock\s*and\s*Sales|StockandSales", t, re.I):
-            result["report_title"] = t
+            result["report_title"] = _unglue_stock_sales_label(t)
         m_seller = re.search(r"Seller\s*:\s*(.+?)(?:\s+From|\s*$)", t, re.I)
         if m_seller:
-            result["stockist_name"] = _clean_name(m_seller.group(1))
+            result["stockist_name"] = _unglue_stock_sales_label(m_seller.group(1))
         m_from = re.search(
             r"From\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*to\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
             t,
@@ -1467,96 +1656,101 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if m_from:
             result["period_from"] = _normalize_date(m_from.group(1))
             result["period_to"] = _normalize_date(m_from.group(2))
-        # Company often first token before ReportDate
-        m_co = re.search(r"^([A-Z0-9][A-Z0-9 &\-.]+?)(?:PHARMA|LTD|LIMITED)?", t)
         if "ReportDate" in t.replace(" ", "") or re.search(r"Report\s*Date", t, re.I):
             company = re.split(r"Report\s*Date", t, flags=re.I)[0]
             company = re.sub(r"\s+", " ", company).strip(" -\t")
             if company:
-                result["company_name"] = _clean_name(company)
+                result["company_name"] = _unglue_stock_sales_label(company)
 
     items: List[Dict[str, Any]] = []
+    is_stock_sales_detail = False
+
     for table in doc.tables:
-        headers = [c.text.strip() for c in table.rows[0].cells] if table.rows else []
-        header_l = [h.lower() for h in headers]
+        if not table.rows:
+            continue
+        headers = [c.text.strip() for c in table.rows[0].cells]
+        colmap = _map_stock_sales_detail_headers(headers)
+        header_norm = {_norm_docx_header(h) for h in headers}
+        table_is_detail = (
+            "item" in header_norm
+            and ("clval" in header_norm or "closingvalue" in header_norm)
+            and ("opqty" in header_norm or "openingqty" in header_norm)
+        )
+        if table_is_detail:
+            is_stock_sales_detail = True
+
         for row in table.rows[1:]:
             cells = [c.text.strip() for c in row.cells]
             if not cells or not any(cells):
                 continue
-            if cells[0].lower() in {"sl.no", "slno", "total"} or cells[0].lower() == "total":
-                if cells[0].lower() == "total":
-                    # totals row
+
+            first_norm = _norm_docx_header(cells[0])
+            if first_norm in {"slno", "sno", "srno"}:
+                continue
+            if first_norm == "total" or str(cells[0]).strip().lower() == "total":
+                if table_is_detail or len(cells) >= 20:
+                    _parse_stock_sales_detail_total_row(cells, colmap, result)
+                else:
+                    # Legacy narrow table fallback
                     if len(cells) > 9:
                         result["totals"]["sales_value"] = _to_nullable_float(cells[9])
                     if len(cells) > 19:
                         result["totals"]["closing_value"] = _to_nullable_float(cells[19])
                     result["totals"]["extra"]["raw"] = cells
                 continue
-            if not re.match(r"^\d+$", cells[0].strip()):
-                # still try if Item column present
-                if len(cells) < 3:
-                    continue
 
+            if table_is_detail or (
+                "item" in header_norm and ("clval" in colmap or len(cells) >= 20)
+            ):
+                item = _parse_stock_sales_detail_item_row(cells, colmap)
+                if item:
+                    items.append(item)
+                continue
+
+            # Non Stock-and-Sales-Detail Word tables: keep previous best-effort path
+            if not re.match(r"^\d+$", cells[0].strip()) and len(cells) < 3:
+                continue
             item = empty_line_item()
-            # Prefer header-based mapping when available
-            def col(name_options: Tuple[str, ...]) -> Optional[str]:
-                for opt in name_options:
-                    if opt in header_l:
-                        idx = header_l.index(opt)
-                        if idx < len(cells):
-                            return cells[idx]
-                return None
-
-            if headers and "item" in header_l:
-                item["product_name"] = _clean_name(
-                    (col(("item",)) or "").replace("\n", " ")
-                )
-                item["opening_qty"] = _to_float(col(("op.qty", "op qty", "opqty")))
-                item["receipts_qty"] = _to_float(col(("p.qty", "p qty", "pqty")))
-                item["sales_qty"] = _to_float(col(("s.qty", "s qty", "sqty")))
-                item["sales_value"] = _to_float(col(("s.val", "s val", "sval")))
-                item["closing_qty"] = _to_float(col(("cl.qty", "cl qty", "clqty")))
-                item["closing_value"] = _to_float(col(("cl.val", "cl val", "clval")))
-                extra_map = {
-                    "opening_value": col(("op.val", "op val")),
-                    "purchase_scheme": col(("p.sch", "p sch")),
-                    "purchase_value": col(("p.val", "p val")),
-                    "sales_scheme": col(("s.sch", "s sch")),
-                    "break_sales_qty": col(("br.s.qty", "br.s qty")),
-                    "break_sales_value": col(("br.s.val", "br.s val")),
-                    "credit_qty": col(("cr.qty",)),
-                    "credit_value": col(("cr.val",)),
-                    "debit_qty": col(("db.qty",)),
-                    "debit_value": col(("db.val",)),
-                    "sl_no": col(("sl.no", "slno")),
-                }
-                item["extra"] = {
-                    k: _to_float(v) if v not in (None, "") and k != "sl_no" else v
-                    for k, v in extra_map.items()
-                    if v not in (None, "")
-                }
-            else:
-                if len(cells) < 10:
-                    continue
-                item["product_name"] = _clean_name(cells[1].replace("\n", " "))
-                item["opening_qty"] = _to_float(cells[2])
-                item["receipts_qty"] = _to_float(cells[4])
-                item["sales_qty"] = _to_float(cells[7])
-                item["sales_value"] = _to_float(cells[9])
-                item["closing_qty"] = _to_float(cells[18] if len(cells) > 18 else 0)
-                item["closing_value"] = _to_float(cells[19] if len(cells) > 19 else 0)
-                item["extra"] = {
-                    "sl_no": cells[0],
-                    "opening_value": _to_float(cells[3]),
-                    "purchase_scheme": _to_float(cells[5]),
-                    "purchase_value": _to_float(cells[6]),
-                    "sales_scheme": _to_float(cells[8]),
-                }
-
+            if len(cells) < 10:
+                continue
+            item["product_name"] = _clean_name(cells[1].replace("\n", " "))
+            item["opening_qty"] = _to_float(cells[2])
+            item["receipts_qty"] = _to_float(cells[4] if len(cells) > 4 else 0)
+            item["sales_qty"] = _to_float(cells[7] if len(cells) > 7 else 0)
+            item["sales_value"] = _to_float(cells[9] if len(cells) > 9 else 0)
+            item["closing_qty"] = _to_float(cells[18] if len(cells) > 18 else 0)
+            item["closing_value"] = _to_float(cells[19] if len(cells) > 19 else 0)
+            item["extra"] = {
+                "sl_no": cells[0],
+                "opening_value": _to_float(cells[3] if len(cells) > 3 else 0),
+                "purchase_scheme": _to_float(cells[5] if len(cells) > 5 else 0),
+                "purchase_value": _to_float(cells[6] if len(cells) > 6 else 0),
+                "sales_scheme": _to_float(cells[8] if len(cells) > 8 else 0),
+            }
             if item["product_name"]:
                 items.append(item)
 
     result["line_items"] = items
+    if is_stock_sales_detail:
+        result["totals"].setdefault("extra", {})["extraction_method"] = (
+            "docx_stock_sales_detail"
+        )
+        # Prefer printed Total-row closing; if absent, fall back to line sum.
+        if result["totals"].get("closing_value") is None and items:
+            result["totals"]["closing_value"] = round(
+                sum(_to_float(i.get("closing_value")) for i in items), 2
+            )
+        if result["totals"].get("sales_value") is None and items:
+            result["totals"]["sales_value"] = round(
+                sum(_to_float(i.get("sales_value")) for i in items), 2
+            )
+        line_closing = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
+        printed_closing = result["totals"].get("closing_value")
+        result["totals"]["extra"]["line_closing_value_sum"] = line_closing
+        if printed_closing is not None:
+            result["totals"]["extra"]["closing_value_matches_lines"] = (
+                abs(float(printed_closing) - line_closing) < 0.05
+            )
     return result
 
 
