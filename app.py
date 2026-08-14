@@ -2592,6 +2592,339 @@ def fix_structured_einvoice_qty_rate_from_ocr(items, ocr_text: str):
     return items
 
 
+_NIC_IRP_TAXRATE_RE = re.compile(r'5\s*\+\s*0\s*[|/]\s*0\s*\+\s*0')
+
+
+def _ocr_suggests_nic_irp_einvoice_table(ocr_text: str) -> bool:
+    """NIC-IRP / GST e-invoice item table (Quantity | UNT | Unit Price | Taxable).
+
+    Signature ('Digitally Signed by NIC-IRP') is often on a trailing page that
+    is grouped separately. Detect from the item-table pages themselves.
+    Do not reject when Azure also emits 'Quantity: N' labels — UNT + 5+0|0+0
+    is unique to this table and is not used by Quantity:/Unit Price: blocks.
+    """
+    if not ocr_text:
+        return False
+    if not re.search(r'\bUNT\b', ocr_text):
+        return False
+    if not re.search(r'Unit\s+Price', ocr_text, re.IGNORECASE):
+        return False
+    if not re.search(r'Taxable', ocr_text, re.IGNORECASE):
+        return False
+    if not _NIC_IRP_TAXRATE_RE.search(ocr_text):
+        return False
+    return bool(
+        re.search(r'Digitally\s+Signed\s+by\s+NIC-IRP', ocr_text, re.IGNORECASE)
+        or re.search(r'e-Invoice\s+Details', ocr_text, re.IGNORECASE)
+        or re.search(r'4A\.?\s*Details\s+of\s+Goods', ocr_text, re.IGNORECASE)
+        or re.search(r'(?m)^\s*Sr\s+(?:No\.?|Item)\b', ocr_text, re.IGNORECASE)
+        or re.search(r'Item\s+Description', ocr_text, re.IGNORECASE)
+    )
+
+
+def _nic_irp_unt_priced_row_count(text: str) -> int:
+    return len(re.findall(r'\bUNT\s+\d+(?:\.\d+)?', text or "", re.IGNORECASE))
+
+
+def _nic_irp_table_ocr_is_richer(keep: str, other: str) -> bool:
+    """True when `keep` is a NIC-IRP item table with more priced UNT rows.
+
+    Continuation pages often have no invoice# so Tesseract replaces PDFPlumber
+    and drops Quantity/Unit Price (Taxable/Total only).
+    """
+    if not keep or not _ocr_suggests_nic_irp_einvoice_table(keep):
+        return False
+    keep_n = _nic_irp_unt_priced_row_count(keep)
+    other_n = _nic_irp_unt_priced_row_count(other)
+    if keep_n >= 1 and keep_n > other_n:
+        return True
+    return keep_n >= 1 and keep_n == other_n and len(keep) > len(other or "") * 1.3
+
+
+def _page_looks_like_einvoice_signature_only(page_ocr: str) -> bool:
+    """Trailing NIC-IRP / eSign page with no item table."""
+    text = str(page_ocr or "").strip()
+    if not text or len(text) > 400:
+        return False
+    if re.search(r'\bUNT\b', text) and re.search(r'\b5\+0\s*\|\s*0\+0\b', text):
+        return False
+    return bool(re.search(
+        r'\b(?:Generated\s+By|Print\s+Date|Digitally\s+Signed|eSign)\b',
+        text,
+        re.IGNORECASE,
+    ))
+
+
+def _page_looks_like_nic_irp_item_continuation(page_ocr: str) -> bool:
+    """NIC-IRP item table page with no Document No (continuation of one e-invoice)."""
+    text = str(page_ocr or "")
+    if not text:
+        return False
+    if re.search(r'Document\s+No\.?\s*:', text, re.IGNORECASE):
+        return False
+    if re.search(r'\bUNT\b', text) and _NIC_IRP_TAXRATE_RE.search(text):
+        return True
+    return _ocr_suggests_nic_irp_einvoice_table(text)
+
+
+def _parse_nic_irp_einvoice_qty_rate_rows(
+    ocr_text: str, include_zero_qty: bool = False
+) -> list:
+    """
+    Parse NIC-IRP plumber / PyMuPDF / Azure rows:
+
+      20 VAULT 20 300490 100 UNT 111.33 333.99 11133 5+0|0+0 0 11338.96
+      TAB 10's 99
+
+      20 VAULT 20 TAB 10's 300490 99 100 UNT 111.33 ... 11338.96
+
+      20\\nVAULT 20\\nTAB 10's\\n300490\\n99\\n100\\nUNT\\n111.33\\n...
+
+    HSN often wraps as 300490 + 99. Zero-qty scheme rows are skipped.
+    """
+    if not _ocr_suggests_nic_irp_einvoice_table(ocr_text):
+        return []
+
+    # Cell-join pipes from plumber extract_tables(); keep 5+0|0+0 intact.
+    blob = re.sub(r' \| ', ' ', ocr_text)
+    blob = re.sub(r'\s+', ' ', blob)
+    row_re = re.compile(
+        r'(?<!\d)(\d{1,3})\s+'
+        r'([A-Za-z](?:(?!\s\d{1,3}\s+[A-Z]{4,}).){0,79}?)\s+'
+        r'(\d{4,8})(?:\s+(\d{2}))?\s+'
+        r'(\d+(?:\.\d+)?)\s+UNT\s+'
+        r'([\d]+(?:\.\d+)?)\s+'
+        r'([\d]+(?:\.\d+)?)\s+'
+        r'([\d]+(?:\.\d+)?)\s+'
+        r'[\d.]+\s*\+\s*[\d.]+\s*[|/]\s*[\d.]+\s*\+\s*[\d.]+\s+'
+        r'([\d]+(?:\.\d+)?)\s+'
+        r'([\d]+(?:\.\d+)?)',
+        re.IGNORECASE,
+    )
+
+    rows = []
+    seen = set()
+    for m in row_re.finditer(blob):
+        try:
+            qty = float(m.group(5).replace(',', ''))
+            rate = float(m.group(6).replace(',', ''))
+            taxable = float(m.group(8).replace(',', ''))
+            total = float(m.group(10).replace(',', ''))
+        except Exception:
+            continue
+        if rate <= 0 or qty < 0:
+            continue
+        if qty == 0 and not include_zero_qty:
+            continue
+        if qty > 0 and taxable > 0 and abs(qty * rate - taxable) / max(taxable, 0.01) > 0.03:
+            continue
+
+        product = re.sub(r'\s+', ' ', m.group(2)).strip(" -|")
+        product = re.sub(r'\b(?:Sr|No\.?|Item|Description|HSN|Code)\b', ' ', product, flags=re.I)
+        product = re.sub(r'\s+', ' ', product).strip(" -|")
+        hsn = m.group(3) + (m.group(4) or "")
+
+        if not product or not re.match(r'[A-Za-z]', product):
+            continue
+        if len(re.sub(r'[^A-Za-z]', '', product)) < 3:
+            continue
+        key = (m.group(1), hsn, round(qty, 2), round(rate, 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "sr": m.group(1),
+            "product_description": product,
+            "hsn_code": hsn,
+            "quantity": qty,
+            "unit_price": rate,
+            "taxable": taxable,
+            "total_amount": total if total > 0 else taxable,
+        })
+    return rows
+
+
+def _nic_irp_line_items_from_combined_ocr(ocr_text: str) -> list:
+    """Build one invoice's line items from the NIC-IRP Quantity/UNT/Unit Price table."""
+    rows = _parse_nic_irp_einvoice_qty_rate_rows(
+        ocr_text, include_zero_qty=True)
+    # Plumber text + extract_tables() repeats the same Sr row; keep the
+    # longer product name for each serial.
+    by_sr = {}
+    for row in rows:
+        sr = str(row.get("sr") or "")
+        prev = by_sr.get(sr)
+        if not prev or len(row.get("product_description") or "") > len(
+            prev.get("product_description") or ""
+        ):
+            by_sr[sr] = row
+    rows = [
+        by_sr[k] for k in sorted(
+            by_sr, key=lambda s: int(s) if str(s).isdigit() else str(s)
+        )
+    ]
+    items = []
+    for row in rows:
+        qty = float(row["quantity"])
+        rate = float(row["unit_price"])
+        total = float(row.get("total_amount") or row.get("taxable") or 0)
+        if abs(qty - round(qty)) < 0.001:
+            qty_s = str(int(round(qty)))
+        else:
+            qty_s = f"{qty:.2f}"
+        items.append({
+            "product_description": row["product_description"],
+            "hsn_code": row.get("hsn_code") or "",
+            "quantity": qty_s,
+            "unit_price": f"{rate:.2f}",
+            "total_amount": f"{total:.2f}",
+            "sku_code": None,
+            "lot_batch_number": "",
+        })
+    return items
+
+
+def _apply_nic_irp_multipage_line_items(group: dict) -> bool:
+    """One NIC-IRP invoice: all page table rows, skip combined-OCR Gemini re-extract."""
+    if not isinstance(group, dict):
+        return False
+    combined = str(group.get("ocr_text") or "")
+    if not _ocr_suggests_nic_irp_einvoice_table(combined):
+        return False
+    items = _nic_irp_line_items_from_combined_ocr(combined)
+    if len(items) < 2:
+        return False
+    extracted = group.get("extracted_data")
+    if not isinstance(extracted, dict):
+        group["extracted_data"] = {
+            "data": {"line_items": {"items": items, "count": len(items)}}
+        }
+    else:
+        import copy as _copy_nic
+        group["extracted_data"] = _copy_nic.deepcopy(extracted)
+        _merge_line_items_into_full_data(group["extracted_data"], items)
+    logger.info(
+        f"   ✅ NIC-IRP e-invoice: kept {len(items)} table row(s) across "
+        f"{len(group.get('pages') or [])} page(s) "
+        f"(skipped combined-OCR re-extract)"
+    )
+    return True
+
+
+def fix_nic_irp_einvoice_qty_rate_from_ocr(items, ocr_text: str) -> list:
+    """
+    NIC-IRP tables: Vision often maps Taxable Amount → qty and Total → rate
+    (VAULT 20: 11133 × 11338 instead of 100 × 111.33).
+    Restore qty/rate from the labeled Quantity / Unit Price columns only.
+    """
+    if not items or not ocr_text or not _ocr_suggests_nic_irp_einvoice_table(ocr_text):
+        return items
+
+    ocr_rows = _parse_nic_irp_einvoice_qty_rate_rows(ocr_text)
+    if not ocr_rows:
+        return items
+
+    def _norm_desc(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _names_match(a: str, b: str) -> bool:
+        if not a or not b:
+            return False
+        if a == b or a in b or b in a:
+            return True
+        skip = {'TAB', 'CAP', 'INJ', 'MG', 'ML', 'BOX', 'THE', 'AND'}
+        ta = {t for t in re.findall(r'[A-Z]{3,}', a) if t not in skip}
+        tb = {t for t in re.findall(r'[A-Z]{3,}', b) if t not in skip}
+        return bool(ta and tb and (ta & tb))
+
+    def _fmt_qty(q: float) -> str:
+        if abs(q - round(q)) < 0.001:
+            return str(int(round(q)))
+        return f"{q:.2f}"
+
+    def _to_float(value) -> float:
+        try:
+            return float(normalize_numeric_value(str(value or "0")) or 0)
+        except Exception:
+            return 0.0
+
+    def _near(a: float, b: float) -> bool:
+        if a <= 0 or b <= 0:
+            return False
+        return abs(a - b) <= 1.0 or abs(a - b) / max(b, 0.01) <= 0.005
+
+    used = set()
+    for item in items:
+        item_raw = str(item.get("product_description", "") or "")
+        item_desc = _norm_desc(item_raw)
+        item_hsn = re.sub(r'[^0-9]', '', str(item.get("hsn_code", "") or ""))
+        cur_qty = _to_float(item.get("quantity"))
+        cur_rate = _to_float(item.get("unit_price"))
+        cur_total = _to_float(item.get("total_amount"))
+        if not item_desc and not item_hsn:
+            continue
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            row_hsn = re.sub(r'[^0-9]', '', str(row.get("hsn_code") or ""))
+            if item_hsn and row_hsn and (
+                item_hsn == row_hsn or item_hsn.startswith(row_hsn) or row_hsn.startswith(item_hsn)
+            ):
+                score += 3
+            row_raw = str(row.get("product_description", "") or "")
+            if _names_match(item_desc, _norm_desc(row_raw)) or _names_match(
+                re.sub(r'[^A-Z0-9 ]', '', item_raw.upper()),
+                re.sub(r'[^A-Z0-9 ]', '', row_raw.upper()),
+            ):
+                score += 5
+            row_total = float(row.get("total_amount") or 0)
+            row_taxable = float(row.get("taxable") or 0)
+            if _near(cur_total, row_total) or _near(cur_rate, row_total) or _near(cur_qty, row_total):
+                score += 4
+            elif _near(cur_total, row_taxable) or _near(cur_qty, row_taxable) or _near(cur_rate, row_taxable):
+                score += 4
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        # Amount-only match is enough: Vision often uses a different brand name
+        # (TOR XILINGIO vs CONCOR) while Taxable/Total still identify the row.
+        if best_idx is None or best_score < 4:
+            continue
+
+        row = ocr_rows[best_idx]
+        ocr_qty = float(row["quantity"])
+        ocr_rate = float(row["unit_price"])
+        ocr_total = float(row.get("total_amount") or 0)
+        ocr_taxable = float(row.get("taxable") or 0)
+
+        qty_ok = cur_qty > 0 and abs(cur_qty - ocr_qty) <= 0.05
+        rate_ok = cur_rate > 0 and abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) <= 0.02
+        if qty_ok and rate_ok:
+            used.add(best_idx)
+            continue
+
+        used.add(best_idx)
+        item["quantity"] = _fmt_qty(ocr_qty)
+        item["unit_price"] = f"{ocr_rate:.2f}"
+        if ocr_total > 0:
+            item["total_amount"] = f"{ocr_total:.2f}"
+        elif ocr_taxable > 0:
+            item["total_amount"] = f"{ocr_taxable:.2f}"
+        logger.warning(
+            f"⚠️ NIC-IRP e-invoice: corrected qty/rate for "
+            f"'{item.get('product_description', '')}': "
+            f"qty {cur_qty}->{item['quantity']}, "
+            f"rate {cur_rate}->{item['unit_price']}"
+        )
+
+    return items
+
+
 def _ocr_suggests_gst_portal_goods_details(ocr_text: str) -> bool:
     """GST portal e-invoice PDF: Goods Details table (Qty + Free | Unit | Unit Price)."""
     if not ocr_text:
@@ -16555,6 +16888,25 @@ def _detect_invoice_continuation_page(
         re.IGNORECASE,
     ))
 
+    if (
+        is_empty_invoice
+        and _page_looks_like_einvoice_signature_only(page_ocr or "")
+    ):
+        logger.info(
+            f"[Continuation] Page {idx + 1} is an e-invoice signature/footer page.")
+        logger.info(
+            f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
+        return True
+
+    # NIC-IRP / GST e-invoice: only page 1 has Document No. Later pages repeat
+    # the item table (UNT | Unit Price | Taxable) with no invoice number.
+    if is_empty_invoice and _page_looks_like_nic_irp_item_continuation(page_ocr or ""):
+        logger.info(
+            f"[Continuation] Page {idx + 1} is a NIC-IRP item-table continuation.")
+        logger.info(
+            f"[Continuation] Page {idx + 1} attached to invoice {current_invoice}.")
+        return True
+
     if _page_has_conflicting_party(
         current_ocr_text, page_ocr, current_full_data, page_full_data,
         previous_context,
@@ -20068,6 +20420,8 @@ def enforce_schema(raw_data):
     # GST portal Goods Details table: Rate/Qty column swap (JAI MATADI style)
     items = fix_gst_portal_einvoice_qty_rate_swap(items, ocr_text)
     items = dedupe_gst_portal_einvoice_recovered_items(items, ocr_text)
+    # NIC-IRP item table: Taxable/Total misread as qty/rate (CR2403 / invoice_4)
+    items = fix_nic_irp_einvoice_qty_rate_from_ocr(items, ocr_text)
 
     for item in items:
         # Fix quantity/price swap
@@ -20851,6 +21205,8 @@ def enforce_schema(raw_data):
     processed_items = fix_gst_portal_einvoice_qty_rate_swap(
         processed_items, ocr_text)
     processed_items = dedupe_gst_portal_einvoice_recovered_items(
+        processed_items, ocr_text)
+    processed_items = fix_nic_irp_einvoice_qty_rate_from_ocr(
         processed_items, ocr_text)
 
     # 🔧 FIX 14: Strict fallback for Bharat Pharma invoice 008125.
@@ -23582,8 +23938,19 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 page, page_num=page_num)
 
         if tesseract_text and len(tesseract_text.strip()) > 100:
-            # Keep OCR text for downstream fallbacks even if we end up using Gemini Vision
-            fallback_ocr_text = tesseract_text
+            # Keep OCR text for downstream fallbacks even if we end up using Gemini Vision.
+            # NIC-IRP continuation pages: PDFPlumber already has Quantity|UNT|Unit Price;
+            # Tesseract often keeps only Taxable/Total and would break the qty/rate fixer.
+            if _nic_irp_table_ocr_is_richer(_tier12_ocr_text, tesseract_text):
+                _unt_n = _nic_irp_unt_priced_row_count(_tier12_ocr_text)
+                logger.info(
+                    "    ✅ NIC-IRP: keeping PDFPlumber table OCR "
+                    f"({len(_tier12_ocr_text)} chars, {_unt_n} UNT) "
+                    "over Tesseract"
+                )
+                fallback_ocr_text = _tier12_ocr_text
+            else:
+                fallback_ocr_text = tesseract_text
             increment_ocr_stat(ocr_stats, ocr_stats_lock,
                                "tesseract_success", 1)
 
@@ -24025,6 +24392,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 if (
                     _bharath_relaxed
                     and len(_bharath_relaxed.strip()) > len(str(_bharath_ocr_hint).strip())
+                    and not _nic_irp_table_ocr_is_richer(
+                        _bharath_ocr_hint, _bharath_relaxed)
                 ):
                     result["ocr_text"] = _bharath_relaxed
                     fallback_ocr_text = _bharath_relaxed
@@ -27241,6 +27610,12 @@ def split_and_extract_invoices(
                                 f"   ⚠️ PHARMACEA multipage Vision merge failed: {_pl_mp_err}")
                         continue
 
+                    # NIC-IRP e-invoice: page 1 has Document No; later pages are the
+                    # same invoice's item table. Combined Gemini re-extract maps
+                    # Taxable/Total as qty/rate. Use the labeled table instead.
+                    if _apply_nic_irp_multipage_line_items(g):
+                        continue
+
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
                     update_request_progress(
@@ -28262,6 +28637,8 @@ def test_extract(
                         except Exception as _jk_merge_err:
                             logger.warning(
                                 f"   ⚠️ JACKSON multipage Vision merge failed: {_jk_merge_err}")
+                        continue
+                    if _apply_nic_irp_multipage_line_items(g):
                         continue
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g.get('invoice_no')} "
