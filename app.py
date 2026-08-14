@@ -15833,6 +15833,304 @@ def fix_sterling_pharma_line_items_from_ocr(items: list, ocr_text: str) -> list:
     return items
 
 
+def ocr_suggests_someshwara_agencies(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """Detect the SOMESHWARA AGENCIES (Profitmaker) scanned invoice layout."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    return bool(
+        "SOMESHWARA" in blob
+        and (
+            "PRODUCT NAME" in blob
+            or "AMLODAC" in blob
+            or "TAMLODAC" in blob
+            or "ZYTANIX" in blob
+        )
+    )
+
+
+def _ocr_someshwara_agencies_detail(
+    page=None, image_bytes: bytes = None
+) -> str:
+    """OCR the SOMESHWARA header/table/footer bands at high resolution.
+
+    Pipeline OCR of this scan loses the Date line and merges the QTY column
+    into neighbouring cells, so dedicated crops are needed to read Date,
+    the item rows, and the Gross / Total GST footer.
+    """
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(6.0, 6.0))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        full_gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
+        full_text = pytesseract.image_to_string(
+            full_gray, config="--psm 6") or ""
+
+        width, height = img.size
+        table = img.crop((
+            int(width * 0.03), int(height * 0.25),
+            int(width * 0.98), int(height * 0.60),
+        ))
+        table_gray = cv2.cvtColor(np.array(table), cv2.COLOR_RGB2GRAY)
+        # psm 6 keeps item rows on one line; psm 4 recovers the "Date :" label
+        table_rows_text = pytesseract.image_to_string(
+            table_gray, config="--psm 6") or ""
+        table_date_text = pytesseract.image_to_string(
+            table_gray, config="--psm 4") or ""
+        try:
+            img.close()
+        except Exception:
+            pass
+
+        parts = [full_text]
+        if table_date_text.strip():
+            parts.append("SOMESHWARA_HEADER:\n" + table_date_text)
+        if table_rows_text.strip():
+            parts.append("SOMESHWARA_ROWS:\n" + table_rows_text)
+        if height > width:
+            inv_band = _ocr_someshwara_invno_band(page=page)
+            if inv_band.strip():
+                parts.append("SOMESHWARA_INVNO:\n" + inv_band)
+        return "\n".join(part for part in parts if part.strip()).strip()
+    except Exception:
+        return ""
+
+
+def _ocr_someshwara_invno_band(page=None, image_bytes: bytes = None) -> str:
+    """OCR the Profitmaker INV.No cell on portrait scans of landscape bills.
+
+    Those pages are rotated 90° CW, so INV.No sits in the upright top-right.
+    A 4x render + 2x cubic upsample is the scale that still reads PF#####
+    through the rule line that cuts the label.
+    """
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+        if height > width:
+            img = img.rotate(90, expand=True)
+            width, height = img.size
+        crop = img.crop((
+            int(width * 0.78), int(height * 0.18),
+            int(width * 0.98), int(height * 0.28),
+        ))
+        try:
+            img.close()
+        except Exception:
+            pass
+        gray = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        gray = cv2.resize(
+            gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        return pytesseract.image_to_string(gray, config="--psm 6") or ""
+    except Exception:
+        return ""
+
+
+def _parse_someshwara_invoice_no_strict(text: str) -> str:
+    match = re.search(r"\bPF\s*(\d{5,6})\b", (text or "").upper())
+    if match:
+        return "PF" + match.group(1)
+    return ""
+
+
+def _parse_someshwara_invoice_no(text: str) -> str:
+    """Read INV.No PF#####, including OCR forms like PPEi222 / Pril237."""
+    blob = (text or "").upper()
+    match = re.search(r"\bPF\s*(\d{5,6})\b", blob)
+    if match:
+        return "PF" + match.group(1)
+    for token in re.findall(r"[A-Z0-9]{6,14}", blob):
+        mapped = token.replace("I", "1").replace("L", "1").replace("O", "0")
+        if "P" not in mapped:
+            continue
+        mapped = mapped[mapped.index("P"):]
+        if mapped.startswith("PF"):
+            rest = mapped[2:]
+        elif mapped.startswith("P"):
+            rest = mapped[1:]
+            if rest and rest[0] in "FEPR":
+                rest = rest[1:]
+        else:
+            continue
+        digits = re.sub(r"\D", "", rest.replace("E", "1").replace("B", "8"))
+        if len(digits) == 5:
+            return "PF" + digits
+    return ""
+
+
+def _parse_someshwara_agencies_rows(detail_ocr: str) -> list:
+    """Read SOMESHWARA item rows from the dedicated table-band OCR.
+
+    The QTY column is unreliable on this scan, so quantity is derived from the
+    PRICE / AMOUNT pair and accepted only when it resolves to a whole number.
+    """
+    rows_match = re.search(
+        r"SOMESHWARA_ROWS:\s*(.*)\Z",
+        detail_ocr or "",
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not rows_match:
+        return []
+
+    product_patterns = (
+        (re.compile(r"T?AMLODAC\s+[S5]{1,2}MG\s+TABS?", re.I),
+         "AMLODAC 5MG TABS"),
+        (re.compile(r"ZYTANIX[-\s]*2[.,]5MG\s+TABS?", re.I),
+         "ZYTANIX-2.5MG TAB"),
+        (re.compile(r"ZYTANIX[-\s]*[S5]MG\s+TABS?", re.I),
+         "ZYTANIX-5MG TAB"),
+    )
+
+    rows = []
+    for line in rows_match.group(1).splitlines():
+        for pattern, product in product_patterns:
+            match = pattern.search(line)
+            if not match:
+                continue
+            values = [
+                float(value.replace(",", ""))
+                for value in re.findall(
+                    r"\d[\d,]*\.\d{1,2}", line[match.end():]
+                )
+            ]
+            for rate, amount in zip(values, values[1:]):
+                if rate <= 0 or amount <= rate:
+                    continue
+                qty = amount / rate
+                if abs(qty - round(qty)) <= 0.02 and round(qty) > 0:
+                    qty_i = int(round(qty))
+                    rows.append({
+                        "product_description": product,
+                        "quantity": qty_i,
+                        "unit_price": rate,
+                        # AMOUNT is sometimes off by a few paise on this scan;
+                        # this vendor's Base Amount is always Qty × Rate.
+                        "total_amount": round(qty_i * rate, 2),
+                    })
+                    break
+            break
+    return rows
+
+
+def fix_someshwara_agencies_fields(
+    items: list, invoice_summary: dict, ocr_text: str, detail_ocr: str
+) -> list:
+    """Correct Date, Total, Product, Qty, Rate and Base Amount for SOMESHWARA."""
+    vendor = str((invoice_summary or {}).get("vendor", "") or "")
+    if not ocr_suggests_someshwara_agencies(ocr_text, vendor):
+        return items
+
+    # Shared qty/rate swap heuristics treat large wholesale QTY (1080) + round
+    # PRICE (54.00) as swapped. On this layout QTY is whole packs and PRICE is
+    # the rate, so put the whole number back into Quantity when the fields are
+    # clearly reversed. Values are only reassigned, not rewritten.
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            qty = float(normalize_numeric_value(
+                str(item.get("quantity") or "")))
+            rate = float(normalize_numeric_value(
+                str(item.get("unit_price") or "")))
+        except (TypeError, ValueError):
+            continue
+        if qty <= 0 or rate <= 0:
+            continue
+        qty_whole = abs(qty - round(qty)) <= 0.02
+        rate_whole = abs(rate - round(rate)) <= 0.02
+        if (not qty_whole and rate_whole) or (
+            qty_whole and rate_whole and qty < rate
+        ):
+            item["quantity"], item["unit_price"] = (
+                item.get("unit_price"),
+                item.get("quantity"),
+            )
+
+    # "Date" is often read as Sate/Oate/Bate. Portrait scans keep that label in
+    # page OCR while the landscape table-band crop is empty, so search both.
+    date_match = re.search(
+        r"\b[DSOB]ate\s*[:;.]?\s*([0-3]?\d)[/.\-]([01]?\d)[/.\-]((?:19|20)\d{2})",
+        f"{detail_ocr or ''}\n{ocr_text or ''}",
+        re.I,
+    )
+    if date_match:
+        try:
+            invoice_summary["invoice_date"] = datetime(
+                int(date_match.group(3)),
+                int(date_match.group(2)),
+                int(date_match.group(1)),
+            ).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+
+    parsed_inv = ""
+    invno_match = re.search(
+        r"SOMESHWARA_INVNO:\s*(.*?)(?=\nSOMESHWARA_|\Z)",
+        detail_ocr or "",
+        re.IGNORECASE | re.DOTALL,
+    )
+    if invno_match:
+        parsed_inv = _parse_someshwara_invoice_no(invno_match.group(1))
+    if not parsed_inv:
+        parsed_inv = _parse_someshwara_invoice_no_strict(
+            f"{detail_ocr or ''}\n{ocr_text or ''}")
+    current_inv = str(invoice_summary.get("invoice_no") or "").strip()
+    if parsed_inv and (
+        not current_inv
+        or current_inv.upper() in {"NONE", "NULL", "N/A", "UNKNOWN"}
+        or _is_suspicious_invoice_number(current_inv)
+        or re.fullmatch(r"\d{8}", current_inv)
+    ):
+        invoice_summary["invoice_no"] = parsed_inv
+
+    if not detail_ocr or not re.search(
+        r"\b(?:T?AMLODAC|ZYTANIX)\b", detail_ocr, re.I
+    ):
+        return items
+
+    gross_match = re.search(
+        r"\bGross\s*[:=]?\s*([\d,]+\.\d{2})", detail_ocr, re.I)
+    gst_match = re.search(
+        r"Total\s+GST\s*[:;.]?\s*([\d,]+\.\d{2})", detail_ocr, re.I)
+    if gross_match and gst_match:
+        gross = float(gross_match.group(1).replace(",", ""))
+        gst = float(gst_match.group(1).replace(",", ""))
+        invoice_summary["total"] = f"{gross + gst:.2f}"
+
+    rows = _parse_someshwara_agencies_rows(detail_ocr)
+    if not rows:
+        return items
+
+    # Drop rows this scan's OCR recovery invented (e.g. a second AMLODAC read
+    # as "TAMLODAC SMG TABS") only when the table band confirms the row count.
+    kept_items = [
+        item for item in items
+        if isinstance(item, dict) and not item.get("recovered_from_ocr")
+    ]
+    if len(kept_items) != len(rows):
+        return items
+
+    for item, row in zip(kept_items, rows):
+        item["product_description"] = row["product_description"]
+        item["quantity"] = str(row["quantity"])
+        item["unit_price"] = f"{row['unit_price']:.2f}"
+        item["total_amount"] = f"{row['total_amount']:.2f}"
+    return kept_items
+
+
 def ocr_suggests_saraswati_medical_agency(
     ocr_text: str = "", vendor: str = ""
 ) -> bool:
@@ -22819,6 +23117,25 @@ def enforce_schema(raw_data):
     except Exception as _sara_err:
         logger.debug(f"SARASWATI line-item fix skipped: {_sara_err}")
 
+    # 🔧 SOMESHWARA AGENCIES: fix date, total, product rows from band OCR
+    try:
+        _som_detail = ""
+        if isinstance(data, dict):
+            _som_detail = str(
+                data.get("someshwara_detail_ocr", "") or "").strip()
+        if _som_detail:
+            _som_items = fix_someshwara_agencies_fields(
+                template["data"]["line_items"].get("items") or [],
+                template["data"]["invoice_summary"],
+                ocr_text or "",
+                _som_detail,
+            )
+            if _som_items:
+                template["data"]["line_items"]["items"] = _som_items
+                template["data"]["line_items"]["count"] = len(_som_items)
+    except Exception as _som_err:
+        logger.debug(f"SOMESHWARA field fix skipped: {_som_err}")
+
     if ocr_text and ocr_suggests_payal_pharma(
         ocr_text,
         template["data"]["invoice_summary"].get("vendor", "") or "",
@@ -22961,6 +23278,7 @@ def enforce_schema(raw_data):
         template["data"].pop("rathna_table_ocr", None)
         template["data"].pop("jackson_table_ocr", None)
         template["data"].pop("saraswati_table_ocr", None)
+        template["data"].pop("someshwara_detail_ocr", None)
         template["data"].pop("tulsyan_rate_ocr", None)
         template["data"].pop("jackson_invoice_date", None)
         template["data"].pop("jackson_invoice_no", None)
@@ -22970,6 +23288,7 @@ def enforce_schema(raw_data):
         _summary_out.pop("rathna_table_ocr", None)
         _summary_out.pop("jackson_table_ocr", None)
         _summary_out.pop("saraswati_table_ocr", None)
+        _summary_out.pop("someshwara_detail_ocr", None)
         _summary_out.pop("tulsyan_rate_ocr", None)
         _summary_out.pop("jackson_invoice_date", None)
         _summary_out.pop("jackson_invoice_no", None)
@@ -24507,6 +24826,31 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _sara_ocr_err:
             logger.debug(
                 f"SARASWATI table OCR enrichment skipped: {_sara_ocr_err}")
+
+        # SOMESHWARA AGENCIES: capture header/table bands for date + row fix
+        try:
+            _som_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _som_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _som_data = _som_fd.get("data") if isinstance(
+                _som_fd.get("data"), dict) else _som_fd
+            _som_sum = _som_data.get("invoice_summary") if isinstance(
+                _som_data.get("invoice_summary"), dict) else {}
+            _som_vendor = str(
+                _som_sum.get("vendor") or _som_fd.get("vendor") or "")
+            if ocr_suggests_someshwara_agencies(_som_ocr, _som_vendor):
+                _som_detail = _ocr_someshwara_agencies_detail(page=page)
+                if _som_detail.strip():
+                    result["someshwara_detail_ocr"] = _som_detail
+                    logger.info(
+                        f"    ✅ SOMESHWARA detail OCR captured "
+                        f"({len(_som_detail)} chars)")
+        except Exception as _som_ocr_err:
+            logger.debug(
+                f"SOMESHWARA detail OCR enrichment skipped: {_som_ocr_err}")
 
         # HYD-26-*: if we can recover a reliable header date, prefer it over Vision month confusion
         try:
@@ -27737,6 +28081,27 @@ def split_and_extract_invoices(
                     if _sara_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["saraswati_table_ocr"] = _sara_tocr
 
+                    _som_docr = str(
+                        page_result.get("someshwara_detail_ocr", "") or "").strip()
+                    if (
+                        not _som_docr
+                        and ocr_suggests_someshwara_agencies(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _som_page = doc.load_page(first_page_idx)
+                            _som_docr = _ocr_someshwara_agencies_detail(
+                                page=_som_page)
+                            if _som_docr.strip():
+                                logger.info(
+                                    f"    ✅ SOMESHWARA detail OCR captured at response build "
+                                    f"({len(_som_docr)} chars)")
+                        except Exception as _som_fb_err:
+                            logger.debug(
+                                f"SOMESHWARA detail OCR fallback failed: {_som_fb_err}")
+                    if _som_docr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["someshwara_detail_ocr"] = _som_docr
+
                     _tul_rate_ocr = str(page_result.get("tulsyan_rate_ocr", "") or "").strip()
                     if (
                         not _tul_rate_ocr
@@ -28703,6 +29068,26 @@ def test_extract(
                                 f"SARASWATI table OCR fallback failed: {_sara_fb_err}")
                     if _sara_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["saraswati_table_ocr"] = _sara_tocr
+                    _som_docr = str(
+                        page_result.get("someshwara_detail_ocr", "") or "").strip()
+                    if (
+                        not _som_docr
+                        and ocr_suggests_someshwara_agencies(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _som_page = doc.load_page(first_page_idx)
+                            _som_docr = _ocr_someshwara_agencies_detail(
+                                page=_som_page)
+                            if _som_docr.strip():
+                                logger.info(
+                                    f"    ✅ SOMESHWARA detail OCR captured at response build "
+                                    f"({len(_som_docr)} chars)")
+                        except Exception as _som_fb_err:
+                            logger.debug(
+                                f"SOMESHWARA detail OCR fallback failed: {_som_fb_err}")
+                    if _som_docr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["someshwara_detail_ocr"] = _som_docr
                     _tul_rate_ocr = str(page_result.get("tulsyan_rate_ocr", "") or "").strip()
                     if (
                         not _tul_rate_ocr
