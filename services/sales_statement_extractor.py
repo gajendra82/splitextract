@@ -1758,6 +1758,231 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 # XLS / XLSX (Victory-style sparse grid)
 # ---------------------------------------------------------------------------
 
+_POD_HOSPITAL_SALES_HEADERS = {
+    "invoice number",
+    "invoice date",
+    "card code",
+    "card name",
+    "item code",
+    "item description",
+    "quantity",
+    "total",
+}
+_POD_STOCK_HEADERS = {
+    "item_code",
+    "item_name",
+    "manufacturer",
+    "opening",
+    "purchases",
+    "sales",
+    "closing",
+}
+
+
+def _normalized_sheet_headers(row: Tuple[Any, ...]) -> set:
+    return {
+        re.sub(r"\s+", " ", str(value or "").strip().lower())
+        for value in row
+        if value is not None and str(value).strip()
+    }
+
+
+def _parse_pod_hospital_sales_xlsx(
+    workbook: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse the two-sheet POD hospital-sales workbook without affecting generic XLSX."""
+    def pod_date(value: Any) -> str:
+        """Preserve Excel date cells; avoid treating YYYY-MM-DD as DD-MM-YY."""
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        text = str(value or "").strip()
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:\s+00:00:00)?", text):
+            return text[:10]
+        return _normalize_date(text) or text
+
+    hospital_sheet = next(
+        (sheet for sheet in workbook.worksheets
+         if _POD_HOSPITAL_SALES_HEADERS.issubset(
+             _normalized_sheet_headers(next(sheet.iter_rows(
+                 min_row=1, max_row=1, values_only=True), ()))
+         )),
+        None,
+    )
+    stock_sheet = next(
+        (sheet for sheet in workbook.worksheets
+         if _POD_STOCK_HEADERS.issubset(
+             _normalized_sheet_headers(next(sheet.iter_rows(
+                 min_row=1, max_row=1, values_only=True), ()))
+         )),
+        None,
+    )
+    if hospital_sheet is None or stock_sheet is None:
+        return None
+
+    result = empty_result(filename, "xlsx")
+    result["report_title"] = "POD Hospital Wise Sales"
+    result["company_name"] = "ZYDUS"
+    result["totals"]["extra"]["extraction_method"] = "pod_hospital_wise_sales_xlsx"
+    result["totals"]["extra"]["hospital_sales_worksheet"] = hospital_sheet.title
+    result["totals"]["extra"]["stock_statement_worksheet"] = stock_sheet.title
+
+    hospital_headers = [
+        re.sub(r"\s+", " ", str(value or "").strip().lower())
+        for value in next(hospital_sheet.iter_rows(
+            min_row=1, max_row=1, values_only=True
+        ))
+    ]
+    hospital_indices = {
+        header: index for index, header in enumerate(hospital_headers) if header
+    }
+
+    def hospital_cell(row: Tuple[Any, ...], header: str) -> Any:
+        index = hospital_indices.get(header)
+        return row[index] if index is not None and index < len(row) else None
+
+    items: List[Dict[str, Any]] = []
+    hospital_summary: Dict[str, Dict[str, Any]] = {}
+    invoice_dates: List[datetime] = []
+    invoice_numbers: set = set()
+    manufacturers: set = set()
+
+    for row in hospital_sheet.iter_rows(min_row=2, values_only=True):
+        invoice_no = str(hospital_cell(row, "invoice number") or "").strip()
+        hospital_name = _clean_name(str(hospital_cell(row, "card name") or ""))
+        product_name = _clean_name(str(hospital_cell(row, "item description") or ""))
+        if not invoice_no or not hospital_name or not product_name:
+            continue
+
+        invoice_date = hospital_cell(row, "invoice date")
+        if isinstance(invoice_date, datetime):
+            invoice_dates.append(invoice_date)
+            invoice_date_value = invoice_date.strftime("%Y-%m-%d")
+        else:
+            invoice_date_value = pod_date(invoice_date)
+
+        quantity = _to_float(hospital_cell(row, "quantity"))
+        total = _to_float(hospital_cell(row, "total"))
+        manufacturer = _clean_name(
+            str(hospital_cell(row, "manufacturer") or "")
+        )
+        if manufacturer:
+            manufacturers.add(manufacturer)
+
+        item = empty_line_item()
+        item["product_code"] = str(hospital_cell(row, "item code") or "").strip() or None
+        item["product_name"] = product_name
+        item["sales_qty"] = quantity
+        item["sales_value"] = total
+        item["extra"] = {
+            "invoice_number": invoice_no,
+            "invoice_date": invoice_date_value,
+            "hospital_code": str(hospital_cell(row, "card code") or "").strip(),
+            "hospital_name": hospital_name,
+            "hsn": str(hospital_cell(row, "hsn") or "").strip(),
+            "manufacturer": manufacturer,
+            "batch": str(hospital_cell(row, "batch") or "").strip(),
+            "expiry": pod_date(hospital_cell(row, "expiry")),
+            "tax_rate": _to_float(hospital_cell(row, "tax rate")),
+            "mrp": _to_float(hospital_cell(row, "mrp")),
+        }
+        items.append(item)
+        invoice_numbers.add(invoice_no)
+
+        summary = hospital_summary.setdefault(
+            hospital_name,
+            {
+                "hospital_code": item["extra"]["hospital_code"],
+                "hospital_name": hospital_name,
+                "line_count": 0,
+                "invoice_numbers": set(),
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+            },
+        )
+        summary["line_count"] += 1
+        summary["invoice_numbers"].add(invoice_no)
+        summary["sales_qty"] += quantity
+        summary["sales_value"] += total
+
+    if not items:
+        return None
+
+    stock_headers = [
+        str(value or "").strip().lower()
+        for value in next(stock_sheet.iter_rows(
+            min_row=1, max_row=1, values_only=True
+        ))
+    ]
+    stock_indices = {
+        header: index for index, header in enumerate(stock_headers) if header
+    }
+
+    def stock_cell(row: Tuple[Any, ...], header: str) -> Any:
+        index = stock_indices.get(header)
+        return row[index] if index is not None and index < len(row) else None
+
+    stock_statement: List[Dict[str, Any]] = []
+    for row in stock_sheet.iter_rows(min_row=2, values_only=True):
+        item_name = _clean_name(str(stock_cell(row, "item_name") or ""))
+        item_code = str(stock_cell(row, "item_code") or "").strip()
+        if not item_name and not item_code:
+            continue
+        stock_statement.append({
+            "item_code": item_code,
+            "item_name": item_name,
+            "manufacturer": _clean_name(str(stock_cell(row, "manufacturer") or "")),
+            "packing_factor": _to_float(stock_cell(row, "packing factor")),
+            "uom": str(stock_cell(row, "uom") or "").strip(),
+            "opening_qty": _to_float(stock_cell(row, "opening")),
+            "purchases_qty": _to_float(stock_cell(row, "purchases")),
+            "sales_qty": _to_float(stock_cell(row, "sales")),
+            "closing_qty": _to_float(stock_cell(row, "closing")),
+        })
+
+    hospital_sales_summary = []
+    for summary in hospital_summary.values():
+        hospital_sales_summary.append({
+            "hospital_code": summary["hospital_code"],
+            "hospital_name": summary["hospital_name"],
+            "line_count": summary["line_count"],
+            "invoice_count": len(summary["invoice_numbers"]),
+            "sales_qty": round(summary["sales_qty"], 2),
+            "sales_value": round(summary["sales_value"], 2),
+        })
+
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item["sales_value"]) for item in items), 2
+    )
+    result["totals"]["extra"].update({
+        "hospital_count": len(hospital_summary),
+        "invoice_count": len(invoice_numbers),
+        "hospital_sales_line_count": len(items),
+        "hospital_sales_summary": hospital_sales_summary,
+        "stock_statement": stock_statement,
+        "stock_statement_line_count": len(stock_statement),
+        "stock_opening_qty": round(
+            sum(_to_float(item["opening_qty"]) for item in stock_statement), 2
+        ),
+        "stock_purchases_qty": round(
+            sum(_to_float(item["purchases_qty"]) for item in stock_statement), 2
+        ),
+        "stock_sales_qty": round(
+            sum(_to_float(item["sales_qty"]) for item in stock_statement), 2
+        ),
+        "stock_closing_qty": round(
+            sum(_to_float(item["closing_qty"]) for item in stock_statement), 2
+        ),
+    })
+    result["stockist_name"] = "POD Hospital Wise Sales"
+    if len(manufacturers) == 1:
+        result["company_name"] = next(iter(manufacturers))
+    if invoice_dates:
+        result["period_from"] = min(invoice_dates).strftime("%Y-%m-%d")
+        result["period_to"] = max(invoice_dates).strftime("%Y-%m-%d")
+    return result
+
+
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     result = empty_result(filename, ext.lstrip("."))
 
@@ -1773,9 +1998,14 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         from openpyxl import load_workbook
 
         wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
+        pod_result = _parse_pod_hospital_sales_xlsx(wb, filename)
+        if pod_result is not None:
+            wb.close()
+            return pod_result
         sh = wb.active
         for row in sh.iter_rows(values_only=True):
             rows.append(list(row))
+        wb.close()
 
     # Metadata scan
     for row in rows[:20]:
