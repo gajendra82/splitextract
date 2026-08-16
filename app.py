@@ -16,11 +16,11 @@ from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
     OCR_THREADPOOL_LOGGING_ENABLED,
+    increment_ocr_active,
     decrement_ocr_active,
     get_enhanced_heartbeat_snapshot,
     get_ready_snapshot,
     get_resource_snapshot,
-    increment_ocr_active,
     install_structured_logging,
     log_semaphore_acquire,
     log_semaphore_release,
@@ -236,6 +236,7 @@ REQUEST_STUCK_THRESHOLD_SECONDS = int(
 
 MAX_WAIT_TIME = 300  # 5 minutes max wait for quota
 
+
 def _env_bool_flag(name: str, default: bool = True) -> bool:
     raw = os.getenv(name)
     if raw is None:
@@ -267,7 +268,8 @@ GEMINI_MAX_REQUESTS_PER_DAY = _env_positive_int(
 GEMINI_PROVIDER_BACKOFF_MAX_SECONDS = _env_positive_int(
     "GEMINI_PROVIDER_BACKOFF_MAX_SECONDS", 60)
 GEMINI_PROVIDER_NAME = (
-    "vertex" if _env_bool_flag("GOOGLE_GENAI_USE_VERTEXAI", True) else "ai_studio"
+    "vertex" if _env_bool_flag(
+        "GOOGLE_GENAI_USE_VERTEXAI", True) else "ai_studio"
 )
 
 MAX_PARALLEL_GEMINI_CALLS = int(os.getenv("MAX_PARALLEL_CALLS", "3"))
@@ -425,7 +427,8 @@ def begin_request_progress(
             "_last_logged_page": 0,
         })
     on_request_start(request_id, source_filename or "", stage)
-    update_request_progress(stage, source_filename=source_filename, force_log=True)
+    update_request_progress(
+        stage, source_filename=source_filename, force_log=True)
     return request_id
 
 
@@ -1147,12 +1150,14 @@ def extract_text_with_tesseract_relaxed(page, page_num: Optional[int] = None) ->
         _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
         del gray
 
-        text, avg_confidence = _tesseract_ocr_on_thresh(thresh, page_num=page_num)
+        text, avg_confidence = _tesseract_ocr_on_thresh(
+            thresh, page_num=page_num)
 
         if text and _ocr_text_needs_rotation_retry(text):
             rot_thresh = cv2.rotate(thresh, cv2.ROTATE_180)
             del thresh
-            rot_text, rot_conf = _tesseract_ocr_on_thresh(rot_thresh, page_num=page_num)
+            rot_text, rot_conf = _tesseract_ocr_on_thresh(
+                rot_thresh, page_num=page_num)
             del rot_thresh
             if rot_text and _ocr_text_has_invoice_cues(rot_text):
                 logger.warning(
@@ -3574,7 +3579,8 @@ def extract_yen_pharma_line_items_from_ocr(ocr_text: str) -> List[Dict]:
             maxsplit=1,
             flags=re.IGNORECASE,
         )[0].strip()
-        product = _strip_yen_pharma_mfr_suffix(product, {mfg.upper()} if mfg else None)
+        product = _strip_yen_pharma_mfr_suffix(
+            product, {mfg.upper()} if mfg else None)
         if not product or len(product) < 3:
             continue
         if re.fullmatch(r'S\s*\d{1,5}', product, re.IGNORECASE):
@@ -3719,7 +3725,8 @@ def recover_yen_pharma_line_items_from_ocr(
     }
     existing_names = set()
     for it in cleaned:
-        desc = re.sub(r'\s+', ' ', str(it.get("product_description", "")).upper()).strip()
+        desc = re.sub(
+            r'\s+', ' ', str(it.get("product_description", "")).upper()).strip()
         if desc:
             existing_names.add(desc)
 
@@ -3748,7 +3755,8 @@ def recover_yen_pharma_line_items_from_ocr(
         )
 
     if added:
-        logger.info(f"✅ YEN-PHARMA recovered {added} missing line item(s) from OCR")
+        logger.info(
+            f"✅ YEN-PHARMA recovered {added} missing line item(s) from OCR")
     return cleaned
 
 
@@ -7517,7 +7525,8 @@ def fix_satiija_distributors_rate_from_ocr(
                 continue
             ocr_has_rows = True
             try:
-                cur = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+                cur = float(normalize_numeric_value(
+                    str(item.get("unit_price", "0"))))
             except Exception:
                 cur = 0.0
             if abs(cur - rate) > 0.02:
@@ -7529,7 +7538,8 @@ def fix_satiija_distributors_rate_from_ocr(
                 )
             if gross:
                 try:
-                    qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+                    qty = float(normalize_numeric_value(
+                        str(item.get("quantity", "0"))))
                 except Exception:
                     qty = 0.0
                 if qty > 0:
@@ -7555,7 +7565,8 @@ def fix_satiija_distributors_rate_from_ocr(
     if isinstance(invoice_summary, dict):
         try:
             inv_total = float(
-                normalize_numeric_value(str(invoice_summary.get("total", "") or "0"))
+                normalize_numeric_value(
+                    str(invoice_summary.get("total", "") or "0"))
             )
             if inv_total > 0:
                 invoice_taxable = inv_total / 1.05
@@ -7580,7 +7591,8 @@ def fix_satiija_distributors_rate_from_ocr(
         if not isinstance(af, dict):
             continue
         try:
-            dis = float(normalize_numeric_value(str(af.get("discount_percentage", "") or "0")))
+            dis = float(normalize_numeric_value(
+                str(af.get("discount_percentage", "") or "0")))
         except Exception:
             dis = 0.0
         try:
@@ -7592,8 +7604,10 @@ def fix_satiija_distributors_rate_from_ocr(
         if dis <= 0 and sch <= 0:
             continue
         try:
-            cur = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
-            qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+            cur = float(normalize_numeric_value(
+                str(item.get("unit_price", "0"))))
+            qty = float(normalize_numeric_value(
+                str(item.get("quantity", "0"))))
         except Exception:
             continue
         if cur <= 0 or qty <= 0:
@@ -7707,14 +7721,16 @@ def fix_chaitanya_pharma_line_items_from_ocr(items, ocr_text: str) -> list:
 
         try:
             cur_qty = float(
-                normalize_numeric_value(str(item.get("quantity", "") or "")) or 0
+                normalize_numeric_value(
+                    str(item.get("quantity", "") or "")) or 0
             )
         except Exception:
             cur_qty = 0.0
 
         try:
             cur_rate = float(
-                normalize_numeric_value(str(item.get("unit_price", "") or "")) or 0
+                normalize_numeric_value(
+                    str(item.get("unit_price", "") or "")) or 0
             )
         except Exception:
             cur_rate = 0.0
@@ -7722,7 +7738,8 @@ def fix_chaitanya_pharma_line_items_from_ocr(items, ocr_text: str) -> list:
         if rate > 0 and value > 0:
             qty_from_value = int(round(value / rate))
             if 1 <= qty_from_value <= 99999:
-                qty_wrong = cur_qty <= 0 or abs(cur_qty * rate - value) / value > 0.05
+                qty_wrong = cur_qty <= 0 or abs(
+                    cur_qty * rate - value) / value > 0.05
                 if qty_wrong:
                     old_qty = item.get("quantity")
                     item["quantity"] = str(qty_from_value)
@@ -7757,7 +7774,8 @@ def fix_chaitanya_pharma_line_items_from_ocr(items, ocr_text: str) -> list:
             re.IGNORECASE,
         )
         if mid_m:
-            pack, ocr_desc = _split_chaitanya_pack_product(mid_m.group(1).strip())
+            pack, ocr_desc = _split_chaitanya_pack_product(
+                mid_m.group(1).strip())
             ocr_desc = _clean_chaitanya_product_name(ocr_desc)
             cur_desc = str(item.get("product_description", "") or "").strip()
             cleaned_cur = _clean_chaitanya_product_name(cur_desc)
@@ -7856,7 +7874,8 @@ def fix_chaitanya_pharma_qty_net_vs_value_fallback(items, ocr_text: str) -> list
 
         try:
             cur_qty = float(
-                normalize_numeric_value(str(item.get("quantity", "") or "")) or 0
+                normalize_numeric_value(
+                    str(item.get("quantity", "") or "")) or 0
             )
         except Exception:
             cur_qty = 0.0
@@ -7932,7 +7951,8 @@ def fix_chaitanya_pharma_leading_pack_product_fallback(items, ocr_text: str) -> 
                 re.IGNORECASE,
             )
             if mid_m:
-                _pack, ocr_desc = _split_chaitanya_pack_product(mid_m.group(1).strip())
+                _pack, ocr_desc = _split_chaitanya_pack_product(
+                    mid_m.group(1).strip())
                 preferred = _clean_chaitanya_product_name(ocr_desc)
 
         cleaned = _clean_chaitanya_product_name(cur_desc)
@@ -8104,16 +8124,21 @@ def _clean_chaitanya_product_name(name: str) -> str:
         flags=re.IGNORECASE,
     )
     n = re.sub(r'^\d{1,4}\s+(?=[A-Z])', '', n)  # "10 ATORVA…"
-    n = re.sub(r'^\d+C\s+(?=[A-Z])', '', n, flags=re.IGNORECASE)  # "15C ATORVA…" (S_6240)
-    n = re.sub(r'^\d+C(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)  # "15CATORVA…"
+    # "15C ATORVA…" (S_6240)
+    n = re.sub(r'^\d+C\s+(?=[A-Z])', '', n, flags=re.IGNORECASE)
+    n = re.sub(r'^\d+C(?=[A-Z]{3,})', '', n,
+               flags=re.IGNORECASE)  # "15CATORVA…"
     n = re.sub(r'^(?:ML|GM)(?=[A-Z]{3,})', '', n, flags=re.IGNORECASE)
 
     # Known OCR merges on this format (S_5090 / BENSUS Tax Inv.)
-    n = re.sub(r'^MCOLM(?=BIMIST\b)', 'COM', n, flags=re.IGNORECASE)  # MCOLMBIMIST
+    n = re.sub(r'^MCOLM(?=BIMIST\b)', 'COM', n,
+               flags=re.IGNORECASE)  # MCOLMBIMIST
     # "…2ML"+"DERIPHYLLIN" OCR'd as MDLERIPHYLLIN (MLD → MDL)
     n = re.sub(r'^MDL(?=ERIPHYLLIN\b)', 'D', n, flags=re.IGNORECASE)
-    n = re.sub(r'^AMNP(?=UCOXIA\b)', 'N', n, flags=re.IGNORECASE)  # AMNPUCOXIA → NUCOXIA
-    n = re.sub(r'^SUPP(?=JONAC\b)', '', n, flags=re.IGNORECASE)      # SUPPJONAC
+    n = re.sub(r'^AMNP(?=UCOXIA\b)', 'N', n,
+               flags=re.IGNORECASE)  # AMNPUCOXIA → NUCOXIA
+    n = re.sub(r'^SUPP(?=JONAC\b)', '', n,
+               flags=re.IGNORECASE)      # SUPPJONAC
     # S 21074 / pdfplumber: 3M+INAC → MILNAC, 14'S TIN+PROVIDAC, 10'+TRAMAZAC
     n = re.sub(r'^MILNAC\b', 'INAC', n, flags=re.IGNORECASE)
     n = re.sub(r'^ILNAC\b', 'INAC', n, flags=re.IGNORECASE)
@@ -8636,7 +8661,8 @@ def fix_trilok_enterprises_ocr_garbage_product_fallback(
         prev = batch_to_product.get(bk)
         # Prefer name without digits-only tail / shorter clean name without pack glue
         if prev is None or (
-            '*' not in product and (prev[0].find('*') >= 0 or len(product) < len(prev[0]))
+            '*' not in product and (prev[0].find('*')
+                                    >= 0 or len(product) < len(prev[0]))
         ):
             batch_to_product[bk] = (product, mfg, pack)
 
@@ -8752,8 +8778,10 @@ def fix_trilok_enterprises_overlap_pack_product_fallback(
         needs_fix = False
         if desc.upper() != product.upper():
             needs_fix = True
-        af = item.get("additional_fields") if isinstance(item.get("additional_fields"), dict) else {}
-        cur_pack = str((af or {}).get("pack", "") or "").strip().upper().replace(" ", "")
+        af = item.get("additional_fields") if isinstance(
+            item.get("additional_fields"), dict) else {}
+        cur_pack = str((af or {}).get("pack", "")
+                       or "").strip().upper().replace(" ", "")
         if cur_pack in {"0ML", "0GM", "ML", "GM"} or (
             cur_pack and cur_pack != pack.upper().replace(" ", "")
             and re.match(r'^0?(?:ML|GM)$', cur_pack)
@@ -9577,13 +9605,16 @@ def _ocr_jackson_medicals_qty_rate_region(page=None, image_bytes: bytes = None) 
                 int(width * x1), int(height * y1),
             ))
             arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
-            arr = cv2.resize(arr, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
-            _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            arr = cv2.resize(arr, None, fx=1.5, fy=1.5,
+                             interpolation=cv2.INTER_CUBIC)
+            _, th = cv2.threshold(
+                arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             return pytesseract.image_to_string(th, config="--psm 6") or ""
 
         candidates = [
             _ocr_box(0.72, 0.18, 0.998, 0.76),  # default
-            _ocr_box(0.68, 0.12, 0.999, 0.88),  # wider — helps damaged right bands
+            # wider — helps damaged right bands
+            _ocr_box(0.68, 0.12, 0.999, 0.88),
         ]
 
         def _crop_score(text: str) -> tuple:
@@ -9780,7 +9811,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                             q_use = qi
                             # Prefer amount-inferred qty only when explicit qty does not fit.
                             if rate_dec and rate > 0:
-                                err_qi = abs(qi * rate - amount) / max(amount, 1.0)
+                                err_qi = abs(qi * rate - amount) / \
+                                    max(amount, 1.0)
                                 q_from_amt = amount / rate
                                 # Don't invent qty from Amount when Amount is a
                                 # no-decimal 100× duplicate of Rate (7781 vs 77.81)
@@ -9831,7 +9863,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                                     or abs(calc_amount - amount) / max(amount, 1.0) <= 0.03
                                 ):
                                     amount = calc_amount
-                                    err = abs(q_use * rate - amount) / max(amount, 1.0)
+                                    err = abs(q_use * rate - amount) / \
+                                        max(amount, 1.0)
                                 # First-digit Amount OCR noise (496.00 vs 196.00)
                                 elif (
                                     abs(calc_amount - amount) >= 100
@@ -9858,11 +9891,13 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                                 else:
                                     score -= 5
                             if best is None or score > best[0]:
-                                best = (score, q_use, round(rate, 2), round(amount, 2))
+                                best = (score, q_use, round(
+                                    rate, 2), round(amount, 2))
 
         if not best and len(tokens) >= 2:
             a_tok = tokens[-1]
-            amount = a_tok["v"] / 100.0 if (not a_tok["dec"] and a_tok["v"] >= 10000) else a_tok["v"]
+            amount = a_tok["v"] / 100.0 if (not a_tok["dec"]
+                                            and a_tok["v"] >= 10000) else a_tok["v"]
             r_tok = tokens[-2]
             rate_cands = [(r_tok["v"], 0)]
             if not r_tok["dec"]:
@@ -9875,7 +9910,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                 qty = amount / rate
                 if abs(qty - round(qty)) <= 0.05 and 1 <= round(qty) <= 2000:
                     score = (3 if 1 <= rate <= 500 else 0) - pen
-                    cand = (score, int(round(qty)), round(rate, 2), round(amount, 2))
+                    cand = (score, int(round(qty)), round(
+                        rate, 2), round(amount, 2))
                     if best is None or score > best[0]:
                         best = cand
 
@@ -10197,9 +10233,11 @@ def _ocr_jackson_header_date(page=None, image_bytes: bytes = None) -> Optional[s
             return None
         img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
         w, h = img.size
-        crop = img.crop((int(w * 0.50), int(h * 0.02), int(w * 0.99), int(h * 0.20)))
+        crop = img.crop((int(w * 0.50), int(h * 0.02),
+                        int(w * 0.99), int(h * 0.20)))
         arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
-        arr = cv2.resize(arr, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        arr = cv2.resize(arr, None, fx=2.0, fy=2.0,
+                         interpolation=cv2.INTER_CUBIC)
         _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text = pytesseract.image_to_string(th, config="--psm 6") or ""
         try:
@@ -10282,10 +10320,12 @@ def _clean_jackson_product_name(name: str) -> str:
     cleaned = re.sub(r'\bMEGACV\b', 'MEGA CV', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\bIGMTAB\b', 'IGM TAB', cleaned, flags=re.IGNORECASE)
     # Vision/OCR variants: MEGAIIEAL, MEGAUIEAL, MEGAHEAL GEL SGM / ISGM, IIYPONAT
-    cleaned = re.sub(r'\bMEGA[A-Z]{0,4}EAL\b', 'MEGAHEAL', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bMEGA[A-Z]{0,4}EAL\b',
+                     'MEGAHEAL', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\bI?SGM\b', '15GM', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\b1SGM\b', '15GM', cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r'\bI{1,2}YPONAT\b', 'HYPONAT', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bI{1,2}YPONAT\b', 'HYPONAT',
+                     cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\bTAR\b', 'TAB', cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.replace('+', '-').replace(':', '-')
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
@@ -10400,7 +10440,8 @@ def fix_jackson_medicals_line_items_from_ocr(
         except Exception:
             rate_val = 0.0
 
-        name_key = _jackson_product_name_key(item.get("product_description", ""))
+        name_key = _jackson_product_name_key(
+            item.get("product_description", ""))
         if free_qty > 0 and total_val <= 0.01 and rate_val <= 0.01:
             free_by_name[name_key] = free_by_name.get(name_key, 0.0) + free_qty
             continue
@@ -10411,7 +10452,8 @@ def fix_jackson_medicals_line_items_from_ocr(
     # so matching stays aligned with paid QTY/Rate/Amount OCR rows.
     by_name = {}
     for idx, item in enumerate(kept):
-        name_key = _jackson_product_name_key(item.get("product_description", ""))
+        name_key = _jackson_product_name_key(
+            item.get("product_description", ""))
         try:
             total_val = float(normalize_numeric_value(
                 str(item.get("total_amount", 0) or 0)))
@@ -10538,7 +10580,8 @@ def fix_jackson_medicals_line_items_from_ocr(
     kept = kept_order
 
     for item in kept:
-        name_key = _jackson_product_name_key(item.get("product_description", ""))
+        name_key = _jackson_product_name_key(
+            item.get("product_description", ""))
         if name_key in free_by_name:
             additional = item.get("additional_fields")
             if not isinstance(additional, dict):
@@ -10588,9 +10631,12 @@ def fix_jackson_medicals_line_items_from_ocr(
         if row.get("unit_price", 0) < 3.5 or row.get("total_amount", 0) < 50:
             return False
         try:
-            old_q = float(normalize_numeric_value(str(item.get("quantity", 0) or 0)))
-            old_r = float(normalize_numeric_value(str(item.get("unit_price", 0) or 0)))
-            old_t = float(normalize_numeric_value(str(item.get("total_amount", 0) or 0)))
+            old_q = float(normalize_numeric_value(
+                str(item.get("quantity", 0) or 0)))
+            old_r = float(normalize_numeric_value(
+                str(item.get("unit_price", 0) or 0)))
+            old_t = float(normalize_numeric_value(
+                str(item.get("total_amount", 0) or 0)))
         except Exception:
             old_q = old_r = old_t = 0.0
 
@@ -10621,7 +10667,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                 allow_same_rate_override = (
                     same_rate
                     and abs(
-                        row["quantity"] * row["unit_price"] - row["total_amount"]
+                        row["quantity"] * row["unit_price"] -
+                        row["total_amount"]
                     ) / max(row["total_amount"], 1.0) <= 0.02
                     and (
                         row["total_amount"] > old_t * 1.05
@@ -10713,7 +10760,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                         cur_total > 0
                         and row["total_amount"] > cur_total * 1.05
                         and abs(
-                            row["quantity"] * row["unit_price"] - row["total_amount"]
+                            row["quantity"] * row["unit_price"] -
+                            row["total_amount"]
                         ) / max(row["total_amount"], 1.0) <= 0.02
                     ):
                         score += 4
@@ -10722,7 +10770,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                     elif (
                         vision_qty_suspect
                         and abs(
-                            row["quantity"] * row["unit_price"] - row["total_amount"]
+                            row["quantity"] * row["unit_price"] -
+                            row["total_amount"]
                         ) / max(row["total_amount"], 1.0) <= 0.02
                     ):
                         score += 3
@@ -10841,7 +10890,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                     pass
 
         # Order-fill remaining broken items (prefer position among unused OCR rows)
-        unused = [(idx, row) for idx, row in enumerate(qr_rows) if idx not in used_rows]
+        unused = [(idx, row)
+                  for idx, row in enumerate(qr_rows) if idx not in used_rows]
         for item_i, item in enumerate(kept):
             # Do not overwrite rows already aligned to a qty/rate OCR triple
             # (HYPONAT 1×587.63 is valid but looks like Vision amount-as-rate).
@@ -10850,9 +10900,12 @@ def fix_jackson_medicals_line_items_from_ocr(
                     item.get("product_description", ""))
                 continue
             try:
-                qty = float(normalize_numeric_value(str(item.get("quantity", 0) or 0)))
-                rate = float(normalize_numeric_value(str(item.get("unit_price", 0) or 0)))
-                total = float(normalize_numeric_value(str(item.get("total_amount", 0) or 0)))
+                qty = float(normalize_numeric_value(
+                    str(item.get("quantity", 0) or 0)))
+                rate = float(normalize_numeric_value(
+                    str(item.get("unit_price", 0) or 0)))
+                total = float(normalize_numeric_value(
+                    str(item.get("total_amount", 0) or 0)))
             except Exception:
                 qty = rate = total = 0.0
             # Valid Jackson single-unit lines (qty=1, rate==amount) matching an OCR
@@ -10909,7 +10962,8 @@ def fix_jackson_medicals_line_items_from_ocr(
             if rate > 2000 or total > 5000:
                 for _ui, (_uidx, _urow) in enumerate(unused):
                     if (
-                        abs(_urow["unit_price"] * 100.0 - rate) / max(rate, 1.0) <= 0.03
+                        abs(_urow["unit_price"] * 100.0 - rate) /
+                            max(rate, 1.0) <= 0.03
                         or abs(_urow["total_amount"] * 100.0 - total) / max(total, 1.0) <= 0.03
                     ):
                         picked_i = _ui
@@ -10952,15 +11006,18 @@ def fix_jackson_medicals_line_items_from_ocr(
         }:
             continue
         try:
-            qty = float(normalize_numeric_value(str(item.get("quantity", 0) or 0)))
+            qty = float(normalize_numeric_value(
+                str(item.get("quantity", 0) or 0)))
         except Exception:
             qty = 0.0
         try:
-            rate = float(normalize_numeric_value(str(item.get("unit_price", 0) or 0)))
+            rate = float(normalize_numeric_value(
+                str(item.get("unit_price", 0) or 0)))
         except Exception:
             rate = 0.0
         try:
-            total = float(normalize_numeric_value(str(item.get("total_amount", 0) or 0)))
+            total = float(normalize_numeric_value(
+                str(item.get("total_amount", 0) or 0)))
         except Exception:
             total = 0.0
         if qty <= 0 and rate <= 0 and total <= 0:
@@ -11086,7 +11143,8 @@ def fix_jackson_medicals_line_items_from_ocr(
         )
 
     if fixed_count:
-        logger.warning(f"⚠️ FIX12j: Applied {fixed_count} JACKSON MEDICALS row correction(s)")
+        logger.warning(
+            f"⚠️ FIX12j: Applied {fixed_count} JACKSON MEDICALS row correction(s)")
     return kept
 
 
@@ -11836,7 +11894,8 @@ def fix_maruti_and_company_rate_from_ocr(items, ocr_text: str) -> list:
                     continue
                 if cur_qty > 0 and abs(cur_qty - row["qty"]) < 0.5:
                     if cur_total <= 0 or (
-                        abs(cur_total - row["taxable"]) / max(row["taxable"], 1.0) <= 0.03
+                        abs(cur_total - row["taxable"]) /
+                            max(row["taxable"], 1.0) <= 0.03
                         or abs(cur_total - row["gstval"]) / max(row["gstval"], 1.0) <= 0.03
                     ):
                         matched_idx = ridx
@@ -20479,7 +20538,8 @@ def enforce_schema(raw_data):
         if ocr_suggests_jackson_medicals(_ocr_jk, _vend_jk):
             _jk_date = ""
             if isinstance(data, dict):
-                _jk_date = str(data.get("jackson_invoice_date", "") or "").strip()
+                _jk_date = str(
+                    data.get("jackson_invoice_date", "") or "").strip()
             if not _jk_date:
                 _jk_date = extract_jackson_medicals_invoice_date(_ocr_jk) or ""
             _cur_jk_date = str(_sum_jk.get("invoice_date", "") or "").strip()
@@ -20768,7 +20828,8 @@ def enforce_schema(raw_data):
         # 🔧 FIX 2: Detect and fix MRP/Rate confusion
         _vendor_for_mrp = str(
             template["data"]["invoice_summary"].get("vendor", "") or "")
-        item = fix_mrp_as_unit_price(item, vendor=_vendor_for_mrp, ocr_text=ocr_text)
+        item = fix_mrp_as_unit_price(
+            item, vendor=_vendor_for_mrp, ocr_text=ocr_text)
 
         # Normalize numeric fields
         for field in ["quantity", "unit_price", "total_amount"]:
@@ -20979,7 +21040,8 @@ def enforce_schema(raw_data):
     # 🔧 FIX 12j: Correct JACKSON MEDICALS product/qty/rate from qty-rate band OCR
     _jackson_table_ocr = ""
     if isinstance(data, dict):
-        _jackson_table_ocr = str(data.get("jackson_table_ocr", "") or "").strip()
+        _jackson_table_ocr = str(
+            data.get("jackson_table_ocr", "") or "").strip()
     processed_items = fix_jackson_medicals_line_items_from_ocr(
         processed_items, ocr_text, _jackson_table_ocr, _vendor_name)
 
@@ -21773,7 +21835,8 @@ def enforce_schema(raw_data):
     try:
         _vendor_18 = str(
             template["data"]["invoice_summary"].get("vendor", "") or "")
-        _is_pharmacea_18 = _is_pharmacea_link_vendor(_vendor_18, ocr_text or "")
+        _is_pharmacea_18 = _is_pharmacea_link_vendor(
+            _vendor_18, ocr_text or "")
         if _is_pharmacea_18:
             _ocr_lines_18 = (ocr_text or "").splitlines()
             _ocr_up_18 = (ocr_text or "").upper()
@@ -21978,7 +22041,8 @@ def enforce_schema(raw_data):
                     if _gross18 <= 0 and _qty18 >= 2 and _up18 > 0 and _total18 > 0:
                         _calc_tt18 = _qty18 * _up18
                         _self_consistent18 = (
-                            abs(_calc_tt18 - _total18) / max(_total18, 1.0) <= 0.02
+                            abs(_calc_tt18 - _total18) /
+                            max(_total18, 1.0) <= 0.02
                         )
                         _total_inflated18 = _total18 > (_up18 * 1.4)
                         _derived_rate18 = _up18 / _qty18
@@ -22353,7 +22417,8 @@ def enforce_schema(raw_data):
     try:
         _vendor_19 = str(
             template["data"]["invoice_summary"].get("vendor", "") or "")
-        _is_pharmacea_19 = _is_pharmacea_link_vendor(_vendor_19, ocr_text or "")
+        _is_pharmacea_19 = _is_pharmacea_link_vendor(
+            _vendor_19, ocr_text or "")
         if _is_pharmacea_19 and ocr_text:
             _ocr_lines_19 = ocr_text.splitlines()
             _fix19_count = 0
@@ -24740,7 +24805,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 _rathna_fd.get("data"), dict) else _rathna_fd
             _rathna_sum = _rathna_data.get("invoice_summary") if isinstance(
                 _rathna_data.get("invoice_summary"), dict) else {}
-            _rathna_vendor = str(_rathna_sum.get("vendor") or _rathna_fd.get("vendor") or "")
+            _rathna_vendor = str(_rathna_sum.get("vendor")
+                                 or _rathna_fd.get("vendor") or "")
             _rathna_ocr = result.get("ocr_text") or fallback_ocr_text or ""
             if ocr_suggests_rathna_agencies(_rathna_ocr, _rathna_vendor):
                 _table_ocr = _ocr_rathna_agencies_table_region(page=page)
@@ -24749,7 +24815,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                     logger.info(
                         f"    ✅ RATHNA table-band OCR captured ({len(_table_ocr)} chars)")
         except Exception as _rathna_ocr_err:
-            logger.debug(f"RATHNA table OCR enrichment skipped: {_rathna_ocr_err}")
+            logger.debug(
+                f"RATHNA table OCR enrichment skipped: {_rathna_ocr_err}")
 
         # JACKSON MEDICALS scans: capture QTY/Rate/Amount band for FIX12j
         try:
@@ -24769,7 +24836,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 ocr_suggests_jackson_medicals(_jk_ocr, _jk_vendor)
                 or ocr_suggests_jackson_medicals(fallback_ocr_text or "", "")
             ):
-                _jk_table_ocr = _ocr_jackson_medicals_qty_rate_region(page=page)
+                _jk_table_ocr = _ocr_jackson_medicals_qty_rate_region(
+                    page=page)
                 if _jk_table_ocr.strip():
                     result["jackson_table_ocr"] = _jk_table_ocr
                     logger.info(
@@ -24793,7 +24861,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                     logger.info(
                         f"    ✅ JACKSON footer total OCR: {_jk_tot_hdr:.2f}")
         except Exception as _jk_ocr_err:
-            logger.warning(f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
+            logger.warning(
+                f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
 
         # TULSYAN Mediserve: capture Rate/Amount band (pipeline OCR often drops decimals)
         try:
@@ -26056,7 +26125,8 @@ def _ocr_text_from_image_crop(pil_img, psm: int = 7, whitelist: Optional[str] = 
             config += f" -c tessedit_char_whitelist={whitelist}"
         with tesseract_ocr_slot(f"image_crop_psm_{psm}"):
             return run_tesseract_call(
-                lambda: pytesseract.image_to_string(thresh, config=config).strip(),
+                lambda: pytesseract.image_to_string(
+                    thresh, config=config).strip(),
                 label=f"image_crop_psm_{psm}",
             )
     except Exception:
@@ -28285,7 +28355,8 @@ def split_and_extract_invoices(
                 (i, executor.submit(
                     copy_context().run,
                     extract_full_invoice_data_combined,
-                    doc.load_page(i), None, pdf_path, i, ocr_stats, ocr_stats_lock,
+                    doc.load_page(
+                        i), None, pdf_path, i, ocr_stats, ocr_stats_lock,
                 ))
                 for i in range(total_pages_count)
             ]
@@ -28798,7 +28869,8 @@ def split_and_extract_invoices(
                                 "ocr_text": raw_ocr_text
                             }
 
-                    _rathna_tocr = str(page_result.get("rathna_table_ocr", "") or "").strip()
+                    _rathna_tocr = str(page_result.get(
+                        "rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
 
@@ -29787,7 +29859,8 @@ def test_extract(
 
                     first_page_idx = g["pages"][0]
                     page_result = page_results[first_page_idx]
-                    _rathna_tocr = str(page_result.get("rathna_table_ocr", "") or "").strip()
+                    _rathna_tocr = str(page_result.get(
+                        "rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
                     _sara_tocr = str(page_result.get("saraswati_table_ocr", "") or "").strip()
@@ -30537,6 +30610,82 @@ async def ready():
     """Non-blocking readiness probe (lightweight resource snapshot)."""
     runtime = get_runtime_health_snapshot()
     return get_ready_snapshot(runtime)
+
+
+@app.post("/extract-sales-statement")
+async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
+    """Extract stock/sales statement data into a unified JSON schema.
+
+    Supports text, images, PDF, Word, Excel and HTML formats:
+    .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, .bmp, .tif, .tiff, .webp,
+    .htm, .html, .xls, .xlsx
+
+    Does not use the invoice OCR / split pipeline.
+    """
+    filename = file.filename or "upload"
+    # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
+    # when extension is missing or mismatched (e.g. .TXT, octet-stream upload).
+    content_type = (file.content_type or "").lower()
+    if "." not in filename:
+        if content_type.startswith("text/"):
+            filename = f"{filename}.txt"
+        elif content_type == "application/pdf":
+            filename = f"{filename}.pdf"
+        elif content_type in {"image/jpeg", "image/jpg"}:
+            filename = f"{filename}.jpg"
+        elif content_type == "image/png":
+            filename = f"{filename}.png"
+        elif content_type == "image/bmp":
+            filename = f"{filename}.bmp"
+        elif content_type in {"image/tiff", "image/tif"}:
+            filename = f"{filename}.tiff"
+        elif content_type == "image/webp":
+            filename = f"{filename}.webp"
+        elif content_type in {
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }:
+            filename = (
+                f"{filename}.docx"
+                if "openxmlformats" in content_type
+                else f"{filename}.doc"
+            )
+
+    ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
+    word_mime = content_type in {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",
+    }
+    # Allow through when extension unknown — extractor may sniff bytes
+    if ext and ext not in SALES_STATEMENT_EXTENSIONS:
+        # Still allow if content-type clearly indicates txt/image/Word/PDF
+        if not (
+            content_type.startswith("text/")
+            or content_type.startswith("image/")
+            or content_type == "application/pdf"
+            or word_mime
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported format '{ext}'. "
+                    f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
+                ),
+            )
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file")
+        result = extract_sales_statement(file_bytes, filename)
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Sales statement extraction failed for %s", filename)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
