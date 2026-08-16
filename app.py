@@ -3,6 +3,15 @@ from services.vertex_gemini_client import (
     generate_content_via_vertex,
     initialize_vertex_gemini_client,
 )
+from services.sales_statement_extractor import (
+    SUPPORTED_EXTENSIONS as SALES_STATEMENT_EXTENSIONS,
+    extract_sales_statement,
+)
+from services.file_type_detector import FileKind, FileTypeDetector
+from services.excel_invoice_extract import (
+    build_excel_ocr_text,
+    extract_invoices_from_excel,
+)
 from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
@@ -27217,6 +27226,695 @@ def build_pdf_from_pages(src_doc: fitz.Document, page_indices: List[int]) -> byt
         out.close()
 
 
+
+def build_text_pdf_bytes(title: str, body: str) -> bytes:
+    """Build a minimal single-page PDF for Excel-derived invoices (blob naming stays *.pdf)."""
+    out = fitz.open()
+    try:
+        page = out.new_page(width=595, height=842)
+        text = f"{title}\n\n{(body or '')[:12000]}"
+        # insert_textbox wraps long lines; fall back to insert_text on failure
+        rect = fitz.Rect(36, 36, 559, 806)
+        try:
+            page.insert_textbox(rect, text, fontsize=9, fontname="helv")
+        except Exception:
+            page.insert_text(
+                (36, 50), text[:4000], fontsize=9, fontname="helv")
+        return out.tobytes(garbage=4, deflate=True)
+    finally:
+        out.close()
+
+
+def build_split_extract_response_from_excel(
+    *,
+    excel_path: str,
+    source_filename: str,
+    batch_id: Optional[str],
+    split_id: Optional[str],
+    file_name: Optional[str],
+    use_blob_storage: bool,
+    container_name: str,
+    target_invoices_blob_folder: Optional[str],
+    queued_ahead: int,
+    queue_wait_seconds: float,
+    start_time: datetime,
+    ocr_stats: Dict[str, float],
+) -> Dict[str, Any]:
+    """
+    Excel path for /split-and-extract.
+
+    Returns the SAME top-level JSON keys as the PDF/Image path so Laravel needs
+    no special handling. Extraction skips OCR/Gemini and uses structured parse.
+    """
+    update_request_progress("excel_parse_started")
+
+    # POD GRN Hospital Wise Sales workbooks: prefer dedicated parser so Card Name
+    # / Card Code become customer + hospital_* (generic Excel path alone used to
+    # leave customer empty → Laravel "Unknown Hospital").
+    try:
+        with open(excel_path, "rb") as _pod_fh:
+            _pod_bytes = _pod_fh.read()
+        _pod_sales = extract_sales_statement(_pod_bytes, source_filename)
+        _pod_method = str(
+            ((_pod_sales.get("totals") or {}).get("extra") or {}).get(
+                "extraction_method"
+            )
+            or ""
+        )
+        if _pod_method == "pod_hospital_wise_sales_xlsx":
+            logger.info(
+                "Excel POD Hospital Wise Sales detected — using POD GRN builder"
+            )
+            return build_split_extract_response_from_sales_statement(
+                sales_result=_pod_sales,
+                source_filename=source_filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name,
+                use_blob_storage=use_blob_storage,
+                container_name=container_name,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                queued_ahead=queued_ahead,
+                queue_wait_seconds=queue_wait_seconds,
+                start_time=start_time,
+            )
+    except Exception as _pod_detect_err:
+        logger.info(
+            "POD Hospital Wise Sales excel detection skipped: %s",
+            _pod_detect_err,
+        )
+
+    parse_result = extract_invoices_from_excel(excel_path, source_filename)
+    excel_meta = parse_result.metadata.to_dict()
+
+    if not parse_result.success and not parse_result.invoices:
+        detail = parse_result.error or "Excel parse failed"
+        # Soft-fail empty/corrupt only when nothing usable was produced
+        raise HTTPException(status_code=400, detail=detail)
+
+    all_invoices: List[Dict[str, Any]] = []
+    for idx, raw_invoice in enumerate(parse_result.invoices):
+        group_invoice_no = str(raw_invoice.get(
+            "invoice_no") or "").strip() or f"UNKNOWN_{idx + 1}"
+        update_request_progress(
+            "excel_invoice_normalized", invoice=group_invoice_no)
+
+        ocr_text = build_excel_ocr_text(raw_invoice)
+        # Flat Gemini-compatible shape → shared enforce_schema
+        flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
+        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+
+        try:
+            formatted = enforce_schema(data_with_ocr)
+        except Exception as schema_err:
+            logger.error(
+                "Excel schema enforcement failed for %s: %s",
+                group_invoice_no,
+                schema_err,
+                exc_info=True,
+            )
+            formatted = {
+                "data": {
+                    "invoice_summary": {
+                        "customer": str(flat.get("customer", "") or ""),
+                        "customer_address": str(flat.get("customer_address", "") or ""),
+                        "customer_gstin": str(flat.get("customer_gstin", "") or ""),
+                        "invoice_date": str(flat.get("invoice_date", "") or ""),
+                        "invoice_no": group_invoice_no,
+                        "irn": str(flat.get("irn", "") or ""),
+                        "tax": str(flat.get("tax", "") or ""),
+                        "total": str(flat.get("total", "") or ""),
+                        "vendor": str(flat.get("vendor", "") or ""),
+                        "vendor_gstin": str(flat.get("vendor_gstin", "") or ""),
+                    },
+                    "line_items": {
+                        "count": len(flat.get("line_items") or []),
+                        "has_lot_batch_info": True,
+                        "has_quantity_info": True,
+                        "items": flat.get("line_items") or [],
+                        "items_with_lot_batch": 0,
+                        "items_with_quantity": 0,
+                        "standardized_columns": {},
+                        "title": "line items (with lot / batch)",
+                    },
+                    "ocr_text": ocr_text,
+                },
+                "message": "invoice processed successfully",
+                "status": "success",
+                "timestamp": "",
+                "user": "huggingface_user",
+            }
+
+        formatted["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        formatted["model_used"] = "excel_parser"
+        formatted["ocr_method"] = "excel"
+        formatted["confidence"] = 1.0
+
+        # Align nested invoice_no with group key
+        try:
+            summary_obj = formatted.get("data", {}).get("invoice_summary", {})
+            summary_invoice_no = str(summary_obj.get(
+                "invoice_no", "") or "").strip()
+            if summary_invoice_no:
+                group_invoice_no = summary_invoice_no
+            else:
+                summary_obj["invoice_no"] = group_invoice_no
+        except Exception:
+            pass
+
+        final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
+        safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
+        invoice_filename = f"invoice_{safe_name}.pdf"
+        pdf_bytes = build_text_pdf_bytes(
+            f"Invoice {final_invoice_no}", ocr_text)
+
+        invoice_info: Dict[str, Any] = {
+            "invoice_no": final_invoice_no,
+            "pages": [1],
+            "num_pages": 1,
+            "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
+            "extracted_data": formatted,
+        }
+
+        if use_blob_storage:
+            try:
+                blob_info = upload_split_pdf_to_blob(
+                    pdf_bytes,
+                    invoice_filename,
+                    source_filename,
+                    batch_id,
+                    container_name,
+                    target_invoices_blob_folder,
+                )
+                invoice_info["storage"] = blob_info
+                invoice_info["pdf_url"] = blob_info["download_url"]
+                update_request_progress(
+                    "blob_upload_completed",
+                    invoice=final_invoice_no,
+                )
+            except Exception as e:
+                invoice_info["upload_error"] = str(e)
+                logger.warning(f"Blob upload failed (excel): {e}")
+
+        all_invoices.append(invoice_info)
+        del pdf_bytes
+
+    # Keep UNKNOWN_* separate (same dedupe policy as PDF path)
+    dedupe_map = {}
+    ordered_keys = []
+    unknown_entries = []
+    for inv in all_invoices:
+        inv_no = str(inv.get("invoice_no", "") or "").strip()
+        key = inv_no.upper()
+        if not key or key.startswith("UNKNOWN"):
+            unknown_entries.append(inv)
+            continue
+        if key not in dedupe_map:
+            dedupe_map[key] = inv
+            ordered_keys.append(key)
+            continue
+        base = dedupe_map[key]
+        if _invoice_item_count_for_dedupe(inv) > _invoice_item_count_for_dedupe(base):
+            dedupe_map[key] = inv
+    if dedupe_map:
+        all_invoices = [dedupe_map[k] for k in ordered_keys] + unknown_entries
+
+    total_time = (datetime.now() - start_time).total_seconds()
+    total_pages_count = max(len(all_invoices), 1)
+
+    invoices_filled = []
+    for inv in all_invoices:
+        storage = inv.get("storage", {})
+        blob_path = storage.get("blob_name", "")
+        inv_filename = blob_path.split(
+            "/")[-1] if blob_path else f"invoice_{inv.get('invoice_no', 'unknown')}.pdf"
+        invoices_filled.append({
+            "filename": inv_filename,
+            "blob_path": blob_path,
+            "url": storage.get("download_url", inv.get("pdf_url", "")),
+        })
+
+    # Identical top-level contract as PDF/Image responses
+    response = {
+        "success": True,
+        "batch_id": batch_id,
+        "split_id": split_id,
+        "file_name": file_name,
+        "Invoices": invoices_filled,
+        "queue": {
+            "queued_ahead_at_arrival": queued_ahead,
+            "wait_time_seconds": queue_wait_seconds,
+            "max_concurrent_requests": MAX_CONCURRENT_REQUESTS
+        },
+        "summary": {
+            "total_invoices": len(all_invoices),
+            "total_pages": total_pages_count,
+            "total_time_seconds": round(total_time, 2),
+            "was_image_converted": False,
+            # Excel-only extras (Laravel ignores unknown keys)
+            "source": "excel",
+            "excel_metadata": excel_meta,
+        },
+        "cost_optimization": {
+            "traditional_gemini_calls": 0,
+            "actual_gemini_calls": ocr_stats.get("total_gemini_calls", 0),
+            "calls_saved": 0,
+            "cost_saved_usd": 0.0,
+            "ocr_savings_percentage": 100.0
+        },
+        "ocr_statistics": {
+            "pdfplumber": 0,
+            "pymupdf": 0,
+            "tesseract": 0,
+            "gemini_vision": 0,
+            "gemini_text_api": 0,
+            "total_gemini_calls": 0,
+            "free_extractions": total_pages_count,
+            "ocr_time_seconds": round(excel_meta.get("processing_time", 0.0), 2)
+        },
+        "invoices": all_invoices
+    }
+
+    if parse_result.metadata.warnings:
+        logger.warning(
+            "Excel parse warnings (%s): %s",
+            len(parse_result.metadata.warnings),
+            parse_result.metadata.warnings[:10],
+        )
+
+    update_request_progress("excel_parse_complete", force_log=True)
+    logger.info(
+        "Excel split-and-extract complete: invoices=%s rows_processed=%s time=%.2fs",
+        len(all_invoices),
+        excel_meta.get("processed_rows"),
+        total_time,
+    )
+    return response
+
+
+def _invoice_item_count_for_dedupe(_invoice: dict) -> int:
+    if not isinstance(_invoice, dict):
+        return 0
+    _ed = _invoice.get("extracted_data")
+    if not isinstance(_ed, dict):
+        return 0
+    try:
+        _items = _extract_line_items_for_validation(_ed)
+        return len(_items) if isinstance(_items, list) else 0
+    except Exception:
+        return 0
+
+
+def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
+    """Map a sales-statement line_item into the Gemini/enforce_schema item shape."""
+    extra = line.get("extra") if isinstance(line.get("extra"), dict) else {}
+    product = str(
+        line.get("product_name")
+        or extra.get("item_name")
+        or ""
+    ).strip()
+    qty = line.get("sales_qty")
+    if qty in (None, "", 0, 0.0) and line.get("closing_qty") not in (None, ""):
+        # Stock-only rows still expose a quantity for UI tables
+        qty = line.get("closing_qty")
+    amount = line.get("sales_value")
+    additional = {}
+    for key in (
+        "mrp",
+        "tax_rate",
+        "hospital_code",
+        "hospital_name",
+        "manufacturer",
+        "expiry",
+        "invoice_date",
+        "opening_value",
+        "purchase_value",
+        "purchase_scheme",
+        "sales_scheme",
+        "opening_qty",
+        "receipts_qty",
+        "closing_qty",
+        "closing_value",
+    ):
+        if key in extra and extra.get(key) not in (None, ""):
+            additional[key] = extra[key]
+        elif key in line and line.get(key) not in (None, "", 0, 0.0):
+            additional[key] = line.get(key)
+    if line.get("packing"):
+        additional["packing"] = line.get("packing")
+    return {
+        "product_description": product,
+        "quantity": "" if qty in (None, "") else str(qty),
+        "unit_price": "",
+        "total_amount": "" if amount in (None, "") else str(amount),
+        "hsn_code": str(extra.get("hsn") or ""),
+        "lot_batch_number": str(extra.get("batch") or ""),
+        "sku_code": str(line.get("product_code") or extra.get("item_code") or ""),
+        "tax_amount": str(extra.get("tax_rate") or ""),
+        "unit_of_measure": "",
+        "discount": "",
+        "additional_fields": additional,
+        "confidence": 1.0,
+    }
+
+
+def _group_pod_hospital_sales_into_invoices(
+    sales_result: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Group POD Hospital Wise Sales rows by invoice number into flat invoice dicts."""
+    groups: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for line in sales_result.get("line_items") or []:
+        if not isinstance(line, dict):
+            continue
+        extra = line.get("extra") if isinstance(line.get("extra"), dict) else {}
+        inv_no = str(extra.get("invoice_number") or "").strip()
+        if not inv_no:
+            continue
+        key = inv_no.upper()
+        if key not in groups:
+            groups[key] = {
+                "invoice_no": inv_no,
+                "invoice_date": str(extra.get("invoice_date") or ""),
+                "invoice_date_raw": str(extra.get("invoice_date") or ""),
+                "vendor": str(
+                    extra.get("manufacturer")
+                    or sales_result.get("company_name")
+                    or ""
+                ),
+                "vendor_gstin": "",
+                "customer": str(extra.get("hospital_name") or ""),
+                "customer_address": "",
+                "customer_gstin": "",
+                "tax": "",
+                "total": 0.0,
+                "irn": "",
+                "line_items": [],
+                "confidence": 1.0,
+                "_pod": {
+                    "hospital_code": str(extra.get("hospital_code") or ""),
+                    "hospital_name": str(extra.get("hospital_name") or ""),
+                },
+            }
+            order.append(key)
+        group = groups[key]
+        item = _sales_line_to_invoice_item(line)
+        group["line_items"].append(item)
+        try:
+            group["total"] = float(group.get("total") or 0) + float(
+                line.get("sales_value") or 0
+            )
+        except Exception:
+            pass
+        # Prefer first non-empty hospital/vendor
+        if not group.get("customer") and extra.get("hospital_name"):
+            group["customer"] = str(extra.get("hospital_name"))
+        if not group.get("vendor") and extra.get("manufacturer"):
+            group["vendor"] = str(extra.get("manufacturer"))
+        if not group.get("invoice_date") and extra.get("invoice_date"):
+            group["invoice_date"] = str(extra.get("invoice_date"))
+            group["invoice_date_raw"] = str(extra.get("invoice_date"))
+
+    invoices = []
+    for key in order:
+        group = groups[key]
+        total = group.get("total") or 0
+        try:
+            group["total"] = f"{float(total):.2f}"
+        except Exception:
+            group["total"] = str(total)
+        invoices.append(group)
+    return invoices
+
+
+def _sales_statement_to_flat_invoices(
+    sales_result: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Convert any sales-statement payload into flat invoice dicts for enforce_schema."""
+    method = str(
+        ((sales_result.get("totals") or {}).get("extra") or {}).get(
+            "extraction_method")
+        or ""
+    )
+    if method == "pod_hospital_wise_sales_xlsx":
+        return _group_pod_hospital_sales_into_invoices(sales_result)
+
+    # Generic statement → one logical document (Laravel still gets invoices[] shape)
+    lines = [
+        _sales_line_to_invoice_item(line)
+        for line in (sales_result.get("line_items") or [])
+        if isinstance(line, dict)
+    ]
+    total = (sales_result.get("totals") or {}).get("sales_value")
+    if total is None:
+        total = (sales_result.get("totals") or {}).get("closing_value")
+    return [{
+        "invoice_no": str(
+            sales_result.get("report_title")
+            or sales_result.get("source_file")
+            or "STATEMENT_1"
+        )[:80],
+        "invoice_date": str(sales_result.get("period_to") or sales_result.get("period_from") or ""),
+        "invoice_date_raw": str(sales_result.get("period_to") or ""),
+        "vendor": str(sales_result.get("company_name") or ""),
+        "vendor_gstin": "",
+        "customer": str(sales_result.get("stockist_name") or ""),
+        "customer_address": str(sales_result.get("stockist_address") or ""),
+        "customer_gstin": "",
+        "tax": "",
+        "total": "" if total is None else str(total),
+        "irn": "",
+        "line_items": lines,
+        "confidence": 1.0,
+    }]
+
+
+def build_split_extract_response_from_sales_statement(
+    *,
+    sales_result: Dict[str, Any],
+    source_filename: str,
+    batch_id: Optional[str] = None,
+    split_id: Optional[str] = None,
+    file_name: Optional[str] = None,
+    use_blob_storage: bool = False,
+    container_name: Optional[str] = None,
+    target_invoices_blob_folder: Optional[str] = None,
+    queued_ahead: int = 0,
+    queue_wait_seconds: float = 0.0,
+    start_time: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """
+    Wrap sales-statement extraction in the SAME JSON contract as /split-and-extract
+    so Laravel POD screens can consume GRN/POD Excel without a second schema.
+    """
+    started = start_time or datetime.now()
+    flat_invoices = _sales_statement_to_flat_invoices(sales_result)
+    if not flat_invoices:
+        raise HTTPException(
+            status_code=400,
+            detail="No sales/POD rows found in uploaded statement",
+        )
+
+    container = (container_name or "").strip() or AZURE_CONTAINER_NAME
+    all_invoices: List[Dict[str, Any]] = []
+
+    for idx, raw_invoice in enumerate(flat_invoices):
+        group_invoice_no = str(raw_invoice.get("invoice_no") or "").strip(
+        ) or f"UNKNOWN_{idx + 1}"
+        ocr_text = build_excel_ocr_text(raw_invoice) if "line_items" in raw_invoice else ""
+        # Prefer POD-aware text when excel helper is available
+        try:
+            ocr_text = build_excel_ocr_text(
+                {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
+            )
+        except Exception:
+            ocr_text = f"SOURCE: SALES_STATEMENT\nINVOICE NO: {group_invoice_no}"
+
+        flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
+        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+        try:
+            formatted = enforce_schema(data_with_ocr)
+        except Exception as schema_err:
+            logger.error(
+                "Sales-statement schema enforcement failed for %s: %s",
+                group_invoice_no,
+                schema_err,
+                exc_info=True,
+            )
+            formatted = {
+                "data": {
+                    "invoice_summary": {
+                        "customer": str(flat.get("customer", "") or ""),
+                        "customer_address": str(flat.get("customer_address", "") or ""),
+                        "customer_gstin": str(flat.get("customer_gstin", "") or ""),
+                        "invoice_date": str(flat.get("invoice_date", "") or ""),
+                        "invoice_no": group_invoice_no,
+                        "irn": "",
+                        "tax": str(flat.get("tax", "") or ""),
+                        "total": str(flat.get("total", "") or ""),
+                        "vendor": str(flat.get("vendor", "") or ""),
+                        "vendor_gstin": str(flat.get("vendor_gstin", "") or ""),
+                    },
+                    "line_items": {
+                        "count": len(flat.get("line_items") or []),
+                        "has_lot_batch_info": True,
+                        "has_quantity_info": True,
+                        "items": flat.get("line_items") or [],
+                        "items_with_lot_batch": 0,
+                        "items_with_quantity": 0,
+                        "standardized_columns": {},
+                        "title": "line items (with lot / batch)",
+                    },
+                    "ocr_text": ocr_text,
+                },
+                "message": "invoice processed successfully",
+                "status": "success",
+                "timestamp": "",
+                "user": "huggingface_user",
+            }
+
+        formatted["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        formatted["model_used"] = "sales_statement_parser"
+        formatted["ocr_method"] = "sales_statement"
+        formatted["confidence"] = 1.0
+
+        pod_meta = raw_invoice.get("_pod") if isinstance(raw_invoice.get("_pod"), dict) else {}
+        hospital_name = str(
+            pod_meta.get("hospital_name")
+            or flat.get("customer")
+            or ""
+        ).strip()
+        hospital_code = str(pod_meta.get("hospital_code") or "").strip()
+
+        try:
+            summary_obj = formatted.get("data", {}).get("invoice_summary", {})
+            if isinstance(summary_obj, dict):
+                summary_invoice_no = str(summary_obj.get("invoice_no", "") or "").strip()
+                if summary_invoice_no:
+                    group_invoice_no = summary_invoice_no
+                else:
+                    summary_obj["invoice_no"] = group_invoice_no
+                # Laravel POD hospital mapping reads customer / hospital_name
+                if hospital_name:
+                    summary_obj["customer"] = hospital_name
+                    summary_obj["hospital_name"] = hospital_name
+                if hospital_code:
+                    summary_obj["hospital_code"] = hospital_code
+        except Exception:
+            pass
+
+        final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
+        safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
+        invoice_filename = f"invoice_{safe_name}.pdf"
+        pdf_bytes = build_text_pdf_bytes(f"Invoice {final_invoice_no}", ocr_text)
+
+        invoice_info: Dict[str, Any] = {
+            "invoice_no": final_invoice_no,
+            "pages": [1],
+            "num_pages": 1,
+            "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
+            "extracted_data": formatted,
+        }
+        if hospital_name:
+            invoice_info["customer"] = hospital_name
+            invoice_info["hospital_name"] = hospital_name
+        if hospital_code:
+            invoice_info["hospital_code"] = hospital_code
+
+        if use_blob_storage:
+            try:
+                blob_info = upload_split_pdf_to_blob(
+                    pdf_bytes,
+                    invoice_filename,
+                    source_filename,
+                    batch_id or str(uuid.uuid4()),
+                    container,
+                    target_invoices_blob_folder,
+                )
+                invoice_info["storage"] = blob_info
+                invoice_info["pdf_url"] = blob_info["download_url"]
+            except Exception as e:
+                invoice_info["upload_error"] = str(e)
+                logger.warning(f"Blob upload failed (sales-statement): {e}")
+
+        all_invoices.append(invoice_info)
+        del pdf_bytes
+
+    total_time = (datetime.now() - started).total_seconds()
+    totals_extra = ((sales_result.get("totals") or {}).get("extra") or {})
+
+    invoices_filled = []
+    for inv in all_invoices:
+        storage = inv.get("storage", {})
+        blob_path = storage.get("blob_name", "")
+        inv_filename = blob_path.split("/")[-1] if blob_path else (
+            f"invoice_{inv.get('invoice_no', 'unknown')}.pdf"
+        )
+        invoices_filled.append({
+            "filename": inv_filename,
+            "blob_path": blob_path,
+            "url": storage.get("download_url", inv.get("pdf_url", "")),
+        })
+
+    # Identical top-level contract as /split-and-extract
+    return {
+        "success": True,
+        "batch_id": batch_id,
+        "split_id": split_id,
+        "file_name": file_name,
+        "Invoices": invoices_filled,
+        "queue": {
+            "queued_ahead_at_arrival": queued_ahead,
+            "wait_time_seconds": queue_wait_seconds,
+            "max_concurrent_requests": MAX_CONCURRENT_REQUESTS,
+        },
+        "summary": {
+            "total_invoices": len(all_invoices),
+            "total_pages": max(len(all_invoices), 1),
+            "total_time_seconds": round(total_time, 2),
+            "was_image_converted": False,
+            "source": "sales_statement",
+            "document_type": "pod",
+            "sales_statement_metadata": {
+                "report_title": sales_result.get("report_title"),
+                "stockist_name": sales_result.get("stockist_name"),
+                "company_name": sales_result.get("company_name"),
+                "period_from": sales_result.get("period_from"),
+                "period_to": sales_result.get("period_to"),
+                "sales_value": (sales_result.get("totals") or {}).get("sales_value"),
+                "closing_value": (sales_result.get("totals") or {}).get("closing_value"),
+                "extraction_method": totals_extra.get("extraction_method"),
+                "hospital_count": totals_extra.get("hospital_count"),
+                "invoice_count": totals_extra.get("invoice_count"),
+                "hospital_sales_summary": totals_extra.get("hospital_sales_summary"),
+                "stock_statement": totals_extra.get("stock_statement"),
+                "stock_statement_line_count": totals_extra.get("stock_statement_line_count"),
+                "stock_opening_qty": totals_extra.get("stock_opening_qty"),
+                "stock_purchases_qty": totals_extra.get("stock_purchases_qty"),
+                "stock_sales_qty": totals_extra.get("stock_sales_qty"),
+                "stock_closing_qty": totals_extra.get("stock_closing_qty"),
+            },
+        },
+        "cost_optimization": {
+            "traditional_gemini_calls": 0,
+            "actual_gemini_calls": 0,
+            "calls_saved": 0,
+            "cost_saved_usd": 0.0,
+            "ocr_savings_percentage": 100.0,
+        },
+        "ocr_statistics": {
+            "pdfplumber": 0,
+            "pymupdf": 0,
+            "tesseract": 0,
+            "gemini_vision": 0,
+            "gemini_text_api": 0,
+            "total_gemini_calls": 0,
+            "free_extractions": max(len(all_invoices), 1),
+            "ocr_time_seconds": round(total_time, 2),
+        },
+        "invoices": all_invoices,
+    }
+
 def get_blob_service_client(force_refresh: bool = False):
     global blob_service_client
     if not AZURE_AVAILABLE:
@@ -27388,7 +28086,8 @@ def split_and_extract_invoices(
     source_filename = unquote(source_filename or "uploaded.pdf")
     filename_lower = source_filename.lower()
     SUPPORTED_EXTENSIONS = ['.pdf', '.png',
-                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+                            '.jpg', '.jpeg', '.tiff', '.tif', '.bmp',
+                            '.xlsx', '.xls']
 
     file_extension = None
     for ext in SUPPORTED_EXTENSIONS:
@@ -27396,11 +28095,26 @@ def split_and_extract_invoices(
             file_extension = ext
             break
 
+    # Content-type / magic fallback when extension missing from blob/URL names
+    if not file_extension:
+        content_type = getattr(file, "content_type", None) if file is not None else None
+        kind, detected_ext = FileTypeDetector().detect(
+            filename=source_filename,
+            content_type=content_type,
+        )
+        if kind == FileKind.EXCEL and detected_ext in {'.xlsx', '.xls'}:
+            file_extension = detected_ext
+        elif kind == FileKind.PDF:
+            file_extension = '.pdf'
+        elif kind == FileKind.IMAGE and detected_ext:
+            file_extension = detected_ext
+
     if not file_extension:
         raise HTTPException(status_code=400, detail="Unsupported format")
 
     is_image_file = file_extension in [
         '.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp']
+    is_excel_file = file_extension in ['.xlsx', '.xls']
 
     with request_queue_lock:
         waiting_requests += 1
@@ -27506,6 +28220,32 @@ def split_and_extract_invoices(
 
         file_size_mb = total_size / (1024 * 1024)
         print(f"💾 File size: {file_size_mb:.2f}MB")
+
+        # ------------------------------------------------------------------
+        # Excel path — structured parse only (no OCR / no fitz). PDF & Image
+        # continue through the existing pipeline unchanged below.
+        # ------------------------------------------------------------------
+        if is_excel_file:
+            print(f"📊 Excel invoice extract: {source_filename}")
+            response = build_split_extract_response_from_excel(
+                excel_path=temp_path,
+                source_filename=source_filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name,
+                use_blob_storage=use_blob_storage,
+                container_name=container_name,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                queued_ahead=queued_ahead,
+                queue_wait_seconds=queue_wait_seconds,
+                start_time=start_time,
+                ocr_stats=ocr_stats,
+            )
+            update_request_progress("response_generated", force_log=True)
+            _request_summary["total_execution_seconds"] = round(
+                (datetime.now() - start_time).total_seconds(), 2)
+            update_request_progress("request_completed", force_log=True)
+            return JSONResponse(response)
 
         if is_image_file:
             print(f"🖼️  Converting image to PDF...")
@@ -29551,6 +30291,210 @@ def test_extract(
         if pdf_path != temp_path and os.path.exists(pdf_path):
             os.remove(pdf_path)
         gc.collect()
+
+
+
+@app.post("/extract-sales-statement")
+async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
+    """Extract secondary sales / stock statement into the original sales-statement JSON schema.
+
+    Supports text, images, PDF, Word, Excel and HTML formats:
+    .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, .bmp, .tif, .tiff, .webp,
+    .htm, .html, .xls, .xlsx
+
+    Does not use the invoice OCR / split pipeline.
+    For POD GRN Excel uploads that need /split-and-extract JSON shape, use
+    POST /extract-pod-grn instead.
+    """
+    filename = file.filename or "upload"
+    # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
+    # when extension is missing or mismatched (e.g. .TXT, octet-stream upload).
+    content_type = (file.content_type or "").lower()
+    if "." not in filename:
+        if content_type.startswith("text/"):
+            filename = f"{filename}.txt"
+        elif content_type == "application/pdf":
+            filename = f"{filename}.pdf"
+        elif content_type in {"image/jpeg", "image/jpg"}:
+            filename = f"{filename}.jpg"
+        elif content_type == "image/png":
+            filename = f"{filename}.png"
+        elif content_type == "image/bmp":
+            filename = f"{filename}.bmp"
+        elif content_type in {"image/tiff", "image/tif"}:
+            filename = f"{filename}.tiff"
+        elif content_type == "image/webp":
+            filename = f"{filename}.webp"
+        elif content_type in {
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }:
+            filename = (
+                f"{filename}.docx"
+                if "openxmlformats" in content_type
+                else f"{filename}.doc"
+            )
+
+    ext = ("." + filename.rsplit(".", 1)
+           [-1].lower()) if "." in filename else ""
+    word_mime = content_type in {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",
+    }
+    # Allow through when extension unknown — extractor may sniff bytes
+    if ext and ext not in SALES_STATEMENT_EXTENSIONS:
+        # Still allow if content-type clearly indicates txt/image/Word/PDF
+        if not (
+            content_type.startswith("text/")
+            or content_type.startswith("image/")
+            or content_type == "application/pdf"
+            or word_mime
+            or content_type in {
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported format '{ext}'. "
+                    f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
+                ),
+            )
+    try:
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file")
+        result = extract_sales_statement(file_bytes, filename)
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Sales statement extraction failed for %s", filename)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/extract-pod-grn")
+async def extract_pod_grn_endpoint(
+    file: Optional[UploadFile] = File(None),
+    batch_id: Optional[str] = Form(None),
+    use_blob_storage: bool = Form(True),
+    blob_container: Optional[str] = Form(None),
+    target_invoices_blob_folder: Optional[str] = Form(None),
+    parallel_batch_size: int = Form(MAX_PARALLEL_GEMINI_CALLS),
+    split_id: Optional[str] = Form(None),
+    file_name: Optional[str] = Form(None),
+    split_raw_blob_path: Optional[str] = Form(None),
+    split_raw_url: Optional[str] = Form(None),
+):
+    """Extract POD GRN / hospital-wise sales Excel into /split-and-extract JSON shape.
+
+    Accepts the SAME multipart fields as /split-and-extract so Laravel can reuse
+    the same client payload (file upload OR split_raw_blob_path / split_raw_url).
+
+    Secondary sales statements should continue to use /extract-sales-statement.
+    """
+    _ = parallel_batch_size  # accepted for Laravel parity; unused for Excel GRN
+
+    if file is None and not split_raw_blob_path and not split_raw_url:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either file upload or split_raw_blob_path/split_raw_url",
+        )
+
+    batch_id = (batch_id or "").strip() or str(uuid.uuid4())
+    target_invoices_blob_folder = (target_invoices_blob_folder or "").strip() or None
+    container_name = (blob_container.strip() if blob_container else None) or AZURE_CONTAINER_NAME
+
+    source_filename = None
+    if file is not None and file.filename:
+        source_filename = file.filename
+    elif split_raw_blob_path:
+        source_filename = os.path.basename(split_raw_blob_path)
+    elif split_raw_url:
+        source_filename = os.path.basename(urlparse(split_raw_url).path)
+    source_filename = unquote(source_filename or file_name or "upload.xlsx")
+
+    content_type = (getattr(file, "content_type", None) or "").lower() if file is not None else ""
+    if "." not in source_filename:
+        if content_type in {
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/octet-stream",
+        } or split_raw_blob_path or split_raw_url:
+            source_filename = f"{source_filename}.xlsx"
+
+    ext = (
+        ("." + source_filename.rsplit(".", 1)[-1].lower())
+        if "." in source_filename
+        else ""
+    )
+    if ext and ext not in {".xlsx", ".xls"}:
+        if ext not in SALES_STATEMENT_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported POD GRN format '{ext}'. "
+                    "Expected .xlsx/.xls hospital-wise sales workbook."
+                ),
+            )
+
+    try:
+        if file is not None:
+            file_bytes = await file.read()
+        elif split_raw_url:
+            dl_response = requests.get(split_raw_url, timeout=120)
+            dl_response.raise_for_status()
+            file_bytes = dl_response.content
+        else:
+            client = get_blob_service_client()
+            if not client:
+                raise HTTPException(
+                    status_code=500, detail="Azure blob client unavailable"
+                )
+            blob_client = client.get_blob_client(
+                container=container_name,
+                blob=split_raw_blob_path,
+            )
+            file_bytes = blob_client.download_blob().readall()
+
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Empty file")
+
+        start_time = datetime.now()
+        sales_result = extract_sales_statement(file_bytes, source_filename)
+        method = str(
+            ((sales_result.get("totals") or {}).get("extra") or {}).get(
+                "extraction_method"
+            )
+            or ""
+        )
+        response = build_split_extract_response_from_sales_statement(
+            sales_result=sales_result,
+            source_filename=source_filename,
+            batch_id=batch_id,
+            split_id=split_id,
+            file_name=file_name or source_filename,
+            use_blob_storage=use_blob_storage,
+            container_name=container_name,
+            target_invoices_blob_folder=target_invoices_blob_folder,
+            start_time=start_time,
+        )
+        response.setdefault("summary", {})["source"] = "pod_grn"
+        response["summary"]["document_type"] = "pod"
+        if method:
+            response["summary"]["extraction_method"] = method
+        return JSONResponse(content=response)
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("POD GRN extraction failed for %s", source_filename)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")
