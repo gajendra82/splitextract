@@ -145,7 +145,8 @@ app.add_middleware(
 @app.middleware("http")
 async def _track_extract_inflight(request: Request, call_next):
     """Count open extract calls + log connection lifecycle (no OCR logic)."""
-    tracked = request.url.path.rstrip("/") in ("/split-and-extract", "/test-extract")
+    tracked = request.url.path.rstrip(
+        "/") in ("/split-and-extract", "/test-extract")
     peer = (
         f"{request.client.host}:{request.client.port}"
         if request.client
@@ -186,7 +187,8 @@ async def _track_extract_inflight(request: Request, call_next):
     finally:
         if tracked:
             with extract_inflight_lock:
-                extract_inflight_requests = max(0, extract_inflight_requests - 1)
+                extract_inflight_requests = max(
+                    0, extract_inflight_requests - 1)
                 inflight_left = extract_inflight_requests
             logger.info(
                 "[CONN] request_finished path=%s peer=%s inflight=%s duration_s=%.2f",
@@ -6786,7 +6788,8 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
         name = re.sub(
             r'\bPROL(?:ITON|UTION)\b', 'PROLUTON', name, flags=re.IGNORECASE)
         name = re.sub(r'\bSOGMG\b', '500MG', name, flags=re.IGNORECASE)
-        name = re.sub(r'\bVELOZ\s+0\s+CAP\b', 'VELOZ D CAP', name, flags=re.IGNORECASE)
+        name = re.sub(r'\bVELOZ\s+0\s+CAP\b', 'VELOZ D CAP',
+                      name, flags=re.IGNORECASE)
         return name.strip()
 
     def _normalize_novacare_ocr_delimiters(raw: str) -> str:
@@ -6896,8 +6899,10 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
                     continue
                 product = fixed_name or _clean_product_name(m.group(0))
                 product = _clean_product_name(product)
-                product = re.sub(r'\bINU\b', 'INJ', product, flags=re.IGNORECASE)
-                product = re.sub(r'\b(\d)WL\b', r'\1ML', product, flags=re.IGNORECASE)
+                product = re.sub(r'\bINU\b', 'INJ', product,
+                                 flags=re.IGNORECASE)
+                product = re.sub(r'\b(\d)WL\b', r'\1ML',
+                                 product, flags=re.IGNORECASE)
                 # Drop trailing OCR junk after dosage form
                 product = re.sub(
                     r'\s+(?:Galata|H)\b.*$', '', product, flags=re.IGNORECASE
@@ -7188,9 +7193,11 @@ def fix_novacare_qty_rate_from_ocr(items, ocr_text: str) -> list:
 
         # Garbled fallback: only Product Name + Rate (leave qty/amount untouched)
         if matched_row.get("_garbled_fallback"):
-            ocr_product = str(matched_row.get("product_description", "") or "").strip()
+            ocr_product = str(matched_row.get(
+                "product_description", "") or "").strip()
             ocr_rate = matched_row.get("unit_price")
-            cur_product = str(item.get("product_description", "") or "").strip()
+            cur_product = str(
+                item.get("product_description", "") or "").strip()
             if ocr_product and _novacare_name_key(cur_product) != _novacare_name_key(ocr_product):
                 item["product_description"] = ocr_product
                 logger.warning(
@@ -8846,7 +8853,8 @@ def extract_rajesh_pharma_invoice_total_from_ocr(ocr_text: str) -> Optional[str]
             pass
 
     # Amount-in-words uses "Lac" / "Lacs"; shared words_to_number only knows LAKH
-    fixed_words_ocr = re.sub(r'\bLACS?\b', 'LAKH', ocr_text, flags=re.IGNORECASE)
+    fixed_words_ocr = re.sub(r'\bLACS?\b', 'LAKH',
+                             ocr_text, flags=re.IGNORECASE)
     words_amt = extract_amount_from_words(fixed_words_ocr)
     if words_amt and words_amt >= 1000:
         return f"{words_amt:.2f}"
@@ -9791,7 +9799,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                     # Skip /10,/100 fabrication when face rate already equals Amount
                     # with qty=1 (valid single-unit lines like HYPONAT 1×587.63).
                     _face_qty1_amt = (
-                        abs(r_tok["v"] - a_tok["v"]) / max(a_tok["v"], 1.0) <= 0.01
+                        abs(r_tok["v"] - a_tok["v"]) /
+                        max(a_tok["v"], 1.0) <= 0.01
                         and abs(q_tok - 1.0) <= 0.01
                     )
                     if abs(r_tok["v"] - a_tok["v"]) / max(a_tok["v"], 1.0) <= 0.01 and not _face_qty1_amt:
@@ -9957,7 +9966,8 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                         qi = int(round(q))
                         if abs(qi * rate - amount) / max(amount, 1.0) > 0.02:
                             continue
-                        cand = (best[0] + 10, qi, round(rate, 2), round(amount, 2))
+                        cand = (best[0] + 10, qi,
+                                round(rate, 2), round(amount, 2))
                         if alt is None or cand[0] > alt[0]:
                             alt = cand
             if alt is not None:
@@ -10263,9 +10273,11 @@ def _ocr_jackson_header_invoice_no(page=None, image_bytes: bytes = None) -> Opti
             return None
         img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
         w, h = img.size
-        crop = img.crop((int(w * 0.58), int(h * 0.03), int(w * 0.99), int(h * 0.15)))
+        crop = img.crop((int(w * 0.58), int(h * 0.03),
+                        int(w * 0.99), int(h * 0.15)))
         arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
-        arr = cv2.resize(arr, None, fx=2.5, fy=2.5, interpolation=cv2.INTER_CUBIC)
+        arr = cv2.resize(arr, None, fx=2.5, fy=2.5,
+                         interpolation=cv2.INTER_CUBIC)
         _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text = pytesseract.image_to_string(th, config="--psm 6") or ""
         try:
@@ -10275,11 +10287,12 @@ def _ocr_jackson_header_invoice_no(page=None, image_bytes: bytes = None) -> Opti
         inv = extract_jackson_medicals_invoice_no(text)
         if inv:
             return inv
-        # Header crop often loses the "Inv.No." label; accept bare D#### / #### 
+        # Header crop often loses the "Inv.No." label; accept bare D#### / ####
         m = re.search(r'\b(D\d{3,6})\b', text or "", re.IGNORECASE)
         if m:
             return m.group(1).upper()
-        m = re.search(r'Inv\.?\s*No\.?\s*[:\-]?\s*(\d{3,6})\b', text or "", re.IGNORECASE)
+        m = re.search(
+            r'Inv\.?\s*No\.?\s*[:\-]?\s*(\d{3,6})\b', text or "", re.IGNORECASE)
         if m:
             return f"D{m.group(1)}"
         return None
@@ -10539,7 +10552,8 @@ def fix_jackson_medicals_line_items_from_ocr(
             if secondary_totals and keep_total > 0:
                 if all(t < keep_total * 0.5 for t in secondary_totals):
                     add_free = float(phantom_n)
-        free_name_bonus[name_key] = free_name_bonus.get(name_key, 0.0) + add_free
+        free_name_bonus[name_key] = free_name_bonus.get(
+            name_key, 0.0) + add_free
         additional["free_quantity"] = (
             str(int(add_free))
             if abs(add_free - int(add_free)) < 0.01
@@ -10565,7 +10579,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                 kept_order.append(d)
                 seen_ids.add(id(d))
             continue
-        name_key = _jackson_product_name_key(item.get("product_description", ""))
+        name_key = _jackson_product_name_key(
+            item.get("product_description", ""))
         for d in deduped:
             if id(d) in seen_ids:
                 continue
@@ -11079,7 +11094,8 @@ def fix_jackson_medicals_line_items_from_ocr(
         if not owner_key:
             continue
         for item in group:
-            item_key = _jackson_product_name_key(item.get("product_description", ""))
+            item_key = _jackson_product_name_key(
+                item.get("product_description", ""))
             # Keep if name shares a strong token with the OCR owner
             if owner_key[:6] and owner_key[:6] in item_key:
                 continue
@@ -11134,7 +11150,8 @@ def fix_jackson_medicals_line_items_from_ocr(
                 pass
         for idx, row in enumerate(qr_rows):
             if any(
-                abs(a - row["total_amount"]) / max(row["total_amount"], 1.0) <= 0.02
+                abs(a - row["total_amount"]) /
+                    max(row["total_amount"], 1.0) <= 0.02
                 for a in kept_amts if a > 0
             ):
                 used_after.add(idx)
@@ -11357,13 +11374,15 @@ def _jackson_qr_row_for_product_name(
                     row.get("total_amount", 0) >= 50
                     and row.get("unit_price", 0) >= 3.5
                     and abs(
-                        row["quantity"] * row["unit_price"] - row["total_amount"]
+                        row["quantity"] * row["unit_price"] -
+                        row["total_amount"]
                     ) / max(row["total_amount"], 1.0)
                     <= 0.03
                 ):
                     nearby = _decimal_amounts(window) + _nodec_amounts(window)
                     if any(
-                        abs(a - row["total_amount"]) <= max(2.0, 0.01 * row["total_amount"])
+                        abs(a - row["total_amount"]) <= max(2.0,
+                                                            0.01 * row["total_amount"])
                         for a in nearby
                     ):
                         return row
@@ -11575,7 +11594,8 @@ def _recover_jackson_missing_items_from_qr(
             f"total={new_item['total_amount']}"
         )
     if added:
-        logger.warning(f"⚠️ FIX12j: Recovered {added} missing JACKSON line item(s) from OCR")
+        logger.warning(
+            f"⚠️ FIX12j: Recovered {added} missing JACKSON line item(s) from OCR")
     return out
 
 
@@ -11635,9 +11655,11 @@ def _ocr_jackson_footer_total(page=None, image_bytes: bytes = None) -> Optional[
             return None
         img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
         w, h = img.size
-        crop = img.crop((int(w * 0.02), int(h * 0.72), int(w * 0.98), int(h * 0.98)))
+        crop = img.crop((int(w * 0.02), int(h * 0.72),
+                        int(w * 0.98), int(h * 0.98)))
         arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
-        arr = cv2.resize(arr, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        arr = cv2.resize(arr, None, fx=2.0, fy=2.0,
+                         interpolation=cv2.INTER_CUBIC)
         _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text = pytesseract.image_to_string(th, config="--psm 6") or ""
         try:
@@ -11677,7 +11699,8 @@ def extract_jackson_medicals_invoice_total(ocr_text: str = "") -> Optional[float
 def _jackson_line_item_merge_key(item: dict) -> tuple:
     """Identity for Jackson multipage / dedupe merges (name + batch + amount)."""
     name = _jackson_product_name_key(
-        (item or {}).get("product_description", "") if isinstance(item, dict) else ""
+        (item or {}).get("product_description",
+                         "") if isinstance(item, dict) else ""
     )
     batch = str(
         (item or {}).get("lot_batch_number", "") if isinstance(item, dict) else ""
@@ -11695,7 +11718,8 @@ def _merge_jackson_line_item_lists(base_items: list, donor_items: list) -> list:
     if not donor_items:
         return list(base_items or [])
     out = list(base_items or [])
-    seen = {_jackson_line_item_merge_key(it) for it in out if isinstance(it, dict)}
+    seen = {_jackson_line_item_merge_key(it)
+            for it in out if isinstance(it, dict)}
     for it in donor_items:
         if not isinstance(it, dict):
             continue
@@ -13209,7 +13233,8 @@ def extract_quantum_health_care_customer_details(ocr_text: str) -> dict:
     if not ocr_text or not ocr_suggests_quantum_health_care(ocr_text):
         return details
 
-    lines = [re.sub(r'\s+', ' ', ln).strip(" |") for ln in ocr_text.splitlines()]
+    lines = [re.sub(r'\s+', ' ', ln).strip(" |")
+             for ln in ocr_text.splitlines()]
     lines = [ln for ln in lines if ln]
 
     inv_idx = -1
@@ -14138,7 +14163,8 @@ def extract_tulsyan_invoice_total_from_ocr(ocr_text: str) -> Optional[str]:
             pass
 
     # OCR often reads THIRTY as THINY / THINY → words_to_number drops it (1105 vs 1135)
-    fixed_words_ocr = re.sub(r'\bTHINY\b', 'THIRTY', ocr_text, flags=re.IGNORECASE)
+    fixed_words_ocr = re.sub(r'\bTHINY\b', 'THIRTY',
+                             ocr_text, flags=re.IGNORECASE)
     words_amt = extract_amount_from_words(fixed_words_ocr)
     if words_amt and words_amt >= 100:
         return f"{words_amt:.2f}"
@@ -14571,7 +14597,8 @@ def _apply_tulsyan_mediserve_rates(
         if rate:
             old = str(item.get("unit_price", "") or "").strip()
             try:
-                old_f = float(normalize_numeric_value(old) or 0) if old else 0.0
+                old_f = float(normalize_numeric_value(old)
+                              or 0) if old else 0.0
                 new_f = float(rate)
             except Exception:
                 old_f, new_f = 0.0, 0.0
@@ -14582,14 +14609,16 @@ def _apply_tulsyan_mediserve_rates(
         if amount:
             old_amt = str(item.get("total_amount", "") or "").strip()
             try:
-                old_a = float(normalize_numeric_value(old_amt) or 0) if old_amt else 0.0
+                old_a = float(normalize_numeric_value(
+                    old_amt) or 0) if old_amt else 0.0
                 new_a = float(amount)
             except Exception:
                 old_a, new_a = 0.0, 0.0
             if new_a > 0 and (not old_amt or abs(old_a - new_a) > 0.005):
                 item["total_amount"] = amount
                 if old_amt and abs(old_a - new_a) > 0.005:
-                    logger.warning(f"⚠️ TULSYAN: amount '{old_amt}' → '{amount}'")
+                    logger.warning(
+                        f"⚠️ TULSYAN: amount '{old_amt}' → '{amount}'")
 
         # Qty-only fix: Vision sometimes copies neighbor qty (FORGLYN 20→10).
         # Only rewrite when qty × rate does not match the OCR Amount.
@@ -14601,7 +14630,8 @@ def _apply_tulsyan_mediserve_rates(
                 normalize_numeric_value(
                     str(item.get("total_amount", "") or "")) or 0)
             old_qty_s = str(item.get("quantity", "") or "").strip()
-            qty_f = float(normalize_numeric_value(old_qty_s) or 0) if old_qty_s else 0.0
+            qty_f = float(normalize_numeric_value(
+                old_qty_s) or 0) if old_qty_s else 0.0
         except Exception:
             rate_f = amt_f = qty_f = 0.0
             old_qty_s = ""
@@ -14860,7 +14890,8 @@ def ocr_suggests_payal_pharma(ocr_text: str = "", vendor: str = "") -> bool:
     if not ocr_text:
         return False
     u = ocr_text.upper()
-    has_pack_mfgr = ("PACK." in u or re.search(r'\bPACK\.?\b', u)) and "MFGR" in u
+    has_pack_mfgr = ("PACK." in u or re.search(
+        r'\bPACK\.?\b', u)) and "MFGR" in u
     has_footer = (
         "ORIGINAL FOR RECIPIENT" in u
         or re.search(r'\bSMAN\b', u)
@@ -15195,7 +15226,8 @@ def fix_payal_pharma_line_items_from_ocr(
     for idx, row in enumerate(ocr_rows):
         oq = _f(row.get("quantity"))
         obatch = str(row.get("lot_batch_number", "") or "")
-        product = _dedupe_payal_product_name(row.get("product_description", ""))
+        product = _dedupe_payal_product_name(
+            row.get("product_description", ""))
 
         # Seed from same-index Gemini item (preserves mrp/mfg when alignment is good)
         base = {}
@@ -15216,10 +15248,13 @@ def fix_payal_pharma_line_items_from_ocr(
                 if not _payal_batch_match(obatch, cand["batch"]):
                     continue
                 rate, amount, mrp = cand["rate"], cand["amount"], cand["mrp"]
-                math_ok = amount > 0 and abs(oq * rate - amount) <= max(0.75, amount * 0.015)
+                math_ok = amount > 0 and abs(
+                    oq * rate - amount) <= max(0.75, amount * 0.015)
                 # Reject rate≈MRP (Vision often copies the wrong RATE into MRP)
-                rate_eq_mrp = mrp > 0 and abs(rate - mrp) <= max(0.05, mrp * 0.02)
-                mrp_ok = mrp <= 0 or (rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
+                rate_eq_mrp = mrp > 0 and abs(
+                    rate - mrp) <= max(0.05, mrp * 0.02)
+                mrp_ok = mrp <= 0 or (
+                    rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
                 if math_ok and mrp_ok:
                     chosen_rate, chosen_amount, chosen_mrp = rate, amount, mrp or chosen_mrp
                     used.add(ci)
@@ -15239,8 +15274,10 @@ def fix_payal_pharma_line_items_from_ocr(
                         continue
                     err = abs(oq * rate - amount)
                     if err <= max(0.75, amount * 0.015):
-                        rate_eq_mrp = mrp > 0 and abs(rate - mrp) <= max(0.05, mrp * 0.02)
-                        mrp_ok = mrp <= 0 or (rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
+                        rate_eq_mrp = mrp > 0 and abs(
+                            rate - mrp) <= max(0.05, mrp * 0.02)
+                        mrp_ok = mrp <= 0 or (
+                            rate <= mrp * 1.05 + 0.01 and not rate_eq_mrp)
                         # Prefer direct Vision pairs, then MRP-ok, then low error
                         matches.append((
                             1 if cand.get("derived") else 0,
@@ -16592,7 +16629,8 @@ def extract_saraswati_line_items_from_ocr(ocr_text: str) -> list:
         if not line.startswith("SARASWATI_ROW"):
             continue
         qty_m = re.search(r"\bqty=([0-9]*)", line)
-        prod_m = re.search(r"\bproduct=([^=]*?)(?=\s+batch=|\s+rate=|\s+amount=|$)", line)
+        prod_m = re.search(
+            r"\bproduct=([^=]*?)(?=\s+batch=|\s+rate=|\s+amount=|$)", line)
         batch_m = re.search(r"\bbatch=([A-Z0-9]*)", line, re.I)
         rate_m = re.search(r"\brate=([0-9.]*)", line)
         amt_m = re.search(r"\bamount=([0-9.]*)", line)
@@ -16616,7 +16654,8 @@ def extract_saraswati_line_items_from_ocr(ocr_text: str) -> list:
 
     # Legacy fallback: freeform rotated OCR text (invoice 3809-style lines)
     has_pack_orphan = bool(
-        re.search(r"\b(?:1OTAB|LOTAB|10TAB|10\s*TAB|15TAB|ISTAB)\b", ocr_text, re.I)
+        re.search(r"\b(?:1OTAB|LOTAB|10TAB|10\s*TAB|15TAB|ISTAB)\b",
+                  ocr_text, re.I)
     )
 
     seen = set()
@@ -16679,7 +16718,8 @@ def extract_saraswati_line_items_from_ocr(ocr_text: str) -> list:
                     except Exception:
                         rate = None
                 if rate is None:
-                    rate = float(money[1]) if len(money) >= 2 else rate_candidates[0]
+                    rate = float(money[1]) if len(
+                        money) >= 2 else rate_candidates[0]
                     if rate >= amount:
                         rate = rate_candidates[0]
 
@@ -16949,7 +16989,8 @@ def _gstins_from_ocr_text(ocr_text: str) -> set:
 def _invoice_summary_from_full_data(full_data) -> dict:
     if not isinstance(full_data, dict):
         return {}
-    data = full_data.get("data") if isinstance(full_data.get("data"), dict) else full_data
+    data = full_data.get("data") if isinstance(
+        full_data.get("data"), dict) else full_data
     if isinstance(data, dict) and isinstance(data.get("invoice_summary"), dict):
         return data["invoice_summary"]
     return data if isinstance(data, dict) else {}
@@ -17055,7 +17096,8 @@ def _page_has_new_invoice_header_block(page_ocr: str, current_invoice=None) -> b
 
     has_date_label = bool(re.search(
         r'(?:Invoice|Inv)\s*Date\s*[:\-]', page_ocr, re.IGNORECASE))
-    has_tax_header = bool(re.search(r'\bTAX\s*INVOICE\b', page_ocr, re.IGNORECASE))
+    has_tax_header = bool(
+        re.search(r'\bTAX\s*INVOICE\b', page_ocr, re.IGNORECASE))
     has_seller = bool(re.search(
         r'\b(?:Seller|Supplier|GSTIN)\b', page_ocr, re.IGNORECASE))
     has_buyer = bool(re.search(
@@ -17074,7 +17116,8 @@ def _page_looks_like_line_item_continuation(page_ocr: str) -> bool:
     ):
         return True
     if (
-        re.search(r'\b(?:TAB|CAP|INJ|SYRUP|CREAM|GEL|RESP|MG|ML)\b', page_ocr, re.I)
+        re.search(r'\b(?:TAB|CAP|INJ|SYRUP|CREAM|GEL|RESP|MG|ML)\b',
+                  page_ocr, re.I)
         and re.search(r'\d+\.\d{2}', page_ocr)
     ):
         return True
@@ -20454,7 +20497,8 @@ def enforce_schema(raw_data):
         # OCR-derived number here is junk ('27-2105'). Leave it empty and let the
         # focused header recovery read it from the image instead.
         if ocr_inv_no and _is_pharmacea_link_vendor(
-            str(template["data"]["invoice_summary"].get("vendor", "") or ""), ocr_text
+            str(template["data"]["invoice_summary"].get(
+                "vendor", "") or ""), ocr_text
         ):
             logger.info(
                 f"⏭️ Skipping OCR-header invoice_no '{ocr_inv_no}' for Pharmacea Link "
@@ -20673,7 +20717,8 @@ def enforce_schema(raw_data):
             _trust_iso = extract_trust_pharmaceuticals_invoice_date(
                 ocr_text or "", known_trust=True
             )
-            _cur_trust_date = str(_sum_trust.get("invoice_date", "") or "").strip()
+            _cur_trust_date = str(_sum_trust.get(
+                "invoice_date", "") or "").strip()
             # Only override when empty or the known DL print date (26/03/****).
             # Garbled full-page OCR must not replace an already-corrected crop date.
             _cur_is_dl = bool(
@@ -20696,7 +20741,8 @@ def enforce_schema(raw_data):
                     f"'{_cur_trust_date}' -> '{_trust_iso}'")
                 _sum_trust["invoice_date"] = _trust_iso
     except Exception as _trust_date_err:
-        logger.debug(f"TRUST PHARMACEUTICALS date fix skipped: {_trust_date_err}")
+        logger.debug(
+            f"TRUST PHARMACEUTICALS date fix skipped: {_trust_date_err}")
 
     # NOVACARE DEL-26-*: always prefer 'No. DEL-26-#### Date' over Vision due-date confusion
     try:
@@ -23153,7 +23199,8 @@ def enforce_schema(raw_data):
             logger.info(
                 "✅ United Medical Agencies line items recovered from OCR")
 
-    _sunanda_vendor = template["data"]["invoice_summary"].get("vendor", "") or ""
+    _sunanda_vendor = template["data"]["invoice_summary"].get(
+        "vendor", "") or ""
     if ocr_suggests_sunanda_associates(ocr_text or "", _sunanda_vendor):
         _sunanda_items = fix_sunanda_associates_product_names(
             template["data"]["line_items"].get("items") or [],
@@ -23173,11 +23220,13 @@ def enforce_schema(raw_data):
 
     # 🔧 SARASWATI MEDICAL AGENCY: sideways scan — fix qty + product name only
     try:
-        _sara_vendor = template["data"]["invoice_summary"].get("vendor", "") or ""
+        _sara_vendor = template["data"]["invoice_summary"].get(
+            "vendor", "") or ""
         _sara_ocr = ocr_text or ""
         _sara_table = ""
         if isinstance(data, dict):
-            _sara_table = str(data.get("saraswati_table_ocr", "") or "").strip()
+            _sara_table = str(
+                data.get("saraswati_table_ocr", "") or "").strip()
         if ocr_suggests_saraswati_medical_agency(_sara_ocr, _sara_vendor):
             _sara_items = fix_saraswati_medical_agency_line_items_from_ocr(
                 template["data"]["line_items"].get("items") or [],
@@ -24878,7 +24927,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         f"    ✅ TULSYAN rate-band OCR captured "
                         f"({len(_tul_rate_ocr)} chars)")
         except Exception as _tul_ocr_err:
-            logger.debug(f"TULSYAN rate OCR enrichment skipped: {_tul_ocr_err}")
+            logger.debug(
+                f"TULSYAN rate OCR enrichment skipped: {_tul_ocr_err}")
 
         # SARASWATI MEDICAL AGENCY: sideways table → capture rotated band for qty/product fix
         try:
@@ -25049,7 +25099,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 if isinstance(_d_tr, dict):
                     _sum_tr = _d_tr.get("invoice_summary", _d_tr)
                     _vend_tr = str(_sum_tr.get("vendor", "") or "").strip()
-                    _gstin_tr = str(_sum_tr.get("vendor_gstin", "") or "").strip()
+                    _gstin_tr = str(_sum_tr.get(
+                        "vendor_gstin", "") or "").strip()
                     _ocr_tr = result.get("ocr_text") or fallback_ocr_text or ""
                     if _is_trust_pharmaceuticals_invoice(
                         ocr_text=_ocr_tr,
@@ -25071,7 +25122,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                             _trust_iso = _recover_trust_pharmaceuticals_invoice_date_from_header(
                                 page, page_num=page_num
                             )
-                        _cur_tr = str(_sum_tr.get("invoice_date", "") or "").strip()
+                        _cur_tr = str(_sum_tr.get(
+                            "invoice_date", "") or "").strip()
                         if (
                             _trust_iso
                             and not _is_trust_dl_date(_trust_iso)
@@ -26810,7 +26862,8 @@ Do not include ocr_text. Return ONLY JSON."""
             parsed.pop("ocr_text", None)
             if isinstance(parsed.get("data"), dict):
                 parsed["data"].pop("ocr_text", None)
-        inv_no = parsed.get("invoice_no", "") if isinstance(parsed, dict) else ""
+        inv_no = parsed.get("invoice_no", "") if isinstance(
+            parsed, dict) else ""
         if inv_no and _looks_like_monetary_amount(inv_no):
             logger.warning(
                 f"[Continuation] Vision candidate invoice_no={inv_no} "
@@ -27985,6 +28038,7 @@ def build_split_extract_response_from_sales_statement(
         "invoices": all_invoices,
     }
 
+
 def get_blob_service_client(force_refresh: bool = False):
     global blob_service_client
     if not AZURE_AVAILABLE:
@@ -28124,7 +28178,8 @@ def split_and_extract_invoices(
     global waiting_requests, active_requests
 
     batch_id = (batch_id or "").strip()
-    target_invoices_blob_folder = (target_invoices_blob_folder or "").strip() or None
+    target_invoices_blob_folder = (
+        target_invoices_blob_folder or "").strip() or None
     # Auto-generate a batch_id only when the caller supplied no batch identity at
     # all. When batch_id / target_invoices_blob_folder are sent they decide the
     # destination folder, so a random UUID folder is never invented for them.
@@ -28167,7 +28222,8 @@ def split_and_extract_invoices(
 
     # Content-type / magic fallback when extension missing from blob/URL names
     if not file_extension:
-        content_type = getattr(file, "content_type", None) if file is not None else None
+        content_type = getattr(file, "content_type",
+                               None) if file is not None else None
         kind, detected_ext = FileTypeDetector().detect(
             filename=source_filename,
             content_type=content_type,
@@ -28703,7 +28759,8 @@ def split_and_extract_invoices(
                                 _jk_base = (page_results[g["pages"][0]] or {}).get(
                                     "full_data")
                             if _jk_base and _jk_merged:
-                                g["extracted_data"] = _copy_jk.deepcopy(_jk_base)
+                                g["extracted_data"] = _copy_jk.deepcopy(
+                                    _jk_base)
                                 _merge_line_items_into_full_data(
                                     g["extracted_data"], _jk_merged)
                                 _jk_data = g["extracted_data"].get("data")
@@ -28874,7 +28931,8 @@ def split_and_extract_invoices(
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
 
-                    _sara_tocr = str(page_result.get("saraswati_table_ocr", "") or "").strip()
+                    _sara_tocr = str(page_result.get(
+                        "saraswati_table_ocr", "") or "").strip()
                     if (
                         not _sara_tocr
                         and ocr_suggests_saraswati_medical_agency(raw_ocr_text, "")
@@ -28882,7 +28940,8 @@ def split_and_extract_invoices(
                     ):
                         try:
                             _sara_page = doc.load_page(first_page_idx)
-                            _sara_tocr = _ocr_saraswati_table_region(page=_sara_page)
+                            _sara_tocr = _ocr_saraswati_table_region(
+                                page=_sara_page)
                             if _sara_tocr.strip():
                                 logger.info(
                                     f"    ✅ SARASWATI table-band OCR captured at response build "
@@ -28935,7 +28994,8 @@ def split_and_extract_invoices(
                         data_with_ocr["data"]["tulsyan_rate_ocr"] = _tul_rate_ocr
 
                     _jackson_tocr = str(
-                        (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
+                        (data_with_ocr.get("data") or {}).get(
+                            "jackson_table_ocr", "")
                         if isinstance(data_with_ocr.get("data"), dict) else ""
                     ).strip()
                     if not _jackson_tocr:
@@ -29798,7 +29858,8 @@ def test_extract(
                                 _jk_base = (page_results[g["pages"][0]] or {}).get(
                                     "full_data")
                             if _jk_base and _jk_merged:
-                                g["extracted_data"] = _copy_jk.deepcopy(_jk_base)
+                                g["extracted_data"] = _copy_jk.deepcopy(
+                                    _jk_base)
                                 _merge_line_items_into_full_data(
                                     g["extracted_data"], _jk_merged)
                                 _jk_data = g["extracted_data"].get("data")
@@ -29863,7 +29924,8 @@ def test_extract(
                         "rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
-                    _sara_tocr = str(page_result.get("saraswati_table_ocr", "") or "").strip()
+                    _sara_tocr = str(page_result.get(
+                        "saraswati_table_ocr", "") or "").strip()
                     if (
                         not _sara_tocr
                         and ocr_suggests_saraswati_medical_agency(raw_ocr_text, "")
@@ -29871,7 +29933,8 @@ def test_extract(
                     ):
                         try:
                             _sara_page = doc.load_page(first_page_idx)
-                            _sara_tocr = _ocr_saraswati_table_region(page=_sara_page)
+                            _sara_tocr = _ocr_saraswati_table_region(
+                                page=_sara_page)
                             if _sara_tocr.strip():
                                 logger.info(
                                     f"    ✅ SARASWATI table-band OCR captured at response build "
@@ -29921,7 +29984,8 @@ def test_extract(
                     if _tul_rate_ocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["tulsyan_rate_ocr"] = _tul_rate_ocr
                     _jackson_tocr = str(
-                        (data_with_ocr.get("data") or {}).get("jackson_table_ocr", "")
+                        (data_with_ocr.get("data") or {}).get(
+                            "jackson_table_ocr", "")
                         if isinstance(data_with_ocr.get("data"), dict) else ""
                     ).strip()
                     if not _jackson_tocr:
@@ -30613,14 +30677,20 @@ async def ready():
 
 
 @app.post("/extract-sales-statement")
-async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
-    """Extract stock/sales statement data into a unified JSON schema.
+async def extract_sales_statement_endpoint(
+    file: UploadFile = File(...),
+    batch_id: Optional[str] = Form(None),
+    use_blob_storage: bool = Form(False),
+    blob_container: Optional[str] = Form(None),
+    target_invoices_blob_folder: Optional[str] = Form(None),
+    split_id: Optional[str] = Form(None),
+    file_name: Optional[str] = Form(None),
+):
+    """Extract stock/sales/POD GRN statement data.
 
-    Supports text, images, PDF, Word, Excel and HTML formats:
-    .txt, .pdf, .doc, .docx, .jpg, .jpeg, .png, .bmp, .tif, .tiff, .webp,
-    .htm, .html, .xls, .xlsx
-
-    Does not use the invoice OCR / split pipeline.
+    Returns the SAME top-level JSON contract as /split-and-extract
+    (success, Invoices, invoices, summary, queue, ocr_statistics, ...)
+    so Laravel POD screens can treat GRN Excel like other POD uploads.
     """
     filename = file.filename or "upload"
     # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
@@ -30651,7 +30721,8 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
                 else f"{filename}.doc"
             )
 
-    ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
+    ext = ("." + filename.rsplit(".", 1)
+           [-1].lower()) if "." in filename else ""
     word_mime = content_type in {
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -30665,6 +30736,10 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
             or content_type.startswith("image/")
             or content_type == "application/pdf"
             or word_mime
+            or content_type in {
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
         ):
             raise HTTPException(
                 status_code=400,
@@ -30677,8 +30752,23 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
-        result = extract_sales_statement(file_bytes, filename)
-        return JSONResponse(content=result)
+        start_time = datetime.now()
+        if not batch_id:
+            batch_id = str(uuid.uuid4())
+        sales_result = extract_sales_statement(file_bytes, filename)
+        # Same response schema as /split-and-extract for Laravel POD compatibility
+        response = build_split_extract_response_from_sales_statement(
+            sales_result=sales_result,
+            source_filename=filename,
+            batch_id=batch_id,
+            split_id=split_id,
+            file_name=file_name or filename,
+            use_blob_storage=use_blob_storage,
+            container_name=blob_container,
+            target_invoices_blob_folder=target_invoices_blob_folder,
+            start_time=start_time,
+        )
+        return JSONResponse(content=response)
     except HTTPException:
         raise
     except ValueError as e:
