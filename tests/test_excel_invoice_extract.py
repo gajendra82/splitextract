@@ -369,6 +369,83 @@ class TestExcelInvoiceExtract(unittest.TestCase):
         self.assertIn("P |", text)
 
 
+class TestMultiSheetAndPivotExcel(unittest.TestCase):
+    def tearDown(self):
+        for path in getattr(self, "_temps", []):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+    def _track(self, path: str) -> str:
+        if not hasattr(self, "_temps"):
+            self._temps = []
+        self._temps.append(path)
+        return path
+
+    def test_all_invoice_sheets_are_read(self):
+        wb = Workbook()
+        may = wb.active
+        may.title = "MAY"
+        may.append(["invoice_date", "Hospital Name", "product_name", "quantity", "invoice_number"])
+        may.append(["2026-05-05", "HCG YELAHANKA", "FLUTICONE", 1, "VGP/27/4697"])
+        june = wb.create_sheet("JUNE")
+        june.append(["invoice_date", "Hospital Name", "product_name", "quantity", "invoice_number"])
+        june.append(["2026-06-01", "HCG KALINGA RAO ROAD", "ZYCEL", 3, "VGP/27/8483"])
+        fd, path = tempfile.mkstemp(suffix=".xlsx")
+        os.close(fd)
+        wb.save(path)
+        wb.close()
+        self._track(path)
+
+        result = extract_invoices_from_excel(path, "ZYDUS.xlsx")
+        self.assertTrue(result.success)
+        by_no = {i["invoice_no"]: i for i in result.invoices}
+        self.assertEqual(set(by_no), {"VGP/27/4697", "VGP/27/8483"})
+        self.assertEqual(by_no["VGP/27/4697"]["customer"], "HCG YELAHANKA")
+        self.assertEqual(by_no["VGP/27/8483"]["customer"], "HCG KALINGA RAO ROAD")
+
+    def test_stock_statement_sheet_is_skipped(self):
+        path = self._track(_write_xlsx(
+            [
+                ["Item Code", "Item Name", "OPENING", "STOCK IN", "SALE", "CLOSING"],
+                ["C1", "Prod 1", 10, 5, 3, 12],
+            ],
+            sheet_name="STATEMENT",
+        ))
+        result = extract_invoices_from_excel(path, "stock.xlsx")
+        self.assertFalse(result.success)
+        self.assertEqual(result.invoices, [])
+
+    def test_hospital_quantity_pivot_unpivots_to_customers(self):
+        path = self._track(_write_xlsx([
+            [
+                "Item Code",
+                "Item Name",
+                "Narayana Multispeciality Hospital Howrah",
+                "Narayana Superspeciality Hospital Guwahati",
+                "NH MMI Narayana Superspeciality Hospital",
+            ],
+            ["C1", "SENSORCAINE", 58, 0, 30],
+            ["C2", "AUGMENTIN", "", 1, 40],
+        ], sheet_name="SALE"))
+        result = extract_invoices_from_excel(path, "pivot.xlsx")
+        self.assertTrue(result.success)
+        by_hospital = {i["customer"]: i for i in result.invoices}
+        self.assertEqual(len(by_hospital), 3)
+        self.assertEqual(len(by_hospital["Narayana Multispeciality Hospital Howrah"]["line_items"]), 1)
+        self.assertEqual(
+            by_hospital["Narayana Multispeciality Hospital Howrah"]["line_items"][0]["quantity"],
+            "58",
+        )
+        self.assertEqual(
+            by_hospital["Narayana Superspeciality Hospital Guwahati"]["line_items"][0]["product_description"],
+            "AUGMENTIN",
+        )
+        from services.excel_invoice_extract import invoices_are_usable
+        self.assertTrue(invoices_are_usable(result.invoices))
+
+
 class TestExcelSchemaCompatibility(unittest.TestCase):
     """Ensure Excel flat dicts survive enforce_schema with Laravel shape."""
 

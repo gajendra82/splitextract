@@ -11,7 +11,10 @@ from services.file_type_detector import FileKind, FileTypeDetector
 from services.excel_invoice_extract import (
     build_excel_ocr_text,
     extract_invoices_from_excel,
+    invoices_are_usable,
+    workbook_to_tsv_for_llm,
 )
+from services.prompts import build_excel_table_prompt
 from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
@@ -27368,6 +27371,90 @@ def build_text_pdf_bytes(title: str, body: str) -> bytes:
         out.close()
 
 
+def extract_invoices_from_excel_via_gemini(
+    excel_path: str,
+    source_filename: str,
+    ocr_stats: Dict[str, float],
+) -> List[Dict[str, Any]]:
+    """Last-resort Excel path: send sheet TSV to Gemini, same idea as PDF text OCR.
+
+    Structured parsers run first. This is only for unrecognized GRN layouts.
+    PDF/image extraction is unchanged.
+    """
+    table_text = workbook_to_tsv_for_llm(excel_path, source_filename)
+    if not table_text.strip():
+        return []
+
+    update_request_progress("excel_gemini_fallback")
+    ocr_stats_lock = Lock()
+    increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_text_calls", 1)
+    increment_ocr_stat(ocr_stats, ocr_stats_lock, "total_gemini_calls", 1)
+
+    model_config = get_current_model_config()
+    payload = {
+        "contents": [{"parts": [{"text": build_excel_table_prompt(table_text)}]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 16384},
+    }
+    try:
+        response = call_gemini_with_quota(
+            model=model_config["name"],
+            payload=payload,
+            timeout=model_config["timeout"],
+            request_type="text",
+        )
+        if not response:
+            return []
+        data = response.json()
+        response_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if response_text.startswith("```"):
+            response_text = response_text.replace(
+                "```json", "").replace("```", "").strip()
+        parsed = json.loads(response_text)
+    except Exception as exc:
+        logger.warning("Excel Gemini fallback failed for %s: %s", source_filename, exc)
+        return []
+
+    raw_invoices = []
+    if isinstance(parsed, dict):
+        raw_invoices = parsed.get("invoices") or []
+        if not raw_invoices and (parsed.get("customer") or parsed.get("invoice_no") or parsed.get("line_items")):
+            raw_invoices = [parsed]
+    elif isinstance(parsed, list):
+        raw_invoices = parsed
+
+    invoices: List[Dict[str, Any]] = []
+    for idx, raw in enumerate(raw_invoices):
+        if not isinstance(raw, dict):
+            continue
+        items = raw.get("line_items") or []
+        if not isinstance(items, list):
+            items = []
+        customer = str(raw.get("customer") or raw.get("hospital_name") or "").strip()
+        invoice_no = str(raw.get("invoice_no") or "").strip() or f"UNKNOWN_{idx + 1}"
+        invoices.append({
+            "invoice_no": invoice_no,
+            "invoice_date": str(raw.get("invoice_date") or ""),
+            "invoice_date_raw": str(raw.get("invoice_date") or ""),
+            "vendor": str(raw.get("vendor") or ""),
+            "vendor_gstin": str(raw.get("vendor_gstin") or ""),
+            "customer": customer,
+            "customer_address": str(raw.get("customer_address") or ""),
+            "customer_gstin": str(raw.get("customer_gstin") or ""),
+            "tax": str(raw.get("tax") or ""),
+            "total": str(raw.get("total") or ""),
+            "irn": str(raw.get("irn") or ""),
+            "line_items": items,
+            "confidence": 0.85,
+            "_excel": {"source": "gemini_excel_table", "worksheet_name": ""},
+        })
+    logger.info(
+        "Excel Gemini fallback produced %s invoices for %s",
+        len(invoices),
+        source_filename,
+    )
+    return invoices
+
+
 def build_split_extract_response_from_excel(
     *,
     excel_path: str,
@@ -27428,6 +27515,21 @@ def build_split_extract_response_from_excel(
         )
 
     parse_result = extract_invoices_from_excel(excel_path, source_filename)
+    if not invoices_are_usable(parse_result.invoices):
+        logger.info(
+            "Excel structured parse had no usable hospital/invoice columns for %s — Gemini table fallback",
+            source_filename,
+        )
+        llm_invoices = extract_invoices_from_excel_via_gemini(
+            excel_path,
+            source_filename,
+            ocr_stats,
+        )
+        if llm_invoices:
+            parse_result.invoices = llm_invoices
+            parse_result.success = True
+            parse_result.metadata.warnings.append("gemini_excel_table_fallback")
+
     excel_meta = parse_result.metadata.to_dict()
 
     if not parse_result.success and not parse_result.invoices:
@@ -30602,28 +30704,43 @@ async def extract_pod_grn_endpoint(
             raise HTTPException(status_code=400, detail="Empty file")
 
         start_time = datetime.now()
-        sales_result = extract_sales_statement(file_bytes, source_filename)
-        method = str(
-            ((sales_result.get("totals") or {}).get("extra") or {}).get(
-                "extraction_method"
+        # Same Excel pipeline as /split-and-extract: Hospital Wise Sales (Card Name)
+        # first, then row-grouped invoice extract (Hospital Name / Customer Name GRNs).
+        # extract_sales_statement alone collapses unknown GRN layouts into one
+        # filename-invoice with an empty customer → Laravel "Unknown Hospital".
+        suffix = ext if ext in {".xlsx", ".xls"} else (
+            "." + source_filename.rsplit(".", 1)[-1].lower()
+            if "." in source_filename else ".xlsx"
+        )
+        if suffix not in {".xlsx", ".xls"}:
+            suffix = ".xlsx"
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+            response = build_split_extract_response_from_excel(
+                excel_path=tmp_path,
+                source_filename=source_filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name or source_filename,
+                use_blob_storage=use_blob_storage,
+                container_name=container_name,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                queued_ahead=0,
+                queue_wait_seconds=0.0,
+                start_time=start_time,
+                ocr_stats=create_ocr_stats(),
             )
-            or ""
-        )
-        response = build_split_extract_response_from_sales_statement(
-            sales_result=sales_result,
-            source_filename=source_filename,
-            batch_id=batch_id,
-            split_id=split_id,
-            file_name=file_name or source_filename,
-            use_blob_storage=use_blob_storage,
-            container_name=container_name,
-            target_invoices_blob_folder=target_invoices_blob_folder,
-            start_time=start_time,
-        )
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
         response.setdefault("summary", {})["source"] = "pod_grn"
         response["summary"]["document_type"] = "pod"
-        if method:
-            response["summary"]["extraction_method"] = method
         return JSONResponse(content=response)
     except HTTPException:
         raise

@@ -16,7 +16,19 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-PARSER_VERSION = "1.0.0"
+PARSER_VERSION = "1.1.0"
+
+_STOCK_HEADER_KEYS = {
+    "opening",
+    "stockin",
+    "purchases",
+    "sales",
+    "closing",
+    "sale",
+    "packingfactor",
+    "uom",
+    "manufacturer",
+}
 
 # ---------------------------------------------------------------------------
 # Header normalization
@@ -560,6 +572,75 @@ def _pick_header_row(
     return best_idx, best_map, best_headers
 
 
+def _is_stock_statement_sheet(headers: List[Any], col_map: Dict[int, str]) -> bool:
+    """Skip opening/purchases/closing stock grids — they are not POD/GRN invoices."""
+    mapped = set(col_map.values())
+    if "invoice_no" in mapped or "customer" in mapped:
+        return False
+    stock_hits = 0
+    for header in headers:
+        key = HeaderNormalizer.normalize_key(header)
+        if not key:
+            continue
+        if (
+            key in _STOCK_HEADER_KEYS
+            or key.startswith("opening")
+            or key.startswith("closing")
+            or key.startswith("stock")
+        ):
+            stock_hits += 1
+    return stock_hits >= 3
+
+
+def _hospital_pivot_columns(headers: List[Any], col_map: Dict[int, str]) -> List[int]:
+    """Unmapped columns whose headers look like hospital / account names."""
+    mapped_idxs = set(col_map.keys())
+    hospital_cols: List[int] = []
+    for idx, header in enumerate(headers):
+        if idx in mapped_idxs:
+            continue
+        text = _normalize_whitespace(header)
+        if len(text) < 4:
+            continue
+        key = HeaderNormalizer.normalize_key(text)
+        if (
+            key in _STOCK_HEADER_KEYS
+            or key.startswith("opening")
+            or key.startswith("closing")
+            or key.startswith("stock")
+        ):
+            continue
+        hospital_cols.append(idx)
+    return hospital_cols
+
+
+def _is_hospital_qty_pivot(headers: List[Any], col_map: Dict[int, str]) -> bool:
+    """Item rows × hospital-name columns with quantities (no invoice/customer col)."""
+    mapped = set(col_map.values())
+    if "invoice_no" in mapped or "customer" in mapped:
+        return False
+    if _is_stock_statement_sheet(headers, col_map):
+        return False
+    if "product_description" not in mapped and "sku_code" not in mapped:
+        return False
+    return len(_hospital_pivot_columns(headers, col_map)) >= 3
+
+
+def invoices_are_usable(invoices: List[Dict[str, Any]]) -> bool:
+    """True when at least one invoice has a hospital/customer or a real invoice no."""
+    for invoice in invoices:
+        customer = _normalize_whitespace(invoice.get("customer"))
+        invoice_no = str(invoice.get("invoice_no") or "").strip()
+        items = invoice.get("line_items") or []
+        if not items:
+            continue
+        if customer:
+            return True
+        if invoice_no and not invoice_no.upper().startswith("UNKNOWN"):
+            return True
+    return False
+
+
 def _iter_xlsx_rows(path: str) -> Tuple[str, Iterator[Tuple[int, List[Any], bool]]]:
     """Yield (1-based_row_index, values, is_hidden) from first usable worksheet."""
     from openpyxl import load_workbook
@@ -667,6 +748,302 @@ def _open_row_iterator(path: str, ext: str) -> Tuple[str, Iterator[Tuple[int, Li
             logger.warning("xlrd failed for %s (%s); trying openpyxl", path, xls_err)
             return _iter_xlsx_rows(path)
     raise ValueError(f"Unsupported Excel extension: {ext}")
+
+
+def _xlsx_sheet_rows(ws) -> List[Tuple[int, List[Any], bool]]:
+    rows: List[Tuple[int, List[Any], bool]] = []
+    for row_idx, row in enumerate(ws.iter_rows(values_only=False), start=1):
+        values = []
+        row_num = row_idx
+        for cell in row:
+            values.append(getattr(cell, "value", None))
+            cell_row = getattr(cell, "row", None)
+            if isinstance(cell_row, int) and cell_row > 0:
+                row_num = cell_row
+        is_hidden = False
+        try:
+            dim = ws.row_dimensions.get(row_num)
+            if dim is not None and getattr(dim, "hidden", False):
+                is_hidden = True
+        except Exception:
+            is_hidden = False
+        rows.append((row_num, values, is_hidden))
+    return rows
+
+
+def _xls_sheet_rows(sheet, datemode: int) -> List[Tuple[int, List[Any], bool]]:
+    import xlrd
+
+    rows: List[Tuple[int, List[Any], bool]] = []
+    for r in range(sheet.nrows):
+        values = []
+        for c in range(sheet.ncols):
+            cell = sheet.cell(r, c)
+            val = cell.value
+            if cell.ctype == xlrd.XL_CELL_DATE:
+                try:
+                    tup = xlrd.xldate_as_tuple(val, datemode)
+                    if tup[0] > 0:
+                        val = datetime(*tup[:6])
+                    else:
+                        val = dt_time(tup[3], tup[4], tup[5])
+                except Exception:
+                    pass
+            values.append(val)
+        rows.append((r + 1, values, False))
+    return rows
+
+
+def _load_all_sheets(path: str, ext: str) -> List[Tuple[str, List[Tuple[int, List[Any], bool]]]]:
+    """Load every worksheet so GRN workbooks with MAY/JUNE (or SALE+STATEMENT) are all seen."""
+    ext = ext.lower()
+    sheets: List[Tuple[str, List[Tuple[int, List[Any], bool]]]] = []
+    if ext == ".xlsx":
+        from openpyxl import load_workbook
+
+        wb = load_workbook(path, read_only=True, data_only=True, keep_vba=False)
+        try:
+            if not wb.sheetnames:
+                raise ValueError("No worksheets found in workbook")
+            for name in wb.sheetnames:
+                sheets.append((name, _xlsx_sheet_rows(wb[name])))
+        finally:
+            wb.close()
+        return sheets
+    if ext == ".xls":
+        import xlrd
+
+        try:
+            wb = xlrd.open_workbook(path, on_demand=True)
+        except Exception as xls_err:
+            logger.warning("xlrd failed for %s (%s); trying openpyxl", path, xls_err)
+            return _load_all_sheets(path, ".xlsx")
+        try:
+            if wb.nsheets < 1:
+                raise ValueError("No worksheets found in workbook")
+            for idx in range(wb.nsheets):
+                sheet = wb.sheet_by_index(idx)
+                sheets.append((sheet.name, _xls_sheet_rows(sheet, wb.datemode)))
+        finally:
+            try:
+                wb.release_resources()
+            except Exception:
+                pass
+        return sheets
+    raise ValueError(f"Unsupported Excel extension: {ext}")
+
+
+def _qty_from_cell(value: Any) -> Optional[float]:
+    text = _normalize_numeric(value)
+    if not text:
+        return None
+    try:
+        qty = float(text)
+    except ValueError:
+        return None
+    if qty == 0:
+        return None
+    return qty
+
+
+def _unpivot_hospital_qty_sheet(
+    rows: List[Tuple[int, List[Any], bool]],
+    headers: List[Any],
+    col_map: Dict[int, str],
+    header_row_idx: int,
+    worksheet_name: str,
+    metadata: ExcelParseMetadata,
+    unknown_start: int,
+) -> List[Dict[str, Any]]:
+    """Turn Item × Hospital quantity columns into one invoice per hospital."""
+    hospital_cols = _hospital_pivot_columns(headers, col_map)
+    groups: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    unknown_counter = unknown_start
+
+    for row_num, values, is_hidden in rows:
+        metadata.total_rows += 1
+        if row_num <= header_row_idx or is_hidden or _is_empty_row(values):
+            metadata.ignored_rows += 1
+            continue
+        mapped = _map_row(values, col_map)
+        product = _normalize_whitespace(mapped.get("product_description"))
+        sku = _normalize_whitespace(mapped.get("sku_code"))
+        if not product and not sku:
+            metadata.ignored_rows += 1
+            continue
+        emitted = False
+        for col_idx in hospital_cols:
+            if col_idx >= len(values):
+                continue
+            qty = _qty_from_cell(values[col_idx])
+            if qty is None:
+                continue
+            hospital = _normalize_whitespace(headers[col_idx] if col_idx < len(headers) else "")
+            if not hospital:
+                continue
+            key = hospital.upper()
+            if key not in groups:
+                unknown_counter += 1
+                invoice = _empty_invoice_shell(f"UNKNOWN_{unknown_counter}")
+                invoice["customer"] = hospital
+                groups[key] = invoice
+                order.append(key)
+            item = _build_line_item(
+                {
+                    "product_description": product,
+                    "sku_code": sku,
+                    "quantity": qty,
+                    "unit_price": mapped.get("unit_price"),
+                    "total_amount": mapped.get("total_amount"),
+                    "lot_batch_number": mapped.get("lot_batch_number"),
+                    "hsn_code": mapped.get("hsn_code"),
+                    "unit_of_measure": mapped.get("unit_of_measure"),
+                    "mrp": mapped.get("mrp"),
+                    "expiry_date": mapped.get("expiry_date"),
+                },
+                row_num,
+            )
+            if item:
+                groups[key]["line_items"].append(item)
+                emitted = True
+        if emitted:
+            metadata.processed_rows += 1
+        else:
+            metadata.ignored_rows += 1
+
+    return [_finalize_invoice(groups[key], worksheet_name) for key in order]
+
+
+def _extract_invoices_from_sheet(
+    rows: List[Tuple[int, List[Any], bool]],
+    worksheet_name: str,
+    metadata: ExcelParseMetadata,
+    unknown_start: int,
+) -> List[Dict[str, Any]]:
+    normalizer = HeaderNormalizer()
+    sample: List[Tuple[int, List[Any]]] = []
+    for row_num, values, is_hidden in rows:
+        if is_hidden or _is_empty_row(values):
+            continue
+        sample.append((row_num, values))
+        if len(sample) >= 40:
+            break
+
+    header_row_idx, col_map, headers = _pick_header_row(sample, normalizer)
+    if header_row_idx is None or not col_map:
+        metadata.warnings.append(f"Skipped sheet '{worksheet_name}': no usable headers")
+        return []
+
+    if _is_stock_statement_sheet(headers, col_map):
+        metadata.warnings.append(
+            f"Skipped stock-statement sheet '{worksheet_name}'"
+        )
+        logger.info("Skipping stock-statement worksheet '%s'", worksheet_name)
+        return []
+
+    if _is_hospital_qty_pivot(headers, col_map):
+        logger.info(
+            "Hospital quantity pivot detected on '%s' (%s hospital columns)",
+            worksheet_name,
+            len(_hospital_pivot_columns(headers, col_map)),
+        )
+        return _unpivot_hospital_qty_sheet(
+            rows,
+            headers,
+            col_map,
+            header_row_idx,
+            worksheet_name,
+            metadata,
+            unknown_start,
+        )
+
+    logger.info(
+        "Headers detected on '%s' row %s: %s",
+        worksheet_name,
+        header_row_idx,
+        sorted(set(col_map.values())),
+    )
+    invoices = group_rows_into_invoices(
+        iter(rows),
+        col_map,
+        header_row_idx,
+        worksheet_name,
+        metadata,
+    )
+    shifted = unknown_start
+    for invoice in invoices:
+        invoice_no = str(invoice.get("invoice_no") or "")
+        if invoice_no.upper().startswith("UNKNOWN"):
+            shifted += 1
+            invoice["invoice_no"] = f"UNKNOWN_{shifted}"
+    return invoices
+
+
+def _merge_sheet_invoices(
+    all_invoices: List[Dict[str, Any]],
+    sheet_invoices: List[Dict[str, Any]],
+) -> None:
+    index = {
+        str(inv.get("invoice_no") or "").upper(): inv
+        for inv in all_invoices
+        if inv.get("invoice_no")
+        and not str(inv.get("invoice_no")).upper().startswith("UNKNOWN")
+    }
+    for invoice in sheet_invoices:
+        key = str(invoice.get("invoice_no") or "").upper()
+        if key and not key.startswith("UNKNOWN") and key in index:
+            index[key]["line_items"].extend(invoice.get("line_items") or [])
+            _finalize_invoice(
+                index[key],
+                (index[key].get("_excel") or {}).get("worksheet_name") or "",
+            )
+            continue
+        all_invoices.append(invoice)
+        if key and not key.startswith("UNKNOWN"):
+            index[key] = invoice
+
+
+def workbook_to_tsv_for_llm(
+    path: str,
+    original_filename: Optional[str] = None,
+    max_rows_per_sheet: int = 250,
+    max_chars: int = 40000,
+) -> str:
+    """Compact TSV of non-stock sheets for Gemini fallback (PDF-text analogue)."""
+    filename = original_filename or os.path.basename(path)
+    ext = os.path.splitext(filename.lower())[1] or os.path.splitext(path.lower())[1]
+    chunks: List[str] = [f"SOURCE FILE: {filename}"]
+    try:
+        sheets = _load_all_sheets(path, ext)
+    except Exception as exc:
+        return f"SOURCE FILE: {filename}\nERROR: {exc}"
+
+    normalizer = HeaderNormalizer()
+    for sheet_name, rows in sheets:
+        sample = [
+            (row_num, values)
+            for row_num, values, hidden in rows[:40]
+            if not hidden and not _is_empty_row(values)
+        ]
+        _, col_map, headers = _pick_header_row(sample, normalizer)
+        if headers and _is_stock_statement_sheet(headers, col_map or {}):
+            continue
+        chunks.append(f"\n--- SHEET: {sheet_name} ---")
+        emitted = 0
+        for row_num, values, is_hidden in rows:
+            if is_hidden or _is_empty_row(values):
+                continue
+            cells = [_cell_to_str(v) for v in values]
+            chunks.append("\t".join(cells))
+            emitted += 1
+            if emitted >= max_rows_per_sheet:
+                chunks.append("[... rows truncated ...]")
+                break
+    text = "\n".join(chunks)
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n[... truncated ...]"
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -937,7 +1314,9 @@ def extract_invoices_from_excel(
     """
     Parse an Excel workbook into flat invoice dicts compatible with enforce_schema().
 
-    Does not call Gemini/OCR. Structured cells get confidence=1.0.
+    Walks every worksheet. Stock-statement grids are skipped. Hospital-name
+    quantity pivots are unpivoted. Does not call Gemini/OCR — structured cells
+    get confidence=1.0.
     """
     started = datetime.now()
     filename = original_filename or os.path.basename(path)
@@ -964,66 +1343,44 @@ def extract_invoices_from_excel(
             ext,
         )
 
-        sheet_name, row_iter = _open_row_iterator(path, ext)
-        metadata.worksheet_name = sheet_name
-        row_iter_closed = False
+        sheets = _load_all_sheets(path, ext)
+        all_invoices: List[Dict[str, Any]] = []
+        unknown_start = 0
+        used_sheets: List[str] = []
 
-        try:
-            normalizer = HeaderNormalizer()
-            sample: List[Tuple[int, List[Any]]] = []
-            buffered: List[Tuple[int, List[Any], bool]] = []
-            max_sample = 40
-
-            for row_num, values, is_hidden in row_iter:
-                buffered.append((row_num, values, is_hidden))
-                if not is_hidden and not _is_empty_row(values) and len(sample) < max_sample:
-                    sample.append((row_num, values))
-                if len(buffered) >= max_sample and len(sample) >= 5:
-                    # Sample window filled; remaining rows continue via same iterator
-                    break
-
-            header_row_idx, col_map, headers = _pick_header_row(sample, normalizer)
-            if header_row_idx is None or not col_map:
-                result.success = False
-                result.error = "No usable headers detected in workbook"
-                metadata.warnings.append(result.error)
-                metadata.processing_time = (datetime.now() - started).total_seconds()
-                return result
-
-            logger.info(
-                "Headers detected on row %s: %s",
-                header_row_idx,
-                sorted(set(col_map.values())),
-            )
-
-            def _combined() -> Iterator[Tuple[int, List[Any], bool]]:
-                yielded = set()
-                for item in buffered:
-                    yielded.add(item[0])
-                    yield item
-                for item in row_iter:
-                    if item[0] in yielded:
-                        continue
-                    yield item
-
-            invoices = group_rows_into_invoices(
-                _combined(),
-                col_map,
-                header_row_idx,
+        for sheet_name, rows in sheets:
+            if not rows:
+                metadata.warnings.append(f"Skipped empty sheet '{sheet_name}'")
+                continue
+            sheet_invoices = _extract_invoices_from_sheet(
+                rows,
                 sheet_name,
                 metadata,
+                unknown_start,
             )
-            row_iter_closed = True
-            result.invoices = invoices
-            if not invoices:
-                metadata.warnings.append("No invoice rows found after header")
-                logger.warning("Excel parse produced zero invoices for '%s'", filename)
-        finally:
-            if not row_iter_closed:
-                try:
-                    row_iter.close()  # type: ignore[attr-defined]
-                except Exception:
-                    pass
+            for invoice in sheet_invoices:
+                invoice_no = str(invoice.get("invoice_no") or "")
+                if invoice_no.upper().startswith("UNKNOWN"):
+                    try:
+                        unknown_start = max(
+                            unknown_start,
+                            int(invoice_no.split("_", 1)[1]),
+                        )
+                    except (IndexError, ValueError):
+                        unknown_start += 1
+            if sheet_invoices:
+                used_sheets.append(sheet_name)
+                _merge_sheet_invoices(all_invoices, sheet_invoices)
+
+        metadata.worksheet_name = ",".join(used_sheets) if used_sheets else (
+            sheets[0][0] if sheets else ""
+        )
+        result.invoices = all_invoices
+        if not all_invoices:
+            result.success = False
+            result.error = result.error or "No usable headers or invoice rows detected in workbook"
+            metadata.warnings.append(result.error)
+            logger.warning("Excel parse produced zero invoices for '%s'", filename)
 
     except Exception as exc:
         msg = str(exc).lower()
