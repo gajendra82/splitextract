@@ -1456,6 +1456,13 @@ def try_extract_invoice_from_text(text: str) -> Optional[str]:
         "ORIGINAL", "COPY", "DUPLICATE", "TRIPLICATE", "PLOT", "PLOTNO"
     }
 
+    if ocr_suggests_shri_parvathy_healthcare(text_norm):
+        parvathy_no = extract_shri_parvathy_invoice_no(text_norm)
+        if parvathy_no and not _is_shri_parvathy_dl_number(parvathy_no):
+            logger.info(
+                f"✅ ACCEPTED invoice# from SHRI PARVATHY Tax Inv. No.: '{parvathy_no}'")
+            return parvathy_no
+
     # Prefer explicit TAX INVOICE header number before other IDs.
     tax_invoice_header_no = _extract_tax_invoice_header_number()
     if tax_invoice_header_no:
@@ -3801,6 +3808,14 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         )
         return existing_items
 
+    # SHRI PARVATHY: generic sparse recovery treats Pack 10'S as qty and glues
+    # billed qty onto the batch (64IA02009A). Dedicated parser owns this layout.
+    if ocr_suggests_shri_parvathy_healthcare(ocr_text):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for SHRI PARVATHY HEALTHCARE"
+        )
+        return existing_items
+
     def _extract_declared_product_count(text: str) -> Optional[int]:
         """Read declared product count from invoice footer (e.g., 'Total Prod : 8')."""
         if not text:
@@ -5369,6 +5384,10 @@ def fix_marg_erp_qty_rate_from_ocr(items, ocr_text: str):
     Uses total_amount as anchor to find the specific product line.
     """
     if not items or not ocr_text:
+        return items
+
+    # CHANDUKA uses ZYDUS in COMP column but is not MARG ERP layout.
+    if ocr_suggests_chanduka_agencies(ocr_text):
         return items
 
     # Check if this is MARG ERP format (Supreme Life Sciences, etc.)
@@ -9582,6 +9601,164 @@ def drop_nataraj_batch_phantom_items(items, ocr_text: str) -> list:
     return cleaned
 
 
+def ocr_suggests_chanduka_agencies(ocr_text: str = "") -> bool:
+    """Detect CHANDUKA AGENCIES invoices (COMP + PARTICULARS + N_MRP table)."""
+    if not ocr_text:
+        return False
+    ocr_upper = ocr_text.upper()
+    return (
+        "CHANDUKA AGENCIES" in ocr_upper
+        and re.search(r'\bCOMP\b', ocr_upper)
+        and re.search(r'\bPARTICULARS\b', ocr_upper)
+        and re.search(r'N_MRP', ocr_upper)
+    )
+
+
+def _parse_chanduka_ocr_line_items(ocr_text: str) -> list:
+    """Parse CHANDUKA COMP/PARTICULARS table rows from OCR text."""
+    pack = r"(?:\d+[`']?[A-Z]{1,3}|\d+ML)"
+    row_pat = re.compile(
+        rf'^\s*(\d+)\.\s+ZYDUS\s+[A-Z]{{2}}\s+(\d{{8}})\s+(.+?)\s+{pack}\s+'
+        r'([A-Z0-9]+)\s+(\d{2}/\d{2})\s+'
+        r'(\d+)\s*'
+        r'(?:F\s+)?'
+        r'([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)',
+        re.IGNORECASE | re.MULTILINE
+    )
+    rows = []
+    for line in ocr_text.splitlines():
+        m = row_pat.match(line.strip())
+        if not m:
+            continue
+        try:
+            rows.append({
+                "serial": m.group(1),
+                "hsn_code": m.group(2),
+                "product_description": m.group(3).strip().upper(),
+                "lot_batch_number": m.group(4).upper(),
+                "quantity": int(m.group(6)),
+                "unit_price": float(m.group(9)),
+                "total_amount": float(m.group(10)),
+            })
+        except (TypeError, ValueError):
+            continue
+    return rows
+
+
+def _chanduka_product_name_matches(desc: str, ocr_product: str) -> bool:
+    desc_norm = re.sub(r'[^A-Z0-9]', '', str(desc or '').upper())
+    ocr_norm = re.sub(r'[^A-Z0-9]', '', str(ocr_product or '').upper())
+    if not desc_norm or not ocr_norm:
+        return False
+    if ocr_norm in desc_norm or desc_norm in ocr_norm:
+        return True
+    stop = {
+        'TAB', 'TABS', 'TABLET', 'TABLETS', 'INJ', 'CAP', 'MG', 'ML', 'DROP', 'EAR',
+    }
+
+    def _sig_words(value: str) -> list:
+        return [
+            w for w in re.sub(r'[^A-Z0-9\s]', ' ', value.upper()).split()
+            if len(w) >= 3 and w not in stop
+        ]
+
+    desc_words = _sig_words(desc)
+    ocr_words = _sig_words(ocr_product)
+    if desc_words and ocr_words and desc_words[0] == ocr_words[0]:
+        return True
+    return False
+
+
+def _chanduka_item_numeric_key(item) -> Optional[tuple]:
+    try:
+        qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+        rate = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+        total = float(normalize_numeric_value(str(item.get("total_amount", "0"))))
+        if qty <= 0 or rate <= 0 or total <= 0:
+            return None
+        return (round(qty, 2), round(rate, 2), round(total, 2))
+    except (TypeError, ValueError):
+        return None
+
+
+def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
+    """
+    CHANDUKA AGENCIES: drop Gemini/Vision phantom rows where manufacturer COMP
+    codes become product names (e.g. 'ZYDUS AEROFROCE') duplicating qty/rate/total
+    from the real PARTICULARS row.
+    """
+    if not items or not ocr_text:
+        return items
+    if not ocr_suggests_chanduka_agencies(ocr_text):
+        return items
+
+    ocr_rows = _parse_chanduka_ocr_line_items(ocr_text)
+    if not ocr_rows:
+        return items
+
+    ocr_by_key = {}
+    for row in ocr_rows:
+        key = (
+            round(row["quantity"], 2),
+            round(row["unit_price"], 2),
+            round(row["total_amount"], 2),
+        )
+        ocr_by_key[key] = row
+
+    groups = {}
+    for idx, item in enumerate(items):
+        key = _chanduka_item_numeric_key(item)
+        if key:
+            groups.setdefault(key, []).append((idx, item))
+
+    drop_indices = set()
+    for key, group in groups.items():
+        ocr_row = ocr_by_key.get(key)
+        if not ocr_row:
+            continue
+        ocr_product = ocr_row["product_description"]
+
+        if len(group) == 1:
+            idx, item = group[0]
+            desc = str(item.get("product_description", ""))
+            if (
+                re.match(r'^ZYDUS\s+', desc.upper())
+                and not _chanduka_product_name_matches(desc, ocr_product)
+            ):
+                drop_indices.add(idx)
+            continue
+
+        best_idx = None
+        best_score = -1
+        for idx, item in group:
+            desc = str(item.get("product_description", ""))
+            score = 0
+            if _chanduka_product_name_matches(desc, ocr_product):
+                score += 10
+            if not re.match(r'^ZYDUS\s+', desc.upper()):
+                score += 5
+            batch = str(item.get("lot_batch_number", "")).upper().strip()
+            if batch and batch == ocr_row.get("lot_batch_number"):
+                score += 3
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        for idx, _item in group:
+            if idx != best_idx:
+                drop_indices.add(idx)
+
+    if not drop_indices:
+        return items
+
+    cleaned = [item for idx, item in enumerate(items) if idx not in drop_indices]
+    removed = len(items) - len(cleaned)
+    logger.info(
+        f"CHANDUKA: Dropped {removed} COMP-column phantom product row(s)")
+
+    return cleaned
+
+
 def ocr_suggests_jackson_medicals(ocr_text: str = "", vendor: str = "") -> bool:
     """Detect JACKSON MEDICALS credit invoices (KL-KTM / ST.THOMAS style tables)."""
     blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
@@ -12733,12 +12910,174 @@ def extract_bharath_medical_party_details(ocr_text: str) -> dict:
     return details
 
 
-def ocr_suggests_maa_pharmaceuticals(ocr_text: str) -> bool:
-    """Detect MAA PHARMACEUTICALS vendor from OCR text."""
+def ocr_suggests_maa_pharmaceuticals(ocr_text: str, vendor: str = "") -> bool:
+    """Detect MAA PHARMACEUTICALS vendor from OCR text or vendor name."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if re.search(r'MAA\s+PHARMACEUTICAL', blob, re.IGNORECASE):
+        return True
+    return bool(
+        re.search(r'21AGEPM8451', blob, re.IGNORECASE)
+        and re.search(r'GST\s+INVOICE|Product\s*Name', blob, re.IGNORECASE)
+    )
+
+
+def _ocr_maa_pharmaceuticals_table_region(page=None, image_bytes: bytes = None) -> str:
+    """OCR the Rate/QTY/Free table on 270°-rotated MAA landscape scans."""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(3.0, 3.0))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+        if height > width:
+            img = img.rotate(270, expand=True)
+            width, height = img.size
+        crop = img.crop((
+            int(width * 0.02), int(height * 0.12),
+            int(width * 0.98), int(height * 0.42),
+        ))
+        try:
+            img.close()
+        except Exception:
+            pass
+        arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        arr = cv2.resize(arr, None, fx=1.5, fy=1.5,
+                         interpolation=cv2.INTER_CUBIC)
+        _, th = cv2.threshold(arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        return pytesseract.image_to_string(th, config="--psm 6") or ""
+    except Exception:
+        return ""
+
+
+def fix_maa_pharmaceuticals_zero_qty_from_ocr(
+    items: list, ocr_text: str = "", vendor: str = "",
+) -> list:
+    """MAA-only: restore QTY when Gemini used the Free column (0) as quantity."""
+    if not items or not ocr_suggests_maa_pharmaceuticals(ocr_text, vendor):
+        return items
     if not ocr_text:
-        return False
-    return bool(re.search(
-        r'MAA\s+PHARMACEUTICAL', ocr_text, re.IGNORECASE))
+        return items
+
+    def _num(item, key, extra=None):
+        raw = item.get(key, "")
+        if extra and isinstance(item.get("additional_fields"), dict):
+            raw = raw or item["additional_fields"].get(extra, "")
+        try:
+            return float(normalize_numeric_value(str(raw or 0)) or 0)
+        except Exception:
+            return 0.0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        qty = _num(item, "quantity")
+        rate = _num(item, "unit_price")
+        total = _num(item, "total_amount")
+        if qty > 0.5 or rate <= 0:
+            continue
+
+        batch = re.sub(
+            r'[^A-Z0-9]', '',
+            str(item.get("lot_batch_number", "") or "").upper())
+        desc = str(item.get("product_description", "") or "").strip().upper()
+        desc_tokens = [t for t in re.findall(r'[A-Z0-9]+', desc) if len(t) >= 3]
+        matched_line = ""
+        for line in str(ocr_text).splitlines():
+            upper = line.upper()
+            if batch:
+                line_batch = re.sub(r'[^A-Z0-9]', '', upper)
+                if batch in line_batch or line_batch.find(batch.replace('I', '1')) >= 0:
+                    matched_line = line
+                    break
+            if desc_tokens and all(tok in upper for tok in desc_tokens[:3]):
+                matched_line = line
+                break
+        if not matched_line:
+            continue
+
+        rate_pat = re.escape(f"{rate:.2f}").replace(r'\.', r'[.,]')
+        qty_match = re.search(
+            rf'{rate_pat}\s+(\d{{1,4}})\s+[0oO]\b',
+            matched_line.replace(',', ''),
+        )
+        if not qty_match:
+            continue
+        recovered_qty = int(qty_match.group(1))
+        if recovered_qty <= 0 or recovered_qty > 5000:
+            continue
+        expected_amt = recovered_qty * rate
+        money = []
+        for tok in re.findall(r'\d[\d]*[.,]\d{2}', matched_line.replace(',', '')):
+            try:
+                money.append(float(tok.replace(',', '.')))
+            except ValueError:
+                continue
+        if money and not any(
+            abs(m - expected_amt) <= max(0.51, 0.02 * expected_amt)
+            for m in money
+        ):
+            continue
+
+        old_qty = str(item.get("quantity", "") or "").strip()
+        item["quantity"] = str(recovered_qty)
+        logger.warning(
+            f"⚠️ FIX MAA: quantity '{old_qty}' -> '{recovered_qty}' "
+            f"for '{item.get('product_description', '')}'"
+        )
+        if total <= 0.01:
+            item["total_amount"] = f"{expected_amt:.2f}"
+    return items
+
+
+def fix_maa_pharmaceuticals_base_amount_from_qty_rate(
+    items: list, ocr_text: str = "", vendor: str = "",
+) -> list:
+    """MAA-only: Base Amount is Qty × Rate, not Amount-after-DIS% or TOTAL-with-GST."""
+    if not items or not ocr_suggests_maa_pharmaceuticals(ocr_text, vendor):
+        return items
+
+    def _num(item, key):
+        try:
+            return float(normalize_numeric_value(str(item.get(key, 0) or 0)) or 0)
+        except Exception:
+            return 0.0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        qty = _num(item, "quantity")
+        rate = _num(item, "unit_price")
+        total = _num(item, "total_amount")
+        if qty <= 0 or rate <= 0:
+            continue
+        expected = round(qty * rate, 2)
+        if abs(total - expected) <= 0.05:
+            continue
+        old_total = str(item.get("total_amount", "") or "").strip()
+        item["total_amount"] = f"{expected:.2f}"
+        logger.warning(
+            f"⚠️ FIX MAA: base amount '{old_total}' -> '{item['total_amount']}' "
+            f"({qty:g} × {rate:.2f}) for '{item.get('product_description', '')}'"
+        )
+        # Dis.Amt / Amount-after-discount in gross_amount would make the shared
+        # MRP check rewrite Rate (e.g. 82720/440 → 188). Keep Rate as printed.
+        af = item.get("additional_fields")
+        if isinstance(af, dict) and af.get("gross_amount") not in (None, ""):
+            try:
+                gval = float(normalize_numeric_value(
+                    str(af.get("gross_amount") or 0)) or 0)
+            except Exception:
+                gval = 0.0
+            if gval > 0 and abs(gval - expected) > 0.05:
+                af["gross_amount"] = f"{expected:.2f}"
+    return items
+
+
 
 
 def extract_party_name_customer_from_ocr(ocr_text: str) -> dict:
@@ -13587,6 +13926,269 @@ def fix_sunanda_associates_product_names(
             + (f", dropped {dropped} rack-Mfr junk row(s)" if dropped else "")
         )
     return kept
+
+
+def ocr_suggests_shri_parvathy_healthcare(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect SHRI PARVATHY HEALTHCARE Tax Inv. No. / Mfac-Rack layout."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if re.search(r'SHRI\s+PAR(?:VATHY|~ATH).{0,12}HEALTHCARE', blob, re.I):
+        return True
+    if re.search(r'shriparvathyhealthcare', blob, re.I):
+        return True
+    return bool(
+        re.search(r'33AEDFS6695G', blob, re.I)
+        and re.search(r'Tax\s+Inv', blob, re.I)
+        and re.search(r'Mfac|Rack\s*No|TotQty', blob, re.I)
+    )
+
+
+def _shri_parvathy_skip_pdfplumber(ocr_text: str) -> bool:
+    """pdfplumber interleaves Tax Inv. No. with the buyer block; dates vanish."""
+    if not ocr_suggests_shri_parvathy_healthcare(ocr_text):
+        return False
+    return not bool(re.search(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b', ocr_text or ""))
+
+
+def _is_shri_parvathy_dl_number(value: str) -> bool:
+    """Tamil Nadu drug-license tokens like CBE/5513/21B — not the tax inv no."""
+    token = str(value or "").strip().upper()
+    return bool(re.fullmatch(r'[A-Z]{2,3}/\d{3,5}/\d{2}[A-Z]', token))
+
+
+def extract_shri_parvathy_invoice_no(ocr_text: str = "") -> Optional[str]:
+    """Starred 13-digit Tax Inv. No. (not DI No CBE/####/##B)."""
+    if not ocr_text:
+        return None
+    m = re.search(r'\*\s*(\d{12,14})\s*\*', ocr_text)
+    if m:
+        return m.group(1)
+    m = re.search(
+        r'Tax\s*Inv\.?\s*No\.?\s*[:\-,\s]+(\d{12,14})\b',
+        ocr_text, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    m = re.search(r':\s*(\d{12,14})\s*(?:\n|:)', ocr_text)
+    if m:
+        return m.group(1)
+    return None
+
+
+def extract_shri_parvathy_invoice_date(ocr_text: str = "") -> Optional[str]:
+    """Invoice Date dd/mm/yy (day-first). Due Date on this layout is the same day."""
+    if not ocr_text:
+        return None
+
+    def _iso(day, month, year) -> Optional[str]:
+        try:
+            d, mth, y = int(day), int(month), int(year)
+        except (TypeError, ValueError):
+            return None
+        if y < 100:
+            y += 2000
+        if not (1 <= d <= 31 and 1 <= mth <= 12 and 2000 <= y <= 2099):
+            return None
+        try:
+            return datetime(y, mth, d).strftime("%Y-%m-%d")
+        except ValueError:
+            return None
+
+    m = re.search(
+        r'Invoice\s*Date.{0,280}?(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',
+        ocr_text, re.IGNORECASE | re.DOTALL)
+    if m:
+        iso = _iso(m.group(1), m.group(2), m.group(3))
+        if iso:
+            return iso
+
+    m = re.search(
+        r':\s*\d{12,14}\s*:?\s*(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})',
+        ocr_text)
+    if m:
+        iso = _iso(m.group(1), m.group(2), m.group(3))
+        if iso:
+            return iso
+
+    m = re.search(r':\s*(\d{1,2})/(\d{1,2})/(\d{2})\b', ocr_text[:900])
+    if m:
+        return _iso(m.group(1), m.group(2), m.group(3))
+    return None
+
+
+def _normalize_shri_parvathy_product(name: str) -> str:
+    """Strip Mfac/Rack leakage and repair OCR (zvcoLcH1N → ZYCOLCHIN TAB)."""
+    raw = re.sub(r'[\\|/]+', ' ', name or "")
+    raw = re.sub(r'\s+', ' ', raw).strip()
+    tokens = raw.split()
+    mfr_rack = re.compile(
+        r'^(?:ZYD|ZVO|ZUNSU|EUNSU|Z¥D)$', re.IGNORECASE)
+    while tokens and mfr_rack.match(tokens[0]):
+        tokens.pop(0)
+    name = ' '.join(tokens).upper()
+    name = re.sub(r'(?<=[A-Z])1(?=[A-Z])', 'I', name)
+    name = re.sub(r'\bZVCOLCHIN\b', 'ZYCOLCHIN', name)
+    if re.search(r'ZYCOLCHIN', name):
+        return 'ZYCOLCHIN TAB'
+    return name.strip(' .')
+
+
+def extract_shri_parvathy_line_items_from_ocr(ocr_text: str = "") -> list:
+    """Parse Mfac | Rack | Item | Pack | HSN | Billed Qty | Batch rows."""
+    if not ocr_text or not ocr_suggests_shri_parvathy_healthcare(ocr_text):
+        return []
+
+    flat = re.sub(r'\s+', ' ', ocr_text)
+    row_re = re.compile(
+        r'((?:[A-Za-z]{2,6}\s+){0,2}[A-Za-z][A-Za-z0-9\\]*?)\s+'
+        r'(TAB|TABS|CAP|CAPS|INJ|SYP|GEL|CREAM|DROPS?|OINT|SPRAY|VIAL|AMP|SUSP)S?\b'
+        r'.{0,24}?'
+        r'(\d{6,10})\s+'
+        r'(\d{1,5})\s+'
+        r'([A-Z]{1,3}\d{4,8}[A-Z]?)',
+        re.IGNORECASE,
+    )
+    items = []
+    seen = set()
+    for match in row_re.finditer(flat):
+        product = _normalize_shri_parvathy_product(
+            f"{match.group(1)} {match.group(2)}")
+        if not product or len(product) < 4:
+            continue
+        if re.search(r'ITEM\s*DESC|HEALTHCARE|HOSPITAL', product, re.I):
+            continue
+        qty = match.group(4)
+        key = (product, qty, match.group(5).upper())
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({
+            "product_description": product,
+            "quantity": qty,
+            "lot_batch_number": match.group(5).upper(),
+            "hsn_code": re.sub(r'^1(?=3004)', '', match.group(3)),
+        })
+
+    if not items:
+        tot_qty = extract_total_qty_from_ocr(ocr_text)
+        prod_m = re.search(
+            r'([A-Za-z][A-Za-z0-9\\]{4,})\s+(TAB|TABS|CAP|CAPS|INJ)\b',
+            flat, re.IGNORECASE)
+        if prod_m and tot_qty:
+            product = _normalize_shri_parvathy_product(
+                f"{prod_m.group(1)} {prod_m.group(2)}")
+            if product:
+                items.append({
+                    "product_description": product,
+                    "quantity": str(int(tot_qty)) if float(tot_qty).is_integer()
+                    else str(tot_qty),
+                })
+    return items
+
+
+def fix_shri_parvathy_healthcare_fields(
+    items: list, invoice_summary: dict, ocr_text: str = "", vendor: str = "",
+) -> list:
+    """Correct Tax Inv. No., Invoice Date, product name, and billed qty only."""
+    if not ocr_suggests_shri_parvathy_healthcare(ocr_text, vendor):
+        return items
+
+    summary = invoice_summary if isinstance(invoice_summary, dict) else {}
+
+    inv_no = extract_shri_parvathy_invoice_no(ocr_text)
+    if inv_no:
+        current_inv = str(summary.get("invoice_no", "") or "").strip()
+        if (
+            not current_inv
+            or current_inv != inv_no
+            or _is_shri_parvathy_dl_number(current_inv)
+        ):
+            if current_inv != inv_no:
+                logger.warning(
+                    f"⚠️ FIX SHRI PARVATHY: invoice_no "
+                    f"'{current_inv}' -> '{inv_no}'")
+            summary["invoice_no"] = inv_no
+
+    inv_date = extract_shri_parvathy_invoice_date(ocr_text)
+    if inv_date:
+        current_date = str(summary.get("invoice_date", "") or "").strip()
+        if current_date != inv_date:
+            logger.warning(
+                f"⚠️ FIX SHRI PARVATHY: invoice_date "
+                f"'{current_date}' -> '{inv_date}'")
+            summary["invoice_date"] = inv_date
+
+    ocr_rows = extract_shri_parvathy_line_items_from_ocr(ocr_text)
+    tot_qty = extract_total_qty_from_ocr(ocr_text)
+
+    phantom = re.compile(
+        r'^(?:ZYD|ZVO|ZUNSU|EUNSU|Z¥D|\d+[\'` ]?S)$', re.IGNORECASE)
+    real_items = []
+    phantom_items = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("product_description", "") or "").strip()
+        if phantom.fullmatch(desc):
+            phantom_items.append(item)
+        else:
+            real_items.append(item)
+    if real_items:
+        if phantom_items:
+            logger.warning(
+                f"⚠️ FIX SHRI PARVATHY: dropped {len(phantom_items)} "
+                "Mfac/Rack/pack phantom row(s)")
+        items = real_items
+    else:
+        items = phantom_items or []
+
+    def _apply_product_qty(item: dict, product: str = "", qty: str = "") -> None:
+        if product and str(item.get("product_description", "") or "").strip() != product:
+            logger.warning(
+                f"⚠️ FIX SHRI PARVATHY: product "
+                f"'{item.get('product_description')}' -> '{product}'")
+            item["product_description"] = product
+        if qty:
+            cur_q = str(item.get("quantity", "") or "").strip()
+            if cur_q != str(qty):
+                logger.warning(
+                    f"⚠️ FIX SHRI PARVATHY: quantity '{cur_q}' -> '{qty}'")
+                item["quantity"] = str(qty)
+
+    if ocr_rows and len(ocr_rows) == 1:
+        product = ocr_rows[0].get("product_description") or ""
+        qty = ocr_rows[0].get("quantity") or ""
+        batch = ocr_rows[0].get("lot_batch_number") or ""
+        if not items:
+            new_item = {
+                "product_description": product,
+                "quantity": qty,
+            }
+            if batch:
+                new_item["lot_batch_number"] = batch
+            items = [new_item]
+        elif len(items) == 1:
+            _apply_product_qty(items[0], product, qty)
+            if batch and not str(items[0].get("lot_batch_number") or "").strip():
+                items[0]["lot_batch_number"] = batch
+        else:
+            _apply_product_qty(items[0], product, qty)
+    elif items:
+        for item in items:
+            old = str(item.get("product_description", "") or "")
+            new = _normalize_shri_parvathy_product(old)
+            if new and new != old.strip().upper() and new != old:
+                _apply_product_qty(item, new, "")
+        if tot_qty and len(items) == 1:
+            try:
+                cur = float(normalize_numeric_value(
+                    str(items[0].get("quantity", "") or 0)) or 0)
+            except (TypeError, ValueError):
+                cur = 0.0
+            if abs(cur - tot_qty) > 0.5:
+                qty_s = str(int(tot_qty)) if float(
+                    tot_qty).is_integer() else str(tot_qty)
+                _apply_product_qty(items[0], "", qty_s)
+
+    return items
 
 
 def _bluefox_garbled_product_text(ocr_text: str) -> bool:
@@ -20839,6 +21441,20 @@ def enforce_schema(raw_data):
     # NIC-IRP item table: Taxable/Total misread as qty/rate (CR2403 / invoice_4)
     items = fix_nic_irp_einvoice_qty_rate_from_ocr(items, ocr_text)
 
+    _maa_vendor = str(
+        template["data"]["invoice_summary"].get("vendor", "") or "")
+    _maa_fix_ocr = ocr_text or ""
+    if isinstance(data, dict):
+        _maa_table_ocr = str(data.get("maa_table_ocr", "") or "").strip()
+        if _maa_table_ocr:
+            _maa_fix_ocr = (
+                _maa_fix_ocr + "\n--- MAA TABLE OCR ---\n" + _maa_table_ocr
+            ).strip()
+    items = fix_maa_pharmaceuticals_zero_qty_from_ocr(
+        items, _maa_fix_ocr, _maa_vendor)
+    items = fix_maa_pharmaceuticals_base_amount_from_qty_rate(
+        items, _maa_fix_ocr, _maa_vendor)
+
     for item in items:
         # Fix quantity/price swap
         if "quantity" in item and "unit_price" in item and "total_amount" in item:
@@ -21206,6 +21822,10 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 12g-b: Drop NATARAJ batch-as-product phantoms from pipe-table recovery
     processed_items = drop_nataraj_batch_phantom_items(
+        processed_items, ocr_text)
+
+    # CHANDUKA AGENCIES: drop COMP-column phantom products (ZYDUS AEROFROCE, etc.)
+    processed_items = drop_chanduka_comp_phantom_items(
         processed_items, ocr_text)
 
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
@@ -23214,6 +23834,19 @@ def enforce_schema(raw_data):
             template["data"]["line_items"]["items"] = _sunanda_items
             template["data"]["line_items"]["count"] = len(_sunanda_items)
 
+    _parvathy_vendor = template["data"]["invoice_summary"].get(
+        "vendor", "") or ""
+    if ocr_suggests_shri_parvathy_healthcare(ocr_text or "", _parvathy_vendor):
+        _parvathy_items = fix_shri_parvathy_healthcare_fields(
+            template["data"]["line_items"].get("items") or [],
+            template["data"]["invoice_summary"],
+            ocr_text or "",
+            _parvathy_vendor,
+        )
+        if _parvathy_items:
+            template["data"]["line_items"]["items"] = _parvathy_items
+            template["data"]["line_items"]["count"] = len(_parvathy_items)
+
     if ocr_text and ocr_suggests_sterling_pharma_table(ocr_text):
         _sterling_items = fix_sterling_pharma_line_items_from_ocr(
             template["data"]["line_items"].get("items") or [], ocr_text)
@@ -23402,6 +24035,7 @@ def enforce_schema(raw_data):
 
     if isinstance(template.get("data"), dict):
         template["data"].pop("rathna_table_ocr", None)
+        template["data"].pop("maa_table_ocr", None)
         template["data"].pop("jackson_table_ocr", None)
         template["data"].pop("saraswati_table_ocr", None)
         template["data"].pop("someshwara_detail_ocr", None)
@@ -23412,6 +24046,7 @@ def enforce_schema(raw_data):
     _summary_out = template["data"].get("invoice_summary")
     if isinstance(_summary_out, dict):
         _summary_out.pop("rathna_table_ocr", None)
+        _summary_out.pop("maa_table_ocr", None)
         _summary_out.pop("jackson_table_ocr", None)
         _summary_out.pop("saraswati_table_ocr", None)
         _summary_out.pop("someshwara_detail_ocr", None)
@@ -24165,16 +24800,22 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         if pdfplumber_text and (
             _ksk_needs_tesseract_ocr(pdfplumber_text)
             or _bluefox_needs_tesseract_ocr(pdfplumber_text)
+            or _shri_parvathy_skip_pdfplumber(pdfplumber_text)
         ):
             if _ksk_needs_tesseract_ocr(pdfplumber_text):
                 logger.warning(
                     "    ⚠️ KSK SPECIALITY: PDFPlumber layout garbled, "
                     "falling back to Tesseract..."
                 )
-            else:
+            elif _bluefox_needs_tesseract_ocr(pdfplumber_text):
                 logger.warning(
                     "    ⚠️ BlueFox/United Medical: PDF product fonts garbled, "
                     "falling back to Tesseract..."
+                )
+            else:
+                logger.warning(
+                    "    ⚠️ SHRI PARVATHY HEALTHCARE: PDFPlumber interleaved "
+                    "Tax Inv. No. / buyer columns, using PyMuPDF text..."
                 )
         elif pdfplumber_text and len(pdfplumber_text.strip()) > 100:
             _tier12_ocr_text = pdfplumber_text
@@ -24869,6 +25510,26 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _rathna_ocr_err:
             logger.debug(
                 f"RATHNA table OCR enrichment skipped: {_rathna_ocr_err}")
+
+        try:
+            _maa_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _maa_data = _maa_fd.get("data") if isinstance(
+                _maa_fd.get("data"), dict) else _maa_fd
+            _maa_sum = _maa_data.get("invoice_summary") if isinstance(
+                _maa_data.get("invoice_summary"), dict) else {}
+            _maa_vendor = str(_maa_sum.get("vendor")
+                              or _maa_fd.get("vendor") or "")
+            _maa_ocr = result.get("ocr_text") or fallback_ocr_text or ""
+            if ocr_suggests_maa_pharmaceuticals(_maa_ocr, _maa_vendor):
+                _maa_tocr = _ocr_maa_pharmaceuticals_table_region(page=page)
+                if _maa_tocr.strip():
+                    result["maa_table_ocr"] = _maa_tocr
+                    logger.info(
+                        f"    ✅ MAA table-band OCR captured ({len(_maa_tocr)} chars)")
+        except Exception as _maa_ocr_err:
+            logger.debug(
+                f"MAA table OCR enrichment skipped: {_maa_ocr_err}")
 
         # JACKSON MEDICALS scans: capture QTY/Rate/Amount band for FIX12j
         try:
@@ -29033,6 +29694,28 @@ def split_and_extract_invoices(
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
 
+                    _maa_tocr = str(page_result.get(
+                        "maa_table_ocr", "") or "").strip()
+                    if not _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        _maa_sum_fb = data_with_ocr["data"].get(
+                            "invoice_summary")
+                        _maa_vend_fb = ""
+                        if isinstance(_maa_sum_fb, dict):
+                            _maa_vend_fb = str(
+                                _maa_sum_fb.get("vendor") or "")
+                        if ocr_suggests_maa_pharmaceuticals(
+                            raw_ocr_text or "", _maa_vend_fb
+                        ):
+                            try:
+                                _maa_page = doc.load_page(first_page_idx)
+                                _maa_tocr = _ocr_maa_pharmaceuticals_table_region(
+                                    page=_maa_page) or ""
+                            except Exception as _maa_fb_err:
+                                logger.debug(
+                                    f"MAA table OCR fallback failed: {_maa_fb_err}")
+                    if _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["maa_table_ocr"] = _maa_tocr
+
                     _sara_tocr = str(page_result.get(
                         "saraswati_table_ocr", "") or "").strip()
                     if (
@@ -30026,6 +30709,27 @@ def test_extract(
                         "rathna_table_ocr", "") or "").strip()
                     if _rathna_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["rathna_table_ocr"] = _rathna_tocr
+                    _maa_tocr = str(page_result.get(
+                        "maa_table_ocr", "") or "").strip()
+                    if not _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        _maa_sum_fb = data_with_ocr["data"].get(
+                            "invoice_summary")
+                        _maa_vend_fb = ""
+                        if isinstance(_maa_sum_fb, dict):
+                            _maa_vend_fb = str(
+                                _maa_sum_fb.get("vendor") or "")
+                        if ocr_suggests_maa_pharmaceuticals(
+                            raw_ocr_text or "", _maa_vend_fb
+                        ):
+                            try:
+                                _maa_page = doc.load_page(first_page_idx)
+                                _maa_tocr = _ocr_maa_pharmaceuticals_table_region(
+                                    page=_maa_page) or ""
+                            except Exception as _maa_fb_err:
+                                logger.debug(
+                                    f"MAA table OCR fallback failed: {_maa_fb_err}")
+                    if _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["maa_table_ocr"] = _maa_tocr
                     _sara_tocr = str(page_result.get(
                         "saraswati_table_ocr", "") or "").strip()
                     if (
