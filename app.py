@@ -1463,6 +1463,13 @@ def try_extract_invoice_from_text(text: str) -> Optional[str]:
                 f"✅ ACCEPTED invoice# from SHRI PARVATHY Tax Inv. No.: '{parvathy_no}'")
             return parvathy_no
 
+    if ocr_suggests_pharmacureil_wondersoft(text_norm):
+        pharmacureil_no = extract_pharmacureil_wondersoft_invoice_no(text_norm)
+        if pharmacureil_no:
+            logger.info(
+                f"✅ ACCEPTED invoice# from PHARMACUREIL WsDocNo: '{pharmacureil_no}'")
+            return pharmacureil_no
+
     # Prefer explicit TAX INVOICE header number before other IDs.
     tax_invoice_header_no = _extract_tax_invoice_header_number()
     if tax_invoice_header_no:
@@ -13942,6 +13949,266 @@ def ocr_suggests_shri_parvathy_healthcare(ocr_text: str = "", vendor: str = "") 
     )
 
 
+def ocr_suggests_pharmacureil_wondersoft(ocr_text: str = "", vendor: str = "") -> bool:
+    """PHARMACUREIL PRIVATE LIMITED / Sf-Wondersoft SalePrint (HSN MFR DESCRIPTION NETAMT)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'PHARMACUREIL', blob, re.IGNORECASE):
+        return False
+    if not re.search(r'Wondersoft|WsDocNo', blob, re.IGNORECASE):
+        return False
+    return bool(re.search(
+        r'\bNETAMT\b|\bHSN\b.{0,80}\bMFR\b.{0,80}\bDESCRIPTION\b',
+        blob,
+        re.IGNORECASE | re.DOTALL,
+    ))
+
+
+def _pharmacureil_wondersoft_skip_pdfplumber(ocr_text: str) -> bool:
+    """pdfplumber merges the SHANTHI overlay into DESCRIPTION; PyMuPDF keeps names intact."""
+    return ocr_suggests_pharmacureil_wondersoft(ocr_text)
+
+
+def extract_pharmacureil_wondersoft_invoice_no(ocr_text: str = "") -> Optional[str]:
+    """WsDocNo / GD-DISCOU value, including PyMuPDF 'value then label' column order."""
+    if not ocr_text or not ocr_suggests_pharmacureil_wondersoft(ocr_text):
+        return None
+
+    def _ok(raw: str) -> Optional[str]:
+        candidate = normalize_invoice_number(raw)
+        if not candidate or not re.search(r'\d', candidate):
+            return None
+        if '/' in candidate:
+            return None
+        if _is_gstin_like(candidate) or _is_suspicious_invoice_number(candidate):
+            return None
+        return candidate
+
+    patterns = (
+        r'\b([A-Z0-9][A-Z0-9\-]{5,24})\s+WsDocNo\b',
+        r'\bWsDocNo\s*:?\s*([A-Z0-9][A-Z0-9\-]{5,24})',
+        r'\bGD-DISCOU\s+([A-Z0-9][A-Z0-9\-]{5,24})',
+        r'\b([A-Z0-9][A-Z0-9\-]{5,24})\s+GD-DISCOU\b',
+    )
+    for pat in patterns:
+        m = re.search(pat, ocr_text, re.IGNORECASE)
+        if not m:
+            continue
+        candidate = _ok(m.group(1))
+        if candidate:
+            return candidate
+    return None
+
+
+def extract_pharmacureil_wondersoft_line_items_from_ocr(ocr_text: str) -> list:
+    """
+    Parse Wondersoft NETAMT rows from PyMuPDF right-to-left column text.
+
+    Per row: NETAMT, GST amt (SG/C G), GST%, MRP, OLD MRP, RATE, QTY, EXP, BATCH, PACK, DESCRIPTION, MFR, HSN
+    Base Amount is GST-inclusive NETAMT (Docexa Calculated Total = sum of line
+    totals). Invoice footer BASE / taxable is stored as additional_fields.taxable_amount.
+    """
+    if not ocr_text or not ocr_suggests_pharmacureil_wondersoft(ocr_text):
+        return []
+
+    flat = re.sub(r'\s+', ' ', ocr_text)
+    row_re = re.compile(
+        r'(?P<net>\d+\.\d{2})\s+'
+        r'(?P<gst_amt>\d+\.\d{2})\s+'
+        r'(?P<gst_pct>\d{1,2})%\s+'
+        r'(?P<mrp>\d+\.\d{2})\s+'
+        r'(?P<old_mrp>\d*\.\d{2})\s+'
+        r'(?P<rate>\d+\.\d{2})\s+'
+        r'(?P<qty>\d+)\s+'
+        r'(?P<exp>\d{2}/\d{2})\s+'
+        r'(?P<batch>[A-Z0-9]+)\s+'
+        r"(?P<pack>\d+['’]?s)\s+"
+        r'(?P<name>\*?[A-Za-z][A-Za-z0-9 ./*-]*)\*?\s+'
+        r'ZYDU[S]?\s+'
+        r'(?P<hsn>\d{8})',
+        re.IGNORECASE,
+    )
+
+    items = []
+    seen = set()
+    for m in row_re.finditer(flat):
+        name = re.sub(r'^\*+|\*+$', '', m.group('name')).strip()
+        if len(name) < 3:
+            continue
+        try:
+            qty = int(m.group('qty'))
+            rate = float(m.group('rate'))
+            net = float(m.group('net'))
+            gst_amt = float(m.group('gst_amt'))
+        except (TypeError, ValueError):
+            continue
+        if qty <= 0 or rate <= 0 or net <= 0:
+            continue
+        taxable = round(net - gst_amt, 2)
+        if taxable <= 0:
+            continue
+        batch = m.group('batch').strip()
+        key = (name.upper(), qty, round(rate, 2), batch)
+        if key in seen:
+            continue
+        seen.add(key)
+        gst_pct = str(int(m.group('gst_pct')))
+        items.append({
+            "product_description": name,
+            "quantity": str(qty),
+            "unit_price": f"{rate:.2f}",
+            "total_amount": f"{net:.2f}",
+            "tax_amount": gst_pct,
+            "hsn_code": m.group('hsn'),
+            "lot_batch_number": batch,
+            "additional_fields": {
+                "mrp": m.group('mrp'),
+                "mfg": "ZYDU",
+                "expiry_date": m.group('exp'),
+                "pack": m.group('pack'),
+                "gst_amount": f"{gst_amt:.2f}",
+                "net_amount": f"{net:.2f}",
+                "taxable_amount": f"{taxable:.2f}",
+                "gross_amount": f"{taxable:.2f}",
+            },
+            "recovered_from_ocr": True,
+        })
+    return items
+
+
+def fix_pharmacureil_wondersoft_line_items_from_ocr(
+    items: list, ocr_text: str = "", vendor: str = "",
+) -> list:
+    """PHARMACUREIL-only: restore DESCRIPTION names and NETAMT line totals from OCR rows."""
+    if not ocr_suggests_pharmacureil_wondersoft(ocr_text, vendor):
+        return items
+    parsed = extract_pharmacureil_wondersoft_line_items_from_ocr(ocr_text)
+    if not parsed:
+        return items
+
+    def _num(item, key):
+        try:
+            return float(normalize_numeric_value(str(item.get(key, 0) or 0)) or 0)
+        except Exception:
+            return 0.0
+
+    def _name_garbled(name: str) -> bool:
+        up = str(name or "").upper()
+        if not up or len(up) < 3:
+            return True
+        if re.search(r'S\*\s+S[A-Z]{6,}|ZYDUS\*|SHANTHI', up):
+            return True
+        if re.search(r'[A-Z]\*[A-Z]', up) and '*' in up:
+            return True
+        return False
+
+    existing = [it for it in (items or []) if isinstance(it, dict)]
+    existing_garbled = any(
+        _name_garbled(str(it.get("product_description", "") or ""))
+        for it in existing
+    )
+    qty_rate_mismatch = False
+    if existing and len(existing) != len(parsed):
+        qty_rate_mismatch = True
+    else:
+        parsed_keys = {
+            (round(_num(row, "quantity"), 2), round(_num(row, "unit_price"), 2),
+             str(row.get("lot_batch_number", "") or "").upper())
+            for row in parsed
+        }
+        for it in existing:
+            key = (
+                round(_num(it, "quantity"), 2),
+                round(_num(it, "unit_price"), 2),
+                str(it.get("lot_batch_number", "") or "").upper(),
+            )
+            if key not in parsed_keys:
+                qty_rate_mismatch = True
+                break
+
+    if existing_garbled or qty_rate_mismatch or not existing:
+        logger.warning(
+            f"⚠️ FIX PHARMACUREIL: using {len(parsed)} OCR line item(s) "
+            f"(garbled_name={existing_garbled}, row_mismatch={qty_rate_mismatch})"
+        )
+        return parsed
+
+    def _batch_key(item):
+        return re.sub(r'[^A-Z0-9]', '', str(item.get("lot_batch_number", "") or "").upper())
+
+    used = set()
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        qty = _num(item, "quantity")
+        rate = _num(item, "unit_price")
+        batch = _batch_key(item)
+        match_idx = None
+        for i, row in enumerate(parsed):
+            if i in used:
+                continue
+            if batch and _batch_key(row) == batch:
+                try:
+                    rq = float(row["quantity"])
+                    rr = float(row["unit_price"])
+                except (TypeError, ValueError):
+                    continue
+                if abs(rq - qty) <= 0.01 and abs(rr - rate) <= 0.02:
+                    match_idx = i
+                    break
+        if match_idx is None:
+            for i, row in enumerate(parsed):
+                if i in used:
+                    continue
+                try:
+                    rq = float(row["quantity"])
+                    rr = float(row["unit_price"])
+                except (TypeError, ValueError):
+                    continue
+                if abs(rq - qty) <= 0.01 and abs(rr - rate) <= 0.02:
+                    match_idx = i
+                    break
+        if match_idx is None:
+            continue
+        used.add(match_idx)
+        row = parsed[match_idx]
+        old_name = str(item.get("product_description", "") or "").strip()
+        new_name = str(row.get("product_description", "") or "").strip()
+        if new_name and new_name.upper() != old_name.upper():
+            item["product_description"] = new_name
+            logger.warning(
+                f"⚠️ FIX PHARMACUREIL: product name '{old_name}' -> '{new_name}'"
+            )
+        old_total = str(item.get("total_amount", "") or "").strip()
+        new_total = str(row.get("total_amount", "") or "").strip()
+        if new_total and old_total != new_total:
+            item["total_amount"] = new_total
+            logger.warning(
+                f"⚠️ FIX PHARMACUREIL: base amount '{old_total}' -> '{new_total}' "
+                f"for '{item.get('product_description', '')}'"
+            )
+        if not item.get("lot_batch_number") and row.get("lot_batch_number"):
+            item["lot_batch_number"] = row["lot_batch_number"]
+        if not item.get("hsn_code") and row.get("hsn_code"):
+            item["hsn_code"] = row["hsn_code"]
+        if row.get("tax_amount") and not item.get("tax_amount"):
+            item["tax_amount"] = row["tax_amount"]
+        row_af = row.get("additional_fields") if isinstance(
+            row.get("additional_fields"), dict) else {}
+        item_af = item.get("additional_fields") if isinstance(
+            item.get("additional_fields"), dict) else {}
+        if row_af:
+            if not isinstance(item.get("additional_fields"), dict):
+                item["additional_fields"] = {}
+                item_af = item["additional_fields"]
+            for _k in ("gst_amount", "net_amount", "taxable_amount", "gross_amount"):
+                if row_af.get(_k):
+                    item_af[_k] = row_af[_k]
+
+    if not items and parsed:
+        return parsed
+    return items
+
+
 def _shri_parvathy_skip_pdfplumber(ocr_text: str) -> bool:
     """pdfplumber interleaves Tax Inv. No. with the buyer block; dates vanish."""
     if not ocr_suggests_shri_parvathy_healthcare(ocr_text):
@@ -21098,6 +21365,23 @@ def enforce_schema(raw_data):
             if heuristic_inv_no and not _is_suspicious_invoice_number(heuristic_inv_no):
                 ocr_inv_no = heuristic_inv_no
 
+        # PHARMACUREIL: generic alnum fallback truncates 26-27GD18891 -> 27GD18891
+        _pc_vendor = str(
+            template["data"]["invoice_summary"].get("vendor", "") or "")
+        if ocr_suggests_pharmacureil_wondersoft(ocr_text, _pc_vendor):
+            _pc_inv = extract_pharmacureil_wondersoft_invoice_no(ocr_text)
+            _cur_pc = str(current_inv_no or "").strip()
+            if _pc_inv and (
+                not _cur_pc
+                or _cur_pc.upper() in {"NONE", "NULL", "N/A"}
+                or _pc_inv.replace("-", "").upper() != _cur_pc.replace("-", "").upper()
+            ):
+                logger.warning(
+                    f"⚠️ FIX PHARMACUREIL: invoice_no '{_cur_pc}' -> '{_pc_inv}'"
+                )
+                template["data"]["invoice_summary"]["invoice_no"] = _pc_inv
+                current_inv_no = _pc_inv
+
         # PHARMACEA LINK: the header OCRs into noise ("Document No) 2b ivi oT"), so an
         # OCR-derived number here is junk ('27-2105'). Leave it empty and let the
         # focused header recovery read it from the image instead.
@@ -23322,6 +23606,52 @@ def enforce_schema(raw_data):
     except Exception as _payal_err:
         logger.debug(f"PAYAL PHARMA fix skipped: {_payal_err}")
 
+    # PHARMACUREIL / Sf-Wondersoft: DESCRIPTION overlay + GST-inclusive NETAMT as base
+    try:
+        processed_items = fix_pharmacureil_wondersoft_line_items_from_ocr(
+            processed_items,
+            ocr_text or "",
+            template["data"]["invoice_summary"].get("vendor", "") or "",
+        )
+        if ocr_suggests_pharmacureil_wondersoft(
+            ocr_text or "",
+            template["data"]["invoice_summary"].get("vendor", "") or "",
+        ):
+            # Docexa Calculated Total is SUM(line total_amount). Use GST-inclusive
+            # NETAMT so it matches Grand Total; footer BASE stays in taxable_amount.
+            _pc_ext = template["data"]["invoice_summary"].get("total")
+            _pc_calc = None
+            try:
+                _pc_calc = float(normalize_numeric_value(str(_pc_ext or "")) or 0)
+            except Exception:
+                _pc_calc = 0.0
+            if not _pc_calc:
+                _pc_sum = 0.0
+                for _pc_it in processed_items:
+                    if not isinstance(_pc_it, dict):
+                        continue
+                    _pc_af = _pc_it.get("additional_fields") if isinstance(
+                        _pc_it.get("additional_fields"), dict) else {}
+                    _pc_net = _pc_af.get("net_amount")
+                    if _pc_net not in (None, ""):
+                        try:
+                            _pc_sum += float(
+                                normalize_numeric_value(str(_pc_net)) or 0)
+                            continue
+                        except Exception:
+                            pass
+                    try:
+                        _pc_sum += float(normalize_numeric_value(
+                            str(_pc_it.get("total_amount", 0) or 0)) or 0)
+                    except Exception:
+                        pass
+                _pc_calc = _pc_sum
+            if _pc_calc and _pc_calc > 0:
+                template["data"]["invoice_summary"]["calculated_total"] = (
+                    f"{_pc_calc:.2f}")
+    except Exception as _pc_err:
+        logger.debug(f"PHARMACUREIL Wondersoft fix skipped: {_pc_err}")
+
     template["data"]["line_items"]["items"] = processed_items
     template["data"]["line_items"]["count"] = len(processed_items)
     template["data"]["line_items"]["items_with_quantity"] = sum(
@@ -24801,6 +25131,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             _ksk_needs_tesseract_ocr(pdfplumber_text)
             or _bluefox_needs_tesseract_ocr(pdfplumber_text)
             or _shri_parvathy_skip_pdfplumber(pdfplumber_text)
+            or _pharmacureil_wondersoft_skip_pdfplumber(pdfplumber_text)
         ):
             if _ksk_needs_tesseract_ocr(pdfplumber_text):
                 logger.warning(
@@ -24811,6 +25142,11 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 logger.warning(
                     "    ⚠️ BlueFox/United Medical: PDF product fonts garbled, "
                     "falling back to Tesseract..."
+                )
+            elif _pharmacureil_wondersoft_skip_pdfplumber(pdfplumber_text):
+                logger.warning(
+                    "    ⚠️ PHARMACUREIL Wondersoft: PDFPlumber interleaved "
+                    "buyer overlay into product names, using PyMuPDF text..."
                 )
             else:
                 logger.warning(
