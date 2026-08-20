@@ -3068,6 +3068,246 @@ def fix_nic_irp_einvoice_qty_rate_from_ocr(items, ocr_text: str) -> list:
     return items
 
 
+def _ocr_suggests_gst_einvoice_goods_services_unt_table(ocr_text: str) -> bool:
+    """GST e-invoice 'Details of Goods / Services' print with UNT + qty.000 + 5.00+0.00.
+
+    Distinct from NIC-IRP (5+0|0+0) and GST portal Goods Details (Qty + Free).
+    Discounted Unit Price must not be replaced with taxable/qty.
+    """
+    if not ocr_text:
+        return False
+    if _ocr_suggests_nic_irp_einvoice_table(ocr_text):
+        return False
+    if _ocr_suggests_gst_portal_goods_details(ocr_text):
+        return False
+    if not re.search(r'e-Invoice\s+Details', ocr_text, re.IGNORECASE):
+        return False
+    if not re.search(r'Details\s+of\s+Goods', ocr_text, re.IGNORECASE):
+        return False
+    if not re.search(r'\bUNT\b', ocr_text):
+        return False
+    # Header often wraps: "Unit | Unit Discount" then next line "Price(Rs)"
+    if not (
+        re.search(r'Unit\s+Price', ocr_text, re.IGNORECASE)
+        or (
+            re.search(r'Item\s+Description', ocr_text, re.IGNORECASE)
+            and re.search(r'Price\s*\(Rs\)', ocr_text, re.IGNORECASE)
+        )
+    ):
+        return False
+    if not re.search(r'\d+\.\d{2}\s*\+\s*\d+\.\d{2}', ocr_text):
+        return False
+    if not re.search(r'\d+\.\d{3}\s*.{0,12}UNT', ocr_text, re.IGNORECASE):
+        return False
+    return True
+
+
+_GST_EINVOICE_GOODS_UNT_ROW_RE = re.compile(
+    r'(?m)^\s*(\d{1,3})\.?\s*[|]?\s*'
+    r'(.+?)\s*[—_|]*\s*'
+    r'(\d{4,8})\s*'
+    r'(?:[|—_\-\s{]+)?'
+    r'(\d+\.\d{3})\s*'
+    r'[\|)/\]}{]?\s*'
+    r'UNT\s*'
+    r'[}|/\\]?\s*'
+    r'(\d+\.\d{2,3})',
+    re.IGNORECASE,
+)
+
+
+def _parse_gst_einvoice_goods_services_unt_rows(ocr_text: str) -> list:
+    """Parse SINo | Item Description | HSN | Quantity.000 | UNT | Unit Price rows.
+
+    OCR often glues Unit to price (UNT}21.600, UNT/105.210) and wraps the
+    product name onto the next line (DERIPHYLLIN RET / 150MG).
+    """
+    if not _ocr_suggests_gst_einvoice_goods_services_unt_table(ocr_text):
+        return []
+
+    lines = (ocr_text or "").splitlines()
+    rows = []
+    seen = set()
+    for idx, line in enumerate(lines):
+        m = _GST_EINVOICE_GOODS_UNT_ROW_RE.search(line)
+        if not m:
+            continue
+        try:
+            qty = float(m.group(4).replace(',', ''))
+            rate = float(m.group(5).replace(',', ''))
+        except Exception:
+            continue
+        if qty <= 0 or rate <= 0:
+            continue
+        product = re.sub(r'[\s|—_]+', ' ', m.group(2)).strip(" -|")
+        product = re.sub(
+            r'\b(?:SINo|Sr|No\.?|Item|Description|HSN|Code)\b',
+            ' ',
+            product,
+            flags=re.I,
+        )
+        product = re.sub(r'\s+', ' ', product).strip(" -|")
+        nxt = None
+        for look in range(idx + 1, min(idx + 4, len(lines))):
+            cand = (lines[look] or "").strip()
+            if not cand:
+                continue
+            nxt = cand
+            break
+        if nxt and not _GST_EINVOICE_GOODS_UNT_ROW_RE.search(nxt):
+            if not re.search(r"Tax['’]?ble|Tot\s+Inv", nxt, re.IGNORECASE):
+                wrap = re.match(
+                    r'^([A-Za-z0-9][A-Za-z0-9\-/.]*[A-Za-z][A-Za-z0-9\-/.]*)\b',
+                    nxt,
+                )
+                if wrap:
+                    extra = wrap.group(1).strip()
+                    if extra.upper() not in {
+                        'UNT', 'HSN', 'UNIT', 'TOTAL', 'CGST', 'SGST', 'IGST',
+                    }:
+                        product = (product + ' ' + extra).strip()
+        if not product or not re.match(r'[A-Za-z]', product):
+            continue
+        key = (m.group(1), m.group(3), round(qty, 3), round(rate, 3))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "sr": m.group(1),
+            "product_description": product,
+            "hsn_code": m.group(3),
+            "quantity": qty,
+            "unit_price": rate,
+        })
+    return rows
+
+
+def fix_gst_einvoice_goods_services_unt_qty_rate_from_ocr(items, ocr_text: str) -> list:
+    """Restore Quantity + Unit Price (+ wrapped name) for GST e-invoice UNT tables.
+
+    Shared swap / taxable÷qty fixes treat Discounted lines as mismatched rate.
+    Only product_description / quantity / unit_price are updated; totals stay.
+    """
+    if not items or not ocr_text:
+        return items
+    if _is_pharmacea_link_vendor("", ocr_text):
+        return items
+    if not _ocr_suggests_gst_einvoice_goods_services_unt_table(ocr_text):
+        return items
+
+    ocr_rows = _parse_gst_einvoice_goods_services_unt_rows(ocr_text)
+    if len(ocr_rows) < 2:
+        return items
+
+    def _norm_desc(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _names_match(a: str, b: str) -> bool:
+        if not a or not b:
+            return False
+        if a == b or a in b or b in a:
+            return True
+        skip = {'TAB', 'CAP', 'INJ', 'MG', 'ML', 'THE', 'AND', 'RET'}
+        ta = {t for t in re.findall(r'[A-Z]{3,}', a) if t not in skip}
+        tb = {t for t in re.findall(r'[A-Z]{3,}', b) if t not in skip}
+        return bool(ta and tb and (ta & tb))
+
+    def _to_float(value) -> float:
+        try:
+            return float(normalize_numeric_value(str(value or "0")) or 0)
+        except Exception:
+            return 0.0
+
+    def _fmt_qty(q: float) -> str:
+        if abs(q - round(q)) < 0.001:
+            return str(int(round(q)))
+        return f"{q:.3f}"
+
+    def _near(a: float, b: float) -> bool:
+        if a <= 0 or b <= 0:
+            return False
+        return abs(a - b) <= 0.05 or abs(a - b) / max(b, 0.01) <= 0.01
+
+    used = set()
+    for item in items:
+        item_raw = str(item.get("product_description", "") or "")
+        item_desc = _norm_desc(item_raw)
+        item_hsn = re.sub(r'[^0-9]', '', str(item.get("hsn_code", "") or ""))
+        cur_qty = _to_float(item.get("quantity"))
+        cur_rate = _to_float(item.get("unit_price"))
+        if not item_desc and not item_hsn:
+            continue
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            row_hsn = re.sub(r'[^0-9]', '', str(row.get("hsn_code") or ""))
+            if item_hsn and row_hsn and (
+                item_hsn == row_hsn
+                or item_hsn.startswith(row_hsn)
+                or row_hsn.startswith(item_hsn)
+            ):
+                score += 3
+            row_raw = str(row.get("product_description", "") or "")
+            if _names_match(item_desc, _norm_desc(row_raw)):
+                score += 5
+            ocr_qty = float(row["quantity"])
+            ocr_rate = float(row["unit_price"])
+            if _near(cur_qty, ocr_qty):
+                score += 4
+            if _near(cur_rate, ocr_rate):
+                score += 4
+            # Swap leftover: Quantity column taken as rate or Unit Price as qty
+            if _near(cur_qty, ocr_rate) or _near(cur_rate, ocr_qty):
+                score += 3
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        if best_idx is None or best_score < 5:
+            continue
+
+        row = ocr_rows[best_idx]
+        used.add(best_idx)
+        ocr_qty = float(row["quantity"])
+        ocr_rate = float(row["unit_price"])
+        ocr_name = str(row.get("product_description") or "").strip()
+
+        qty_ok = cur_qty > 0 and abs(cur_qty - ocr_qty) <= 0.05
+        rate_ok = cur_rate > 0 and abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) <= 0.005
+        if not qty_ok:
+            item["quantity"] = _fmt_qty(ocr_qty)
+        if not rate_ok:
+            item["unit_price"] = f"{ocr_rate:.2f}"
+
+        cur_name_n = _norm_desc(item_raw)
+        ocr_name_n = _norm_desc(ocr_name)
+        if (
+            ocr_name_n
+            and cur_name_n
+            and cur_name_n != ocr_name_n
+            and (
+                ocr_name_n.startswith(cur_name_n)
+                or cur_name_n.startswith(ocr_name_n)
+            )
+            and len(ocr_name_n) > len(cur_name_n)
+        ):
+            item["product_description"] = ocr_name
+
+        if not qty_ok or not rate_ok:
+            logger.warning(
+                f"⚠️ GST e-invoice Goods/Services UNT: corrected "
+                f"'{item.get('product_description', '')}': "
+                f"qty {cur_qty}->{item['quantity']}, "
+                f"rate {cur_rate}->{item['unit_price']}"
+            )
+
+    return items
+
+
 def _ocr_suggests_gst_portal_goods_details(ocr_text: str) -> bool:
     """GST portal e-invoice PDF: Goods Details table (Qty + Free | Unit | Unit Price)."""
     if not ocr_text:
@@ -23711,6 +23951,8 @@ def enforce_schema(raw_data):
     processed_items = dedupe_gst_portal_einvoice_recovered_items(
         processed_items, ocr_text)
     processed_items = fix_nic_irp_einvoice_qty_rate_from_ocr(
+        processed_items, ocr_text)
+    processed_items = fix_gst_einvoice_goods_services_unt_qty_rate_from_ocr(
         processed_items, ocr_text)
 
     # 🔧 FIX 14: Strict fallback for Bharat Pharma invoice 008125.
