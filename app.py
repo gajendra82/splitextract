@@ -7675,6 +7675,581 @@ def fix_satiija_distributors_rate_from_ocr(
     return items
 
 
+def ocr_suggests_drogaria_colvalcar(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect DROGARIA COLVALCAR / New Drug House GST invoice table layout."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    if "COLVALCAR" in blob or "COL VALCAR" in blob:
+        return True
+    if "NEW DRUG HOUSE" in blob and "DROGARIA" in blob:
+        return True
+    if (
+        "NEW DRUG HOUSE" in blob
+        and "PRODUCTS UNDER GST" in blob
+        and re.search(r'\bMRP\b', blob)
+        and re.search(r'\bRATE\b', blob)
+    ):
+        return True
+    return False
+
+
+def _ocr_drogaria_colvalcar_table_region(page=None, image_bytes: bytes = None) -> str:
+    """OCR the line-item table band for DROGARIA COLVALCAR scans (format-scoped)."""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(4.0, 4.0))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+
+        def _ocr_box(x0, y0, x1, y1) -> str:
+            crop = img.crop((
+                int(width * x0), int(height * y0),
+                int(width * x1), int(height * y1),
+            ))
+            arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+            arr = cv2.resize(arr, None, fx=1.5, fy=1.5,
+                             interpolation=cv2.INTER_CUBIC)
+            _, th = cv2.threshold(
+                arr, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            return pytesseract.image_to_string(th, config="--psm 6") or ""
+
+        candidates = [
+            _ocr_box(0.0, 0.22, 0.999, 0.36),
+            _ocr_box(0.0, 0.20, 0.999, 0.40),
+        ]
+        try:
+            img.close()
+        except Exception:
+            pass
+        return max(candidates, key=lambda t: len(t.strip()))
+    except Exception as exc:
+        logger.debug(f"COLVALCAR table OCR skipped: {exc}")
+        return ""
+
+
+def _colvalcar_item_mrp(item: dict) -> float:
+    try:
+        up = float(normalize_numeric_value(str(item.get("unit_price", "0") or "0")))
+    except Exception:
+        up = 0.0
+    af = item.get("additional_fields")
+    mrp = 0.0
+    if isinstance(af, dict) and af.get("mrp") not in (None, ""):
+        try:
+            mrp = float(normalize_numeric_value(str(af.get("mrp"))))
+        except Exception:
+            mrp = 0.0
+    return mrp if mrp > 0 else up
+
+
+def _colvalcar_taxable_amount(invoice_summary: dict = None, ocr_text: str = "") -> float:
+    if isinstance(invoice_summary, dict):
+        try:
+            inv_total = float(normalize_numeric_value(
+                str(invoice_summary.get("total", "") or "0")))
+            inv_tax = float(normalize_numeric_value(
+                str(invoice_summary.get("tax", "") or "0")))
+            if inv_total > 0:
+                taxable = inv_total - inv_tax if inv_tax > 0 else inv_total / 1.05
+                if taxable > 0:
+                    return taxable
+        except Exception:
+            pass
+    if ocr_text:
+        m = re.search(
+            r'Taxable[^\d]*([\d,]+[.,]\d{2})',
+            ocr_text,
+            re.IGNORECASE,
+        )
+        if m:
+            raw = m.group(1).replace(',', '.')
+            if raw.count('.') > 1:
+                raw = raw.replace('.', '', raw.count('.') - 1)
+            try:
+                return float(raw)
+            except Exception:
+                pass
+    return 0.0
+
+
+def _extract_drogaria_colvalcar_total_qty(ocr_text: str) -> Optional[float]:
+    """Total Qty footer for COLVALCAR scans (OCR often reads 'Oty' instead of 'Qty')."""
+    if not ocr_text:
+        return None
+    patterns = [
+        r'\bTotal\s*O?ty\s*[:\.]?\s*(\d+(?:\.\d+)?)',
+        r'\bTot(?:al)?\s*O?ty\s*[:\.]?\s*(\d+(?:\.\d+)?)',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, ocr_text, re.IGNORECASE)
+        if m:
+            try:
+                return float(m.group(1))
+            except ValueError:
+                continue
+    return extract_total_qty_from_ocr(ocr_text)
+
+
+def _clean_drogaria_colvalcar_product_name(name: str) -> str:
+    cleaned = re.sub(r'\s+', ' ', str(name or '').strip())
+    cleaned = re.sub(r'\bAERGHALE\b', 'AEROHALE', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bAERGHAL\b', 'AEROHALE', cleaned, flags=re.IGNORECASE)
+    # Strip leading manufacturer token from "Mfr Product Name" layout.
+    cleaned = re.sub(
+        r'^(GERM|GERMAN)\s+',
+        '',
+        cleaned,
+        flags=re.IGNORECASE,
+    ).strip()
+    return cleaned.strip()
+
+
+def _normalize_drogaria_colvalcar_table_ocr(text: str) -> str:
+    """Repair common COLVALCAR table OCR artifacts before row parsing."""
+    s = str(text or "")
+    # Split decimal glued as 214.414 -> 214.14 (extra trailing digit)
+    s = re.sub(r'\b(\d+)\.(\d{2})(\d)\b', r'\1.\2', s)
+    # Value split as 90552.7 1 -> 90552.71
+    s = re.sub(r'\b(\d{4,})\.(\d)\s+(\d)\b', r'\1.\2\3', s)
+    s = re.sub(r'\b(\d{4,})\.(\d{2})\s+(\d)\b', r'\1.\2', s)
+    return s
+
+
+def _parse_drogaria_colvalcar_table_rows(table_ocr: str, ocr_text: str = "") -> list:
+    """Parse COLVALCAR table OCR into qty/rate/value rows.
+
+    Layout: ... MRP Qty Rate [PD%] [BD%] Value
+    Value is often qty×rate×(1-PD%/100), so do not require qty×rate≈value.
+    """
+    combined = _normalize_drogaria_colvalcar_table_ocr(
+        f"{table_ocr or ''}\n{ocr_text or ''}"
+    )
+    if not combined.strip():
+        return []
+
+    flat = re.sub(r'\s+', ' ', combined)
+    rows = []
+    row_pat = re.compile(
+        r'(?P<name>(?:GERM\s+)?[A-Z][A-Z0-9 .\-]{3,50}?)\s+'
+        r'(?P<hsn>\d{8})\s+'
+        r'(?:PC|UNIT|LINIT|LNIT|[A-Z]{2,6})\s+'
+        r'BEC\s*(?P<batch>\d{3,6})\s+'
+        r'(?P<exp>\d{1,2}[/\\]\d{2,4})\s+'
+        r'(?P<mrp>\d+\.\d{2,4})\s+'
+        r'(?P<qty>\d{1,5})\s+'
+        r'(?P<rate>\d+\.\d{2,4})'
+        r'(?:\s+(?P<pd>\d{1,2}\.\d{2}))?'
+        r'(?:\s+(?P<bd>\d{1,2}\.\d{2}))?'
+        r'(?:\s+(?P<value>\d{2,}[\d,]*(?:\.\d{1,2})?))?',
+        re.IGNORECASE,
+    )
+    for m in row_pat.finditer(flat):
+        try:
+            qty = int(m.group("qty"))
+            rate = round(float(m.group("rate")), 2)
+            mrp = round(float(m.group("mrp")), 2)
+        except (TypeError, ValueError):
+            continue
+        if qty <= 0 or rate <= 0 or mrp <= 0:
+            continue
+        if rate >= mrp * 1.02:
+            continue
+
+        pd_pct = 0.0
+        if m.group("pd"):
+            try:
+                pd_pct = float(m.group("pd"))
+            except Exception:
+                pd_pct = 0.0
+        # PD% is typically small; BD%/GST markers like 5.00 can appear instead.
+        if pd_pct > 20:
+            pd_pct = 0.0
+
+        value = None
+        if m.group("value"):
+            try:
+                value = float(m.group("value").replace(',', ''))
+            except Exception:
+                value = None
+        gross = qty * rate
+        expected = gross * (1.0 - pd_pct / 100.0)
+        # Prefer printed Value when it is a discounted qty×rate (PD%/BD%).
+        if value is not None and value > 0 and value <= gross * 1.02:
+            if abs(value - gross) / max(gross, 1.0) <= 0.20:
+                pass  # keep printed value
+            elif abs(value - expected) / max(expected, 1.0) <= 0.08:
+                pass
+            else:
+                value = round(expected, 2)
+        else:
+            value = round(expected, 2)
+
+        # If Value is discounted, recover Rate from Value/Qty/(1-PD%).
+        # This corrects OCR rate glitches like 214.414 -> 214.41.
+        if value and qty > 0 and value < gross * 0.999:
+            pd_candidates = []
+            if 0 < pd_pct <= 20:
+                pd_candidates.append(pd_pct)
+            for cand_pd in (0.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 7.5, 10.0):
+                if cand_pd not in pd_candidates:
+                    pd_candidates.append(cand_pd)
+            best = None
+            for cand_pd in pd_candidates:
+                denom = qty * (1.0 - cand_pd / 100.0)
+                if denom <= 0:
+                    continue
+                cand_rate = value / denom
+                if cand_rate <= 0 or cand_rate >= mrp * 1.02:
+                    continue
+                score = abs(cand_rate - rate) / max(rate, 0.01)
+                if best is None or score < best[0]:
+                    best = (score, cand_rate, cand_pd)
+            if best and best[0] <= 0.02:
+                rate = round(best[1], 2)
+
+        rows.append({
+            "product_description": _clean_drogaria_colvalcar_product_name(
+                m.group("name").strip()),
+            "quantity": qty,
+            "unit_price": rate,
+            "total_amount": round(value, 2),
+            "lot_batch_number": f"BEC {m.group('batch').strip()}",
+            "mrp": mrp,
+        })
+
+    if rows:
+        return rows
+
+    # Fallback: numeric MRP Qty Rate triples ordered as printed (no product text).
+    num_pat = re.compile(
+        r'(?P<mrp>\d+\.\d{2})\s+(?P<qty>\d{1,5})\s+(?P<rate>\d+\.\d{2})'
+        r'(?:\s+(?P<pd>\d{1,2}\.\d{2}))?'
+        r'(?:\s+(?P<value>\d{2,}[\d,]*(?:\.\d{1,2})?))?'
+    )
+    for m in num_pat.finditer(flat):
+        try:
+            qty = int(m.group("qty"))
+            rate = float(m.group("rate"))
+            mrp = float(m.group("mrp"))
+        except (TypeError, ValueError):
+            continue
+        if qty < 2 or rate <= 0 or mrp <= 0 or rate >= mrp * 1.02:
+            continue
+        pd_pct = 0.0
+        if m.group("pd"):
+            try:
+                pd_pct = float(m.group("pd"))
+            except Exception:
+                pd_pct = 0.0
+        if pd_pct > 20:
+            pd_pct = 0.0
+        value = None
+        if m.group("value"):
+            try:
+                value = float(m.group("value").replace(',', ''))
+            except Exception:
+                value = None
+        expected = qty * rate * (1.0 - pd_pct / 100.0)
+        if value is None or value <= 0 or abs(value - expected) / max(expected, 1.0) > 0.08:
+            value = round(expected, 2)
+        rows.append({
+            "product_description": "",
+            "quantity": qty,
+            "unit_price": round(rate, 2),
+            "total_amount": round(value, 2),
+            "mrp": round(mrp, 2),
+        })
+    return rows
+
+
+def _colvalcar_rows_need_fix(items: list) -> bool:
+    if not items:
+        return False
+    bad = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        mrp = _colvalcar_item_mrp(item)
+        try:
+            qty = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+            rate = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+        except Exception:
+            bad += 1
+            continue
+        if mrp <= 0:
+            continue
+        # Standard bad extract: qty≈1 and/or unit_price equals MRP.
+        if qty <= 1.5 or abs(rate - mrp) / max(mrp, 1.0) <= 0.02:
+            bad += 1
+    return bad >= max(1, (len(items) + 1) // 2)
+
+
+def _colvalcar_to_float(value) -> Optional[float]:
+    try:
+        if value in (None, ""):
+            return None
+        return float(normalize_numeric_value(str(value)))
+    except Exception:
+        return None
+
+
+def _colvalcar_item_consistent(qty, rate, total, mrp=None) -> bool:
+    q = _colvalcar_to_float(qty)
+    r = _colvalcar_to_float(rate)
+    t = _colvalcar_to_float(total)
+    if q is None or r is None or t is None or q < 2 or r <= 0 or t <= 0:
+        return False
+    m = _colvalcar_to_float(mrp) if mrp is not None else None
+    if m and m > 0 and abs(r - m) / m <= 0.02:
+        return False
+    # Allow PD% discount between gross and printed Value.
+    gross = q * r
+    if abs(gross - t) / max(t, 1.0) <= 0.03:
+        return True
+    if t < gross and abs(gross - t) / max(gross, 1.0) <= 0.15:
+        return True
+    return False
+
+
+def recover_drogaria_colvalcar_line_item_quantities(
+    page, full_data, ocr_stats, ocr_stats_lock, ocr_text: str = ""
+):
+    """Hi-res Vision recovery for COLVALCAR scans (MRP/qty/rate columns).
+
+    Standard 1.5x Vision frequently maps MRP as unit_price with qty=1.
+    A 3x pass reads Qty + Rate + Value reliably for this format.
+    """
+    try:
+        if page is None or not isinstance(full_data, dict):
+            return
+        vendor = str(full_data.get("vendor", "") or "")
+        inv_summary = full_data.get("invoice_summary")
+        if isinstance(inv_summary, dict) and not vendor:
+            vendor = str(inv_summary.get("vendor", "") or "")
+        if not ocr_suggests_drogaria_colvalcar(ocr_text, vendor):
+            return
+
+        _li = full_data.get("line_items")
+        if isinstance(_li, list):
+            items = _li
+        elif isinstance(_li, dict) and isinstance(_li.get("items"), list):
+            items = _li["items"]
+        else:
+            container = _get_line_items_container(full_data)
+            items = container.get("items") if isinstance(container, dict) else None
+        if not items or not isinstance(items, list):
+            return
+        if not _colvalcar_rows_need_fix(items):
+            return
+
+        pix = page.get_pixmap(matrix=fitz.Matrix(3.0, 3.0))
+        hi_bytes = pix.tobytes("png")
+        pix = None
+
+        logger.warning(
+            "    🔄 DROGARIA COLVALCAR: line-item qty/rate look unreliable — "
+            "running hi-res Vision pass"
+        )
+        ref = extract_full_data_from_image_gemini(
+            hi_bytes, ocr_stats, ocr_stats_lock)
+        ref_fd = ref.get("full_data") if isinstance(ref, dict) else None
+        if not isinstance(ref_fd, dict):
+            return
+        ref_items = ref_fd.get("line_items")
+        if not isinstance(ref_items, list) or not ref_items:
+            return
+
+        from difflib import SequenceMatcher
+        pairs = []
+        if len(ref_items) == len(items):
+            pairs = list(zip(items, ref_items))
+        else:
+            used = [False] * len(ref_items)
+            for it in items:
+                name = re.sub(
+                    r'[^A-Z0-9]', '',
+                    _clean_drogaria_colvalcar_product_name(
+                        it.get("product_description")).upper())
+                best, best_ratio = -1, 0.0
+                for ri, rit in enumerate(ref_items):
+                    if used[ri]:
+                        continue
+                    r_name = re.sub(
+                        r'[^A-Z0-9]', '',
+                        _clean_drogaria_colvalcar_product_name(
+                            rit.get("product_description")).upper())
+                    ratio = SequenceMatcher(None, name, r_name).ratio() \
+                        if name and r_name else 0.0
+                    if ratio > best_ratio:
+                        best_ratio, best = ratio, ri
+                if best >= 0 and best_ratio >= 0.55:
+                    used[best] = True
+                    pairs.append((it, ref_items[best]))
+
+        updated = 0
+        for it, rit in pairs:
+            r_qty = _colvalcar_to_float(rit.get("quantity"))
+            r_rate = _colvalcar_to_float(rit.get("unit_price"))
+            r_total = _colvalcar_to_float(rit.get("total_amount"))
+            r_af = rit.get("additional_fields") if isinstance(
+                rit.get("additional_fields"), dict) else {}
+            r_mrp = _colvalcar_to_float(r_af.get("mrp")) if r_af else None
+            if not _colvalcar_item_consistent(r_qty, r_rate, r_total, r_mrp):
+                continue
+            it["quantity"] = (
+                str(int(r_qty)) if float(r_qty).is_integer() else f"{r_qty:.2f}"
+            )
+            it["unit_price"] = f"{r_rate:.2f}"
+            it["total_amount"] = f"{r_total:.2f}"
+            it["product_description"] = _clean_drogaria_colvalcar_product_name(
+                rit.get("product_description") or it.get("product_description"))
+            af = it.get("additional_fields")
+            if not isinstance(af, dict):
+                af = {}
+            if r_mrp and r_mrp > 0:
+                af["mrp"] = f"{r_mrp:.2f}"
+            elif _colvalcar_item_mrp(it) > 0:
+                af["mrp"] = f"{_colvalcar_item_mrp(it):.2f}"
+            it["additional_fields"] = af
+            updated += 1
+        if updated:
+            logger.warning(
+                f"    ✅ COLVALCAR hi-res Vision recovered qty/rate for {updated} item(s)"
+            )
+    except Exception as exc:
+        logger.debug(f"COLVALCAR hi-res Vision recovery skipped: {exc}")
+
+
+def fix_drogaria_colvalcar_line_items_from_ocr(
+    items: list,
+    ocr_text: str = "",
+    table_ocr: str = "",
+    vendor: str = "",
+    invoice_summary: dict = None,
+) -> list:
+    """
+    DROGARIA COLVALCAR / New Drug House only:
+    Gemini/Tesseract often map MRP as unit_price and miss qty/rate on scanned tables
+    (Mfr | Product | HSN | Pack | Sch | Batch | Ex.Dt | MRP | Qty | Rate | PD% | Value).
+    """
+    if not items or not ocr_suggests_drogaria_colvalcar(ocr_text, vendor):
+        return items
+
+    # Always clean product names for this format.
+    for item in items:
+        if isinstance(item, dict):
+            item["product_description"] = _clean_drogaria_colvalcar_product_name(
+                item.get("product_description", ""))
+
+    parsed_rows = _parse_drogaria_colvalcar_table_rows(table_ocr, ocr_text)
+    needs_fix = _colvalcar_rows_need_fix(items)
+    if not parsed_rows and not needs_fix:
+        return items
+    if not parsed_rows:
+        return items
+
+    logger.info(
+        "🔧 FIX: DROGARIA COLVALCAR — correcting product/qty/rate from table OCR"
+    )
+
+    use_rows = parsed_rows
+    # Prefer exact item-count match; otherwise keep as many leading rows as items.
+    if len(use_rows) != len(items):
+        if len(use_rows) < 1:
+            return items
+        use_rows = use_rows[:len(items)]
+        if len(use_rows) != len(items):
+            return items
+
+    total_qty = _extract_drogaria_colvalcar_total_qty(ocr_text)
+    if total_qty:
+        row_qty_sum = sum(float(r.get("quantity") or 0) for r in use_rows)
+        if abs(row_qty_sum - total_qty) > max(1.0, 0.05 * total_qty):
+            logger.info(
+                f"⏭️ COLVALCAR OCR rows qty sum {row_qty_sum} "
+                f"!= Total Qty {total_qty}; skipping OCR override"
+            )
+            return items if not needs_fix else items
+
+    # If Vision already looks mostly right, still prefer OCR rows when their
+    # Value sum is closer to invoice taxable than current item totals.
+    taxable = _colvalcar_taxable_amount(invoice_summary, ocr_text)
+    if taxable > 0 and not needs_fix:
+        try:
+            cur_sum = sum(
+                float(normalize_numeric_value(str(it.get("total_amount", "0"))))
+                for it in items if isinstance(it, dict)
+            )
+            ocr_sum = sum(float(r.get("total_amount") or 0) for r in use_rows)
+        except Exception:
+            cur_sum = ocr_sum = 0.0
+        if cur_sum > 0 and abs(cur_sum - taxable) / taxable <= 0.02:
+            return items
+        if ocr_sum > 0 and abs(ocr_sum - taxable) >= abs(cur_sum - taxable):
+            return items
+
+    from difflib import SequenceMatcher
+
+    def _name_key(text: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(text or '').upper())
+
+    used = set()
+    for item in items:
+        ikey = _name_key(item.get("product_description"))
+        match_idx = None
+        for idx, row in enumerate(use_rows):
+            if idx in used:
+                continue
+            rkey = _name_key(row.get("product_description", ""))
+            if ikey and rkey and (
+                ikey == rkey
+                or ikey in rkey
+                or rkey in ikey
+                or SequenceMatcher(None, ikey, rkey).ratio() >= 0.55
+            ):
+                match_idx = idx
+                break
+        if match_idx is None and len(use_rows) == len(items):
+            for idx, row in enumerate(use_rows):
+                if idx not in used:
+                    match_idx = idx
+                    break
+        if match_idx is None:
+            continue
+        used.add(match_idx)
+        row = use_rows[match_idx]
+        old_rate = item.get("unit_price")
+        old_qty = item.get("quantity")
+        old_total = item.get("total_amount")
+        item["quantity"] = str(row["quantity"])
+        item["unit_price"] = f"{float(row['unit_price']):.2f}"
+        item["total_amount"] = f"{float(row['total_amount']):.2f}"
+        if row.get("lot_batch_number"):
+            item["lot_batch_number"] = row["lot_batch_number"]
+        if row.get("product_description"):
+            item["product_description"] = _clean_drogaria_colvalcar_product_name(
+                row["product_description"])
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            af = {}
+        mrp = row.get("mrp") or _colvalcar_item_mrp(item)
+        if mrp:
+            af["mrp"] = f"{float(mrp):.2f}"
+        item["additional_fields"] = af
+        logger.warning(
+            f"⚠️ COLVALCAR row '{str(item.get('product_description', ''))[:40]}': "
+            f"qty {old_qty}→{item['quantity']}, rate {old_rate}→{item['unit_price']}, "
+            f"total {old_total}→{item['total_amount']}"
+        )
+
+    return items
+
+
 def ocr_suggests_chaitanya_bensus_pharma(ocr_text: str) -> bool:
     """Detect CHAITANYA PHARMA / BENSUS PHARMA Tax Inv. layout."""
     if not ocr_text:
@@ -13999,6 +14574,35 @@ def extract_pharmacureil_wondersoft_invoice_no(ocr_text: str = "") -> Optional[s
     return None
 
 
+def extract_pharmacureil_wondersoft_invoice_total(ocr_text: str = "") -> Optional[float]:
+    """Payable Grand Total for PHARMACUREIL / Sf-Wondersoft only.
+
+    Footer layout (PyMuPDF RTL): payable figure, then 'Grand Total', then CD amount.
+    Category Amount (BASE+GST) and ITEMS 'AMOUNT :' are not the invoice total.
+    """
+    if not ocr_text or not ocr_suggests_pharmacureil_wondersoft(ocr_text):
+        return None
+    words_amount = extract_amount_from_words(ocr_text)
+    grand = None
+    m_before = re.search(
+        r'(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s+Grand\s*Total\b',
+        ocr_text,
+        re.IGNORECASE,
+    )
+    if m_before:
+        try:
+            grand = float(m_before.group(1).replace(',', ''))
+        except ValueError:
+            grand = None
+        if grand is not None and grand <= 100:
+            grand = None
+    if words_amount and words_amount > 100:
+        if grand is not None and abs(grand - words_amount) <= 1:
+            return grand
+        return float(words_amount)
+    return grand
+
+
 def extract_pharmacureil_wondersoft_line_items_from_ocr(ocr_text: str) -> list:
     """
     Parse Wondersoft NETAMT rows from PyMuPDF right-to-left column text.
@@ -14021,15 +14625,14 @@ def extract_pharmacureil_wondersoft_line_items_from_ocr(ocr_text: str) -> list:
         r'(?P<qty>\d+)\s+'
         r'(?P<exp>\d{2}/\d{2})\s+'
         r'(?P<batch>[A-Z0-9]+)\s+'
-        r"(?P<pack>\d+['’]?s)\s+"
-        r'(?P<name>\*?[A-Za-z][A-Za-z0-9 ./*-]*)\*?\s+'
+        r"(?P<pack>\d+['’]?s|\d+\s*MD|\d+\*\d+(?:\.\d+)?\s*m\s*l|\d+['’]?\s*m\s*l|\d+\s*gm)\s+"
+        r'(?P<name>\*?[A-Za-z][A-Za-z0-9 ./*%-]*?)\*?\s+'
         r'ZYDU[S]?\s+'
         r'(?P<hsn>\d{8})',
         re.IGNORECASE,
     )
 
     items = []
-    seen = set()
     for m in row_re.finditer(flat):
         name = re.sub(r'^\*+|\*+$', '', m.group('name')).strip()
         if len(name) < 3:
@@ -14047,17 +14650,11 @@ def extract_pharmacureil_wondersoft_line_items_from_ocr(ocr_text: str) -> list:
         if taxable <= 0:
             continue
         batch = m.group('batch').strip()
-        key = (name.upper(), qty, round(rate, 2), batch)
-        if key in seen:
-            continue
-        seen.add(key)
-        gst_pct = str(int(m.group('gst_pct')))
         items.append({
             "product_description": name,
             "quantity": str(qty),
             "unit_price": f"{rate:.2f}",
             "total_amount": f"{net:.2f}",
-            "tax_amount": gst_pct,
             "hsn_code": m.group('hsn'),
             "lot_batch_number": batch,
             "additional_fields": {
@@ -14186,12 +14783,19 @@ def fix_pharmacureil_wondersoft_line_items_from_ocr(
                 f"⚠️ FIX PHARMACUREIL: base amount '{old_total}' -> '{new_total}' "
                 f"for '{item.get('product_description', '')}'"
             )
+        old_rate = str(item.get("unit_price", "") or "").strip()
+        new_rate = str(row.get("unit_price", "") or "").strip()
+        if new_rate and old_rate != new_rate:
+            item["unit_price"] = new_rate
+            logger.warning(
+                f"⚠️ FIX PHARMACUREIL: rate '{old_rate}' -> '{new_rate}' "
+                f"for '{item.get('product_description', '')}'"
+            )
         if not item.get("lot_batch_number") and row.get("lot_batch_number"):
             item["lot_batch_number"] = row["lot_batch_number"]
         if not item.get("hsn_code") and row.get("hsn_code"):
             item["hsn_code"] = row["hsn_code"]
-        if row.get("tax_amount") and not item.get("tax_amount"):
-            item["tax_amount"] = row["tax_amount"]
+        item.pop("tax_amount", None)
         row_af = row.get("additional_fields") if isinstance(
             row.get("additional_fields"), dict) else {}
         item_af = item.get("additional_fields") if isinstance(
@@ -22152,6 +22756,19 @@ def enforce_schema(raw_data):
         template["data"].get("invoice_summary"),
     )
 
+    # DROGARIA COLVALCAR / New Drug House: MRP mapped as rate; qty/rate missing on scans
+    _colvalcar_table_ocr = ""
+    if isinstance(data, dict):
+        _colvalcar_table_ocr = str(
+            data.get("colvalcar_table_ocr", "") or "").strip()
+    processed_items = fix_drogaria_colvalcar_line_items_from_ocr(
+        processed_items,
+        ocr_text,
+        _colvalcar_table_ocr,
+        _vendor_name,
+        template["data"].get("invoice_summary"),
+    )
+
     # 🔧 FIX 12a: Drop OCR-recovered company-header fragments added as product rows
     # (e.g., "CURTIS DRUG POINT" with batch tokens like LTD/COM and no qty/rate/amount).
     try:
@@ -23617,38 +24234,46 @@ def enforce_schema(raw_data):
             ocr_text or "",
             template["data"]["invoice_summary"].get("vendor", "") or "",
         ):
-            # Docexa Calculated Total is SUM(line total_amount). Use GST-inclusive
-            # NETAMT so it matches Grand Total; footer BASE stays in taxable_amount.
-            _pc_ext = template["data"]["invoice_summary"].get("total")
-            _pc_calc = None
-            try:
-                _pc_calc = float(normalize_numeric_value(str(_pc_ext or "")) or 0)
-            except Exception:
-                _pc_calc = 0.0
-            if not _pc_calc:
-                _pc_sum = 0.0
-                for _pc_it in processed_items:
-                    if not isinstance(_pc_it, dict):
-                        continue
-                    _pc_af = _pc_it.get("additional_fields") if isinstance(
-                        _pc_it.get("additional_fields"), dict) else {}
-                    _pc_net = _pc_af.get("net_amount")
-                    if _pc_net not in (None, ""):
-                        try:
-                            _pc_sum += float(
-                                normalize_numeric_value(str(_pc_net)) or 0)
-                            continue
-                        except Exception:
-                            pass
+            # NETAMT already includes GST. tax_amount=5 makes Docexa compute
+            # Σ(qty × rate × 1.05). Payable is printed Grand Total (round-off of
+            # Σ NETAMT / category Amount). Do not use ITEMS AMOUNT or footer BASE.
+            _pc_sum = 0.0
+            _pc_have = False
+            for _pc_it in processed_items:
+                if not isinstance(_pc_it, dict):
+                    continue
+                _pc_it.pop("tax_amount", None)
+                _pc_af = _pc_it.get("additional_fields") if isinstance(
+                    _pc_it.get("additional_fields"), dict) else {}
+                _pc_val = None
+                _pc_net = _pc_af.get("net_amount") if _pc_af else None
+                if _pc_net not in (None, ""):
                     try:
-                        _pc_sum += float(normalize_numeric_value(
+                        _pc_val = float(
+                            normalize_numeric_value(str(_pc_net)) or 0)
+                    except Exception:
+                        _pc_val = None
+                if _pc_val is None:
+                    try:
+                        _pc_val = float(normalize_numeric_value(
                             str(_pc_it.get("total_amount", 0) or 0)) or 0)
                     except Exception:
-                        pass
-                _pc_calc = _pc_sum
-            if _pc_calc and _pc_calc > 0:
-                template["data"]["invoice_summary"]["calculated_total"] = (
-                    f"{_pc_calc:.2f}")
+                        _pc_val = None
+                if _pc_val and _pc_val > 0:
+                    _pc_sum += _pc_val
+                    _pc_have = True
+            _pc_grand = extract_pharmacureil_wondersoft_invoice_total(
+                ocr_text or "")
+            if _pc_grand and _pc_grand > 0:
+                template["data"]["invoice_summary"]["total"] = (
+                    f"{_pc_grand:.2f}")
+            if _pc_have and _pc_sum > 0:
+                if _pc_grand and abs(_pc_sum - _pc_grand) <= 1.0:
+                    template["data"]["invoice_summary"]["calculated_total"] = (
+                        f"{_pc_grand:.2f}")
+                else:
+                    template["data"]["invoice_summary"]["calculated_total"] = (
+                        f"{_pc_sum:.2f}")
     except Exception as _pc_err:
         logger.debug(f"PHARMACUREIL Wondersoft fix skipped: {_pc_err}")
 
@@ -24367,6 +24992,7 @@ def enforce_schema(raw_data):
         template["data"].pop("rathna_table_ocr", None)
         template["data"].pop("maa_table_ocr", None)
         template["data"].pop("jackson_table_ocr", None)
+        template["data"].pop("colvalcar_table_ocr", None)
         template["data"].pop("saraswati_table_ocr", None)
         template["data"].pop("someshwara_detail_ocr", None)
         template["data"].pop("tulsyan_rate_ocr", None)
@@ -24378,6 +25004,7 @@ def enforce_schema(raw_data):
         _summary_out.pop("rathna_table_ocr", None)
         _summary_out.pop("maa_table_ocr", None)
         _summary_out.pop("jackson_table_ocr", None)
+        _summary_out.pop("colvalcar_table_ocr", None)
         _summary_out.pop("saraswati_table_ocr", None)
         _summary_out.pop("someshwara_detail_ocr", None)
         _summary_out.pop("tulsyan_rate_ocr", None)
@@ -25703,6 +26330,22 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _nv_err:
             logger.debug(f"Novacare qty recovery call skipped: {_nv_err}")
 
+    # 🔧 DROGARIA COLVALCAR scans: recover qty/rate when 1.5x Vision maps MRP
+    if result:
+        try:
+            _cv_full_data = result.get("full_data") if isinstance(
+                result, dict) else None
+            if _cv_full_data is not None:
+                recover_drogaria_colvalcar_line_item_quantities(
+                    page,
+                    _cv_full_data,
+                    ocr_stats,
+                    ocr_stats_lock,
+                    ocr_text=str(result.get("ocr_text") or fallback_ocr_text or ""),
+                )
+        except Exception as _cv_err:
+            logger.debug(f"COLVALCAR qty recovery call skipped: {_cv_err}")
+
     # ✅ Add OCR info to Gemini Vision result
     if result:
         try:
@@ -25912,6 +26555,30 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _jk_ocr_err:
             logger.warning(
                 f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
+
+        # DROGARIA COLVALCAR scans: capture table band for qty/rate recovery
+        try:
+            _cv_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _cv_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _cv_data = _cv_fd.get("data") if isinstance(
+                _cv_fd.get("data"), dict) else _cv_fd
+            _cv_sum = _cv_data.get("invoice_summary") if isinstance(
+                _cv_data.get("invoice_summary"), dict) else {}
+            _cv_vendor = str(
+                _cv_sum.get("vendor") or _cv_fd.get("vendor") or "")
+            if ocr_suggests_drogaria_colvalcar(_cv_ocr, _cv_vendor):
+                _cv_table_ocr = _ocr_drogaria_colvalcar_table_region(page=page)
+                if _cv_table_ocr.strip():
+                    result["colvalcar_table_ocr"] = _cv_table_ocr
+                    logger.info(
+                        f"    ✅ COLVALCAR table-band OCR captured ({len(_cv_table_ocr)} chars)")
+        except Exception as _cv_ocr_err:
+            logger.debug(
+                f"COLVALCAR table OCR enrichment skipped: {_cv_ocr_err}")
 
         # TULSYAN Mediserve: capture Rate/Amount band (pipeline OCR often drops decimals)
         try:
@@ -30143,6 +30810,32 @@ def split_and_extract_invoices(
                                 f"JACKSON qty/rate OCR fallback failed: {_jk_fb_err}")
                     if _jackson_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["jackson_table_ocr"] = _jackson_tocr
+                    _colvalcar_tocr = str(
+                        (data_with_ocr.get("data") or {}).get(
+                            "colvalcar_table_ocr", "")
+                        if isinstance(data_with_ocr.get("data"), dict) else ""
+                    ).strip()
+                    if not _colvalcar_tocr:
+                        _colvalcar_tocr = str(
+                            page_result.get("colvalcar_table_ocr", "") or "").strip()
+                    if (
+                        not _colvalcar_tocr
+                        and ocr_suggests_drogaria_colvalcar(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _cv_page = doc.load_page(first_page_idx)
+                            _colvalcar_tocr = _ocr_drogaria_colvalcar_table_region(
+                                page=_cv_page)
+                            if _colvalcar_tocr.strip():
+                                logger.info(
+                                    f"    ✅ COLVALCAR table-band OCR captured at response build "
+                                    f"({len(_colvalcar_tocr)} chars)")
+                        except Exception as _cv_fb_err:
+                            logger.debug(
+                                f"COLVALCAR table OCR fallback failed: {_cv_fb_err}")
+                    if _colvalcar_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["colvalcar_table_ocr"] = _colvalcar_tocr
                     _jackson_date = str(
                         page_result.get("jackson_invoice_date", "") or "").strip()
                     if (
@@ -31154,6 +31847,32 @@ def test_extract(
                                 f"JACKSON qty/rate OCR fallback failed: {_jk_fb_err}")
                     if _jackson_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["jackson_table_ocr"] = _jackson_tocr
+                    _colvalcar_tocr = str(
+                        (data_with_ocr.get("data") or {}).get(
+                            "colvalcar_table_ocr", "")
+                        if isinstance(data_with_ocr.get("data"), dict) else ""
+                    ).strip()
+                    if not _colvalcar_tocr:
+                        _colvalcar_tocr = str(
+                            page_result.get("colvalcar_table_ocr", "") or "").strip()
+                    if (
+                        not _colvalcar_tocr
+                        and ocr_suggests_drogaria_colvalcar(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _cv_page = doc.load_page(first_page_idx)
+                            _colvalcar_tocr = _ocr_drogaria_colvalcar_table_region(
+                                page=_cv_page)
+                            if _colvalcar_tocr.strip():
+                                logger.info(
+                                    f"    ✅ COLVALCAR table-band OCR captured at response build "
+                                    f"({len(_colvalcar_tocr)} chars)")
+                        except Exception as _cv_fb_err:
+                            logger.debug(
+                                f"COLVALCAR table OCR fallback failed: {_cv_fb_err}")
+                    if _colvalcar_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["colvalcar_table_ocr"] = _colvalcar_tocr
                     _jackson_date = str(
                         page_result.get("jackson_invoice_date", "") or "").strip()
                     if (
