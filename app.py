@@ -1962,6 +1962,116 @@ def _filter_zydus_pod_split_artifacts(
     return invoices_found
 
 
+def ocr_suggests_parshwanath_critical_care(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect PARSHWANATH CRITICAL CARE GST TAX INVOICE customer-copy scans."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    return bool(re.search(r'PARSH?\w{0,3}ANATH\s+CRITICAL\s+CARE', blob, re.IGNORECASE))
+
+
+def _normalize_parshwanath_puneccb_token(raw: str) -> Optional[str]:
+    """Normalize OCR variants like PUNE€CB503O1' / PUNECCB50302\" → PUNECCB50301."""
+    if not raw:
+        return None
+    # € commonly replaces 'C' in PUNECCB on these scans.
+    s = str(raw).upper().replace('€', 'C')
+    s = re.sub(r'[^A-Z0-9]', '', s)
+    m = re.match(r'^PUNECC?B([0-9OIL]{4,6})$', s)
+    if not m:
+        return None
+    digits = m.group(1).translate(str.maketrans('OIL', '011'))
+    if not digits.isdigit():
+        return None
+    return f"PUNECCB{digits}"
+
+
+def extract_parshwanath_puneccb_invoice_nos(ocr_text: str) -> List[str]:
+    """Find PUNECCB##### invoice numbers on Parshwanath pages (OCR-tolerant)."""
+    if not ocr_text or not ocr_suggests_parshwanath_critical_care(ocr_text):
+        return []
+    found: List[str] = []
+    for m in re.finditer(r'PUNE[€E]?C{1,2}B[0-9OIl]{4,6}', ocr_text, re.IGNORECASE):
+        inv = _normalize_parshwanath_puneccb_token(m.group(0))
+        if inv and inv not in found:
+            found.append(inv)
+    return found
+
+
+def collect_parshwanath_same_page_invoice_nos(
+    page_ocr: str, vision_invoice_no: Optional[str] = None
+) -> List[str]:
+    """
+    Same-page Parshwanath Customer Copy often stacks two GST TAX INVOICEs.
+    Vision may return only the top invoice# while OCR still shows the second
+    PUNECCB token (or vice versa). Merge both sources in document order.
+    """
+    if not ocr_suggests_parshwanath_critical_care(
+        page_ocr or "", vision_invoice_no or ""
+    ):
+        return []
+
+    nos = extract_parshwanath_puneccb_invoice_nos(page_ocr or "")
+    vin = _normalize_parshwanath_puneccb_token(vision_invoice_no or "")
+    if vin and vin not in nos:
+        # Top copy is usually Vision's primary invoice_no when OCR dropped it.
+        nos.insert(0, vin)
+    return nos
+
+
+def split_parshwanath_ocr_by_puneccb_invoices(
+    page_ocr: str, invoice_numbers: List[str]
+) -> dict:
+    """
+    Split a stacked Parshwanath customer-copy page into per-invoice OCR sections.
+    The first invoice number may be Vision-only and absent from garbled OCR.
+    """
+    if not page_ocr or not invoice_numbers:
+        return {}
+    if len(invoice_numbers) == 1:
+        return {invoice_numbers[0]: page_ocr}
+
+    split_pos = None
+    for inv in invoice_numbers[1:]:
+        for m in re.finditer(r'PUNE[€E]?C{1,2}B[0-9OIl]{4,6}', page_ocr, re.IGNORECASE):
+            if _normalize_parshwanath_puneccb_token(m.group(0)) != inv:
+                continue
+            headers = list(re.finditer(
+                r'(?:GST\s*TAX\s*INVOICE|PARSHWANATH\s+CRITICAL\s+CARE)',
+                page_ocr[:m.start()],
+                re.IGNORECASE,
+            ))
+            split_pos = headers[-1].start() if headers else m.start()
+            break
+        if split_pos is not None:
+            break
+
+    if split_pos is None:
+        for m in re.finditer(
+            r'(?:GST\s*TAX\s*INVOICE|PARSHWANATH\s+CRITICAL\s+CARE)',
+            page_ocr,
+            re.IGNORECASE,
+        ):
+            if m.start() > len(page_ocr) * 0.35:
+                split_pos = m.start()
+                break
+
+    if split_pos is None or split_pos <= 0:
+        return split_ocr_by_invoices(page_ocr, invoice_numbers)
+
+    sections = {}
+    # For exactly two invoices (the known Parshwanath layout), use the split.
+    if len(invoice_numbers) >= 2:
+        chunks = [page_ocr[:split_pos].strip(), page_ocr[split_pos:].strip()]
+        for inv, chunk in zip(invoice_numbers[:2], chunks):
+            if inv.upper() not in (chunk or "").upper():
+                chunk = f"GST TAX INVOICE\n{inv}\n{chunk}"
+            sections[inv] = chunk
+        for inv in invoice_numbers[2:]:
+            sections.setdefault(inv, page_ocr)
+        return sections
+
+    return split_ocr_by_invoices(page_ocr, invoice_numbers)
+
+
 def split_ocr_by_invoices(page_ocr: str, invoice_numbers: List[str]) -> dict:
     """
     Split OCR text by invoice numbers, creating separate sections for each invoice.
@@ -3823,6 +3933,23 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         )
         return existing_items
 
+    # CHANDUKA AGENCIES: skip NELSON-style recovery (COMP mistaken as product)
+    # and restore missing PARTICULARS rows from the dedicated COMP table parser.
+    if ocr_suggests_chanduka_agencies(ocr_text):
+        logger.info(
+            "⏭️ Using CHANDUKA PARTICULARS OCR recovery (skip generic FIX 9)"
+        )
+        return recover_chanduka_line_items_from_ocr(existing_items, ocr_text)
+
+    # KYAL AGENCIES: same COMP/PARTICULARS table family as CHANDUKA but HSN
+    # before COMP. Generic NELSON recovery treats 'ZYDUS CO' as a product.
+    if ocr_suggests_kyal_agencies(ocr_text):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for KYAL AGENCIES "
+            "(COMP column is not a product)"
+        )
+        return existing_items
+
     def _extract_declared_product_count(text: str) -> Optional[int]:
         """Read declared product count from invoice footer (e.g., 'Total Prod : 8')."""
         if not text:
@@ -5395,6 +5522,8 @@ def fix_marg_erp_qty_rate_from_ocr(items, ocr_text: str):
 
     # CHANDUKA uses ZYDUS in COMP column but is not MARG ERP layout.
     if ocr_suggests_chanduka_agencies(ocr_text):
+        return items
+    if ocr_suggests_kyal_agencies(ocr_text):
         return items
 
     # Check if this is MARG ERP format (Supreme Life Sciences, etc.)
@@ -10198,13 +10327,20 @@ def ocr_suggests_chanduka_agencies(ocr_text: str = "") -> bool:
 
 def _parse_chanduka_ocr_line_items(ocr_text: str) -> list:
     """Parse CHANDUKA COMP/PARTICULARS table rows from OCR text."""
-    pack = r"(?:\d+[`']?[A-Z]{1,3}|\d+ML)"
+    # Packs seen on this format: 15`S, 10S, 10ML, 1 VIAL, VIAL. Avoid matching
+    # dosage tokens in PARTICULARS such as 1GM / 500.
+    pack = (
+        r"(?:\d+\s*VIALS?|VIALS?|\d+\s*ML|\d+[`']S|\d+S|"
+        r"\d+[`']?(?!GM|MG|MCG)[A-Z]{1,3})"
+    )
+    # COMP is manufacturer code: ZYDUS AE, BROOKS, CIPLA *C, UNITED B, GUFIC CR
+    comp = r"[A-Z]{2,}(?:\s+[*\"'A-Z]{1,4})?"
     row_pat = re.compile(
-        rf'^\s*(\d+)\.\s+ZYDUS\s+[A-Z]{{2}}\s+(\d{{8}})\s+(.+?)\s+{pack}\s+'
-        r'([A-Z0-9]+)\s+(\d{2}/\d{2})\s+'
+        rf'^\s*(\d+)\.\s+({comp})\s+(\d{{8}})\s+(.+?)\s+{pack}\s+'
+        r'([A-Z0-9\-]+)\s+(\d{2}/\d{2})\s+'
         r'(\d+)\s*'
         r'(?:F\s+)?'
-        r'([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)',
+        r'([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)',
         re.IGNORECASE | re.MULTILINE
     )
     rows = []
@@ -10215,16 +10351,42 @@ def _parse_chanduka_ocr_line_items(ocr_text: str) -> list:
         try:
             rows.append({
                 "serial": m.group(1),
-                "hsn_code": m.group(2),
-                "product_description": m.group(3).strip().upper(),
-                "lot_batch_number": m.group(4).upper(),
-                "quantity": int(m.group(6)),
-                "unit_price": float(m.group(9)),
-                "total_amount": float(m.group(10)),
+                "comp": m.group(2).strip().upper(),
+                "hsn_code": m.group(3),
+                "product_description": m.group(4).strip().upper(),
+                "lot_batch_number": m.group(5).upper(),
+                "quantity": int(m.group(7)),
+                "unit_price": float(m.group(10).replace(",", "")),
+                "total_amount": float(m.group(11).replace(",", "")),
             })
         except (TypeError, ValueError):
             continue
     return rows
+
+
+def _chanduka_comp_name_key(value: str) -> str:
+    return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+
+def _chanduka_is_comp_product_name(desc: str, ocr_row: Optional[dict] = None) -> bool:
+    """True when product_description is the COMP manufacturer code, not PARTICULARS."""
+    desc_key = _chanduka_comp_name_key(desc)
+    if not desc_key:
+        return False
+    if ocr_row:
+        ocr_product = str(ocr_row.get("product_description") or "")
+        if _chanduka_product_name_matches(desc, ocr_product):
+            return False
+        comp_key = _chanduka_comp_name_key(ocr_row.get("comp", ""))
+        if comp_key and (
+            desc_key == comp_key
+            or desc_key.startswith(comp_key)
+            or comp_key.startswith(desc_key)
+        ):
+            return True
+        if re.match(r'^ZYDUS\s+', str(desc or '').upper()):
+            return True
+    return bool(re.match(r'^ZYDUS\s+', str(desc or '').upper()))
 
 
 def _chanduka_product_name_matches(desc: str, ocr_product: str) -> bool:
@@ -10263,6 +10425,53 @@ def _chanduka_item_numeric_key(item) -> Optional[tuple]:
         return None
 
 
+def _chanduka_batch_key(value: str) -> str:
+    return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+
+def recover_chanduka_line_items_from_ocr(existing_items, ocr_text: str) -> list:
+    """
+    CHANDUKA AGENCIES: append PARTICULARS rows present in OCR but missing from
+    Gemini. Same SKU on different batches (same qty/rate/amount) is legitimate.
+    Does not use generic NELSON recovery (that invents COMP-column products).
+    """
+    if not ocr_suggests_chanduka_agencies(ocr_text):
+        return existing_items
+
+    ocr_rows = _parse_chanduka_ocr_line_items(ocr_text)
+    if not ocr_rows:
+        return existing_items or []
+
+    existing = list(existing_items or [])
+    existing_batches = {
+        _chanduka_batch_key(it.get("lot_batch_number", ""))
+        for it in existing
+        if _chanduka_batch_key(it.get("lot_batch_number", ""))
+    }
+
+    added = []
+    for row in ocr_rows:
+        bk = _chanduka_batch_key(row.get("lot_batch_number", ""))
+        if not bk or bk in existing_batches:
+            continue
+        added.append({
+            "product_description": row["product_description"],
+            "hsn_code": row.get("hsn_code"),
+            "quantity": str(row["quantity"]),
+            "unit_price": f"{row['unit_price']:.2f}",
+            "total_amount": f"{row['total_amount']:.2f}",
+            "lot_batch_number": row["lot_batch_number"],
+            "recovered_from_ocr": True,
+        })
+        existing_batches.add(bk)
+
+    if added:
+        logger.info(
+            f"CHANDUKA: Recovered {len(added)} missing PARTICULARS row(s) from OCR")
+        return existing + added
+    return existing
+
+
 def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
     """
     CHANDUKA AGENCIES: drop Gemini/Vision phantom rows where manufacturer COMP
@@ -10285,7 +10494,7 @@ def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
             round(row["unit_price"], 2),
             round(row["total_amount"], 2),
         )
-        ocr_by_key[key] = row
+        ocr_by_key.setdefault(key, []).append(row)
 
     groups = {}
     for idx, item in enumerate(items):
@@ -10295,19 +10504,31 @@ def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
 
     drop_indices = set()
     for key, group in groups.items():
-        ocr_row = ocr_by_key.get(key)
-        if not ocr_row:
+        ocr_list = ocr_by_key.get(key) or []
+        if not ocr_list:
             continue
+
+        # Same qty/rate/amount on different batches are distinct invoice lines
+        # (e.g. AGGRAMED INJ HA250140B vs HA260046A). Only drop COMP names.
+        if len(ocr_list) > 1:
+            for idx, item in group:
+                desc = str(item.get("product_description", ""))
+                name_ok = any(
+                    _chanduka_product_name_matches(desc, r["product_description"])
+                    for r in ocr_list
+                )
+                if name_ok:
+                    continue
+                if any(_chanduka_is_comp_product_name(desc, r) for r in ocr_list):
+                    drop_indices.add(idx)
+            continue
+
+        ocr_row = ocr_list[0]
         ocr_product = ocr_row["product_description"]
 
         if len(group) == 1:
-            idx, item = group[0]
-            desc = str(item.get("product_description", ""))
-            if (
-                re.match(r'^ZYDUS\s+', desc.upper())
-                and not _chanduka_product_name_matches(desc, ocr_product)
-            ):
-                drop_indices.add(idx)
+            # Single row for this qty/rate/amount: keep it and fix COMP→PARTICULARS
+            # below. Do not drop a legitimate line that only has a COMP name.
             continue
 
         best_idx = None
@@ -10317,7 +10538,7 @@ def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
             score = 0
             if _chanduka_product_name_matches(desc, ocr_product):
                 score += 10
-            if not re.match(r'^ZYDUS\s+', desc.upper()):
+            if not _chanduka_is_comp_product_name(desc, ocr_row):
                 score += 5
             batch = str(item.get("lot_batch_number", "")).upper().strip()
             if batch and batch == ocr_row.get("lot_batch_number"):
@@ -10330,15 +10551,344 @@ def drop_chanduka_comp_phantom_items(items, ocr_text: str) -> list:
             if idx != best_idx:
                 drop_indices.add(idx)
 
-    if not drop_indices:
-        return items
+    cleaned = (
+        [item for idx, item in enumerate(items) if idx not in drop_indices]
+        if drop_indices else items
+    )
+    if drop_indices:
+        removed = len(items) - len(cleaned)
+        logger.info(
+            f"CHANDUKA: Dropped {removed} COMP-column phantom product row(s)")
 
-    cleaned = [item for idx, item in enumerate(items) if idx not in drop_indices]
-    removed = len(items) - len(cleaned)
-    logger.info(
-        f"CHANDUKA: Dropped {removed} COMP-column phantom product row(s)")
+    # Replace COMP-column names (CIPLA RE, GUFIC CR, UNITED B, ZYDUS …) with
+    # PARTICULARS. Leave names that already match the OCR product unchanged.
+    renamed = 0
+    for item in cleaned:
+        key = _chanduka_item_numeric_key(item)
+        ocr_list = ocr_by_key.get(key) if key else None
+        if not ocr_list:
+            continue
+        batch = _chanduka_batch_key(item.get("lot_batch_number", ""))
+        ocr_row = ocr_list[0]
+        if batch and len(ocr_list) > 1:
+            for row in ocr_list:
+                if _chanduka_batch_key(row.get("lot_batch_number", "")) == batch:
+                    ocr_row = row
+                    break
+        desc = str(item.get("product_description", ""))
+        ocr_product = ocr_row["product_description"]
+        if _chanduka_is_comp_product_name(desc, ocr_row):
+            item["product_description"] = ocr_product
+            renamed += 1
+    if renamed:
+        logger.info(
+            f"CHANDUKA: Corrected {renamed} product name(s) from PARTICULARS")
 
     return cleaned
+
+
+def ocr_suggests_kyal_agencies(ocr_text: str = "") -> bool:
+    """Detect KYAL AGENCIES invoices (HSN + COMP + PARTICULARS + N_MRP table)."""
+    if not ocr_text:
+        return False
+    ocr_upper = ocr_text.upper()
+    return (
+        "KYAL AGENCIES" in ocr_upper
+        and re.search(r'\bCOMP\b', ocr_upper)
+        and re.search(r'\bPARTICULARS\b', ocr_upper)
+        and re.search(r'N_MRP', ocr_upper)
+    )
+
+
+def _parse_kyal_ocr_line_items(ocr_text: str) -> list:
+    """Parse KYAL HSN/COMP/PARTICULARS rows (HSN comes before COMP)."""
+    comp = r"[A-Z]{2,}(?:\s+[*\"'A-Z]{1,4})?"
+    row_pat = re.compile(
+        rf'^\s*(\d+)\.\s+(\d{{8}})\s+({comp})\s+(.+?)\s+(\d+)\s+'
+        r'([A-Z0-9\-]+)\s+(\d{2}/\d{2})\s+'
+        r'(\d+)\s*'
+        r'(?:F\s+)?'
+        r'([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)\s+([\d,.]+)',
+        re.IGNORECASE | re.MULTILINE
+    )
+    rows = []
+    for line in ocr_text.splitlines():
+        m = row_pat.match(line.strip())
+        if not m:
+            continue
+        try:
+            rows.append({
+                "serial": m.group(1),
+                "hsn_code": m.group(2),
+                "comp": m.group(3).strip().upper(),
+                "product_description": m.group(4).strip().upper(),
+                "lot_batch_number": m.group(6).upper(),
+                "quantity": int(m.group(8)),
+                "unit_price": float(m.group(11).replace(",", "")),
+                "total_amount": float(m.group(12).replace(",", "")),
+            })
+        except (TypeError, ValueError):
+            continue
+    return rows
+
+
+_KYAL_PARTICULARS_MARK = "--- KYAL PARTICULARS ---"
+_KYAL_FOOTER_START = re.compile(
+    r'^(PLEASE|THEN YOU|GROSS|REMARKS|DUE FROM|IRN|ACK |TERMS|BANK |RUPEES|'
+    r'CERTIFIED|PRINT BY|FOR KYAL|E\.&O)',
+    re.IGNORECASE,
+)
+_KYAL_DPCO_SUFFIX = re.compile(r'^\d+S\(DPCO\)$', re.IGNORECASE)
+
+
+def _parse_kyal_particulars_from_page(page) -> list:
+    """Read KYAL PARTICULARS by word x-position so wrapped flavor/DPCO lines
+    attach to the correct row (e.g. MANGO → FLUTICONE, not ELECTRAL)."""
+    if page is None:
+        return []
+    try:
+        words = list(page.get_text("words") or [])
+    except Exception:
+        return []
+    if not words:
+        return []
+
+    part_x = pack_x = batch_x = header_y = None
+    for t in words:
+        token = str(t[4] or "").upper().strip()
+        y = t[1]
+        if y > 280:
+            continue
+        if token.startswith("PARTICULAR"):
+            part_x, header_y = t[0], y
+        elif token == "PACK":
+            pack_x = t[0]
+        elif token == "BATCH":
+            batch_x = t[0]
+    if part_x is None or pack_x is None or header_y is None:
+        return []
+
+    part_x0, part_x1 = part_x - 3, pack_x - 3
+    batch_x0 = (batch_x - 5) if batch_x is not None else pack_x + 5
+    batch_x1 = batch_x0 + 55
+
+    from collections import defaultdict
+    lines = defaultdict(list)
+    for w in words:
+        y = round(w[1] / 4.0) * 4.0
+        lines[y].append(w)
+    ys = sorted(lines)
+    header_bin = round(header_y / 4.0) * 4.0
+
+    product_rows = []
+    for y in ys:
+        if y <= header_bin:
+            continue
+        ws = sorted(lines[y], key=lambda t: t[0])
+        serial = None
+        for t in ws:
+            if t[0] < 50 and re.match(r'^\d+\.$', str(t[4] or "")):
+                serial = str(t[4])
+                break
+        if not serial:
+            continue
+        part_words = [str(t[4]) for t in ws if part_x0 <= t[0] < part_x1]
+        batch = ""
+        for t in ws:
+            tok = str(t[4] or "")
+            if batch_x0 <= t[0] < batch_x1 and re.match(r'^[A-Z0-9\-]{4,}$', tok, re.I):
+                batch = tok.upper()
+                break
+        product_rows.append({
+            "y": y,
+            "serial": int(serial[:-1]),
+            "batch": batch,
+            "name": list(part_words),
+        })
+    if not product_rows:
+        return []
+
+    serial_ys = {pr["y"] for pr in product_rows}
+    for y in ys:
+        if y <= header_bin or y in serial_ys:
+            continue
+        ws = sorted(lines[y], key=lambda t: t[0])
+        part_words = [str(t[4]) for t in ws if part_x0 <= t[0] < part_x1]
+        if not part_words:
+            continue
+        joined = " ".join(part_words).upper()
+        if _KYAL_FOOTER_START.search(joined):
+            continue
+        prev = next_ = None
+        for pr in product_rows:
+            if pr["y"] <= y:
+                prev = pr
+            elif next_ is None:
+                next_ = pr
+                break
+        if prev and not next_ and (y - prev["y"] > 16):
+            continue
+        target = None
+        if prev and next_:
+            mid = (prev["y"] + next_["y"]) / 2.0
+            target = next_ if y >= mid else prev
+            suffix = "".join(part_words).replace(" ", "")
+            if prev and _KYAL_DPCO_SUFFIX.match(suffix):
+                target = prev
+        else:
+            target = prev or next_
+        if target is None:
+            continue
+        if y >= target["y"]:
+            target["name"].extend(part_words)
+        else:
+            target["name"] = part_words + target["name"]
+        if not target["batch"]:
+            for t in ws:
+                tok = str(t[4] or "")
+                if batch_x0 <= t[0] < batch_x1 and re.match(r'^[A-Z0-9\-]{4,}$', tok, re.I):
+                    target["batch"] = tok.upper()
+                    break
+
+    rows = []
+    for pr in product_rows:
+        name = re.sub(r'\s+', ' ', " ".join(pr["name"])).strip()
+        if not name:
+            continue
+        rows.append({
+            "serial": pr["serial"],
+            "lot_batch_number": pr["batch"],
+            "product_description": name.upper(),
+        })
+    return rows
+
+
+def _kyal_particulars_block_from_page(page) -> str:
+    rows = _parse_kyal_particulars_from_page(page)
+    if not rows:
+        return ""
+    lines = [_KYAL_PARTICULARS_MARK]
+    for row in rows:
+        batch = row.get("lot_batch_number") or ""
+        name = row.get("product_description") or ""
+        if batch and name:
+            lines.append(f"{batch}\t{name}")
+    return "\n".join(lines) if len(lines) > 1 else ""
+
+
+def _parse_kyal_particulars_block(ocr_text: str) -> list:
+    if not ocr_text or _KYAL_PARTICULARS_MARK not in ocr_text:
+        return []
+    rows = []
+    in_block = False
+    for line in ocr_text.splitlines():
+        if line.strip() == _KYAL_PARTICULARS_MARK:
+            in_block = True
+            continue
+        if not in_block:
+            continue
+        if line.startswith("--- ") and line.strip() != _KYAL_PARTICULARS_MARK:
+            break
+        if "\t" not in line:
+            continue
+        batch, name = line.split("\t", 1)
+        batch = batch.strip().upper()
+        name = re.sub(r'\s+', ' ', name).strip()
+        if batch and name:
+            rows.append({
+                "lot_batch_number": batch,
+                "product_description": name.upper(),
+            })
+    return rows
+
+
+def fix_kyal_product_names_from_ocr(items, ocr_text: str) -> list:
+    """KYAL: set product_description from PARTICULARS (coordinate-parsed block)."""
+    if not items or not ocr_text or not ocr_suggests_kyal_agencies(ocr_text):
+        return items
+    rows = _parse_kyal_particulars_block(ocr_text)
+    if not rows:
+        return items
+    by_batch = {
+        _chanduka_batch_key(r["lot_batch_number"]): r["product_description"]
+        for r in rows if r.get("lot_batch_number")
+    }
+    renamed = 0
+    for item in items:
+        bk = _chanduka_batch_key(item.get("lot_batch_number", ""))
+        correct = by_batch.get(bk)
+        if not correct:
+            continue
+        current = re.sub(
+            r'\s+', ' ', str(item.get("product_description") or "")).strip()
+        if current.upper() == correct.upper():
+            continue
+        item["product_description"] = correct
+        renamed += 1
+    if renamed:
+        logger.info(
+            f"KYAL: Corrected {renamed} product name(s) from PARTICULARS column")
+    return items
+
+
+def drop_kyal_comp_phantom_items(items, ocr_text: str) -> list:
+    """
+    KYAL AGENCIES: drop COMP-column phantom products (e.g. 'ZYDUS CO') that are
+    not PARTICULARS rows. These extras often use PACK as qty / O_MRP as amount,
+    so they are not numeric duplicates of the real line.
+    """
+    if not items or not ocr_text:
+        return items
+    if not ocr_suggests_kyal_agencies(ocr_text):
+        return items
+
+    ocr_rows = _parse_kyal_ocr_line_items(ocr_text)
+    if not ocr_rows:
+        return fix_kyal_product_names_from_ocr(items, ocr_text)
+
+    ocr_by_key = {}
+    for row in ocr_rows:
+        key = (
+            round(row["quantity"], 2),
+            round(row["unit_price"], 2),
+            round(row["total_amount"], 2),
+        )
+        ocr_by_key.setdefault(key, []).append(row)
+
+    cleaned = []
+    dropped = 0
+    renamed = 0
+    for item in items:
+        desc = str(item.get("product_description", ""))
+        particulars_match = any(
+            _chanduka_product_name_matches(desc, row["product_description"])
+            for row in ocr_rows
+        )
+        if particulars_match:
+            cleaned.append(item)
+            continue
+
+        is_comp = any(_chanduka_is_comp_product_name(desc, row) for row in ocr_rows)
+        if not is_comp:
+            cleaned.append(item)
+            continue
+
+        key = _chanduka_item_numeric_key(item)
+        ocr_match = (ocr_by_key.get(key) or [None])[0] if key else None
+        if ocr_match:
+            item["product_description"] = ocr_match["product_description"]
+            renamed += 1
+            cleaned.append(item)
+        else:
+            dropped += 1
+
+    if dropped:
+        logger.info(
+            f"KYAL: Dropped {dropped} COMP-column phantom product row(s)")
+    if renamed:
+        logger.info(
+            f"KYAL: Corrected {renamed} product name(s) from PARTICULARS")
+    return fix_kyal_product_names_from_ocr(cleaned, ocr_text)
 
 
 def ocr_suggests_jackson_medicals(ocr_text: str = "", vendor: str = "") -> bool:
@@ -15385,6 +15935,17 @@ def _finalize_bluefox_page_result(
     if not isinstance(result, dict) or page is None:
         return result
     ocr = str(result.get("ocr_text") or "")
+    if ocr_suggests_kyal_agencies(ocr):
+        try:
+            kyal_block = _kyal_particulars_block_from_page(page)
+            if kyal_block and _KYAL_PARTICULARS_MARK not in ocr:
+                result["ocr_text"] = ocr.rstrip() + "\n" + kyal_block
+                logger.info(
+                    f"    ✅ KYAL PARTICULARS column captured "
+                    f"({kyal_block.count(chr(10))} row(s))")
+        except Exception as e:
+            logger.debug(f"KYAL PARTICULARS finalize skipped: {e}")
+        ocr = str(result.get("ocr_text") or "")
     if not ocr_suggests_united_medical_agencies_bluefox(ocr):
         return result
     try:
@@ -22716,6 +23277,10 @@ def enforce_schema(raw_data):
     processed_items = drop_chanduka_comp_phantom_items(
         processed_items, ocr_text)
 
+    # KYAL AGENCIES: drop COMP-column phantom products (ZYDUS CO, etc.)
+    processed_items = drop_kyal_comp_phantom_items(
+        processed_items, ocr_text)
+
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
     processed_items = fix_marg_erp_qty_rate_from_ocr(
         processed_items, ocr_text)
@@ -23608,6 +24173,11 @@ def enforce_schema(raw_data):
                     # puts Taxable Amount into unit_price and sets total = qty × taxable.
                     # Example: qty=20, unit_price=3415.4, total=68308 → true rate=170.77,
                     # gross=3415.4, total≈3586. Does not run when gross_amount already present.
+                    #
+                    # IMPORTANT: qty × unit_price ≈ total also happens when unit_price is
+                    # already the correct Unit Price and total_amount holds Taxable Amount
+                    # (discount=0). That case must NOT divide rate by qty. Require unit_price
+                    # to look like a line taxable (≥1000), matching the known bad pattern.
                     if _gross18 <= 0 and _qty18 >= 2 and _up18 > 0 and _total18 > 0:
                         _calc_tt18 = _qty18 * _up18
                         _self_consistent18 = (
@@ -23616,9 +24186,11 @@ def enforce_schema(raw_data):
                         )
                         _total_inflated18 = _total18 > (_up18 * 1.4)
                         _derived_rate18 = _up18 / _qty18
+                        _up_looks_like_taxable18 = _up18 >= 1000.0
                         if (
                             _self_consistent18
                             and _total_inflated18
+                            and _up_looks_like_taxable18
                             and _derived_rate18 >= 5.0
                         ):
                             _old_up_c18 = _up18
@@ -23636,6 +24208,20 @@ def enforce_schema(raw_data):
                                 f"total {_old_tot_c18:.2f} -> {_total18:.2f} "
                                 f"(gross={_gross18:.2f}, qty={_qty18:.0f}) "
                                 f"for '{_name18[:30]}'"
+                            )
+                        elif (
+                            _self_consistent18
+                            and not _up_looks_like_taxable18
+                            and _up18 >= 5.0
+                        ):
+                            # Correct Unit Price already; total_amount is Taxable — keep rate,
+                            # seed gross so GST uplift can repair total below.
+                            _gross18 = _total18
+                            _af18["gross_amount"] = f"{_gross18:.2f}"
+                            logger.info(
+                                f"🔧 FIX18c: Pharmacea taxable-as-total detected for "
+                                f"'{_name18[:30]}' — keeping unit_price={_up18:.2f}, "
+                                f"gross={_gross18:.2f}"
                             )
 
                     # FIX18d (Pharmacea-only): if gross still missing, try OCR line
@@ -23869,7 +24455,9 @@ def enforce_schema(raw_data):
                     if _gross18 > 0:
                         _gst18 = _gst_from_ocr18
                         _ratio18 = _total18 / _gross18 if _total18 > 0 else 0.0
-                        if _gst18 is None and 1.0 <= _ratio18 <= 1.30:
+                        # Infer GST% from uplift only when total already includes tax.
+                        # ratio≈1.0 means total_amount is Taxable (no GST yet) — default 5%.
+                        if _gst18 is None and 1.02 <= _ratio18 <= 1.30:
                             _gst18 = (_ratio18 - 1.0) * 100.0
                         if _gst18 is None:
                             _gst18 = 5.0  # Pharmacea invoices in this stream are typically 5%
@@ -23877,7 +24465,7 @@ def enforce_schema(raw_data):
                         _expected_total18 = _gross18 * (1.0 + (_gst18 / 100.0))
                         _needs_total_fix18 = (
                             _total18 <= 0
-                            or _ratio18 < 1.0
+                            or _ratio18 < 1.02
                             or _ratio18 > 1.30
                             or abs(_total18 - _expected_total18) / max(_expected_total18, 1.0) > 0.20
                         )
@@ -26489,6 +27077,21 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _rathna_ocr_err:
             logger.debug(
                 f"RATHNA table OCR enrichment skipped: {_rathna_ocr_err}")
+
+        try:
+            _kyal_ocr = str(result.get("ocr_text") or fallback_ocr_text or "")
+            if ocr_suggests_kyal_agencies(_kyal_ocr):
+                _kyal_block = _kyal_particulars_block_from_page(page)
+                if _kyal_block:
+                    _base_ocr = str(result.get("ocr_text") or _kyal_ocr)
+                    if _KYAL_PARTICULARS_MARK not in _base_ocr:
+                        result["ocr_text"] = (_base_ocr.rstrip() + "\n" + _kyal_block)
+                    logger.info(
+                        f"    ✅ KYAL PARTICULARS column captured "
+                        f"({_kyal_block.count(chr(10))} row(s))")
+        except Exception as _kyal_ocr_err:
+            logger.debug(
+                f"KYAL PARTICULARS capture skipped: {_kyal_ocr_err}")
 
         try:
             _maa_fd = result.get("full_data") if isinstance(
@@ -30267,8 +30870,16 @@ def split_and_extract_invoices(
 
             # ✅ NEW: Detect if page contains MULTIPLE invoices
             multiple_invoices = try_extract_all_invoices_from_text(page_ocr)
-            should_split_multi = len(multiple_invoices) > 1 and _looks_like_real_multi_invoice_page(
-                page_ocr, multiple_invoices
+            # PARSHWANATH CRITICAL CARE: two Customer Copy invoices on one scan
+            _parsh_multi = collect_parshwanath_same_page_invoice_nos(
+                page_ocr, inv_no)
+            if len(_parsh_multi) >= 2:
+                multiple_invoices = _parsh_multi
+            should_split_multi = len(multiple_invoices) > 1 and (
+                _looks_like_real_multi_invoice_page(
+                    page_ocr, multiple_invoices
+                )
+                or len(_parsh_multi) >= 2
             )
             if len(multiple_invoices) > 1 and not should_split_multi:
                 logger.info(
@@ -30291,19 +30902,26 @@ def split_and_extract_invoices(
                     })
 
                 # ✅ Sort invoices by their position in OCR text (document order)
-                invoice_positions = []
-                for inv_no in multiple_invoices:
-                    pos = page_ocr.upper().find(inv_no.upper())
-                    if pos >= 0:
-                        invoice_positions.append((pos, inv_no))
-                invoice_positions.sort()  # Sort by position
-                sorted_invoices = [inv for _, inv in invoice_positions]
-                logger.info(
-                    f"   📋 Invoices in document order: {sorted_invoices}")
+                if len(_parsh_multi) >= 2:
+                    sorted_invoices = list(_parsh_multi)
+                    ocr_sections = split_parshwanath_ocr_by_puneccb_invoices(
+                        page_ocr, sorted_invoices)
+                    logger.info(
+                        f"   📋 Parshwanath same-page invoices in order: {sorted_invoices}")
+                else:
+                    invoice_positions = []
+                    for inv_cand in multiple_invoices:
+                        pos = page_ocr.upper().find(inv_cand.upper())
+                        if pos >= 0:
+                            invoice_positions.append((pos, inv_cand))
+                    invoice_positions.sort()  # Sort by position
+                    sorted_invoices = [inv for _, inv in invoice_positions]
+                    logger.info(
+                        f"   📋 Invoices in document order: {sorted_invoices}")
 
-                # ✅ Split OCR by invoice sections
-                ocr_sections = split_ocr_by_invoices(
-                    page_ocr, multiple_invoices)
+                    # ✅ Split OCR by invoice sections
+                    ocr_sections = split_ocr_by_invoices(
+                        page_ocr, multiple_invoices)
                 logger.info(f"   📄 Split into {len(ocr_sections)} sections")
 
                 # ✅ RE-EXTRACT each invoice from its OCR section (in document order)
@@ -31557,8 +32175,15 @@ def test_extract(
 
             # Check for multiple invoices on same page
             multiple_invoices = try_extract_all_invoices_from_text(page_ocr)
-            should_split_multi = len(multiple_invoices) > 1 and _looks_like_real_multi_invoice_page(
-                page_ocr, multiple_invoices
+            _parsh_multi = collect_parshwanath_same_page_invoice_nos(
+                page_ocr, inv_no)
+            if len(_parsh_multi) >= 2:
+                multiple_invoices = _parsh_multi
+            should_split_multi = len(multiple_invoices) > 1 and (
+                _looks_like_real_multi_invoice_page(
+                    page_ocr, multiple_invoices
+                )
+                or len(_parsh_multi) >= 2
             )
             if len(multiple_invoices) > 1 and not should_split_multi:
                 logger.info(
@@ -31577,17 +32202,22 @@ def test_extract(
                         "ocr_text": current_ocr_text
                     })
 
-                # Sort invoices by position in OCR text
-                invoice_positions = []
-                for inv in multiple_invoices:
-                    pos = page_ocr.upper().find(inv.upper())
-                    if pos >= 0:
-                        invoice_positions.append((pos, inv))
-                invoice_positions.sort()
-                sorted_invoices = [inv for _, inv in invoice_positions]
+                if len(_parsh_multi) >= 2:
+                    sorted_invoices = list(_parsh_multi)
+                    ocr_sections = split_parshwanath_ocr_by_puneccb_invoices(
+                        page_ocr, sorted_invoices)
+                else:
+                    # Sort invoices by position in OCR text
+                    invoice_positions = []
+                    for inv in multiple_invoices:
+                        pos = page_ocr.upper().find(inv.upper())
+                        if pos >= 0:
+                            invoice_positions.append((pos, inv))
+                    invoice_positions.sort()
+                    sorted_invoices = [inv for _, inv in invoice_positions]
 
-                ocr_sections = split_ocr_by_invoices(
-                    page_ocr, multiple_invoices)
+                    ocr_sections = split_ocr_by_invoices(
+                        page_ocr, multiple_invoices)
 
                 for inv_on_page in sorted_invoices:
                     inv_ocr_section = ocr_sections.get(inv_on_page, page_ocr)
