@@ -164,6 +164,55 @@ class TestGstEinvoiceGoodsServicesUnt(unittest.TestCase):
         self.assertAlmostEqual(float(deri["unit_price"]), 21.6, places=2)
         self.assertEqual(deri["total_amount"], "615.60")
 
+    def test_single_line_restores_unit_price_only(self):
+        """SMA7513: one row, Discounted Unit Price must not become taxable/qty."""
+        ocr = """
+1.e-Invoice Details
+Document No. : SMA7513
+4.Details of Goods / Services
+SINo |Item Description |HSN Code | Quantity |Unit |Unit Price(Rs) |Discount(Rs) | Taxable
+1 NASOCLEAR DR |30049069 |150.000 |UNT /43.440 325.80 6190.20 5.00 + 0.00 | 0
+0.00 +0
+Tax'bleAmt Tot Inv. Amt
+6190.20 6500.00
+"""
+        items = [{
+            "product_description": "NASOCLEAR DR",
+            "hsn_code": "30049069",
+            "quantity": "150.000",
+            "unit_price": "41.27",
+            "total_amount": "6190.20",
+        }]
+        self.assertTrue(_ocr_suggests_gst_einvoice_goods_services_unt_table(ocr))
+        rows = _parse_gst_einvoice_goods_services_unt_rows(ocr)
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(rows[0]["unit_price"], 43.44, places=2)
+        fixed = fix_gst_einvoice_goods_services_unt_qty_rate_from_ocr(
+            [dict(items[0])], ocr)
+        self.assertEqual(fixed[0]["product_description"], "NASOCLEAR DR")
+        self.assertEqual(fixed[0]["quantity"], "150.000")
+        self.assertEqual(fixed[0]["unit_price"], "43.44")
+        self.assertEqual(fixed[0]["total_amount"], "6190.20")
+
+        payload = {
+            "data": {
+                "invoice_summary": {
+                    "vendor": "SURYA MEDICAL AGENCIES",
+                    "customer": "Narayana pharmacy unit III",
+                    "invoice_no": "SMA7513",
+                    "total": "6500.00",
+                },
+                "line_items": {"items": [dict(items[0])], "count": 1},
+                "ocr_text": ocr,
+            }
+        }
+        out = _extract_line_items_for_validation(enforce_schema(payload))
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["product_description"], "NASOCLEAR DR")
+        self.assertEqual(float(out[0]["quantity"]), 150.0)
+        self.assertAlmostEqual(float(out[0]["unit_price"]), 43.44, places=2)
+        self.assertEqual(out[0]["total_amount"], "6190.20")
+
     def test_does_not_touch_non_matching_invoices(self):
         items = [{
             "product_description": "AMLOPIN 5MG TAB",
