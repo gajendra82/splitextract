@@ -8,6 +8,14 @@ from services.sales_statement_extractor import (
     extract_sales_statement,
 )
 from services.file_type_detector import FileKind, FileTypeDetector
+from services.multipage_invoice_continuity import (
+    apply_controlled_combined_ocr_fallback,
+    classify_page_continuity,
+    log_page_audit,
+    merge_multipage_page_level_extractions,
+    PageAuditRecord,
+    PageClassification,
+)
 from services.excel_invoice_extract import (
     build_excel_ocr_text,
     extract_invoices_from_excel,
@@ -33547,15 +33555,56 @@ def split_and_extract_invoices(
                 current_pages = [idx]
                 current_data = result.get("full_data") if result else None
                 current_ocr_text = page_ocr  # ✅ Store first page OCR
+                try:
+                    log_page_audit(
+                        batch_id=batch_id,
+                        audit=PageAuditRecord(
+                            page_number=1,
+                            detected_invoice_number=(
+                                str(inv_no).strip() if inv_no else None),
+                            normalized_invoice_number=_normalize_invoice_no_for_grouping(
+                                inv_no),
+                            previous_invoice_number=None,
+                            classification=PageClassification.NEW_INVOICE,
+                            extraction_strategy_used="page_level",
+                        ),
+                    )
+                except Exception:
+                    pass
             else:
-                if _should_attach_page_to_current_invoice_group(
+                _attach = _should_attach_page_to_current_invoice_group(
                     idx, inv_no, page_ocr, current_invoice, current_ocr_text,
                     page_full_data=page_full_data,
                     current_full_data=current_data,
-                ):
+                )
+                _cls = classify_page_continuity(
+                    page_index=idx,
+                    page_invoice_no=inv_no,
+                    current_invoice_no=current_invoice,
+                    attach_decision=_attach,
+                )
+                try:
+                    log_page_audit(
+                        batch_id=batch_id,
+                        audit=PageAuditRecord(
+                            page_number=idx + 1,
+                            detected_invoice_number=(
+                                str(inv_no).strip() if inv_no else None),
+                            normalized_invoice_number=_normalize_invoice_no_for_grouping(
+                                inv_no),
+                            previous_invoice_number=(
+                                str(current_invoice).strip()
+                                if current_invoice else None),
+                            classification=_cls,
+                            extraction_strategy_used="page_level",
+                        ),
+                    )
+                except Exception:
+                    pass
+                if _attach:
                     logger.info(
                         f"   📎 Attaching Page {idx+1} to invoice "
-                        f"{current_invoice} (continuation)")
+                        f"{current_invoice} (continuation/{_cls.value})")
                     current_pages.append(idx)
                     if page_ocr:
                         current_ocr_text += "\n\n--- Page " + \
@@ -33685,10 +33734,11 @@ def split_and_extract_invoices(
 
         update_request_progress("invoice_grouping_complete")
 
-        # ✅ RE-EXTRACT DATA FOR MULTI-PAGE INVOICES using combined OCR from all pages
+        # Multi-page invoices: stockist-specific Vision merges first, then generic
+        # page-level merge. Combined OCR Gemini re-extract is controlled fallback only.
         for g_idx, g in enumerate(groups):
             if len(g["pages"]) > 1:
-                # Multi-page invoice - re-extract data using combined OCR text
+                # Multi-page invoice group
                 combined_ocr = g.get("ocr_text", "")
                 if combined_ocr and len(combined_ocr.strip()) > 100:
                     if _bharath_pages_are_duplicate_copies(combined_ocr):
@@ -33784,17 +33834,53 @@ def split_and_extract_invoices(
                     if _apply_nic_irp_multipage_line_items(g):
                         continue
 
+                    # GENERIC multi-page: prefer independent page-level merge.
+                    # Combined OCR/Gemini re-extract is NOT the default — it runs
+                    # only as a controlled fallback when page-level merge yields
+                    # no usable products, and only if validation says combined wins.
+                    try:
+                        _mp_merge = merge_multipage_page_level_extractions(
+                            group=g,
+                            page_results=page_results,
+                            batch_id=batch_id,
+                        )
+                        if _mp_merge.applied and _mp_merge.extracted_data:
+                            groups[g_idx]["extracted_data"] = _mp_merge.extracted_data
+                            logger.info(
+                                f"   ✅ MULTI-PAGE page-level merge for "
+                                f"{g.get('invoice_no')}: "
+                                f"{_mp_merge.before_count}→{_mp_merge.after_count} "
+                                f"products across {len(g['pages'])} pages "
+                                f"(combined OCR skipped)"
+                            )
+                        if not _mp_merge.needs_combined_fallback:
+                            continue
+                        logger.info(
+                            f"   ⚠️ Page-level merge insufficient for "
+                            f"{g.get('invoice_no')} — trying controlled "
+                            f"combined-OCR fallback only"
+                        )
+                    except Exception as _mp_err:
+                        logger.warning(
+                            f"   ⚠️ Generic multipage page-level merge failed: "
+                            f"{_mp_err}"
+                        )
+                        # Fall through to controlled combined OCR
+
                     logger.info(
-                        f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
+                        f"   🔄 CONTROLLED FALLBACK re-extract multi-page invoice "
+                        f"{g['invoice_no']} ({len(g['pages'])} pages, "
+                        f"{len(combined_ocr)} chars OCR)...")
                     update_request_progress(
                         "multi_page_reextract_started",
                         invoice=g.get("invoice_no"),
                     )
                     try:
-                        # Re-extract using combined OCR from all pages
+                        # Controlled fallback only — must beat page-level to apply
                         re_extracted_data = extract_full_data_from_text_gemini(
                             combined_ocr, ocr_stats, ocr_stats_lock
                         )
+                        _page_level_keep = groups[g_idx].get("extracted_data")
                         if re_extracted_data:
                             re_items = _extract_line_items_for_validation(
                                 re_extracted_data)
@@ -33814,18 +33900,34 @@ def split_and_extract_invoices(
 
                             if re_items and (hsn_summary_like_count / len(re_items)) >= 0.60:
                                 logger.warning(
-                                    f"   ⚠️ RE-EXTRACTION for multi-page invoice {g['invoice_no']} looks like HSN tax-summary rows "
-                                    f"({hsn_summary_like_count}/{len(re_items)}). Keeping first-page extraction data.")
+                                    f"   ⚠️ FALLBACK for multi-page invoice "
+                                    f"{g['invoice_no']} looks like HSN tax-summary rows "
+                                    f"({hsn_summary_like_count}/{len(re_items)}). "
+                                    f"Keeping page-level extraction data.")
                             else:
-                                logger.info(
-                                    f"   ✅ RE-EXTRACTED data for multi-page invoice {g['invoice_no']}")
-                                groups[g_idx]["extracted_data"] = re_extracted_data
+                                chosen, used_combined = apply_controlled_combined_ocr_fallback(
+                                    group=g,
+                                    page_level_data=_page_level_keep,
+                                    combined_data=re_extracted_data,
+                                    batch_id=batch_id,
+                                )
+                                groups[g_idx]["extracted_data"] = chosen
+                                if used_combined:
+                                    logger.info(
+                                        f"   ✅ CONTROLLED FALLBACK accepted for "
+                                        f"multi-page invoice {g['invoice_no']}")
+                                else:
+                                    logger.info(
+                                        f"   ℹ️ CONTROLLED FALLBACK rejected for "
+                                        f"{g['invoice_no']} — kept page-level data")
                         else:
                             logger.warning(
-                                f"   ⚠️ RE-EXTRACTION failed for multi-page invoice {g['invoice_no']}, keeping first page data")
+                                f"   ⚠️ FALLBACK re-extract failed for multi-page "
+                                f"invoice {g['invoice_no']}, keeping page-level data")
                     except Exception as e:
                         logger.error(
-                            f"   ❌ Error re-extracting multi-page invoice {g['invoice_no']}: {str(e)}")
+                            f"   ❌ Error in controlled multi-page fallback "
+                            f"{g['invoice_no']}: {str(e)}")
                     update_request_progress(
                         "multi_page_reextract_completed",
                         invoice=g.get("invoice_no"),
@@ -35051,15 +35153,41 @@ def test_extract(
                         continue
                     if _apply_nic_irp_multipage_line_items(g):
                         continue
+                    # GENERIC: page-level merge first; combined OCR only as fallback
+                    try:
+                        _mp_merge = merge_multipage_page_level_extractions(
+                            group=g,
+                            page_results=page_results,
+                            batch_id=None,
+                        )
+                        if _mp_merge.applied and _mp_merge.extracted_data:
+                            g["extracted_data"] = _mp_merge.extracted_data
+                            logger.info(
+                                f"   ✅ MULTI-PAGE page-level merge for "
+                                f"{g.get('invoice_no')}: "
+                                f"{_mp_merge.before_count}→{_mp_merge.after_count} "
+                                f"products (combined OCR skipped)")
+                        if not _mp_merge.needs_combined_fallback:
+                            continue
+                    except Exception as _mp_err:
+                        logger.warning(
+                            f"   ⚠️ Generic multipage page-level merge failed: {_mp_err}")
                     logger.info(
-                        f"   🔄 RE-EXTRACTING multi-page invoice {g.get('invoice_no')} "
+                        f"   🔄 CONTROLLED FALLBACK re-extract multi-page invoice "
+                        f"{g.get('invoice_no')} "
                         f"({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
                     try:
                         re_extracted_data = extract_full_data_from_text_gemini(
                             combined_ocr, ocr_stats, ocr_stats_lock
                         )
-                        if re_extracted_data:
-                            g["extracted_data"] = re_extracted_data
+                        chosen, _used = apply_controlled_combined_ocr_fallback(
+                            group=g,
+                            page_level_data=g.get("extracted_data"),
+                            combined_data=re_extracted_data,
+                            batch_id=None,
+                        )
+                        if chosen:
+                            g["extracted_data"] = chosen
                     except Exception as e:
                         logger.error(
                             f"   ❌ Error re-extracting multi-page invoice {g.get('invoice_no')}: {e}")
