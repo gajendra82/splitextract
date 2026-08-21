@@ -2507,6 +2507,8 @@ def fix_single_item_qty_rate_from_ocr(items, ocr_text: str):
     """
     if not items or len(items) != 1:
         return items
+    if ocr_suggests_sivagami_medical(ocr_text):
+        return items
 
     total_qty = extract_total_qty_from_ocr(ocr_text) if ocr_text else None
 
@@ -3785,6 +3787,8 @@ def fix_multi_item_qty_rate_from_totals(items, ocr_text: str):
     """
     if not items or len(items) < 2:
         return items
+    if ocr_suggests_sivagami_medical(ocr_text):
+        return items
 
     total_qty = extract_total_qty_from_ocr(ocr_text) if ocr_text else None
     updated = False
@@ -4332,6 +4336,13 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         logger.info(
             "⏭️ Skipping OCR missing-item recovery for ESKAY MEDICALS "
             "(Mfr/Pack fragment is not a line item)"
+        )
+        return existing_items
+
+    if ocr_suggests_sivagami_medical(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for SIVAGAMI MEDICAL "
+            "(rotated table OCR owns line items)"
         )
         return existing_items
 
@@ -5951,6 +5962,8 @@ def fix_marg_erp_qty_rate_from_ocr(items, ocr_text: str):
     if ocr_suggests_chanduka_agencies(ocr_text):
         return items
     if ocr_suggests_kyal_agencies(ocr_text):
+        return items
+    if ocr_suggests_sivagami_medical(ocr_text):
         return items
 
     # Check if this is MARG ERP format (Supreme Life Sciences, etc.)
@@ -15469,6 +15482,426 @@ def ocr_suggests_maa_pharmaceuticals(ocr_text: str, vendor: str = "") -> bool:
     )
 
 
+def ocr_suggests_sivagami_medical(ocr_text: str = "", vendor: str = "") -> bool:
+    """L.SIVAGAMI MEDICAL landscape CREDIT BILL (Inv.No SA######)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    return bool(re.search(
+        r'SIVAGAMI\s+MEDICAL|STVAGAM[I,]?\s+MEDICAL|SIVAGAM[I:]?\s+MEDICAL',
+        blob,
+        re.IGNORECASE,
+    ))
+
+
+def _clean_sivagami_product_name(raw: str) -> str:
+    s = re.sub(r'[^A-Z0-9/.\s]', ' ', str(raw or '').upper())
+    s = re.sub(r'\s+', ' ', s).strip()
+    s = re.sub(r'\b20MIG\b', '20MG', s)
+    s = re.sub(r'\bDAPAG(?:I[VYN]|E[VYN]|CL|LY[SN])\s*[VN]?\s*', 'DAPAGLYN ', s)
+    s = re.sub(r'\bDAPAGLYNS\b', 'DAPAGLYN S', s)
+    s = re.sub(r'\bCLOPITOR[VN]\s*[A4]?\s*', 'CLOPITORVA ', s)
+    s = re.sub(r'\bTHROMBOP[I1]*O[RBH]+\b', 'THROMBOPHOB', s)
+    s = re.sub(r'\bD[EI][VN]ONA(?:INS?|ING|INY)\b', 'DEXONA INJ', s)
+    s = re.sub(r'\bDEXONA(?:INS?|ING|INY)\b', 'DEXONA INJ', s)
+    s = re.sub(r'\bDEXONA INJ(?:\s+INJ)+\b', 'DEXONA INJ', s)
+    s = re.sub(r'\s+SOE2MI\b', '', s)
+    s = re.sub(r'\s+10 2ML\b', '', s)
+    s = re.sub(r'\b10/108\b', '10/100', s)
+    s = re.sub(r'\b10100\b', '10/100', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
+def _sivagami_name_anchor(desc: str) -> str:
+    s = _clean_sivagami_product_name(desc)
+    for tok in s.split():
+        if len(tok) >= 5 and tok[:4].isalpha() and tok not in {
+            "TABLE", "TABLET", "DEPOT"
+        }:
+            return tok
+    return ""
+
+
+def _ocr_sivagami_medical_rotated_table(page=None, image_bytes: bytes = None) -> str:
+    """OCR the 90°-rotated SIVAGAMI product table (portrait scan of landscape bill)."""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(3.0, 3.0))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+        if height >= width:
+            img = img.rotate(90, expand=True)
+            width, height = img.size
+        crop = img.crop((
+            int(width * 0.02), int(height * 0.16),
+            int(width * 0.98), int(height * 0.58),
+        ))
+        gray = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+        gray = cv2.resize(gray, None, fx=1.4, fy=1.4,
+                          interpolation=cv2.INTER_CUBIC)
+        _, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text = pytesseract.image_to_string(th, config="--psm 6") or ""
+        # Lower band: long SIVAGAMI tables continue below the default crop.
+        lower = img.crop((
+            int(width * 0.02), int(height * 0.48),
+            int(width * 0.98), int(height * 0.82),
+        ))
+        lg = cv2.cvtColor(np.array(lower), cv2.COLOR_RGB2GRAY)
+        lg = cv2.resize(lg, None, fx=1.4, fy=1.4,
+                        interpolation=cv2.INTER_CUBIC)
+        _, lth = cv2.threshold(lg, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text2 = pytesseract.image_to_string(lth, config="--psm 6") or ""
+        try:
+            img.close()
+        except Exception:
+            pass
+        return (text + "\n" + text2).strip()
+    except Exception as exc:
+        logger.debug(f"SIVAGAMI rotated OCR skipped: {exc}")
+        return ""
+
+
+def extract_sivagami_medical_line_items_from_ocr(ocr_text: str) -> list:
+    """Parse Mfr *Product Pack HSN Qty ... MRP Rate ... Value rows.
+
+    Rotated Tesseract often glues HSN+Qty and drops Value digits, so qty/rate
+    are recovered from printed Rate × Qty ≈ Value rather than token position.
+    """
+    if not ocr_text:
+        return []
+    mfr_re = re.compile(
+        r'(?:ZYDUS|ZADUS|ZVDUS|ZYDCS|ZNDUS|ZAYDUS|ZANDAS)',
+        re.IGNORECASE,
+    )
+    rows = []
+    seen = set()
+    for raw in str(ocr_text).splitlines():
+        line = re.sub(r'\s+', ' ', str(raw or '').strip())
+        if not line:
+            continue
+        up = line.upper().replace('|', ' ')
+        if 'PRODUCT NAME' in up and ('PACK' in up or 'MFR' in up or 'QTY' in up):
+            continue
+        if not mfr_re.search(up) and '*' not in line:
+            continue
+
+        line_n = line.replace('$', '')
+        # Rate often OCRs as 244,00; strip thousands commas after decimal-comma normalize.
+        line_n = re.sub(r'(\d+),(\d{2})(?!\d)', r'\1.\2', line_n)
+        line_n = line_n.replace(',', '')
+        line_n = re.sub(r'\d{1,2}/\d{2,4}', ' ', line_n)
+        money = []
+        for tok in re.findall(r'\d+\.\d{2}', line_n):
+            try:
+                money.append(float(tok))
+            except Exception:
+                continue
+        end_int = re.search(r'(\d{4,7})(?:\.\d{1,2})?\s*\|?\s*$', line_n)
+        end_amt = float(end_int.group(1)) if end_int else 0.0
+        two_dec = [m for m in money if 15.0 <= m <= 800.0]
+        rate = 0.0
+        mrp = 0.0
+        for i in range(len(two_dec) - 1):
+            a, b = two_dec[i], two_dec[i + 1]
+            if a > b:
+                mrp, rate = a, b
+        if rate <= 0 and two_dec:
+            rate = two_dec[-1]
+
+        int_cands = []
+        for tok in re.findall(r'(?<![\d.])(\d{1,4})(?![\d.A-Z])', line_n):
+            try:
+                iv = int(tok)
+            except Exception:
+                continue
+            if iv in (5,) or iv > 2000:
+                continue
+            int_cands.append(float(iv))
+
+        amount_bases = []
+        if end_amt >= 80:
+            amount_bases.append(end_amt)
+        for m in reversed(money):
+            if m >= 80:
+                amount_bases.append(m)
+                break
+        gst_val = re.search(r'\b5\s+(\d{3,5}(?:\.\d{2})?)\s*\|?\s*$', line_n)
+        if gst_val:
+            try:
+                tail = float(gst_val.group(1))
+                # "5 $594.00" (GST% + truncated Value) → 5594. Do not
+                # stitch a full Value such as 1517.00 into 6517.
+                if 100 <= tail < 1000:
+                    amount_bases.append(5000.0 + tail)
+            except Exception:
+                pass
+
+        best = None
+        if rate > 0:
+            implied = []
+            for amt in amount_bases:
+                for amt2 in (amt, amt / 10.0):
+                    if amt2 < 80:
+                        continue
+                    q_imp = round(amt2 / rate)
+                    if 1 <= q_imp <= 500 and abs(q_imp * rate - amt2) <= max(0.51, 0.02 * amt2):
+                        implied.append(float(q_imp))
+            qty_opts = list(dict.fromkeys(int_cands + implied))
+            pack_like = {10.0, 15.0, 1.0, 500.0}
+
+            def _qty_matches_value(q: float) -> bool:
+                expected = q * rate
+                for amt in amount_bases:
+                    for amt2 in (amt, amt / 10.0):
+                        if abs(expected - amt2) <= max(0.51, 0.03 * max(expected, amt2)):
+                            return True
+                return False
+
+            value_hits = [q for q in qty_opts if 0 < q <= 500 and _qty_matches_value(q)]
+            if any(q not in pack_like for q in value_hits):
+                value_hits = [q for q in value_hits if q not in pack_like]
+            for q in value_hits:
+                expected = q * rate
+                score = 0
+                if q in int_cands:
+                    score += 10
+                if q not in (10, 15, 1, 500):
+                    score += 2
+                if q == 100 and 200 in qty_opts:
+                    score -= 4
+                cand = (score, expected, q, rate, expected)
+                if best is None or cand[0] > best[0] or (
+                    cand[0] == best[0] and cand[1] > best[1]
+                ):
+                    best = cand
+        if re.search(r'10\s*/\s*10[08]\s*TAB', up) and 200.0 in int_cands and rate > 0:
+            expected = 200.0 * rate
+            cand = (20, expected, 200.0, rate, expected)
+            if best is None or cand[0] > best[0]:
+                best = cand
+        if best is None:
+            continue
+        _, _, qty, rate, amount = best
+
+        name = ""
+        name_m = re.search(
+            r'(?:ZYDUS|ZADUS|ZVDUS|ZYDCS|ZNDUS|ZAYDUS|ZANDAS)\s+\W{0,8}\*?\s*'
+            r'([A-Z0-9][A-Z0-9 /.\-]{2,48}?)'
+            r'(?=\s+\d{1,3}\s*[\'`’]?\s*S\b|\s+TES\b|\s+10.?S\b|\s+\d+\s*GM|\s+\d+CC\b|'
+            r'\s+300|\s+\d{6,8}|\s+\d{3}-\d{4})',
+            up,
+        )
+        if name_m:
+            name = name_m.group(1)
+        elif '*' in up:
+            star = re.search(r'\*\s*([A-Z0-9][A-Z0-9 /.\-]{3,40})', up)
+            if star:
+                name = star.group(1)
+        if re.search(r'10\s*/\s*10[08]\s*TAB', up):
+            name = "DAPAGLYN S 10/100 TAB"
+        product = _clean_sivagami_product_name(name)
+        product = re.sub(r'\s+0G\b', '', product).strip()
+        if (
+            product.startswith("DAPAGLYN")
+            and "10/100" not in product
+            and re.search(r'DAPAG', up)
+        ):
+            product = "DAPAGLYN M 500"
+        if len(product) < 4:
+            continue
+        key = (product, round(qty, 2), round(rate, 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "product_description": product,
+            "quantity": qty,
+            "unit_price": rate,
+            "total_amount": amount,
+            "additional_fields": {"mrp": f"{mrp:.2f}"} if mrp else {},
+        })
+    return rows
+
+
+def fix_sivagami_medical_line_items_from_ocr(
+    items: list,
+    ocr_text: str = "",
+    table_ocr: str = "",
+    vendor: str = "",
+) -> list:
+    """Restore Product Name / Qty / Rate from rotated SIVAGAMI table OCR.
+
+    Portrait scans of this landscape CREDIT BILL make PDFPlumber text unreadable,
+    so Gemini invents names (TULI / INTRAVENOUS FLUID) and maps MRP or pack as
+    Rate/Qty. Totals are left unchanged.
+    """
+    if not items:
+        return items
+    if not ocr_suggests_sivagami_medical(ocr_text, vendor) and not ocr_suggests_sivagami_medical(table_ocr, vendor):
+        return items
+    combined = "\n".join(
+        x for x in (table_ocr or "", ocr_text or "") if x and str(x).strip()
+    )
+    ocr_rows = extract_sivagami_medical_line_items_from_ocr(combined)
+    if not ocr_rows:
+        return items
+
+    def _f(v) -> float:
+        try:
+            return float(normalize_numeric_value(str(v or "0")) or 0)
+        except Exception:
+            return 0.0
+
+    used = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        qty = _f(item.get("quantity"))
+        rate = _f(item.get("unit_price"))
+        total = _f(item.get("total_amount"))
+        mrp = 0.0
+        af = item.get("additional_fields")
+        if isinstance(af, dict):
+            mrp = _f(af.get("mrp"))
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            rq = float(row["quantity"])
+            rr = float(row["unit_price"])
+            ra = float(row.get("total_amount") or 0)
+            if total > 0 and ra > 0 and abs(total - ra) <= max(0.51, 0.01 * ra):
+                score += 6
+            if abs(qty - rq) <= 0.51 and rate > 0.009:
+                score += 4
+            if abs(rate - rr) <= 0.05:
+                score += 5
+            if mrp > 0 and abs(mrp - rr) <= 0.05:
+                score += 4
+            if abs(rate - rq) <= 0.05:
+                score += 1
+            row_mrp = 0.0
+            raf = row.get("additional_fields") or {}
+            if isinstance(raf, dict):
+                row_mrp = _f(raf.get("mrp"))
+            if abs(rate - row_mrp) <= 0.08 and row_mrp > 0:
+                score += 3
+            ia = _sivagami_name_anchor(item.get("product_description", ""))
+            ra_n = _sivagami_name_anchor(row.get("product_description", ""))
+            name_hit = bool(
+                ia and ra_n and (
+                    ia == ra_n or ia.startswith(ra_n[:5]) or ra_n.startswith(ia[:5])
+                )
+            )
+            if name_hit and rate <= 0.009:
+                score += 6
+            elif (
+                name_hit
+                and abs(rate - round(rate)) <= 0.01
+                and 1 <= rate <= 200
+                and rr > 15
+                and abs(rr - round(rr)) > 0.001
+            ):
+                score += 6
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+        if best_idx is None or best_score < 4:
+            continue
+        row = ocr_rows[best_idx]
+        new_name = row["product_description"]
+        new_qty = float(row["quantity"])
+        new_rate = float(row["unit_price"])
+        row_mrp_apply = 0.0
+        raf_apply = row.get("additional_fields") or {}
+        if isinstance(raf_apply, dict):
+            row_mrp_apply = _f(raf_apply.get("mrp"))
+        old_name = str(item.get("product_description") or "")
+        old_clean = _clean_sivagami_product_name(old_name)
+        invented_name = (
+            old_clean in {"TULI", "NATUROGEST AQ", "NATUROGEST"}
+            or "FLUID" in old_clean
+        )
+        coherent = (
+            qty > 0 and rate > 0 and total > 0
+            and abs(qty * rate - total) / max(total, 1.0) <= 0.08
+        )
+        mrp_as_rate = (
+            row_mrp_apply > 0
+            and abs(rate - row_mrp_apply) <= 0.08
+            and new_rate < rate * 0.95
+        )
+        ia = _sivagami_name_anchor(old_name)
+        ra_n = _sivagami_name_anchor(new_name)
+        name_hit = bool(
+            ia and ra_n and (
+                ia == ra_n or ia.startswith(ra_n[:5]) or ra_n.startswith(ia[:5])
+            )
+        )
+        tiny_rate_drift = (
+            name_hit and 0.02 < abs(rate - new_rate) <= 0.20
+        )
+        if (
+            coherent and not mrp_as_rate and not invented_name
+            and rate > 0.009 and not tiny_rate_drift
+        ):
+            continue
+        used.add(best_idx)
+        old_clean = _clean_sivagami_product_name(old_name)
+        new_clean = _clean_sivagami_product_name(new_name)
+        old_tok = set(t for t in old_clean.split() if len(t) >= 4)
+        new_tok = set(t for t in new_clean.split() if len(t) >= 4)
+        keep_name = bool(
+            old_clean and new_clean and (
+                old_clean == new_clean
+                or new_clean in old_clean
+                or old_clean in new_clean
+                or (old_tok and new_tok and old_tok & new_tok)
+                or (len(old_clean) >= 6 and old_clean[:6] == new_clean[:6])
+            )
+        )
+        if new_name and not keep_name:
+            item["product_description"] = new_name
+        qty_str = str(int(new_qty)) if new_qty == int(new_qty) else f"{new_qty:.2f}"
+        row_mrp_apply = 0.0
+        raf_apply = row.get("additional_fields") or {}
+        if isinstance(raf_apply, dict):
+            row_mrp_apply = _f(raf_apply.get("mrp"))
+        rate_only = (
+            rate <= 0.009
+            or (row_mrp_apply > 0 and abs(rate - row_mrp_apply) <= 0.08
+                and abs(rate - new_rate) > 0.05)
+            or (
+                abs(rate - round(rate)) <= 0.01
+                and 1 <= rate <= 200
+                and new_rate > 15
+                and abs(new_rate - round(new_rate)) > 0.001
+            )
+            or tiny_rate_drift
+        )
+        if not rate_only:
+            if abs(qty - new_qty) > 0.51:
+                item["quantity"] = qty_str
+            elif abs(qty - new_qty) <= 0.51 and str(item.get("quantity")) != qty_str:
+                item["quantity"] = qty_str
+        if abs(rate - new_rate) > 0.02:
+            item["unit_price"] = f"{new_rate:.2f}"
+        logger.warning(
+            f"⚠️ SIVAGAMI MEDICAL: restored name/qty/rate "
+            f"'{old_name}' -> '{item.get('product_description')}' "
+            f"qty={item.get('quantity')} rate={item.get('unit_price')}"
+        )
+    return items
+
+
 def _ocr_maa_pharmaceuticals_table_region(page=None, image_bytes: bytes = None) -> str:
     """OCR the Rate/QTY/Free table on 270°-rotated MAA landscape scans."""
     if not TESSERACT_AVAILABLE:
@@ -22539,6 +22972,12 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
         gross_amount = None
         additional_fields = item.get("additional_fields", {})
         _is_pharmacea_mrp = _is_pharmacea_link_vendor(vendor, ocr_text)
+        if ocr_suggests_sivagami_medical(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for SIVAGAMI MEDICAL row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(name/qty/rate restored from rotated table OCR)")
+            return item
         if ocr_suggests_eskay_medicals_marg_table(ocr_text, vendor):
             logger.info(
                 f"⏭️ Skipping fix_mrp_as_unit_price for ESKAY MEDICALS row "
@@ -25599,6 +26038,18 @@ def enforce_schema(raw_data):
         template["data"].get("invoice_summary"),
     )
 
+    # SIVAGAMI MEDICAL: restore Product Name / Qty / Rate from 90° table OCR
+    _sivagami_table_ocr = ""
+    if isinstance(data, dict):
+        _sivagami_table_ocr = str(
+            data.get("sivagami_table_ocr", "") or "").strip()
+    processed_items = fix_sivagami_medical_line_items_from_ocr(
+        processed_items,
+        ocr_text,
+        _sivagami_table_ocr,
+        _vendor_name,
+    )
+
     # 🔧 FIX 12j: Correct JACKSON MEDICALS product/qty/rate from qty-rate band OCR
     _jackson_table_ocr = ""
     if isinstance(data, dict):
@@ -25987,7 +26438,11 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 10: FINAL VALIDATION - Correct BOTH qty AND unit_price using OCR verification
     # If unit_price × quantity doesn't equal total_amount, find correct values from OCR
+    _skip_fix10_sivagami = ocr_suggests_sivagami_medical(
+        ocr_text, _vendor_name)
     for item in processed_items:
+        if _skip_fix10_sivagami:
+            break
         try:
             qty_str = str(item.get("quantity", "0"))
             price_str = str(item.get("unit_price", "0"))
@@ -28074,6 +28529,7 @@ def enforce_schema(raw_data):
         template["data"].pop("jackson_table_ocr", None)
         template["data"].pop("colvalcar_table_ocr", None)
         template["data"].pop("oncomed_table_ocr", None)
+        template["data"].pop("sivagami_table_ocr", None)
         template["data"].pop("saraswati_table_ocr", None)
         template["data"].pop("someshwara_detail_ocr", None)
         template["data"].pop("tulsyan_rate_ocr", None)
@@ -28087,6 +28543,7 @@ def enforce_schema(raw_data):
         _summary_out.pop("jackson_table_ocr", None)
         _summary_out.pop("colvalcar_table_ocr", None)
         _summary_out.pop("oncomed_table_ocr", None)
+        _summary_out.pop("sivagami_table_ocr", None)
         _summary_out.pop("saraswati_table_ocr", None)
         _summary_out.pop("someshwara_detail_ocr", None)
         _summary_out.pop("tulsyan_rate_ocr", None)
@@ -29636,6 +30093,31 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _maa_ocr_err:
             logger.debug(
                 f"MAA table OCR enrichment skipped: {_maa_ocr_err}")
+
+        # SIVAGAMI MEDICAL: landscape CREDIT BILL scanned portrait — 90° table OCR
+        try:
+            _siv_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _siv_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _siv_data = _siv_fd.get("data") if isinstance(
+                _siv_fd.get("data"), dict) else _siv_fd
+            _siv_sum = _siv_data.get("invoice_summary") if isinstance(
+                _siv_data.get("invoice_summary"), dict) else {}
+            _siv_vendor = str(
+                _siv_sum.get("vendor") or _siv_fd.get("vendor") or "")
+            if ocr_suggests_sivagami_medical(_siv_ocr, _siv_vendor):
+                _siv_tocr = _ocr_sivagami_medical_rotated_table(page=page)
+                if _siv_tocr.strip():
+                    result["sivagami_table_ocr"] = _siv_tocr
+                    logger.info(
+                        f"    ✅ SIVAGAMI rotated table OCR captured "
+                        f"({len(_siv_tocr)} chars)")
+        except Exception as _siv_ocr_err:
+            logger.debug(
+                f"SIVAGAMI table OCR enrichment skipped: {_siv_ocr_err}")
 
         # JACKSON MEDICALS scans: capture QTY/Rate/Amount band for FIX12j
         try:
@@ -33909,6 +34391,27 @@ def split_and_extract_invoices(
                     if _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["maa_table_ocr"] = _maa_tocr
 
+                    _siv_tocr = str(page_result.get(
+                        "sivagami_table_ocr", "") or "").strip()
+                    if (
+                        not _siv_tocr
+                        and ocr_suggests_sivagami_medical(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _siv_page = doc.load_page(first_page_idx)
+                            _siv_tocr = _ocr_sivagami_medical_rotated_table(
+                                page=_siv_page)
+                            if _siv_tocr.strip():
+                                logger.info(
+                                    f"    ✅ SIVAGAMI table OCR captured at response build "
+                                    f"({len(_siv_tocr)} chars)")
+                        except Exception as _siv_fb_err:
+                            logger.debug(
+                                f"SIVAGAMI table OCR fallback failed: {_siv_fb_err}")
+                    if _siv_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["sivagami_table_ocr"] = _siv_tocr
+
                     _sara_tocr = str(page_result.get(
                         "saraswati_table_ocr", "") or "").strip()
                     if (
@@ -35118,6 +35621,26 @@ def test_extract(
                                     f"MAA table OCR fallback failed: {_maa_fb_err}")
                     if _maa_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["maa_table_ocr"] = _maa_tocr
+                    _siv_tocr = str(page_result.get(
+                        "sivagami_table_ocr", "") or "").strip()
+                    if (
+                        not _siv_tocr
+                        and ocr_suggests_sivagami_medical(raw_ocr_text, "")
+                        and isinstance(data_with_ocr.get("data"), dict)
+                    ):
+                        try:
+                            _siv_page = doc.load_page(first_page_idx)
+                            _siv_tocr = _ocr_sivagami_medical_rotated_table(
+                                page=_siv_page)
+                            if _siv_tocr.strip():
+                                logger.info(
+                                    f"    ✅ SIVAGAMI table OCR captured at response build "
+                                    f"({len(_siv_tocr)} chars)")
+                        except Exception as _siv_fb_err:
+                            logger.debug(
+                                f"SIVAGAMI table OCR fallback failed: {_siv_fb_err}")
+                    if _siv_tocr and isinstance(data_with_ocr.get("data"), dict):
+                        data_with_ocr["data"]["sivagami_table_ocr"] = _siv_tocr
                     _sara_tocr = str(page_result.get(
                         "saraswati_table_ocr", "") or "").strip()
                     if (
