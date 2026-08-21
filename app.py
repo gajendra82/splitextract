@@ -4325,6 +4325,16 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         )
         return existing_items
 
+    # ESKAY MEDICALS MARG: generic recovery treats Mfr+Qty+Pack as a product
+    # (e.g. "ZYDU 50 - VIAL" from "ZYDU 50 - VIAL MEROZA 1 GM INJ ...").
+    # Vision already has the real rows, including legitimate same-name repeats.
+    if ocr_suggests_eskay_medicals_marg_table(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for ESKAY MEDICALS "
+            "(Mfr/Pack fragment is not a line item)"
+        )
+        return existing_items
+
     # YEN-PHARMA SalePrint: pipe-table OCR invents 'S 1100' products from schedule+qty;
     # use dedicated SalePrint row parser instead of generic recovery.
     if ocr_suggests_yen_pharma(ocr_text):
@@ -8705,6 +8715,19 @@ Columns: PRODUCT NAME | PACK | HSNCODE | BATCH | EXP | QTY | FREE | OLDMRP | M.R
 """
 
 
+_ONCOMED_VISION_RATE_HINT = """
+⚠️ ONCOMED / OncoMed MARKETING tax invoice ONLY (Patna; invoice nos like OM003060):
+Columns L→R: S.N | HSN | Product Name | Mfg.Dt | Pack | Qty | Free | Batch | Mfg | Exp | M.R.P | Rate | Dis% | SGST% | SGST Value | CGST% | CGST Value | Amount
+- quantity = Qty column (often >> 1, e.g. 50/2/5/6). NEVER default every row to 1.
+- unit_price = Rate column ONLY (per-unit selling price, e.g. 400.00, 6595.00, 1300.00).
+- total_amount = Amount column (= Qty × Rate). NEVER copy Amount into unit_price.
+- SGST%/CGST% are small percentages (2.50 / 9.00) — NEVER put them in unit_price.
+- SGST Value / CGST Value are tax amounts — NEVER put them in unit_price.
+- Extract EVERY product row. Footer "Total Items" must equal line_items count.
+- Validate each row: quantity × unit_price ≈ total_amount (±0.05).
+"""
+
+
 def _yash_item_mrp(item: dict) -> float:
     if not isinstance(item, dict):
         return 0.0
@@ -10941,9 +10964,23 @@ def fix_singhal_medicals_product_names_from_ocr(
 
 
 def ocr_suggests_oncomed_marketing(ocr_text: str = "", vendor: str = "") -> bool:
-    """Detect ONCOMED / OncoMed MARKETING tax-invoice layout."""
+    """Detect ONCOMED / OncoMed MARKETING tax-invoice layout.
+
+    Scans are often upside-down / skewed so OCR drops the vendor banner; also
+    match stable identity tokens (GSTIN / email / invoice OM######).
+    """
     blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
-    return bool(re.search(r'\bONCO\s*MED\s+MARKETING\b|\bONCOMED\s+MARKETING\b', blob))
+    if re.search(r'\bONCO\s*MED\s+MARKETING\b|\bONCOMED\s+MARKETING\b', blob):
+        return True
+    # Known ONCOMED MARKETING GSTIN (Patna)
+    if re.search(r'\b10AIZPK6606M3ZR\b', blob):
+        return True
+    if 'ONCOMEDPATNA@' in blob.replace(' ', ''):
+        return True
+    # Invoice series OM###### used by this vendor (e.g. OM003060)
+    if re.search(r'\bOM\d{5,6}\b', blob) and re.search(r'\bONCO\s*MED\b|\bONCOMED\b', blob):
+        return True
+    return False
 
 
 def _ocr_oncomed_marketing_rotated_page(page=None, image_bytes: bytes = None) -> str:
@@ -10984,132 +11021,35 @@ def _ocr_oncomed_marketing_rotated_page(page=None, image_bytes: bytes = None) ->
         return ""
 
 
-
-def _oncomed_recover_qty_rate_from_amount_context(ocr_text: str, amount: float) -> dict | None:
-    """
-    ONCOMED only: when table-row regex fails, recover qty/rate from the
-    numeric neighborhood of a known line Amount in OCR text.
-
-    Prefer true money tokens (with decimals). Integer tax OCR (250, 236, 241)
-    must not win over Rate like 23.61 / 48.26 / 347.11.
-    """
-    if not ocr_text or amount <= 0:
-        return None
-
-    amt_re = re.compile(rf'(?<!\d){re.escape(f"{amount:.2f}")}(?!\d)')
-    best = None  # (score, cand)
-
-    for raw in ocr_text.splitlines():
-        line = re.sub(r'\s+', ' ', str(raw or '').strip())
-        if not line:
-            continue
-        line_n = re.sub(r'(\d{1,2}):(\d{2})(?!\d)', r'\1/\2', line)
-        for m in amt_re.finditer(line_n):
-            left = line_n[:m.start()]
-            # Money tokens WITH a decimal point only (Rate/MRP/Disc)
-            money_toks = re.findall(r'\d+\.\d{1,2}', left)
-            if len(money_toks) < 2:
-                continue
-            moneys = []
-            for t in money_toks:
-                try:
-                    moneys.append(float(t))
-                except ValueError:
-                    continue
-            if len(moneys) < 2:
-                continue
-
-            scored = []
-            for idx, n in enumerate(moneys):
-                if n <= 0 or n >= amount:
-                    continue
-                # Disc / near-zero noise
-                if n < 0.05:
-                    continue
-                qty_f = amount / n
-                qty_i = int(round(qty_f))
-                if qty_i < 1 or qty_i > 20000:
-                    continue
-                if abs(qty_i * n - amount) > max(0.05, amount * 0.002):
-                    continue
-
-                # Prefer classic MRP Rate Disc… : rate has a larger MRP to its left
-                mrp_left = [x for x in moneys[:idx] if x >= n * 0.95]
-                has_mrp = bool(mrp_left)
-                # Prefer rate near the right end of decimal cluster (before tax ints)
-                dist_from_right = len(moneys) - 1 - idx
-                qty_present = bool(re.search(rf'(?<!\d){qty_i}(?!\d)', left))
-
-                score = 5  # decimal money baseline
-                if has_mrp:
-                    score += 4
-                if qty_present:
-                    score += 3
-                if dist_from_right <= 3:
-                    score += 2
-                if n <= amount * 0.75:
-                    score += 1
-                # Prefer 2-decimal rates that are not huge integers-as-float
-                if abs(n - round(n)) > 1e-9:
-                    score += 2
-                scored.append((score, -dist_from_right, n, qty_i))
-
-            if not scored:
-                continue
-            scored.sort(reverse=True)
-            score, _, rate, qty_i = scored[0]
-            if score < 6:
-                continue
-            cand = {
-                "quantity": float(qty_i),
-                "unit_price": round(rate, 2),
-                "total_amount": round(amount, 2),
-            }
-            if best is None or score > best[0]:
-                best = (score, cand)
-
-    return best[1] if best else None
-
-
 def extract_oncomed_marketing_rates_from_ocr(ocr_text: str) -> list:
     """
     Parse ONCOMED MARKETING rows:
       ... Qty Batch [Mfg] Exp MRP Rate Disc SGST% SGSTVal CGST% CGSTVal [Amount]
-    Tolerant of noisy OCR dates (10:28) without corrupting money decimals (41.85).
+    Prefer Amount/qty when Rate OCR is noisy; reject SGST-Value-as-Rate.
+    Pack tokens like 1X30 / 1*15 must not be treated as Qty.
     """
     if not ocr_text:
         return []
 
-    def _pct(tok: str) -> float:
-        v = float(tok)
-        if v >= 100:  # 250 → 2.50
-            v = v / 100.0
-        return v
-
-    def _num(tok: str) -> float:
-        return float(str(tok).replace(',', ''))
-
     rows = []
-    # Normalize ONLY date-like colon forms (10:28), never money dots (41.85)
-    norm = re.sub(r'(\d{1,2}):(\d{2})(?!\d)', r'\1/\2', ocr_text)
-
+    # Batch must contain both a letter and a digit (rejects pack fragments / plain qty).
     tail_re = re.compile(
         r'(?P<qty>\d{1,5})\s+'
         r'(?P<batch>(?=[A-Z0-9/.\-]*[A-Z])(?=[A-Z0-9/.\-]*\d)[A-Z0-9][A-Z0-9/.\-]{3,})\s+'
-        r'(?:(?!\d{1,2}/\d{2,4})(?:[A-Z][A-Z0-9./\-]*|[A-Z0-9]*[A-Z][A-Z0-9]*)\s+)*'
+        r'(?:(?!\d{1,2}/\d{2,4})(?:[A-Z][A-Z0-9./\-]*|[A-Z0-9]*[A-Z][A-Z0-9]*)\s+)*'  # Mfg tokens (ZYDUS, K.LAB, 3D)
         r'(?P<exp>\d{1,2}/\d{2,4})\s+'
-        r'(?P<mrp>\d+(?:\.\d{1,2})?)\s+'
-        r'(?P<rate>\d+(?:\.\d{1,2})?)\s*'
-        r'(?P<disc>\d+(?:\.\d{1,2})?)?\s*'
-        r'(?P<sgst_pct>\d+(?:\.\d{1,2})?)\s+'
-        r'(?P<sgst_val>\d+(?:\.\d{1,2})?)\s+'
-        r'(?P<cgst_pct>\d+(?:\.\d{1,2})?)\s+'
-        r'(?P<cgst_val>\d+(?:\.\d{1,2})?)'
-        r'(?:\s+(?P<amount>\d+(?:\.\d{1,2})?))?',
+        r'(?P<mrp>\d+\.\d{1,2})\s+'
+        r'(?P<rate>\d+\.\d{1,2})\s*'
+        r'(?P<disc>\d+\.\d{1,2})?\s*'
+        r'(?P<sgst_pct>\d+\.\d{1,2})\s+'
+        r'(?P<sgst_val>\d+\.\d{1,2})\s+'
+        r'(?P<cgst_pct>\d+\.\d{1,2})\s+'
+        r'(?P<cgst_val>\d+\.\d{1,2})'
+        r'(?:\s+(?P<amount>\d+\.\d{1,2}))?',
         re.IGNORECASE,
     )
 
-    for raw in norm.splitlines():
+    for raw in ocr_text.splitlines():
         line = re.sub(r'\s+', ' ', str(raw or '').strip())
         if not line:
             continue
@@ -11117,26 +11057,26 @@ def extract_oncomed_marketing_rates_from_ocr(ocr_text: str) -> list:
         candidates = []
         for m in tail_re.finditer(line):
             try:
-                qty = float(m.group('qty'))
-                rate = _num(m.group('rate'))
-                mrp = _num(m.group('mrp'))
-                sgst_pct = _pct(m.group('sgst_pct'))
-                sgst_val = _num(m.group('sgst_val'))
-                amount = _num(m.group('amount')) if m.group('amount') else 0.0
+                qty = float(m.group("qty"))
+                rate = float(m.group("rate"))
+                mrp = float(m.group("mrp"))
+                sgst_val = float(m.group("sgst_val"))
+                amount = float(m.group("amount")) if m.group("amount") else 0.0
             except (TypeError, ValueError):
                 continue
             if qty <= 0 or rate <= 0:
                 continue
-            batch = m.group('batch').strip().upper()
+            batch = m.group("batch").strip().upper()
+            # Reject pack fragments mistaken as batch (20GM, 10T, etc.)
             if re.match(r'^\d+(?:GM|ML|MG|TAB|CAPS?|VIALS?|NOS?|T)?$', batch, re.I):
-                continue
-            if sgst_pct > 40:
                 continue
 
             printed_rate = rate
             if amount > 0:
                 derived = round(amount / qty, 2)
                 if abs(qty * derived - amount) <= max(0.05, amount * 0.002):
+                    # Prefer printed rate only when it regenerates Amount tightly;
+                    # otherwise Amount/qty wins over noisy OCR Rate (e.g. 120.09).
                     if abs(qty * printed_rate - amount) <= 0.05:
                         rate = printed_rate
                     else:
@@ -11149,16 +11089,13 @@ def extract_oncomed_marketing_rates_from_ocr(ocr_text: str) -> list:
                     else:
                         continue
             else:
-                if sgst_val > 0 and 1.0 <= sgst_pct <= 6.0:
-                    if abs(qty * rate * (sgst_pct / 100.0) - sgst_val) <= max(0.05, sgst_val * 0.05):
+                if sgst_val > 0 and abs(rate - sgst_val) <= 0.05:
+                    cand = round(sgst_val / (qty * 0.025), 2) if qty > 0 else 0.0
+                    if cand > 0 and (mrp <= 0 or cand <= mrp * 1.05):
+                        rate = cand
                         amount = round(qty * rate, 2)
                     else:
-                        cand = round(sgst_val / (qty * (sgst_pct / 100.0)), 2)
-                        if cand > 0 and (mrp <= 0 or cand <= mrp * 1.05):
-                            rate = cand
-                            amount = round(qty * rate, 2)
-                        else:
-                            continue
+                        continue
                 else:
                     amount = round(qty * rate, 2)
 
@@ -11168,6 +11105,7 @@ def extract_oncomed_marketing_rates_from_ocr(ocr_text: str) -> list:
                 if abs(qty * rate - amount) / max(amount, 1.0) > 0.20:
                     continue
 
+            # Score: reward SGST/amount consistency; penalize pack-size false qty.
             score = 0.0
             if amount > 0:
                 score += max(0.0, 3.0 - abs(qty * rate - amount) * 20.0)
@@ -11179,33 +11117,35 @@ def extract_oncomed_marketing_rates_from_ocr(ocr_text: str) -> list:
             if re.search(r'[xX*]\s*\d{0,4}\s*$', before):
                 score -= 5.0
             if re.search(r'\b\d{1,2}/\d{2,4}\s*$', before):
+                # qty glued to a date fragment (e.g. 1/25 → 25)
                 score -= 2.0
 
             head = line[:m.start()].strip()
             head = re.sub(r'^\d{1,3}\s+', '', head)
             head = re.sub(r'^\d{4,8}\s*', '', head)
             name = re.sub(r'[\|\{\}\]]+', ' ', head)
-            name = re.sub(r'\s+', ' ', name).strip(' .-')
+            name = re.sub(r'\s+', ' ', name).strip(" .-")
             name = re.sub(r'\s+\d{1,2}/\d{2,4}\s*$', '', name).strip()
             if len(name) < 3:
-                name = ''
+                name = ""
 
             candidates.append((score, {
-                'product_description': name,
-                'quantity': qty,
-                'unit_price': round(rate, 2),
-                'total_amount': round(amount, 2),
-                'lot_batch_number': batch,
-                'mrp': round(mrp, 2) if mrp else 0.0,
-                'sgst_value': round(sgst_val, 2),
+                "product_description": name,
+                "quantity": qty,
+                "unit_price": round(rate, 2),
+                "total_amount": round(amount, 2),
+                "lot_batch_number": batch,
+                "mrp": round(mrp, 2),
+                "sgst_value": round(sgst_val, 2),
             }))
 
         if not candidates:
             continue
         candidates.sort(key=lambda x: x[0], reverse=True)
-        if candidates[0][0] < 0:
+        best_score, best = candidates[0]
+        if best_score < 0:
             continue
-        rows.append(candidates[0][1])
+        rows.append(best)
     return rows
 
 
@@ -11404,33 +11344,10 @@ def fix_oncomed_marketing_rate_from_ocr(
         new_rate = None
         new_total = None
         if match:
-            # Reject absurd OCR matches (qty blown up by batch OCR)
-            mq = float(match.get("quantity") or 0)
-            mr = float(match.get("unit_price") or 0)
-            mt = float(match.get("total_amount") or 0)
-            if mq > 5000 or (mt > 0 and mq > 0 and mr > 0 and abs(mq * mr - mt) / max(mt, 1) > 0.05):
-                match = None
-            else:
-                new_qty = mq
-                new_rate = mr
-                new_total = mt
-
-        # Amount-anchored OCR recovery (handles messy Oncomed Tesseract lines)
-        if match is None and (amount_as_rate or abs(qty - 1.0) <= 0.51):
-            anchor_amt = cur_rate if amount_as_rate and cur_rate > 0 else cur_total
-            if anchor_amt > 0:
-                rec = _oncomed_recover_qty_rate_from_amount_context(combined, anchor_amt)
-                if rec:
-                    new_qty = float(rec["quantity"])
-                    new_rate = float(rec["unit_price"])
-                    new_total = float(rec["total_amount"])
-
-        if match is not None and new_rate is None:
             new_qty = float(match["quantity"])
             new_rate = float(match["unit_price"])
             new_total = float(match["total_amount"])
-
-        if new_rate is None:
+        else:
             af = item.get("additional_fields") if isinstance(
                 item.get("additional_fields"), dict) else {}
             mrp = _f(af.get("mrp"))
@@ -11474,15 +11391,6 @@ def fix_oncomed_marketing_rate_from_ocr(
                         new_rate = round(taxable / qty, 2)
                         new_qty = qty
                         new_total = round(qty * new_rate, 2)
-
-        # Qty-only recovery: Vision kept Rate but forced Qty=1 (Amount still correct)
-        if new_rate is None and qty > 0 and cur_rate > 0 and cur_total > 0:
-            if abs(qty * cur_rate - cur_total) > max(0.05, cur_total * 0.02):
-                inferred = round(cur_total / cur_rate)
-                if inferred >= 2 and abs(inferred * cur_rate - cur_total) <= max(0.05, cur_total * 0.01):
-                    new_qty = float(inferred)
-                    new_rate = cur_rate
-                    new_total = round(cur_total, 2)
 
         if new_rate is None or new_rate <= 0:
             continue
@@ -21865,8 +21773,8 @@ _LIFE_LINE_CARE_ROW_RE = re.compile(
     r'(?m)^\s*\d+\s+'
     r'(\d{4,8})\s+'
     r'(.+?)\s+'
-    r'(UNIT|TABLET|CAPSULE|SYRUP|INJ|VIAL|BOTTELS?|BOTTLES?|STRIP|BAG|BOX)\s+'
-    r'([A-Z0-9\-/]+)\s+'
+    r'(UNIT|TABLET|CAPSULE|SYRUP|INJ|VIAL|BOTTELS?|BOTTLES?|STRIP|BAG)\s+'
+    r'([A-Z0-9\-]+)\s+'
     r'(\d{2}-\d{2})\s+'
     r'([\d,]+\.\d{2})\s+'
     r'([\d,]+\.\d{2})\s+'
@@ -22335,6 +22243,206 @@ def fix_bruklyn_associates_price_from_ocr(items, ocr_text: str) -> list:
     return items
 
 
+def ocr_suggests_eskay_medicals_marg_table(ocr_text: str = "", vendor: str = "") -> bool:
+    """ESKAY MEDICALS ENTERPRISES MARG table: Mfr Qty Free Pack ... M.R.P Rate Dis."""
+    blob = f"{ocr_text or ''}\n{vendor or ''}"
+    if not re.search(r'\bESKAY\s+MEDICALS\b', blob, re.IGNORECASE):
+        return False
+    text = ocr_text or ""
+    if not re.search(r'Item\s+Description', text, re.IGNORECASE):
+        return False
+    if not re.search(r'\bM\.?\s*R\.?\s*P\b', text, re.IGNORECASE):
+        return False
+    if not re.search(r'\bRate\b', text, re.IGNORECASE):
+        return False
+    return bool(re.search(r'\bDis\.?\b', text, re.IGNORECASE))
+
+
+# Mfr Qty Free Pack Item Batch Exp HSN MRP Rate Dis% SGST Value CGST Value Amount
+_ESKAY_MEDICALS_RATE_ROW_RE = re.compile(
+    r'(?m)\b[A-Z]{3,5}\s+'
+    r'(\d{1,5})\s+'
+    r'(?:-|\d+)\s+'
+    r"(?:\d{1,4}['\u2019`]?S|VAIL)\s+"
+    r'(.+?)\s+'
+    r'([A-Z0-9]{5,})\s+'
+    r'\d{1,2}/\d{2}\s+'
+    r'\d{6,8}\s+'
+    r'([\d,]+\.\d{1,2})\s+'
+    r'([\d,]+\.\d{1,2})\s+'
+    r'[\d,]+\.?\d*\s+',
+    re.IGNORECASE,
+)
+
+
+def _parse_eskay_medicals_rate_rows(ocr_text: str) -> list:
+    """Parse printed Rate (after M.R.P, before Dis%) from ESKAY MARG rows."""
+    if not ocr_suggests_eskay_medicals_marg_table(ocr_text):
+        return []
+    rows = []
+    seen = set()
+    for m in _ESKAY_MEDICALS_RATE_ROW_RE.finditer(ocr_text or ""):
+        try:
+            qty = float(m.group(1).replace(',', ''))
+            rate = float(m.group(5).replace(',', ''))
+        except Exception:
+            continue
+        if qty <= 0 or rate <= 0:
+            continue
+        product = re.sub(r'\s+', ' ', m.group(2)).strip(" .")
+        batch = str(m.group(3) or "").upper()
+        if not product:
+            continue
+        key = (product.upper(), batch, round(qty, 2), round(rate, 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "product_description": product,
+            "quantity": qty,
+            "unit_price": rate,
+            "lot_batch_number": batch,
+        })
+    return rows
+
+
+def fix_eskay_medicals_rate_from_ocr(items, ocr_text: str, vendor: str = "") -> list:
+    """Restore Rate-column unit_price on discounted ESKAY MARG rows; qty/totals stay.
+
+    Shared fix_mrp_as_unit_price uses qty×rate≈Amount within 5%. TIGEMAC 90 has
+    Dis% 20 so Amount/qty (210.83) replaces printed Rate 261.44. Other rows already
+    match Amount within 5% and must not change.
+    """
+    if not items or not ocr_text:
+        return items
+    if not ocr_suggests_eskay_medicals_marg_table(ocr_text, vendor):
+        return items
+    ocr_rows = _parse_eskay_medicals_rate_rows(ocr_text)
+    if not ocr_rows:
+        return items
+
+    def _norm_desc(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _to_float(v) -> float:
+        try:
+            return float(normalize_numeric_value(str(v or "0")))
+        except Exception:
+            return 0.0
+
+    def _near(a: float, b: float) -> bool:
+        if a <= 0 or b <= 0:
+            return False
+        return abs(a - b) <= 0.05 or abs(a - b) / max(b, 0.01) <= 0.01
+
+    used = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_desc = _norm_desc(item.get("product_description", ""))
+        item_batch = re.sub(
+            r'[^A-Z0-9]', '', str(item.get("lot_batch_number", "") or "").upper())
+        cur_qty = _to_float(item.get("quantity"))
+        cur_rate = _to_float(item.get("unit_price"))
+        if not item_desc or cur_qty <= 0:
+            continue
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            row_desc = _norm_desc(row.get("product_description"))
+            if row_desc and (row_desc in item_desc or item_desc in row_desc):
+                score += 5
+            row_batch = re.sub(
+                r'[^A-Z0-9]', '', str(row.get("lot_batch_number") or "").upper())
+            if item_batch and row_batch and item_batch == row_batch:
+                score += 6
+            if _near(cur_qty, float(row["quantity"])):
+                score += 3
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        if best_idx is None or best_score < 6:
+            continue
+        row = ocr_rows[best_idx]
+        ocr_qty = float(row["quantity"])
+        ocr_rate = float(row["unit_price"])
+        if not _near(cur_qty, ocr_qty):
+            continue
+        used.add(best_idx)
+        if _near(cur_rate, ocr_rate):
+            continue
+        item["unit_price"] = f"{ocr_rate:.2f}"
+        logger.warning(
+            f"⚠️ ESKAY MEDICALS: restored Rate column for "
+            f"'{item.get('product_description', '')}': "
+            f"{cur_rate}->{item['unit_price']} (qty unchanged)"
+        )
+    return items
+
+
+# Qty column is "-" (free-only row): Mfr - Free Pack Item Batch Exp HSN ...
+_ESKAY_DASH_QTY_ROW_RE = re.compile(
+    r'(?m)\b[A-Z]{3,5}\s+-\s+'
+    r'(?:-|\d+)\s+'
+    r"(?:\d{1,4}['\u2019`]?S|VAIL|VIAL|\d+\s*(?:ML|GM|MDI))\s+"
+    r'.+?\s+'
+    r'([A-Z0-9][A-Z0-9\-]{4,})\s+'
+    r'\d{1,2}/\d{2}\s+'
+    r'\d{6,8}\b',
+    re.IGNORECASE,
+)
+
+
+def _parse_eskay_medicals_dash_qty_batches(ocr_text: str) -> set:
+    """Batches whose Qty column is '-' on ESKAY MARG rows (not Free '-')."""
+    if not ocr_suggests_eskay_medicals_marg_table(ocr_text):
+        return set()
+    batches = set()
+    for m in _ESKAY_DASH_QTY_ROW_RE.finditer(ocr_text or ""):
+        batch = re.sub(r'[^A-Z0-9]', '', str(m.group(1) or "").upper())
+        if batch:
+            batches.add(batch)
+    return batches
+
+
+def fix_eskay_medicals_dash_qty_from_ocr(items, ocr_text: str, vendor: str = "") -> list:
+    """Keep Qty as '-' when the ESKAY Qty column is dash; do not use Free Pack.
+
+    Shared/Gemini mapping copies Free (e.g. 2) into quantity for
+    'LINU - 2 10'S CITALIN LITE D2511041LLB'. Other numeric Qty rows stay.
+    """
+    if not items or not ocr_text:
+        return items
+    if not ocr_suggests_eskay_medicals_marg_table(ocr_text, vendor):
+        return items
+    dash_batches = _parse_eskay_medicals_dash_qty_batches(ocr_text)
+    if not dash_batches:
+        return items
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        batch = re.sub(
+            r'[^A-Z0-9]', '', str(item.get("lot_batch_number", "") or "").upper())
+        if not batch or batch not in dash_batches:
+            continue
+        cur = str(item.get("quantity", "") or "").strip()
+        if cur == "-":
+            continue
+        item["quantity"] = "-"
+        logger.warning(
+            f"⚠️ ESKAY MEDICALS: restored dash Qty for "
+            f"'{item.get('product_description', '')}' batch={batch}: "
+            f"{cur}->- (rate/total unchanged)"
+        )
+    return items
+
+
 def fix_pharmaceutical_column_misread(item):
     """
     🔧 Fix when Gemini reads from completely wrong columns in pharmaceutical invoices
@@ -22431,6 +22539,12 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
         gross_amount = None
         additional_fields = item.get("additional_fields", {})
         _is_pharmacea_mrp = _is_pharmacea_link_vendor(vendor, ocr_text)
+        if ocr_suggests_eskay_medicals_marg_table(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for ESKAY MEDICALS row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(Rate column restored by ESKAY Dis% handler)")
+            return item
         if _is_pharmacea_mrp and isinstance(additional_fields, dict) and additional_fields.get("gross_amount"):
             logger.info(
                 f"⏭️ Skipping fix_mrp_as_unit_price for Pharmacea Link row "
@@ -25472,27 +25586,17 @@ def enforce_schema(raw_data):
     processed_items = fix_singhal_medicals_product_names_from_ocr(
         processed_items, ocr_text, _vendor_name)
 
-    # ONCOMED MARKETING: Qty/Rate often swapped with Amount or SGST Value
+    # ONCOMED MARKETING: Rate column often swapped with SGST Value
     _oncomed_table_ocr = ""
     if isinstance(data, dict):
         _oncomed_table_ocr = str(
             data.get("oncomed_table_ocr", "") or "").strip()
-    _inv_sum_om = template["data"].get("invoice_summary")
-    if not _oncomed_table_ocr and isinstance(_inv_sum_om, dict):
-        _oncomed_table_ocr = str(
-            _inv_sum_om.get("oncomed_table_ocr", "") or "").strip()
-    # Prefer the longer OCR blob for row parsing
-    _oncomed_fix_ocr = ocr_text or ""
-    if _oncomed_table_ocr and len(_oncomed_table_ocr) > len(_oncomed_fix_ocr):
-        _oncomed_fix_ocr = _oncomed_table_ocr
-    elif _oncomed_table_ocr:
-        _oncomed_fix_ocr = f"{_oncomed_fix_ocr}\n{_oncomed_table_ocr}"
     processed_items = fix_oncomed_marketing_rate_from_ocr(
         processed_items,
-        _oncomed_fix_ocr,
+        ocr_text,
         _oncomed_table_ocr,
         _vendor_name,
-        _inv_sum_om,
+        template["data"].get("invoice_summary"),
     )
 
     # 🔧 FIX 12j: Correct JACKSON MEDICALS product/qty/rate from qty-rate band OCR
@@ -26073,6 +26177,16 @@ def enforce_schema(raw_data):
     )
     processed_items = fix_bruklyn_associates_price_from_ocr(
         processed_items, ocr_text)
+    processed_items = fix_eskay_medicals_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+    processed_items = fix_eskay_medicals_dash_qty_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
 
     # 🔧 FIX 14: Strict fallback for Bharat Pharma invoice 008125.
     # Applies only for the known uploaded invoice signature when these rows remain incomplete.
@@ -29287,10 +29401,12 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         pix = None
 
     _vision_suffix = ""
-    if _ocr_suggests_yash_agencies(
-        str(fallback_ocr_text or tesseract_text or _tier12_ocr_text or "")
-    ):
+    _vision_ocr_blob = str(
+        fallback_ocr_text or tesseract_text or _tier12_ocr_text or "")
+    if _ocr_suggests_yash_agencies(_vision_ocr_blob):
         _vision_suffix = _YASH_VISION_RATE_HINT
+    elif ocr_suggests_oncomed_marketing(_vision_ocr_blob, ""):
+        _vision_suffix = _ONCOMED_VISION_RATE_HINT
 
     result = extract_full_data_from_image_gemini(
         page_bytes, ocr_stats, ocr_stats_lock,
@@ -33936,6 +34052,135 @@ def split_and_extract_invoices(
                                 f"ONCOMED rotated OCR fallback failed: {_om_fb_err}")
                     if _oncomed_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["oncomed_table_ocr"] = _oncomed_tocr
+                    # ONCOMED scans are often rotated/skewed, so Gemini-Text/Tesseract
+                    # drop products and map Amount or SGST into Rate (Qty→1). When the
+                    # invoice is ONCOMED (or OM###### + failure signature), re-read the
+                    # page with Gemini Vision + ONCOMED column hint and REPLACE the
+                    # line_items list. Scoped strictly to ONCOMED; no other format touched.
+                    try:
+                        _om_d = data_with_ocr.get("data") if isinstance(
+                            data_with_ocr.get("data"), dict) else None
+                        _om_li = _om_d.get("line_items") if _om_d else None
+                        _om_sum = (_om_d.get("invoice_summary") or {}) if _om_d else {}
+                        if not isinstance(_om_sum, dict):
+                            _om_sum = {}
+                        _om_vend = str(
+                            _om_sum.get("vendor") or _om_d.get("vendor") or "") if _om_d else ""
+                        _om_inv = str(
+                            _om_sum.get("invoice_no") or _om_d.get("invoice_no") or ""
+                        ).strip() if _om_d else ""
+
+                        def _om_f(v):
+                            try:
+                                return float(normalize_numeric_value(
+                                    str(v if v is not None else 0)))
+                            except Exception:
+                                return 0.0
+
+                        def _om_sig(it):
+                            a = _om_f(it.get("total_amount"))
+                            r = _om_f(it.get("unit_price"))
+                            q = _om_f(it.get("quantity"))
+                            if a <= 0 or r <= 0:
+                                return False
+                            if r < a * 0.10 and abs(r - a * 0.025) <= max(0.05, a * 0.01):
+                                return True
+                            if abs(q - 1.0) <= 0.01 and abs(r - a) <= max(0.02, a * 0.01):
+                                return True
+                            return False
+
+                        def _om_row_ok(q, r, a):
+                            if q <= 0 or r <= 0 or a <= 0:
+                                return False
+                            # Reject GST%-as-rate (2.50/5/9/12/18) with tiny amount
+                            if r in (2.5, 2.50, 5.0, 5.00, 9.0, 9.00, 12.0, 12.00, 18.0, 18.00) and a < 100:
+                                return False
+                            return abs(q * r - a) <= max(0.5, a * 0.02)
+
+                        _om_is = ocr_suggests_oncomed_marketing(
+                            raw_ocr_text or "", _om_vend)
+                        if not _om_is and re.match(r'^OM\d{5,6}$', _om_inv, re.I):
+                            # OCR dropped the vendor banner; OM###### + broken rows
+                            if isinstance(_om_li, list) and any(
+                                    isinstance(_it, dict) and _om_sig(_it) for _it in _om_li):
+                                _om_is = True
+                        _om_need = (
+                            isinstance(_om_li, list) and _om_li and (
+                                any(isinstance(_it, dict) and _om_sig(_it) for _it in _om_li)
+                                or len(_om_li) < 3
+                            )
+                        )
+                        if (
+                            doc is not None and _om_d and _om_is and _om_need
+                        ):
+                            _om_pg = doc.load_page(first_page_idx)
+                            _om_img = _om_pg.get_pixmap(
+                                matrix=fitz.Matrix(3.0, 3.0), alpha=False).tobytes("png")
+                            _om_vis = extract_full_data_from_image_gemini(
+                                _om_img, ocr_stats, ocr_stats_lock,
+                                prompt_suffix=_ONCOMED_VISION_RATE_HINT)
+                            _om_img = None
+                            _om_vfd = _om_vis.get("full_data") if isinstance(
+                                _om_vis, dict) else None
+                            _om_vitems = _om_vfd.get("line_items") if isinstance(
+                                _om_vfd, dict) else None
+                            _om_new = []
+                            if isinstance(_om_vitems, list):
+                                for v in _om_vitems:
+                                    if not isinstance(v, dict):
+                                        continue
+                                    _desc = str(v.get("product_description") or "").strip()
+                                    if not _desc:
+                                        continue
+                                    _vq = _om_f(v.get("quantity"))
+                                    _vr = _om_f(v.get("unit_price"))
+                                    _va = _om_f(v.get("total_amount"))
+                                    if not _om_row_ok(_vq, _vr, _va):
+                                        # Prefer Amount/Qty when Vision Rate is GST%
+                                        if _vq > 0 and _va > 0 and abs(_vq * _vr - _va) > max(0.5, _va * 0.02):
+                                            _vr = round(_va / _vq, 2)
+                                        if not _om_row_ok(_vq, _vr, _va):
+                                            continue
+                                    _nq = int(_vq) if abs(_vq - round(_vq)) < 1e-6 else round(_vq, 2)
+                                    _row = {
+                                        "product_description": _desc,
+                                        "quantity": str(_nq),
+                                        "unit_price": f"{_vr:.2f}",
+                                        "total_amount": f"{_va:.2f}",
+                                        "hsn_code": v.get("hsn_code"),
+                                        "lot_batch_number": v.get("lot_batch_number"),
+                                        "sku_code": v.get("sku_code"),
+                                        "additional_fields": v.get("additional_fields")
+                                        if isinstance(v.get("additional_fields"), dict) else {},
+                                    }
+                                    _om_new.append(_row)
+                            # Replace only when Vision recovers a fuller/consistent set
+                            if _om_new and (
+                                len(_om_new) > len(_om_li)
+                                or (len(_om_new) >= len(_om_li)
+                                    and all(_om_sig(_it) for _it in _om_li if isinstance(_it, dict)))
+                            ):
+                                _om_d["line_items"] = _om_new
+                                # Prefer Vision vendor/total when Text left them empty/wrong
+                                if isinstance(_om_vfd, dict):
+                                    _vv = str(_om_vfd.get("vendor") or "").strip()
+                                    if _vv and (not _om_vend or _om_vend.lower() in ("none", "null", "n/a")):
+                                        _om_sum["vendor"] = _vv
+                                        _om_d["vendor"] = _vv
+                                    _vt = _om_f(_om_vfd.get("total"))
+                                    _ct = _om_f(_om_sum.get("total") or _om_d.get("total"))
+                                    if _vt > 0 and (_ct <= 0 or abs(_vt - _ct) / max(_vt, 1) > 0.05):
+                                        _om_sum["total"] = f"{_vt:.2f}"
+                                    _vtx = _om_f(_om_vfd.get("tax"))
+                                    if _vtx > 0:
+                                        _om_sum["tax"] = f"{_vtx:.2f}"
+                                logger.info(
+                                    f"   ✅ ONCOMED MARKETING: vision replaced "
+                                    f"{len(_om_li)} → {len(_om_new)} line item(s) "
+                                    f"(qty/rate/amount)")
+                    except Exception as _om_vis_err:
+                        logger.debug(
+                            f"ONCOMED vision qty/rate correction skipped: {_om_vis_err}")
                     _jackson_date = str(
                         page_result.get("jackson_invoice_date", "") or "").strip()
                     if (
@@ -35013,6 +35258,135 @@ def test_extract(
                                 f"ONCOMED rotated OCR fallback failed: {_om_fb_err}")
                     if _oncomed_tocr and isinstance(data_with_ocr.get("data"), dict):
                         data_with_ocr["data"]["oncomed_table_ocr"] = _oncomed_tocr
+                    # ONCOMED scans are often rotated/skewed, so Gemini-Text/Tesseract
+                    # drop products and map Amount or SGST into Rate (Qty→1). When the
+                    # invoice is ONCOMED (or OM###### + failure signature), re-read the
+                    # page with Gemini Vision + ONCOMED column hint and REPLACE the
+                    # line_items list. Scoped strictly to ONCOMED; no other format touched.
+                    try:
+                        _om_d = data_with_ocr.get("data") if isinstance(
+                            data_with_ocr.get("data"), dict) else None
+                        _om_li = _om_d.get("line_items") if _om_d else None
+                        _om_sum = (_om_d.get("invoice_summary") or {}) if _om_d else {}
+                        if not isinstance(_om_sum, dict):
+                            _om_sum = {}
+                        _om_vend = str(
+                            _om_sum.get("vendor") or _om_d.get("vendor") or "") if _om_d else ""
+                        _om_inv = str(
+                            _om_sum.get("invoice_no") or _om_d.get("invoice_no") or ""
+                        ).strip() if _om_d else ""
+
+                        def _om_f(v):
+                            try:
+                                return float(normalize_numeric_value(
+                                    str(v if v is not None else 0)))
+                            except Exception:
+                                return 0.0
+
+                        def _om_sig(it):
+                            a = _om_f(it.get("total_amount"))
+                            r = _om_f(it.get("unit_price"))
+                            q = _om_f(it.get("quantity"))
+                            if a <= 0 or r <= 0:
+                                return False
+                            if r < a * 0.10 and abs(r - a * 0.025) <= max(0.05, a * 0.01):
+                                return True
+                            if abs(q - 1.0) <= 0.01 and abs(r - a) <= max(0.02, a * 0.01):
+                                return True
+                            return False
+
+                        def _om_row_ok(q, r, a):
+                            if q <= 0 or r <= 0 or a <= 0:
+                                return False
+                            # Reject GST%-as-rate (2.50/5/9/12/18) with tiny amount
+                            if r in (2.5, 2.50, 5.0, 5.00, 9.0, 9.00, 12.0, 12.00, 18.0, 18.00) and a < 100:
+                                return False
+                            return abs(q * r - a) <= max(0.5, a * 0.02)
+
+                        _om_is = ocr_suggests_oncomed_marketing(
+                            raw_ocr_text or "", _om_vend)
+                        if not _om_is and re.match(r'^OM\d{5,6}$', _om_inv, re.I):
+                            # OCR dropped the vendor banner; OM###### + broken rows
+                            if isinstance(_om_li, list) and any(
+                                    isinstance(_it, dict) and _om_sig(_it) for _it in _om_li):
+                                _om_is = True
+                        _om_need = (
+                            isinstance(_om_li, list) and _om_li and (
+                                any(isinstance(_it, dict) and _om_sig(_it) for _it in _om_li)
+                                or len(_om_li) < 3
+                            )
+                        )
+                        if (
+                            doc is not None and _om_d and _om_is and _om_need
+                        ):
+                            _om_pg = doc.load_page(first_page_idx)
+                            _om_img = _om_pg.get_pixmap(
+                                matrix=fitz.Matrix(3.0, 3.0), alpha=False).tobytes("png")
+                            _om_vis = extract_full_data_from_image_gemini(
+                                _om_img, ocr_stats, ocr_stats_lock,
+                                prompt_suffix=_ONCOMED_VISION_RATE_HINT)
+                            _om_img = None
+                            _om_vfd = _om_vis.get("full_data") if isinstance(
+                                _om_vis, dict) else None
+                            _om_vitems = _om_vfd.get("line_items") if isinstance(
+                                _om_vfd, dict) else None
+                            _om_new = []
+                            if isinstance(_om_vitems, list):
+                                for v in _om_vitems:
+                                    if not isinstance(v, dict):
+                                        continue
+                                    _desc = str(v.get("product_description") or "").strip()
+                                    if not _desc:
+                                        continue
+                                    _vq = _om_f(v.get("quantity"))
+                                    _vr = _om_f(v.get("unit_price"))
+                                    _va = _om_f(v.get("total_amount"))
+                                    if not _om_row_ok(_vq, _vr, _va):
+                                        # Prefer Amount/Qty when Vision Rate is GST%
+                                        if _vq > 0 and _va > 0 and abs(_vq * _vr - _va) > max(0.5, _va * 0.02):
+                                            _vr = round(_va / _vq, 2)
+                                        if not _om_row_ok(_vq, _vr, _va):
+                                            continue
+                                    _nq = int(_vq) if abs(_vq - round(_vq)) < 1e-6 else round(_vq, 2)
+                                    _row = {
+                                        "product_description": _desc,
+                                        "quantity": str(_nq),
+                                        "unit_price": f"{_vr:.2f}",
+                                        "total_amount": f"{_va:.2f}",
+                                        "hsn_code": v.get("hsn_code"),
+                                        "lot_batch_number": v.get("lot_batch_number"),
+                                        "sku_code": v.get("sku_code"),
+                                        "additional_fields": v.get("additional_fields")
+                                        if isinstance(v.get("additional_fields"), dict) else {},
+                                    }
+                                    _om_new.append(_row)
+                            # Replace only when Vision recovers a fuller/consistent set
+                            if _om_new and (
+                                len(_om_new) > len(_om_li)
+                                or (len(_om_new) >= len(_om_li)
+                                    and all(_om_sig(_it) for _it in _om_li if isinstance(_it, dict)))
+                            ):
+                                _om_d["line_items"] = _om_new
+                                # Prefer Vision vendor/total when Text left them empty/wrong
+                                if isinstance(_om_vfd, dict):
+                                    _vv = str(_om_vfd.get("vendor") or "").strip()
+                                    if _vv and (not _om_vend or _om_vend.lower() in ("none", "null", "n/a")):
+                                        _om_sum["vendor"] = _vv
+                                        _om_d["vendor"] = _vv
+                                    _vt = _om_f(_om_vfd.get("total"))
+                                    _ct = _om_f(_om_sum.get("total") or _om_d.get("total"))
+                                    if _vt > 0 and (_ct <= 0 or abs(_vt - _ct) / max(_vt, 1) > 0.05):
+                                        _om_sum["total"] = f"{_vt:.2f}"
+                                    _vtx = _om_f(_om_vfd.get("tax"))
+                                    if _vtx > 0:
+                                        _om_sum["tax"] = f"{_vtx:.2f}"
+                                logger.info(
+                                    f"   ✅ ONCOMED MARKETING: vision replaced "
+                                    f"{len(_om_li)} → {len(_om_new)} line item(s) "
+                                    f"(qty/rate/amount)")
+                    except Exception as _om_vis_err:
+                        logger.debug(
+                            f"ONCOMED vision qty/rate correction skipped: {_om_vis_err}")
                     _jackson_date = str(
                         page_result.get("jackson_invoice_date", "") or "").strip()
                     if (
