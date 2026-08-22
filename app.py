@@ -8716,6 +8716,22 @@ def recover_drogaria_colvalcar_line_item_quantities(
         logger.debug(f"COLVALCAR hi-res Vision recovery skipped: {exc}")
 
 
+_PHARMACEA_VISION_RATE_HINT = """
+⚠️ PHARMACEA LINK NIC e-invoice printout ONLY (vendor "Pharmaceä Link" / Pharmacea Link;
+table "4.Details of Goods / Services" with Unit Price(Rs) | Discount(Rs) | Taxable Amount(Rs)):
+Columns L→R: SINo | Item Description | HSN Code | Quantity | Unit (NOS) | Unit Price(Rs) | Discount(Rs) | Taxable Amount(Rs) | Tax Rate | Total
+- product_description = the FULL Item Description cell, including strength/pack tokens
+  that sit in the name (e.g. "Pantodac 20 Tab", "Zycel 100 Cap", "Telista A M Tab 15s").
+  Do NOT drop those numbers. Quantity is the Quantity column (180.0 / 100.0), never the
+  "20" or "100" inside the product name.
+- unit_price = Unit Price(Rs) column ONLY (e.g. 118.42, 127.65). NEVER Taxable÷Quantity
+  (that is the net rate after Discount(Rs)) and NEVER Taxable Amount or Total.
+- additional_fields.discount_percentage = Discount(Rs) in rupees (e.g. 639.47), not a %.
+- additional_fields.gross_amount = Taxable Amount(Rs).
+- total_amount = Total column (GST-inclusive), not Taxable Amount.
+"""
+
+
 _YASH_VISION_RATE_HINT = """
 ⚠️ YASH AGENCIES TaxInvNo format (ONLY when vendor header shows YASH AGENCIES):
 Columns: PRODUCT NAME | PACK | HSNCODE | BATCH | EXP | QTY | FREE | OLDMRP | M.R.P | RATE | DIS% | AMOUNT | GST%
@@ -22941,6 +22957,162 @@ def _is_pharmacea_link_vendor(vendor: str = "", ocr_text: str = "") -> bool:
     return False
 
 
+_PHARMACEA_NAME_SKIP = {
+    "TAB", "TABS", "CAP", "CAPS", "NOS", "INJ", "MG", "GM", "GMS", "ML",
+    "S", "SF", "XL", "ITEM", "DESCRIPTION", "HSN", "CODE", "UNIT", "PRICE",
+}
+
+
+def _parse_pharmacea_link_item_description_rows(ocr_text: str) -> list:
+    """Parse Item Description cells from Pharmacea Goods/Services OCR lines.
+
+    Layout: SINo | Item Description | HSN | Quantity | NOS | Unit Price | ...
+    Tesseract often keeps the name+HSN even when Unit Price digits drop.
+    """
+    if not ocr_text or not _is_pharmacea_link_vendor("", ocr_text):
+        return []
+    rows = []
+    seen = set()
+    for raw in ocr_text.splitlines():
+        line = (raw or "").strip()
+        if not line:
+            continue
+        m = re.search(
+            r'(?i)(?:^\s*\d{1,3}\s*[.|]?\s*)?(?:\|\s*)?'
+            r'([A-Za-z][A-Za-z0-9][A-Za-z0-9 .,%/\'-]{1,48}?)'
+            r'\s*\|\s*(3[0-9A-Za-z]{6,8})\b',
+            line,
+        )
+        if not m:
+            m = re.search(
+                r'(?i)([A-Za-z][A-Za-z0-9][A-Za-z0-9 .,%/\'-]{1,40}?'
+                r'(?:Tab|Cap|Inj|mg|ml)[A-Za-z0-9 .,%/\'-]*)'
+                r'\s*[|]?\s*(3\d{5,8})\b',
+                line,
+            )
+        if not m:
+            continue
+        name = re.sub(r'\s+', ' ', m.group(1)).strip(" |.-")
+        if not name or name.upper() in {
+            "ITEM DESCRIPTION", "SINO", "SINO ITEM DESCRIPTION",
+        }:
+            continue
+        if re.search(
+            r'\b(?:GSTIN|SUPPLIER|RECIPIENT|DOCUMENT|INVOICE)\b',
+            name,
+            re.IGNORECASE,
+        ):
+            continue
+        key = name.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        rate = None
+        nos_m = re.search(
+            r'(?i)\b(?:NOS|UNT)\s*[|/\[\]}]?\s*(\d+(?:\.\d+)?)',
+            line,
+        )
+        if nos_m:
+            try:
+                rate = float(nos_m.group(1).replace(',', ''))
+            except Exception:
+                rate = None
+            if rate is not None and (rate <= 0 or rate > 20000):
+                rate = None
+        rows.append({
+            "product_description": name,
+            "unit_price": rate,
+        })
+    return rows
+
+
+def fix_pharmacea_link_product_names_from_ocr(items, ocr_text: str) -> list:
+    """Restore truncated Item Description (pack/strength tokens) for Pharmacea only.
+
+    Does not replace letter tokens (won't swap Dexona→Dexana). Only upgrades when
+    OCR name contains the extracted brand tokens plus extra numeric pack tokens.
+    Optionally restores Unit Price when OCR shows it immediately after NOS and the
+    current rate is taxable÷qty (net after discount).
+    """
+    if not items or not ocr_text or not _is_pharmacea_link_vendor("", ocr_text):
+        return items
+    ocr_rows = _parse_pharmacea_link_item_description_rows(ocr_text)
+    if not ocr_rows:
+        return items
+
+    def _toks(value: str):
+        return [
+            t for t in re.split(r'\W+', str(value or "").upper())
+            if t and t not in _PHARMACEA_NAME_SKIP
+        ]
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        cur = str(item.get("product_description") or "").strip()
+        if not cur:
+            continue
+        cur_toks = _toks(cur)
+        cur_alpha = [t for t in cur_toks if t.isalpha()]
+        if not cur_alpha:
+            continue
+        best = None
+        for row in ocr_rows:
+            ocr_name = str(row.get("product_description") or "").strip()
+            ocr_toks = _toks(ocr_name)
+            ocr_alpha = [t for t in ocr_toks if t.isalpha()]
+            if not ocr_alpha:
+                continue
+            if set(cur_alpha).issubset(set(ocr_alpha)):
+                best = row
+                extra_num = [
+                    t for t in ocr_toks
+                    if t not in cur_toks and re.search(r'\d', t)
+                ]
+                if extra_num:
+                    break
+        if best:
+            ocr_name = str(best.get("product_description") or "").strip()
+            extra_num = [
+                t for t in _toks(ocr_name)
+                if t not in cur_toks and re.search(r'\d', t)
+            ]
+            if extra_num and ocr_name != cur:
+                logger.info(
+                    f"🔧 Pharmacea Item Description restored "
+                    f"'{cur}' -> '{ocr_name}'"
+                )
+                item["product_description"] = ocr_name
+
+        ocr_rate = best.get("unit_price") if best else None
+        if ocr_rate and ocr_rate > 0:
+            try:
+                qty = float(normalize_numeric_value(
+                    str(item.get("quantity") or 0)))
+                up = float(normalize_numeric_value(
+                    str(item.get("unit_price") or 0)))
+                af = item.get("additional_fields") or {}
+                if not isinstance(af, dict):
+                    af = {}
+                gross = float(normalize_numeric_value(
+                    str(af.get("gross_amount") or 0)))
+                disc = float(normalize_numeric_value(
+                    str(af.get("discount_percentage") or 0)))
+            except Exception:
+                continue
+            if qty <= 0 or up <= 0 or gross <= 0:
+                continue
+            net = gross / qty
+            if disc <= 0 and abs(up - net) <= 0.05 and abs(ocr_rate - net) > 0.05:
+                if abs((qty * ocr_rate) - gross) / max(qty * ocr_rate, 1.0) <= 0.16:
+                    logger.warning(
+                        f"⚠️ Pharmacea Unit Price restored from NOS column "
+                        f"{up:.2f} -> {ocr_rate:.2f} for '{cur[:30]}'"
+                    )
+                    item["unit_price"] = f"{ocr_rate:.2f}"
+    return items
+
+
 def _pharmacea_discount_rs(additional_fields) -> float:
     """Pharmacea stores discount in Rs under discount_percentage (not a %)."""
     if not isinstance(additional_fields, dict):
@@ -26891,6 +27063,9 @@ def enforce_schema(raw_data):
     except Exception as _e17:
         logger.debug(f"FIX17 error: {_e17}")
 
+    processed_items = fix_pharmacea_link_product_names_from_ocr(
+        processed_items, ocr_text)
+
     # 🔧 FIX 18: Pharmacea Link row normalizer.
     # Handles three recurring Vision/OCR issues in this table format:
     # 1) Wrong qty (e.g. 130 instead of 10) from shifted columns.
@@ -26982,7 +27157,13 @@ def enforce_schema(raw_data):
                         _best_score = _score18
                         _best = _up_ln18
 
-                if not _best or _best_score < 2:
+                _min_score18 = 2
+                if (
+                    _best_score == 1
+                    and any(len(_t18) >= 6 for _t18 in _name_tokens_18)
+                ):
+                    _min_score18 = 1
+                if not _best or _best_score < _min_score18:
                     return None, None, None
 
                 # Extract row qty token (first number before NOS/INOS) when present.
@@ -27116,7 +27297,9 @@ def enforce_schema(raw_data):
                         )
                         _total_inflated18 = _total18 > (_up18 * 1.4)
                         _derived_rate18 = _up18 / _qty18
-                        _up_looks_like_taxable18 = _up18 >= 1000.0
+                        # >=2000: line Taxable misread as rate (e.g. 3415.4).
+                        # 1000–1999 can be a real Unit Price (e.g. Ferinject 1500.0).
+                        _up_looks_like_taxable18 = _up18 >= 2000.0
                         if (
                             _self_consistent18
                             and _total_inflated18
@@ -27287,6 +27470,28 @@ def enforce_schema(raw_data):
                         f"ocr_rate={_rate_from_ocr18}, "
                         f"gross={_gross18:.2f}, disc={_disc18:.2f}, qty={_qty18:.0f}")
 
+                    # Recover Discount(Rs) before qty math so Taxable÷Rate is not
+                    # used as quantity (e.g. 20676.13/118.42 → 175 instead of 180).
+                    if (
+                        _qty18 > 0
+                        and _up18 > 0
+                        and _gross18 > 0
+                        and _disc18 <= 0
+                    ):
+                        _line_from_rate18 = _qty18 * _up18
+                        _gap18 = _line_from_rate18 - _gross18
+                        if _line_from_rate18 > 0:
+                            _gap_pct18 = _gap18 / _line_from_rate18
+                            if 0.004 <= _gap_pct18 <= 0.15:
+                                _disc18 = _gap18
+                                _af18["discount_percentage"] = f"{_gap18:.2f}"
+                                logger.info(
+                                    f"🔧 FIX18: Pharmacea implied Discount(Rs)="
+                                    f"{_gap18:.2f} from Unit Price gap for "
+                                    f"'{_name18[:30]}' — keeping unit_price="
+                                    f"{_up18:.2f}"
+                                )
+
                     # Candidate qty from already-extracted rate and (gross+discount).
                     # This catches OCR-inflated qty values like 11/112/130 when rate is reasonable.
                     _qty_from_price18 = None
@@ -27302,7 +27507,10 @@ def enforce_schema(raw_data):
                     if _qty_from_price18 and _qty_from_price18 > 0:
                         _ratio_price18 = max(
                             _qty18, _qty_from_price18) / max(min(_qty18, _qty_from_price18), 1.0)
-                        if _qty18 <= 0 or _qty18 > 100 or _ratio_price18 >= 2.0:
+                        if (
+                            abs(_qty18 - _qty_from_price18) >= 1.0
+                            and (_qty18 <= 0 or _qty18 > 100 or _ratio_price18 >= 2.0)
+                        ):
                             _old_qty18 = _qty18
                             _qty18 = _qty_from_price18
                             _it18["quantity"] = str(
@@ -27351,9 +27559,13 @@ def enforce_schema(raw_data):
                             _old_up18 = _up18
                             _up18 = _rate_from_ocr18
                             _it18["unit_price"] = f"{_up18:.2f}"
-                            _qty18 = round((_gross18 + _disc18) /
-                                           _up18) if _up18 > 0 else _qty18
-                            if 1 <= _qty18 <= 9999:
+                            _new_qty18 = round((_gross18 + _disc18) /
+                                               _up18) if _up18 > 0 else _qty18
+                            if (
+                                1 <= _new_qty18 <= 9999
+                                and abs(_qty18 - _new_qty18) >= 1.0
+                            ):
+                                _qty18 = float(_new_qty18)
                                 _it18["quantity"] = str(
                                     int(_qty18) if _qty18 == int(_qty18) else round(_qty18, 2))
                             _fix18_count += 1
@@ -29864,6 +30076,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         _vision_suffix = _YASH_VISION_RATE_HINT
     elif ocr_suggests_oncomed_marketing(_vision_ocr_blob, ""):
         _vision_suffix = _ONCOMED_VISION_RATE_HINT
+    elif _is_pharmacea_link_vendor("", _vision_ocr_blob):
+        _vision_suffix = _PHARMACEA_VISION_RATE_HINT
 
     result = extract_full_data_from_image_gemini(
         page_bytes, ocr_stats, ocr_stats_lock,
