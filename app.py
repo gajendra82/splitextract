@@ -4321,6 +4321,16 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         )
         return existing_items
 
+    # MANGLAM ASSOCIATES: manufacturer wrap ("INTAS INSTITUTION") and hospital
+    # receiving-stamp text sit under/over the product table. Generic recovery
+    # would treat those as extra line items. Vision already has the real rows.
+    if ocr_suggests_manglam_associates(ocr_text):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for MANGLAM ASSOCIATES "
+            "(manufacturer wrap / receiving stamp is not a line item)"
+        )
+        return existing_items
+
     # JACKSON MEDICALS: FIX12j already owns paid qty/rate rows. OCR row recovery
     # reintroduces free-line phantoms (e.g. MEGAIIEAL/IIYPONAT husks with null rates).
     if ocr_suggests_jackson_medicals(ocr_text, ""):
@@ -12334,6 +12344,195 @@ def drop_kyal_comp_phantom_items(items, ocr_text: str) -> list:
         logger.info(
             f"KYAL: Corrected {renamed} product name(s) from PARTICULARS")
     return fix_kyal_product_names_from_ocr(cleaned, ocr_text)
+
+
+def ocr_suggests_manglam_associates(ocr_text: str = "") -> bool:
+    """Detect MANGLAM ASSOCIATES TAX INVOICE CREDIT tables.
+
+    Layout: SN | HSN | Product Name | Pack | Qty | Batch | ... with a
+    manufacturer wrap line (e.g. INTAS INSTITUTION) under each product.
+    """
+    if not ocr_text:
+        return False
+    blob = ocr_text.upper()
+    if not re.search(r'MANGLAM\s+ASSOCIATES', blob):
+        return False
+    if "TAX INVOICE" not in blob:
+        return False
+    has_credit_or_header = (
+        "CREDIT" in blob
+        or re.search(r'PRODUCT\s*NAME', blob)
+    )
+    has_wrap_or_rows = (
+        re.search(r'INTAS\s+INST', blob)
+        or re.search(r'\b\d{1,2}\s+\d{8}\b', blob)
+    )
+    return bool(has_credit_or_header and has_wrap_or_rows)
+
+
+def _manglam_norm_product_name(name: str) -> str:
+    text = re.sub(r'[^A-Z0-9]+', ' ', str(name or '').upper())
+    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r'\bINTAS\s+INST\w*\b', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _manglam_name_tokens(name: str) -> set:
+    return {
+        tok for tok in _manglam_norm_product_name(name).split()
+        if len(tok) >= 2 and tok not in {
+            'TAB', 'TABS', 'CAP', 'CAPS', 'INJ', 'SYR', 'MG', 'ML',
+            'THE', 'AND', 'FOR', 'OF',
+        }
+    }
+
+
+def _manglam_names_match(a: str, b: str) -> bool:
+    ta, tb = _manglam_name_tokens(a), _manglam_name_tokens(b)
+    if not ta or not tb:
+        return False
+    if ta & tb:
+        # Keep VENTAB vs YENTAB / CILNY vs CILNY OCR variants
+        if len(ta & tb) >= 1 and (
+            len(ta & tb) / min(len(ta), len(tb)) >= 0.4
+            or any(
+                (x[:4] == y[:4] and len(x) >= 4)
+                for x in ta for y in tb
+            )
+        ):
+            return True
+    na, nb = _manglam_norm_product_name(a), _manglam_norm_product_name(b)
+    if not na or not nb:
+        return False
+    return na in nb or nb in na
+
+
+def _manglam_looks_like_drug(desc: str) -> bool:
+    u = str(desc or '').upper()
+    return bool(re.search(
+        r'\b(?:TAB|TABS|CAP|CAPS|INJ|SYR|GEL|DROP|DROPS|MG|MCG|ML)\b',
+        u,
+    ))
+
+
+def _manglam_is_manufacturer_wrap(desc: str) -> bool:
+    raw = re.sub(r'[^A-Z0-9]+', ' ', str(desc or '').upper())
+    raw = re.sub(r'\s+', ' ', raw).strip()
+    if not raw:
+        return False
+    if _manglam_looks_like_drug(desc):
+        return False
+    if re.fullmatch(r'INTAS\s+INST\w*', raw):
+        return True
+    tokens = raw.split()
+    if 1 <= len(tokens) <= 4 and all(tok.isalpha() for tok in tokens):
+        if re.search(r'\b(?:INSTITUTION|INSTITUTE|LIMITED|LTD|LABS?|PHARMA)\b', raw):
+            return True
+    return False
+
+
+def _manglam_is_receiving_stamp(desc: str) -> bool:
+    u = re.sub(r'\s+', ' ', str(desc or '').upper()).strip()
+    if not u:
+        return False
+    if _manglam_looks_like_drug(desc):
+        return False
+    stamp_needles = (
+        'MAX SUPER SPECIALITY',
+        'MAX SUPER SPECIALTY',
+        'MATERIAL RECEIVED',
+        'SAMPLE CHECKED',
+        'SUBJECT TO PHYSICAL',
+        'PHYSICAL VERIFICATION',
+        'STARLIT MEDICAL',
+        'VIRAJ KHAND',
+        'GOMTI NAGAR',
+        'S.NO./REGISTER',
+        'S NO/REGISTER',
+        'GATE ENTRY',
+        'REGISTER NO',
+    )
+    if any(n in u for n in stamp_needles):
+        return True
+    if re.fullmatch(r'(?:PHARMACY|SIGNATURE|DATE)', u):
+        return True
+    return False
+
+
+_MANGLAM_PRODUCT_ROW_RE = re.compile(
+    r'(?im)^\s*\|?\s*(\d{1,2})\s+\|?\s*(\d{8})[)\|\]\s]*'
+    r'\s+(.+?)\s+(1[\*X"]+\d(?:[\*"X]\d)?)\b'
+)
+
+
+def _parse_manglam_associates_ocr_products(ocr_text: str) -> list:
+    """Numbered SN+HSN product rows from the MANGLAM ASSOCIATES table."""
+    if not ocr_text:
+        return []
+    rows = []
+    seen = set()
+    for match in _MANGLAM_PRODUCT_ROW_RE.finditer(ocr_text):
+        sn = match.group(1)
+        hsn = match.group(2)
+        product = re.sub(r'\s+', ' ', match.group(3)).strip()
+        product = re.sub(r'^[|\s]+', '', product)
+        if not product or _manglam_is_manufacturer_wrap(product):
+            continue
+        if _manglam_is_receiving_stamp(product):
+            continue
+        key = (sn, hsn, _manglam_norm_product_name(product))
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            "sn": sn,
+            "hsn_code": hsn,
+            "product_description": product,
+        })
+    return rows
+
+
+def drop_manglam_associates_extra_items(items, ocr_text: str) -> list:
+    """Drop manufacturer-wrap and receiving-stamp rows on MANGLAM invoices.
+
+    Real products stay untouched (including INTAS INSTITUTION glued onto a
+    genuine TAB name). Only standalone extras are removed.
+    """
+    if not items or not ocr_text or not ocr_suggests_manglam_associates(ocr_text):
+        return items
+
+    ocr_products = _parse_manglam_associates_ocr_products(ocr_text)
+    cleaned = []
+    dropped = 0
+    for item in items:
+        if not isinstance(item, dict):
+            cleaned.append(item)
+            continue
+        desc = str(item.get("product_description", "") or "").strip()
+        if _manglam_is_manufacturer_wrap(desc) or _manglam_is_receiving_stamp(desc):
+            dropped += 1
+            logger.info(
+                f"MANGLAM ASSOCIATES: Dropped extra non-product row '{desc}'")
+            continue
+        if ocr_products:
+            name_ok = any(
+                _manglam_names_match(desc, row["product_description"])
+                for row in ocr_products
+            )
+            if not name_ok:
+                if _manglam_looks_like_drug(desc):
+                    cleaned.append(item)
+                    continue
+                dropped += 1
+                logger.info(
+                    f"MANGLAM ASSOCIATES: Dropped extra unmatched row '{desc}'")
+                continue
+        cleaned.append(item)
+
+    if dropped:
+        logger.info(
+            f"MANGLAM ASSOCIATES: Dropped {dropped} extra product row(s)")
+    return cleaned if cleaned else items
 
 
 def ocr_suggests_jackson_medicals(ocr_text: str = "", vendor: str = "") -> bool:
@@ -26392,6 +26591,10 @@ def enforce_schema(raw_data):
 
     # KYAL AGENCIES: drop COMP-column phantom products (ZYDUS CO, etc.)
     processed_items = drop_kyal_comp_phantom_items(
+        processed_items, ocr_text)
+
+    # MANGLAM ASSOCIATES: drop INTAS INSTITUTION wrap + receiving-stamp extras
+    processed_items = drop_manglam_associates_extra_items(
         processed_items, ocr_text)
 
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
