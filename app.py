@@ -23026,6 +23026,48 @@ def _parse_pharmacea_link_item_description_rows(ocr_text: str) -> list:
     return rows
 
 
+def _restore_pharmacea_dropped_qty_rate_decimals(qty, rate, gross, disc):
+    """Restore Qty/Rate when OCR dropped a decimal (5.0→50, 231.4→2314).
+
+    Pharmacea Goods/Services identity: Taxable = Qty × Unit Price − Discount(Rs).
+    Only rewrites the pair when the raw OCR tokens fail that identity.
+    Does not run for other invoice formats.
+    """
+    try:
+        qty_f = float(qty) if qty is not None else None
+        rate_f = float(rate) if rate is not None else None
+        gross_f = float(gross or 0)
+        disc_f = float(disc or 0)
+    except Exception:
+        return qty, rate
+    if not qty_f or not rate_f or qty_f <= 0 or rate_f <= 0 or gross_f <= 0:
+        return qty, rate
+
+    def _fits(q, r) -> bool:
+        taxable = (q * r) - max(disc_f, 0.0)
+        return abs(taxable - gross_f) / max(gross_f, 1.0) <= 0.03
+
+    if _fits(qty_f, rate_f):
+        return qty_f, rate_f
+
+    qty_is_int = abs(qty_f - round(qty_f)) < 0.001
+    rate_is_int = abs(rate_f - round(rate_f)) < 0.001
+    candidates = []
+    # Both tokens lost one decimal (most common on this printout).
+    if qty_is_int and rate_is_int and qty_f >= 10 and rate_f >= 100:
+        candidates.append((qty_f / 10.0, rate_f / 10.0))
+    # Only qty lost the .0 (rate already has a decimal).
+    if qty_is_int and not rate_is_int and qty_f >= 10:
+        candidates.append((qty_f / 10.0, rate_f))
+    # Only rate lost a decimal (qty already has a decimal).
+    if rate_is_int and not qty_is_int and rate_f >= 100:
+        candidates.append((qty_f, rate_f / 10.0))
+    for q_try, r_try in candidates:
+        if q_try > 0 and r_try > 0 and _fits(q_try, r_try):
+            return q_try, r_try
+    return qty_f, rate_f
+
+
 def fix_pharmacea_link_product_names_from_ocr(items, ocr_text: str) -> list:
     """Restore truncated Item Description (pack/strength tokens) for Pharmacea only.
 
@@ -27148,8 +27190,13 @@ def enforce_schema(raw_data):
                             1 for _t18 in _name_tokens_18 if _t18 in _up_ln18)
                     else:
                         _score18 = 0
+                    # HSN-6 is shared across many 300490** pharma rows. Only boost a
+                    # line that already matched the product name; otherwise Nucoxia
+                    # (HSN 30049069) can steal Gerbisa's 300490 line and then
+                    # (gross+disc)/wrong_qty becomes the rate.
                     if _hsn6_18 and _hsn6_18 in re.sub(r'\D', '', _up_ln18):
-                        _score18 += 6
+                        if _score18 > 0 or not _name_tokens_18:
+                            _score18 += 6
                     if _score18 <= 0:
                         continue
 
@@ -27166,10 +27213,12 @@ def enforce_schema(raw_data):
                 if not _best or _best_score < _min_score18:
                     return None, None, None
 
-                # Extract row qty token (first number before NOS/INOS) when present.
+                # Extract row qty token (number immediately before NOS/INOS).
+                # OCR often inserts a pipe: "5.0 |NOS" or "[50  |NOS".
                 _qty_row_18 = None
                 _qty_m_18 = re.search(
-                    r'\b(\d{1,4}(?:[\.,]\d+)?)\s*(?:INOS|NOS)[A-Z0-9]{0,3}\b', _best)
+                    r'\b(\d{1,4}(?:[\.,]\d+)?)\s*[|/\[\]{}]*\s*(?:INOS|NOS)[A-Z0-9|/\[\]{}]{0,3}\b',
+                    _best)
                 if _qty_m_18:
                     try:
                         _qv_18 = float(_qty_m_18.group(1).replace(',', '.'))
@@ -27253,6 +27302,26 @@ def enforce_schema(raw_data):
                         f"FIX18: Unit Price column not found in OCR for "
                         f"'{_name_18[:30]}' (gross_idx={_gross_idx}, nums={_nums})")
                     return _qty_row_18, None, _gst_18
+
+                _qty_restored_18, _rate_restored_18 = (
+                    _restore_pharmacea_dropped_qty_rate_decimals(
+                        _qty_row_18, _rate_18, _gross_18, _disc_18)
+                )
+                if (
+                    _qty_restored_18 is not None
+                    and _rate_restored_18 is not None
+                    and (
+                        _qty_restored_18 != _qty_row_18
+                        or abs(float(_rate_restored_18) - float(_rate_18)) > 0.001
+                    )
+                ):
+                    logger.info(
+                        f"🔧 FIX18: restored dropped OCR decimals for "
+                        f"'{_name_18[:30]}' qty {_qty_row_18}->{_qty_restored_18}, "
+                        f"rate {_rate_18}->{_rate_restored_18}"
+                    )
+                    _qty_row_18 = _qty_restored_18
+                    _rate_18 = _rate_restored_18
 
                 logger.info(
                     f"🔧 FIX18: OCR row match for '{_name_18[:30]}' — "
