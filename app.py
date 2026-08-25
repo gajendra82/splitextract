@@ -5975,6 +5975,8 @@ def fix_marg_erp_qty_rate_from_ocr(items, ocr_text: str):
         return items
     if ocr_suggests_sivagami_medical(ocr_text):
         return items
+    if ocr_suggests_smartpharma360_qty_rate(ocr_text):
+        return items
 
     # Check if this is MARG ERP format (Supreme Life Sciences, etc.)
     is_marg_format = (
@@ -6853,6 +6855,369 @@ def _extract_smartpharma360_rate_rows(
         )
 
     return extracted_rows
+
+
+def ocr_suggests_smartpharma360_qty_rate(ocr_text: str = "", vendor: str = "") -> bool:
+    """SmartPharma360 distributor tables: Qty | Free | Rate | MRP | Amount (ALARIC)."""
+    blob = f"{ocr_text or ''} {vendor or ''}".upper()
+    if not blob.strip():
+        return False
+    has_vendor = (
+        "SMARTPHARMA360" in blob
+        or "SMARTPHARMA 360" in blob
+        or "ALARIC ENTERPRISES" in blob
+    )
+    if not has_vendor:
+        return False
+    has_table = (
+        bool(re.search(r'\bQTY\b', blob))
+        and bool(re.search(r'\bMRP\b', blob))
+        and bool(re.search(r'\bAMOUNT\b', blob))
+    )
+    return has_table or "SMARTPHARMA360" in blob
+
+
+def _parse_smartpharma360_qty_rate_serialized(ocr_text: str) -> list:
+    """Parse SP360\\tNAME\\tqty\\trate\\tamt lines emitted by column-band OCR."""
+    rows = []
+    for line in (ocr_text or "").splitlines():
+        if not line.startswith("SP360\t"):
+            continue
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        name = parts[1].strip()
+        if len(re.sub(r'[^A-Z]', '', name.upper())) < 4:
+            continue
+        def _num(raw):
+            raw = str(raw or "").strip()
+            if not raw or raw.upper() in {"", "NONE", "NULL"}:
+                return None
+            try:
+                return float(normalize_numeric_value(raw))
+            except Exception:
+                return None
+        qty = _num(parts[2])
+        rate = _num(parts[3])
+        amt = _num(parts[4])
+        if qty is None and rate is None and amt is None:
+            continue
+        rows.append({
+            "product_description": name,
+            "quantity": qty,
+            "unit_price": rate,
+            "total_amount": amt,
+        })
+    return rows
+
+
+def _ocr_smartpharma360_qty_rate_region(page=None, image_bytes: bytes = None) -> str:
+    """Column-band OCR for SmartPharma360 Qty / Rate / Amount (format-scoped)."""
+    if not TESSERACT_AVAILABLE:
+        return ""
+    try:
+        if page is not None:
+            pix = page.get_pixmap(matrix=fitz.Matrix(3.5, 3.5))
+            image_bytes = pix.tobytes("png")
+            pix = None
+        if not image_bytes:
+            return ""
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = img.size
+        data = pytesseract.image_to_data(
+            img, config="--psm 6", output_type=pytesseract.Output.DICT)
+        try:
+            img.close()
+        except Exception:
+            pass
+
+        tokens = []
+        n = len(data.get("text") or [])
+        for i in range(n):
+            t = str(data["text"][i] or "").strip()
+            if not t:
+                continue
+            try:
+                conf = float(data["conf"][i])
+            except Exception:
+                conf = -1
+            if 0 <= conf < 15:
+                continue
+            tokens.append({
+                "t": t,
+                "x": data["left"][i] + data["width"][i] / 2.0,
+                "y": data["top"][i] + data["height"][i] / 2.0,
+            })
+        if not tokens:
+            return ""
+
+        qty_lo, qty_hi = 0.52 * width, 0.61 * width
+        rate_lo, rate_hi = 0.61 * width, 0.69 * width
+        amt_lo, amt_hi = 0.82 * width, 0.91 * width
+        name_lo, name_hi = 0.12 * width, 0.42 * width
+        skip_name = {
+            "INT", "FRE", "DRR", "MAN", "REL", "UNI", "HET", "ORR", "ZYD",
+            "TNT", "THT", "DAR", "INJECTION", "INJECTIONS", "TAB", "CAP",
+            "HSN", "MFG", "PACK", "BATCH", "SNO", "GSTIN", "CREDIT",
+        }
+        num_re = re.compile(
+            r'^[\[\(\{]?(?P<n>\d{1,7}(?:\.\d{1,2})?)[\]\)\}\|]*$')
+
+        tokens.sort(key=lambda z: z["y"])
+        grouped = []
+        for tok in tokens:
+            if not grouped or abs(tok["y"] - grouped[-1][0]["y"]) > 22:
+                grouped.append([tok])
+            else:
+                grouped[-1].append(tok)
+
+        lines = []
+        for row in grouped:
+            names = []
+            qty = rate = amt = None
+            for tok in row:
+                tu = tok["t"].upper()
+                if name_lo <= tok["x"] <= name_hi and re.search(r'[A-Z]{3,}', tu):
+                    token_clean = re.sub(r'[^A-Z0-9%]', '', tu)
+                    if token_clean not in skip_name and token_clean not in {
+                            "BUILDING", "BEARING", "GARHI", "CHOWK", "UDYOG",
+                            "NAGAR", "INDUSTRIAL", "WWW", "SMARTPHARMA360",
+                            "IN", "HDFC", "BANK", "IFSC", "BRANCH", "AIRPORT"}:
+                        names.append(tok["t"])
+                cleaned = tok["t"].replace(",", "")
+                m = num_re.match(cleaned)
+                if not m:
+                    m2 = re.search(r'(\d{1,7}(?:\.\d{1,2})?)', cleaned)
+                    if not m2 or tok["x"] < qty_lo:
+                        continue
+                    val = float(m2.group(1))
+                else:
+                    val = float(m.group("n"))
+                x = tok["x"]
+                if qty_lo <= x <= qty_hi and qty is None and abs(val - int(val)) < 0.01 and 1 <= val <= 500:
+                    qty = int(round(val))
+                elif rate_lo <= x <= rate_hi and rate is None and val >= 0:
+                    rate = val
+                elif amt_lo <= x <= amt_hi and amt is None and val >= 0:
+                    amt = val
+            name = re.sub(r'\s+', ' ', " ".join(names)).strip()
+            name = re.sub(r'\b(?:fis|jis|tis)\b', '', name, flags=re.IGNORECASE)
+            name = re.sub(r'\s+', ' ', name).strip()
+            if not name or (qty is None and rate is None and amt is None):
+                continue
+            if re.search(r'BUILDING|GARHI|SMARTPHARMA|HDFC|IFSC|BRANCH', name, re.I):
+                continue
+            q_s = "" if qty is None else str(qty)
+            r_s = "" if rate is None else f"{rate:.2f}"
+            a_s = "" if amt is None else f"{amt:.2f}"
+            lines.append(f"SP360\t{name}\t{q_s}\t{r_s}\t{a_s}")
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.debug(f"SmartPharma360 qty/rate OCR skipped: {exc}")
+        return ""
+
+
+def _collect_smartpharma360_qty_rate_ocr(
+    page_results: list, pages: list, doc=None
+) -> str:
+    parts = []
+    for pidx in pages or []:
+        try:
+            pr = page_results[pidx] if page_results else None
+        except Exception:
+            pr = None
+        text = str((pr or {}).get("smartpharma360_table_ocr", "") or "").strip()
+        if not text and doc is not None:
+            try:
+                text = (_ocr_smartpharma360_qty_rate_region(
+                    page=doc.load_page(pidx)) or "").strip()
+            except Exception:
+                text = ""
+        if text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _attach_smartpharma360_qty_rate_ocr(
+    data_with_ocr: dict, page_results: list, pages: list, doc, raw_ocr_text: str
+) -> None:
+    if not isinstance(data_with_ocr, dict):
+        return
+    data_obj = data_with_ocr.get("data")
+    if not isinstance(data_obj, dict):
+        return
+    existing = str(data_obj.get("smartpharma360_table_ocr", "") or "").strip()
+    if existing:
+        return
+    vendor = ""
+    summary = data_obj.get("invoice_summary")
+    if isinstance(summary, dict):
+        vendor = str(summary.get("vendor") or "")
+    blob = f"{raw_ocr_text or ''} {vendor}"
+    if not ocr_suggests_smartpharma360_qty_rate(blob, vendor):
+        return
+    text = _collect_smartpharma360_qty_rate_ocr(page_results, pages, doc=doc)
+    if text.strip():
+        data_obj["smartpharma360_table_ocr"] = text
+        logger.info(
+            "    ✅ SmartPharma360 qty/rate column OCR captured (%s chars)",
+            len(text),
+        )
+
+
+def fix_smartpharma360_qty_rate_from_ocr(
+    items, ocr_text: str = "", table_ocr: str = "", vendor: str = ""
+) -> list:
+    """Restore Qty/Rate from SmartPharma360 Qty|Free|Rate|MRP columns.
+
+    Shared MRP/qty-misread logic maps Amount or MRP into Rate on this layout.
+    Only rows that are currently inconsistent (or Amount-as-Rate) are updated.
+    """
+    if not items:
+        return items
+    combined = f"{ocr_text or ''}\n{table_ocr or ''}"
+    if not ocr_suggests_smartpharma360_qty_rate(combined, vendor):
+        return items
+    ocr_rows = _parse_smartpharma360_qty_rate_serialized(table_ocr or "")
+    if not ocr_rows:
+        ocr_rows = _parse_smartpharma360_qty_rate_serialized(ocr_text or "")
+    if not ocr_rows:
+        logger.info("📋 SmartPharma360 qty/rate fixer: no column-band rows")
+        return items
+
+    def _to_float(value) -> float:
+        try:
+            return float(normalize_numeric_value(str(value or "0")) or 0)
+        except Exception:
+            return 0.0
+
+    def _norm_desc(value: str) -> str:
+        text = re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+        for tok in ("INJECTION", "INJECTIONS", "INJ", "TABLET", "TAB", "CAPSULE",
+                    "CAP"):
+            text = text.replace(tok, "")
+        return text
+
+    def _names_match(a: str, b: str) -> bool:
+        if not a or not b:
+            return False
+        # Keep strength digits so NANOXEL 100 ≠ NANOXEL 30.
+        return a == b or a in b or b in a
+
+    def _near(a: float, b: float, rel: float = 0.05) -> bool:
+        if a <= 0 or b <= 0:
+            return False
+        return abs(a - b) <= 0.05 or abs(a - b) / max(b, 0.01) <= rel
+
+    used = set()
+    for item in items:
+        desc = str(item.get("product_description", "") or "")
+        item_key = _norm_desc(desc)
+        cur_qty = _to_float(item.get("quantity"))
+        cur_rate = _to_float(item.get("unit_price"))
+        cur_total = _to_float(item.get("total_amount"))
+        if not item_key:
+            continue
+
+        foc_like = "FOC" in desc.upper() and cur_total > 0 and cur_total < 2
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            if not _names_match(item_key, _norm_desc(row.get("product_description"))):
+                continue
+            score = 5
+            ocr_qty = row.get("quantity")
+            ocr_rate = row.get("unit_price")
+            ocr_amt = row.get("total_amount")
+            if ocr_qty and cur_qty > 0 and abs(ocr_qty - cur_qty) < 0.01:
+                score += 3
+            if ocr_rate and cur_rate > 0 and _near(ocr_rate, cur_rate):
+                score += 2
+            if ocr_amt and cur_total > 0 and _near(ocr_amt, cur_total):
+                score += 5
+            if ocr_rate and cur_qty > 0 and ocr_amt and _near(cur_qty * ocr_rate, ocr_amt):
+                score += 6
+            elif (
+                ocr_rate and ocr_amt and ocr_rate > 0 and cur_qty > 0
+                and abs((ocr_amt / ocr_rate) - cur_qty) >= 1
+            ):
+                score -= 4
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+        if best_idx is None:
+            if foc_like and cur_qty >= 2:
+                new_rate = cur_total / cur_qty
+                if new_rate > 0:
+                    old_rate = cur_rate
+                    item["unit_price"] = f"{new_rate:.2f}"
+                    logger.warning(
+                        "⚠️ SmartPharma360 FOC rate %s -> %s for %r",
+                        old_rate, item["unit_price"], desc[:40],
+                    )
+            continue
+
+        used.add(best_idx)
+        row = ocr_rows[best_idx]
+        ocr_qty = row.get("quantity")
+        ocr_rate = row.get("unit_price")
+        ocr_amt = row.get("total_amount")
+        new_qty = cur_qty
+        new_rate = cur_rate
+
+        if (
+            ocr_rate and ocr_amt and ocr_rate > 0 and ocr_amt > 0
+            and abs(ocr_rate - ocr_amt) / max(ocr_amt, 1.0) <= 0.02
+            and cur_qty >= 2
+            and abs(ocr_amt / ocr_rate - 1.0) <= 0.05
+        ):
+            new_qty = 1.0
+            new_rate = ocr_amt
+        elif (
+            ocr_rate and ocr_rate > 0 and cur_qty > 0 and ocr_amt
+            and _near(cur_qty * ocr_rate, ocr_amt)
+        ):
+            new_rate = ocr_rate
+        elif (
+            ocr_qty and ocr_rate and ocr_amt
+            and ocr_qty > 0 and ocr_rate > 0
+            and _near(ocr_qty * ocr_rate, ocr_amt)
+        ):
+            new_qty = float(ocr_qty)
+            new_rate = ocr_rate
+        elif ocr_amt and ocr_amt > 0 and cur_qty > 0:
+            inferred = ocr_amt / cur_qty
+            if inferred > 0:
+                new_rate = inferred
+        elif ocr_rate and ocr_rate > 0:
+            new_rate = ocr_rate
+            if ocr_amt and ocr_amt > 0 and new_rate > 0:
+                inferred_qty = ocr_amt / new_rate
+                if abs(inferred_qty - round(inferred_qty)) <= 0.05 and 1 <= round(inferred_qty) <= 500:
+                    if cur_qty <= 0 or abs(cur_qty * new_rate - ocr_amt) / max(ocr_amt, 1.0) > 0.05:
+                        new_qty = float(int(round(inferred_qty)))
+
+        qty_changed = abs(new_qty - cur_qty) >= 0.5
+        rate_changed = (
+            new_rate > 0 and (
+                cur_rate <= 0
+                or abs(new_rate - cur_rate) > 0.05
+                or abs(new_rate - cur_rate) / max(new_rate, 0.01) > 0.005
+            )
+        )
+        if qty_changed:
+            item["quantity"] = str(int(new_qty) if abs(new_qty - int(new_qty)) < 0.01 else new_qty)
+        if rate_changed:
+            item["unit_price"] = f"{new_rate:.2f}"
+        if qty_changed or rate_changed:
+            logger.warning(
+                "⚠️ SmartPharma360 qty/rate %r: qty %s->%s rate %s->%s",
+                desc[:40], cur_qty, item.get("quantity"), cur_rate, item.get("unit_price"),
+            )
+    return items
 
 
 def extract_rate_candidates_from_ocr_table(ocr_text: str) -> List[Dict[str, float]]:
@@ -14958,6 +15323,11 @@ def fix_unit_price_from_ocr_rate_column(items, ocr_text: str):
             logger.info(
                 "⏭️ Skipping FIX8 OCR rate-column override for NATARAJ format (handled by FIX12g)")
             return items
+        if ocr_suggests_smartpharma360_qty_rate(ocr_text or "", ""):
+            logger.info(
+                "⏭️ Skipping FIX8 OCR rate-column override for SmartPharma360 "
+                "(handled by Qty/Free/Rate column parser)")
+            return items
     except Exception:
         pass
 
@@ -22738,6 +23108,492 @@ def fix_bhasin_agencies_swapped_qty_rate_from_ocr(items, ocr_text: str) -> list:
     return items
 
 
+def _ocr_suggests_sg_pharma_csquare(ocr_text: str = "", vendor: str = "") -> bool:
+    """SG PHARMA DISTRIBUTORS / C-Square GST Tax Invoice layout."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'SG\s+PHARMA\s+DISTRIBUTORS', blob, re.IGNORECASE):
+        return False
+    # OCR often garbles "Info" → "lifo" / drops Tot Qty → "Tot Hems"
+    if re.search(r'C[\-\s]?Square', blob, re.IGNORECASE):
+        return True
+    return bool(
+        re.search(r'TAX\s*U?INV\.?\s*NO|FTAXU?INVNO|TAXINVNO', blob, re.IGNORECASE)
+        or re.search(r'\bTot\s*(?:Qty|Items|Hems)\b', blob, re.IGNORECASE)
+        or re.search(r'\bZYDU\b', blob, re.IGNORECASE)
+    )
+
+
+def _normalize_sg_pharma_ocr_line(line: str) -> str:
+    """Normalize C-Square OCR noise for qty/rate/amount parsing."""
+    ln = str(line or "")
+    ln = ln.replace('§', '5')
+    ln = ln.replace('»', ' ').replace('«', ' ')
+    # Glued OCR junk after integers: 12—= → 12
+    ln = re.sub(r'(\d)[—–=+]+', r'\1 ', ln)
+    # Sch column OCR: a.00 / o.00 → 0.00
+    ln = re.sub(r'\b[ao]\.00\b', '0.00', ln, flags=re.IGNORECASE)
+    # Decimal commas: 0,00 / 2407,30
+    ln = re.sub(r'(\d),(\d{2})\b', r'\1.\2', ln)
+    # Trailing OCR junk after decimals: 260.39, → 260.39
+    ln = re.sub(r'(\d+\.\d{2})[,.](?=\s)', r'\1', ln)
+    return ln
+
+
+def _sg_pharma_amount_candidates(amount: float, raw_amount: str) -> list:
+    """OCR often drops the decimal (290950 → 2909.50, 17030250 → 170302.50)."""
+    if amount <= 0:
+        return []
+    raw = str(raw_amount or "")
+    # Integer OCR amount → interpret as paise (2 decimal places). Do NOT
+    # keep the raw integer or /10 — those create false 10× qty matches.
+    if raw and '.' not in raw and amount >= 1000:
+        return [round(amount / 100.0, 2)]
+    return [amount]
+
+
+def _sg_pharma_qty_candidates(qty: float) -> list:
+    """Gemini/Tesseract often append a trailing 0 (10→100, 870→8700)."""
+    cands = [qty]
+    q = qty
+    for _ in range(2):
+        if q >= 10 and abs(q / 10.0 - round(q / 10.0)) < 1e-9:
+            q = q / 10.0
+            cands.append(q)
+        else:
+            break
+    out = []
+    for c in cands:
+        if c >= 1 and not any(abs(c - x) < 0.001 for x in out):
+            out.append(c)
+    return out
+
+
+def _parse_sg_pharma_csquare_qty_rate_rows(ocr_text: str) -> list:
+    """
+    Parse C-Square rows:
+      HSN | Item | Pack | Batch | Exp | QTY | Sch | MRP | Rate | Disc | Amount | Tax | Mfg
+    Live Tesseract often mirrors Gemini's 10× QTY / missing-decimal Amount errors;
+    resolve by finding qty×rate≈amount among qty and amount candidates.
+    """
+    if not ocr_text:
+        return []
+
+    # (?<![A-Za-z0-9.]) blocks batch tails like AFC1040; (?<![\d.]) alone is not enough
+    qty_b = r'(?<![A-Za-z0-9.])(?P<qty>\d{1,5})(?![A-Za-z0-9])'
+    # qty [sch] mrp rate disc amount tax
+    pat_full = re.compile(
+        qty_b + r'\s+(?:0(?:\.00)?\s+)?'
+        r'(?P<mrp>\d+\.\d{2})\s+(?P<rate>\d+\.\d{2})\s+'
+        r'0(?:\.00)?\s+(?P<amount>\d+\.\d{2}|\d{4,8})\s+'
+        r'(?P<tax>5(?:\.0)?|12(?:\.0)?|18(?:\.0)?|6(?:\.0)?|8(?:\.0)?|9(?:\.0)?)\b'
+    )
+    # qty rate disc amount tax (MRP dropped)
+    pat_short = re.compile(
+        qty_b + r'\s+(?P<rate>\d+\.\d{2})\s+'
+        r'0(?:\.00)?\s+(?P<amount>\d+\.\d{2}|\d{4,8})\s+'
+        r'(?P<tax>5(?:\.0)?|12(?:\.0)?|18(?:\.0)?|6(?:\.0)?|8(?:\.0)?|9(?:\.0)?)\b'
+    )
+    # qty [junk/sch] mrp rate disc amount tax — MELGAIN "6 12 O O 0.00 1018.83 548.18"
+    pat_loose = re.compile(
+        qty_b + r'(?:\s+\S+){0,6}?\s+'
+        r'(?P<mrp>\d+\.\d{2})\s+(?P<rate>\d+\.\d{2})\s+'
+        r'(?:0(?:\.00)?\s+)?(?P<amount>\d+\.\d{2}|\d{4,8})\s+'
+        r'(?P<tax>5(?:\.0)?|12(?:\.0)?|18(?:\.0)?|6(?:\.0)?|8(?:\.0)?|9(?:\.0)?)\b'
+    )
+    # qty [sch] mrp GARBLED_RATE disc amount tax → rate from amount/qty later
+    pat_garbled_rate = re.compile(
+        qty_b + r'\s+(?:0(?:\.00)?\s+)?'
+        r'(?P<mrp>\d+\.\d{2})\s+(?P<rate_tok>(?!\d+\.\d{2}\b)\S+)\s+'
+        r'0(?:\.00)?\s+(?P<amount>\d+\.\d{2}|\d{4,8})\s+'
+        r'(?P<tax>5(?:\.0)?|12(?:\.0)?|18(?:\.0)?|6(?:\.0)?|8(?:\.0)?|9(?:\.0)?)\b'
+    )
+
+    rows = []
+    for raw in str(ocr_text).splitlines():
+        if not (
+            re.search(r'\b30\d{6}\b', raw)
+            or re.search(r'\bs?00\d{6}\b', raw, re.I)
+            or re.search(r'\bZYDU\b', raw, re.IGNORECASE)
+            or re.search(r'\b[A-Z]{2,4}\d{4,}[A-Z0-9]*\b', raw)
+            or re.search(
+                r'DECA|ATORVA|CLOPITORVA|MELGAIN|DAPAGLYN|DEXONA|VOCID|ALDONIL|'
+                r'OXALGIN|SITAGLYN|LIPAGLYN|IPAGLYN|OCID|TORVA',
+                raw,
+                re.I,
+            )
+        ):
+            continue
+        if re.search(r'Tot\s*(?:Items|Qty|Hems)|TAXABLE|Invoice\s*Total', raw, re.I):
+            continue
+
+        ln = _normalize_sg_pharma_ocr_line(raw)
+        best = None
+        best_err = None
+
+        def _consider(qty, rate, amount, amount_raw="", mrp=None, garbled_rate=False):
+            nonlocal best, best_err
+            if rate <= 0:
+                return
+            if mrp is not None and mrp > 0 and rate > mrp * 1.05 and not garbled_rate:
+                return
+            for amt in _sg_pharma_amount_candidates(float(amount), amount_raw):
+                if amt <= 0:
+                    continue
+                qty_opts = list(_sg_pharma_qty_candidates(float(qty)))
+                # Prefer qty implied by amount/rate (fixes 670→570 digit errors)
+                if not garbled_rate and rate > 0:
+                    implied = amt / rate
+                    if implied >= 1 and abs(implied - round(implied)) <= 0.02:
+                        qi = float(round(implied))
+                        if not any(abs(qi - x) < 0.001 for x in qty_opts):
+                            qty_opts.insert(0, qi)
+                for q in qty_opts:
+                    if q < 1:
+                        continue
+                    if garbled_rate:
+                        rate_use = round(amt / q, 2)
+                        if rate_use <= 0:
+                            continue
+                        if mrp is not None and mrp > 0 and rate_use > mrp * 1.05:
+                            continue
+                        calc = round(q * rate_use, 2)
+                        err = abs(calc - amt) / max(amt, 1.0)
+                    else:
+                        rate_use = rate
+                        calc = round(q * rate_use, 2)
+                        err = abs(calc - amt) / max(amt, 1.0)
+                    if err > 0.08:
+                        if abs(calc - amt) / max(calc, 1.0) <= 0.08:
+                            amt_use = calc
+                            err = 0.0
+                        else:
+                            ratio = calc / max(amt, 1.0)
+                            # 10× OCR qty vs correct amount → skip; qty/10 handles it
+                            if 9.5 <= ratio <= 10.5:
+                                continue
+                            # Truncated/garbled amount (2625.00 vs 21625.00 ≈ 8.2×)
+                            if (
+                                amount_raw
+                                and '.' in str(amount_raw)
+                                and 7.5 <= ratio <= 12.5
+                                and q >= 10
+                            ):
+                                amt_use = calc
+                                err = 0.0
+                            elif (
+                                amount_raw
+                                and '.' in str(amount_raw)
+                                and str(int(round(amt))) in str(int(round(calc)))
+                                and calc > amt * 1.5
+                            ):
+                                amt_use = calc
+                                err = 0.0
+                            else:
+                                continue
+                    else:
+                        amt_use = calc
+                    if rate_use >= amt_use * 0.9 and amt_use > 0:
+                        continue
+                    # Prefer lower error; then qty closest to amount/rate; then larger amount
+                    better = False
+                    if best is None:
+                        better = True
+                    elif err < best_err - 1e-9:
+                        better = True
+                    elif abs(err - best_err) <= 1e-9:
+                        best_implied = best["total_amount"] / max(best["unit_price"], 1e-9)
+                        cur_implied = amt_use / max(rate_use, 1e-9)
+                        if abs(q - cur_implied) < abs(best["quantity"] - best_implied) - 1e-9:
+                            better = True
+                        elif abs(q - cur_implied) <= abs(best["quantity"] - best_implied) + 1e-9:
+                            if amt_use > best["total_amount"]:
+                                better = True
+                    if better:
+                        best_err = err
+                        best = {
+                            "quantity": q,
+                            "unit_price": rate_use,
+                            "total_amount": amt_use,
+                            "mrp": mrp,
+                            "raw": raw,
+                        }
+
+        for pat in (pat_full, pat_short):
+            for m in pat.finditer(ln):
+                # Skip Exp-date day as qty (02-28 6 12 …)
+                if m.start() >= 1 and ln[m.start() - 1] == '-':
+                    continue
+                try:
+                    qty = float(m.group('qty'))
+                    rate = float(m.group('rate'))
+                    amount_raw = m.group('amount')
+                    amount = float(amount_raw)
+                except Exception:
+                    continue
+                mrp = None
+                if 'mrp' in m.groupdict() and m.groupdict().get('mrp'):
+                    try:
+                        mrp = float(m.group('mrp'))
+                    except Exception:
+                        mrp = None
+                _consider(qty, rate, amount, amount_raw, mrp)
+
+        if best is None:
+            # Independent qty candidates (finditer is non-overlapping and would
+            # let Exp-date "28" consume "6 12 … amount")
+            for qm in re.finditer(qty_b, ln):
+                if qm.start() >= 1 and ln[qm.start() - 1] == '-':
+                    continue
+                try:
+                    qty = float(qm.group('qty'))
+                except Exception:
+                    continue
+                tail = ln[qm.end():]
+                m2 = re.match(
+                    r'(?:\s+\S+){0,6}?\s+'
+                    r'(?P<mrp>\d+\.\d{2})\s+(?P<rate>\d+\.\d{2})\s+'
+                    r'(?:0(?:\.00)?\s+)?(?P<amount>\d+\.\d{2}|\d{4,8})\s+'
+                    r'(?P<tax>5(?:\.0)?|12(?:\.0)?|18(?:\.0)?|6(?:\.0)?|8(?:\.0)?|9(?:\.0)?)\b',
+                    tail,
+                )
+                if not m2:
+                    continue
+                try:
+                    rate = float(m2.group('rate'))
+                    amount_raw = m2.group('amount')
+                    amount = float(amount_raw)
+                    mrp = float(m2.group('mrp'))
+                except Exception:
+                    continue
+                _consider(qty, rate, amount, amount_raw, mrp)
+
+        if best is None:
+            for m in pat_garbled_rate.finditer(ln):
+                if m.start() >= 1 and ln[m.start() - 1] == '-':
+                    continue
+                try:
+                    qty = float(m.group('qty'))
+                    amount_raw = m.group('amount')
+                    amount = float(amount_raw)
+                    mrp = float(m.group('mrp'))
+                except Exception:
+                    continue
+                # Placeholder rate; _consider recomputes from amount/qty
+                _consider(qty, 1.0, amount, amount_raw, mrp, garbled_rate=True)
+
+        # MELGAIN-style: two qty tokens "6 12" before sch — try explicit nearby ints
+        if best is None:
+            decs = list(re.finditer(r'(?<![\d.])(\d+\.\d{2})(?![\d])', ln))
+            if len(decs) >= 2:
+                # Heuristic: ... qty sch mrp rate disc amount
+                try:
+                    mrp_v = float(decs[-4].group(1)) if len(decs) >= 4 else None
+                    rate_v = float(decs[-3].group(1)) if len(decs) >= 3 else float(decs[-2].group(1))
+                    # amount may be last-but tied to tax; find int/decimal before tax
+                    am = re.search(
+                        r'(?<![\d.])(\d+\.\d{2}|\d{4,8})\s+(?:5|6|8|9|12|18)(?:\.0)?\b',
+                        ln,
+                    )
+                    if am and rate_v > 0:
+                        amount_raw = am.group(1)
+                        amount_v = float(amount_raw)
+                        # qty tokens immediately before first of trailing decimals
+                        head = ln[:decs[0].start()] if decs else ln
+                        for qm in re.finditer(r'(?<![\d.])(\d{1,5})(?![\d.])', head):
+                            _consider(
+                                float(qm.group(1)),
+                                rate_v,
+                                amount_v,
+                                amount_raw,
+                                mrp_v,
+                            )
+                except Exception:
+                    pass
+
+        if not best:
+            continue
+
+        # Description / batch for matching — skip pack/HSN fragments (1X10, S0049039)
+        cleaned = re.sub(r'[^A-Za-z0-9\s]', ' ', raw).upper()
+        batch_cands = []
+        for bm2 in re.finditer(
+            r'\b([A-Z]{1,5}\d{2,}[A-Z0-9]*|\d[A-Z]{1,4}\d{2,}[A-Z0-9]*)\b',
+            cleaned,
+        ):
+            tok = bm2.group(1)
+            if re.match(r'^(?:30|S?00)\d{6}$', tok):
+                continue
+            if re.fullmatch(r'\d{6,}', tok):
+                continue
+            if re.match(r'^\dX\d', tok):
+                continue
+            if re.match(r'^S\d{2}MG$', tok):
+                continue
+            batch_cands.append(tok)
+        batch = ""
+        if batch_cands:
+            batch = max(
+                batch_cands,
+                key=lambda t: (len(re.findall(r'\d', t)), len(t)),
+            )
+        name = raw
+        if batch:
+            name = re.split(re.escape(batch), name, flags=re.IGNORECASE)[0]
+        name = re.sub(r'^\s*\|?\s*\d{8}\s*', '', name)
+        name = re.sub(r'^\s*\|?\s*s?\d{8}\s*', '', name, flags=re.I)
+        name = re.sub(r'\b1[xX]\d+\w*\b', ' ', name)
+        name = re.sub(r'[^A-Za-z0-9\s/\-]', ' ', name)
+        name = re.sub(r'\s+', ' ', name).strip()
+        name = re.sub(r'\s+\d{1,2}[\-/]\d{2}.*$', '', name).strip()
+
+        best["product_description"] = name
+        best["lot_batch_number"] = batch
+        rows.append(best)
+
+    return rows
+
+
+def fix_sg_pharma_csquare_qty_rate_from_ocr(items, ocr_text: str, vendor: str = "") -> list:
+    """
+    SG PHARMA (C-Square) only: Gemini Text invents math-consistent wrong QTY
+    (10→100, 870→8700) from garbled Tesseract. Restore QTY/Rate/Amount from OCR
+    table rows (Tot Qty footer used as soft sanity check).
+    """
+    if not items or not ocr_text:
+        return items
+    if not _ocr_suggests_sg_pharma_csquare(ocr_text, vendor):
+        return items
+
+    ocr_rows = _parse_sg_pharma_csquare_qty_rate_rows(ocr_text)
+    if len(ocr_rows) < 3:
+        return items
+
+    def _norm(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _to_float(value) -> float:
+        try:
+            return float(normalize_numeric_value(str(value or "0")) or 0)
+        except Exception:
+            return 0.0
+
+    def _names_match(a: str, b: str) -> bool:
+        if not a or not b:
+            return False
+        if a == b or a in b or b in a:
+            return True
+        # Leading-char OCR drop (IPAGLYN↔LIPAGLYN, TORVA↔ATORVA)
+        for x, y in ((a, b), (b, a)):
+            if len(x) >= 5 and (y.endswith(x) or x[1:] and x[1:] in y):
+                return True
+        # Glued OCR names: ALDONILODTAB1X10 vs JUUCUESEALDONILODTABAPFO2ABB
+        pa = re.sub(r'[^A-Z]', '', a)
+        pb = re.sub(r'[^A-Z]', '', b)
+        if len(pa) >= 6 and len(pb) >= 6:
+            short, long = (pa, pb) if len(pa) <= len(pb) else (pb, pa)
+            for i in range(len(short) - 5):
+                if short[i:i + 6] in long:
+                    return True
+        skip = {'TAB', 'CAP', 'INJ', 'LOTION', 'THE', 'AND', 'OD'}
+        ta = {t for t in re.findall(r'[A-Z]{3,}', a) if t not in skip}
+        tb = {t for t in re.findall(r'[A-Z]{3,}', b) if t not in skip}
+        return bool(ta and tb and (ta & tb))
+
+    used = set()
+    fixed = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_desc = _norm(item.get("product_description", ""))
+        item_batch = _norm(item.get("lot_batch_number", ""))
+        cur_qty = _to_float(item.get("quantity"))
+        cur_rate = _to_float(item.get("unit_price"))
+        cur_tot = _to_float(item.get("total_amount"))
+
+        best_idx = None
+        best_score = -1
+        for idx, row in enumerate(ocr_rows):
+            if idx in used:
+                continue
+            score = 0
+            row_batch = _norm(row.get("lot_batch_number"))
+            # Canonicalize common OCR I/1 O/0 confusions for batch match
+            def _canon(b: str) -> str:
+                return b.translate(str.maketrans({'I': '1', 'L': '1', 'O': '0'}))
+            if item_batch and row_batch:
+                if item_batch == row_batch or _canon(item_batch) == _canon(row_batch):
+                    score += 8
+            if _names_match(item_desc, _norm(row.get("product_description"))):
+                score += 5
+            oq = float(row["quantity"])
+            orate = float(row["unit_price"])
+            ot = float(row["total_amount"])
+            if cur_qty > 0 and abs(cur_qty - oq) / max(oq, 1) <= 0.02:
+                score += 3
+            if cur_rate > 0 and abs(cur_rate - orate) / max(orate, 1) <= 0.02:
+                score += 3
+            if cur_tot > 0 and abs(cur_tot - ot) / max(ot, 1) <= 0.05:
+                score += 4
+            # Extra zero on qty (10→100, 870→8700)
+            if cur_qty > 0 and oq > 0 and abs(cur_qty - oq * 10) / max(cur_qty, 1) <= 0.02:
+                score += 6
+            if cur_tot > 0 and ot > 0 and abs(cur_tot - ot * 10) / max(cur_tot, 1) <= 0.05:
+                score += 4
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        if best_idx is None or best_score < 8:
+            continue
+
+        row = ocr_rows[best_idx]
+        used.add(best_idx)
+        oq = float(row["quantity"])
+        orate = float(row["unit_price"])
+        ot = float(row["total_amount"])
+
+        changed = False
+        if abs(cur_qty - oq) > 0.05 or abs(cur_rate - orate) > 0.05 or (
+            cur_tot > 0 and abs(cur_tot - ot) / max(ot, 1) > 0.05
+        ):
+            changed = True
+
+        item["quantity"] = str(int(oq)) if float(oq).is_integer() else f"{oq:.2f}"
+        item["unit_price"] = f"{orate:.2f}"
+        item["total_amount"] = f"{ot:.2f}"
+        if row.get("mrp"):
+            af = item.get("additional_fields")
+            if not isinstance(af, dict):
+                af = {}
+            af["mrp"] = f"{float(row['mrp']):.2f}"
+            item["additional_fields"] = af
+        if changed:
+            fixed += 1
+            logger.warning(
+                f"⚠️ FIX SG-PHARMA/C-Square: restored qty/rate for "
+                f"'{str(item.get('product_description', ''))[:40]}': "
+                f"qty {cur_qty}->{item['quantity']}, "
+                f"rate {cur_rate}->{item['unit_price']}, "
+                f"amt {cur_tot}->{item['total_amount']}"
+            )
+
+    if fixed:
+        tot_footer = extract_total_qty_from_ocr(ocr_text)
+        try:
+            sum_qty = sum(
+                float(normalize_numeric_value(str(it.get("quantity", 0) or 0)) or 0)
+                for it in items if isinstance(it, dict)
+            )
+        except Exception:
+            sum_qty = 0.0
+        if tot_footer and sum_qty > 0:
+            logger.info(
+                f"   SG-PHARMA/C-Square: fixed {fixed} row(s); "
+                f"qty sum={sum_qty:.0f} footer Tot Qty={tot_footer:.0f}"
+            )
+    return items
+
+
 def _ocr_suggests_bruklyn_associates_price_table(ocr_text: str) -> bool:
     """BRUKLYN ASSOCIATES: Description Of Goods | Qty | M.R.P | Price | Taxable | Amount."""
     if not ocr_text:
@@ -23391,6 +24247,12 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                 f"'{str(item.get('product_description', ''))[:40]}' "
                 f"(name/qty/rate restored from rotated table OCR)")
             return item
+        if ocr_suggests_smartpharma360_qty_rate(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for SmartPharma360 row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(Qty/Rate restored from Qty|Free|Rate columns)")
+            return item
         if ocr_suggests_eskay_medicals_marg_table(ocr_text, vendor):
             logger.info(
                 f"⏭️ Skipping fix_mrp_as_unit_price for ESKAY MEDICALS row "
@@ -23422,6 +24284,14 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                     f"'{str(item.get('product_description', ''))[:40]}' "
                     f"(qty={qty} looks like GST%%, gross={_g:.2f})")
                 return item
+        # SG PHARMA / C-Square: Gemini/Tesseract invent math-consistent 10× QTY and
+        # scaled Amount; gross/qty "correction" then invents rates (1146, 1957).
+        # Dedicated fix_sg_pharma_csquare_qty_rate_from_ocr restores true Rate column.
+        if _ocr_suggests_sg_pharma_csquare(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for SG-PHARMA/C-Square row "
+                f"'{str(item.get('product_description', ''))[:40]}'")
+            return item
         # YASH AGENCIES: AMOUNT often extracted as unit_price (rate≈total). Keep qty and
         # derive RATE = amount/qty — do NOT collapse qty→1 via the generic QTY-misread path.
         if (
@@ -26165,6 +27035,10 @@ def enforce_schema(raw_data):
         items = []
 
     processed_items = []
+    _sp360_skip_shared_qty = ocr_suggests_smartpharma360_qty_rate(
+        ocr_text,
+        str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
     # 🔧 FIX e-Invoice: correct qty/rate from Quantity:/Unit Price: before auto-fixes
     items = fix_structured_einvoice_qty_rate_from_ocr(items, ocr_text)
     # GST portal Goods Details table: Rate/Qty column swap (JAI MATADI style)
@@ -26198,7 +27072,10 @@ def enforce_schema(raw_data):
 
                 calculated = qty * price
 
-                if abs(calculated - total) > (total * 0.1) and qty > price:
+                if (
+                    not _sp360_skip_shared_qty
+                    and abs(calculated - total) > (total * 0.1) and qty > price
+                ):
                     logger.warning(
                         f"⚠️ Swap detected: qty={qty}, price={price}")
                     item["quantity"], item["unit_price"] = item["unit_price"], item["quantity"]
@@ -26217,10 +27094,12 @@ def enforce_schema(raw_data):
                 item["additional_fields"]["free_quantity"] = free_qty
 
         # 🔧 FIX 1: Detect and fix swapped quantity ↔ unit_price
-        item = fix_swapped_quantity_unit_price(item)
+        if not _sp360_skip_shared_qty:
+            item = fix_swapped_quantity_unit_price(item)
 
         # 🔧 FIX 1b: PHARMACEUTICAL INVOICE - Fix when Gemini reads from wrong columns entirely
-        item = fix_pharmaceutical_column_misread(item)
+        if not _sp360_skip_shared_qty:
+            item = fix_pharmaceutical_column_misread(item)
 
         # 🔧 FIX 2: Detect and fix MRP/Rate confusion
         _vendor_for_mrp = str(
@@ -26244,7 +27123,7 @@ def enforce_schema(raw_data):
             total = float(normalize_numeric_value(
                 str(item.get("total_amount", 0))))
 
-            if qty > 0 and up > 0 and total > 0:
+            if qty > 0 and up > 0 and total > 0 and not _sp360_skip_shared_qty:
                 calc = qty * up
                 ratio = calc / total if total > 0 else 0
 
@@ -26857,8 +27736,10 @@ def enforce_schema(raw_data):
     # If unit_price × quantity doesn't equal total_amount, find correct values from OCR
     _skip_fix10_sivagami = ocr_suggests_sivagami_medical(
         ocr_text, _vendor_name)
+    _skip_fix10_sg_pharma = _ocr_suggests_sg_pharma_csquare(
+        ocr_text, _vendor_name)
     for item in processed_items:
-        if _skip_fix10_sivagami:
+        if _skip_fix10_sivagami or _skip_fix10_sg_pharma:
             break
         try:
             qty_str = str(item.get("quantity", "0"))
@@ -27040,6 +27921,21 @@ def enforce_schema(raw_data):
         processed_items, ocr_text)
     processed_items = fix_bhasin_agencies_swapped_qty_rate_from_ocr(
         processed_items, ocr_text)
+    processed_items = fix_sg_pharma_csquare_qty_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+    _sp360_table_ocr = ""
+    if isinstance(data, dict):
+        _sp360_table_ocr = str(
+            data.get("smartpharma360_table_ocr", "") or "").strip()
+    processed_items = fix_smartpharma360_qty_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        _sp360_table_ocr,
+        str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
     processed_items = fix_sterling_pharma_free_rate_items(
         processed_items,
         ocr_text,
@@ -29017,6 +29913,7 @@ def enforce_schema(raw_data):
         template["data"].pop("saraswati_table_ocr", None)
         template["data"].pop("someshwara_detail_ocr", None)
         template["data"].pop("tulsyan_rate_ocr", None)
+        template["data"].pop("smartpharma360_table_ocr", None)
         template["data"].pop("jackson_invoice_date", None)
         template["data"].pop("jackson_invoice_no", None)
         template["data"].pop("jackson_invoice_total", None)
@@ -29031,6 +29928,7 @@ def enforce_schema(raw_data):
         _summary_out.pop("saraswati_table_ocr", None)
         _summary_out.pop("someshwara_detail_ocr", None)
         _summary_out.pop("tulsyan_rate_ocr", None)
+        _summary_out.pop("smartpharma360_table_ocr", None)
         _summary_out.pop("jackson_invoice_date", None)
         _summary_out.pop("jackson_invoice_no", None)
         _summary_out.pop("jackson_invoice_total", None)
@@ -30650,6 +31548,30 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _jk_ocr_err:
             logger.warning(
                 f"JACKSON qty/rate OCR enrichment failed: {_jk_ocr_err}")
+
+        try:
+            _sp360_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _sp360_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _sp360_data = _sp360_fd.get("data") if isinstance(
+                _sp360_fd.get("data"), dict) else _sp360_fd
+            _sp360_sum = _sp360_data.get("invoice_summary") if isinstance(
+                _sp360_data.get("invoice_summary"), dict) else {}
+            _sp360_vendor = str(
+                _sp360_sum.get("vendor") or _sp360_fd.get("vendor") or "")
+            if ocr_suggests_smartpharma360_qty_rate(_sp360_ocr, _sp360_vendor):
+                _sp360_table = _ocr_smartpharma360_qty_rate_region(page=page)
+                if _sp360_table.strip():
+                    result["smartpharma360_table_ocr"] = _sp360_table
+                    logger.info(
+                        f"    ✅ SmartPharma360 qty/rate column OCR captured "
+                        f"({len(_sp360_table)} chars)")
+        except Exception as _sp360_ocr_err:
+            logger.debug(
+                f"SmartPharma360 qty/rate OCR enrichment skipped: {_sp360_ocr_err}")
 
         # DROGARIA COLVALCAR scans: capture table band for qty/rate recovery
         try:
@@ -35235,6 +36157,10 @@ def split_and_extract_invoices(
                         data_with_ocr["data"]["jackson_invoice_total"] = float(
                             _jackson_tot)
 
+                    _attach_smartpharma360_qty_rate_ocr(
+                        data_with_ocr, page_results, g.get("pages") or [],
+                        doc, raw_ocr_text)
+
                     # ✅ Enforce schema (will preserve full OCR text and all Gemini data)
                     formatted = enforce_schema(data_with_ocr)
 
@@ -36460,6 +37386,10 @@ def test_extract(
                     ):
                         data_with_ocr["data"]["jackson_invoice_total"] = float(
                             _jackson_tot)
+
+                    _attach_smartpharma360_qty_rate_ocr(
+                        data_with_ocr, page_results, g.get("pages") or [],
+                        doc, raw_ocr_text)
 
                     formatted = enforce_schema(data_with_ocr)
 
