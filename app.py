@@ -6735,6 +6735,118 @@ def fix_partap_pdfplumber_rows_from_ocr(items, ocr_text: str):
     return items
 
 
+def _ocr_suggests_alaric_enterprises_smartpharma360(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """ALARIC ENTERPRISES / SmartPharma360: Qty | Free | Rate | MRP | Amount.
+
+    Rate is the selling price; MRP is higher. Vision often maps MRP → unit_price
+    while Qty is already correct (INDEL2627008380 ZODOX 20 × 110, MRP 169.58).
+    """
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    if not blob.strip():
+        return False
+    if re.search(r'ALARIC\s+ENTERPRISES', blob):
+        return True
+    compact = blob.replace(' ', '')
+    if 'SMARTPHARMA360' not in compact:
+        return False
+    if not (re.search(r'\bQTY\b', blob) and re.search(r'\bRATE\b', blob)
+            and re.search(r'\bMRP\b', blob)):
+        return False
+    return bool(re.search(r'OLD\s*MRP', blob) or re.search(r'\bFREE\b', blob))
+
+
+def _alaric_group_vendor_ocr(group: dict, page_results: list) -> Tuple[str, str]:
+    """Vendor + OCR from the group and per-page Vision payloads (OCR may be empty)."""
+    ocr_parts = [str((group or {}).get("ocr_text") or "")]
+    vendors: List[str] = []
+
+    def _vendor_from_full_data(ed) -> str:
+        if not isinstance(ed, dict):
+            return ""
+        data = ed.get("data") if isinstance(ed.get("data"), dict) else ed
+        if not isinstance(data, dict):
+            return str(ed.get("vendor") or "")
+        summary = data.get("invoice_summary")
+        if isinstance(summary, dict) and summary.get("vendor"):
+            return str(summary.get("vendor") or "")
+        return str(data.get("vendor") or ed.get("vendor") or "")
+
+    vendors.append(_vendor_from_full_data((group or {}).get("extracted_data")))
+    for pidx in (group or {}).get("pages") or []:
+        if not page_results or pidx >= len(page_results):
+            continue
+        pr = page_results[pidx]
+        if not isinstance(pr, dict):
+            continue
+        ocr_parts.append(str(pr.get("ocr_text") or ""))
+        vendors.append(_vendor_from_full_data(pr.get("full_data")))
+    return "\n".join(ocr_parts), " ".join(v for v in vendors if v)
+
+
+def _apply_alaric_enterprises_multipage_vision_line_items(
+    group: dict, page_results: list
+) -> bool:
+    """Keep page-2+ Vision rows for ALARIC / SmartPharma360 (INDEL2627008376).
+
+    Scanned copies have empty Tesseract OCR, so combined-OCR re-extract never
+    runs and grouping keeps only page-1 line items (SN 17–23 dropped).
+    """
+    if not isinstance(group, dict):
+        return False
+    pages = group.get("pages") or []
+    if len(pages) < 2:
+        return False
+    ocr_blob, vendor_blob = _alaric_group_vendor_ocr(group, page_results)
+    if not _ocr_suggests_alaric_enterprises_smartpharma360(ocr_blob, vendor_blob):
+        return False
+
+    items = []
+    seen = set()
+    pages_with_items = 0
+    for pidx in pages:
+        if not page_results or pidx >= len(page_results):
+            continue
+        pr = page_results[pidx]
+        if not isinstance(pr, dict):
+            continue
+        page_added = 0
+        for it in _extract_line_items_for_validation(pr.get("full_data") or {}):
+            if not isinstance(it, dict):
+                continue
+            name = str(it.get("product_description", "") or "").strip()
+            if not name:
+                continue
+            key = (
+                name.upper(),
+                str(it.get("lot_batch_number", "") or "").strip().upper(),
+                str(it.get("quantity", "") or ""),
+                str(it.get("total_amount", "") or ""),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(it)
+            page_added += 1
+        if page_added:
+            pages_with_items += 1
+
+    if pages_with_items < 2 or len(items) < 2:
+        return False
+
+    if not group.get("extracted_data") and pages:
+        group["extracted_data"] = (page_results[pages[0]] or {}).get("full_data")
+    if isinstance(group.get("extracted_data"), dict):
+        _merge_line_items_into_full_data(group["extracted_data"], items)
+        logger.info(
+            f"   ✅ ALARIC ENTERPRISES: kept {len(items)} Vision line item(s) across "
+            f"{len(pages)} page(s) (skipped combined-OCR re-extract)"
+        )
+        return True
+    return False
+
+
 def _is_smartpharma360_table_layout(header_line: str, ocr_text: str) -> bool:
     """
     Detect SmartPharma360 distributor tables (e.g. ALARIC ENTERPRISES).
@@ -23569,6 +23681,8 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
 
             # ✅ Prefer correcting quantity first when unit_price appears plausible and
             # total/unit_price gives a clean integer qty (common OCR misread for single-item invoices).
+            # ALARIC/SmartPharma360: unit_price is often MRP; Amount/MRP can be near-integer
+            # (ZODOX 2200/169.58≈13) while printed Qty is already correct — keep Qty.
             if unit_price > 0 and validation_total > 0:
                 inferred_qty_from_rate = validation_total / unit_price
                 nearest_qty = round(inferred_qty_from_rate)
@@ -23579,12 +23693,21 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                     and abs(qty - nearest_qty) >= 1
                     and relative_qty_gap >= 0.20
                 ):
-                    logger.warning(
-                        f"⚠️ QTY misread detected: qty={qty}, unit_price={unit_price}, total={validation_total}")
-                    item["quantity"] = str(int(nearest_qty))
-                    logger.info(
-                        f"   ✅ Fixed quantity from total/rate: {qty} -> {item['quantity']}")
-                    return item
+                    if _ocr_suggests_alaric_enterprises_smartpharma360(
+                        ocr_text, vendor
+                    ):
+                        logger.info(
+                            f"⏭️ Skipping QTY-misread for ALARIC/SmartPharma360 "
+                            f"'{product}': keeping qty={qty} "
+                            f"(Amount/MRP≈{nearest_qty}); Rate from amount/qty"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ QTY misread detected: qty={qty}, unit_price={unit_price}, total={validation_total}")
+                        item["quantity"] = str(int(nearest_qty))
+                        logger.info(
+                            f"   ✅ Fixed quantity from total/rate: {qty} -> {item['quantity']}")
+                        return item
 
             # ⚠️ CORRUPTION CHECK: If qty is suspiciously round and mismatch is HUGE,
             # this likely means Gemini read from wrong columns entirely (e.g., GSTAMT vs Amount)
@@ -34656,6 +34779,12 @@ def split_and_extract_invoices(
         # ✅ RE-EXTRACT DATA FOR MULTI-PAGE INVOICES using combined OCR from all pages
         for g_idx, g in enumerate(groups):
             if len(g["pages"]) > 1:
+                # ALARIC/SmartPharma360 scans: OCR is often empty (Tesseract missing),
+                # so combined re-extract never runs and page-2 products are dropped.
+                if _apply_alaric_enterprises_multipage_vision_line_items(
+                    g, page_results
+                ):
+                    continue
                 # Multi-page invoice - re-extract data using combined OCR text
                 combined_ocr = g.get("ocr_text", "")
                 if combined_ocr and len(combined_ocr.strip()) > 100:
@@ -35998,6 +36127,10 @@ def test_extract(
         # Re-extract multi-page invoices using combined OCR from all pages
         for g in groups:
             if len(g.get("pages") or []) > 1:
+                if _apply_alaric_enterprises_multipage_vision_line_items(
+                    g, page_results
+                ):
+                    continue
                 combined_ocr = g.get("ocr_text", "")
                 if combined_ocr and len(combined_ocr.strip()) > 100:
                     if _bharath_pages_are_duplicate_copies(combined_ocr):
