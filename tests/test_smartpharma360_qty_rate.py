@@ -169,6 +169,22 @@ class TestSmartpharma360QtyRate(unittest.TestCase):
         self.assertEqual(out[0]["unit_price"], "783.25")
         self.assertEqual(out[0]["quantity"], "10")
 
+    def test_does_not_clobber_consistent_meva_with_garbage_column_ocr(self):
+        """ALARIC INMLR2627009718: column OCR [EVA→79835 must not overwrite Rate 196.35."""
+        table = "SP360\t[EVA CAPSULES\t\t79835.00\t\n"
+        items = [{
+            "product_description": "MEVA SR CAPSULES (15S)",
+            "quantity": "100",
+            "unit_price": "196.35",
+            "total_amount": "19635.00",
+            "additional_fields": {"mrp": "431.99"},
+        }]
+        out = fix_smartpharma360_qty_rate_from_ocr(
+            items, SP360_OCR, table, "ALARIC ENTERPRISES")
+        self.assertEqual(out[0]["quantity"], "100")
+        self.assertAlmostEqual(float(out[0]["unit_price"]), 196.35, places=2)
+        self.assertAlmostEqual(float(out[0]["total_amount"]), 19635.00, places=2)
+
 
 if __name__ == "__main__":
     unittest.main()

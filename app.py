@@ -3462,16 +3462,22 @@ def _ocr_suggests_gst_portal_goods_details(ocr_text: str) -> bool:
     # Labeled Quantity:/Unit Price: rows are handled by fix_structured_einvoice_*
     if re.search(r'Quantity:\s*\d', ocr_text, re.IGNORECASE):
         return False
-    if not re.search(r'e-Invoice\s+Details', ocr_text, re.IGNORECASE):
+    # OCR often wraps: "e-\nInvoice Details" or "e- Invoice Details"
+    if not re.search(r'e-\s*Invoice\s+Details', ocr_text, re.IGNORECASE):
         return False
     if not re.search(r'Goods\s+Details', ocr_text, re.IGNORECASE):
         return False
     # Header OCR often wraps: "Qty +" then next line "Free" / "Unit" then "Price (Rs)"
     if not re.search(r'Qty\s*\+', ocr_text, re.IGNORECASE):
         return False
+    # "Unit Price" may OCR as "Unit Unit" + later "Price (Rs)"
     if not (
         re.search(r'Unit\s*Price', ocr_text, re.IGNORECASE)
         or re.search(r'Price\s*\(Rs\)', ocr_text, re.IGNORECASE)
+        or (
+            re.search(r'\bUnit\b', ocr_text, re.IGNORECASE)
+            and re.search(r'\bTaxable\b', ocr_text, re.IGNORECASE)
+        )
     ):
         return False
     return True
@@ -3515,8 +3521,16 @@ def _parse_gst_portal_goods_details_qty_rate_rows(ocr_text: str) -> list:
                 continue
             if qty <= 0 or rate <= 0 or taxable <= 0:
                 continue
-            if abs(qty * rate - taxable) / taxable > 0.02:
-                continue
+            # Prefer Qty×UnitPrice when Taxable lost a leading digit (A005223).
+            # Keep printed Unit Price when scheme pricing makes Qty×Rate ≠ Taxable
+            # (COCO BABY OIL: 110×190.47 vs Taxable 19047.00).
+            expected = round(qty * rate, 2)
+            if abs(expected - taxable) / max(taxable, 0.01) > 0.02:
+                exp_cents = str(int(round(expected * 100)))
+                tax_cents = str(int(round(taxable * 100)))
+                if exp_cents.endswith(tax_cents) and len(exp_cents) > len(tax_cents):
+                    taxable = expected
+                # else: keep both columns as printed (scheme / trade discount)
             key = (hsn, round(qty, 2), round(rate, 2), round(taxable, 2))
             if key in seen:
                 continue
@@ -3526,6 +3540,7 @@ def _parse_gst_portal_goods_details_qty_rate_rows(ocr_text: str) -> list:
                 "hsn_code": hsn,
                 "quantity": qty,
                 "unit_price": rate,
+                "total_amount": taxable,
             })
     return rows
 
@@ -3623,7 +3638,21 @@ def fix_gst_portal_einvoice_qty_rate_swap(items, ocr_text: str) -> list:
             and abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) <= 0.02
             and name_ok
         )
-        if not swapped and not missing_qty:
+        try:
+            cur_total = float(normalize_numeric_value(
+                str(item.get("total_amount", "0"))) or 0)
+        except Exception:
+            cur_total = 0.0
+        ocr_tax = float(row.get("total_amount") or 0)
+        # COCO BABY OIL / scheme rows: Vision or MRP-fix replaced Unit Price with
+        # Taxable÷Qty (173.15) while OCR still has printed Unit Price (190.47).
+        rate_drift = (
+            name_ok
+            and ocr_rate > 0
+            and cur_rate > 0
+            and abs(cur_rate - ocr_rate) / max(ocr_rate, 0.01) > 0.02
+        )
+        if not swapped and not missing_qty and not rate_drift:
             continue
 
         used.add(best_idx)
@@ -3636,12 +3665,23 @@ def fix_gst_portal_einvoice_qty_rate_swap(items, ocr_text: str) -> list:
                 f"qty {cur_qty}->{item['quantity']}, "
                 f"rate {cur_rate}->{item['unit_price']}"
             )
-        else:
+        elif missing_qty:
             item["quantity"] = _fmt_qty(ocr_qty)
             logger.warning(
                 f"⚠️ GST portal Goods Details: restored missing qty for "
                 f"'{item.get('product_description', '')}': "
                 f"{cur_qty}->{item['quantity']} (rate unchanged {cur_rate})"
+            )
+        else:
+            item["quantity"] = _fmt_qty(ocr_qty)
+            item["unit_price"] = f"{ocr_rate:.2f}"
+            if ocr_tax > 0:
+                item["total_amount"] = f"{ocr_tax:.2f}"
+            logger.warning(
+                f"⚠️ GST portal Goods Details: restored Unit Price for "
+                f"'{item.get('product_description', '')}': "
+                f"rate {cur_rate}->{item['unit_price']} "
+                f"(qty={item['quantity']}, amt={item.get('total_amount')})"
             )
 
     return items
@@ -13220,9 +13260,52 @@ def _parse_jackson_qty_rate_rows(ocr_text: str) -> list:
                                     score += 5
                                 else:
                                     score -= 5
+                            # OCR dropped a QTY trailing 0 and Rate decimal:
+                            # "3 434 13020" is 30×4.34=130.20, not 3×43.40.
+                            if (
+                                not r_tok["dec"]
+                                and q_use == qi * 10
+                                and abs(r_tok["v"] / 100.0 - rate) <= 0.011
+                            ):
+                                score += 6
                             if best is None or score > best[0]:
                                 best = (score, q_use, round(
                                     rate, 2), round(amount, 2))
+
+        # Qty glued onto Rate: "14"+"52.10" OCR as "1452.10" (SUPRADYN 14×52.10)
+        for t in tokens:
+            raw = str(t.get("raw") or "")
+            if "." not in raw:
+                continue
+            ip, fp = raw.split(".", 1)
+            if len(ip) < 3 or len(fp) != 2:
+                continue
+            for n in (1, 2):
+                if len(ip) <= n:
+                    continue
+                try:
+                    qg = int(ip[:n])
+                    rg = float(ip[n:] + "." + fp)
+                except Exception:
+                    continue
+                if not (1 <= qg <= 200 and 3.5 <= rg <= 2000):
+                    continue
+                for a_tok in tokens:
+                    if a_tok is t:
+                        continue
+                    amount = a_tok["v"]
+                    if not a_tok["dec"] and amount >= 10000:
+                        amount = amount / 100.0
+                    if amount < 50:
+                        continue
+                    calc = round(qg * rg, 2)
+                    if abs(calc - amount) > 0.05:
+                        continue
+                    if abs(calc - amount) / max(amount, 1.0) > 0.002:
+                        continue
+                    cand = (12, qg, round(rg, 2), round(calc, 2))
+                    if best is None or cand[0] > best[0]:
+                        best = cand
 
         if not best and len(tokens) >= 2:
             a_tok = tokens[-1]
@@ -13821,21 +13904,40 @@ def fix_jackson_medicals_line_items_from_ocr(
 
         paid_coherent = [g for g in group if _coherent_paid(g)]
         # Two AMLOPIN 10×20.32=203.20 rows (different batches) must both be kept.
+        # ECOSPRIN GOLD 1×206.56 and 4×206.56 (different batches, different Amounts)
+        # must also both be kept — do not collapse the smaller paid row into Free.
         if len(paid_coherent) >= 2:
             totals = [g[1] for g in paid_coherent]
             tmax = max(totals) if totals else 0
             tmin = min(totals) if totals else 0
-            if tmax > 0 and tmin / tmax >= 0.98:
-                batches = {
-                    str(g[2].get("lot_batch_number") or "").strip().upper()
-                    for g in paid_coherent
-                }
-                if len(batches) >= 2 or len(paid_coherent) == len(group):
-                    for _idx, _tot, keep_item in sorted(paid_coherent, key=lambda x: x[0]):
-                        keep_item["product_description"] = _clean_jackson_product_name(
-                            keep_item.get("product_description", ""))
-                        deduped.append(keep_item)
-                    continue
+            batches = {
+                str(g[2].get("lot_batch_number") or "").strip().upper()
+                for g in paid_coherent
+            }
+            rates = []
+            for _g in paid_coherent:
+                try:
+                    rates.append(round(float(normalize_numeric_value(
+                        str(_g[2].get("unit_price", 0) or 0))), 2))
+                except Exception:
+                    rates.append(0.0)
+            same_rate = (
+                len(rates) >= 2
+                and min(rates) >= 3.5
+                and (max(rates) - min(rates)) <= max(
+                    0.05, 0.002 * max(max(rates), 1.0))
+            )
+            totals_close = tmax > 0 and tmin / tmax >= 0.98
+            if (
+                (totals_close and (
+                    len(batches) >= 2 or len(paid_coherent) == len(group)))
+                or (same_rate and len(batches) >= 2)
+            ):
+                for _idx, _tot, keep_item in sorted(paid_coherent, key=lambda x: x[0]):
+                    keep_item["product_description"] = _clean_jackson_product_name(
+                        keep_item.get("product_description", ""))
+                    deduped.append(keep_item)
+                continue
 
         # Keep highest invoice Amount (paid line); others are free/MRP phantoms
         group_sorted = sorted(group, key=lambda x: x[1], reverse=True)
@@ -14447,6 +14549,27 @@ def fix_jackson_medicals_line_items_from_ocr(
         if not named:
             continue
         named_amt = float(named.get("total_amount") or 0)
+        # Dual-batch same name (ECOSPRIN GOLD 206.56 and 826.24): keep every
+        # row whose Amount is a distinct paid OCR triple.
+        qr_matched_amts = set()
+        for item in group:
+            try:
+                amt = float(normalize_numeric_value(
+                    str(item.get("total_amount", 0) or 0)))
+            except Exception:
+                continue
+            if amt < 50:
+                continue
+            if any(
+                abs(row["total_amount"] - amt) / max(amt, 1.0) <= 0.02
+                and abs(
+                    row["quantity"] * row["unit_price"] - row["total_amount"]
+                ) / max(row["total_amount"], 1.0) <= 0.03
+                for row in qr_rows
+            ):
+                qr_matched_amts.add(round(amt, 2))
+        if len(qr_matched_amts) >= 2:
+            continue
         for item in group:
             try:
                 amt = float(normalize_numeric_value(
@@ -14918,6 +15041,171 @@ def _recover_jackson_missing_items_from_qr(
         logger.warning(
             f"⚠️ FIX12j: Recovered {added} missing JACKSON line item(s) from OCR")
     return out
+
+
+def ocr_suggests_standard_agencies(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect STANDARD AGENCIES (Kottayam) Rate|QTY|Free|Amount tables."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    return bool(re.search(r'\bSTANDARD\s+AGENC', blob))
+
+
+def _parse_standard_agencies_qty_rate_line(line: str) -> Optional[dict]:
+    """Parse MRP Rate QTY Amount GST% from one STANDARD AGENCIES product line.
+
+    Amount OCR often drops the decimal (22585.50 → 2258550). QTY may lose a
+    leading digit (126 → 26). Rate column usually still has two decimals.
+    """
+    if not line or re.search(r'\bFREE\b', line, re.I) and not re.search(
+        r'\d+[.,]\d{2}', line
+    ):
+        return None
+    nums = []
+    for m in re.finditer(r'(\d{1,8}(?:[.,]\d{1,2})?)', line.replace(',', '.')):
+        raw = m.group(1).replace(',', '.')
+        try:
+            nums.append({"v": float(raw), "dec": "." in raw})
+        except Exception:
+            continue
+    gst_i = None
+    for i, n in enumerate(nums):
+        if n["dec"] and abs(n["v"] - 5.0) < 0.011:
+            gst_i = i
+            break
+    if gst_i is None or gst_i < 3:
+        return None
+    before = nums[:gst_i]
+    amount_tok = before[-1]
+    amount_face = amount_tok["v"]
+    amount_cands = [amount_face]
+    if not amount_tok["dec"] and amount_face >= 1000:
+        amount_cands.append(amount_face / 100.0)
+    rates = [
+        n["v"] for n in before[:-1]
+        if n["dec"] and 5.0 <= n["v"] <= 2000
+    ]
+    ocr_qtys = [
+        int(round(n["v"])) for n in before
+        if abs(n["v"] - round(n["v"])) <= 0.01 and 1 <= round(n["v"]) <= 5000
+    ]
+    best = None
+    for rate in rates:
+        for amt in amount_cands:
+            if amt < 50 or rate <= 0:
+                continue
+            q = amt / rate
+            if abs(q - round(q)) > 0.02:
+                continue
+            qi = int(round(q))
+            if not (1 <= qi <= 2000):
+                continue
+            if abs(qi * rate - amt) > 0.05:
+                continue
+            if abs(qi * rate - amt) / max(amt, 1.0) > 0.002:
+                continue
+            score = 0
+            if amount_tok["dec"] or abs(amt - amount_face / 100.0) <= 0.02:
+                score += 3
+            if any(qi == oq or str(qi).endswith(str(oq)) for oq in ocr_qtys):
+                score += 4
+            if 1 <= rate <= 500:
+                score += 1
+            cand = (score, qi, round(rate, 2), round(amt, 2))
+            if best is None or cand[0] > best[0]:
+                best = cand
+    if not best:
+        return None
+    return {
+        "quantity": best[1],
+        "unit_price": best[2],
+        "total_amount": best[3],
+    }
+
+
+def fix_standard_agencies_qty_rate_from_ocr(
+    items: list, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Restore Rate and QTY from STANDARD AGENCIES OCR (format-scoped).
+
+    Shared FIX 1 rewrites Rate as Amount÷QTY when QTY lost a digit and Amount
+    lost its decimal. Re-read Rate from the Rate column on the product line.
+    """
+    if not items or not ocr_suggests_standard_agencies(ocr_text, vendor):
+        return items
+    skip_tok = {
+        "TAB", "TABS", "TABLET", "TABLETS", "CAP", "CAPS", "GEL", "SPRAY",
+        "INH", "NASAL", "THE", "AND", "FOR",
+    }
+    parsed = []
+    for line in (ocr_text or "").splitlines():
+        up = line.upper()
+        row = _parse_standard_agencies_qty_rate_line(line)
+        if not row:
+            continue
+        parsed.append((up, row))
+
+    if not parsed:
+        return items
+
+    used = set()
+    for item in items:
+        desc = str(item.get("product_description", "") or "").upper()
+        tokens = [
+            t for t in re.findall(r'[A-Z]{2,}', desc)
+            if t not in skip_tok
+        ]
+        if not tokens:
+            continue
+        try:
+            cur_q = float(normalize_numeric_value(
+                str(item.get("quantity", 0) or 0)))
+            cur_r = float(normalize_numeric_value(
+                str(item.get("unit_price", 0) or 0)))
+            cur_t = float(normalize_numeric_value(
+                str(item.get("total_amount", 0) or 0)))
+        except Exception:
+            cur_q = cur_r = cur_t = 0.0
+        best_i = None
+        best_score = -1
+        for i, (up, row) in enumerate(parsed):
+            if i in used:
+                continue
+            score = sum(3 for t in tokens if t in up)
+            if score <= 0:
+                continue
+            if cur_t > 0:
+                for t_try in (cur_t, cur_t / 100.0):
+                    if abs(row["total_amount"] - t_try) / max(t_try, 1.0) <= 0.02:
+                        score += 4
+                        break
+            if cur_r >= 5 and abs(cur_r - row["unit_price"]) <= 0.05:
+                score += 2
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is None or best_score < 3:
+            continue
+        row = parsed[best_i][1]
+        used.add(best_i)
+        already_ok = (
+            cur_q > 0 and 5 <= cur_r <= 2000 and cur_t >= 50
+            and abs(cur_q - row["quantity"]) < 0.01
+            and abs(cur_r - row["unit_price"]) <= 0.05
+            and abs(cur_q * cur_r - cur_t) / max(cur_t, 1.0) <= 0.02
+        )
+        if already_ok:
+            continue
+        old_q, old_r = item.get("quantity"), item.get("unit_price")
+        item["quantity"] = str(row["quantity"])
+        item["unit_price"] = f"{row['unit_price']:.2f}"
+        # Restore Amount only when it is a 100× decimal-drop of qty×rate
+        expected_amt = round(row["quantity"] * row["unit_price"], 2)
+        if cur_t > 0 and abs(cur_t - expected_amt * 100.0) / max(cur_t, 1.0) <= 0.02:
+            item["total_amount"] = f"{expected_amt:.2f}"
+        logger.warning(
+            f"⚠️ STANDARD AGENCIES: '{str(item.get('product_description', ''))[:30]}' "
+            f"qty {old_q}->{item['quantity']}, rate {old_r}->{item['unit_price']}"
+        )
+    return items
 
 
 def extract_jackson_medicals_invoice_no(ocr_text: str = "") -> Optional[str]:
@@ -24292,6 +24580,15 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                 f"⏭️ Skipping fix_mrp_as_unit_price for SG-PHARMA/C-Square row "
                 f"'{str(item.get('product_description', ''))[:40]}'")
             return item
+        # GST portal Goods Details (DIPALI / A00xxxx): Unit Price column is authoritative.
+        # Scheme lines (COCO BABY OIL) have Qty×UnitPrice ≠ Taxable; do NOT replace
+        # Unit Price with Taxable÷Qty.
+        if _ocr_suggests_gst_portal_goods_details(ocr_text):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for GST portal Goods Details row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(keep printed Unit Price column)")
+            return item
         # YASH AGENCIES: AMOUNT often extracted as unit_price (rate≈total). Keep qty and
         # derive RATE = amount/qty — do NOT collapse qty→1 via the generic QTY-misread path.
         if (
@@ -27349,6 +27646,9 @@ def enforce_schema(raw_data):
             data.get("jackson_table_ocr", "") or "").strip()
     processed_items = fix_jackson_medicals_line_items_from_ocr(
         processed_items, ocr_text, _jackson_table_ocr, _vendor_name)
+
+    processed_items = fix_standard_agencies_qty_rate_from_ocr(
+        processed_items, ocr_text, _vendor_name)
 
     # 🔧 FIX 4b: Remove items whose description is just the customer/vendor company name
     def _company_word_overlap(_desc: str, _company: str) -> float:

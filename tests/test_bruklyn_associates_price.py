@@ -119,6 +119,74 @@ class TestBruklynAssociatesPrice(unittest.TestCase):
         fixed = fix_bruklyn_associates_price_from_ocr(items, JACKSON_OCR)
         self.assertEqual(fixed[0]["unit_price"], "20.32")
 
+    def test_restores_qty_and_price_not_pack_sch_or_mrp(self):
+        ocr = """
+BRUKLYN ASSOCIATES
+Description Of Goods Pack Batch No. Qty Sch M.R.P Price Sch % Disc% Taxable CGST% SGST% Amount
+SHR LI DM TAB 10'S 10 MHT260025G 20 8 104.06 83.24 0.00 0 1664.80 2.50 2.50 1748.04
+AA ODIMONT LC 15S TAB 15 IB00280A 200 0 380.63 228.00 0.00 0 45600.00 2.50 2.50 47880.00
+F- ALDACTONE 25MG 15S TAB 15 02A26006 20 0 34.90 26.59 0.00 0 531.80 2.50 2.50 558.40
+ZYD BILYPSA 4MG TAB 45'S 45 IB00223A 8 0 2255.08 1718.16 0.00 0 13745.28 2.50 2.50 14432.54
+MAC MACBERY XT 100ML 1 18260844A 30 0 122.72 66.27 0.00 0 1988.10 2.50 2.50 2087.50
+for BRUKLYN ASSOCIATES
+"""
+        rows = _parse_bruklyn_associates_price_rows(ocr)
+        by_name = {r["product_description"].upper(): r for r in rows}
+        self.assertEqual(by_name["LI DM TAB 10'S"]["quantity"], 20.0)
+        self.assertAlmostEqual(by_name["LI DM TAB 10'S"]["unit_price"], 83.24, places=2)
+        self.assertEqual(by_name["ODIMONT LC 15S TAB"]["quantity"], 200.0)
+        self.assertAlmostEqual(by_name["ODIMONT LC 15S TAB"]["unit_price"], 228.00, places=2)
+        self.assertEqual(by_name["ALDACTONE 25MG 15S TAB"]["quantity"], 20.0)
+        self.assertAlmostEqual(by_name["ALDACTONE 25MG 15S TAB"]["unit_price"], 26.59, places=2)
+        self.assertEqual(by_name["BILYPSA 4MG TAB 45'S"]["quantity"], 8.0)
+        self.assertAlmostEqual(by_name["BILYPSA 4MG TAB 45'S"]["unit_price"], 1718.16, places=2)
+
+        items = [
+            {
+                "product_description": "LI DM TAB 10'S",
+                "lot_batch_number": "MHT260025G",
+                "quantity": "8",
+                "unit_price": "104.06",
+                "total_amount": "1748.04",
+            },
+            {
+                "product_description": "ODIMONT LC 15S TAB",
+                "lot_batch_number": "IB00280A",
+                "quantity": "15",
+                "unit_price": "380.63",
+                "total_amount": "47880.00",
+            },
+            {
+                "product_description": "ALDACTONE 25MG 15S TAB",
+                "lot_batch_number": "02A26006",
+                "quantity": "15",
+                "unit_price": "34.90",
+                "total_amount": "558.40",
+            },
+            {
+                "product_description": "MACBERY XT 100ML",
+                "lot_batch_number": "18260844A",
+                "quantity": "30",
+                "unit_price": "66.27",
+                "total_amount": "2087.50",
+            },
+        ]
+        fixed = fix_bruklyn_associates_price_from_ocr(items, ocr)
+        lidm = next(i for i in fixed if "LI DM" in i["product_description"].upper())
+        odi = next(i for i in fixed if "ODIMONT" in i["product_description"].upper())
+        ald = next(i for i in fixed if "ALDACTONE" in i["product_description"].upper())
+        mac = next(i for i in fixed if "MACBERY" in i["product_description"].upper())
+        self.assertEqual(lidm["quantity"], "20")
+        self.assertEqual(lidm["unit_price"], "83.24")
+        self.assertEqual(lidm["total_amount"], "1748.04")
+        self.assertEqual(odi["quantity"], "200")
+        self.assertEqual(odi["unit_price"], "228.00")
+        self.assertEqual(odi["total_amount"], "47880.00")
+        self.assertEqual(ald["quantity"], "20")
+        self.assertEqual(ald["unit_price"], "26.59")
+        self.assertEqual(mac["quantity"], "30")
+        self.assertEqual(mac["unit_price"], "66.27")
+
 
 if __name__ == "__main__":
     unittest.main()
