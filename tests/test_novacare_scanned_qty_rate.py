@@ -104,6 +104,47 @@ class TestNovacareScannedQtyRate(unittest.TestCase):
         self.assertEqual(out[0]["unit_price"], "12.00")
         self.assertEqual(out[0]["quantity"], "10")
 
+    def test_ggn_keeps_vision_when_ocr_drops_rate_column(self):
+        """GGN-26-23064: OCR loses RATE → [OLD,NEW,AMOUNT]; keep Vision qty/rate."""
+        ocr = """
+ggn@novacare.in NEW MRP RATE AMOUNT BATCH NO.
+N O V d C a re Healthcare Solutions
+| 30045090 fac _|FOLINEXT TAB od ARIST | 1027 |DPE260815 fo] | 128.0 120.00 ___835.70] 5.00] — 793.92]
+30049099 [AC IMEGLYN 500 TAB 10] zyDu{o48 | Emv261359 60 91.35 85.64 3,914.40| 5.00 3718.68
+30049099 [ac IMEGLYN 500 TAB ZYOU (03/28 [EmVv260767C 18 91.36 85.64 65.24 1,174.32| 5.00 1115.60]
+"""
+        items = [
+            {
+                "product_description": "FOLINEXT TAB",
+                "quantity": "10",
+                "unit_price": "83.57",
+                "total_amount": "835.70",
+                "lot_batch_number": "DPE260815",
+            },
+            {
+                "product_description": "IMEGLYN 500 TAB",
+                "quantity": "60",
+                "unit_price": "65.24",
+                "total_amount": "3914.40",
+                "lot_batch_number": "EMV261359",
+            },
+            {
+                "product_description": "IMEGLYN 500 TAB",
+                "quantity": "18",
+                "unit_price": "65.24",
+                "total_amount": "1174.32",
+                "lot_batch_number": "EMV260767C",
+            },
+        ]
+        out = fix_novacare_qty_rate_from_ocr(items, ocr)
+        by_batch = {i["lot_batch_number"].upper(): i for i in out}
+        self.assertEqual(by_batch["DPE260815"]["quantity"], "10")
+        self.assertEqual(by_batch["DPE260815"]["unit_price"], "83.57")
+        self.assertEqual(by_batch["EMV261359"]["quantity"], "60")
+        self.assertEqual(by_batch["EMV261359"]["unit_price"], "65.24")
+        self.assertEqual(by_batch["EMV260767C"]["quantity"], "18")
+        self.assertEqual(by_batch["EMV260767C"]["unit_price"], "65.24")
+
 
 if __name__ == "__main__":
     unittest.main()
