@@ -11642,6 +11642,242 @@ def fix_trilok_enterprises_overlap_pack_product_fallback(
     return items
 
 
+def ocr_suggests_marg_nano_hsn_mfg_gst(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """MARG ERP NANO GST stockist: HSN | MFG | PRODUCT | PACK | MRP | QTY | RATE.
+
+    Dual-copy (Recipient/Supplier) bills fuse MFG into PRODUCT and map RATE
+    from VALUE÷QTY (QTY includes scheme free). TRILOK uses the same columns
+    on TAX INVOICE and keeps its own handlers.
+    """
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not blob.strip():
+        return False
+    if re.search(r'TRILOK\s+ENTERPRISES', blob, re.IGNORECASE):
+        return False
+    if re.search(r'RAJESH\s+PHARMA|RAJESH\s+SPECIALITIES', blob, re.IGNORECASE):
+        return False
+    if not re.search(r'MARG\s+ERP\s+NANO', blob, re.IGNORECASE):
+        return False
+    if not re.search(r'GST\s+INVOICE', blob, re.IGNORECASE):
+        return False
+    if not re.search(
+        r'\bHSN\b.*\bMFG\b.*\bPRODUCT\b', blob, re.IGNORECASE | re.DOTALL
+    ):
+        return False
+    return bool(re.search(
+        r'\bMRP\b.*\bQTY\b.*\bRATE\b', blob, re.IGNORECASE | re.DOTALL
+    ))
+
+
+_MARG_NANO_GST_ROW_RE = re.compile(
+    r'(?P<hsn>\d{6,8})\s+'
+    r'(?:(?P<mfg>[A-Z]{2,4})\s+|(?P<mfg_fused>[A-Z]{3})(?=[A-Z]))'
+    r'(?P<product>.+?)\s+'
+    r'(?P<batch>(?!\d+(?:MG|ML|GM|IU|S)\b)'
+    r'(?=[A-Z0-9\-]*[A-Z])(?=[A-Z0-9\-]*\d)[A-Z0-9\-]{5,})'
+    r'(?:/(?P<fused_yy>\d{2}))?\s+'
+    r'(?:(?P<exp>\d{1,2}/\d{2})\s+)?'
+    r'(?P<mrp>\d+\.\d{2})\s+'
+    r'(?P<qty>\d+)\s+'
+    r'(?P<rate>\d+\.\d{2})\s+'
+    r'(?P<dis>\d+\.\d{2})\s+'
+    r'(?P<disamt>\d+\.\d{2})\s+'
+    r'(?P<gst>\d{1,2})\s+'
+    r'(?P<value>\d+\.\d{2})\s+'
+    r'(?P<scheme>\d+(?:\+\d+)?)',
+    re.IGNORECASE,
+)
+
+_MARG_NANO_GST_SKIP_PRODUCT = re.compile(
+    r'\b(?:STORAGE|SUB\s*TOTAL|CLASS|REMARK|FLASH)\b',
+    re.IGNORECASE,
+)
+
+
+def _marg_nano_gst_name_key(name: str) -> str:
+    return re.sub(r'[^A-Z0-9]+', '', (name or '').upper())
+
+
+def _marg_nano_gst_batch_key(value: str) -> str:
+    return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+
+def _parse_marg_nano_hsn_mfg_gst_rows(ocr_text: str) -> list:
+    """Parse PRODUCT / billed QTY / RATE from MARG Nano GST stockist lines."""
+    if not ocr_text:
+        return []
+    rows = []
+    seen = set()
+    for match in _MARG_NANO_GST_ROW_RE.finditer(ocr_text):
+        mfg = (match.group('mfg') or match.group('mfg_fused') or '').upper()
+        product = re.sub(r'\s+', ' ', (match.group('product') or '').strip())
+        if not product or _MARG_NANO_GST_SKIP_PRODUCT.search(product):
+            continue
+        if mfg in {
+            'TAB', 'CAP', 'INJ', 'SYP', 'GEL', 'AMP', 'BTL', 'HSN',
+            'PACK', 'MRP', 'QTY', 'GST', 'THE', 'AND', 'FOR', 'NEW',
+        }:
+            continue
+        try:
+            qty_col = int(match.group('qty'))
+            rate = float(match.group('rate'))
+            value = float(match.group('value'))
+        except (TypeError, ValueError):
+            continue
+        if qty_col <= 0 or rate < 0 or value < 0:
+            continue
+        scheme = (match.group('scheme') or '').strip()
+        paid = qty_col
+        free = 0
+        if '+' in scheme:
+            try:
+                sch_paid, sch_free = scheme.split('+', 1)
+                sch_paid_i = int(sch_paid)
+                sch_free_i = int(sch_free)
+            except ValueError:
+                sch_paid_i = 0
+                sch_free_i = 0
+            if sch_paid_i > 0:
+                paid_ok = (
+                    value <= 0.009
+                    or abs(sch_paid_i * rate - value) / max(value, 0.01) <= 0.03
+                )
+                qty_ok = (
+                    value <= 0.009
+                    or abs(qty_col * rate - value) / max(value, 0.01) <= 0.03
+                )
+                if paid_ok or not qty_ok:
+                    paid = sch_paid_i
+                    free = sch_free_i if sch_free_i > 0 else 0
+        is_free = (value <= 0.009 and rate <= 0.009) or (
+            paid > 0 and value <= 0.009 and rate <= 0.009
+        )
+        batch = (match.group('batch') or '').upper()
+        key = (
+            _marg_nano_gst_batch_key(batch),
+            _marg_nano_gst_name_key(product),
+            paid,
+            round(rate, 2),
+            round(value, 2),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append({
+            'product_description': product,
+            'mfg': mfg,
+            'batch': batch,
+            'quantity': paid,
+            'free_quantity': 0 if is_free else free,
+            'unit_price': 0.0 if is_free else round(rate, 2),
+            'total_amount': round(value, 2),
+            'is_free': bool(is_free),
+        })
+    return rows
+
+
+def fix_marg_nano_hsn_mfg_gst_line_items_from_ocr(
+    items: list, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Restore PRODUCT, billed Quantity, and RATE for MARG Nano GST stockists.
+
+    Does not change totals or other already-correct fields. Scheme free (20+1)
+    stays on free_quantity and is not copied onto a neighbouring paid row.
+    """
+    if not items or not ocr_suggests_marg_nano_hsn_mfg_gst(ocr_text, vendor):
+        return items
+    rows = _parse_marg_nano_hsn_mfg_gst_rows(ocr_text or '')
+    if not rows:
+        return items
+
+    def _f(val) -> float:
+        try:
+            return float(normalize_numeric_value(str(val))) if val not in (None, '') else 0.0
+        except Exception:
+            return 0.0
+
+    used = set()
+    logger.info(
+        "🔧 FIX: MARG Nano GST HSN/MFG/PRODUCT — restoring name/qty/rate from OCR"
+    )
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get('product_description', '') or '')
+        ikey = _marg_nano_gst_name_key(desc)
+        batch = _marg_nano_gst_batch_key(
+            str(item.get('lot_batch_number', '') or ''))
+        cur_q, cur_r, cur_t = (
+            _f(item.get('quantity')),
+            _f(item.get('unit_price')),
+            _f(item.get('total_amount')),
+        )
+        best_i = None
+        best_score = -1
+        for i, row in enumerate(rows):
+            if i in used:
+                continue
+            rkey = _marg_nano_gst_name_key(row['product_description'])
+            rbatch = _marg_nano_gst_batch_key(row.get('batch', ''))
+            score = 0
+            if batch and rbatch:
+                if batch == rbatch or batch.startswith(rbatch) or rbatch.startswith(batch):
+                    score += 8
+            if ikey and rkey:
+                if ikey == rkey:
+                    score += 6
+                elif ikey in rkey or rkey in ikey:
+                    score += 4
+            if cur_t > 0 and abs(cur_t - row['total_amount']) <= 0.05:
+                score += 3
+            if cur_r > 0 and abs(cur_r - row['unit_price']) <= 0.02:
+                score += 1
+            if cur_q > 0 and abs(cur_q - row['quantity']) <= 0.01:
+                score += 1
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is None or best_score < 4:
+            continue
+        used.add(best_i)
+        row = rows[best_i]
+        new_name = row['product_description']
+        if new_name and new_name.upper() != desc.upper():
+            logger.warning(
+                f"⚠️ MARG Nano GST product '{desc}' → '{new_name}'"
+            )
+            item['product_description'] = new_name
+        new_qty = row['quantity']
+        new_rate = row['unit_price']
+        qty_str = (
+            str(int(new_qty)) if float(new_qty) == int(new_qty)
+            else f"{new_qty:.2f}"
+        )
+        rate_str = f"{new_rate:.2f}"
+        if abs(cur_q - new_qty) > 0.01 or abs(cur_r - new_rate) > 0.01:
+            logger.warning(
+                f"⚠️ MARG Nano GST qty/rate '{item.get('product_description', '')[:30]}' "
+                f"qty {item.get('quantity')}→{qty_str}, rate {item.get('unit_price')}→{rate_str}"
+            )
+            item['quantity'] = qty_str
+            item['unit_price'] = rate_str
+        af = item.get('additional_fields')
+        if not isinstance(af, dict):
+            af = {}
+            item['additional_fields'] = af
+        if row.get('mfg') and not str(af.get('mfg', '') or '').strip():
+            af['mfg'] = row['mfg']
+        free_qty = int(row.get('free_quantity') or 0)
+        if free_qty > 0:
+            af['free_quantity'] = str(free_qty)
+        elif row.get('is_free'):
+            item['unit_price'] = '0.00'
+            af['free_quantity'] = qty_str
+    return items
+
+
 def ocr_suggests_rajesh_pharma(ocr_text: str = "", vendor: str = "") -> bool:
     """Detect RAJESH PHARMA MARG ERP Mfr/Pack Product Name invoices."""
     blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
@@ -29950,6 +30186,13 @@ def enforce_schema(raw_data):
 
     # NATIONAL PHARMACEUTICALS: re-apply after FIX10 amount÷qty (RATE ≠ NET RATE)
     processed_items = fix_national_pharmaceuticals_qty_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+
+    # MARG Nano GST stockist: PRODUCT from MFG column, RATE (not VALUE÷QTY), billed qty
+    processed_items = fix_marg_nano_hsn_mfg_gst_line_items_from_ocr(
         processed_items,
         ocr_text,
         vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
