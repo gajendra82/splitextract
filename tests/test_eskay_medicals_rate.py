@@ -355,5 +355,168 @@ class TestEskayMedicalsDashQty(unittest.TestCase):
         self.assertEqual(dash["total_amount"], "0.00")
 
 
+ESKAY_F007147_OCR = """
+GST INVOICE
+ESKAY MEDICALS ENTERPRISES M/s METRO MEDICALS Inv No : F007147
+Mfr Qty Free Pack Item Description Batch Exp. HSN M.R.P Rate Dis. SGST Value CGST Value Amount
+LUPI 10 - 10'S AJADUO 25/5 JC01095 3/28 30049099 214.25 163.24 0.0 2.50 39.18 2.50 39.18 1645.46
+LUPI 26 - 15'S CARVISTAR 3.125 COA-26009 2/28 30049099 60.50 46.10 0.0 2.50 28.77 2.50 28.77 1208.20
+LINU 10 2 10'S COGNITAM 800 COMB26001 5/28 30041010 180.05 137.18 0.0 2.50 32.92 2.50 32.92 1382.77
+CHE 10 4 4'S D3 GIFT SOFT CAP 3D260218D 2/28 30043110 121.87 92.85 0.0 2.50 22.28 2.50 22.28 935.92
+RANB 3 - 10GM FUNGICROS CREAM ZND0018 3/28 30043110 202.00 153.90 0.0 2.50 11.08 2.50 11.08 465.39
+H&H 1 - 50ML KZ LOTION CC226 11/27 30049029 285.94 217.86 0.0 2.50 5.23 2.50 5.23 219.61
+COG 50 15 10'S METOHEAL XL R25/2.5 T26B803A 1/28 30049074 155.00 118.10 0.0 2.50 141.72 2.50 141.72 5952.24
+CADE 10 4 15'S VILAPIL 50 LGQ01/217/10 12/27 30049099 126.00 96.00 0.0 2.50 23.04 2.50 23.04 967.68
+MACL 2 - 120'S THYROX 125 16260221A 1/28 30043990 216.63 165.06 0.0 2.50 7.92 2.50 7.92 332.76
+GRAND TOTAL 33279.00
+"""
+
+
+class TestEskayMedicalsF007147QtyRate(unittest.TestCase):
+    def test_parses_pack_gm_ml_hyphen_and_slash_batch(self):
+        rows = _parse_eskay_medicals_rate_rows(ESKAY_F007147_OCR)
+        by_name = {
+            r["product_description"].upper(): r for r in rows
+        }
+
+        def q(name):
+            row = next(r for n, r in by_name.items() if name in n)
+            return row["quantity"], row["unit_price"]
+
+        self.assertEqual(q("AJADUO")[0], 10.0)
+        self.assertAlmostEqual(q("AJADUO")[1], 163.24, places=2)
+        self.assertEqual(q("CARVISTAR")[0], 26.0)
+        self.assertAlmostEqual(q("CARVISTAR")[1], 46.10, places=2)
+        self.assertEqual(q("FUNGICROS")[0], 3.0)
+        self.assertAlmostEqual(q("FUNGICROS")[1], 153.90, places=2)
+        self.assertEqual(q("KZ LOTION")[0], 1.0)
+        self.assertAlmostEqual(q("KZ LOTION")[1], 217.86, places=2)
+        self.assertEqual(q("METOHEAL")[0], 50.0)
+        self.assertAlmostEqual(q("METOHEAL")[1], 118.10, places=2)
+        self.assertEqual(q("VILAPIL")[0], 10.0)
+        self.assertAlmostEqual(q("VILAPIL")[1], 96.00, places=2)
+        self.assertEqual(q("THYROX")[0], 2.0)
+        self.assertAlmostEqual(q("THYROX")[1], 165.06, places=2)
+
+    def test_restores_pack_as_qty_and_mrp_as_rate(self):
+        items = [
+            {
+                "product_description": "AJADUO 25/5",
+                "lot_batch_number": "JC01095",
+                "quantity": "10",
+                "unit_price": "214.25",
+                "total_amount": "1645.46",
+            },
+            {
+                "product_description": "CARVISTAR 3.125",
+                "lot_batch_number": "COA-26009",
+                "quantity": "15",
+                "unit_price": "60.50",
+                "total_amount": "1208.20",
+            },
+            {
+                "product_description": "FUNGICROS CREAM",
+                "lot_batch_number": "ZND0018",
+                "quantity": "10",
+                "unit_price": "202.00",
+                "total_amount": "465.39",
+            },
+            {
+                "product_description": "KZ LOTION",
+                "lot_batch_number": "CC226",
+                "quantity": "50",
+                "unit_price": "285.94",
+                "total_amount": "219.61",
+            },
+            {
+                "product_description": "METOHEAL XL R25/2.5",
+                "lot_batch_number": "T26B803A",
+                "quantity": "10",
+                "unit_price": "155.00",
+                "total_amount": "5952.24",
+            },
+            {
+                "product_description": "VILAPIL 50",
+                "lot_batch_number": "LGQ01/217/10",
+                "quantity": "15",
+                "unit_price": "126.00",
+                "total_amount": "967.68",
+            },
+            {
+                "product_description": "THYROX 125",
+                "lot_batch_number": "16260221A",
+                "quantity": "120",
+                "unit_price": "216.63",
+                "total_amount": "332.76",
+            },
+        ]
+        out = fix_eskay_medicals_rate_from_ocr(
+            items, ESKAY_F007147_OCR, "ESKAY MEDICALS ENTERPRISES")
+        ajaduo = next(i for i in out if "AJADUO" in i["product_description"].upper())
+        carv = next(i for i in out if "CARVISTAR" in i["product_description"].upper())
+        fung = next(i for i in out if "FUNGICROS" in i["product_description"].upper())
+        kz = next(i for i in out if "KZ LOTION" in i["product_description"].upper())
+        meto = next(i for i in out if "METOHEAL" in i["product_description"].upper())
+        vila = next(i for i in out if "VILAPIL" in i["product_description"].upper())
+        thyro = next(i for i in out if "THYROX" in i["product_description"].upper())
+        self.assertEqual(ajaduo["quantity"], "10")
+        self.assertEqual(ajaduo["unit_price"], "163.24")
+        self.assertEqual(carv["quantity"], "26")
+        self.assertEqual(carv["unit_price"], "46.10")
+        self.assertEqual(fung["quantity"], "3")
+        self.assertEqual(fung["unit_price"], "153.90")
+        self.assertEqual(kz["quantity"], "1")
+        self.assertEqual(kz["unit_price"], "217.86")
+        self.assertEqual(meto["quantity"], "50")
+        self.assertEqual(meto["unit_price"], "118.10")
+        self.assertEqual(vila["quantity"], "10")
+        self.assertEqual(vila["unit_price"], "96.00")
+        self.assertEqual(thyro["quantity"], "2")
+        self.assertEqual(thyro["unit_price"], "165.06")
+        self.assertEqual(ajaduo["total_amount"], "1645.46")
+        self.assertEqual(meto["total_amount"], "5952.24")
+
+    def test_enforce_schema_restores_qty_and_rate(self):
+        payload = {
+            "data": {
+                "invoice_summary": {
+                    "vendor": "ESKAY MEDICALS ENTERPRISES",
+                    "customer": "M/s METRO MEDICALS",
+                    "invoice_no": "F007147",
+                    "total": "33279.00",
+                },
+                "line_items": {
+                    "items": [
+                        {
+                            "product_description": "METOHEAL XL R25/2.5",
+                            "lot_batch_number": "T26B803A",
+                            "quantity": "10",
+                            "unit_price": "155.00",
+                            "total_amount": "5952.24",
+                            "additional_fields": {"mrp": "155.00"},
+                        },
+                        {
+                            "product_description": "FUNGICROS CREAM",
+                            "lot_batch_number": "ZND0018",
+                            "quantity": "10",
+                            "unit_price": "202.00",
+                            "total_amount": "465.39",
+                            "additional_fields": {"mrp": "202.00"},
+                        },
+                    ],
+                    "count": 2,
+                },
+                "ocr_text": ESKAY_F007147_OCR,
+            }
+        }
+        out = _extract_line_items_for_validation(enforce_schema(payload))
+        meto = next(i for i in out if "METOHEAL" in i["product_description"].upper())
+        fung = next(i for i in out if "FUNGICROS" in i["product_description"].upper())
+        self.assertEqual(float(meto["quantity"]), 50.0)
+        self.assertAlmostEqual(float(meto["unit_price"]), 118.10, places=2)
+        self.assertEqual(float(fung["quantity"]), 3.0)
+        self.assertAlmostEqual(float(fung["unit_price"]), 153.90, places=2)
+
+
 if __name__ == "__main__":
     unittest.main()

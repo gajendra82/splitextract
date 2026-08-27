@@ -2999,6 +2999,18 @@ def _ocr_suggests_yash_agencies(ocr_text: str = "", vendor: str = "") -> bool:
     return bool(re.search(r'YASH\s+AGENC', blob, re.IGNORECASE))
 
 
+def ocr_suggests_yashika_agencies(ocr_text: str = "", vendor: str = "") -> bool:
+    """YASHIKA AGENCIES RELYSOFT TAX INVOICE-CREDIT (SRATE table + copy)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'\bYASHIKA\s+AGENC', blob, re.IGNORECASE):
+        return False
+    return bool(
+        re.search(r'\bSRATE\b', blob, re.IGNORECASE)
+        or re.search(r'RELYSOFT|RELIABLE\s+SOFTWARE', blob, re.IGNORECASE)
+        or re.search(r'TAX\s+INVOICE[\s.\-]*CREDIT', blob, re.IGNORECASE)
+    )
+
+
 def _yash_line_items_rates_look_corrupt(items) -> bool:
     """
     YASH Tesseract+Gemini often parks AMOUNT in unit_price (rate≈total, qty still
@@ -4554,6 +4566,27 @@ def ocr_suggests_yen_pharma(ocr_text: str) -> bool:
     ))
 
 
+def ocr_suggests_beta_agencies_saleprint(ocr_text: str = "", vendor: str = "") -> bool:
+    """BETA AGENCIES MEDIBILL SalePrint: RCK MFR QTY DESCRIPTION + schedule DIS."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'\bBETA\s+AGENC', blob, re.IGNORECASE):
+        return False
+    return bool(
+        re.search(r'\bRCK\b', blob, re.IGNORECASE)
+        and re.search(r'\bDESCRIPTION\b', blob, re.IGNORECASE)
+        and re.search(r'\b(?:MFR|QTY)\b', blob, re.IGNORECASE)
+    )
+
+
+def _is_saleprint_schedule_qty_phantom(desc: str) -> bool:
+    """DIS column 'S' fused with Qty (e.g. 'S 2800', 'S* 10')."""
+    return bool(re.fullmatch(
+        r'S\s*\*?\s*\d{1,5}',
+        str(desc or "").strip(),
+        re.IGNORECASE,
+    ))
+
+
 def _strip_yen_pharma_mfr_suffix(product: str, mfr_codes: Optional[set] = None) -> str:
     """Strip trailing MFR-column codes fused into product names (CAD / CADI / ZYDU)."""
     cleaned = re.sub(r'\s+', ' ', str(product or "")).strip()
@@ -5037,6 +5070,24 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         logger.info(
             "⏭️ Skipping OCR missing-item recovery for SIVAGAMI MEDICAL "
             "(rotated table OCR owns line items)"
+        )
+        return existing_items
+
+    # YASHIKA AGENCIES: pdfplumber pipe-dumps the GST footer (SUB TOTAL /
+    # T.ITEMS / TRANS). Generic pipe-table recovery treats that as a product.
+    if ocr_suggests_yashika_agencies(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for YASHIKA AGENCIES "
+            "(GST footer pipe table is not a line item)"
+        )
+        return existing_items
+
+    # BETA AGENCIES SalePrint: pipe-table OCR invents 'S 2800' products from
+    # schedule DIS fused with Qty (same phantom as YEN-PHARMA 'S 1100').
+    if ocr_suggests_beta_agencies_saleprint(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for BETA AGENCIES SalePrint "
+            "(schedule+qty pipe cell is not a line item)"
         )
         return existing_items
 
@@ -14097,6 +14148,65 @@ def drop_manglam_associates_extra_items(items, ocr_text: str) -> list:
     if dropped:
         logger.info(
             f"MANGLAM ASSOCIATES: Dropped {dropped} extra product row(s)")
+    return cleaned if cleaned else items
+
+
+_YASHIKA_FOOTER_LABEL_RE = re.compile(
+    r'^(?:SUB\s*TOTAL|SUBTOTAL|C[\s\-]?GST|S[\s\-]?GST|I[\s\-]?GST|'
+    r'T[\s\-]?GST|T[\s.]?QTY|T[\s.]?ITEMS|PROD[\s.]?DISC|BILL\s*DISC|'
+    r'CLASS\s*GST|NET\s*PAY|SCAN\s*&?\s*PAY|CR\s*NOTE|DR\s*NOTE|'
+    r'LIFE\s+SCAN\b.*)$',
+    re.IGNORECASE,
+)
+
+
+def drop_yashika_agencies_extra_items(items, ocr_text: str = "", vendor: str = "") -> list:
+    """Drop GST-footer labels recovered as products on YASHIKA AGENCIES invoices."""
+    if not items or not ocr_suggests_yashika_agencies(ocr_text, vendor):
+        return items
+    cleaned = []
+    dropped = 0
+    for item in items:
+        if not isinstance(item, dict):
+            cleaned.append(item)
+            continue
+        desc = re.sub(
+            r'[^A-Z0-9&]+', ' ', str(item.get("product_description", "") or "").upper())
+        desc = re.sub(r'\s+', ' ', desc).strip()
+        if desc and _YASHIKA_FOOTER_LABEL_RE.match(desc):
+            dropped += 1
+            logger.info(
+                f"YASHIKA AGENCIES: Dropped extra footer row '{item.get('product_description', '')}'")
+            continue
+        cleaned.append(item)
+    if dropped:
+        logger.info(
+            f"YASHIKA AGENCIES: Dropped {dropped} extra product row(s)")
+    return cleaned if cleaned else items
+
+
+def drop_beta_agencies_saleprint_extra_items(
+    items, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Drop schedule+qty phantoms (S 2800) on BETA AGENCIES SalePrint invoices."""
+    if not items or not ocr_suggests_beta_agencies_saleprint(ocr_text, vendor):
+        return items
+    cleaned = []
+    dropped = 0
+    for item in items:
+        if not isinstance(item, dict):
+            cleaned.append(item)
+            continue
+        desc = str(item.get("product_description", "") or "").strip()
+        if _is_saleprint_schedule_qty_phantom(desc):
+            dropped += 1
+            logger.info(
+                f"BETA AGENCIES SalePrint: Dropped extra schedule+qty row '{desc}'")
+            continue
+        cleaned.append(item)
+    if dropped:
+        logger.info(
+            f"BETA AGENCIES SalePrint: Dropped {dropped} extra product row(s)")
     return cleaned if cleaned else items
 
 
@@ -25982,13 +26092,14 @@ def ocr_suggests_eskay_medicals_marg_table(ocr_text: str = "", vendor: str = "")
 
 
 # Mfr Qty Free Pack Item Batch Exp HSN MRP Rate Dis% SGST Value CGST Value Amount
+# Pack may be 10'S / 10GM / 50ML / VIAL; batch may include '-' or '/' (COA-26009, LGQ01/217/10).
 _ESKAY_MEDICALS_RATE_ROW_RE = re.compile(
-    r'(?m)\b[A-Z]{3,5}\s+'
+    r'(?m)\b(?:[A-Z]{1,5}&[A-Z]{1,5}|[A-Z]{3,5})\s+'
     r'(\d{1,5})\s+'
     r'(?:-|\d+)\s+'
-    r"(?:\d{1,4}['\u2019`]?S|VAIL)\s+"
+    r"(?:\d{1,4}['\u2019`]?S|\d+\s*(?:ML|GM|MDI)|VAIL|VIAL)\s+"
     r'(.+?)\s+'
-    r'([A-Z0-9]{5,})\s+'
+    r'([A-Z0-9][A-Z0-9\-\/]{4,})\s+'
     r'\d{1,2}/\d{2}\s+'
     r'\d{6,8}\s+'
     r'([\d,]+\.\d{1,2})\s+'
@@ -26030,11 +26141,11 @@ def _parse_eskay_medicals_rate_rows(ocr_text: str) -> list:
 
 
 def fix_eskay_medicals_rate_from_ocr(items, ocr_text: str, vendor: str = "") -> list:
-    """Restore Rate-column unit_price on discounted ESKAY MARG rows; qty/totals stay.
+    """Restore Qty and Rate columns on ESKAY MARG rows.
 
-    Shared fix_mrp_as_unit_price uses qty×rate≈Amount within 5%. TIGEMAC 90 has
-    Dis% 20 so Amount/qty (210.83) replaces printed Rate 261.44. Other rows already
-    match Amount within 5% and must not change.
+    Shared/Gemini mapping often takes Pack as quantity and M.R.P or Amount/qty
+    as unit_price. TIGEMAC 90 also has Dis% 20 so Amount/qty (210.83) replaces
+    printed Rate 261.44. Totals stay; dash-Qty rows are handled separately.
     """
     if not items or not ocr_text:
         return items
@@ -26058,16 +26169,23 @@ def fix_eskay_medicals_rate_from_ocr(items, ocr_text: str, vendor: str = "") -> 
             return False
         return abs(a - b) <= 0.05 or abs(a - b) / max(b, 0.01) <= 0.01
 
+    def _qty_str(qty: float) -> str:
+        if qty == int(qty):
+            return str(int(qty))
+        return f"{qty:.2f}"
+
     used = set()
     for item in items:
         if not isinstance(item, dict):
+            continue
+        if str(item.get("quantity", "") or "").strip() == "-":
             continue
         item_desc = _norm_desc(item.get("product_description", ""))
         item_batch = re.sub(
             r'[^A-Z0-9]', '', str(item.get("lot_batch_number", "") or "").upper())
         cur_qty = _to_float(item.get("quantity"))
         cur_rate = _to_float(item.get("unit_price"))
-        if not item_desc or cur_qty <= 0:
+        if not item_desc:
             continue
 
         best_idx = None
@@ -26094,16 +26212,22 @@ def fix_eskay_medicals_rate_from_ocr(items, ocr_text: str, vendor: str = "") -> 
         row = ocr_rows[best_idx]
         ocr_qty = float(row["quantity"])
         ocr_rate = float(row["unit_price"])
-        if not _near(cur_qty, ocr_qty):
-            continue
         used.add(best_idx)
-        if _near(cur_rate, ocr_rate):
+        qty_wrong = cur_qty <= 0 or not _near(cur_qty, ocr_qty)
+        rate_wrong = cur_rate <= 0 or not _near(cur_rate, ocr_rate)
+        if not qty_wrong and not rate_wrong:
             continue
-        item["unit_price"] = f"{ocr_rate:.2f}"
+        old_qty = item.get("quantity")
+        old_rate = item.get("unit_price")
+        if qty_wrong and ocr_qty > 0:
+            item["quantity"] = _qty_str(ocr_qty)
+        if rate_wrong and ocr_rate > 0:
+            item["unit_price"] = f"{ocr_rate:.2f}"
         logger.warning(
-            f"⚠️ ESKAY MEDICALS: restored Rate column for "
+            f"⚠️ ESKAY MEDICALS: restored Qty/Rate columns for "
             f"'{item.get('product_description', '')}': "
-            f"{cur_rate}->{item['unit_price']} (qty unchanged)"
+            f"qty {old_qty}->{item.get('quantity')}, "
+            f"rate {old_rate}->{item.get('unit_price')}"
         )
     return items
 
@@ -29755,6 +29879,20 @@ def enforce_schema(raw_data):
     # MANGLAM ASSOCIATES: drop INTAS INSTITUTION wrap + receiving-stamp extras
     processed_items = drop_manglam_associates_extra_items(
         processed_items, ocr_text)
+
+    # YASHIKA AGENCIES: drop GST-footer pipe-table phantoms (SUB TOTAL / T.ITEMS)
+    processed_items = drop_yashika_agencies_extra_items(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+
+    # BETA AGENCIES SalePrint: drop schedule+qty pipe-table phantoms (S 2800)
+    processed_items = drop_beta_agencies_saleprint_extra_items(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
 
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
     processed_items = fix_marg_erp_qty_rate_from_ocr(
