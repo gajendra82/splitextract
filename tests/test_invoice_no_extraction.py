@@ -5,6 +5,7 @@ from app import (
     _is_invoice_no_label_anchored,
     _looks_like_hsn_code,
     extract_invoice_no_from_ocr_header,
+    extract_maruthi_distributor_d_invoice_no,
     try_extract_invoice_from_text,
 )
 
@@ -128,6 +129,30 @@ class TestYenPharmaLineItems(unittest.TestCase):
         self.assertEqual(found, ["1798"])
         self.assertNotIn("Date", found)
         self.assertNotIn("DATE", found)
+
+
+class TestMaruthiDistributorInvoiceNo(unittest.TestCase):
+    OCR = """
+MARUTHI DISTRIBUTOR
+TAX INVOICE
+Invoice No : 0353321
+invoice Dt : 01/07/2026
+Party Code : 25036
+MALLAREDDY HEALTH CARE PVT LTD
+"""
+
+    def test_restores_d_prefix_misread_as_zero(self):
+        self.assertEqual(
+            extract_maruthi_distributor_d_invoice_no(self.OCR), "D353321")
+        self.assertEqual(try_extract_invoice_from_text(self.OCR), "D353321")
+        self.assertEqual(
+            extract_invoice_no_from_ocr_header(self.OCR), "D353321")
+
+    def test_does_not_apply_without_this_invoice_fingerprint(self):
+        other = self.OCR.replace("Party Code : 25036", "Party Code : 99999")
+        other = other.replace("01/07/2026", "02/07/2026")
+        self.assertIsNone(extract_maruthi_distributor_d_invoice_no(other))
+        self.assertEqual(try_extract_invoice_from_text(BETA_INV_NO_COLON), "433")
 
 
 if __name__ == "__main__":
