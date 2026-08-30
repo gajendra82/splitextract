@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import (  # noqa: E402
     enforce_schema,
+    extract_sr_pharma_me9_party_details,
     fix_sr_pharma_me9_qty_rate_from_ocr,
     ocr_suggests_sr_pharma_me9_credit_invoice,
     recover_missing_items_from_ocr,
@@ -225,6 +226,53 @@ class TestSrPharmaMe9QtyRate(unittest.TestCase):
         )
         rows = _parse_sr_pharma_me9_qty_rate_rows(ocr)
         self.assertEqual(len(rows), 1)
+
+    def test_enforce_schema_keeps_vendor_and_products(self):
+        """Shared GSTIN scoring must not wipe vendor (importers drop products)."""
+        ocr = (
+            SR_OCR
+            + "\nGST No. : 20ABCFM8681Q1ZQ\n"
+            + "This Bill : 601279.00\nGrand Total 601279.00\n"
+            + "Date : 08-06-2026 Due Date : 08-06-2026\n"
+        )
+        payload = {
+            "data": {
+                "invoice_no": "A002135",
+                "vendor": "SR. PHARMACEUTICALS",
+                "customer": "MED POINT",
+                "line_items": [],
+                "ocr_text": ocr,
+            }
+        }
+        out = enforce_schema(payload)
+        summary = out["data"]["invoice_summary"]
+        self.assertEqual(summary["vendor"], "SR. PHARMACEUTICALS")
+        self.assertNotEqual(summary["vendor"].upper(), "NONE")
+        self.assertEqual(summary["vendor_gstin"], "20AOLPK7893L1ZD")
+        self.assertEqual(summary["customer_gstin"], "20ABCFM8681Q1ZQ")
+        self.assertEqual(summary["customer"], "MED POINT")
+        self.assertEqual(summary["invoice_date"], "2026-06-08")
+        self.assertEqual(float(summary["total"]), 601279.00)
+        items = out["data"]["line_items"]["items"]
+        self.assertGreaterEqual(len(items), 14)
+        names = [i["product_description"].upper() for i in items]
+        self.assertTrue(any("NUCOXIA 60" in n for n in names))
+        self.assertTrue(any("NASOCLEAR" in n for n in names))
+
+    def test_party_details_from_ocr(self):
+        ocr = (
+            "SR. PHARMACEUTICALS SHELTER ARCADE GSTIN : 20AOLPK7893L1ZD\n"
+            "MED POINT HEALTH POINT HOSPITAL CAMPUS BARIYATU\n"
+            "GST No. : 20ABCFM8681Q1ZQ Date : 08-06-2026\n"
+            "This Bill : 601279.00 Grand Total 601279.00\n"
+        )
+        d = extract_sr_pharma_me9_party_details(ocr)
+        self.assertEqual(d["vendor"], "SR. PHARMACEUTICALS")
+        self.assertEqual(d["vendor_gstin"], "20AOLPK7893L1ZD")
+        self.assertEqual(d["customer"], "MED POINT")
+        self.assertEqual(d["customer_gstin"], "20ABCFM8681Q1ZQ")
+        self.assertEqual(d["invoice_date"], "2026-06-08")
+        self.assertEqual(d["total"], "601279.00")
 
 
 def re_key(name: str) -> str:
