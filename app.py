@@ -5124,6 +5124,16 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         )
         return recover_chanduka_line_items_from_ocr(existing_items, ocr_text)
 
+    # SR. PHARMACEUTICALS CREDIT TAX INVOICE: NUCOXIA/AMLODAC/NASOCLEAR have no
+    # TAB/CAP/INJ suffix, so generic FIX 9 drops every product. Dedicated parser.
+    if ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text):
+        logger.info(
+            "⏭️ Using SR PHARMACEUTICALS CREDIT TAX INVOICE OCR recovery "
+            "(skip generic FIX 9)"
+        )
+        return recover_sr_pharma_me9_line_items_from_ocr(
+            existing_items, ocr_text)
+
     # KYAL AGENCIES: same COMP/PARTICULARS table family as CHANDUKA but HSN
     # before COMP. Generic NELSON recovery treats 'ZYDUS CO' as a product.
     if ocr_suggests_kyal_agencies(ocr_text):
@@ -6711,6 +6721,9 @@ def fix_marg_erp_qty_rate_from_ocr(items, ocr_text: str):
     if ocr_suggests_sivagami_medical(ocr_text):
         return items
     if ocr_suggests_smartpharma360_qty_rate(ocr_text):
+        return items
+    # SR. PHARMACEUTICALS: ZYDUS is the Company column, not MARG Qty/FQTY layout.
+    if ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text):
         return items
 
     # Check if this is MARG ERP format (Supreme Life Sciences, etc.)
@@ -16688,6 +16701,481 @@ def fix_national_pharmaceuticals_qty_rate_from_ocr(
     return items
 
 
+def ocr_suggests_sr_pharma_me9_credit_invoice(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """SR. PHARMACEUTICALS CREDIT TAX INVOICE (me9 B2B): Mrp|Qty|Free|Rate|Company.
+
+    Scanned layout puts MRP immediately after expiry, then Qty, an often-empty
+    Free column, then Rate. Shared MARG/ZYDUS heuristics and 'qty is first
+    number after expiry' recovery therefore take MRP as quantity.
+    """
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not blob.strip():
+        return False
+    has_vendor = bool(re.search(
+        r'SR\.?\s*PHARMACEUTICAL|SR\.?\s*PH\s*ARM\s*ACEU',
+        blob,
+        re.IGNORECASE,
+    ))
+    has_gstin = bool(re.search(r'20AOLPK7893', blob, re.IGNORECASE))
+    has_addr = bool(re.search(r'SHELTER\s+ARCADE', blob, re.IGNORECASE))
+    return bool(has_vendor or has_gstin or has_addr)
+
+
+_SR_PHARMA_HSN_RE = re.compile(r'\b(30[0-9A-Za-z]{3,5})\b')
+_SR_PHARMA_EXP_RE = re.compile(r'(\d{1,2})\s*[/\-]\s*(\d{2})(?!\d)')
+_SR_PHARMA_BATCH_RE = re.compile(
+    r'\b([A-Z0-9]*[A-Z][A-Z0-9]{3,})\b', re.IGNORECASE)
+_SR_PHARMA_NUM_RE = re.compile(r'\d+(?:\.\d{1,2})?')
+_SR_PHARMA_GST_PCTS = {0.0, 2.0, 2.5, 5.0, 6.0, 9.0, 12.0, 18.0, 250.0, 500.0}
+_SR_PHARMA_MFG = {
+    'CADIL', 'ZYDUS', 'MERC', 'ZVOUS', 'ZVDUS', 'ZVPUS', 'ZYOUS',
+}
+
+
+def _sr_pharma_name_key(name: str) -> str:
+    cleaned = re.sub(r'\s+', ' ', str(name or '').strip(' |).'))
+    # Fused pack cells (1*10→110, 1*15→115, 6*10→610), not strength like 500/1000
+    cleaned = re.sub(r'\s+(?:110|115|610)$', '', cleaned)
+    cleaned = re.sub(r'\s+\d+°\d+\s*_?$', '', cleaned)
+    cleaned = re.sub(r'\s+\d+ML\d*$', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s+\d+\s*GM(?:S)?$', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r'\s+(?:ZYDUS|CADIL|MERC)\s*$', '', cleaned, flags=re.IGNORECASE)
+    return re.sub(r'[^A-Z0-9]+', '', cleaned.upper())
+
+
+def _sr_pharma_is_int(value: float) -> bool:
+    return abs(value - round(value)) < 0.011
+
+
+def _sr_pharma_parse_nums(text: str) -> list:
+    text = re.sub(r'(\d),(\d{2})(?!\d)', r'\1.\2', text or '')
+    nums = []
+    for m in _SR_PHARMA_NUM_RE.finditer(text):
+        try:
+            nums.append(float(m.group(0)))
+        except Exception:
+            continue
+    return nums
+
+
+def _sr_pharma_qty_rate_score(qty: float, rate: float, nums: list) -> int:
+    if qty < 1 or qty > 20000 or not _sr_pharma_is_int(qty):
+        return 0
+    if rate <= 1 or rate > 2500 or rate in _SR_PHARMA_GST_PCTS:
+        return 0
+    calc = qty * rate
+    if calc < 10:
+        return 0
+    score = 0
+    for n in nums:
+        if n <= 0:
+            continue
+        if abs(n - calc) / max(calc, 1.0) <= 0.025:
+            score += 10
+        if n >= 100 and abs(n / 100.0 - calc) / max(calc, 1.0) <= 0.025:
+            score += 8
+        if abs(n - calc * 0.025) / max(n, 1.0) <= 0.04:
+            score += 6
+        if abs(n - calc * 0.05) / max(n, 1.0) <= 0.04:
+            score += 4
+    return score
+
+
+def _parse_sr_pharma_me9_qty_rate_rows(ocr_text: str) -> list:
+    """Parse Qty/Rate after Mrp on SR PHARMACEUTICALS CREDIT TAX INVOICE rows.
+
+    Printed order after Exp.: Mrp. | Qty. | Free (often blank) | Rate | Dis% |
+    CGST | SGST | Amount | Company. Empty Free concatenates MRP Qty Rate.
+    """
+    if not ocr_text or not ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text):
+        return []
+    rows = []
+    seen = set()
+    for raw in (ocr_text or '').splitlines():
+        line = re.sub(r'\s+', ' ', (raw or '').strip())
+        if len(line) < 20:
+            continue
+        if re.search(
+            r'TOTAL\s*B\s*/?\s*F|GRAND\s*TOTAL|Last\s+Balance',
+            line,
+            re.IGNORECASE,
+        ):
+            continue
+        hsn_m = _SR_PHARMA_HSN_RE.search(line)
+        if not hsn_m:
+            continue
+        left = re.sub(r'^\s*\d+\s*[\|\].]?\s*', '', line[:hsn_m.start()]).strip()
+        name = re.sub(r'\s+', ' ', left)
+        if len(_sr_pharma_name_key(name)) < 4:
+            continue
+        after = line[hsn_m.end():]
+        batch = ''
+        batch_m = None
+        for m in _SR_PHARMA_BATCH_RE.finditer(after):
+            tok = m.group(1).upper().rstrip('.')
+            if tok in _SR_PHARMA_MFG or not re.search(r'\d', tok):
+                continue
+            batch_m = m
+            batch = tok
+            break
+        rest = after[batch_m.end():] if batch_m else after
+        exp_m = _SR_PHARMA_EXP_RE.search(rest)
+        if exp_m:
+            rest = rest[exp_m.end():]
+        nums = _sr_pharma_parse_nums(rest)
+        # Garbled expiry after batch: 229 (2/29), 2128 (2/28), 128 (1/28)
+        if (
+            len(nums) >= 3
+            and _sr_pharma_is_int(nums[0])
+            and 100 <= nums[0] <= 12999
+            and not _sr_pharma_is_int(nums[1])
+        ):
+            nums = nums[1:]
+        if len(nums) < 3:
+            continue
+        rate_cands = [nums[2]]
+        if _sr_pharma_is_int(nums[2]) and nums[2] >= 1000:
+            rate_cands.append(nums[2] / 100.0)
+        if len(nums) >= 4:
+            rate_cands.append(nums[3])
+            if _sr_pharma_is_int(nums[3]) and nums[3] >= 1000:
+                rate_cands.append(nums[3] / 100.0)
+        qty = nums[1]
+        best = None
+        for rate in rate_cands:
+            score = _sr_pharma_qty_rate_score(qty, rate, nums)
+            if score >= 6 and (best is None or score > best[0]):
+                best = (score, qty, rate)
+        if not best:
+            # OCR sometimes eats Qty (e.g. 36 → "3%"); infer Qty from Amount/Rate.
+            for rate in rate_cands:
+                if rate <= 1 or rate in _SR_PHARMA_GST_PCTS:
+                    continue
+                for amt in nums:
+                    if amt < 50:
+                        continue
+                    q = amt / rate
+                    if not _sr_pharma_is_int(q) or q < 1 or q > 20000:
+                        continue
+                    q = float(int(round(q)))
+                    score = _sr_pharma_qty_rate_score(q, rate, nums)
+                    if score >= 6 and (best is None or score > best[0]):
+                        best = (score, q, rate)
+        if not best:
+            continue
+        _, qty, rate = best
+        key = (
+            _sr_pharma_name_key(name),
+            re.sub(r'[^A-Z0-9]', '', batch),
+            int(round(qty)),
+            round(rate, 2),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        mrp_val = nums[0]
+        if _sr_pharma_is_int(mrp_val) and mrp_val >= 1000:
+            mrp_val = mrp_val / 100.0
+        hsn_raw = hsn_m.group(1)
+        hsn_digits = re.sub(r'[^0-9]', '', hsn_raw)
+        rows.append({
+            'product_description': name,
+            'batch': batch,
+            'hsn_code': hsn_digits if len(hsn_digits) >= 4 else hsn_raw,
+            'quantity': float(int(round(qty))),
+            'unit_price': round(rate, 2),
+            'total_amount': round(qty * rate, 2),
+            'mrp': round(mrp_val, 2) if mrp_val > 0 else None,
+        })
+    return rows
+
+
+def fix_sr_pharma_me9_qty_rate_from_ocr(
+    items: list, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Restore Qty/Rate for SR. PHARMACEUTICALS CREDIT TAX INVOICE only.
+
+    Shared swap/MRP heuristics treat the printed Rate (e.g. 187.51) as qty
+    and Qty (60) as rate, or take MRP as qty because Free is blank. Re-read
+    Qty and Rate from the OCR row; do not change other formats.
+    """
+    if not items or not ocr_suggests_sr_pharma_me9_credit_invoice(
+            ocr_text, vendor):
+        return items
+    rows = _parse_sr_pharma_me9_qty_rate_rows(ocr_text or '')
+    if not rows:
+        return items
+
+    def _f(val) -> float:
+        try:
+            return float(normalize_numeric_value(str(val))) if val not in (None, '') else 0.0
+        except Exception:
+            return 0.0
+
+    used = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get('product_description', '') or '')
+        ikey = _sr_pharma_name_key(desc)
+        batch = re.sub(
+            r'[^A-Z0-9]', '',
+            str(item.get('lot_batch_number', '') or '').upper())
+        cur_q, cur_r = _f(item.get('quantity')), _f(item.get('unit_price'))
+        best_i = None
+        best_score = -1
+        for i, row in enumerate(rows):
+            if i in used:
+                continue
+            rkey = _sr_pharma_name_key(row['product_description'])
+            score = 0
+            if ikey and rkey and ikey == rkey:
+                score = 20
+            elif ikey and rkey and (ikey in rkey or rkey in ikey):
+                score = 12
+            else:
+                itoks = set(re.findall(r'[A-Z]{3,}', desc.upper()))
+                rtoks = set(re.findall(
+                    r'[A-Z]{3,}', row['product_description'].upper()))
+                overlap = itoks & rtoks
+                if not overlap:
+                    continue
+                score = 4 * len(overlap)
+            row_batch = re.sub(r'[^A-Z0-9]', '', row.get('batch') or '')
+            if batch and row_batch:
+                if batch == row_batch:
+                    score += 10
+                else:
+                    # OCR I/1, O/0 in batch codes
+                    canon = str.maketrans({'I': '1', 'L': '1', 'O': '0'})
+                    if batch.translate(canon) == row_batch.translate(canon):
+                        score += 8
+            if cur_q > 0 and abs(cur_q - row['quantity']) < 0.01:
+                score += 2
+            if cur_r >= 5 and abs(cur_r - row['unit_price']) <= 0.05:
+                score += 2
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is None or best_score < 8:
+            continue
+        row = rows[best_i]
+        used.add(best_i)
+        if (
+            abs(cur_q - row['quantity']) < 0.01
+            and abs(cur_r - row['unit_price']) <= 0.05
+        ):
+            continue
+        old_q, old_r = item.get('quantity'), item.get('unit_price')
+        item['quantity'] = str(int(row['quantity']))
+        item['unit_price'] = f"{row['unit_price']:.2f}"
+        logger.warning(
+            f"⚠️ SR PHARMACEUTICALS: '{desc[:40]}' "
+            f"qty {old_q}->{item['quantity']}, rate {old_r}->{item['unit_price']}"
+        )
+    return items
+
+
+def _sr_pharma_clean_product_name(name: str) -> str:
+    """Strip trailing pack tokens fused onto Item Description by OCR."""
+    s = re.sub(r'\s+', ' ', str(name or '').strip(' |).'))
+    s = re.sub(r'\s+(?:110|115|610)$', '', s)
+    s = re.sub(r'\s+\d+°\d+\s*_?$', '', s)
+    s = re.sub(r'\s+\d+\s*ML\d*$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s+\d+\s*GM(?:S)?$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\s+ZYDUS$', '', s, flags=re.IGNORECASE)
+    s = re.sub(r'\b(AMLODAC)([5T])\b', r'\1 \2', s, flags=re.IGNORECASE)
+    return s.strip(' |.')
+
+
+def _sr_pharma_line_item_from_ocr_row(row: dict) -> dict:
+    qty = float(row.get('quantity') or 0)
+    rate = float(row.get('unit_price') or 0)
+    amt = row.get('total_amount')
+    if not amt:
+        amt = round(qty * rate, 2)
+    item = {
+        "product_description": _sr_pharma_clean_product_name(
+            row.get('product_description', '')),
+        "quantity": str(int(qty)) if abs(qty - int(qty)) < 0.01 else f"{qty:.2f}",
+        "unit_price": f"{rate:.2f}",
+        "total_amount": f"{float(amt):.2f}",
+        "lot_batch_number": row.get('batch') or "",
+        "hsn_code": str(row.get('hsn_code') or ""),
+        "additional_fields": {},
+        "recovered_from_ocr": True,
+    }
+    if row.get('mrp'):
+        item["additional_fields"]["mrp"] = f"{row['mrp']:.2f}"
+    return item
+
+
+def recover_sr_pharma_me9_line_items_from_ocr(
+    existing_items, ocr_text: str, vendor: str = ""
+) -> list:
+    """Fill missing product rows from SR. PHARMACEUTICALS CREDIT TAX INVOICE OCR.
+
+    Generic FIX 9 looks for TAB/CAP/INJ dosage tokens and HSN-code-code-pack
+    rows. This layout prints NUCOXIA 60 / AMLODAC 10 / NASOCLEAR with no
+    dosage suffix, so Gemini-empty and Gemini-partial extracts drop all
+    products. Dedicated parser owns the table.
+    """
+    if not ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text, vendor):
+        return existing_items if existing_items is not None else []
+    ocr_rows = _parse_sr_pharma_me9_qty_rate_rows(ocr_text or "")
+    if not ocr_rows:
+        return existing_items if existing_items is not None else []
+
+    existing = [it for it in (existing_items or []) if isinstance(it, dict)]
+
+    def _row_key(name, batch, qty) -> tuple:
+        return (
+            _sr_pharma_name_key(name),
+            re.sub(r'[^A-Z0-9]', '', str(batch or '').upper()),
+            int(round(float(qty or 0))),
+        )
+
+    # Gemini-empty or Gemini-partial (most NUCOXIA/AMLODAC rows dropped)
+    if not existing or len(existing) * 2 < len(ocr_rows):
+        logger.warning(
+            f"⚠️ SR PHARMACEUTICALS: recovering {len(ocr_rows)} product "
+            f"row(s) from OCR (Gemini returned {len(existing)})"
+        )
+        return [_sr_pharma_line_item_from_ocr_row(r) for r in ocr_rows]
+
+    if len(existing) >= len(ocr_rows):
+        return existing
+
+    existing_keys = set()
+    for it in existing:
+        try:
+            q = float(normalize_numeric_value(str(it.get("quantity") or 0)))
+        except Exception:
+            q = 0.0
+        existing_keys.add(_row_key(
+            it.get("product_description", ""),
+            it.get("lot_batch_number", ""),
+            q,
+        ))
+
+    added = []
+    for row in ocr_rows:
+        key = _row_key(
+            row.get("product_description", ""),
+            row.get("batch", ""),
+            row.get("quantity") or 0,
+        )
+        if key in existing_keys:
+            continue
+        rkey = _sr_pharma_name_key(row.get("product_description", ""))
+        if rkey and any(
+            _sr_pharma_name_key(it.get("product_description", "")) == rkey
+            for it in existing
+        ):
+            continue
+        added.append(_sr_pharma_line_item_from_ocr_row(row))
+        existing_keys.add(key)
+
+    if added:
+        logger.info(
+            f"SR PHARMACEUTICALS: recovered {len(added)} missing product "
+            f"row(s) from OCR"
+        )
+        return existing + added
+    return existing
+
+
+def _sr_pharma_full_data_from_ocr(ocr_text: str) -> Optional[dict]:
+    """Build Gemini-shaped invoice data from SR PHARMACEUTICALS table OCR."""
+    items = recover_sr_pharma_me9_line_items_from_ocr([], ocr_text)
+    if not items:
+        return None
+    inv_no = try_extract_invoice_from_text(ocr_text) or ""
+    customer = ""
+    if re.search(r'\bMED\s*POINT\b', ocr_text or "", re.IGNORECASE):
+        customer = "MED POINT"
+    return {
+        "invoice_no": inv_no,
+        "vendor": "SR. PHARMACEUTICALS",
+        "customer": customer,
+        "line_items": items,
+    }
+
+
+def _apply_sr_pharma_multipage_ocr_line_items(group: dict) -> bool:
+    """Fill product rows from combined OCR; skip Gemini re-extract for this format."""
+    combined = str(group.get("ocr_text") or "")
+    if not ocr_suggests_sr_pharma_me9_credit_invoice(combined):
+        return False
+    fd = _sr_pharma_full_data_from_ocr(combined)
+    if not fd:
+        return False
+    group["extracted_data"] = fd
+    logger.info(
+        f"   ✅ SR PHARMACEUTICALS: recovered "
+        f"{len(fd.get('line_items') or [])} product row(s) from combined OCR "
+        f"(skipped Gemini re-extract)"
+    )
+    return True
+
+
+def _sr_pharma_hsn_row_count(ocr_text: str) -> int:
+    return sum(
+        1 for ln in (ocr_text or "").splitlines()
+        if _SR_PHARMA_HSN_RE.search(ln)
+    )
+
+
+def _ocr_sr_pharma_me9_page(page, page_num=None) -> str:
+    """Grayscale PSM 6 OCR for SR PHARMACEUTICALS CREDIT TAX INVOICE.
+
+    Default Tesseract uses binary thresh 150 without PSM 6, which collapses the
+    dense Mrp|Qty|Rate table to 'NAME amount | COMPANY' and drops every HSN.
+    """
+    if not TESSERACT_AVAILABLE or page is None:
+        return ""
+    try:
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5))
+        img_bytes = pix.tobytes("png")
+        pix = None
+        img = PILImage.open(io.BytesIO(img_bytes)).convert("RGB")
+        gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
+        try:
+            img.close()
+        except Exception:
+            pass
+        with tesseract_ocr_slot("sr_pharma_psm6"):
+            text = run_tesseract_call(
+                lambda: pytesseract.image_to_string(gray, config="--psm 6") or "",
+                label="sr_pharma_psm6",
+                page=page_num,
+            )
+        return text or ""
+    except Exception as exc:
+        logger.debug(f"SR PHARMACEUTICALS PSM6 OCR skipped: {exc}")
+        return ""
+
+
+def _maybe_upgrade_sr_pharma_me9_ocr(page, current_ocr: str, page_num=None) -> str:
+    """Replace collapsed table OCR with PSM 6 text when this format is detected."""
+    hint = current_ocr or ""
+    if not ocr_suggests_sr_pharma_me9_credit_invoice(hint):
+        return hint
+    if _sr_pharma_hsn_row_count(hint) >= 4:
+        return hint
+    better = _ocr_sr_pharma_me9_page(page, page_num=page_num)
+    if _sr_pharma_hsn_row_count(better) > _sr_pharma_hsn_row_count(hint):
+        logger.info(
+            f"    ✅ SR PHARMACEUTICALS: PSM6 table OCR "
+            f"({len(better)} chars, {_sr_pharma_hsn_row_count(better)} HSN rows)"
+        )
+        return better
+    return hint
+
+
 def extract_jackson_medicals_invoice_no(ocr_text: str = "") -> Optional[str]:
     """Jackson Inv.No. like D4567 / D4151 (not DL / REKTM license numbers)."""
     if not ocr_text:
@@ -26661,6 +27149,14 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                 f"'{str(item.get('product_description', ''))[:40]}' "
                 f"(QTY/RATE restored from RATE column OCR)")
             return item
+        # SR. PHARMACEUTICALS: Qty can be 1360/3780; shared total÷rate caps qty at
+        # 1000 and empty Free makes MRP look like quantity. OCR restorer owns it.
+        if ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for SR PHARMACEUTICALS row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(Qty/Rate restored from Mrp|Qty|Rate columns)")
+            return item
         # YASH AGENCIES: AMOUNT often extracted as unit_price (rate≈total). Keep qty and
         # derive RATE = amount/qty — do NOT collapse qty→1 via the generic QTY-misread path.
         if (
@@ -29422,6 +29918,8 @@ def enforce_schema(raw_data):
         template["data"]["invoice_summary"].get("vendor", "") or "")
     _nat_pharma_skip_shared_qty = ocr_suggests_national_pharmaceuticals_stockist(
         ocr_text or "", _nat_pharma_vendor)
+    _sr_pharma_skip_shared_qty = ocr_suggests_sr_pharma_me9_credit_invoice(
+        ocr_text or "", _nat_pharma_vendor)
     _anil_vendor = str(template["data"]["invoice_summary"].get("vendor", "") or "")
     _anil_skip_shared_qty = _ocr_suggests_anil_medical_deal_qnty(
         ocr_text, _anil_vendor)
@@ -29431,6 +29929,7 @@ def enforce_schema(raw_data):
         or _bharath_skip_shared_qty
         or _medica_skip_shared_qty
         or _nat_pharma_skip_shared_qty
+        or _sr_pharma_skip_shared_qty
         or _anil_skip_shared_qty
     )
     # 🔧 FIX e-Invoice: correct qty/rate from Quantity:/Unit Price: before auto-fixes
@@ -29752,6 +30251,10 @@ def enforce_schema(raw_data):
 
     # NATIONAL PHARMACEUTICALS stockist: restore QTY./RATE (not NET RATE) from OCR
     processed_items = fix_national_pharmaceuticals_qty_rate_from_ocr(
+        processed_items, ocr_text, _vendor_name)
+
+    # SR. PHARMACEUTICALS CREDIT TAX INVOICE: Qty/Rate after Mrp (empty Free)
+    processed_items = fix_sr_pharma_me9_qty_rate_from_ocr(
         processed_items, ocr_text, _vendor_name)
 
     # 🔧 FIX 4b: Remove items whose description is just the customer/vendor company name
@@ -30324,6 +30827,13 @@ def enforce_schema(raw_data):
 
     # NATIONAL PHARMACEUTICALS: re-apply after FIX10 amount÷qty (RATE ≠ NET RATE)
     processed_items = fix_national_pharmaceuticals_qty_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+
+    # SR. PHARMACEUTICALS: re-apply Qty/Rate after shared amount÷qty (qty>1000 rows)
+    processed_items = fix_sr_pharma_me9_qty_rate_from_ocr(
         processed_items,
         ocr_text,
         vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
@@ -33359,6 +33869,12 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 )
                 tesseract_text, confidence = extract_text_with_tesseract_relaxed(
                     page, page_num=page_num)
+            elif ocr_suggests_sr_pharma_me9_credit_invoice(_probe_sample or ""):
+                logger.warning(
+                    "    ⚠️ SR PHARMACEUTICALS: PSM6 table OCR (skip thresh-150 Tesseract)"
+                )
+                tesseract_text = _ocr_sr_pharma_me9_page(page, page_num=page_num)
+                confidence = 80.0 if tesseract_text else 0.0
             elif _probe_sample and not _ocr_text_has_invoice_cues(_probe_sample):
                 logger.warning(
                     "    ⚠️ Garbled header probe — forcing relaxed Tesseract OCR"
@@ -33369,8 +33885,15 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 tesseract_text, confidence = None, 0.0
         else:
             logger.info(f"    🔍 Trying Tesseract OCR...")
-            tesseract_text, confidence = extract_text_with_tesseract(
-                page, page_num=page_num)
+            if ocr_suggests_sr_pharma_me9_credit_invoice(_probe_sample or ""):
+                logger.warning(
+                    "    ⚠️ SR PHARMACEUTICALS: PSM6 table OCR (skip thresh-150 Tesseract)"
+                )
+                tesseract_text = _ocr_sr_pharma_me9_page(page, page_num=page_num)
+                confidence = 80.0 if tesseract_text else 0.0
+            else:
+                tesseract_text, confidence = extract_text_with_tesseract(
+                    page, page_num=page_num)
 
         if tesseract_text and len(tesseract_text.strip()) > 100:
             # Keep OCR text for downstream fallbacks even if we end up using Gemini Vision.
@@ -33389,6 +33912,47 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             increment_ocr_stat(ocr_stats, ocr_stats_lock,
                                "tesseract_success", 1)
 
+        # SR. PHARMACEUTICALS: thresh-150 OCR drops HSN/Qty/Rate; PSM 6 keeps them.
+        try:
+            _sr_ocr_hint = (
+                fallback_ocr_text or tesseract_text or _probe_sample or ""
+            )
+            _sr_up = _maybe_upgrade_sr_pharma_me9_ocr(
+                page, _sr_ocr_hint, page_num=page_num)
+            if _sr_up and _sr_up != _sr_ocr_hint:
+                fallback_ocr_text = _sr_up
+                tesseract_text = _sr_up
+        except Exception as _sr_ocr_err:
+            logger.debug(f"SR PHARMACEUTICALS PSM6 upgrade skipped: {_sr_ocr_err}")
+
+        try:
+            if (
+                fallback_ocr_text
+                and ocr_suggests_sr_pharma_me9_credit_invoice(fallback_ocr_text)
+            ):
+                _sr_early = _sr_pharma_full_data_from_ocr(fallback_ocr_text)
+                if _sr_early and _count_extracted_line_items(_sr_early) >= 4:
+                    logger.info(
+                        "    ✅ SR PHARMACEUTICALS: using table OCR "
+                        f"({_count_extracted_line_items(_sr_early)} products); "
+                        "skipping Gemini for this page"
+                    )
+                    return _finalize_bluefox_page_result({
+                        "invoice_no": (
+                            _sr_early.get("invoice_no")
+                            or try_extract_invoice_from_text(fallback_ocr_text)
+                        ),
+                        "full_data": _sr_early,
+                        "extraction_method": "tesseract+sr_pharma_ocr",
+                        "ocr_text": fallback_ocr_text,
+                        "ocr_method": "tesseract",
+                        "ocr_confidence": float(confidence or 0),
+                    }, page, page_num=page_num)
+        except Exception as _sr_early_err:
+            logger.debug(
+                f"SR PHARMACEUTICALS early OCR extract skipped: {_sr_early_err}")
+
+        if tesseract_text and len(tesseract_text.strip()) > 100:
             # 🔍 Check OCR quality before processing
             ocr_quality_issues = 0
 
@@ -33887,6 +34451,17 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             logger.debug(
                 f"Bharath vision OCR upgrade skipped: {_bharath_ocr_err}")
 
+        try:
+            _sr_vis_hint = result.get("ocr_text") or fallback_ocr_text or ""
+            _sr_vis_up = _maybe_upgrade_sr_pharma_me9_ocr(
+                page, _sr_vis_hint, page_num=page_num)
+            if _sr_vis_up and _sr_vis_up != _sr_vis_hint:
+                result["ocr_text"] = _sr_vis_up
+                fallback_ocr_text = _sr_vis_up
+        except Exception as _sr_vis_ocr_err:
+            logger.debug(
+                f"SR PHARMACEUTICALS vision PSM6 upgrade skipped: {_sr_vis_ocr_err}")
+
         # RATHNA AGENCIES screenshot scans: enrich OCR with table-band text for FIX12i
         try:
             _rathna_fd = result.get("full_data") if isinstance(
@@ -34344,6 +34919,35 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _trust_fix_err:
             logger.debug(
                 f"TRUST PHARMACEUTICALS Vision date override skipped: {_trust_fix_err}")
+
+    # SR. PHARMACEUTICALS CREDIT TAX INVOICE: scanned table with no TAB/CAP/INJ
+    # tokens. Gemini text+vision often 403/empty; Tesseract still has every row.
+    if fallback_ocr_text and ocr_suggests_sr_pharma_me9_credit_invoice(
+            fallback_ocr_text):
+        _sr_vis_count = _count_extracted_line_items(
+            (result or {}).get("full_data") if isinstance(result, dict) else None)
+        if _sr_vis_count == 0:
+            _sr_ocr_data = _sr_pharma_full_data_from_ocr(fallback_ocr_text)
+            if _sr_ocr_data:
+                logger.warning(
+                    "    ⚠️ Gemini empty/failed on SR PHARMACEUTICALS scan; "
+                    "using Tesseract table OCR for product rows"
+                )
+                _sr_inv = None
+                if isinstance(result, dict):
+                    _sr_inv = result.get("invoice_no")
+                result = {
+                    "invoice_no": (
+                        _sr_inv
+                        or _sr_ocr_data.get("invoice_no")
+                        or try_extract_invoice_from_text(fallback_ocr_text)
+                    ),
+                    "full_data": _sr_ocr_data,
+                    "extraction_method": "tesseract+sr_pharma_ocr",
+                    "ocr_text": fallback_ocr_text,
+                    "ocr_method": "tesseract",
+                    "ocr_confidence": 0.0,
+                }
 
     if (not result or not result.get("full_data")) and _tesseract_gemini_fallback:
         logger.warning(
@@ -38163,6 +38767,9 @@ def split_and_extract_invoices(
                     if _apply_nic_irp_multipage_line_items(g):
                         continue
 
+                    if _apply_sr_pharma_multipage_ocr_line_items(g):
+                        continue
+
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g['invoice_no']} ({len(g['pages'])} pages, {len(combined_ocr)} chars OCR)...")
                     update_request_progress(
@@ -39457,6 +40064,8 @@ def test_extract(
                     if _apply_palepu_multipage_vision_line_items(g, page_results):
                         continue
                     if _apply_nic_irp_multipage_line_items(g):
+                        continue
+                    if _apply_sr_pharma_multipage_ocr_line_items(g):
                         continue
                     logger.info(
                         f"   🔄 RE-EXTRACTING multi-page invoice {g.get('invoice_no')} "
