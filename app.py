@@ -39113,7 +39113,10 @@ def split_and_extract_invoices(
                     if _apply_nic_irp_multipage_line_items(g):
                         continue
 
-<<<<<<< HEAD
+                    # SR PHARMA: stockist-specific multipage OCR line items (from main)
+                    if _apply_sr_pharma_multipage_ocr_line_items(g):
+                        continue
+
                     # GENERIC multi-page: prefer independent page-level merge.
                     # Combined OCR/Gemini re-extract is NOT the default — it runs
                     # only as a controlled fallback when page-level merge yields
@@ -39146,10 +39149,6 @@ def split_and_extract_invoices(
                             f"{_mp_err}"
                         )
                         # Fall through to controlled combined OCR
-=======
-                    if _apply_sr_pharma_multipage_ocr_line_items(g):
-                        continue
->>>>>>> 9d6f9fb88cc3ec8aa9e045753dd88d7a2f20e952
 
                     logger.info(
                         f"   🔄 CONTROLLED FALLBACK re-extract multi-page invoice "
@@ -40465,7 +40464,8 @@ def test_extract(
                         continue
                     if _apply_nic_irp_multipage_line_items(g):
                         continue
-<<<<<<< HEAD
+                    if _apply_sr_pharma_multipage_ocr_line_items(g):
+                        continue
                     # GENERIC: page-level merge first; combined OCR only as fallback
                     try:
                         _mp_merge = merge_multipage_page_level_extractions(
@@ -40485,10 +40485,6 @@ def test_extract(
                     except Exception as _mp_err:
                         logger.warning(
                             f"   ⚠️ Generic multipage page-level merge failed: {_mp_err}")
-=======
-                    if _apply_sr_pharma_multipage_ocr_line_items(g):
-                        continue
->>>>>>> 9d6f9fb88cc3ec8aa9e045753dd88d7a2f20e952
                     logger.info(
                         f"   🔄 CONTROLLED FALLBACK re-extract multi-page invoice "
                         f"{g.get('invoice_no')} "
