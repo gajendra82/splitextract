@@ -27,12 +27,14 @@ from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
     OCR_THREADPOOL_LOGGING_ENABLED,
+    cpu_steal_blocks_heavy_tesseract,
     increment_ocr_active,
     decrement_ocr_active,
     get_enhanced_heartbeat_snapshot,
     get_ready_snapshot,
     get_resource_snapshot,
     install_structured_logging,
+    log_pod_ocr_routing,
     log_semaphore_acquire,
     log_semaphore_release,
     on_heartbeat_update,
@@ -1098,6 +1100,116 @@ def _ocr_text_has_invoice_cues(text: str) -> bool:
         text,
         re.IGNORECASE,
     ))
+
+
+# Large image-scan batches (e.g. Split_1_1_to_10 / to_29): even the "quick"
+# header probe can hang for hours under CPU steal and block the queue.
+# Skip probe + full Tesseract → Gemini Vision. Small POD PDFs (1–9 pages)
+# keep the cheaper Tesseract path.
+_HEAVY_GARBLED_SCAN_MIN_PAGES = 10
+_HEAVY_GARBLED_SCAN_MAX_NATIVE_CHARS = 80
+
+
+def _is_heavy_multipage_image_scan(page, pdf_path: Optional[str] = None) -> bool:
+    """True for multipage image-only PDFs (like Split_*_to_10 / to_29).
+
+    Scoped gate — typical 1–9 page POD jobs keep Tesseract (lower Gemini cost).
+    """
+    total_pages = _pdf_page_count(page, pdf_path=pdf_path)
+    if total_pages < _HEAVY_GARBLED_SCAN_MIN_PAGES:
+        return False
+    if _pdf_native_text_len(page) >= _HEAVY_GARBLED_SCAN_MAX_NATIVE_CHARS:
+        return False
+    return True
+
+
+def _pdf_page_count(page, pdf_path: Optional[str] = None) -> int:
+    total_pages = 0
+    try:
+        with request_progress_lock:
+            tp = _request_progress.get("total_pages")
+            if tp is not None:
+                total_pages = int(tp)
+    except Exception:
+        total_pages = 0
+    try:
+        parent = getattr(page, "parent", None)
+        if parent is not None:
+            total_pages = max(
+                total_pages, int(getattr(parent, "page_count", 0) or 0))
+    except Exception:
+        pass
+    return total_pages
+
+
+def _pdf_native_text_len(page) -> int:
+    try:
+        return len((page.get_text("text") or "").strip())
+    except Exception:
+        return 0
+
+
+def _pdf_routing_type(page, pdf_path: Optional[str] = None) -> str:
+    if _is_heavy_multipage_image_scan(page, pdf_path=pdf_path):
+        return "image-only"
+    if _pdf_native_text_len(page) >= _HEAVY_GARBLED_SCAN_MAX_NATIVE_CHARS:
+        return "text"
+    return "mixed"
+
+
+def _stockist_requires_tesseract_ocr(
+    pdf_path: Optional[str],
+    ocr_hint: str = "",
+) -> Optional[str]:
+    """Existing stockist OCR fallbacks that MUST run before heavy-scan skip.
+
+    Returns a short rule id when Tesseract is required; None otherwise.
+    """
+    if pdf_path and re.search(
+        r'HYD[\s\-_]*26[\s\-_]*\d+',
+        os.path.basename(str(pdf_path)),
+        re.IGNORECASE,
+    ):
+        return "hyd26_filename"
+    hint = ocr_hint or ""
+    if ocr_suggests_novacare_stockist(hint) or is_novacare_del26_invoice(
+        ocr_text=hint
+    ):
+        return "novacare_del26"
+    if ocr_suggests_bharath_medical(hint):
+        return "bharath_medical"
+    if ocr_suggests_tulsyan_pharmaceuticals(hint):
+        return "tulsyan_pharmaceuticals"
+    if ocr_suggests_ksk_speciality(hint):
+        return "ksk_speciality"
+    if ocr_suggests_sri_lakshmi_pharma(hint):
+        return "sri_lakshmi_pharma"
+    if ocr_suggests_sr_pharma_me9_credit_invoice(hint):
+        return "sr_pharma_me9"
+    return None
+
+
+def _should_skip_tesseract_for_heavy_scan(
+    page,
+    pdf_path: Optional[str] = None,
+    ocr_hint: str = "",
+) -> bool:
+    """Heavy image-only scans skip Tesseract unless stockist rules require it."""
+    if not _is_heavy_multipage_image_scan(page, pdf_path=pdf_path):
+        return False
+    if _stockist_requires_tesseract_ocr(pdf_path, ocr_hint):
+        return False
+    return True
+
+
+def _cpu_guard_blocks_tesseract(
+    pdf_path: Optional[str],
+    ocr_hint: str = "",
+) -> bool:
+    """CPU steal guard — never overrides stockist-specific Tesseract rules."""
+    if _stockist_requires_tesseract_ocr(pdf_path, ocr_hint):
+        return False
+    return cpu_steal_blocks_heavy_tesseract()
 
 
 def _ocr_text_needs_rotation_retry(text: str) -> bool:
@@ -33952,9 +34064,61 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         # Scans the top 30% of the page at reduced DPI to detect if invoice text is readable.
         # If the header yields no invoice tokens or low confidence, skip straight to Gemini Vision.
         tesseract_text, confidence = None, 0.0
-        _probe_viable, _probe_conf, _probe_sample = _quick_page_quality_check(
-            page, page_num=page_num)
-        if not _probe_viable:
+        _probe_viable, _probe_conf, _probe_sample = False, 0.0, ""
+        _ocr_routing_hint = fallback_ocr_text or _tier12_ocr_text or ""
+        _routing_pages = _pdf_page_count(page, pdf_path=pdf_path)
+        _routing_type = _pdf_routing_type(page, pdf_path=pdf_path)
+        _stockist_tesseract_rule = _stockist_requires_tesseract_ocr(
+            pdf_path, _ocr_routing_hint)
+        # Heavy multipage image scans: skip probe+Tesseract unless stockist rules require it.
+        _skip_tesseract_heavy_scan = _should_skip_tesseract_for_heavy_scan(
+            page, pdf_path=pdf_path, ocr_hint=_ocr_routing_hint)
+        _cpu_block_tesseract = _cpu_guard_blocks_tesseract(
+            pdf_path, _ocr_routing_hint)
+
+        if _stockist_tesseract_rule:
+            log_pod_ocr_routing(
+                pdf_type=_routing_type,
+                pages=_routing_pages,
+                stockist_fallback=_stockist_tesseract_rule,
+                strategy="tesseract",
+                reason="stockist_specific_rule",
+            )
+        elif _skip_tesseract_heavy_scan:
+            log_pod_ocr_routing(
+                pdf_type=_routing_type,
+                pages=_routing_pages,
+                strategy="gemini",
+                reason="heavy_multipage_scan",
+            )
+            logger.warning(
+                "    ⚠️ Heavy multipage image scan — "
+                "skipping Tesseract probe/OCR → Gemini Vision"
+            )
+        elif _cpu_block_tesseract:
+            log_pod_ocr_routing(
+                pdf_type=_routing_type,
+                pages=_routing_pages,
+                strategy="gemini",
+                reason="cpu_steal_guard",
+            )
+            logger.warning(
+                "    ⚠️ CPU steal guard — skipping Tesseract → Gemini Vision"
+            )
+        else:
+            log_pod_ocr_routing(
+                pdf_type=_routing_type,
+                pages=_routing_pages,
+                strategy="tesseract",
+                reason="standard_ocr_path",
+            )
+
+        if not (_skip_tesseract_heavy_scan or _cpu_block_tesseract):
+            _probe_viable, _probe_conf, _probe_sample = _quick_page_quality_check(
+                page, page_num=page_num)
+        if _skip_tesseract_heavy_scan or _cpu_block_tesseract:
+            pass  # tesseract_text stays None → Gemini Vision below
+        elif not _probe_viable:
             logger.warning(
                 f"    ⚡ Page quality pre-check: conf={_probe_conf:.1f}%, no invoice tokens in header. "
                 f"Skipping Tesseract → going directly to Gemini Vision."

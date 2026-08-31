@@ -56,6 +56,10 @@ OCR_TESSERACT_CALL_TIMEOUT_ENABLED = _env_bool("OCR_TESSERACT_CALL_TIMEOUT_ENABL
 TESSERACT_CALL_TIMEOUT_SECONDS = _env_int("TESSERACT_CALL_TIMEOUT_SECONDS", 180)
 OCR_PAGE_FUTURE_TIMEOUT_SECONDS = _env_int("OCR_PAGE_FUTURE_TIMEOUT_SECONDS", 120)
 
+# Skip starting new heavy Tesseract when host CPU steal is extreme (configurable).
+OCR_CPU_STEAL_GUARD_ENABLED = _env_bool("OCR_CPU_STEAL_GUARD_ENABLED", False)
+OCR_CPU_STEAL_THRESHOLD_PERCENT = _env_int("OCR_CPU_STEAL_THRESHOLD_PERCENT", 80)
+
 OCR_MID_EXECUTION_HEARTBEAT_ENABLED = _env_bool("OCR_MID_EXECUTION_HEARTBEAT_ENABLED", False)
 OCR_HEARTBEAT_TICK_SECONDS = _env_int("OCR_HEARTBEAT_TICK_SECONDS", 30)
 OCR_TESSERACT_LOGGING_ENABLED = _env_bool("OCR_TESSERACT_LOGGING_ENABLED", False)
@@ -545,9 +549,92 @@ def _cleanup_temp_files() -> None:
     logger.error("WATCHDOG: temp files removed=%s attempted=%s", removed, len(paths))
 
 
-def _terminate_tesseract_children() -> None:
+def _read_cpu_steal_total() -> Optional[Tuple[int, int]]:
+    """Return (steal_jiffies, total_jiffies) from aggregate /proc/stat cpu line."""
+    try:
+        with open("/proc/stat", encoding="ascii") as fh:
+            for line in fh:
+                if not line.startswith("cpu "):
+                    continue
+                parts = line.split()
+                if len(parts) < 8:
+                    return None
+                steal = int(parts[7])
+                total = sum(int(x) for x in parts[1:8])
+                return steal, total
+    except Exception:
+        return None
+    return None
+
+
+def get_cpu_steal_percent(sample_interval: float = 0.05) -> Optional[float]:
+    """Approximate CPU steal % over a short sample window."""
+    first = _read_cpu_steal_total()
+    if first is None:
+        return None
+    steal1, total1 = first
+    time.sleep(max(0.01, sample_interval))
+    second = _read_cpu_steal_total()
+    if second is None:
+        return None
+    steal2, total2 = second
+    dsteal = steal2 - steal1
+    dtotal = total2 - total1
+    if dtotal <= 0:
+        return None
+    return round(100.0 * dsteal / dtotal, 1)
+
+
+def cpu_steal_blocks_heavy_tesseract() -> bool:
+    """True when steal guard is on and host steal exceeds threshold."""
+    if not OCR_CPU_STEAL_GUARD_ENABLED:
+        return False
+    steal = get_cpu_steal_percent()
+    if steal is None:
+        return False
+    if steal >= OCR_CPU_STEAL_THRESHOLD_PERCENT:
+        logger.warning(
+            "POD OCR routing: cpu_steal=%s%% threshold=%s%% "
+            "strategy=skip_tesseract reason=cpu_steal_guard",
+            steal, OCR_CPU_STEAL_THRESHOLD_PERCENT,
+        )
+        return True
+    return False
+
+
+def log_pod_ocr_routing(
+    *,
+    pdf_type: str = "",
+    pages: Optional[int] = None,
+    strategy: str = "",
+    reason: str = "",
+    stockist_fallback: str = "",
+    result: str = "",
+    fallback: str = "",
+) -> None:
+    """Structured routing decision log (no sensitive payload data)."""
+    parts = ["POD OCR routing:"]
+    if pdf_type:
+        parts.append(f"type={pdf_type}")
+    if pages is not None:
+        parts.append(f"pages={pages}")
+    if stockist_fallback:
+        parts.append(f"stockist_fallback={stockist_fallback}")
+    if strategy:
+        parts.append(f"strategy={strategy}")
+    if reason:
+        parts.append(f"reason={reason}")
+    if result:
+        parts.append(f"result={result}")
+    if fallback:
+        parts.append(f"fallback={fallback}")
+    logger.info(" ".join(parts))
+
+
+def terminate_tesseract_children(context: str = "") -> int:
+    """Best-effort terminate orphaned Tesseract child processes."""
     if not _PSUTIL:
-        return
+        return 0
     terminated = 0
     try:
         proc = psutil.Process()
@@ -574,7 +661,19 @@ def _terminate_tesseract_children() -> None:
                 except Exception:
                     pass
     except Exception as exc:
-        logger.error("WATCHDOG: tesseract child termination error: %s", exc)
+        label = context or "tesseract_cleanup"
+        logger.error("%s: tesseract child termination error: %s", label, exc)
+    if terminated:
+        logger.warning(
+            "POD OCR routing: strategy=tesseract result=timeout "
+            "fallback=gemini tesseract_children_terminated=%s context=%s",
+            terminated, context or "ocr",
+        )
+    return terminated
+
+
+def _terminate_tesseract_children() -> None:
+    terminated = terminate_tesseract_children(context="watchdog")
     logger.error("WATCHDOG: tesseract children terminated=%s", terminated)
 
 
@@ -888,6 +987,13 @@ def run_tesseract_call(
         logger.error(
             "TESSERACT TIMEOUT label=%s page=%s duration=%ss after=%ss call=%s",
             label, page_num, duration, timeout, call_num,
+        )
+        terminate_tesseract_children(context=f"tesseract_timeout:{label}")
+        log_pod_ocr_routing(
+            strategy="tesseract",
+            result="timeout",
+            fallback="gemini",
+            reason=f"label={label}",
         )
         raise TimeoutError(f"Tesseract call timed out after {timeout}s") from exc
     except Exception as exc:
