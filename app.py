@@ -53,6 +53,7 @@ import gc
 import tempfile
 import json
 import uuid
+import copy
 from typing import Any, List, Dict, Optional, Tuple
 from contextvars import copy_context
 from concurrent.futures import ThreadPoolExecutor
@@ -37568,6 +37569,429 @@ def extract_invoices_from_excel_via_gemini(
     return invoices
 
 
+def _pod_grn_override_item_unit_price(item: Any) -> Any:
+    """Read unit_price from a line item, including Laravel/alternate keys."""
+    if not isinstance(item, dict):
+        return None
+    for key in ("unit_price", "rate", "unit_rate"):
+        val = item.get(key)
+        if val not in (None, "", 0, 0.0, "0", "0.0", "0.00"):
+            return val
+    additional = item.get("additional_fields")
+    if isinstance(additional, dict):
+        for key in ("unit_price", "rate", "mrp"):
+            val = additional.get(key)
+            if val not in (None, "", 0, 0.0, "0", "0.0", "0.00"):
+                return val
+    return item.get("unit_price")
+
+
+def _pod_grn_override_items_unit_price_score(items: List[Any]) -> int:
+    return sum(
+        1 for item in (items or [])
+        if _pod_grn_override_item_unit_price(item) not in (None, "", 0, 0.0)
+    )
+
+
+def _pod_grn_override_collect_item_lists(
+    entry: Dict[str, Any],
+) -> List[Tuple[str, List[Any]]]:
+    """Collect candidate line-item lists from every known Laravel override path."""
+    candidates: List[Tuple[str, List[Any]]] = []
+
+    def _add(label: str, items: Any) -> None:
+        if isinstance(items, list) and items:
+            candidates.append((label, items))
+
+    top_line_items = entry.get("line_items")
+    if isinstance(top_line_items, list):
+        _add("entry.line_items", top_line_items)
+    elif isinstance(top_line_items, dict):
+        _add("entry.line_items.items", top_line_items.get("items"))
+
+    top_items = entry.get("items")
+    if isinstance(top_items, list):
+        _add("entry.items", top_items)
+
+    extracted = entry.get("extracted_data")
+    if isinstance(extracted, dict):
+        data = extracted.get("data")
+        if not isinstance(data, dict):
+            data = extracted
+        if isinstance(data, dict):
+            nested_line_items = data.get("line_items")
+            if isinstance(nested_line_items, list):
+                _add("extracted_data.data.line_items", nested_line_items)
+            elif isinstance(nested_line_items, dict):
+                _add(
+                    "extracted_data.data.line_items.items",
+                    nested_line_items.get("items"),
+                )
+            nested_items = data.get("items")
+            if isinstance(nested_items, list):
+                _add("extracted_data.data.items", nested_items)
+
+    return candidates
+
+
+def _pod_grn_override_first_item_unit_price_from_entry(entry: Dict[str, Any]) -> Any:
+    for _label, items in _pod_grn_override_collect_item_lists(entry):
+        if items and isinstance(items[0], dict):
+            return _pod_grn_override_item_unit_price(items[0])
+    return None
+
+
+def _pod_grn_override_pick_line_items(entry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Pick the line-item list most likely to contain Laravel-resolved unit_price."""
+    candidates = _pod_grn_override_collect_item_lists(entry)
+    if not candidates:
+        return []
+
+    def _rank(candidate: Tuple[str, List[Any]]) -> Tuple[int, int, int]:
+        label, items = candidate
+        return (
+            _pod_grn_override_items_unit_price_score(items),
+            len(items),
+            1 if label.startswith("extracted_data") else 0,
+        )
+
+    _label, best_items = max(candidates, key=_rank)
+    preserved: List[Dict[str, Any]] = []
+    for raw_item in best_items:
+        if not isinstance(raw_item, dict):
+            continue
+        item = copy.deepcopy(raw_item)
+        resolved = _pod_grn_override_item_unit_price(item)
+        if resolved not in (None, "", 0, 0.0) and not str(item.get("unit_price") or "").strip():
+            item["unit_price"] = str(resolved)
+        preserved.append(item)
+    return preserved
+
+
+def _flat_invoice_from_pod_grn_override_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize one Laravel invoice entry into build_excel_ocr_text flat shape."""
+    if not isinstance(entry, dict):
+        raise ValueError("Each invoice override entry must be a JSON object")
+
+    items = _pod_grn_override_pick_line_items(entry)
+
+    extracted = entry.get("extracted_data")
+    data: Dict[str, Any] = {}
+    if isinstance(extracted, dict):
+        nested = extracted.get("data")
+        data = nested if isinstance(nested, dict) else extracted
+
+    summary = data.get("invoice_summary") if isinstance(
+        data.get("invoice_summary"), dict) else {}
+
+    invoice_no = str(
+        entry.get("invoice_no")
+        or summary.get("invoice_no")
+        or ""
+    ).strip()
+    if not invoice_no:
+        raise ValueError("Invoice override entry missing invoice_no")
+
+    hospital_name = str(
+        entry.get("hospital_name")
+        or entry.get("customer")
+        or summary.get("hospital_name")
+        or summary.get("customer")
+        or ""
+    ).strip()
+    hospital_code = str(
+        entry.get("hospital_code")
+        or summary.get("hospital_code")
+        or ""
+    ).strip()
+
+    flat: Dict[str, Any] = {
+        "invoice_no": invoice_no,
+        "invoice_date": str(
+            entry.get("invoice_date") or summary.get("invoice_date") or ""
+        ),
+        "vendor": str(entry.get("vendor") or summary.get("vendor") or ""),
+        "vendor_gstin": str(
+            entry.get("vendor_gstin") or summary.get("vendor_gstin") or ""
+        ),
+        "customer": hospital_name,
+        "customer_address": str(
+            entry.get("customer_address") or summary.get("customer_address") or ""
+        ),
+        "customer_gstin": str(
+            entry.get("customer_gstin") or summary.get("customer_gstin") or ""
+        ),
+        "tax": str(entry.get("tax") or summary.get("tax") or ""),
+        "total": str(entry.get("total") or summary.get("total") or ""),
+        "irn": str(entry.get("irn") or summary.get("irn") or ""),
+        "line_items": items,
+        "confidence": 1.0,
+    }
+    if hospital_name or hospital_code:
+        flat["_pod"] = {
+            "hospital_name": hospital_name,
+            "hospital_code": hospital_code,
+        }
+
+    first_up = flat["line_items"][0].get("unit_price") if flat["line_items"] else None
+    logger.info(
+        "POD GRN override flattened: invoice_no=%s line_items=%s "
+        "line_items[0].unit_price=%s",
+        invoice_no,
+        len(flat["line_items"]),
+        first_up,
+    )
+    return flat
+
+
+def _flat_invoices_from_pod_grn_override(invoices_override: str) -> List[Dict[str, Any]]:
+    try:
+        parsed = json.loads(invoices_override)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invoices_override is not valid JSON: {exc}") from exc
+
+    if isinstance(parsed, dict):
+        raw_list = parsed.get("invoices")
+        if raw_list is None:
+            raw_list = parsed.get("Invoices")
+        if not isinstance(raw_list, list):
+            raise ValueError(
+                "invoices_override object must contain an 'invoices' array"
+            )
+    elif isinstance(parsed, list):
+        raw_list = parsed
+    else:
+        raise ValueError(
+            "invoices_override must be a JSON array or {\"invoices\": [...]}"
+        )
+
+    if raw_list and isinstance(raw_list[0], dict):
+        first_entry = raw_list[0]
+        logger.info(
+            "POD GRN override raw JSON sample: invoice_no=%s "
+            "line_items[0].unit_price=%s",
+            first_entry.get("invoice_no"),
+            _pod_grn_override_first_item_unit_price_from_entry(first_entry),
+        )
+
+    flat_invoices = [
+        _flat_invoice_from_pod_grn_override_entry(entry) for entry in raw_list
+    ]
+    if not flat_invoices:
+        raise ValueError("invoices_override contained no invoices")
+
+    with_rate = sum(
+        1 for inv in flat_invoices
+        if inv.get("line_items")
+        and str((inv["line_items"][0] or {}).get("unit_price") or "").strip()
+    )
+    logger.info(
+        "POD GRN override parsed %s invoices; %s have line_items[0].unit_price",
+        len(flat_invoices),
+        with_rate,
+    )
+    return flat_invoices
+
+
+def build_split_extract_response_from_pod_grn_overrides(
+    *,
+    flat_invoices: List[Dict[str, Any]],
+    source_filename: str,
+    batch_id: Optional[str],
+    split_id: Optional[str],
+    file_name: Optional[str],
+    use_blob_storage: bool,
+    container_name: str,
+    target_invoices_blob_folder: Optional[str],
+    queued_ahead: int,
+    queue_wait_seconds: float,
+    start_time: datetime,
+) -> Dict[str, Any]:
+    """Regenerate POD GRN PDFs from Laravel-provided invoice JSON (skip Excel parse)."""
+    all_invoices: List[Dict[str, Any]] = []
+
+    for idx, raw_invoice in enumerate(flat_invoices):
+        group_invoice_no = str(raw_invoice.get(
+            "invoice_no") or "").strip() or f"UNKNOWN_{idx + 1}"
+        line_items = raw_invoice.get("line_items") or []
+        first_item_up = None
+        if line_items and isinstance(line_items[0], dict):
+            first_item_up = line_items[0].get("unit_price")
+        logger.info(
+            "POD GRN override before build_excel_ocr_text: invoice_no=%s "
+            "line_items[0].unit_price=%s",
+            group_invoice_no,
+            first_item_up,
+        )
+        ocr_text = build_excel_ocr_text(raw_invoice)
+        flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
+        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+
+        try:
+            formatted = enforce_schema(data_with_ocr)
+        except Exception as schema_err:
+            logger.error(
+                "POD GRN override schema enforcement failed for %s: %s",
+                group_invoice_no,
+                schema_err,
+                exc_info=True,
+            )
+            formatted = {
+                "data": {
+                    "invoice_summary": {
+                        "customer": str(flat.get("customer", "") or ""),
+                        "customer_address": str(flat.get("customer_address", "") or ""),
+                        "customer_gstin": str(flat.get("customer_gstin", "") or ""),
+                        "invoice_date": str(flat.get("invoice_date", "") or ""),
+                        "invoice_no": group_invoice_no,
+                        "irn": str(flat.get("irn", "") or ""),
+                        "tax": str(flat.get("tax", "") or ""),
+                        "total": str(flat.get("total", "") or ""),
+                        "vendor": str(flat.get("vendor", "") or ""),
+                        "vendor_gstin": str(flat.get("vendor_gstin", "") or ""),
+                    },
+                    "line_items": {
+                        "count": len(flat.get("line_items") or []),
+                        "has_lot_batch_info": True,
+                        "has_quantity_info": True,
+                        "items": flat.get("line_items") or [],
+                        "items_with_lot_batch": 0,
+                        "items_with_quantity": 0,
+                        "standardized_columns": {},
+                        "title": "line items (with lot / batch)",
+                    },
+                    "ocr_text": ocr_text,
+                },
+                "message": "invoice processed successfully",
+                "status": "success",
+                "timestamp": "",
+                "user": "huggingface_user",
+            }
+
+        formatted["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        formatted["model_used"] = "pod_grn_override"
+        formatted["ocr_method"] = "pod_grn_override"
+        formatted["confidence"] = 1.0
+
+        pod_meta = raw_invoice.get("_pod") if isinstance(raw_invoice.get("_pod"), dict) else {}
+        hospital_name = str(
+            pod_meta.get("hospital_name")
+            or flat.get("customer")
+            or ""
+        ).strip()
+        hospital_code = str(pod_meta.get("hospital_code") or "").strip()
+
+        try:
+            summary_obj = formatted.get("data", {}).get("invoice_summary", {})
+            if isinstance(summary_obj, dict):
+                summary_invoice_no = str(summary_obj.get(
+                    "invoice_no", "") or "").strip()
+                if summary_invoice_no:
+                    group_invoice_no = summary_invoice_no
+                else:
+                    summary_obj["invoice_no"] = group_invoice_no
+                if hospital_name:
+                    summary_obj["customer"] = hospital_name
+                    summary_obj["hospital_name"] = hospital_name
+                if hospital_code:
+                    summary_obj["hospital_code"] = hospital_code
+        except Exception:
+            pass
+
+        final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
+        safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
+        invoice_filename = f"invoice_{safe_name}.pdf"
+        pdf_bytes = build_text_pdf_bytes(
+            f"Invoice {final_invoice_no}", ocr_text)
+
+        invoice_info: Dict[str, Any] = {
+            "invoice_no": final_invoice_no,
+            "pages": [1],
+            "num_pages": 1,
+            "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
+            "extracted_data": formatted,
+        }
+        if hospital_name:
+            invoice_info["customer"] = hospital_name
+            invoice_info["hospital_name"] = hospital_name
+        if hospital_code:
+            invoice_info["hospital_code"] = hospital_code
+
+        if use_blob_storage:
+            try:
+                blob_info = upload_split_pdf_to_blob(
+                    pdf_bytes,
+                    invoice_filename,
+                    source_filename,
+                    batch_id,
+                    container_name,
+                    target_invoices_blob_folder,
+                )
+                invoice_info["storage"] = blob_info
+                invoice_info["pdf_url"] = blob_info["download_url"]
+            except Exception as e:
+                invoice_info["upload_error"] = str(e)
+                logger.warning(f"Blob upload failed (pod_grn_override): {e}")
+
+        all_invoices.append(invoice_info)
+        del pdf_bytes
+
+    total_time = (datetime.now() - start_time).total_seconds()
+    total_pages_count = max(len(all_invoices), 1)
+
+    invoices_filled = []
+    for inv in all_invoices:
+        storage = inv.get("storage", {})
+        blob_path = storage.get("blob_name", "")
+        inv_filename = blob_path.split(
+            "/")[-1] if blob_path else f"invoice_{inv.get('invoice_no', 'unknown')}.pdf"
+        invoices_filled.append({
+            "filename": inv_filename,
+            "blob_path": blob_path,
+            "url": storage.get("download_url", inv.get("pdf_url", "")),
+        })
+
+    return {
+        "success": True,
+        "batch_id": batch_id,
+        "split_id": split_id,
+        "file_name": file_name,
+        "Invoices": invoices_filled,
+        "queue": {
+            "queued_ahead_at_arrival": queued_ahead,
+            "wait_time_seconds": queue_wait_seconds,
+            "max_concurrent_requests": MAX_CONCURRENT_REQUESTS,
+        },
+        "summary": {
+            "total_invoices": len(all_invoices),
+            "total_pages": total_pages_count,
+            "total_time_seconds": round(total_time, 2),
+            "was_image_converted": False,
+            "source": "pod_grn",
+            "document_type": "pod",
+            "regenerated_from_override": True,
+        },
+        "cost_optimization": {
+            "traditional_gemini_calls": 0,
+            "actual_gemini_calls": 0,
+            "calls_saved": 0,
+            "cost_saved_usd": 0.0,
+            "ocr_savings_percentage": 100.0,
+        },
+        "ocr_statistics": {
+            "pdfplumber": 0,
+            "pymupdf": 0,
+            "tesseract": 0,
+            "gemini_vision": 0,
+            "gemini_text_api": 0,
+            "total_gemini_calls": 0,
+            "free_extractions": total_pages_count,
+            "ocr_time_seconds": 0.0,
+        },
+        "invoices": all_invoices,
+    }
+
+
 def build_split_extract_response_from_excel(
     *,
     excel_path: str,
@@ -37916,6 +38340,10 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+_POD_BLANK_INVOICE_GROUP_KEY = "UNKNOWN"
+_POD_BLANK_INVOICE_NO = "UNKNOWN"
+
+
 def _group_pod_hospital_sales_into_invoices(
     sales_result: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
@@ -37927,12 +38355,15 @@ def _group_pod_hospital_sales_into_invoices(
             continue
         extra = line.get("extra") if isinstance(line.get("extra"), dict) else {}
         inv_no = str(extra.get("invoice_number") or "").strip()
-        if not inv_no:
-            continue
-        key = inv_no.upper()
+        if inv_no:
+            key = inv_no.upper()
+            group_invoice_no = inv_no
+        else:
+            key = _POD_BLANK_INVOICE_GROUP_KEY
+            group_invoice_no = _POD_BLANK_INVOICE_NO
         if key not in groups:
             groups[key] = {
-                "invoice_no": inv_no,
+                "invoice_no": group_invoice_no,
                 "invoice_date": str(extra.get("invoice_date") or ""),
                 "invoice_date_raw": str(extra.get("invoice_date") or ""),
                 "vendor": str(
@@ -41240,15 +41671,51 @@ async def extract_pod_grn_endpoint(
     file_name: Optional[str] = Form(None),
     split_raw_blob_path: Optional[str] = Form(None),
     split_raw_url: Optional[str] = Form(None),
+    invoices_override: Optional[str] = Form(None),
 ):
     """Extract POD GRN / hospital-wise sales Excel into /split-and-extract JSON shape.
 
     Accepts the SAME multipart fields as /split-and-extract so Laravel can reuse
     the same client payload (file upload OR split_raw_blob_path / split_raw_url).
 
+    Optional invoices_override (JSON): skip Excel parse and regenerate PDFs from
+    Laravel-updated invoice line items (unit_price / Rate).
+
     Secondary sales statements should continue to use /extract-sales-statement.
     """
     _ = parallel_batch_size  # accepted for Laravel parity; unused for Excel GRN
+
+    batch_id = (batch_id or "").strip() or str(uuid.uuid4())
+    target_invoices_blob_folder = (target_invoices_blob_folder or "").strip() or None
+    container_name = (blob_container.strip() if blob_container else None) or AZURE_CONTAINER_NAME
+    source_filename = unquote(file_name or "pod_grn_override.json")
+
+    override_raw = (invoices_override or "").strip()
+    if override_raw:
+        try:
+            flat_invoices = _flat_invoices_from_pod_grn_override(override_raw)
+            start_time = datetime.now()
+            response = build_split_extract_response_from_pod_grn_overrides(
+                flat_invoices=flat_invoices,
+                source_filename=source_filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name or source_filename,
+                use_blob_storage=use_blob_storage,
+                container_name=container_name,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                queued_ahead=0,
+                queue_wait_seconds=0.0,
+                start_time=start_time,
+            )
+            return JSONResponse(content=response)
+        except HTTPException:
+            raise
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.exception("POD GRN override regeneration failed")
+            raise HTTPException(status_code=500, detail=str(e))
 
     if file is None and not split_raw_blob_path and not split_raw_url:
         raise HTTPException(
@@ -41256,11 +41723,6 @@ async def extract_pod_grn_endpoint(
             detail="Provide either file upload or split_raw_blob_path/split_raw_url",
         )
 
-    batch_id = (batch_id or "").strip() or str(uuid.uuid4())
-    target_invoices_blob_folder = (target_invoices_blob_folder or "").strip() or None
-    container_name = (blob_container.strip() if blob_container else None) or AZURE_CONTAINER_NAME
-
-    source_filename = None
     if file is not None and file.filename:
         source_filename = file.filename
     elif split_raw_blob_path:

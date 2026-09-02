@@ -1777,6 +1777,11 @@ _POD_STOCK_HEADERS = {
     "sales",
     "closing",
 }
+_POD_GRN_QUERY_HEADERS = {
+    "invoice_number",
+    "product_name",
+    "buyer_party_name",
+}
 
 
 def _normalized_sheet_headers(row: Tuple[Any, ...]) -> set:
@@ -1850,7 +1855,7 @@ def _parse_pod_hospital_sales_xlsx(
         invoice_no = str(hospital_cell(row, "invoice number") or "").strip()
         hospital_name = _clean_name(str(hospital_cell(row, "card name") or ""))
         product_name = _clean_name(str(hospital_cell(row, "item description") or ""))
-        if not invoice_no or not hospital_name or not product_name:
+        if not hospital_name or not product_name:
             continue
 
         invoice_date = hospital_cell(row, "invoice date")
@@ -1886,7 +1891,8 @@ def _parse_pod_hospital_sales_xlsx(
             "mrp": _to_float(hospital_cell(row, "mrp")),
         }
         items.append(item)
-        invoice_numbers.add(invoice_no)
+        if invoice_no:
+            invoice_numbers.add(invoice_no)
 
         summary = hospital_summary.setdefault(
             hospital_name,
@@ -1900,7 +1906,8 @@ def _parse_pod_hospital_sales_xlsx(
             },
         )
         summary["line_count"] += 1
-        summary["invoice_numbers"].add(invoice_no)
+        if invoice_no:
+            summary["invoice_numbers"].add(invoice_no)
         summary["sales_qty"] += quantity
         summary["sales_value"] += total
 
@@ -1983,6 +1990,168 @@ def _parse_pod_hospital_sales_xlsx(
     return result
 
 
+def _parse_pod_grn_query_result_xlsx(
+    workbook: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse purchase/sales tracking GRN export (Query result sheet)."""
+    sheet = next(
+        (
+            s
+            for s in workbook.worksheets
+            if _POD_GRN_QUERY_HEADERS.issubset(
+                _normalized_sheet_headers(
+                    next(s.iter_rows(min_row=1, max_row=1, values_only=True), ())
+                )
+            )
+        ),
+        None,
+    )
+    if sheet is None:
+        return None
+
+    def pod_date(value: Any) -> str:
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        text = str(value or "").strip()
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:\s+00:00:00)?", text):
+            return text[:10]
+        return _normalize_date(text) or text
+
+    headers = [
+        re.sub(r"\s+", " ", str(value or "").strip().lower())
+        for value in next(
+            sheet.iter_rows(min_row=1, max_row=1, values_only=True)
+        )
+    ]
+    indices = {header: index for index, header in enumerate(headers) if header}
+
+    def cell(row: Tuple[Any, ...], header: str) -> Any:
+        index = indices.get(header)
+        return row[index] if index is not None and index < len(row) else None
+
+    result = empty_result(filename, "xlsx")
+    result["report_title"] = "POD GRN Query Result"
+    result["totals"]["extra"]["extraction_method"] = "pod_hospital_wise_sales_xlsx"
+    result["totals"]["extra"]["grn_query_worksheet"] = sheet.title
+
+    items: List[Dict[str, Any]] = []
+    invoice_numbers: set = set()
+    invoice_dates: List[datetime] = []
+    manufacturers: set = set()
+
+    for excel_row_num, row in enumerate(
+        sheet.iter_rows(min_row=2, values_only=True), start=2
+    ):
+        invoice_no = str(cell(row, "invoice_number") or "").strip()
+        hospital_name = _clean_name(str(cell(row, "buyer_party_name") or ""))
+        if not hospital_name:
+            hospital_name = _clean_name(str(cell(row, "group_name") or ""))
+        product_name = _clean_name(str(cell(row, "product_name") or ""))
+        if not hospital_name or not product_name:
+            continue
+
+        batch_no = str(cell(row, "batch_number") or "").strip()
+        is_aztreo_target = (
+            invoice_no.upper() == "INV26-37264"
+            and "AZTREO" in product_name.upper()
+            and batch_no.upper() == "AZA25002"
+        )
+
+        invoice_date = cell(row, "invoice_date")
+        if isinstance(invoice_date, datetime):
+            invoice_dates.append(invoice_date)
+            invoice_date_value = invoice_date.strftime("%Y-%m-%d")
+        else:
+            invoice_date_value = pod_date(invoice_date)
+
+        quantity = _to_float(cell(row, "si_qty"))
+        if quantity == 0:
+            quantity = _to_float(cell(row, "qty_picked_from_this_grn"))
+        total = _to_float(cell(row, "net_amount"))
+        manufacturer = _clean_name(str(cell(row, "manufacturer") or ""))
+        if manufacturer:
+            manufacturers.add(manufacturer)
+
+        item = empty_line_item()
+        item["product_code"] = str(cell(row, "sku_id") or "").strip() or None
+        item["product_name"] = product_name
+        item["sales_qty"] = quantity
+        item["sales_value"] = total
+        item["extra"] = {
+            "invoice_number": invoice_no,
+            "invoice_date": invoice_date_value,
+            "hospital_code": "",
+            "hospital_name": hospital_name,
+            "hsn": "",
+            "manufacturer": manufacturer,
+            "batch": str(cell(row, "batch_number") or "").strip(),
+            "expiry": pod_date(cell(row, "batch_expiry")),
+            "tax_rate": _to_float(cell(row, "grn gst rate")),
+            "mrp": _to_float(cell(row, "mrp")),
+            "sales_rate": _to_float(cell(row, "sales_rate")),
+        }
+        if is_aztreo_target:
+            row_pairs = {
+                headers[i]: (row[i] if i < len(row) else None)
+                for i in range(len(headers))
+            }
+            unit_price_exists = "unit_price" in item
+            logger.info(
+                "[POD-ROW-DUMP-AZTREO] sheet=%r excel_row=%s",
+                sheet.title,
+                excel_row_num,
+            )
+            for header, value in row_pairs.items():
+                logger.info(
+                    "[POD-ROW-DUMP-AZTREO] header_value %r -> %r",
+                    header,
+                    value,
+                )
+            for key, value in item.items():
+                logger.info(
+                    "[POD-ROW-DUMP-AZTREO] intermediate_item %r -> %r",
+                    key,
+                    value,
+                )
+            if unit_price_exists:
+                logger.info(
+                    "[POD-ROW-DUMP-AZTREO] unit_price EXISTS on intermediate item: "
+                    "value=%r (not assigned in _parse_pod_grn_query_result_xlsx; "
+                    "check empty_line_item() default keys)",
+                    item.get("unit_price"),
+                )
+            else:
+                logger.info(
+                    "[POD-ROW-DUMP-AZTREO] unit_price DOES NOT EXIST on intermediate "
+                    "item at end of _parse_pod_grn_query_result_xlsx; no assignment "
+                    "to item['unit_price'] in this function (rate-related value is "
+                    "extra.sales_rate=%r from cell(row, 'sales_rate') at line 2101)",
+                    item.get("extra", {}).get("sales_rate"),
+                )
+        items.append(item)
+        if invoice_no:
+            invoice_numbers.add(invoice_no)
+
+    if not items:
+        return None
+
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item["sales_value"]) for item in items), 2
+    )
+    result["totals"]["extra"]["invoice_count"] = len(invoice_numbers)
+    result["totals"]["extra"]["grn_query_line_count"] = len(items)
+    result["stockist_name"] = "POD GRN Query Result"
+    if len(manufacturers) == 1:
+        result["company_name"] = next(iter(manufacturers))
+    elif manufacturers:
+        result["company_name"] = "ZYDUS"
+    if invoice_dates:
+        result["period_from"] = min(invoice_dates).strftime("%Y-%m-%d")
+        result["period_to"] = max(invoice_dates).strftime("%Y-%m-%d")
+    return result
+
+
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     result = empty_result(filename, ext.lstrip("."))
 
@@ -1999,6 +2168,8 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
         wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
         pod_result = _parse_pod_hospital_sales_xlsx(wb, filename)
+        if pod_result is None:
+            pod_result = _parse_pod_grn_query_result_xlsx(wb, filename)
         if pod_result is not None:
             wb.close()
             return pod_result

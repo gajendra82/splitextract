@@ -970,6 +970,7 @@ def _extract_invoices_from_sheet(
         header_row_idx,
         worksheet_name,
         metadata,
+        headers=headers,
     )
     shifted = unknown_start
     for invoice in invoices:
@@ -1051,12 +1052,72 @@ def workbook_to_tsv_for_llm(
 # ---------------------------------------------------------------------------
 
 
-def _map_row(values: List[Any], col_map: Dict[int, str]) -> Dict[str, Any]:
+def _excel_col_letter(idx: int) -> str:
+    """0-based column index -> spreadsheet letter (0->A, 26->AA)."""
+    try:
+        from openpyxl.utils import get_column_letter
+
+        return get_column_letter(idx + 1)
+    except Exception:
+        result = ""
+        n = idx
+        while n >= 0:
+            result = chr(ord("A") + (n % 26)) + result
+            n = n // 26 - 1
+        return result
+
+
+def _log_unit_price_source(
+    mapped: Dict[str, Any],
+    values: List[Any],
+    col_map: Dict[int, str],
+    worksheet_name: Optional[str],
+    row_num: Optional[int],
+    headers: Optional[List[Any]],
+) -> None:
+    """Diagnostic: log which Excel cell became unit_price for the target line item."""
+    if "unit_price" not in mapped:
+        return
+    product = str(mapped.get("product_description") or "").upper()
+    batch = str(mapped.get("lot_batch_number") or "").upper()
+    invoice = str(mapped.get("invoice_no") or "").upper()
+    if not ("AZTREO" in product or "AZA25002" in batch or "INV26-37264" in invoice):
+        return
+    up_idx = next((i for i, f in col_map.items() if f == "unit_price"), None)
+    if up_idx is None:
+        return
+    header_txt = ""
+    if headers is not None and up_idx < len(headers):
+        header_txt = str(headers[up_idx] or "")
+    raw_value = values[up_idx] if up_idx < len(values) else None
+    logger.info(
+        "[unit_price source] sheet=%r excel_row=%s col=%s header=%r field=unit_price "
+        "raw_cell_value=%r | invoice=%r product=%r batch=%r",
+        worksheet_name,
+        row_num,
+        _excel_col_letter(up_idx),
+        header_txt,
+        raw_value,
+        mapped.get("invoice_no"),
+        mapped.get("product_description"),
+        mapped.get("lot_batch_number"),
+    )
+
+
+def _map_row(
+    values: List[Any],
+    col_map: Dict[int, str],
+    *,
+    worksheet_name: Optional[str] = None,
+    row_num: Optional[int] = None,
+    headers: Optional[List[Any]] = None,
+) -> Dict[str, Any]:
     mapped: Dict[str, Any] = {}
     for idx, field in col_map.items():
         if idx >= len(values):
             continue
         mapped[field] = values[idx]
+    _log_unit_price_source(mapped, values, col_map, worksheet_name, row_num, headers)
     return mapped
 
 
@@ -1216,6 +1277,7 @@ def group_rows_into_invoices(
     header_row_idx: int,
     worksheet_name: str,
     metadata: ExcelParseMetadata,
+    headers: Optional[List[Any]] = None,
 ) -> List[Dict[str, Any]]:
     """Group consecutive / matching invoice_no rows into invoice dicts."""
     invoices_by_key: Dict[str, Dict[str, Any]] = {}
@@ -1239,7 +1301,13 @@ def group_rows_into_invoices(
             continue
 
         try:
-            mapped = _map_row(values, col_map)
+            mapped = _map_row(
+                values,
+                col_map,
+                worksheet_name=worksheet_name,
+                row_num=row_num,
+                headers=headers,
+            )
             inv_no = _normalize_invoice_number(mapped.get("invoice_no"))
 
             if inv_no:
