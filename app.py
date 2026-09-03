@@ -30830,6 +30830,12 @@ def enforce_schema(raw_data):
 
     # 🔧 FIX 10: FINAL VALIDATION - Correct BOTH qty AND unit_price using OCR verification
     # If unit_price × quantity doesn't equal total_amount, find correct values from OCR
+    # Excel/POD-GRN callers may set skip_fix10_unit_price_calc so empty rates stay
+    # empty for Laravel (stockist/batch/product/master) — total÷qty is last resort there.
+    _skip_fix10_unit_price_calc = bool(
+        raw_data.get("skip_fix10_unit_price_calc")
+        if isinstance(raw_data, dict) else False
+    )
     _skip_fix10_sivagami = ocr_suggests_sivagami_medical(
         ocr_text, _vendor_name)
     _skip_fix10_sg_pharma = _ocr_suggests_sg_pharma_csquare(
@@ -30872,6 +30878,9 @@ def enforce_schema(raw_data):
 
                 match = arihant_pattern.search(ocr_text)
                 if match:
+                    # Excel/POD-GRN: Laravel owns rate resolution — do not rewrite.
+                    if _skip_fix10_unit_price_calc:
+                        continue
                     try:
                         ocr_qty = float(match.group(1))
                         ocr_mrp = float(match.group(2))
@@ -30916,6 +30925,11 @@ def enforce_schema(raw_data):
 
                 # If error > 20% OR current_price looks like a tax percentage
                 if error_pct > 20 or is_likely_tax_percentage:
+                    # Excel/POD-GRN: leave blank blank for Laravel; never rewrite
+                    # Laravel-resolved rates on override either.
+                    if _skip_fix10_unit_price_calc:
+                        continue
+
                     # Try to find actual rate in OCR text using product name
                     product_name = str(
                         item.get("product_description", "")).strip()
@@ -37570,7 +37584,10 @@ def extract_invoices_from_excel_via_gemini(
 
 
 def _pod_grn_override_item_unit_price(item: Any) -> Any:
-    """Read unit_price from a line item, including Laravel/alternate keys."""
+    """Read unit_price from a line item, including Laravel/alternate keys.
+
+    Never treat MRP as a selling rate — additional_fields.mrp is display-only.
+    """
     if not isinstance(item, dict):
         return None
     for key in ("unit_price", "rate", "unit_rate"):
@@ -37579,7 +37596,8 @@ def _pod_grn_override_item_unit_price(item: Any) -> Any:
             return val
     additional = item.get("additional_fields")
     if isinstance(additional, dict):
-        for key in ("unit_price", "rate", "mrp"):
+        # Intentionally exclude "mrp" — copying MRP into Rate caused Rate=MRP PDFs.
+        for key in ("unit_price", "rate", "unit_rate"):
             val = additional.get(key)
             if val not in (None, "", 0, 0.0, "0", "0.0", "0.00"):
                 return val
@@ -37825,7 +37843,10 @@ def build_split_extract_response_from_pod_grn_overrides(
         )
         ocr_text = build_excel_ocr_text(raw_invoice)
         flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
-        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+        data_with_ocr = {
+            "data": {**flat, "ocr_text": ocr_text},
+            "skip_fix10_unit_price_calc": True,
+        }
 
         try:
             formatted = enforce_schema(data_with_ocr)
@@ -38084,7 +38105,10 @@ def build_split_extract_response_from_excel(
         ocr_text = build_excel_ocr_text(raw_invoice)
         # Flat Gemini-compatible shape → shared enforce_schema
         flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
-        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+        data_with_ocr = {
+            "data": {**flat, "ocr_text": ocr_text},
+            "skip_fix10_unit_price_calc": True,
+        }
 
         try:
             formatted = enforce_schema(data_with_ocr)
@@ -38500,7 +38524,10 @@ def build_split_extract_response_from_sales_statement(
             ocr_text = f"SOURCE: SALES_STATEMENT\nINVOICE NO: {group_invoice_no}"
 
         flat = {k: v for k, v in raw_invoice.items() if not str(k).startswith("_")}
-        data_with_ocr = {"data": {**flat, "ocr_text": ocr_text}}
+        data_with_ocr = {
+            "data": {**flat, "ocr_text": ocr_text},
+            "skip_fix10_unit_price_calc": True,
+        }
         try:
             formatted = enforce_schema(data_with_ocr)
         except Exception as schema_err:

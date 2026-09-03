@@ -325,7 +325,27 @@ class HeaderNormalizer:
         key = self.normalize_key(header)
         if not key:
             return None
-        return self._alias_to_canonical.get(key)
+
+        exact = self._alias_to_canonical.get(key)
+        if exact is not None:
+            return exact
+
+        # Business rule: unit price comes ONLY from a rate/unit-price column,
+        # NEVER from MRP. Tax/discount "rate" columns are also excluded.
+        if "mrp" in key or "maximumretailprice" in key:
+            return "mrp"
+        if any(
+            tok in key
+            for tok in (
+                "gst", "tax", "cgst", "sgst", "igst",
+                "disc", "zren", "ydis", "octroi", "cess",
+            )
+        ):
+            return None
+        if "unitprice" in key or "rate" in key:
+            return "unit_price"
+
+        return None
 
     def map_headers(self, headers: Iterable[Any]) -> Dict[int, str]:
         """Return {column_index: canonical_field} for recognized headers."""
