@@ -1204,6 +1204,180 @@ def _cpu_guard_blocks_tesseract(
     return cpu_steal_blocks_heavy_tesseract()
 
 
+_EXCEL_UNKNOWN_INVOICE_RE = re.compile(
+    r'(?i)INVOICE\s*NO\s*:\s*(UNKNOWN(?:_\d+)?)'
+)
+
+
+def _text_is_excel_unknown_invoice(text: str) -> bool:
+    """True when OCR/native text is EXCEL-sourced with UNKNOWN_* invoice sentinel."""
+    if not text:
+        return False
+    if not re.search(r'(?i)SOURCE:\s*EXCEL', text):
+        return False
+    return bool(_EXCEL_UNKNOWN_INVOICE_RE.search(text))
+
+
+def _excel_unknown_sentinel_from_text(text: str) -> Optional[str]:
+    """Return UNKNOWN / UNKNOWN_N from EXCEL ocr text, or None."""
+    if not text:
+        return None
+    match = _EXCEL_UNKNOWN_INVOICE_RE.search(text)
+    if not match:
+        return None
+    return str(match.group(1) or "").strip().upper() or None
+
+
+def _should_try_gemini_text_for_excel_unknown(
+    text: str,
+    pdf_path: Optional[str] = None,
+) -> bool:
+    """Narrow gate: EXCEL + UNKNOWN_* + usable text, never stockist forced-Tesseract."""
+    if not text or len(text.strip()) <= 100:
+        return False
+    if not _text_is_excel_unknown_invoice(text):
+        return False
+    if _stockist_requires_tesseract_ocr(pdf_path, text):
+        return False
+    return True
+
+
+def _invoice_no_from_gemini_full_data(full_data) -> Optional[str]:
+    """Best-effort invoice_no from Gemini Text/Vision full_data payload."""
+    if not isinstance(full_data, dict):
+        return None
+    try:
+        summary_inv = str(
+            (full_data.get("data") or {}).get("invoice_summary", {}).get(
+                "invoice_no", ""
+            )
+            or ""
+        ).strip()
+        if summary_inv:
+            return summary_inv
+    except Exception:
+        pass
+    top = str(full_data.get("invoice_no") or "").strip()
+    return top or None
+
+
+def _is_grounded_usable_invoice_no(invoice_no: Optional[str], source_text: str) -> bool:
+    """Accept Gemini invoice# only when grounded in source text (no invention)."""
+    if not invoice_no or not source_text:
+        return False
+    candidate = str(invoice_no).strip()
+    if not candidate:
+        return False
+    if candidate.upper().startswith("UNKNOWN"):
+        return False
+    if not re.search(r'\d', candidate):
+        return False
+    return candidate.upper() in source_text.upper()
+
+
+def _excel_unknown_gemini_text_usable(
+    full_data,
+    source_text: str,
+) -> Tuple[bool, Optional[str]]:
+    """Validate Gemini Text for EXCEL UNKNOWN path; never invent invoice#."""
+    if not isinstance(full_data, dict) or not full_data:
+        return False, None
+    if _count_extracted_line_items(full_data) < 1:
+        return False, None
+
+    gemini_inv = _invoice_no_from_gemini_full_data(full_data)
+    if _is_grounded_usable_invoice_no(gemini_inv, source_text):
+        return True, gemini_inv
+
+    sentinel = _excel_unknown_sentinel_from_text(source_text)
+    if sentinel:
+        # Keep the document's UNKNOWN_* sentinel — do not fabricate a new number.
+        return True, sentinel
+    return False, None
+
+
+def _sync_invoice_no_into_full_data(full_data, invoice_no: str) -> None:
+    """Write decided invoice_no into all full_data slots used by canonicalization.
+
+    Downstream prefers data.invoice_summary.invoice_no over page/group invoice_no.
+    When retaining UNKNOWN_*, hallucinated Gemini values must not remain there.
+    """
+    if not isinstance(full_data, dict) or not invoice_no:
+        return
+    decided = str(invoice_no).strip()
+    if not decided:
+        return
+
+    full_data["invoice_no"] = decided
+
+    data_block = full_data.get("data")
+    if not isinstance(data_block, dict):
+        data_block = {}
+        full_data["data"] = data_block
+
+    if "invoice_no" in data_block:
+        data_block["invoice_no"] = decided
+
+    summary = data_block.get("invoice_summary")
+    if not isinstance(summary, dict):
+        summary = {}
+        data_block["invoice_summary"] = summary
+    summary["invoice_no"] = decided
+
+
+def _attempt_excel_unknown_gemini_text(
+    text: str,
+    *,
+    pdf_path: Optional[str],
+    ocr_stats: Dict[str, float],
+    ocr_stats_lock: Lock,
+    ocr_method: str,
+    ocr_confidence: float,
+    page,
+    page_num: int = 0,
+) -> Tuple[Optional[dict], bool]:
+    """EXCEL+UNKNOWN+usable text → Gemini Text before Vision.
+
+    Returns (page_result_or_None, attempted).
+    attempted=True means this gate fired; caller may log Vision fallback reason.
+    """
+    if not _should_try_gemini_text_for_excel_unknown(text, pdf_path):
+        return None, False
+
+    log_pod_ocr_routing(
+        pdf_type=_pdf_routing_type(page, pdf_path=pdf_path),
+        pages=_pdf_page_count(page, pdf_path=pdf_path),
+        strategy="gemini_text",
+        reason="excel_unknown_invoice_usable_text",
+    )
+    logger.info(
+        "    💡 EXCEL UNKNOWN + usable text — trying Gemini Text before Vision"
+    )
+    full_data = extract_full_data_from_text_gemini(
+        text, ocr_stats, ocr_stats_lock
+    )
+    ok, invoice_no = _excel_unknown_gemini_text_usable(full_data, text)
+    if not ok or not full_data or not invoice_no:
+        logger.warning(
+            "    ⚠️ EXCEL UNKNOWN: Gemini Text unusable — keeping Vision fallback"
+        )
+        return None, True
+
+    # Critical: sync decided invoice_no into full_data so downstream
+    # canonicalization (summary-first) cannot prefer a Gemini hallucination.
+    _sync_invoice_no_into_full_data(full_data, invoice_no)
+
+    increment_ocr_stat(ocr_stats, ocr_stats_lock, "cost_saved", 0.002)
+    return _finalize_bluefox_page_result({
+        "invoice_no": invoice_no,
+        "full_data": full_data,
+        "extraction_method": f"{ocr_method}+gemini",
+        "ocr_text": text,
+        "ocr_method": ocr_method,
+        "ocr_confidence": ocr_confidence,
+    }, page, page_num=page_num), True
+
+
 def _ocr_text_needs_rotation_retry(text: str) -> bool:
     """Detect upside-down / mirrored scans where normal OCR is unusable."""
     if not text or len(text.strip()) < 100:
@@ -9785,6 +9959,541 @@ def fix_satiija_distributors_rate_from_ocr(
         logger.warning(
             f"⚠️ SATIJA vision unit_price '{old}' → '{item['unit_price']}' "
             f"(Dis%={dis}, Sch%={sch}) for '{str(item.get('product_description', ''))[:40]}'"
+        )
+
+    return items
+
+
+def ocr_suggests_shreejee_distributor(ocr_text: str = "", vendor: str = "") -> bool:
+    """Detect SHREEJEE DISTRIBUTOR GST invoice (MRP OldMRP Qty Free Rate Amount layout)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    return "SHREEJEE" in blob and "DISTRIBUTOR" in blob
+
+
+def _shreejee_tokenize_numeric_line(line: str) -> list:
+    """Tokenize a SHREEJEE numeric table OCR line."""
+    cleaned = re.sub(r"['\"°£$]", "", str(line or ""))
+    cleaned = cleaned.replace(",", ".")
+    parts = re.findall(r'\d+\.\d+|\d+', cleaned)
+    vals = []
+    for part in parts:
+        if "." in part:
+            vals.append(float(part))
+        elif len(part) >= 5:
+            vals.append(float(part) / 100.0)
+        else:
+            vals.append(float(part))
+    expanded = []
+    for val in vals:
+        merged = re.match(r'^(\d+)\.(\d{2})(\d{1,3})$', f"{val:.4f}")
+        if merged and 1 <= float(merged.group(3)) <= 5000:
+            expanded.extend([
+                float(f"{merged.group(1)}.{merged.group(2)}"),
+                float(merged.group(3)),
+            ])
+        else:
+            expanded.append(val)
+    return expanded
+
+
+def _shreejee_infer_mrp(tokens: list) -> float:
+    """Infer MRP from first token(s); OCR often drops the leading digit (0.52→80.52)."""
+    if not tokens:
+        return 0.0
+    mrp = tokens[0]
+    if 0 < mrp < 10 and len(tokens) > 2:
+        return round(80.0 + mrp, 2)
+    return mrp
+
+
+def _parse_shreejee_table_row_tokens(tokens: list):
+    """Parse one SHREEJEE MRP|OldMRP|Qty|Rate|Amount row from numeric tokens."""
+    if len(tokens) < 4:
+        return None
+    mrp = _shreejee_infer_mrp(tokens)
+    if mrp <= 0 or mrp > 100000:
+        return None
+
+    for qty_idx in range(1, min(8, len(tokens))):
+        qty = tokens[qty_idx]
+        if qty != int(qty) or qty < 1 or qty > 5000:
+            continue
+        for rate_idx in range(qty_idx + 1, min(qty_idx + 4, len(tokens))):
+            rate = tokens[rate_idx]
+            if rate <= 0 or rate > mrp * 1.1:
+                continue
+            for amt_idx in range(rate_idx + 1, min(rate_idx + 4, len(tokens))):
+                amount = tokens[amt_idx]
+                if amount <= 0:
+                    continue
+                if abs((qty * rate) - amount) / max(amount, 1.0) <= 0.03:
+                    if rate >= mrp * 0.99:
+                        continue
+                    return {
+                        "mrp": mrp,
+                        "qty": qty,
+                        "rate": round(rate, 2),
+                        "amount": round(amount, 2),
+                    }
+
+    disc_vals = [t for t in tokens if abs(t - 5.0) <= 0.65]
+    amt_vals = [t for t in tokens if 500 < t < 100000]
+    tax_vals = [
+        t for t in tokens
+        if 100 < t < 100000
+        and abs(t - mrp) / max(mrp, 1.0) > 0.05
+    ]
+    taxable_vals = []
+    for val in tax_vals:
+        if any(
+            other > val and abs(other / val - 1.05) <= 0.005
+            for other in tax_vals
+            if other != val
+        ):
+            taxable_vals.append(val)
+    if not taxable_vals:
+        taxable_vals = list(tax_vals)
+    disc = disc_vals[0] if disc_vals else 5.0
+
+    def _row_from_amount(amount: float, qty_candidates):
+        for qty in qty_candidates:
+            rate = amount / qty
+            if rate <= 0 or rate >= mrp * 0.99:
+                continue
+            rounded_rate = round(rate, 2)
+            if mrp > 50 and rounded_rate < 5.0:
+                continue
+            if abs(qty * rounded_rate - amount) / max(amount, 1.0) <= 0.03:
+                return {
+                    "mrp": mrp,
+                    "qty": float(qty),
+                    "rate": rounded_rate,
+                    "amount": round(amount, 2),
+                }
+        return None
+
+    qty_candidates = (10, 20, 30, 60, 100, 120, 300, 360)
+    if mrp < 50 and amt_vals and taxable_vals:
+        max_amt = max(amt_vals)
+        tax_amount = max(taxable_vals) / (1.0 - disc / 100.0)
+        if abs(max_amt - tax_amount) / max(tax_amount, 1.0) > 0.04:
+            parsed = _row_from_amount(max_amt, qty_candidates)
+            if parsed:
+                return parsed
+    for taxable in sorted(set(taxable_vals), reverse=True):
+        amount = taxable / (1.0 - disc / 100.0)
+        if amt_vals and not any(
+            abs(amt - amount) / max(amount, 1.0) <= 0.06 for amt in amt_vals
+        ):
+            continue
+        parsed = _row_from_amount(amount, qty_candidates)
+        if parsed:
+            return parsed
+
+    for amount in sorted(set(amt_vals), reverse=True):
+        parsed = _row_from_amount(amount, qty_candidates)
+        if parsed:
+            return parsed
+    return None
+
+
+def _parse_shreejee_numeric_table_rows(ocr_text: str) -> list:
+    """Parse SHREEJEE MRP|OldMRP|Qty|Rate|Amount table rows from OCR."""
+    if not ocr_text:
+        return []
+    lines = ocr_text.splitlines()
+    rows = []
+    in_table = False
+    pending = ""
+    for i, line in enumerate(lines):
+        up = re.sub(r'\s+', '', line.upper())
+        if not in_table and (
+            ("OLDMRP" in up and "QTY" in up and "RATE" in up)
+            or ("MRP" in up and "NETAMT" in up)
+        ):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not str(line or "").strip():
+            continue
+        if re.search(
+            r'TOTAL\s*ITEM|TAX\s*TYPE|FOR,\s*SHREEJEE|MANAGED\s+BY|'
+            r'TETAT\s+TEM|TAXABLE\s+CGST',
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        candidate = f"{pending} {line}".strip() if pending else line
+        parsed = _parse_shreejee_table_row_tokens(
+            _shreejee_tokenize_numeric_line(candidate))
+        next_table_line = ""
+        for _nl in lines[i + 1:i + 4]:
+            if str(_nl or "").strip():
+                next_table_line = _nl
+                break
+        if (
+            parsed
+            and not pending
+            and parsed["mrp"] < 50
+            and parsed["rate"] < 15
+            and next_table_line
+            and re.search(r'2[34]\d{2}\.\d{2}', next_table_line)
+        ):
+            pending = candidate
+            continue
+        if parsed:
+            pending = ""
+            rows.append(parsed)
+            continue
+        line_tokens = _shreejee_tokenize_numeric_line(line)
+        if line_tokens and line_tokens[0] < 500:
+            pending = candidate
+        elif pending:
+            pending = ""
+    return rows
+
+
+def _clean_shreejee_product_name(text: str) -> str:
+    """Strip HSN/batch noise from SHREEJEE OCR product lines."""
+    text = re.sub(r'^\s*[iyYoO]\s+', '', str(text or ""), flags=re.IGNORECASE)
+    text = re.sub(r'^\d+\s+', '', text.strip())
+    text = re.sub(r'\s+', ' ', text).strip(" ,.")
+    m = re.match(r'^([A-Za-z][A-Za-z0-9\s\.\-\+\'/]+?)(?:\s+\d{4,}|\s+[A-Z]{2,}\s+\d)', text)
+    if m:
+        return m.group(1).strip(" ,.")
+    return text[:48].strip(" ,.")
+
+
+def _extract_shreejee_product_names(ocr_text: str) -> list:
+    """Extract product description lines above the SHREEJEE numeric table."""
+    if not ocr_text:
+        return []
+    lines = ocr_text.splitlines()
+    names = []
+    capture = False
+    for line in lines:
+        up = line.upper()
+        if "PRODUCT" in up and ("RACK" in up or "HSN" in up or "BATCH" in up):
+            capture = True
+            continue
+        if not capture:
+            continue
+        if re.sub(r'\s+', '', up).startswith("MRP") and "QTY" in up:
+            break
+        text = re.sub(r'^\s*\d+\s+', '', line.strip())
+        text = re.sub(r'^\s*[iyYoO]\s+', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\s+', ' ', text).strip(" ,.")
+        if len(text) < 4:
+            continue
+        if re.search(
+            r'VENUS|PHARMACY|HOSPITAL|GST|TAX\s+INVOICE|DELIVER|INV\.?\s*NO|'
+            r'HSN|MFG|PACK|EXP|BATCH|BATCHNO|J2NUS|RAMPURA|PR\.:',
+            text,
+            re.IGNORECASE,
+        ):
+            continue
+        if sum(ch.isalpha() for ch in text) < 4:
+            continue
+        names.append(_clean_shreejee_product_name(text))
+    return names
+
+
+def _apply_shreejee_table_row_to_item(item: dict, row: dict) -> None:
+    """Apply parsed SHREEJEE OCR row values onto a line item."""
+    item["quantity"] = str(int(row["qty"]) if row["qty"] == int(row["qty"]) else row["qty"])
+    item["unit_price"] = f"{row['rate']:.2f}"
+    item["total_amount"] = f"{row['amount']:.2f}"
+    af = item.get("additional_fields")
+    if not isinstance(af, dict):
+        af = {}
+    af["mrp"] = f"{row['mrp']:.2f}"
+    af["gross_amount"] = f"{row['amount']:.2f}"
+    item["additional_fields"] = af
+
+
+def _new_shreejee_recovered_item(name: str, row: dict) -> dict:
+    """Build a recovered SHREEJEE line item from OCR table row."""
+    item = {
+        "product_description": name,
+        "quantity": str(int(row["qty"]) if row["qty"] == int(row["qty"]) else row["qty"]),
+        "unit_price": f"{row['rate']:.2f}",
+        "total_amount": f"{row['amount']:.2f}",
+        "additional_fields": {
+            "mrp": f"{row['mrp']:.2f}",
+            "gross_amount": f"{row['amount']:.2f}",
+        },
+        "recovered_from_ocr": True,
+    }
+    return item
+
+
+def fix_shreejee_distributor_rate_from_ocr(
+    items,
+    ocr_text: str = "",
+    vendor: str = "",
+    invoice_summary: dict = None,
+) -> list:
+    """
+    SHREEJEE DISTRIBUTOR only:
+    - Gemini often maps Taxable÷Qty as unit_price instead of the Rate column.
+    - OCR path: recover Rate/Amount from batch-anchored table rows.
+    - Vision path: when Disc% is present, undo discount on taxable/qty to get Rate.
+    """
+    if not ocr_suggests_shreejee_distributor(ocr_text, vendor):
+        return items
+
+    logger.info(
+        "🔧 FIX: SHREEJEE DISTRIBUTOR — correcting Rate vs Taxable÷Qty from OCR/discounts"
+    )
+
+    if not isinstance(items, list):
+        items = list(items or [])
+
+    table_rows = _parse_shreejee_numeric_table_rows(ocr_text or "")
+    product_names = _extract_shreejee_product_names(ocr_text or "")
+    if table_rows:
+        logger.info(
+            f"🔧 SHREEJEE: parsed {len(table_rows)} numeric table row(s) from OCR"
+        )
+        matched_rows = set()
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            af = item.get("additional_fields") if isinstance(
+                item.get("additional_fields"), dict) else {}
+            try:
+                item_mrp = float(normalize_numeric_value(str(af.get("mrp", "0"))))
+            except Exception:
+                item_mrp = 0.0
+            best_idx = None
+            for ri, row in enumerate(table_rows):
+                if ri in matched_rows:
+                    continue
+                if item_mrp > 0 and abs(row["mrp"] - item_mrp) / max(item_mrp, 1.0) <= 0.15:
+                    best_idx = ri
+                    break
+            if best_idx is None and idx < len(table_rows):
+                best_idx = idx
+            if best_idx is None:
+                continue
+            row = table_rows[best_idx]
+            matched_rows.add(best_idx)
+            try:
+                cur_q = float(normalize_numeric_value(str(item.get("quantity", "0"))))
+                cur_r = float(normalize_numeric_value(str(item.get("unit_price", "0"))))
+            except Exception:
+                cur_q = cur_r = 0.0
+            if (
+                abs(cur_q - row["qty"]) > 0.5
+                or abs(cur_r - row["rate"]) > 0.05
+            ):
+                logger.warning(
+                    f"⚠️ SHREEJEE table OCR '{str(item.get('product_description', ''))[:40]}': "
+                    f"qty/rate {cur_q}@{cur_r} → {row['qty']}@{row['rate']:.2f}"
+                )
+            _apply_shreejee_table_row_to_item(item, row)
+
+        for ri, row in enumerate(table_rows):
+            if ri in matched_rows:
+                continue
+            name = (
+                product_names[ri]
+                if ri < len(product_names)
+                else f"SHREEJEE ITEM {ri + 1}"
+            )
+            items.append(_new_shreejee_recovered_item(name, row))
+            logger.warning(
+                f"⚠️ SHREEJEE recovered missing row {ri + 1}: "
+                f"'{name[:40]}' qty={row['qty']} rate={row['rate']:.2f}"
+            )
+        return items
+
+    if not items:
+        return items
+
+    def _batch_key(value: str) -> str:
+        return re.sub(r'[^A-Z0-9]', '', str(value or '').upper())
+
+    def _parse_row_after_batch(line: str, batch: str):
+        if not line or not batch:
+            return None, None
+        if _batch_key(batch) not in _batch_key(line):
+            return None, None
+        m = re.search(
+            rf'\b{re.escape(batch)}\s+'
+            r'(?:\d{1,2}/\d{2,4}\s+)?'
+            r'(?P<mrp>\d+\.\d{2})\s+'
+            r'(?:(?P<old_mrp>\d+\.\d{2})\s+)?'
+            r'(?P<qty>\d+(?:\.\d{2})?)\s+'
+            r'(?P<free>\d+(?:\.\d{2})?)?\s*'
+            r'(?P<rate>\d+\.\d{2})\s+'
+            r'(?P<amount>\d+\.\d{2})\s+'
+            r'(?P<disc>\d+\.\d{2})\s+'
+            r'(?P<taxable>\d+\.\d{2})\s+'
+            r'(?P<gst>\d+\.\d{2})\s+'
+            r'(?P<net>\d+\.\d{2})\b',
+            line,
+            re.IGNORECASE,
+        )
+        if not m:
+            return None, None
+        try:
+            qty = float(m.group("qty"))
+            rate = float(m.group("rate"))
+            amount = float(m.group("amount"))
+        except (TypeError, ValueError):
+            return None, None
+        if qty > 0 and rate > 0 and amount > 0:
+            if abs((qty * rate) - amount) / max(amount, 1.0) <= 0.05:
+                return rate, amount
+        return None, None
+
+    def _parse_rate_from_mrp_qty(line: str, mrp_val: float, qty_val: float):
+        """Fallback when batch OCR is garbled: MRP Qty Rate tokens on one line."""
+        if not line or mrp_val <= 0 or qty_val <= 0:
+            return None
+        qty_s = str(int(qty_val)) if qty_val == int(qty_val) else str(qty_val)
+        mrp_s = f"{mrp_val:.2f}"
+        m = re.search(
+            rf'(?<!\d){re.escape(mrp_s)}\s+{re.escape(qty_s)}\s+'
+            r'(?P<rate>\d+\.\d{2}|\d{4,6})(?!\d)',
+            line,
+        )
+        if not m:
+            mrp_compact = mrp_s.replace(".", "")
+            m = re.search(
+                rf'(?<!\d){re.escape(mrp_compact)}\s+{re.escape(qty_s)}\s+'
+                r'(?P<rate>\d+\.\d{2}|\d{4,6})(?!\d)',
+                line.replace(".", " "),
+            )
+        if not m:
+            return None
+        rate_raw = m.group("rate")
+        try:
+            if "." in rate_raw:
+                rate = float(rate_raw)
+            else:
+                rate = float(rate_raw) / 100.0
+        except (TypeError, ValueError):
+            return None
+        if rate <= 0 or rate > mrp_val * 1.05:
+            return None
+        return rate
+
+    ocr_has_rows = False
+    if ocr_text and ocr_text.strip():
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            rate = amount = None
+            batch = str(item.get("lot_batch_number", "") or "").strip()
+            if batch:
+                for line in ocr_text.splitlines():
+                    rate, amount = _parse_row_after_batch(line, batch)
+                    if rate:
+                        break
+            if not rate:
+                af = item.get("additional_fields")
+                if isinstance(af, dict):
+                    try:
+                        mrp_val = float(normalize_numeric_value(
+                            str(af.get("mrp", "0"))))
+                        qty_val = float(normalize_numeric_value(
+                            str(item.get("quantity", "0"))))
+                    except Exception:
+                        mrp_val = qty_val = 0.0
+                    if mrp_val > 0 and qty_val > 0:
+                        for line in ocr_text.splitlines():
+                            rate = _parse_rate_from_mrp_qty(
+                                line, mrp_val, qty_val)
+                            if rate:
+                                amount = qty_val * rate
+                                break
+            if not rate:
+                continue
+            ocr_has_rows = True
+            try:
+                cur = float(normalize_numeric_value(
+                    str(item.get("unit_price", "0"))))
+            except Exception:
+                cur = 0.0
+            if abs(cur - rate) > 0.02:
+                old = item.get("unit_price")
+                item["unit_price"] = f"{rate:.2f}"
+                logger.warning(
+                    f"⚠️ SHREEJEE unit_price '{old}' → '{item['unit_price']}' "
+                    f"for '{str(item.get('product_description', ''))[:40]}'"
+                )
+            if amount:
+                try:
+                    qty = float(normalize_numeric_value(
+                        str(item.get("quantity", "0"))))
+                except Exception:
+                    qty = 0.0
+                if qty > 0:
+                    af = item.get("additional_fields")
+                    if not isinstance(af, dict):
+                        af = {}
+                    af["gross_amount"] = f"{amount:.2f}"
+                    item["additional_fields"] = af
+
+    if ocr_has_rows:
+        return items
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        af = item.get("additional_fields")
+        if not isinstance(af, dict):
+            continue
+        try:
+            dis = float(normalize_numeric_value(
+                str(af.get("discount_percentage", "") or "0")))
+        except Exception:
+            dis = 0.0
+        if dis <= 0:
+            continue
+        try:
+            cur = float(normalize_numeric_value(
+                str(item.get("unit_price", "0"))))
+            qty = float(normalize_numeric_value(
+                str(item.get("quantity", "0"))))
+            gross = float(normalize_numeric_value(
+                str(af.get("gross_amount", "") or "0")))
+            total = float(normalize_numeric_value(
+                str(item.get("total_amount", "0"))))
+        except Exception:
+            continue
+        if cur <= 0 or qty <= 0 or gross <= 0:
+            continue
+        # gross_amount may be Amount (Rate×Qty) or Taxable (after Disc%).
+        # Only undo Disc% when gross is Taxable and unit_price was set to Taxable÷Qty.
+        gst_uplift = 1.05
+        gross_is_amount = (
+            total > 0
+            and dis > 0
+            and abs(total - gross * (1.0 - dis / 100.0) * gst_uplift)
+            / max(total, 1.0) <= 0.03
+        )
+        gross_is_taxable = (
+            not gross_is_amount
+            and total > 0
+            and abs(total - gross * gst_uplift) / max(total, 1.0) <= 0.03
+        )
+        if not gross_is_taxable:
+            continue
+        taxable_per_unit = gross / qty
+        if abs(cur - taxable_per_unit) / max(taxable_per_unit, 1.0) > 0.02:
+            continue
+        rate = taxable_per_unit / (1.0 - dis / 100.0)
+        if rate <= 0:
+            continue
+        old = item.get("unit_price")
+        item["unit_price"] = f"{rate:.2f}"
+        logger.warning(
+            f"⚠️ SHREEJEE vision unit_price '{old}' → '{item['unit_price']}' "
+            f"(Disc%={dis}) for '{str(item.get('product_description', ''))[:40]}'"
         )
 
     return items
@@ -27314,6 +28023,14 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                 f"'{str(item.get('product_description', ''))[:40]}' "
                 f"(QNTY/RATE restored from DEAL table OCR)")
             return item
+        # SHREEJEE DISTRIBUTOR: gross_amount is Taxable (after Disc%), not Amount.
+        # Shared gross/qty rewrite sets Rate→Taxable÷Qty; dedicated fix restores Rate.
+        if ocr_suggests_shreejee_distributor(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for SHREEJEE DISTRIBUTOR row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(Rate restored from Rate column / Disc% handler)")
+            return item
         # NATIONAL PHARMACEUTICALS: AMOUNT = QTY×NET RATE, but unit_price must stay
         # the RATE column. Shared amount÷qty would rewrite RATE→NET RATE (or after a
         # false qty↔rate swap, invent rates like BETD 5.15). OCR restorer owns QTY/RATE.
@@ -31248,6 +31965,10 @@ def enforce_schema(raw_data):
             logger.info(
                 "⏭️ FIX17: Skipping gross-based rate correction for Pharmacea Link "
                 "(handled by FIX18 Unit Price column normalizer)")
+        elif ocr_suggests_shreejee_distributor(ocr_text or "", _vendor_17):
+            logger.info(
+                "⏭️ FIX17: Skipping gross-based rate correction for SHREEJEE DISTRIBUTOR "
+                "(gross_amount is Taxable after Disc%; handled by SHREEJEE rate fix)")
         else:
             _candidates_17 = []
             for _item_17 in processed_items:
@@ -31324,6 +32045,15 @@ def enforce_schema(raw_data):
                     f"cross-item threshold not met (need >=2); no correction applied")
     except Exception as _e17:
         logger.debug(f"FIX17 error: {_e17}")
+
+    # SHREEJEE DISTRIBUTOR: Taxable÷Qty mapped as unit_price instead of Rate column
+    # (must run after FIX17, which would otherwise overwrite Rate with Taxable÷Qty)
+    processed_items = fix_shreejee_distributor_rate_from_ocr(
+        processed_items,
+        ocr_text,
+        _vendor_name,
+        template["data"].get("invoice_summary"),
+    )
 
     processed_items = fix_pharmacea_link_product_names_from_ocr(
         processed_items, ocr_text)
@@ -33873,6 +34603,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
     _tesseract_gemini_fallback = None
     _text_tier_gemini_fallback = None
     _tier12_ocr_text = ""
+    _excel_unknown_text_attempted = False
     _hyd_26_date_crop_iso = None
     _del_26_date_crop_iso = None
     _is_hyd26_file = bool(
@@ -33976,6 +34707,23 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                             "ocr_method": "pdfplumber",
                             "ocr_confidence": confidence
                         }, page, page_num=page_num)
+            else:
+                # Narrow cost path: EXCEL + UNKNOWN_* + usable text → Gemini Text
+                # before paid Vision (stockist forced-Tesseract still wins).
+                _excel_res, _excel_tried = _attempt_excel_unknown_gemini_text(
+                    pdfplumber_text,
+                    pdf_path=pdf_path,
+                    ocr_stats=ocr_stats,
+                    ocr_stats_lock=ocr_stats_lock,
+                    ocr_method="pdfplumber",
+                    ocr_confidence=confidence,
+                    page=page,
+                    page_num=page_num,
+                )
+                if _excel_tried:
+                    _excel_unknown_text_attempted = True
+                if _excel_res is not None:
+                    return _excel_res
 
     # ✅ TIER 2: PyMuPDF text extraction (fallback)
     text = page.get_text("text") or ""
@@ -34046,6 +34794,22 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         "ocr_method": "pymupdf",
                         "ocr_confidence": 90.0
                     }, page, page_num=page_num)
+        else:
+            if not _excel_unknown_text_attempted:
+                _excel_res, _excel_tried = _attempt_excel_unknown_gemini_text(
+                    text,
+                    pdf_path=pdf_path,
+                    ocr_stats=ocr_stats,
+                    ocr_stats_lock=ocr_stats_lock,
+                    ocr_method="pymupdf",
+                    ocr_confidence=90.0,
+                    page=page,
+                    page_num=page_num,
+                )
+                if _excel_tried:
+                    _excel_unknown_text_attempted = True
+                if _excel_res is not None:
+                    return _excel_res
 
     if not fallback_ocr_text and _tier12_ocr_text:
         fallback_ocr_text = _tier12_ocr_text
@@ -34309,6 +35073,26 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         invoice_no = m.group(1).replace(
                             "_", "-").replace(" ", "")
 
+                if (
+                    not invoice_no
+                    and not _novacare_scanned
+                    and not _excel_unknown_text_attempted
+                ):
+                    _excel_res, _excel_tried = _attempt_excel_unknown_gemini_text(
+                        tesseract_text,
+                        pdf_path=pdf_path,
+                        ocr_stats=ocr_stats,
+                        ocr_stats_lock=ocr_stats_lock,
+                        ocr_method="tesseract",
+                        ocr_confidence=confidence,
+                        page=page,
+                        page_num=page_num,
+                    )
+                    if _excel_tried:
+                        _excel_unknown_text_attempted = True
+                    if _excel_res is not None:
+                        return _excel_res
+
                 if invoice_no or _novacare_scanned:
                     if invoice_no:
                         logger.info(f"    ✅ Tesseract: invoice# {invoice_no}")
@@ -34556,6 +35340,13 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 f"    ⚠️ Tesseract+Gemini extracted 0 line items. Falling back to Gemini Vision...")
 
     # ✅ TIER 4: Gemini Vision (PAID - Last Resort)
+    if _excel_unknown_text_attempted:
+        log_pod_ocr_routing(
+            pdf_type=_pdf_routing_type(page, pdf_path=pdf_path),
+            pages=_pdf_page_count(page, pdf_path=pdf_path),
+            strategy="gemini_vision",
+            reason="excel_unknown_gemini_text_fallback",
+        )
     logger.warning(f"    💰 Using Gemini Vision (paid)...")
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "gemini_vision_calls", 1)
 
