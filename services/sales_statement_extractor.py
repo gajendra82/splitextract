@@ -1889,6 +1889,14 @@ def _parse_pod_hospital_sales_xlsx(
             "expiry": pod_date(hospital_cell(row, "expiry")),
             "tax_rate": _to_float(hospital_cell(row, "tax rate")),
             "mrp": _to_float(hospital_cell(row, "mrp")),
+            # Optional selling-rate columns only — never copy MRP into sales_rate.
+            "sales_rate": _to_float(
+                hospital_cell(row, "rate")
+                or hospital_cell(row, "sales rate")
+                or hospital_cell(row, "sales_rate")
+                or hospital_cell(row, "unit price")
+                or hospital_cell(row, "unit_price")
+            ),
         }
         items.append(item)
         if invoice_no:
@@ -2067,7 +2075,15 @@ def _parse_pod_grn_query_result_xlsx(
         quantity = _to_float(cell(row, "si_qty"))
         if quantity == 0:
             quantity = _to_float(cell(row, "qty_picked_from_this_grn"))
-        total = _to_float(cell(row, "net_amount"))
+        if quantity == 0:
+            quantity = _to_float(cell(row, "qty") or cell(row, "quantity") or cell(row, "sales qty"))
+        total = _to_float(
+            cell(row, "net_amount")
+            or cell(row, "amount")
+            or cell(row, "total")
+            or cell(row, "amt")
+            or cell(row, "sales value")
+        )
         manufacturer = _clean_name(str(cell(row, "manufacturer") or ""))
         if manufacturer:
             manufacturers.add(manufacturer)
@@ -2088,7 +2104,14 @@ def _parse_pod_grn_query_result_xlsx(
             "expiry": pod_date(cell(row, "batch_expiry")),
             "tax_rate": _to_float(cell(row, "grn gst rate")),
             "mrp": _to_float(cell(row, "mrp")),
-            "sales_rate": _to_float(cell(row, "sales_rate")),
+            "sales_rate": _to_float(
+                cell(row, "sales_rate")
+                or cell(row, "rate")
+                or cell(row, "sales rate")
+                or cell(row, "unit price")
+                or cell(row, "unit_price")
+                or cell(row, "s.rate")
+            ),
         }
         if is_aztreo_target:
             row_pairs = {

@@ -62,12 +62,14 @@ import threading
 from contextlib import contextmanager
 import time
 import random
+import sys
 import logging
 from urllib.parse import urlparse, unquote
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.formparsers import MultiPartParser
 from starlette.requests import Request
 import fitz  # PyMuPDF
 import requests
@@ -137,7 +139,39 @@ def log_mem(stage: str, t0: Optional[float] = None):
 app = FastAPI(
     title="Invoice Splitter + Extractor API v10.0 (PDFPlumber + Tesseract)")
 
-Request.max_body_size = 200 * 1024 * 1024
+Request.max_body_size = None
+
+# Starlette 0.47 Request._get_form() hardcodes max_part_size=1MB. Setting
+# MultiPartParser.max_part_size alone does NOT change that default, so large
+# invoices_override JSON still 400s with "Part exceeded maximum size of 1024KB."
+# Patch the request method so every multipart part can be larger than 1MB.
+_orig_get_form = Request._get_form
+_UNLIMITED_FORM_MAX_PART_SIZE = sys.maxsize
+
+
+async def _get_form_unlimited(
+    self,
+    *,
+    max_files: int | float = 1000,
+    max_fields: int | float = 1000,
+    max_part_size: int = _UNLIMITED_FORM_MAX_PART_SIZE,
+):
+    return await _orig_get_form(
+        self,
+        max_files=max_files,
+        max_fields=max_fields,
+        max_part_size=max_part_size,
+    )
+
+
+Request._get_form = _get_form_unlimited  # type: ignore[method-assign]
+MultiPartParser.max_part_size = _UNLIMITED_FORM_MAX_PART_SIZE
+logger.info(
+    "✅ Unlimited multipart form parser loaded "
+    "(Request._get_form max_part_size=%s, MultiPartParser.max_part_size=%s)",
+    _UNLIMITED_FORM_MAX_PART_SIZE,
+    getattr(MultiPartParser, "max_part_size", None),
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -639,6 +673,11 @@ async def _reliability_startup():
     register_tesseract_slot_probe(_tesseract_slot_probe)
     register_request_progress_sync(_sync_request_progress_from_reliability)
     start_watchdog()
+    logger.info(
+        "✅ Startup: unlimited multipart form parser active "
+        "(max_part_size=%s) — large invoices_override posts accepted",
+        _UNLIMITED_FORM_MAX_PART_SIZE,
+    )
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -37481,20 +37520,67 @@ def build_pdf_from_pages(src_doc: fitz.Document, page_indices: List[int]) -> byt
 
 
 
+def _pdf_wrap_line(text: str, max_chars: int) -> List[str]:
+    if max_chars < 8:
+        max_chars = 8
+    if not text:
+        return [""]
+    if len(text) <= max_chars:
+        return [text]
+    wrapped: List[str] = []
+    remaining = text
+    while remaining:
+        wrapped.append(remaining[:max_chars])
+        remaining = remaining[max_chars:]
+    return wrapped
+
+
 def build_text_pdf_bytes(title: str, body: str) -> bytes:
-    """Build a minimal single-page PDF for Excel-derived invoices (blob naming stays *.pdf)."""
+    """Multi-page text PDF for Excel/POD GRN invoices (one UNKNOWN can be 1000+ lines)."""
+    pdf_bytes, _page_count = build_text_pdf_bytes_and_pages(title, body)
+    return pdf_bytes
+
+
+def build_text_pdf_bytes_and_pages(title: str, body: str) -> Tuple[bytes, int]:
+    page_width = 595.0
+    page_height = 842.0
+    margin = 36.0
+    fontsize = 8
+    line_height = 10.5
+    max_chars = max(40, int((page_width - (margin * 2)) / (fontsize * 0.5)))
+    max_y = page_height - margin
+
+    lines = [str(title or "Invoice"), ""]
+    lines.extend((body or "").splitlines())
+
     out = fitz.open()
     try:
-        page = out.new_page(width=595, height=842)
-        text = f"{title}\n\n{(body or '')[:12000]}"
-        # insert_textbox wraps long lines; fall back to insert_text on failure
-        rect = fitz.Rect(36, 36, 559, 806)
-        try:
-            page.insert_textbox(rect, text, fontsize=9, fontname="helv")
-        except Exception:
-            page.insert_text(
-                (36, 50), text[:4000], fontsize=9, fontname="helv")
-        return out.tobytes(garbage=4, deflate=True)
+        page = out.new_page(width=page_width, height=page_height)
+        y = margin + fontsize
+
+        def ensure_page() -> None:
+            nonlocal page, y
+            if y + line_height <= max_y:
+                return
+            page = out.new_page(width=page_width, height=page_height)
+            y = margin + fontsize
+
+        for raw in lines:
+            for chunk in _pdf_wrap_line(str(raw), max_chars):
+                ensure_page()
+                try:
+                    page.insert_text(
+                        (margin, y), chunk, fontsize=fontsize, fontname="helv"
+                    )
+                except Exception:
+                    safe = chunk.encode("latin-1", "replace").decode("latin-1")
+                    page.insert_text(
+                        (margin, y), safe, fontsize=fontsize, fontname="helv"
+                    )
+                y += line_height
+
+        page_count = len(out)
+        return out.tobytes(garbage=4, deflate=True), page_count
     finally:
         out.close()
 
@@ -37922,13 +38008,13 @@ def build_split_extract_response_from_pod_grn_overrides(
         final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
         safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
         invoice_filename = f"invoice_{safe_name}.pdf"
-        pdf_bytes = build_text_pdf_bytes(
+        pdf_bytes, page_count = build_text_pdf_bytes_and_pages(
             f"Invoice {final_invoice_no}", ocr_text)
 
         invoice_info: Dict[str, Any] = {
             "invoice_no": final_invoice_no,
-            "pages": [1],
-            "num_pages": 1,
+            "pages": list(range(1, page_count + 1)),
+            "num_pages": page_count,
             "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
             "extracted_data": formatted,
         }
@@ -38013,6 +38099,78 @@ def build_split_extract_response_from_pod_grn_overrides(
     }
 
 
+def _collapse_pod_blank_invoice_groups(
+    invoices: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Merge blank/UNKNOWN_* invoice groups into a single UNKNOWN PDF group.
+
+    Used by /extract-pod-grn so rows without invoice numbers become one
+    invoice_UNKNOWN.pdf instead of UNKNOWN_1..UNKNOWN_N.
+    Preserves each group's customer/hospital on line-item additional_fields.
+    """
+    if not invoices:
+        return invoices
+    known: List[Dict[str, Any]] = []
+    blank: List[Dict[str, Any]] = []
+    for inv in invoices:
+        if not isinstance(inv, dict):
+            continue
+        inv_no = str(inv.get("invoice_no") or "").strip()
+        key = inv_no.upper()
+        if not key or key == "UNKNOWN" or key.startswith("UNKNOWN_"):
+            blank.append(inv)
+        else:
+            known.append(inv)
+    if len(blank) <= 1:
+        if len(blank) == 1:
+            blank[0]["invoice_no"] = _POD_BLANK_INVOICE_NO
+        return known + blank
+
+    merged = dict(blank[0])
+    merged["invoice_no"] = _POD_BLANK_INVOICE_NO
+    merged_items: List[Dict[str, Any]] = []
+    total = 0.0
+    for inv in blank:
+        hospital = str(
+            inv.get("customer")
+            or inv.get("hospital_name")
+            or ""
+        ).strip()
+        for item in (inv.get("line_items") or []):
+            if not isinstance(item, dict):
+                continue
+            if hospital:
+                af = item.setdefault("additional_fields", {})
+                if not isinstance(af, dict):
+                    af = {}
+                    item["additional_fields"] = af
+                af.setdefault("hospital_name", hospital)
+                af.setdefault("customer", hospital)
+            merged_items.append(item)
+        try:
+            total += float(inv.get("total") or 0)
+        except (TypeError, ValueError):
+            pass
+        if not merged.get("vendor") and inv.get("vendor"):
+            merged["vendor"] = inv.get("vendor")
+        if not merged.get("invoice_date") and inv.get("invoice_date"):
+            merged["invoice_date"] = inv.get("invoice_date")
+            merged["invoice_date_raw"] = inv.get("invoice_date_raw") or inv.get(
+                "invoice_date"
+            )
+    # Single UNKNOWN doc — customer left blank; hospital is on each line item.
+    merged["customer"] = ""
+    merged["line_items"] = merged_items
+    merged["total"] = total
+    logger.info(
+        "POD GRN collapsed %s blank/UNKNOWN invoice groups into one UNKNOWN "
+        "(%s line items)",
+        len(blank),
+        len(merged_items),
+    )
+    return known + [merged]
+
+
 def build_split_extract_response_from_excel(
     *,
     excel_path: str,
@@ -38027,6 +38185,7 @@ def build_split_extract_response_from_excel(
     queue_wait_seconds: float,
     start_time: datetime,
     ocr_stats: Dict[str, float],
+    collapse_blank_invoices: bool = False,
 ) -> Dict[str, Any]:
     """
     Excel path for /split-and-extract.
@@ -38072,7 +38231,11 @@ def build_split_extract_response_from_excel(
             _pod_detect_err,
         )
 
-    parse_result = extract_invoices_from_excel(excel_path, source_filename)
+    parse_result = extract_invoices_from_excel(
+        excel_path,
+        source_filename,
+        one_blank_invoice_group=collapse_blank_invoices,
+    )
     if not invoices_are_usable(parse_result.invoices):
         logger.info(
             "Excel structured parse had no usable hospital/invoice columns for %s — Gemini table fallback",
@@ -38095,10 +38258,25 @@ def build_split_extract_response_from_excel(
         # Soft-fail empty/corrupt only when nothing usable was produced
         raise HTTPException(status_code=400, detail=detail)
 
+    if collapse_blank_invoices:
+        before = len(parse_result.invoices or [])
+        parse_result.invoices = _collapse_pod_blank_invoice_groups(
+            list(parse_result.invoices or [])
+        )
+        after = len(parse_result.invoices)
+        if after != before:
+            logger.info(
+                "POD GRN blank-invoice collapse: %s -> %s invoice groups",
+                before,
+                after,
+            )
+
     all_invoices: List[Dict[str, Any]] = []
     for idx, raw_invoice in enumerate(parse_result.invoices):
         group_invoice_no = str(raw_invoice.get(
-            "invoice_no") or "").strip() or f"UNKNOWN_{idx + 1}"
+            "invoice_no") or "").strip() or (
+            _POD_BLANK_INVOICE_NO if collapse_blank_invoices else f"UNKNOWN_{idx + 1}"
+        )
         update_request_progress(
             "excel_invoice_normalized", invoice=group_invoice_no)
 
@@ -38171,13 +38349,13 @@ def build_split_extract_response_from_excel(
         final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
         safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
         invoice_filename = f"invoice_{safe_name}.pdf"
-        pdf_bytes = build_text_pdf_bytes(
+        pdf_bytes, page_count = build_text_pdf_bytes_and_pages(
             f"Invoice {final_invoice_no}", ocr_text)
 
         invoice_info: Dict[str, Any] = {
             "invoice_no": final_invoice_no,
-            "pages": [1],
-            "num_pages": 1,
+            "pages": list(range(1, page_count + 1)),
+            "num_pages": page_count,
             "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
             "extracted_data": formatted,
         }
@@ -38341,6 +38519,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "receipts_qty",
         "closing_qty",
         "closing_value",
+        "sales_rate",
     ):
         if key in extra and extra.get(key) not in (None, ""):
             additional[key] = extra[key]
@@ -38348,10 +38527,26 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             additional[key] = line.get(key)
     if line.get("packing"):
         additional["packing"] = line.get("packing")
+    # Real Excel rate columns only — never MRP. Laravel fills blank rates later.
+    _unit_price = ""
+    for _rate_key in ("sales_rate", "rate", "unit_price", "unit_rate"):
+        _candidate = extra.get(_rate_key)
+        if _candidate in (None, "", 0, 0.0):
+            _candidate = line.get(_rate_key)
+        if _candidate in (None, "", 0, 0.0):
+            continue
+        try:
+            _sr = float(_candidate)
+            if _sr > 0:
+                _unit_price = f"{_sr:.2f}"
+                break
+        except (ValueError, TypeError):
+            continue
+
     return {
         "product_description": product,
         "quantity": "" if qty in (None, "") else str(qty),
-        "unit_price": "",
+        "unit_price": _unit_price,
         "total_amount": "" if amount in (None, "") else str(amount),
         "hsn_code": str(extra.get("hsn") or ""),
         "lot_batch_number": str(extra.get("batch") or ""),
@@ -38602,12 +38797,13 @@ def build_split_extract_response_from_sales_statement(
         final_invoice_no = group_invoice_no or f"UNKNOWN_{idx + 1}"
         safe_name = re.sub(r'[<>:"/\\|?*]', '_', final_invoice_no)
         invoice_filename = f"invoice_{safe_name}.pdf"
-        pdf_bytes = build_text_pdf_bytes(f"Invoice {final_invoice_no}", ocr_text)
+        pdf_bytes, page_count = build_text_pdf_bytes_and_pages(
+            f"Invoice {final_invoice_no}", ocr_text)
 
         invoice_info: Dict[str, Any] = {
             "invoice_no": final_invoice_no,
-            "pages": [1],
-            "num_pages": 1,
+            "pages": list(range(1, page_count + 1)),
+            "num_pages": page_count,
             "size_mb": round(len(pdf_bytes) / (1024 * 1024), 2),
             "extracted_data": formatted,
         }
@@ -41833,6 +42029,7 @@ async def extract_pod_grn_endpoint(
                 queue_wait_seconds=0.0,
                 start_time=start_time,
                 ocr_stats=create_ocr_stats(),
+                collapse_blank_invoices=True,
             )
         finally:
             if tmp_path:

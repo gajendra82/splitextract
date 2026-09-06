@@ -172,6 +172,8 @@ _CANONICAL_FIELDS: Dict[str, Tuple[str, ...]] = {
         "delivered qty",
         "received qty",
         "grn qty",
+        "si qty",
+        "si_qty",
     ),
     "unit_of_measure": (
         "uom",
@@ -189,6 +191,10 @@ _CANONICAL_FIELDS: Dict[str, Tuple[str, ...]] = {
         "selling rate",
         "unit rate",
         "rate per unit",
+        "sales rate",
+        "s.rate",
+        "s rate",
+        "item rate",
     ),
     "total_amount": (
         "amount",
@@ -200,6 +206,9 @@ _CANONICAL_FIELDS: Dict[str, Tuple[str, ...]] = {
         "taxable value",
         "line total",
         "net value",
+        "amt",
+        "sales value",
+        "net amt",
     ),
     "tax": (
         "gst",
@@ -874,8 +883,14 @@ def _unpivot_hospital_qty_sheet(
     worksheet_name: str,
     metadata: ExcelParseMetadata,
     unknown_start: int,
+    one_blank_invoice_group: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Turn Item × Hospital quantity columns into one invoice per hospital."""
+    """Turn Item × Hospital quantity columns into invoice groups.
+
+    Default: one invoice shell per hospital (UNKNOWN_1..N) for generic Excel.
+    When one_blank_invoice_group=True (POD GRN): one UNKNOWN invoice for all
+    blank-invoice rows, with hospital_name stamped on each line item.
+    """
     hospital_cols = _hospital_pivot_columns(headers, col_map)
     groups: Dict[str, Dict[str, Any]] = {}
     order: List[str] = []
@@ -902,11 +917,20 @@ def _unpivot_hospital_qty_sheet(
             hospital = _normalize_whitespace(headers[col_idx] if col_idx < len(headers) else "")
             if not hospital:
                 continue
-            key = hospital.upper()
+            if one_blank_invoice_group:
+                key = "UNKNOWN"
+                group_invoice_no = "UNKNOWN"
+            else:
+                key = hospital.upper()
+                group_invoice_no = None
             if key not in groups:
-                unknown_counter += 1
-                invoice = _empty_invoice_shell(f"UNKNOWN_{unknown_counter}")
-                invoice["customer"] = hospital
+                if group_invoice_no is None:
+                    unknown_counter += 1
+                    group_invoice_no = f"UNKNOWN_{unknown_counter}"
+                invoice = _empty_invoice_shell(group_invoice_no)
+                # Keep a representative customer for single-UNKNOWN POD docs;
+                # per-hospital name is also stored on each line item below.
+                invoice["customer"] = hospital if not one_blank_invoice_group else ""
                 groups[key] = invoice
                 order.append(key)
             item = _build_line_item(
@@ -925,12 +949,26 @@ def _unpivot_hospital_qty_sheet(
                 row_num,
             )
             if item:
+                af = item.setdefault("additional_fields", {})
+                if not isinstance(af, dict):
+                    af = {}
+                    item["additional_fields"] = af
+                af["hospital_name"] = hospital
+                af["customer"] = hospital
                 groups[key]["line_items"].append(item)
                 emitted = True
         if emitted:
             metadata.processed_rows += 1
         else:
             metadata.ignored_rows += 1
+
+    if one_blank_invoice_group and groups:
+        logger.info(
+            "POD hospital-qty pivot collapsed to one UNKNOWN invoice "
+            "(%s hospitals, %s line items)",
+            len(hospital_cols),
+            sum(len(groups[k].get("line_items") or []) for k in order),
+        )
 
     return [_finalize_invoice(groups[key], worksheet_name) for key in order]
 
@@ -940,6 +978,7 @@ def _extract_invoices_from_sheet(
     worksheet_name: str,
     metadata: ExcelParseMetadata,
     unknown_start: int,
+    one_blank_invoice_group: bool = False,
 ) -> List[Dict[str, Any]]:
     normalizer = HeaderNormalizer()
     sample: List[Tuple[int, List[Any]]] = []
@@ -964,9 +1003,10 @@ def _extract_invoices_from_sheet(
 
     if _is_hospital_qty_pivot(headers, col_map):
         logger.info(
-            "Hospital quantity pivot detected on '%s' (%s hospital columns)",
+            "Hospital quantity pivot detected on '%s' (%s hospital columns)%s",
             worksheet_name,
             len(_hospital_pivot_columns(headers, col_map)),
+            " — POD single UNKNOWN group" if one_blank_invoice_group else "",
         )
         return _unpivot_hospital_qty_sheet(
             rows,
@@ -976,6 +1016,7 @@ def _extract_invoices_from_sheet(
             worksheet_name,
             metadata,
             unknown_start,
+            one_blank_invoice_group=one_blank_invoice_group,
         )
 
     logger.info(
@@ -992,6 +1033,35 @@ def _extract_invoices_from_sheet(
         metadata,
         headers=headers,
     )
+    if one_blank_invoice_group:
+        # Flatten blank-invoice shells into one UNKNOWN (POD GRN rule).
+        blank: List[Dict[str, Any]] = []
+        known: List[Dict[str, Any]] = []
+        for invoice in invoices:
+            inv_no = str(invoice.get("invoice_no") or "").strip().upper()
+            if not inv_no or inv_no == "UNKNOWN" or inv_no.startswith("UNKNOWN_"):
+                blank.append(invoice)
+            else:
+                known.append(invoice)
+        if blank:
+            merged = dict(blank[0])
+            merged["invoice_no"] = "UNKNOWN"
+            items: List[Dict[str, Any]] = []
+            for inv in blank:
+                hospital = str(inv.get("customer") or "").strip()
+                for item in (inv.get("line_items") or []):
+                    if not isinstance(item, dict):
+                        continue
+                    if hospital:
+                        af = item.setdefault("additional_fields", {})
+                        if isinstance(af, dict):
+                            af.setdefault("hospital_name", hospital)
+                            af.setdefault("customer", hospital)
+                    items.append(item)
+            merged["line_items"] = items
+            invoices = known + [merged]
+        return invoices
+
     shifted = unknown_start
     for invoice in invoices:
         invoice_no = str(invoice.get("invoice_no") or "")
@@ -1398,6 +1468,7 @@ def group_rows_into_invoices(
 def extract_invoices_from_excel(
     path: str,
     original_filename: Optional[str] = None,
+    one_blank_invoice_group: bool = False,
 ) -> ExcelExtractResult:
     """
     Parse an Excel workbook into flat invoice dicts compatible with enforce_schema().
@@ -1445,10 +1516,11 @@ def extract_invoices_from_excel(
                 sheet_name,
                 metadata,
                 unknown_start,
+                one_blank_invoice_group=one_blank_invoice_group,
             )
             for invoice in sheet_invoices:
                 invoice_no = str(invoice.get("invoice_no") or "")
-                if invoice_no.upper().startswith("UNKNOWN"):
+                if invoice_no.upper().startswith("UNKNOWN_"):
                     try:
                         unknown_start = max(
                             unknown_start,
@@ -1456,6 +1528,8 @@ def extract_invoices_from_excel(
                         )
                     except (IndexError, ValueError):
                         unknown_start += 1
+                elif invoice_no.upper() == "UNKNOWN":
+                    unknown_start = max(unknown_start, 1)
             if sheet_invoices:
                 used_sheets.append(sheet_name)
                 _merge_sheet_invoices(all_invoices, sheet_invoices)
