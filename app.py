@@ -1094,10 +1094,9 @@ def _ocr_text_has_invoice_cues(text: str) -> bool:
     ))
 
 
-# Large image-scan batches (e.g. Split_1_1_to_10 / to_29): even the "quick"
-# header probe can hang for hours under CPU steal and block the queue.
-# Skip probe + full Tesseract → Gemini Vision. Small POD PDFs (1–9 pages)
-# keep the cheaper Tesseract path.
+# Large image-scan batches (e.g. Split_1_1_to_10 / to_29). Used only to
+# classify pdf_type=image-only for routing logs. Page count must NOT skip
+# Tesseract — Vision remains the existing fallback after OCR/text fails.
 _HEAVY_GARBLED_SCAN_MIN_PAGES = 10
 _HEAVY_GARBLED_SCAN_MAX_NATIVE_CHARS = 80
 
@@ -1105,7 +1104,7 @@ _HEAVY_GARBLED_SCAN_MAX_NATIVE_CHARS = 80
 def _is_heavy_multipage_image_scan(page, pdf_path: Optional[str] = None) -> bool:
     """True for multipage image-only PDFs (like Split_*_to_10 / to_29).
 
-    Scoped gate — typical 1–9 page POD jobs keep Tesseract (lower Gemini cost).
+    Classification only — does not skip Tesseract or force Vision.
     """
     total_pages = _pdf_page_count(page, pdf_path=pdf_path)
     if total_pages < _HEAVY_GARBLED_SCAN_MIN_PAGES:
@@ -1186,12 +1185,13 @@ def _should_skip_tesseract_for_heavy_scan(
     pdf_path: Optional[str] = None,
     ocr_hint: str = "",
 ) -> bool:
-    """Heavy image-only scans skip Tesseract unless stockist rules require it."""
-    if not _is_heavy_multipage_image_scan(page, pdf_path=pdf_path):
-        return False
-    if _stockist_requires_tesseract_ocr(pdf_path, ocr_hint):
-        return False
-    return True
+    """Page count must not skip Tesseract.
+
+    Heavy image-only PDFs go through Tesseract first. Gemini Vision stays
+    the existing fallback when OCR/text cannot produce a usable result.
+    Stockist-specific Tesseract rules are applied separately and unchanged.
+    """
+    return False
 
 
 def _cpu_guard_blocks_tesseract(
@@ -5340,6 +5340,12 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
     if ocr_suggests_medica_torero_stockist(ocr_text, ""):
         logger.info(
             "⏭️ Skipping OCR missing-item recovery for Medica/Torero stockist"
+        )
+        return existing_items
+
+    if ocr_suggests_plus_distribution_stn(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for PLUS DISTRIBUTION STN"
         )
         return existing_items
 
@@ -17531,6 +17537,516 @@ def fix_national_pharmaceuticals_qty_rate_from_ocr(
     return items
 
 
+def ocr_suggests_plus_distribution_stn(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """PLUS DISTRIBUTION Stock Transfer Note: Bill Qty | Rate | DIS% | Net Amt."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'STOCK\s+TRANSFER\s+NOTE', blob, re.IGNORECASE):
+        return False
+    if not re.search(r'PLUS\s+DISTRIBUTION|plusdistributions', blob, re.IGNORECASE):
+        return False
+    return bool(re.search(r'NET\s*AMT', blob, re.IGNORECASE))
+
+
+_PLUS_STN_MONTH_RE = (
+    r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
+)
+_PLUS_STN_NAME_SKIP = {
+    'ZYDUS', 'PLUS', 'DISTRIBUTION', 'PRIVATE', 'LIMITED', 'STOCK',
+    'TRANSFER', 'NOTE', 'PRODUCT', 'NAME', 'COMPANY', 'PARK', 'PHARMACY',
+    'HOSPITAL', 'GURUGRAM', 'SHIPPING', 'STATE', 'HARYANA', 'UNDEFINED',
+    'TOTAL', 'ROUND',
+}
+
+
+def _plus_stn_name_key(name: str) -> str:
+    return re.sub(r'[^A-Z0-9]+', '', (name or '').upper())
+
+
+def _plus_stn_close(a: float, b: float, tol: float = 0.04) -> bool:
+    if a <= 0 or b <= 0:
+        return False
+    return abs(a - b) / max(a, b) <= tol
+
+
+def _plus_stn_int_variants(n: float) -> list:
+    """Repair OCR amounts that dropped a decimal point (65085 → 650.85)."""
+    out = [n]
+    if n == int(n) and n >= 1000:
+        out.extend((n / 10.0, n / 100.0, n / 1000.0))
+    return out
+
+
+def _plus_stn_parse_nums(line: str) -> list:
+    line = re.sub(r'(\d),(\d{2})(?!\d)', r'\1.\2', line or '')
+    nums = []
+    for m in re.finditer(r'\d+(?:\.\d+)?', line):
+        try:
+            nums.append(float(m.group(0)))
+        except Exception:
+            continue
+    return nums
+
+
+def _plus_stn_is_hsn(n: float) -> bool:
+    if n != int(n):
+        return False
+    s = str(int(n))
+    return s.startswith('30') and len(s) in (6, 8)
+
+
+def _plus_stn_is_year(n: float) -> bool:
+    return n == int(n) and 2020 <= n <= 2039
+
+
+def _plus_stn_strip_batch_tokens(line: str) -> str:
+    """Drop mixed alphanumeric batch tokens so IB01063A digits are not qty."""
+    return re.sub(
+        r'(?=[A-Z0-9_]*[A-Z])(?=[A-Z0-9_]*\d)[A-Z0-9_]{4,}',
+        ' ',
+        line or '',
+        flags=re.IGNORECASE,
+    )
+
+
+def _parse_plus_stn_footer(ocr_text: str) -> tuple:
+    """Return (footer_qty, footer_net) from QTY: / NET AMT: when present."""
+    text = ocr_text or ''
+    qty = None
+    net = None
+    mq = re.search(r'\bQTY\s*:\s*([\d,]+)', text, re.IGNORECASE)
+    if mq:
+        try:
+            qty = float(mq.group(1).replace(',', ''))
+        except Exception:
+            qty = None
+    mn = re.search(
+        r'NET\s*AMT\s*:?\s*([\d,]+(?:\.\d+)?)', text, re.IGNORECASE)
+    if not mn:
+        mn = re.search(
+            r'(?:ROUND\s*OFF|OFF)\s*:\s*[\d.]+\s+([\d,]+)\b',
+            text,
+            re.IGNORECASE,
+        )
+    if mn:
+        try:
+            net = float(mn.group(1).replace(',', ''))
+        except Exception:
+            net = None
+    return qty, net
+
+
+def _parse_plus_stn_product_names(ocr_text: str) -> list:
+    """Product names from STN OCR (TAB/CAPS/CREAM/RESPICAPS/etc.)."""
+    names = []
+    seen = set()
+    pat = re.compile(
+        r'(?i)([A-Z][A-Z0-9][A-Z0-9 /\'`.*+/-]{2,55}?'
+        r'(?:TAB|TABS|CAPS|CAPSULE|CREAM|DROP|DROPS|SPRAY|'
+        r'RESPICAPS|INJ|GEL)(?:[^\n|]{0,28})?)'
+    )
+    for m in pat.finditer(ocr_text or ''):
+        name = re.sub(r'\s+', ' ', m.group(1)).strip(' |.,;:-')
+        name = re.sub(r'\s+ZYDUS\b.*$', '', name, flags=re.IGNORECASE)
+        words = [w for w in re.findall(r'[A-Z]+', name.upper()) if len(w) > 2]
+        if not words or words[0] in _PLUS_STN_NAME_SKIP:
+            continue
+        key = _plus_stn_name_key(name)
+        if len(key) < 5 or key in seen:
+            continue
+        seen.add(key)
+        names.append(name.strip())
+    return names
+
+
+def _parse_plus_stn_line(raw: str) -> Optional[dict]:
+    """Parse one STN table line using DIS% 8.00 and DIS Amt to recover Rate/Qty/Net."""
+    if not raw or len(raw) < 12:
+        return None
+    if not re.search(r'(?:8\.00|\b800\b)', raw):
+        return None
+    stripped = _plus_stn_strip_batch_tokens(raw)
+    nums = [
+        n for n in _plus_stn_parse_nums(stripped)
+        if not _plus_stn_is_year(n) and not _plus_stn_is_hsn(n)
+    ]
+    disc_i = None
+    for i, n in enumerate(nums):
+        if abs(n - 8.0) < 0.001:
+            disc_i = i
+            break
+    if disc_i is None:
+        for i, n in enumerate(nums):
+            if abs(n - 800.0) < 0.001 and i >= 2:
+                disc_i = i
+                nums[i] = 8.0
+                break
+    if disc_i is None or disc_i < 1 or disc_i >= len(nums) - 1:
+        return None
+    disc = nums[disc_i]
+    if disc <= 0:
+        return None
+    before = nums[:disc_i]
+    after = nums[disc_i + 1:]
+    if not after:
+        return None
+    date_qty = None
+    dm = re.search(
+        rf'{_PLUS_STN_MONTH_RE}[-./\s]*20\d{{2}}\s+(\d{{1,4}})\b',
+        raw,
+        re.IGNORECASE,
+    )
+    if dm:
+        try:
+            date_qty = int(dm.group(1))
+        except Exception:
+            date_qty = None
+
+    best = None
+    for da in _plus_stn_int_variants(after[0]):
+        if da < 0.4:
+            continue
+        amt = da / (disc / 100.0)
+        net = amt * (1.0 - disc / 100.0)
+        qty_cands = sorted({
+            int(n) for n in before
+            if n == int(n) and 1 <= n <= 5000
+        })
+        if date_qty and date_qty not in qty_cands and 1 <= date_qty <= 5000:
+            qty_cands.append(date_qty)
+        ocr_nets = []
+        for x in after[1:]:
+            ocr_nets.extend(_plus_stn_int_variants(x))
+        for qty in qty_cands:
+            rate = amt / qty
+            if not (0.5 <= rate <= 8000):
+                continue
+            score = 0
+            if any(
+                _plus_stn_close(rate, v, 0.025)
+                for b in before for v in _plus_stn_int_variants(b)
+                if v != qty
+            ):
+                score += 5
+            if any(_plus_stn_close(net, v, 0.04) for v in ocr_nets):
+                score += 6
+            if any(_plus_stn_close(amt, v, 0.04) for v in ocr_nets):
+                score += 3
+            if date_qty == qty:
+                score += 4
+            if score < 5:
+                continue
+            if (
+                best is None
+                or score > best[0]
+                or (score == best[0] and date_qty == qty)
+            ):
+                snap = net
+                for v in ocr_nets:
+                    if _plus_stn_close(net, v, 0.02):
+                        snap = v
+                        break
+                best = (score, qty, rate, snap, amt)
+    if not best:
+        return None
+    _score, qty, rate, net, amt = best
+    mrp = 0.0
+    for n in reversed(before):
+        if n != qty and n > rate * 0.5:
+            mrp = n
+            break
+    return {
+        'quantity': float(qty),
+        'unit_price': round(rate, 2),
+        'total_amount': round(net, 2),
+        'mrp': round(mrp, 2) if mrp else 0.0,
+        'amt': round(amt, 2),
+    }
+
+
+def _parse_plus_stn_qty_rate_rows(ocr_text: str) -> list:
+    """Parse Bill Qty / Rate / Net Amt from PLUS DISTRIBUTION STN table OCR."""
+    if not ocr_text:
+        return []
+    rows = []
+    seen = set()
+    for raw in (ocr_text or '').splitlines():
+        line = re.sub(r'\s+', ' ', (raw or '').strip())
+        parsed = _parse_plus_stn_line(line)
+        if not parsed:
+            continue
+        key = (
+            parsed['quantity'],
+            round(parsed['unit_price'], 2),
+            round(parsed['total_amount'], 2),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(parsed)
+    return rows
+
+
+def _plus_stn_rows_are_sane(rows: list, ocr_text: str = "") -> bool:
+    if not rows or len(rows) < 5:
+        return False
+    qty_sum = sum(float(r.get('quantity') or 0) for r in rows)
+    net_sum = sum(float(r.get('total_amount') or 0) for r in rows)
+    if qty_sum <= 0 or net_sum <= 0:
+        return False
+    footer_qty, footer_net = _parse_plus_stn_footer(ocr_text or '')
+    if footer_net and footer_net >= 100:
+        if abs(net_sum - footer_net) / footer_net > 0.12:
+            return False
+    if footer_qty and footer_qty >= 5:
+        if abs(qty_sum - footer_qty) / footer_qty > 0.15:
+            return False
+    return True
+
+
+def _ocr_plus_stn_table_region(page=None) -> str:
+    """Line-removed table OCR for PLUS DISTRIBUTION Stock Transfer Notes."""
+    if not TESSERACT_AVAILABLE or page is None:
+        return ""
+    try:
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5))
+        image_bytes = pix.tobytes("png")
+        pix = None
+        img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        arr = np.array(img)
+        try:
+            img.close()
+        except Exception:
+            pass
+        h, w = arr.shape[:2]
+
+        def _lines_off(gray):
+            th = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                cv2.THRESH_BINARY_INV, 15, 8)
+            hkernel = cv2.getStructuringElement(cv2.MORPH_RECT, (40, 1))
+            vkernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 40))
+            hlines = cv2.morphologyEx(th, cv2.MORPH_OPEN, hkernel)
+            vlines = cv2.morphologyEx(th, cv2.MORPH_OPEN, vkernel)
+            return cv2.bitwise_or(gray, cv2.bitwise_or(hlines, vlines))
+
+        parts = []
+        for y0 in (0.32, 0.36):
+            y0i, y1i = int(h * y0), int(h * 0.98)
+            body = arr[y0i:y1i, :]
+            gray = cv2.cvtColor(body, cv2.COLOR_RGB2GRAY)
+            cleaned = _lines_off(gray)
+            with tesseract_ocr_slot("plus_stn_table"):
+                text = pytesseract.image_to_string(cleaned) or ""
+            if text.strip():
+                parts.append(text)
+            if len(_parse_plus_stn_qty_rate_rows(text)) >= 10:
+                break
+        # Unprocessed body keeps product names the grid-cleaned pass drops
+        try:
+            y0i, y1i = int(h * 0.36), int(h * 0.98)
+            raw_body = arr[y0i:y1i, :]
+            with tesseract_ocr_slot("plus_stn_names"):
+                raw_text = pytesseract.image_to_string(
+                    PILImage.fromarray(raw_body)) or ""
+            if raw_text.strip():
+                parts.append(raw_text)
+        except Exception:
+            pass
+        return "\n".join(parts)
+    except Exception as exc:
+        logger.debug(f"PLUS DISTRIBUTION STN table OCR skipped: {exc}")
+        return ""
+
+
+def _collect_plus_stn_table_ocr(
+    page_results: list, pages: list, doc=None
+) -> str:
+    parts = []
+    for pidx in pages or []:
+        try:
+            pr = page_results[pidx] if page_results else None
+        except Exception:
+            pr = None
+        text = str((pr or {}).get("plus_stn_table_ocr", "") or "").strip()
+        if not text and doc is not None:
+            try:
+                text = (_ocr_plus_stn_table_region(
+                    page=doc.load_page(pidx)) or "").strip()
+            except Exception:
+                text = ""
+        if text:
+            parts.append(text)
+    return "\n".join(parts)
+
+
+def _attach_plus_stn_table_ocr(
+    data_with_ocr: dict, page_results: list, pages: list, doc, raw_ocr_text: str
+) -> None:
+    if not isinstance(data_with_ocr, dict):
+        return
+    data_obj = data_with_ocr.get("data")
+    if not isinstance(data_obj, dict):
+        return
+    existing = str(data_obj.get("plus_stn_table_ocr", "") or "").strip()
+    if existing:
+        return
+    vendor = ""
+    summary = data_obj.get("invoice_summary")
+    if isinstance(summary, dict):
+        vendor = str(summary.get("vendor") or "")
+    blob = f"{raw_ocr_text or ''} {vendor}"
+    if not ocr_suggests_plus_distribution_stn(blob, vendor):
+        return
+    text = _collect_plus_stn_table_ocr(page_results, pages, doc=doc)
+    if text.strip():
+        data_obj["plus_stn_table_ocr"] = text
+        logger.info(
+            "    ✅ PLUS DISTRIBUTION STN table OCR captured (%s chars)",
+            len(text),
+        )
+
+
+def _plus_stn_item_from_row(row: dict, name: str) -> dict:
+    qty = float(row['quantity'])
+    qty_s = (
+        str(int(qty)) if abs(qty - int(qty)) < 0.01 else f"{qty:.2f}"
+    )
+    af = {'free_quantity': '0'}
+    if row.get('mrp'):
+        af['mrp'] = f"{float(row['mrp']):.2f}"
+    return {
+        'sku_code': None,
+        'product_description': name,
+        'hsn_code': str(row.get('hsn_code') or ''),
+        'lot_batch_number': str(row.get('lot_batch_number') or ''),
+        'quantity': qty_s,
+        'unit_price': f"{float(row['unit_price']):.2f}",
+        'total_amount': f"{float(row['total_amount']):.2f}",
+        'additional_fields': af,
+    }
+
+
+def fix_plus_distribution_stn_line_items_from_ocr(
+    items: list, ocr_text: str = "", table_ocr: str = "", vendor: str = ""
+) -> list:
+    """Restore Bill Qty / Rate / Net Amt for PLUS DISTRIBUTION Stock Transfer Notes.
+
+    Gemini maps DIS%→qty, DIS Amt→unit_price, Company (ZYDUS)→product name.
+    Shared qty↔rate swap and FIX10 then explode totals. Re-read the STN table
+    (Bill Qty, Rate, DIS%, Net Amt) and replace rows when they match footer QTY/NET.
+    """
+    blob = f"{ocr_text or ''}\n{table_ocr or ''}\n{vendor or ''}"
+    if not items and not table_ocr:
+        return items
+    if not ocr_suggests_plus_distribution_stn(blob, vendor):
+        return items
+    combined = "\n".join(
+        x for x in (table_ocr or "", ocr_text or "") if x and str(x).strip()
+    )
+    rows = _parse_plus_stn_qty_rate_rows(combined)
+    if not _plus_stn_rows_are_sane(rows, combined):
+        logger.info(
+            "⏭️ PLUS DISTRIBUTION STN: skipping line-item restore "
+            f"(rows={len(rows)})"
+        )
+        return items
+
+    names = _parse_plus_stn_product_names(combined)
+    logger.warning(
+        f"⚠️ PLUS DISTRIBUTION STN: restoring {len(rows)} line item(s) "
+        f"from table OCR (names={len(names)})"
+    )
+
+    def _f(val) -> float:
+        try:
+            return float(normalize_numeric_value(str(val))) if val not in (None, '') else 0.0
+        except Exception:
+            return 0.0
+
+    def _is_zydus_name(desc: str) -> bool:
+        key = _plus_stn_name_key(desc)
+        return key in ('ZYDUS', 'ZYDUSGY', 'ZYD') or key.startswith('ZYDUS')
+
+    # If Gemini mostly kept ZYDUS / exploded qty, replace the whole list.
+    zydus_n = sum(
+        1 for it in (items or [])
+        if isinstance(it, dict) and _is_zydus_name(
+            str(it.get('product_description') or ''))
+    )
+    crazy_qty = sum(
+        1 for it in (items or [])
+        if isinstance(it, dict) and _f(it.get('quantity')) > 5000
+    )
+    replace_all = (
+        not items
+        or zydus_n >= max(2, len(items) // 4)
+        or crazy_qty >= 1
+        or len(rows) >= len(items or []) + 3
+    )
+    if replace_all:
+        out = []
+        for i, row in enumerate(rows):
+            name = names[i] if i < len(names) else ''
+            if not name:
+                # Keep a real Gemini name if this index still has one
+                if i < len(items or []) and isinstance(items[i], dict):
+                    prev = str(items[i].get('product_description') or '').strip()
+                    if prev and not _is_zydus_name(prev):
+                        name = prev
+            if not name:
+                name = f"ITEM {i + 1}"
+            out.append(_plus_stn_item_from_row(row, name))
+        return out
+
+    used = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get('product_description') or '')
+        ikey = _plus_stn_name_key(desc)
+        cur_t = _f(item.get('total_amount'))
+        cur_q = _f(item.get('quantity'))
+        best_i = None
+        best_score = -1
+        for i, row in enumerate(rows):
+            if i in used:
+                continue
+            score = 0
+            if i < len(names):
+                rkey = _plus_stn_name_key(names[i])
+                if ikey and rkey and (ikey == rkey or ikey in rkey or rkey in ikey):
+                    score += 12
+            if cur_t > 0 and _plus_stn_close(row['total_amount'], cur_t, 0.03):
+                score += 8
+            if cur_q > 0 and abs(cur_q - row['quantity']) < 0.01:
+                score += 3
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is None or best_score < 8:
+            continue
+        row = rows[best_i]
+        used.add(best_i)
+        if best_i < len(names) and (
+                not desc or _is_zydus_name(desc)):
+            item['product_description'] = names[best_i]
+        qty = row['quantity']
+        item['quantity'] = (
+            str(int(qty)) if abs(qty - int(qty)) < 0.01 else f"{qty:.2f}"
+        )
+        item['unit_price'] = f"{row['unit_price']:.2f}"
+        item['total_amount'] = f"{row['total_amount']:.2f}"
+        af = item.get('additional_fields')
+        if not isinstance(af, dict):
+            af = {}
+            item['additional_fields'] = af
+        if row.get('mrp'):
+            af['mrp'] = f"{float(row['mrp']):.2f}"
+    return items
+
+
 def ocr_suggests_sr_pharma_me9_credit_invoice(
     ocr_text: str = "", vendor: str = ""
 ) -> bool:
@@ -28040,6 +28556,12 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                 f"'{str(item.get('product_description', ''))[:40]}' "
                 f"(QTY/RATE restored from RATE column OCR)")
             return item
+        if ocr_suggests_plus_distribution_stn(ocr_text, vendor):
+            logger.info(
+                f"⏭️ Skipping fix_mrp_as_unit_price for PLUS DISTRIBUTION STN row "
+                f"'{str(item.get('product_description', ''))[:40]}' "
+                f"(Bill Qty/Rate/Net Amt restored from STN table OCR)")
+            return item
         # SR. PHARMACEUTICALS: Qty can be 1360/3780; shared total÷rate caps qty at
         # 1000 and empty Free makes MRP look like quantity. OCR restorer owns it.
         if ocr_suggests_sr_pharma_me9_credit_invoice(ocr_text, vendor):
@@ -30811,6 +31333,8 @@ def enforce_schema(raw_data):
         ocr_text or "", _nat_pharma_vendor)
     _sr_pharma_skip_shared_qty = ocr_suggests_sr_pharma_me9_credit_invoice(
         ocr_text or "", _nat_pharma_vendor)
+    _plus_stn_skip_shared_qty = ocr_suggests_plus_distribution_stn(
+        ocr_text or "", _nat_pharma_vendor)
     _anil_vendor = str(template["data"]["invoice_summary"].get("vendor", "") or "")
     _anil_skip_shared_qty = _ocr_suggests_anil_medical_deal_qnty(
         ocr_text, _anil_vendor)
@@ -30821,6 +31345,7 @@ def enforce_schema(raw_data):
         or _medica_skip_shared_qty
         or _nat_pharma_skip_shared_qty
         or _sr_pharma_skip_shared_qty
+        or _plus_stn_skip_shared_qty
         or _anil_skip_shared_qty
     )
     # 🔧 FIX e-Invoice: correct qty/rate from Quantity:/Unit Price: before auto-fixes
@@ -31143,6 +31668,14 @@ def enforce_schema(raw_data):
     # NATIONAL PHARMACEUTICALS stockist: restore QTY./RATE (not NET RATE) from OCR
     processed_items = fix_national_pharmaceuticals_qty_rate_from_ocr(
         processed_items, ocr_text, _vendor_name)
+
+    # PLUS DISTRIBUTION Stock Transfer Note: Bill Qty / Rate / Net Amt
+    _plus_stn_table_ocr = ""
+    if isinstance(data, dict):
+        _plus_stn_table_ocr = str(
+            data.get("plus_stn_table_ocr", "") or "").strip()
+    processed_items = fix_plus_distribution_stn_line_items_from_ocr(
+        processed_items, ocr_text, _plus_stn_table_ocr, _vendor_name)
 
     # SR. PHARMACEUTICALS CREDIT TAX INVOICE: Qty/Rate after Mrp (empty Free)
     processed_items = fix_sr_pharma_me9_qty_rate_from_ocr(
@@ -31550,8 +32083,10 @@ def enforce_schema(raw_data):
         ocr_text, _vendor_name)
     _skip_fix10_sg_pharma = _ocr_suggests_sg_pharma_csquare(
         ocr_text, _vendor_name)
+    _skip_fix10_plus_stn = ocr_suggests_plus_distribution_stn(
+        ocr_text, _vendor_name)
     for item in processed_items:
-        if _skip_fix10_sivagami or _skip_fix10_sg_pharma:
+        if _skip_fix10_sivagami or _skip_fix10_sg_pharma or _skip_fix10_plus_stn:
             break
         try:
             qty_str = str(item.get("quantity", "0"))
@@ -31720,6 +32255,14 @@ def enforce_schema(raw_data):
     processed_items = fix_national_pharmaceuticals_qty_rate_from_ocr(
         processed_items,
         ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+
+    # PLUS DISTRIBUTION STN: re-apply Bill Qty/Rate/Net Amt after FIX10
+    processed_items = fix_plus_distribution_stn_line_items_from_ocr(
+        processed_items,
+        ocr_text,
+        str((data.get("plus_stn_table_ocr", "") if isinstance(data, dict) else "") or ""),
         vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
     )
 
@@ -33862,6 +34405,7 @@ def enforce_schema(raw_data):
         template["data"].pop("tulsyan_rate_ocr", None)
         template["data"].pop("smartpharma360_table_ocr", None)
         template["data"].pop("medica_torero_table_ocr", None)
+        template["data"].pop("plus_stn_table_ocr", None)
         template["data"].pop("jackson_invoice_date", None)
         template["data"].pop("jackson_invoice_no", None)
         template["data"].pop("jackson_invoice_total", None)
@@ -33878,6 +34422,7 @@ def enforce_schema(raw_data):
         _summary_out.pop("tulsyan_rate_ocr", None)
         _summary_out.pop("smartpharma360_table_ocr", None)
         _summary_out.pop("medica_torero_table_ocr", None)
+        _summary_out.pop("plus_stn_table_ocr", None)
         _summary_out.pop("jackson_invoice_date", None)
         _summary_out.pop("jackson_invoice_no", None)
         _summary_out.pop("jackson_invoice_total", None)
@@ -34826,7 +35371,7 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         _routing_type = _pdf_routing_type(page, pdf_path=pdf_path)
         _stockist_tesseract_rule = _stockist_requires_tesseract_ocr(
             pdf_path, _ocr_routing_hint)
-        # Heavy multipage image scans: skip probe+Tesseract unless stockist rules require it.
+        # Page count must not skip Tesseract. CPU steal guard is unchanged.
         _skip_tesseract_heavy_scan = _should_skip_tesseract_for_heavy_scan(
             page, pdf_path=pdf_path, ocr_hint=_ocr_routing_hint)
         _cpu_block_tesseract = _cpu_guard_blocks_tesseract(
@@ -34840,17 +35385,6 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 strategy="tesseract",
                 reason="stockist_specific_rule",
             )
-        elif _skip_tesseract_heavy_scan:
-            log_pod_ocr_routing(
-                pdf_type=_routing_type,
-                pages=_routing_pages,
-                strategy="gemini",
-                reason="heavy_multipage_scan",
-            )
-            logger.warning(
-                "    ⚠️ Heavy multipage image scan — "
-                "skipping Tesseract probe/OCR → Gemini Vision"
-            )
         elif _cpu_block_tesseract:
             log_pod_ocr_routing(
                 pdf_type=_routing_type,
@@ -34860,6 +35394,17 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             )
             logger.warning(
                 "    ⚠️ CPU steal guard — skipping Tesseract → Gemini Vision"
+            )
+        elif _is_heavy_multipage_image_scan(page, pdf_path=pdf_path):
+            log_pod_ocr_routing(
+                pdf_type=_routing_type,
+                pages=_routing_pages,
+                strategy="tesseract",
+                reason="heavy_scan_tesseract_enabled",
+            )
+            logger.info(
+                "    🔍 Heavy multipage image scan — "
+                "attempting Tesseract before Gemini Vision fallback"
             )
         else:
             log_pod_ocr_routing(
@@ -35653,6 +36198,30 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
         except Exception as _mt_ocr_err:
             logger.debug(
                 f"Medica/Torero table OCR enrichment skipped: {_mt_ocr_err}")
+
+        try:
+            _pstn_ocr = (
+                str(result.get("ocr_text") or "")
+                or str(fallback_ocr_text or "")
+            )
+            _pstn_fd = result.get("full_data") if isinstance(
+                result.get("full_data"), dict) else {}
+            _pstn_data = _pstn_fd.get("data") if isinstance(
+                _pstn_fd.get("data"), dict) else _pstn_fd
+            _pstn_sum = _pstn_data.get("invoice_summary") if isinstance(
+                _pstn_data.get("invoice_summary"), dict) else {}
+            _pstn_vendor = str(
+                _pstn_sum.get("vendor") or _pstn_fd.get("vendor") or "")
+            if ocr_suggests_plus_distribution_stn(_pstn_ocr, _pstn_vendor):
+                _pstn_tocr = _ocr_plus_stn_table_region(page=page)
+                if _pstn_tocr.strip():
+                    result["plus_stn_table_ocr"] = _pstn_tocr
+                    logger.info(
+                        f"    ✅ PLUS DISTRIBUTION STN table OCR captured "
+                        f"({len(_pstn_tocr)} chars)")
+        except Exception as _pstn_ocr_err:
+            logger.debug(
+                f"PLUS DISTRIBUTION STN table OCR skipped: {_pstn_ocr_err}")
 
         # JACKSON MEDICALS scans: capture QTY/Rate/Amount band for FIX12j
         try:
@@ -38139,6 +38708,321 @@ Return JSON only: {"customer":"","customer_address":"","customer_gstin":""}"""
         return {"customer": "", "customer_address": "", "customer_gstin": ""}
 
 
+_UNKNOWN_INVOICE_SENTINEL_RE = re.compile(r'(?i)^UNKNOWN(?:_\d+)?$')
+_EXCEL_CUSTOMER_NAME_RE = re.compile(r'(?im)^CUSTOMER\s*:\s*(.+)$')
+_EXCEL_CUSTOMER_ADDR_RE = re.compile(r'(?im)^CUSTOMER\s+ADDRESS\s*:\s*(.+)$')
+_EXCEL_CUSTOMER_GSTIN_RE = re.compile(r'(?im)^CUSTOMER\s+GSTIN\s*:\s*(.+)$')
+_EXCEL_VENDOR_GSTIN_RE = re.compile(r'(?im)^VENDOR\s+GSTIN\s*:\s*(.+)$')
+_LABELED_CUSTOMER_GSTIN_RE = re.compile(
+    r'(?i)(?:CUSTOMER|BUYER|BILL\s*TO|SHIP\s*TO|CONSIGNEE)\s+'
+    r'GSTIN\s*:?\s*([A-Z0-9][A-Z0-9\s\-]{12,20})'
+)
+_BUYER_BLOCK_HEADER_RE = re.compile(
+    r'(?im)^\s*(?:BILL\s+TO|SHIP\s+TO|CONSIGNEE|CUSTOMER\s+DETAILS|'
+    r'BUYER(?:\s+DETAILS)?)\s*:?\s*(.*)$'
+)
+_BUYER_BLOCK_STOP_RE = re.compile(
+    r'(?i)^\s*(?:GSTIN|GST\s*NO|GST\s*NUMBER|INVOICE|TAX\s+INVOICE|'
+    r'PHONE|TEL\b|MOB(?:ILE)?|D\.?L\.?\s*NO|IRN|ACK(?:\s*NO)?|HSN|'
+    r'TOTAL|VENDOR|SUPPLIER|SELLER|SOURCE\s*:)\b'
+)
+
+
+def _is_unknown_invoice_sentinel(invoice_no: Optional[str]) -> bool:
+    """True for grouping sentinels UNKNOWN / UNKNOWN_N only."""
+    return bool(_UNKNOWN_INVOICE_SENTINEL_RE.match(str(invoice_no or "").strip()))
+
+
+def _customer_recovery_still_needed(
+    customer_name: str,
+    customer_address: str,
+    customer_gstin: str,
+) -> bool:
+    """Same sufficiency bar as the existing grouping customer-recovery trigger."""
+    name = str(customer_name or "").strip()
+    address = str(customer_address or "").strip()
+    gstin = str(customer_gstin or "").strip()
+    return (
+        (not name)
+        or _looks_like_generic_party_name(name)
+        or name.upper() in {"NONE", "NULL", "N/A"}
+        or (not address)
+        or (not gstin)
+    )
+
+
+def _strict_indian_gstin(raw: str, vendor_gstin: str = "") -> str:
+    """Accept only a format-valid Indian GSTIN that is not the vendor GSTIN."""
+    cleaned = clean_gstin(str(raw or ""))
+    if not cleaned:
+        return ""
+    try:
+        state = int(cleaned[:2])
+    except ValueError:
+        return ""
+    if not (1 <= state <= 38 or state == 97):
+        return ""
+    vendor_clean = clean_gstin(str(vendor_gstin or "")) or str(
+        vendor_gstin or "").strip().upper()
+    if vendor_clean and cleaned == vendor_clean:
+        return ""
+    return cleaned
+
+
+def _usable_ocr_customer_name(name: str, vendor_name: str = "") -> str:
+    cleaned = re.sub(r'\s+', ' ', str(name or "").strip())
+    if not cleaned or _looks_like_generic_party_name(cleaned):
+        return ""
+    if cleaned.upper() in {"NONE", "NULL", "N/A"}:
+        return ""
+    if clean_gstin(cleaned):
+        return ""
+    if not re.search(r'[A-Za-z]', cleaned):
+        return ""
+    if vendor_name and _party_names_equivalent(cleaned, vendor_name):
+        return ""
+    return cleaned
+
+
+def _usable_ocr_customer_address(address: str, *, labeled: bool = False) -> str:
+    cleaned = re.sub(r'\s+', ' ', str(address or "").strip(' ,'))
+    if not cleaned or cleaned.upper() in {"NONE", "NULL", "N/A"}:
+        return ""
+    if _looks_like_generic_party_name(cleaned):
+        return ""
+    if clean_gstin(cleaned):
+        return ""
+    if labeled:
+        return cleaned if len(cleaned) >= 4 else ""
+    score = 0
+    if re.search(r'\d', cleaned):
+        score += 2
+    if ',' in cleaned or '-' in cleaned:
+        score += 1
+    if re.search(
+        r'\b(?:ROAD|RD|STREET|NAGAR|MARG|PIN|DIST|STATE|'
+        r'MUMBAI|DELHI|BENGALURU|BANGALORE|CHENNAI|HYDERABAD|'
+        r'KOLKATA|PUNE|AHMEDABAD)\b',
+        cleaned,
+        re.IGNORECASE,
+    ):
+        score += 2
+    return cleaned if score >= 2 and len(cleaned) >= 6 else ""
+
+
+def _extract_reliable_customer_data_from_existing_ocr(
+    ocr_text: str,
+    *,
+    current_vendor: str = "",
+    current_vendor_gstin: str = "",
+) -> Dict[str, str]:
+    """Deterministic customer fields from existing OCR/native text. Never invents."""
+    empty = {"customer": "", "customer_address": "", "customer_gstin": ""}
+    text = str(ocr_text or "")
+    if not text.strip():
+        return empty
+
+    vendor_gstin = current_vendor_gstin
+    vendor_m = _EXCEL_VENDOR_GSTIN_RE.search(text)
+    if vendor_m and not vendor_gstin:
+        vendor_gstin = _strict_indian_gstin(vendor_m.group(1), "") or vendor_gstin
+
+    name = ""
+    address = ""
+    gstin = ""
+
+    name_m = _EXCEL_CUSTOMER_NAME_RE.search(text)
+    if name_m:
+        name = _usable_ocr_customer_name(name_m.group(1), current_vendor)
+
+    addr_m = _EXCEL_CUSTOMER_ADDR_RE.search(text)
+    if addr_m:
+        address = _usable_ocr_customer_address(addr_m.group(1), labeled=True)
+
+    gstin_m = _EXCEL_CUSTOMER_GSTIN_RE.search(text)
+    if gstin_m:
+        gstin = _strict_indian_gstin(gstin_m.group(1), vendor_gstin)
+
+    if not gstin:
+        labeled_gstin = _LABELED_CUSTOMER_GSTIN_RE.search(text)
+        if labeled_gstin:
+            gstin = _strict_indian_gstin(labeled_gstin.group(1), vendor_gstin)
+
+    if not name or not address or not gstin:
+        lines = [re.sub(r'\s+', ' ', ln).strip() for ln in text.splitlines()]
+        for idx, line in enumerate(lines):
+            header = _BUYER_BLOCK_HEADER_RE.match(line)
+            if not header:
+                continue
+            same_line = _usable_ocr_customer_name(header.group(1), current_vendor)
+            block_name = same_line
+            start = idx + 1
+            if not block_name:
+                for j in range(idx + 1, min(idx + 4, len(lines))):
+                    if not lines[j] or _BUYER_BLOCK_STOP_RE.match(lines[j]):
+                        continue
+                    cand = _usable_ocr_customer_name(lines[j], current_vendor)
+                    if cand:
+                        block_name = cand
+                        start = j + 1
+                        break
+            addr_parts = []
+            block_gstin = ""
+            for j in range(start, min(start + 8, len(lines))):
+                cur = lines[j]
+                if not cur:
+                    continue
+                gstin_line = re.search(
+                    r'(?i)GSTIN\s*:?\s*([A-Z0-9][A-Z0-9\s\-]{12,20})', cur)
+                if gstin_line:
+                    block_gstin = _strict_indian_gstin(
+                        gstin_line.group(1), vendor_gstin)
+                    break
+                if _BUYER_BLOCK_STOP_RE.match(cur):
+                    break
+                if block_name and _party_names_equivalent(cur, block_name):
+                    continue
+                addr_parts.append(cur)
+            block_addr = _usable_ocr_customer_address(
+                ", ".join(addr_parts[:4]), labeled=False)
+            if not name and block_name:
+                name = block_name
+            if not address and block_addr:
+                address = block_addr
+            if not gstin and block_gstin:
+                gstin = block_gstin
+            if name and address and gstin:
+                break
+
+    return {
+        "customer": name,
+        "customer_address": address,
+        "customer_gstin": gstin,
+    }
+
+
+def _merge_customer_recovery_fields(
+    current_customer: str,
+    current_customer_address: str,
+    current_customer_gstin: str,
+    extracted: Dict[str, str],
+    vendor_name: str = "",
+) -> Dict[str, str]:
+    """Fill only missing customer fields from OCR extracts (same apply rules as Vision)."""
+    name = str(current_customer or "").strip()
+    address = str(current_customer_address or "").strip()
+    gstin = str(current_customer_gstin or "").strip()
+    extra_name = _usable_ocr_customer_name(
+        extracted.get("customer", ""), vendor_name)
+    extra_addr = extracted.get("customer_address", "") or ""
+    extra_gstin = _strict_indian_gstin(extracted.get("customer_gstin", ""), "")
+
+    if extra_name and (
+        not name or _looks_like_generic_party_name(name)
+        or name.upper() in {"NONE", "NULL", "N/A"}
+    ):
+        name = extra_name
+    if extra_addr and not address:
+        address = extra_addr
+    if extra_gstin and not gstin:
+        gstin = extra_gstin
+    return {
+        "customer": name,
+        "customer_address": address,
+        "customer_gstin": gstin,
+    }
+
+
+def _log_unknown_customer_recovery_decision(
+    *,
+    invoice_no: str,
+    reason: str,
+    strategy: str,
+    fields: List[str],
+    page_num: Optional[int] = None,
+) -> None:
+    batch_id = "-"
+    source = "-"
+    with request_progress_lock:
+        batch_id = str(_request_progress.get("batch_id") or "-")
+        source = str(_request_progress.get("source_filename") or "-")
+        if page_num is None:
+            page_num = _request_progress.get("current_page")
+    field_csv = ",".join(fields) if fields else "none"
+    page_s = str(page_num) if page_num not in (None, "") else "-"
+    logger.info(
+        "Customer recovery: "
+        f"invoice={str(invoice_no or '').strip() or '-'} "
+        f"batch_id={batch_id} "
+        f"source={source} "
+        f"page={page_s} "
+        f"fields={field_csv} "
+        f"strategy={strategy} "
+        f"reason={reason}"
+    )
+
+
+def _unknown_invoice_customer_from_ocr_if_sufficient(
+    invoice_no: str,
+    ocr_text: str,
+    *,
+    current_customer: str = "",
+    current_customer_address: str = "",
+    current_customer_gstin: str = "",
+    current_vendor: str = "",
+    current_vendor_gstin: str = "",
+    page_num: Optional[int] = None,
+) -> Optional[Dict[str, str]]:
+    """UNKNOWN_* only: return merged customer fields when OCR is sufficient.
+
+    Returns None for real invoice numbers (caller keeps existing Vision) and
+    when OCR cannot fill the existing recovery bar (name + address + GSTIN).
+    """
+    if not _is_unknown_invoice_sentinel(invoice_no):
+        return None
+
+    extracted = _extract_reliable_customer_data_from_existing_ocr(
+        ocr_text,
+        current_vendor=current_vendor,
+        current_vendor_gstin=current_vendor_gstin,
+    )
+    found_labels = []
+    if extracted.get("customer"):
+        found_labels.append("name")
+    if extracted.get("customer_address"):
+        found_labels.append("address")
+    if extracted.get("customer_gstin"):
+        found_labels.append("gstin")
+
+    merged = _merge_customer_recovery_fields(
+        current_customer,
+        current_customer_address,
+        current_customer_gstin,
+        extracted,
+        current_vendor,
+    )
+    if not _customer_recovery_still_needed(
+        merged["customer"], merged["customer_address"], merged["customer_gstin"]
+    ):
+        _log_unknown_customer_recovery_decision(
+            invoice_no=invoice_no,
+            reason="unknown_customer_ocr_sufficient",
+            strategy="ocr",
+            fields=found_labels,
+            page_num=page_num,
+        )
+        return merged
+
+    _log_unknown_customer_recovery_decision(
+        invoice_no=invoice_no,
+        reason="unknown_customer_ocr_insufficient",
+        strategy="vision",
+        fields=found_labels,
+        page_num=page_num,
+    )
+    return None
+
+
 def recover_customer_details_from_image_gemini(image_bytes: bytes, current_customer: str, current_customer_address: str,
                                                current_customer_gstin: str, current_vendor: str, ocr_text: str,
                                                ocr_stats: Dict[str, float], ocr_stats_lock: Lock) -> Dict[str, str]:
@@ -40346,6 +41230,9 @@ def split_and_extract_invoices(
                     _attach_medica_torero_table_ocr(
                         data_with_ocr, page_results, g.get("pages") or [],
                         doc, raw_ocr_text)
+                    _attach_plus_stn_table_ocr(
+                        data_with_ocr, page_results, g.get("pages") or [],
+                        doc, raw_ocr_text)
 
                     # ✅ Enforce schema (will preserve full OCR text and all Gemini data)
                     formatted = enforce_schema(data_with_ocr)
@@ -40406,29 +41293,50 @@ def split_and_extract_invoices(
                         )
 
                         if _need_customer_recovery:
-                            _page = doc.load_page(first_page_idx)
-                            _pix = _page.get_pixmap(
-                                matrix=fitz.Matrix(2.0, 2.0), alpha=False)
-                            if re.search(r'UNI\s+PHARMA', _vendor_name, re.I):
-                                _recovered_customer = recover_uni_pharma_customer_from_image_gemini(
-                                    _pix.tobytes("png"),
-                                    current_vendor=_vendor_name,
-                                    current_vendor_gstin=_vendor_gstin,
-                                    ocr_stats=ocr_stats,
-                                    ocr_stats_lock=ocr_stats_lock,
+                            _recovered_customer = None
+                            _uni_pharma_vendor = bool(
+                                re.search(r'UNI\s+PHARMA', _vendor_name, re.I))
+                            if not _uni_pharma_vendor:
+                                _recovered_customer = (
+                                    _unknown_invoice_customer_from_ocr_if_sufficient(
+                                        group_invoice_no,
+                                        raw_ocr_text,
+                                        current_customer=_customer_name,
+                                        current_customer_address=_customer_address,
+                                        current_customer_gstin=_customer_gstin,
+                                        current_vendor=_vendor_name,
+                                        current_vendor_gstin=_vendor_gstin,
+                                        page_num=(
+                                            first_page_idx + 1
+                                            if isinstance(first_page_idx, int)
+                                            else None
+                                        ),
+                                    )
                                 )
-                            else:
-                                _recovered_customer = recover_customer_details_from_image_gemini(
-                                    _pix.tobytes("png"),
-                                    current_customer=_customer_name,
-                                    current_customer_address=_customer_address,
-                                    current_customer_gstin=_customer_gstin,
-                                    current_vendor=_vendor_name,
-                                    ocr_text=raw_ocr_text,
-                                    ocr_stats=ocr_stats,
-                                    ocr_stats_lock=ocr_stats_lock,
-                                )
-                            _pix = None
+                            if _recovered_customer is None:
+                                _page = doc.load_page(first_page_idx)
+                                _pix = _page.get_pixmap(
+                                    matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+                                if _uni_pharma_vendor:
+                                    _recovered_customer = recover_uni_pharma_customer_from_image_gemini(
+                                        _pix.tobytes("png"),
+                                        current_vendor=_vendor_name,
+                                        current_vendor_gstin=_vendor_gstin,
+                                        ocr_stats=ocr_stats,
+                                        ocr_stats_lock=ocr_stats_lock,
+                                    )
+                                else:
+                                    _recovered_customer = recover_customer_details_from_image_gemini(
+                                        _pix.tobytes("png"),
+                                        current_customer=_customer_name,
+                                        current_customer_address=_customer_address,
+                                        current_customer_gstin=_customer_gstin,
+                                        current_vendor=_vendor_name,
+                                        ocr_text=raw_ocr_text,
+                                        ocr_stats=ocr_stats,
+                                        ocr_stats_lock=ocr_stats_lock,
+                                    )
+                                _pix = None
 
                             _new_customer = str(
                                 _recovered_customer.get("customer", "") or "").strip()
@@ -41581,6 +42489,9 @@ def test_extract(
                     _attach_medica_torero_table_ocr(
                         data_with_ocr, page_results, g.get("pages") or [],
                         doc, raw_ocr_text)
+                    _attach_plus_stn_table_ocr(
+                        data_with_ocr, page_results, g.get("pages") or [],
+                        doc, raw_ocr_text)
 
                     formatted = enforce_schema(data_with_ocr)
 
@@ -41641,29 +42552,50 @@ def test_extract(
                         )
 
                         if _need_customer_recovery:
-                            _page = doc.load_page(first_page_idx)
-                            _pix = _page.get_pixmap(
-                                matrix=fitz.Matrix(2.0, 2.0), alpha=False)
-                            if re.search(r'UNI\s+PHARMA', _vendor_name, re.I):
-                                _recovered_customer = recover_uni_pharma_customer_from_image_gemini(
-                                    _pix.tobytes("png"),
-                                    current_vendor=_vendor_name,
-                                    current_vendor_gstin=_vendor_gstin,
-                                    ocr_stats=ocr_stats,
-                                    ocr_stats_lock=ocr_stats_lock,
+                            _recovered_customer = None
+                            _uni_pharma_vendor = bool(
+                                re.search(r'UNI\s+PHARMA', _vendor_name, re.I))
+                            if not _uni_pharma_vendor:
+                                _recovered_customer = (
+                                    _unknown_invoice_customer_from_ocr_if_sufficient(
+                                        group_invoice_no,
+                                        raw_ocr_text,
+                                        current_customer=_customer_name,
+                                        current_customer_address=_customer_address,
+                                        current_customer_gstin=_customer_gstin,
+                                        current_vendor=_vendor_name,
+                                        current_vendor_gstin=_vendor_gstin,
+                                        page_num=(
+                                            first_page_idx + 1
+                                            if isinstance(first_page_idx, int)
+                                            else None
+                                        ),
+                                    )
                                 )
-                            else:
-                                _recovered_customer = recover_customer_details_from_image_gemini(
-                                    _pix.tobytes("png"),
-                                    current_customer=_customer_name,
-                                    current_customer_address=_customer_address,
-                                    current_customer_gstin=_customer_gstin,
-                                    current_vendor=_vendor_name,
-                                    ocr_text=raw_ocr_text,
-                                    ocr_stats=ocr_stats,
-                                    ocr_stats_lock=ocr_stats_lock,
-                                )
-                            _pix = None
+                            if _recovered_customer is None:
+                                _page = doc.load_page(first_page_idx)
+                                _pix = _page.get_pixmap(
+                                    matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+                                if _uni_pharma_vendor:
+                                    _recovered_customer = recover_uni_pharma_customer_from_image_gemini(
+                                        _pix.tobytes("png"),
+                                        current_vendor=_vendor_name,
+                                        current_vendor_gstin=_vendor_gstin,
+                                        ocr_stats=ocr_stats,
+                                        ocr_stats_lock=ocr_stats_lock,
+                                    )
+                                else:
+                                    _recovered_customer = recover_customer_details_from_image_gemini(
+                                        _pix.tobytes("png"),
+                                        current_customer=_customer_name,
+                                        current_customer_address=_customer_address,
+                                        current_customer_gstin=_customer_gstin,
+                                        current_vendor=_vendor_name,
+                                        ocr_text=raw_ocr_text,
+                                        ocr_stats=ocr_stats,
+                                        ocr_stats_lock=ocr_stats_lock,
+                                    )
+                                _pix = None
 
                             _new_customer = str(
                                 _recovered_customer.get("customer", "") or "").strip()

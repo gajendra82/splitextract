@@ -116,13 +116,18 @@ class ExcelUnknownGateTests(unittest.TestCase):
             )
         )
 
-    def test_heavy_multipage_scan_unchanged(self):
+    def test_heavy_multipage_scan_does_not_skip_tesseract(self):
+        """EXCEL UNKNOWN gate is independent; page count must not skip Tesseract."""
         page = FakePage(page_count=29, native_text="")
         self.assertTrue(app_module._is_heavy_multipage_image_scan(page))
-        self.assertTrue(
+        self.assertFalse(
             app_module._should_skip_tesseract_for_heavy_scan(
                 page, pdf_path="/tmp/Split_1_1_to_29.pdf", ocr_hint="",
             )
+        )
+        text = _excel_unknown_usable_text()
+        self.assertTrue(
+            app_module._should_try_gemini_text_for_excel_unknown(text)
         )
 
 
