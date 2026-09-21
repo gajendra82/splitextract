@@ -5274,6 +5274,20 @@ def recover_yen_pharma_line_items_from_ocr(
     return cleaned
 
 
+def ocr_suggests_new_jb_sales_pms(ocr_text: str = "", vendor: str = "") -> bool:
+    """NEW.J.B.SALES PMS GST INVOICE (Particulars / Rate / QTY / Net.Amt)."""
+    blob = f"{vendor or ''}\n{ocr_text or ''}"
+    if not re.search(r'NEW\s*\.?\s*J\s*\.?\s*B\s*\.?\s*SALES', blob, re.IGNORECASE):
+        return False
+    return bool(
+        re.search(r'OUR\s+SOFTWARE\s+PMS', blob, re.IGNORECASE)
+        or (
+            re.search(r'TYPE\s+OF\s+INV', blob, re.IGNORECASE)
+            and re.search(r'\bNET\.?\s*AMT\b', blob, re.IGNORECASE)
+        )
+    )
+
+
 def ocr_suggests_prakash_medical_stores(ocr_text: str = "") -> bool:
     """Detect PRAKASH MEDICAL STORES credit invoices with a glued packing slip.
 
@@ -5314,6 +5328,15 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
         logger.info(
             "⏭️ Skipping OCR missing-item recovery for PRAKASH MEDICAL STORES "
             "(packing-slip fragment is not a line item)"
+        )
+        return existing_items
+
+    # NEW.J.B.SALES PMS: Tesseract reads 5MG as SMG, so generic recovery
+    # appends a duplicate (AMLODAC SMG TAB) next to Vision's AMLODAC 5MG TAB.
+    if ocr_suggests_new_jb_sales_pms(ocr_text, ""):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for NEW.J.B.SALES PMS "
+            "(Tesseract 5MG→SMG typo is not a line item)"
         )
         return existing_items
 
@@ -15056,6 +15079,292 @@ def drop_beta_agencies_saleprint_extra_items(
     if dropped:
         logger.info(
             f"BETA AGENCIES SalePrint: Dropped {dropped} extra product row(s)")
+    return cleaned if cleaned else items
+
+
+_NEW_JB_SALES_FOOTER_LABEL_RE = re.compile(
+    r'^(?:S\s*GST(?:\s*2\.?5\s*%?)?|C\s*GST(?:\s*2\.?5\s*%?)?|I\s*GST|'
+    r'GST\s*5\s*%|TOTAL|DISCOUNT|TAX\s*AMT|GROSS\s*AMOUNT|'
+    r'NET\s*PAY(?:\s*AMT)?|C\s*N\s*ADJ(?:\s*AMT)?|'
+    r'ROUND\s*OFF|ROUNDOFF|AMOUNT\s*IN\s*WORDS|REMARKS|'
+    r'GOODS\s+ONCE\s+SOLD)\b.*$',
+    re.IGNORECASE,
+)
+
+
+def _new_jb_sales_normalize_product_name(name: str) -> str:
+    """Treat Tesseract SMG as 5MG so AMLODAC SMG TAB matches AMLODAC 5MG TAB."""
+    s = re.sub(r'[^A-Z0-9]+', ' ', str(name or '').upper())
+    s = re.sub(r'\bS(\d*)MG\b', r'5\1MG', s)
+    return re.sub(r'\s+', ' ', s).strip()
+
+
+_NEW_JB_SALES_ROW_RE = re.compile(
+    r'(?im)^\s*(\d{1,3})\.?\s*[|\]]?\s*'
+    r'([A-Z][A-Z0-9 \-\.]{2,50}?\b(?:TABLETS?|TABS?|CAPS?|INJ|SYP|GEL|DROPS?)\b)'
+    r'\s*[|\]]?\s*(\d{6,8})'
+)
+
+
+def _parse_new_jb_sales_pms_line_items(ocr_text: str) -> list:
+    """Parse numbered Particulars rows: MRP Rate QTY Free ACT Dis Amount Tax% Net.Amt."""
+    if not ocr_text:
+        return []
+    rows = []
+    seen_sn = set()
+    for raw in str(ocr_text).splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if re.search(
+            r'AMOUNT\s+IN\s+WORDS|NET\s+PAY|GROSS\s+AMOUNT',
+            line, re.IGNORECASE,
+        ) and not re.match(r'^\s*\d{1,3}\b', line):
+            continue
+        match = _NEW_JB_SALES_ROW_RE.search(line)
+        if not match:
+            continue
+        sn = int(match.group(1))
+        if sn in seen_sn or sn < 1:
+            continue
+        name = re.sub(r'\s+', ' ', match.group(2)).strip()
+        name = re.sub(r'\bS(MG)\b', r'5\1', name, flags=re.IGNORECASE)
+        hsn = match.group(3)
+        rest = re.sub(r'[\[\]\|]', ' ', line[match.end():])
+        rest = re.sub(r'\b\d{1,2}\s*[/:-]\s*\d{2,4}\b', ' ', rest)
+        rest = rest.replace(',', '.')
+        nums = []
+        for tok in re.findall(r'\d+(?:\.\d+)?', rest):
+            try:
+                nums.append(float(tok))
+            except Exception:
+                continue
+        best = None
+        for i, rate in enumerate(nums):
+            if rate <= 0:
+                continue
+            for j, qty in enumerate(nums):
+                if i == j or qty < 1 or qty > 20000:
+                    continue
+                if abs(qty - round(qty)) > 0.051:
+                    continue
+                for k, amount in enumerate(nums):
+                    if k in (i, j) or amount < 10:
+                        continue
+                    calc = rate * qty
+                    if calc <= 0:
+                        continue
+                    rel = abs(calc - amount) / amount
+                    if rel > 0.08:
+                        continue
+                    # This layout prints Rate immediately before QTY.
+                    order_bonus = 0.0 if i < j else 0.5
+                    score = rel + order_bonus
+                    if best is None or score < best[0]:
+                        best = (score, qty, rate, amount)
+        if not best:
+            continue
+        _, qty, rate, amount = best
+        seen_sn.add(sn)
+        rows.append({
+            "sn": sn,
+            "product_description": name,
+            "hsn_code": hsn,
+            "quantity": qty,
+            "unit_price": rate,
+            "total_amount": amount,
+        })
+    rows.sort(key=lambda r: r["sn"])
+    return rows
+
+
+def _new_jb_sales_fmt_qty(qty: float) -> str:
+    if abs(qty - round(qty)) < 0.01:
+        return str(int(round(qty)))
+    return f"{qty:.2f}"
+
+
+def _new_jb_sales_pms_digital_ocr(pdf_text: str) -> str:
+    """Return digital PDF text when Particulars serials 1..N parse cleanly."""
+    if not pdf_text or not ocr_suggests_new_jb_sales_pms(pdf_text, ""):
+        return ""
+    rows = _parse_new_jb_sales_pms_line_items(pdf_text)
+    sns = [r["sn"] for r in rows]
+    if sns and sns == list(range(1, len(rows) + 1)):
+        return pdf_text
+    return ""
+
+
+def _rebuild_new_jb_sales_pms_items_from_rows(items, ocr_rows: list) -> list:
+    """Build one output row per numbered Particulars line; keep Vision batch/HSN."""
+    rebuilt = []
+    used = set()
+    for row in ocr_rows:
+        row_key = _new_jb_sales_normalize_product_name(row["product_description"])
+        best_i = None
+        best_score = -1
+        for i, item in enumerate(items or []):
+            if i in used or not isinstance(item, dict):
+                continue
+            desc = str(item.get("product_description", "") or "")
+            score = 0
+            if _new_jb_sales_normalize_product_name(desc) == row_key:
+                score += 10
+            try:
+                q = float(normalize_numeric_value(str(item.get("quantity", "") or 0)) or 0)
+                r = float(normalize_numeric_value(str(item.get("unit_price", "") or 0)) or 0)
+            except Exception:
+                q, r = 0.0, 0.0
+            if q > 0 and abs(q - row["quantity"]) < 0.02:
+                score += 3
+            if r > 0 and abs(r - row["unit_price"]) <= 0.05:
+                score += 3
+            if re.search(r'\b5\s*MG\b', desc.upper()):
+                score += 2
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is not None and best_score >= 10:
+            used.add(best_i)
+            item = dict(items[best_i])
+            desc = str(item.get("product_description", "") or "")
+            if re.search(r'\bSMG\b', desc.upper()) and not re.search(r'\b5\s*MG\b', desc.upper()):
+                item["product_description"] = row["product_description"]
+            if row.get("hsn_code") and not str(item.get("hsn_code") or "").strip():
+                item["hsn_code"] = row["hsn_code"]
+        else:
+            item = {
+                "product_description": row["product_description"],
+                "hsn_code": row.get("hsn_code", ""),
+                "lot_batch_number": "",
+                "additional_fields": {},
+            }
+        item["quantity"] = _new_jb_sales_fmt_qty(row["quantity"])
+        item["unit_price"] = f"{row['unit_price']:.2f}"
+        item["total_amount"] = f"{row['total_amount']:.2f}"
+        rebuilt.append(item)
+    extra = 0
+    for i, item in enumerate(items or []):
+        if i in used or not isinstance(item, dict):
+            continue
+        desc = str(item.get("product_description", "") or "")
+        # Keep forms the Particulars regex does not parse (e.g. RESPULES).
+        if not re.search(
+            r'\b(?:TABLETS?|TABS?|CAPS?|INJ|SYP|GEL|DROPS?)\b',
+            desc, re.IGNORECASE,
+        ):
+            rebuilt.append(item)
+            continue
+        extra += 1
+    if extra:
+        logger.info(
+            f"NEW.J.B.SALES PMS: Dropped {extra} extra product row(s) "
+            f"(Particulars table has {len(ocr_rows)} numbered row(s))"
+        )
+    return rebuilt
+
+
+def fix_new_jb_sales_pms_line_items_from_ocr(
+    items, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Use numbered Particulars rows as the product list when serials are 1..N."""
+    if not ocr_suggests_new_jb_sales_pms(ocr_text, vendor):
+        return items
+
+    cleaned = drop_new_jb_sales_pms_extra_items(items, ocr_text, vendor)
+    ocr_rows = _parse_new_jb_sales_pms_line_items(ocr_text)
+    if not ocr_rows:
+        return cleaned
+    sns = [r["sn"] for r in ocr_rows]
+    if sns == list(range(1, len(ocr_rows) + 1)):
+        return _rebuild_new_jb_sales_pms_items_from_rows(cleaned, ocr_rows)
+
+    if not cleaned:
+        return cleaned
+    used_rows = set()
+    for item in cleaned:
+        if not isinstance(item, dict):
+            continue
+        desc = str(item.get("product_description", "") or "")
+        name_key = _new_jb_sales_normalize_product_name(desc)
+        try:
+            cur_q = float(normalize_numeric_value(str(item.get("quantity", "") or 0)) or 0)
+            cur_r = float(normalize_numeric_value(str(item.get("unit_price", "") or 0)) or 0)
+        except Exception:
+            cur_q, cur_r = 0.0, 0.0
+        best_i = None
+        best_score = -1
+        for i, row in enumerate(ocr_rows):
+            if i in used_rows:
+                continue
+            score = 0
+            if name_key == _new_jb_sales_normalize_product_name(row["product_description"]):
+                score += 10
+            if cur_q > 0 and abs(cur_q - row["quantity"]) < 0.02:
+                score += 3
+            if cur_r > 0 and abs(cur_r - row["unit_price"]) <= 0.05:
+                score += 3
+            if score > best_score:
+                best_score = score
+                best_i = i
+        if best_i is None or best_score < 10:
+            continue
+        used_rows.add(best_i)
+        row = ocr_rows[best_i]
+        if re.search(r'\bSMG\b', desc.upper()) and not re.search(r'\b5\s*MG\b', desc.upper()):
+            item["product_description"] = row["product_description"]
+        item["quantity"] = _new_jb_sales_fmt_qty(row["quantity"])
+        item["unit_price"] = f"{row['unit_price']:.2f}"
+        item["total_amount"] = f"{row['total_amount']:.2f}"
+        if row.get("hsn_code") and not str(item.get("hsn_code") or "").strip():
+            item["hsn_code"] = row["hsn_code"]
+    return cleaned
+
+
+def drop_new_jb_sales_pms_extra_items(
+    items, ocr_text: str = "", vendor: str = ""
+) -> list:
+    """Drop footer labels and 5MG→SMG duplicates on NEW.J.B.SALES PMS."""
+    if not items or not ocr_suggests_new_jb_sales_pms(ocr_text, vendor):
+        return items
+    cleaned = []
+    dropped = 0
+    kept_index = {}
+    for item in items:
+        if not isinstance(item, dict):
+            cleaned.append(item)
+            continue
+        desc = str(item.get("product_description", "") or "").strip()
+        desc_label = re.sub(r'[^A-Z0-9&]+', ' ', desc.upper())
+        desc_label = re.sub(r'\s+', ' ', desc_label).strip()
+        if desc_label and _NEW_JB_SALES_FOOTER_LABEL_RE.match(desc_label):
+            dropped += 1
+            logger.info(
+                f"NEW.J.B.SALES PMS: Dropped extra footer row '{desc}'")
+            continue
+        name_key = _new_jb_sales_normalize_product_name(desc)
+        if name_key and name_key in kept_index:
+            prev_i = kept_index[name_key]
+            prev = cleaned[prev_i]
+            prev_desc = str(prev.get("product_description", "") or "").upper()
+            cur_has_digit_mg = bool(re.search(r'\b5\s*MG\b', desc.upper()))
+            prev_has_digit_mg = bool(re.search(r'\b5\s*MG\b', prev_desc))
+            if cur_has_digit_mg and not prev_has_digit_mg:
+                logger.info(
+                    f"NEW.J.B.SALES PMS: Dropped extra SMG-typo row "
+                    f"'{prev.get('product_description', '')}'")
+                cleaned[prev_i] = item
+            else:
+                logger.info(
+                    f"NEW.J.B.SALES PMS: Dropped extra SMG-typo row '{desc}'")
+            dropped += 1
+            continue
+        if name_key:
+            kept_index[name_key] = len(cleaned)
+        cleaned.append(item)
+    if dropped:
+        logger.info(
+            f"NEW.J.B.SALES PMS: Dropped {dropped} extra product row(s)")
     return cleaned if cleaned else items
 
 
@@ -31821,6 +32130,13 @@ def enforce_schema(raw_data):
         vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
     )
 
+    # NEW.J.B.SALES PMS: keep numbered Particulars rows only (Rate/QTY columns)
+    processed_items = fix_new_jb_sales_pms_line_items_from_ocr(
+        processed_items,
+        ocr_text,
+        vendor=str(template["data"]["invoice_summary"].get("vendor", "") or ""),
+    )
+
     # 🔧 FIX 11: Correct qty/rate for MARG ERP style invoices (Supreme Life Sciences, ZYDUS)
     processed_items = fix_marg_erp_qty_rate_from_ocr(
         processed_items, ocr_text)
@@ -35287,7 +35603,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 "falling back to Tesseract..."
             )
     elif len(text.strip()) > 100:
-        _tier12_ocr_text = text
+        if not _new_jb_sales_pms_digital_ocr(_tier12_ocr_text):
+            _tier12_ocr_text = text
         increment_ocr_stat(ocr_stats, ocr_stats_lock, "pymupdf_success", 1)
         invoice_no = try_extract_invoice_from_text(text)
 
@@ -35970,9 +36287,35 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 current_items = []
                 if isinstance(line_items_container, dict) and isinstance(line_items_container.get("items"), list):
                     current_items = line_items_container["items"]
+                elif isinstance(full_data.get("line_items"), list):
+                    current_items = full_data["line_items"]
 
-                missing_candidates = _collect_sparse_missing_candidates(
-                    current_items, fallback_ocr_text)
+                _jb_digital = _new_jb_sales_pms_digital_ocr(_tier12_ocr_text)
+                if _jb_digital:
+                    fallback_ocr_text = _jb_digital
+                    logger.info(
+                        "NEW.J.B.SALES PMS: using PDF text for Particulars "
+                        "(not Tesseract 5MG→SMG)"
+                    )
+                    _jb_fixed = fix_new_jb_sales_pms_line_items_from_ocr(
+                        current_items, _jb_digital, "")
+                    if _jb_fixed:
+                        _merge_line_items_into_full_data(full_data, _jb_fixed)
+                        current_items = _jb_fixed
+                        line_items_container = _get_line_items_container(full_data)
+
+                # NEW.J.B.SALES PMS: Tesseract reads Particulars "5MG" as "SMG".
+                # Sparse-candidate collection then treats that as a missing row and
+                # a second Vision pass inserts a duplicate product.
+                if ocr_suggests_new_jb_sales_pms(fallback_ocr_text, ""):
+                    logger.info(
+                        "⏭️ Skipping focused Vision sparse recovery for "
+                        "NEW.J.B.SALES PMS (Tesseract 5MG→SMG is the same row)"
+                    )
+                    missing_candidates = []
+                else:
+                    missing_candidates = _collect_sparse_missing_candidates(
+                        current_items, fallback_ocr_text)
 
                 if missing_candidates:
                     recovered_items = recover_missing_sparse_items_from_image_gemini(
@@ -36053,18 +36396,25 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             result["ocr_text"] = fallback_ocr_text
         elif "ocr_text" not in result:
             result["ocr_text"] = ""
+        _jb_digital = _new_jb_sales_pms_digital_ocr(_tier12_ocr_text)
+        if _jb_digital:
+            result["ocr_text"] = _jb_digital
+            fallback_ocr_text = _jb_digital
 
         # Bharath scans: probe sample is too short — upgrade to full relaxed OCR
         try:
             _bharath_ocr_hint = result.get(
                 "ocr_text") or fallback_ocr_text or ""
             if (
+                not _jb_digital
+                and (
                 len(str(_bharath_ocr_hint).strip()) < 1200
                 or _ocr_text_needs_rotation_retry(_bharath_ocr_hint)
                 or not _ocr_text_has_invoice_cues(_bharath_ocr_hint)
                 or ocr_suggests_tulsyan_pharmaceuticals(_bharath_ocr_hint)
                 or ocr_suggests_ksk_speciality(_bharath_ocr_hint)
                 or ocr_suggests_sri_lakshmi_pharma(_bharath_ocr_hint)
+                )
             ):
                 _bharath_relaxed, _ = extract_text_with_tesseract_relaxed(
                     page, page_num=page_num)
@@ -36084,12 +36434,13 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                 f"Bharath vision OCR upgrade skipped: {_bharath_ocr_err}")
 
         try:
-            _sr_vis_hint = result.get("ocr_text") or fallback_ocr_text or ""
-            _sr_vis_up = _maybe_upgrade_sr_pharma_me9_ocr(
-                page, _sr_vis_hint, page_num=page_num)
-            if _sr_vis_up and _sr_vis_up != _sr_vis_hint:
-                result["ocr_text"] = _sr_vis_up
-                fallback_ocr_text = _sr_vis_up
+            if not _jb_digital:
+                _sr_vis_hint = result.get("ocr_text") or fallback_ocr_text or ""
+                _sr_vis_up = _maybe_upgrade_sr_pharma_me9_ocr(
+                    page, _sr_vis_hint, page_num=page_num)
+                if _sr_vis_up and _sr_vis_up != _sr_vis_hint:
+                    result["ocr_text"] = _sr_vis_up
+                    fallback_ocr_text = _sr_vis_up
         except Exception as _sr_vis_ocr_err:
             logger.debug(
                 f"SR PHARMACEUTICALS vision PSM6 upgrade skipped: {_sr_vis_ocr_err}")
