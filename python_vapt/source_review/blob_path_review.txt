@@ -1,0 +1,14 @@
+Blob path review (source + runtime configuration). No live blob read or overwrite was performed.
+
+Current source (app.py):
+- POST /split-and-extract and POST /extract-pod-grn accept blob_container, split_raw_blob_path, and target_invoices_blob_folder.
+- container_name falls back to AZURE_CONTAINER_NAME when the form field is empty.
+- split_raw_blob_path is passed to BlobClient.download_blob().
+- upload_split_pdf_to_blob() uploads with overwrite=True and returns a read SAS URL built with the account key.
+
+Runtime:
+- Process environment contains a non-empty AZURE_STORAGE_CONNECTION_STRING and AZURE_STORAGE_ACCOUNT_KEY (lengths recorded only; values not stored here).
+- A production request already in the journal performed a blob PUT and received HTTP 201. The object URL is redacted in evidence/runtime_gemini_egress_redacted.txt.
+- Default container name observed in logs: invoice-splits.
+
+Status: Potential. The abusive read/write was not executed.

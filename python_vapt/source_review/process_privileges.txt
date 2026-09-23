@@ -1,0 +1,15 @@
+Process privileges
+
+systemd unit deploy/systemd/split-extract.service:
+  User=root
+  Group=root
+  ExecStart=/var/www/html/venv/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8001
+
+Live process:
+  PID 1095352
+  command: /var/www/html/venv/bin/python3 /var/www/html/split-extract/runner.py
+  uid: 0
+  started: Mon Sep 21 05:15:25 2026
+  cwd: /var/www/html/split-extract
+
+No code-execution primitive was demonstrated. This is informational.

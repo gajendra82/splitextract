@@ -1,0 +1,24 @@
+=== certificate ===
+subject=CN = zydus-py.mediola.in
+issuer=C = US, O = Let's Encrypt, CN = YE1
+notBefore=Sep 17 10:44:08 2026 GMT
+notAfter=Dec 16 10:44:07 2026 GMT
+X509v3 Subject Alternative Name: 
+    DNS:zydus-py.mediola.in
+=== protocols ===
+-- tls1 --
+4067805E417E0000:error:0A0000BF:SSL routines:tls_setup_handshake:no protocols available:../ssl/statem/statem_lib.c:104:
+no peer certificate available
+New, (NONE), Cipher is (NONE)
+-- tls1_1 --
+40C7338574730000:error:0A0000BF:SSL routines:tls_setup_handshake:no protocols available:../ssl/statem/statem_lib.c:104:
+no peer certificate available
+New, (NONE), Cipher is (NONE)
+-- tls1_2 --
+New, TLSv1.2, Cipher is ECDHE-ECDSA-AES256-GCM-SHA384
+    Protocol  : TLSv1.2
+-- tls1_3 --
+New, TLSv1.3, Cipher is TLS_AES_256_GCM_SHA384
+=== nginx ssl_protocols ===
+ssl_protocols TLSv1.2 TLSv1.3;
+ssl_ciphers "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";

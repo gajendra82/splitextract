@@ -1,0 +1,22 @@
+Live OpenAPI (http://127.0.0.1:8001/openapi.json) on 2026-09-22:
+
+GET  /
+GET  /health
+GET  /live
+GET  /ready
+POST /extract-pod-grn
+POST /extract-sales-statement
+POST /split-and-extract
+POST /test-extract
+
+Also HTTP 200 without authentication:
+GET /docs
+GET /redoc
+GET /openapi.json
+
+HTTP 404 on the application:
+GET /split
+GET /extract
+
+Public prefix via nginx location /extract/ -> http://127.0.0.1:8001/
+Example: https://zydus-py.mediola.in/extract/health

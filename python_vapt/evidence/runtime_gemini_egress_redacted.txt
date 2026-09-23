@@ -1,0 +1,16 @@
+Sanitized journal excerpt from the running split-extract process (PID 1095352).
+Customer names, addresses, invoice identifiers, batch identifiers, blob object paths, and filenames have been removed.
+Authorization headers in the Azure SDK log were already marked REDACTED by the SDK.
+
+Observed facts retained:
+- POST /split-and-extract accepted from peer 135.235.16.138 and completed HTTP 200 in about 3.5 seconds.
+- Processing stages included url_download and url_download_complete.
+- OCR path logged PDFPlumber, then Gemini Text, then Gemini Vision.
+- Logger google_genai.models recorded: AFC is enabled with max remote calls: 10.
+- Outbound request: POST https://aiplatform.googleapis.com/v1beta1/projects/pod-ocr-502015/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent HTTP/1.1 200 OK
+- A second generateContent call to the same model URL returned HTTP 200.
+- Azure Blob SDK performed PUT to https://[REDACTED].blob.core.windows.net/invoice-splits/[REDACTED object path] and received HTTP 201.
+- Console summary from the loaded application printed: 4-Tier OCR: PDFPlumber -> PyMuPDF -> Tesseract -> Gemini
+- Access log: 135.235.16.138 - "POST /split-and-extract HTTP/1.1" 200 OK
+
+This excerpt was not produced by an assessor upload. It records a request already in progress during the assessment window.
