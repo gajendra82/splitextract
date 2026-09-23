@@ -1,0 +1,57 @@
+{
+  "ocr_method": "paddleocr",
+  "ocr_text": "SREE PADMAM PHARMA & AGENCIES\nTAX INVOICE\nCREDITCode : SD0535\nCopy\nSREE PADMAM PHARMA & AGENCIES\nTC 25/3388(OLD)82/3997(NEW)\nCREDENCE HOSPITAL, ULLOOR\n2\nTC 25/3388(OLD)82/3997(NEW)\n*26000730041372*\nCHIRAKULAM ROAD\n:ULLOOR\nCHIRAKULAM ROAD\nTRIVANDRUM,TRIVANDRUM-695001\nTax Inv.No.\nMEDICAL COLLEGE, TrivandrumC2C = 16\nTRIVANDRUM\n:26000730041372\nDI No.: KL-TVM-140020\nKL-TVM-140021\nMob:9995551115\nPan No:\n0471-4253001\nInvoice Date\n: 15-08-2026\nTime15:09\nTin No.:\nCst No.:\n: 15-08-2026\nTrivandrum Pin-695001 Ph:04714033333\nCIN NO:\nCopy\nDue Date\nDman : UNSURE\nMEDICAL COLLEGE\nGST No.: 32AAJFS9745F1ZY\n2\nPhone :\n0471-4253001\nOrder No\nCin No.:\nPan No.: AAJFS9745F\nOrder Date\nDL.No:1-343-20/2011;\n*26000730041372*\nGSTIN: 32AAJFS9745F1ZY\nFL No.: 11317001000144\n: 016 ABHILASH\nGSTIN:32AADCC8356R1Z4 FSSAI :\nSales Executive\nEmail:\nsppapurchase2019@gmail.com\n8075228493\nState Code: 32\nName: KERALA\nInvNo26000730041372\nSales Ex. Mobile\n15-08-26\nQuantity\nCGST\nSGST\nSMan:016 ABHILASH\nCREDIT\nMfac/\nRack\nItem Description\nHSN/SAC\nBatch\nExp\nM.R.P\nTrade\nSch\nDisc\nDisc\nMkt By\nPack\nTaxable\nNo\nFree/\nDate\nPrice\nDisc\nAmt\nValue\nNet Value\nCode\nBilled\nRepl\nRate\nAmt\nRate\nAmt\nGER\nUU25\nPROLUTON DEPOT 500MG[381\n30042069\n20\n0\nGB0405A\n02-30\n462.53\n287.80\n0.000.00\n0.00\n5756.002.5\n143.902.5\n143.90\n6043.80\nPending Bills\nBill No.\nDate\nBal. Amt. Days\n26000730040091 12-08-2026 15362.00\n26000730041250 15-08-2026 1672.00\n26000730041372 15-08-2026 6044.00\n0\n0\nTotal Inv: 3\n23078.00\nRapid News\nCONTACT 8590037126 FOR COMPLAINTS ABOUT SUPPLY OF MEDICINES.E\nCode : SD0535\nPrep By:VIDY\nTot Items: 1\nTax%\nTaxable\nSGST%\nAMT\nCGST%\nAMT\nSub Total\n5756.00\nCREDENCE HOSPITAL, ULLOOR\n:\n: 20\n5%\n5756.00\n2.5%\n143.90\n2.5%\n143.90\nTotal Disc Amt\n0.00\nNo,Cs.\nTot Qty\nULLOOR MEDICAL COLLEGE\nSch. Disc\n:\n0.00\nTrivandrum C2C = 16 Trivandrum Pin-695001\nSort By :\nRoute\n: UNS\n12%\n0.00\n6%\n0.00\n6%\n0.00\nGST Tax Amt\n287.80\nPh:04714033333\nPrn Time: 14:43\n18%\n0.00\n9%\n0.00\n9%\n0.00\nCkd By\nPc/Bc\n:\n0.00\nSub Total\n5756.00\n28%\n0.00\n14%\n0.00\n14%\n0.00\nCash Dis\nSaleValue;\n5756.00\nCrNoteNo.\n:\n0.00\nTotal Disc Amt :\n0.00\nSchDisc :\nTax Amt. :\n287.80\n0%\n0.00\n0%\n0.00\n0%\n0.00\nDbNoteNo.\n0.00\nGST Tax Amt\n287.80\nTCS Tax Amt\n.\n:\n0.00\nAdd CESS\n0.00\nPc/Bc\n0.00\nRound off\n0.2\nCrNoteNo.\n0.00\nIRN No: 2b6fb3ce80e9a1a8e193f67ea7aff4d8b46b85d9c89f80cc338edf1de969830d\nAck No:152626812815490\nAck Date: 15-08-2026 15:49:00\nGrand Total\n6044.00\nDbNoteNo.\n0.00\nDeclaration:\nTCS Tax Amt\n0\nWe hereby warranty that the medicine purchased under this memo\nNet Amount\n6044.00\ndo not contravene in any way the provision of section 18 of the Drugs\nCONTACT 7994758742 FOR ANY MISMATCH.\nPrep By\n: VIDYA\n& Cosmetics Act 1940. For the purpose of Jurisdiction the cause of\nCkd :\nC/s :\nCovers:\nthe action for this transaction shall be deemed to have been made in\nTrivandrum and it is agreed by and between parties hereto that\nCourts in Trivandrum will have exclusive jurisdiction.\nFor : SREE PADMAM PHARMA & AGENCIES\nSCAN TO PAY\n3\nAuthorised Signatory\nCONTACT 8590037126 FOR COMPLAINTS ABOUT SUPPLY OF MEDICINES.",
+  "ocr_character_count": 3007,
+  "ocr_confidence": 98.6,
+  "ocr_processing_time_seconds": 16.746,
+  "ocr_quality": {
+    "confidence": 98.6,
+    "quality": "GOOD",
+    "reason": "",
+    "score": 114,
+    "text_length": 3007,
+    "readable_ratio": 0.9983,
+    "invoice_keyword_score": 100.0,
+    "gstin_detected": true,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": true
+  },
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-1.pdf",
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 2.357,
+  "final_json": {
+    "invoice_no": "26000730041372",
+    "vendor": "SREE PADMAM PHARMA & AGENCIES",
+    "vendor_gstin": "32AAJFS9745F1ZY",
+    "customer": "CREDENCE HOSPITAL",
+    "customer_address": "ULLOOR MEDICAL COLLEGE, TRIVANDRUM, TRIVANDRUM-695001",
+    "customer_gstin": "32AADCC8356R1Z4",
+    "invoice_date": "2026-08-15",
+    "invoice_date_raw": "15-08-2026",
+    "total": "6044.00",
+    "tax": "287.80",
+    "irn": "2b6fb3ce80e9a1a8e193f67ea7aff4d8b46b85d9c89f80cc338edf1de969830d",
+    "line_items": [
+      {
+        "product_description": "PROLUTON DEPOT 500MG",
+        "quantity": "20",
+        "unit_price": "287.80",
+        "total_amount": "5756.00",
+        "hsn_code": "30042069",
+        "lot_batch_number": "GB0405A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "462.53",
+          "mfg": null,
+          "expiry_date": "2030-02-01",
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T10:05:43.618309+00:00"
+}

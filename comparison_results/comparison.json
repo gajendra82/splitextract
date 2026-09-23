@@ -1,0 +1,378 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_KAPL-26-35087.pdf",
+  "compared_at_utc": "2026-09-23T06:31:41.158083+00:00",
+  "pipeline": "POST /test-extract (full existing pipeline)",
+  "notes": {
+    "tesseract_run": [
+      "extracted_data is null/empty — structured invoice fields were not produced (often Gemini/Vertex credentials failure).",
+      "Gemini was called but did not return usable structured JSON for this run."
+    ],
+    "paddleocr_run": [
+      "extracted_data is null/empty — structured invoice fields were not produced (often Gemini/Vertex credentials failure).",
+      "Gemini was called but did not return usable structured JSON for this run."
+    ],
+    "important": "Structured invoice_summary/line_items require a working Vertex/Gemini credential. If extracted_data is null in both result files, fix GOOGLE_APPLICATION_CREDENTIALS and re-run this script — OCR-layer differences are still visible via ocr_statistics / raw_ocr_text."
+  },
+  "runs": {
+    "tesseract": {
+      "paddle_ocr_enabled": false,
+      "elapsed_seconds": 7.23,
+      "ocr_method": "tesseract",
+      "ocr_character_count": 2269,
+      "ocr_confidence_avg": null,
+      "ocr_statistics": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 1,
+        "paddleocr": 0,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "summary": {
+        "total_invoices": 1,
+        "total_pages": 1,
+        "total_time_seconds": 7.09,
+        "was_image_converted": false
+      }
+    },
+    "paddleocr": {
+      "paddle_ocr_enabled": true,
+      "elapsed_seconds": 22.573,
+      "ocr_method": "paddleocr",
+      "ocr_character_count": 2158,
+      "ocr_confidence_avg": null,
+      "ocr_statistics": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 0,
+        "paddleocr": 1,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "summary": {
+        "total_invoices": 1,
+        "total_pages": 1,
+        "total_time_seconds": 22.35,
+        "was_image_converted": false
+      }
+    }
+  },
+  "fields": [
+    {
+      "field": "ocr_method",
+      "tesseract": "tesseract",
+      "paddleocr": "paddleocr",
+      "identical": false,
+      "difference": {
+        "tesseract": "tesseract",
+        "paddleocr": "paddleocr"
+      }
+    },
+    {
+      "field": "ocr_character_count",
+      "tesseract": 2269,
+      "paddleocr": 2158,
+      "identical": false,
+      "difference": {
+        "tesseract": 2269,
+        "paddleocr": 2158
+      }
+    },
+    {
+      "field": "ocr_confidence_avg",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "extraction_time_seconds",
+      "tesseract": 7.23,
+      "paddleocr": 22.573,
+      "identical": false,
+      "difference": {
+        "tesseract": 7.23,
+        "paddleocr": 22.573
+      }
+    },
+    {
+      "field": "ocr_statistics",
+      "tesseract": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 1,
+        "paddleocr": 0,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "paddleocr": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 0,
+        "paddleocr": 1,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "identical": false,
+      "difference": {
+        "tesseract": {
+          "pdfplumber": 1,
+          "pymupdf": 1,
+          "tesseract": 1,
+          "paddleocr": 0,
+          "gemini_vision": 1,
+          "gemini_text_api": 3,
+          "free_extractions": 3,
+          "cost_saved_usd": 0.0
+        },
+        "paddleocr": {
+          "pdfplumber": 1,
+          "pymupdf": 1,
+          "tesseract": 0,
+          "paddleocr": 1,
+          "gemini_vision": 1,
+          "gemini_text_api": 3,
+          "free_extractions": 3,
+          "cost_saved_usd": 0.0
+        }
+      }
+    },
+    {
+      "field": "invoice.invoice_no",
+      "tesseract": "UNKNOWN_1",
+      "paddleocr": "UNKNOWN_1",
+      "identical": true
+    },
+    {
+      "field": "invoice.extracted_data_present",
+      "tesseract": false,
+      "paddleocr": false,
+      "identical": true
+    },
+    {
+      "field": "raw_ocr_text",
+      "tesseract": "KYAL AGENCIES PVT. LTD.\n\nPLOT NO. 1531 ,1532,NAHARKANTA\nBHUBANESHWAR-752101\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER }\n\nKG\n\nKya! Group\n\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\n\nGST No. : 21AAFCK2829R1Z7\n\nGST INVOICE Inv Mod CREDIT\nTo, BillNo. | KAPL-26-35087 Dated 01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA GST No : 21AAACU9473G12B Page: 4\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR D.L.No, _:KH-BBS-1-41987/R, 41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR G.R.No: G.R.Dt: 01-Jun-26 No.of Cases :\nOrd No: Ord Dt: O1-Jun-26 Tins: SELF\nS.N HSN COMP | PARTICULARS IPACK | BATCH EXP. QTY. FREE N_MRP O_MRP RATE. AMOUNT] GST%] DIS%)\n4, | 30049039 fevoUsco | MEVA C TAB 15S 45, 1A01979A 05/27 1 365.57 389.94 278.53) 278.53, 5.00] 0.00}\nPLEASE DO NOT PAY CA$H WITHOUT MONEW RECEIPT IF YOU PA’\nTHEN YOU WILL BE SOLE RESPONSIBLE FOR THA’\nRemarks: | PO No. 26-27-5099 Ledger Bal : 0.00 @ COMPLAINT NO- 8917344395]\nDue From : Days\nGROSS AMT| DISC.AMT} SCM.AMT| GST%| CGST.AMT| SGST.AMT) IGST.AMTI «yaar c aT 278.53]\n278.53 0.0 o.oo, Seal 6.96 6.96] 0.00] TOTAL GSTAMT 13.921\n0.00 0.0 0.00} 1296] 0.00 0.0 0.00] Tos % 0.00 0.00\n0.00 0.0 0.00] 189%] 0.00 0.01 0.00] NET.AMOUNT 292.45\n0.00 0.0 0.00] 28¢6| 0.00 0.0 0.00] Less CN/DN 0.00]\n0.00 0.0 0.00} 0% 0.00 0.0 0.00] Grand Total 292.00\n278.53 0.00 0.00) 6.96 6.96 0.00) (R/OF)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa htip://103.92.47.199/onlineorder/\nACK NO.182622816452625 ACK DT:11/06/2026 EWB NO : http://103.243.41.7 1/esurder/\n\n‘Terms & Conditions <= —_‘*!Asputes are subject to Khurda Jurisdiction. For Online Order Use : -http://117.247.73.47/esorder!\n\n*3DU8/*\n\n‘Goods once sold will not be taken back. Inv. Total Qty: 1.00\nBANK :- HDFC BANK LTD IFSC :- HDFC0002694 |A/C NO :- 9991999999005 BRANCH :-  CHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only For KYAL AGENCIES PVT. LTD.\n\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\n\nPrint By: ABINASH\n(Computer Generated Invoice) E.80.E Packed By Checked By Delivered By\n\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+      "paddleocr": "KYAL AGENCIES PVT. LTD\nKG\nPLOT NO. 1531,1532,NAHARKANTA\nBHUBANESHWAR-752101\nKyal Group\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER )\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\nGST No. : 21AAFCK2829R1Z7\nSCAN&PAY\nGST INVOICE\nInv Mod\nCREDIT\nTo,\nBill No.\nKAPL-26-35087\nDated\n01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA\nGST No : 21AAACU9473G1ZB\nPage: 1\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR\nD.L.No.:KH-BBS-I-41987/R,41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR\nG.R.No:\nG.R.Dt01-Jun-26\nNo.of Cases :\nOrd No:\nOrd Dt: 01-Jun-26\nTrns: SELF\nS.N\nHSN\nCOMP\nPARTICULARS\nPACKBATCH\nEXP.\nQTY.\nFREE\nN_MRP\n0_mRp\nRATE.\nAMOUNTGST%\nDIS%\n1.\n30049039\nZYDUS CO\nMEVA C TAB 15S\nIA01979A\n05/27\n365.57\n389.94\n278.53\n278.53\n5.00\n0.00\nPLEASE DO NOT PAY CA$H WITHOUT MONEY RECEIPT IF YOU PAY\nRemarks :\nPO No. 26-27-5099\nLedger Bal : 0.00\nCOMPLAINT NO- 8917344395\nDue From :\nDays\nGROSS AMT\nDISC.AMT\nSCM.AMT GST%\nCGST.AMT\nSGST.AMT\nIGST.AMTTAXABLE AMT\n278.53\n278.53\n0.00\n0.00\n5%\n6.96\n6.96\n0.00\nTOTAL GSTAMT\n13.92\n0.00\n0.00\n0.00\n12%\n0.00\n0.00\n0.00TCS %\n0.00\n0.00\n0.00\n0.00\n0.00\n18%\n0.00\n0.00\n0.00\nNET.AMOUNT\n292.45\n0.00\n0.00\n0.00\n28%\n0.00\n0.00\n0.00\nLess CN/DN\n0.00\n0.00\n0.00\n0.00\n0%\n0.00\n0.00\n0.00\nGrand Total\n292.00\n278.53\n0.00\n0.00\n6.96\n6.96\n0.00\n(R/Off)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa\nhttp://103.92.47.199/onlineorder/\n*35087*\nACK NO.182622816452625 ACK DT:11/06/2026EWB NO\nhttp://103.243.41.71/esorder/\nIerms & Conditions :-\nAll disputes are subject to Khurda Jurisdiction\nFor Online Order Use : -http://117.247.73.47/esorder/\nGoods once sold will not be taken back.\nInv. Total Qty :\n1.00\nBANK :-\nHDFC BANK LTD\nIFSC :- HDFC0002694\nA/C NO :- 99919999999005\nBRANCH :-\nCHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only\nFor KYAL AGENCIES PVT. LTD.\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\nPrint By : ABINASH\n(Computer Generated Invoice)\nE.&O.E\nPacked By\nChecked By\nDelivered By\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+      "identical": false,
+      "difference": {
+        "tesseract": "KYAL AGENCIES PVT. LTD.\n\nPLOT NO. 1531 ,1532,NAHARKANTA\nBHUBANESHWAR-752101\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER }\n\nKG\n\nKya! Group\n\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\n\nGST No. : 21AAFCK2829R1Z7\n\nGST INVOICE Inv Mod CREDIT\nTo, BillNo. | KAPL-26-35087 Dated 01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA GST No : 21AAACU9473G12B Page: 4\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR D.L.No, _:KH-BBS-1-41987/R, 41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR G.R.No: G.R.Dt: 01-Jun-26 No.of Cases :\nOrd No: Ord Dt: O1-Jun-26 Tins: SELF\nS.N HSN COMP | PARTICULARS IPACK | BATCH EXP. QTY. FREE N_MRP O_MRP RATE. AMOUNT] GST%] DIS%)\n4, | 30049039 fevoUsco | MEVA C TAB 15S 45, 1A01979A 05/27 1 365.57 389.94 278.53) 278.53, 5.00] 0.00}\nPLEASE DO NOT PAY CA$H WITHOUT MONEW RECEIPT IF YOU PA’\nTHEN YOU WILL BE SOLE RESPONSIBLE FOR THA’\nRemarks: | PO No. 26-27-5099 Ledger Bal : 0.00 @ COMPLAINT NO- 8917344395]\nDue From : Days\nGROSS AMT| DISC.AMT} SCM.AMT| GST%| CGST.AMT| SGST.AMT) IGST.AMTI «yaar c aT 278.53]\n278.53 0.0 o.oo, Seal 6.96 6.96] 0.00] TOTAL GSTAMT 13.921\n0.00 0.0 0.00} 1296] 0.00 0.0 0.00] Tos % 0.00 0.00\n0.00 0.0 0.00] 189%] 0.00 0.01 0.00] NET.AMOUNT 292.45\n0.00 0.0 0.00] 28¢6| 0.00 0.0 0.00] Less CN/DN 0.00]\n0.00 0.0 0.00} 0% 0.00 0.0 0.00] Grand Total 292.00\n278.53 0.00 0.00) 6.96 6.96 0.00) (R/OF)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa htip://103.92.47.199/onlineorder/\nACK NO.182622816452625 ACK DT:11/06/2026 EWB NO : http://103.243.41.7 1/esurder/\n\n‘Terms & Conditions <= —_‘*!Asputes are subject to Khurda Jurisdiction. For Online Order Use : -http://117.247.73.47/esorder!\n\n*3DU8/*\n\n‘Goods once sold will not be taken back. Inv. Total Qty: 1.00\nBANK :- HDFC BANK LTD IFSC :- HDFC0002694 |A/C NO :- 9991999999005 BRANCH :-  CHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only For KYAL AGENCIES PVT. LTD.\n\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\n\nPrint By: ABINASH\n(Computer Generated Invoice) E.80.E Packed By Checked By Delivered By\n\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+        "paddleocr": "KYAL AGENCIES PVT. LTD\nKG\nPLOT NO. 1531,1532,NAHARKANTA\nBHUBANESHWAR-752101\nKyal Group\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER )\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\nGST No. : 21AAFCK2829R1Z7\nSCAN&PAY\nGST INVOICE\nInv Mod\nCREDIT\nTo,\nBill No.\nKAPL-26-35087\nDated\n01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA\nGST No : 21AAACU9473G1ZB\nPage: 1\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR\nD.L.No.:KH-BBS-I-41987/R,41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR\nG.R.No:\nG.R.Dt01-Jun-26\nNo.of Cases :\nOrd No:\nOrd Dt: 01-Jun-26\nTrns: SELF\nS.N\nHSN\nCOMP\nPARTICULARS\nPACKBATCH\nEXP.\nQTY.\nFREE\nN_MRP\n0_mRp\nRATE.\nAMOUNTGST%\nDIS%\n1.\n30049039\nZYDUS CO\nMEVA C TAB 15S\nIA01979A\n05/27\n365.57\n389.94\n278.53\n278.53\n5.00\n0.00\nPLEASE DO NOT PAY CA$H WITHOUT MONEY RECEIPT IF YOU PAY\nRemarks :\nPO No. 26-27-5099\nLedger Bal : 0.00\nCOMPLAINT NO- 8917344395\nDue From :\nDays\nGROSS AMT\nDISC.AMT\nSCM.AMT GST%\nCGST.AMT\nSGST.AMT\nIGST.AMTTAXABLE AMT\n278.53\n278.53\n0.00\n0.00\n5%\n6.96\n6.96\n0.00\nTOTAL GSTAMT\n13.92\n0.00\n0.00\n0.00\n12%\n0.00\n0.00\n0.00TCS %\n0.00\n0.00\n0.00\n0.00\n0.00\n18%\n0.00\n0.00\n0.00\nNET.AMOUNT\n292.45\n0.00\n0.00\n0.00\n28%\n0.00\n0.00\n0.00\nLess CN/DN\n0.00\n0.00\n0.00\n0.00\n0%\n0.00\n0.00\n0.00\nGrand Total\n292.00\n278.53\n0.00\n0.00\n6.96\n6.96\n0.00\n(R/Off)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa\nhttp://103.92.47.199/onlineorder/\n*35087*\nACK NO.182622816452625 ACK DT:11/06/2026EWB NO\nhttp://103.243.41.71/esorder/\nIerms & Conditions :-\nAll disputes are subject to Khurda Jurisdiction\nFor Online Order Use : -http://117.247.73.47/esorder/\nGoods once sold will not be taken back.\nInv. Total Qty :\n1.00\nBANK :-\nHDFC BANK LTD\nIFSC :- HDFC0002694\nA/C NO :- 99919999999005\nBRANCH :-\nCHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only\nFor KYAL AGENCIES PVT. LTD.\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\nPrint By : ABINASH\n(Computer Generated Invoice)\nE.&O.E\nPacked By\nChecked By\nDelivered By\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S"
+      }
+    },
+    {
+      "field": "invoice_summary.invoice_no",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.invoice_date",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.invoice_date_raw",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.vendor",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.vendor_gstin",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.customer",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.customer_gstin",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.customer_address",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.irn",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.tax",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.total",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.calculated_total",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.subtotal",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.cgst",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.sgst",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "invoice_summary.igst",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "line_items",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    },
+    {
+      "field": "line_items.count",
+      "tesseract": null,
+      "paddleocr": null,
+      "identical": true
+    }
+  ],
+  "summary": {
+    "fields_compared": 26,
+    "identical_count": 21,
+    "different_count": 5,
+    "different_fields": [
+      "ocr_method",
+      "ocr_character_count",
+      "extraction_time_seconds",
+      "ocr_statistics",
+      "raw_ocr_text"
+    ]
+  },
+  "differences_only": [
+    {
+      "field": "ocr_method",
+      "tesseract": "tesseract",
+      "paddleocr": "paddleocr",
+      "identical": false,
+      "difference": {
+        "tesseract": "tesseract",
+        "paddleocr": "paddleocr"
+      }
+    },
+    {
+      "field": "ocr_character_count",
+      "tesseract": 2269,
+      "paddleocr": 2158,
+      "identical": false,
+      "difference": {
+        "tesseract": 2269,
+        "paddleocr": 2158
+      }
+    },
+    {
+      "field": "extraction_time_seconds",
+      "tesseract": 7.23,
+      "paddleocr": 22.573,
+      "identical": false,
+      "difference": {
+        "tesseract": 7.23,
+        "paddleocr": 22.573
+      }
+    },
+    {
+      "field": "ocr_statistics",
+      "tesseract": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 1,
+        "paddleocr": 0,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "paddleocr": {
+        "pdfplumber": 1,
+        "pymupdf": 1,
+        "tesseract": 0,
+        "paddleocr": 1,
+        "gemini_vision": 1,
+        "gemini_text_api": 3,
+        "free_extractions": 3,
+        "cost_saved_usd": 0.0
+      },
+      "identical": false,
+      "difference": {
+        "tesseract": {
+          "pdfplumber": 1,
+          "pymupdf": 1,
+          "tesseract": 1,
+          "paddleocr": 0,
+          "gemini_vision": 1,
+          "gemini_text_api": 3,
+          "free_extractions": 3,
+          "cost_saved_usd": 0.0
+        },
+        "paddleocr": {
+          "pdfplumber": 1,
+          "pymupdf": 1,
+          "tesseract": 0,
+          "paddleocr": 1,
+          "gemini_vision": 1,
+          "gemini_text_api": 3,
+          "free_extractions": 3,
+          "cost_saved_usd": 0.0
+        }
+      }
+    },
+    {
+      "field": "raw_ocr_text",
+      "tesseract": "KYAL AGENCIES PVT. LTD.\n\nPLOT NO. 1531 ,1532,NAHARKANTA\nBHUBANESHWAR-752101\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER }\n\nKG\n\nKya! Group\n\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\n\nGST No. : 21AAFCK2829R1Z7\n\nGST INVOICE Inv Mod CREDIT\nTo, BillNo. | KAPL-26-35087 Dated 01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA GST No : 21AAACU9473G12B Page: 4\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR D.L.No, _:KH-BBS-1-41987/R, 41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR G.R.No: G.R.Dt: 01-Jun-26 No.of Cases :\nOrd No: Ord Dt: O1-Jun-26 Tins: SELF\nS.N HSN COMP | PARTICULARS IPACK | BATCH EXP. QTY. FREE N_MRP O_MRP RATE. AMOUNT] GST%] DIS%)\n4, | 30049039 fevoUsco | MEVA C TAB 15S 45, 1A01979A 05/27 1 365.57 389.94 278.53) 278.53, 5.00] 0.00}\nPLEASE DO NOT PAY CA$H WITHOUT MONEW RECEIPT IF YOU PA’\nTHEN YOU WILL BE SOLE RESPONSIBLE FOR THA’\nRemarks: | PO No. 26-27-5099 Ledger Bal : 0.00 @ COMPLAINT NO- 8917344395]\nDue From : Days\nGROSS AMT| DISC.AMT} SCM.AMT| GST%| CGST.AMT| SGST.AMT) IGST.AMTI «yaar c aT 278.53]\n278.53 0.0 o.oo, Seal 6.96 6.96] 0.00] TOTAL GSTAMT 13.921\n0.00 0.0 0.00} 1296] 0.00 0.0 0.00] Tos % 0.00 0.00\n0.00 0.0 0.00] 189%] 0.00 0.01 0.00] NET.AMOUNT 292.45\n0.00 0.0 0.00] 28¢6| 0.00 0.0 0.00] Less CN/DN 0.00]\n0.00 0.0 0.00} 0% 0.00 0.0 0.00] Grand Total 292.00\n278.53 0.00 0.00) 6.96 6.96 0.00) (R/OF)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa htip://103.92.47.199/onlineorder/\nACK NO.182622816452625 ACK DT:11/06/2026 EWB NO : http://103.243.41.7 1/esurder/\n\n‘Terms & Conditions <= —_‘*!Asputes are subject to Khurda Jurisdiction. For Online Order Use : -http://117.247.73.47/esorder!\n\n*3DU8/*\n\n‘Goods once sold will not be taken back. Inv. Total Qty: 1.00\nBANK :- HDFC BANK LTD IFSC :- HDFC0002694 |A/C NO :- 9991999999005 BRANCH :-  CHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only For KYAL AGENCIES PVT. LTD.\n\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\n\nPrint By: ABINASH\n(Computer Generated Invoice) E.80.E Packed By Checked By Delivered By\n\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+      "paddleocr": "KYAL AGENCIES PVT. LTD\nKG\nPLOT NO. 1531,1532,NAHARKANTA\nBHUBANESHWAR-752101\nKyal Group\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER )\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\nGST No. : 21AAFCK2829R1Z7\nSCAN&PAY\nGST INVOICE\nInv Mod\nCREDIT\nTo,\nBill No.\nKAPL-26-35087\nDated\n01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA\nGST No : 21AAACU9473G1ZB\nPage: 1\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR\nD.L.No.:KH-BBS-I-41987/R,41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR\nG.R.No:\nG.R.Dt01-Jun-26\nNo.of Cases :\nOrd No:\nOrd Dt: 01-Jun-26\nTrns: SELF\nS.N\nHSN\nCOMP\nPARTICULARS\nPACKBATCH\nEXP.\nQTY.\nFREE\nN_MRP\n0_mRp\nRATE.\nAMOUNTGST%\nDIS%\n1.\n30049039\nZYDUS CO\nMEVA C TAB 15S\nIA01979A\n05/27\n365.57\n389.94\n278.53\n278.53\n5.00\n0.00\nPLEASE DO NOT PAY CA$H WITHOUT MONEY RECEIPT IF YOU PAY\nRemarks :\nPO No. 26-27-5099\nLedger Bal : 0.00\nCOMPLAINT NO- 8917344395\nDue From :\nDays\nGROSS AMT\nDISC.AMT\nSCM.AMT GST%\nCGST.AMT\nSGST.AMT\nIGST.AMTTAXABLE AMT\n278.53\n278.53\n0.00\n0.00\n5%\n6.96\n6.96\n0.00\nTOTAL GSTAMT\n13.92\n0.00\n0.00\n0.00\n12%\n0.00\n0.00\n0.00TCS %\n0.00\n0.00\n0.00\n0.00\n0.00\n18%\n0.00\n0.00\n0.00\nNET.AMOUNT\n292.45\n0.00\n0.00\n0.00\n28%\n0.00\n0.00\n0.00\nLess CN/DN\n0.00\n0.00\n0.00\n0.00\n0%\n0.00\n0.00\n0.00\nGrand Total\n292.00\n278.53\n0.00\n0.00\n6.96\n6.96\n0.00\n(R/Off)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa\nhttp://103.92.47.199/onlineorder/\n*35087*\nACK NO.182622816452625 ACK DT:11/06/2026EWB NO\nhttp://103.243.41.71/esorder/\nIerms & Conditions :-\nAll disputes are subject to Khurda Jurisdiction\nFor Online Order Use : -http://117.247.73.47/esorder/\nGoods once sold will not be taken back.\nInv. Total Qty :\n1.00\nBANK :-\nHDFC BANK LTD\nIFSC :- HDFC0002694\nA/C NO :- 99919999999005\nBRANCH :-\nCHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only\nFor KYAL AGENCIES PVT. LTD.\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\nPrint By : ABINASH\n(Computer Generated Invoice)\nE.&O.E\nPacked By\nChecked By\nDelivered By\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+      "identical": false,
+      "difference": {
+        "tesseract": "KYAL AGENCIES PVT. LTD.\n\nPLOT NO. 1531 ,1532,NAHARKANTA\nBHUBANESHWAR-752101\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER }\n\nKG\n\nKya! Group\n\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\n\nGST No. : 21AAFCK2829R1Z7\n\nGST INVOICE Inv Mod CREDIT\nTo, BillNo. | KAPL-26-35087 Dated 01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA GST No : 21AAACU9473G12B Page: 4\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR D.L.No, _:KH-BBS-1-41987/R, 41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR G.R.No: G.R.Dt: 01-Jun-26 No.of Cases :\nOrd No: Ord Dt: O1-Jun-26 Tins: SELF\nS.N HSN COMP | PARTICULARS IPACK | BATCH EXP. QTY. FREE N_MRP O_MRP RATE. AMOUNT] GST%] DIS%)\n4, | 30049039 fevoUsco | MEVA C TAB 15S 45, 1A01979A 05/27 1 365.57 389.94 278.53) 278.53, 5.00] 0.00}\nPLEASE DO NOT PAY CA$H WITHOUT MONEW RECEIPT IF YOU PA’\nTHEN YOU WILL BE SOLE RESPONSIBLE FOR THA’\nRemarks: | PO No. 26-27-5099 Ledger Bal : 0.00 @ COMPLAINT NO- 8917344395]\nDue From : Days\nGROSS AMT| DISC.AMT} SCM.AMT| GST%| CGST.AMT| SGST.AMT) IGST.AMTI «yaar c aT 278.53]\n278.53 0.0 o.oo, Seal 6.96 6.96] 0.00] TOTAL GSTAMT 13.921\n0.00 0.0 0.00} 1296] 0.00 0.0 0.00] Tos % 0.00 0.00\n0.00 0.0 0.00] 189%] 0.00 0.01 0.00] NET.AMOUNT 292.45\n0.00 0.0 0.00] 28¢6| 0.00 0.0 0.00] Less CN/DN 0.00]\n0.00 0.0 0.00} 0% 0.00 0.0 0.00] Grand Total 292.00\n278.53 0.00 0.00) 6.96 6.96 0.00) (R/OF)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa htip://103.92.47.199/onlineorder/\nACK NO.182622816452625 ACK DT:11/06/2026 EWB NO : http://103.243.41.7 1/esurder/\n\n‘Terms & Conditions <= —_‘*!Asputes are subject to Khurda Jurisdiction. For Online Order Use : -http://117.247.73.47/esorder!\n\n*3DU8/*\n\n‘Goods once sold will not be taken back. Inv. Total Qty: 1.00\nBANK :- HDFC BANK LTD IFSC :- HDFC0002694 |A/C NO :- 9991999999005 BRANCH :-  CHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only For KYAL AGENCIES PVT. LTD.\n\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\n\nPrint By: ABINASH\n(Computer Generated Invoice) E.80.E Packed By Checked By Delivered By\n\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S",
+        "paddleocr": "KYAL AGENCIES PVT. LTD\nKG\nPLOT NO. 1531,1532,NAHARKANTA\nBHUBANESHWAR-752101\nKyal Group\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER )\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\nGST No. : 21AAFCK2829R1Z7\nSCAN&PAY\nGST INVOICE\nInv Mod\nCREDIT\nTo,\nBill No.\nKAPL-26-35087\nDated\n01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA\nGST No : 21AAACU9473G1ZB\nPage: 1\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR\nD.L.No.:KH-BBS-I-41987/R,41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR\nG.R.No:\nG.R.Dt01-Jun-26\nNo.of Cases :\nOrd No:\nOrd Dt: 01-Jun-26\nTrns: SELF\nS.N\nHSN\nCOMP\nPARTICULARS\nPACKBATCH\nEXP.\nQTY.\nFREE\nN_MRP\n0_mRp\nRATE.\nAMOUNTGST%\nDIS%\n1.\n30049039\nZYDUS CO\nMEVA C TAB 15S\nIA01979A\n05/27\n365.57\n389.94\n278.53\n278.53\n5.00\n0.00\nPLEASE DO NOT PAY CA$H WITHOUT MONEY RECEIPT IF YOU PAY\nRemarks :\nPO No. 26-27-5099\nLedger Bal : 0.00\nCOMPLAINT NO- 8917344395\nDue From :\nDays\nGROSS AMT\nDISC.AMT\nSCM.AMT GST%\nCGST.AMT\nSGST.AMT\nIGST.AMTTAXABLE AMT\n278.53\n278.53\n0.00\n0.00\n5%\n6.96\n6.96\n0.00\nTOTAL GSTAMT\n13.92\n0.00\n0.00\n0.00\n12%\n0.00\n0.00\n0.00TCS %\n0.00\n0.00\n0.00\n0.00\n0.00\n18%\n0.00\n0.00\n0.00\nNET.AMOUNT\n292.45\n0.00\n0.00\n0.00\n28%\n0.00\n0.00\n0.00\nLess CN/DN\n0.00\n0.00\n0.00\n0.00\n0%\n0.00\n0.00\n0.00\nGrand Total\n292.00\n278.53\n0.00\n0.00\n6.96\n6.96\n0.00\n(R/Off)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa\nhttp://103.92.47.199/onlineorder/\n*35087*\nACK NO.182622816452625 ACK DT:11/06/2026EWB NO\nhttp://103.243.41.71/esorder/\nIerms & Conditions :-\nAll disputes are subject to Khurda Jurisdiction\nFor Online Order Use : -http://117.247.73.47/esorder/\nGoods once sold will not be taken back.\nInv. Total Qty :\n1.00\nBANK :-\nHDFC BANK LTD\nIFSC :- HDFC0002694\nA/C NO :- 99919999999005\nBRANCH :-\nCHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only\nFor KYAL AGENCIES PVT. LTD.\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\nPrint By : ABINASH\n(Computer Generated Invoice)\nE.&O.E\nPacked By\nChecked By\nDelivered By\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S"
+      }
+    }
+  ]
+}

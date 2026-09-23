@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "filename": "invoice_KAPL-26-35087.pdf",
+  "summary": {
+    "total_invoices": 1,
+    "total_pages": 1,
+    "total_time_seconds": 7.09,
+    "was_image_converted": false
+  },
+  "ocr_statistics": {
+    "pdfplumber": 1,
+    "pymupdf": 1,
+    "tesseract": 1,
+    "paddleocr": 0,
+    "gemini_vision": 1,
+    "gemini_text_api": 3,
+    "free_extractions": 3,
+    "cost_saved_usd": 0.0
+  },
+  "invoices": [
+    {
+      "invoice_no": "UNKNOWN_1",
+      "pages": [
+        1
+      ],
+      "num_pages": 1,
+      "extracted_data": null,
+      "raw_ocr_text": "KYAL AGENCIES PVT. LTD.\n\nPLOT NO. 1531 ,1532,NAHARKANTA\nBHUBANESHWAR-752101\nPhone : 9040056342/43 ( RECEPTION ) 08069497799 ( ORDER }\n\nKG\n\nKya! Group\n\nD.L.No. : 20B-KH-17980W, 21B-KH-17981WC, 20G-KH-6329WX\n\nGST No. : 21AAFCK2829R1Z7\n\nGST INVOICE Inv Mod CREDIT\nTo, BillNo. | KAPL-26-35087 Dated 01/06/2026\nUTKAL HEALTHCARE PVT LTD CENTRAL PHARMA GST No : 21AAACU9473G12B Page: 4\nAT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR D.L.No, _:KH-BBS-1-41987/R, 41988/RC\nNEAR DEFENCE COLONY,BHUBANESWAR G.R.No: G.R.Dt: 01-Jun-26 No.of Cases :\nOrd No: Ord Dt: O1-Jun-26 Tins: SELF\nS.N HSN COMP | PARTICULARS IPACK | BATCH EXP. QTY. FREE N_MRP O_MRP RATE. AMOUNT] GST%] DIS%)\n4, | 30049039 fevoUsco | MEVA C TAB 15S 45, 1A01979A 05/27 1 365.57 389.94 278.53) 278.53, 5.00] 0.00}\nPLEASE DO NOT PAY CA$H WITHOUT MONEW RECEIPT IF YOU PA’\nTHEN YOU WILL BE SOLE RESPONSIBLE FOR THA’\nRemarks: | PO No. 26-27-5099 Ledger Bal : 0.00 @ COMPLAINT NO- 8917344395]\nDue From : Days\nGROSS AMT| DISC.AMT} SCM.AMT| GST%| CGST.AMT| SGST.AMT) IGST.AMTI «yaar c aT 278.53]\n278.53 0.0 o.oo, Seal 6.96 6.96] 0.00] TOTAL GSTAMT 13.921\n0.00 0.0 0.00} 1296] 0.00 0.0 0.00] Tos % 0.00 0.00\n0.00 0.0 0.00] 189%] 0.00 0.01 0.00] NET.AMOUNT 292.45\n0.00 0.0 0.00] 28¢6| 0.00 0.0 0.00] Less CN/DN 0.00]\n0.00 0.0 0.00} 0% 0.00 0.0 0.00] Grand Total 292.00\n278.53 0.00 0.00) 6.96 6.96 0.00) (R/OF)\nIRN NO:e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa htip://103.92.47.199/onlineorder/\nACK NO.182622816452625 ACK DT:11/06/2026 EWB NO : http://103.243.41.7 1/esurder/\n\n‘Terms & Conditions <= —_‘*!Asputes are subject to Khurda Jurisdiction. For Online Order Use : -http://117.247.73.47/esorder!\n\n*3DU8/*\n\n‘Goods once sold will not be taken back. Inv. Total Qty: 1.00\nBANK :- HDFC BANK LTD IFSC :- HDFC0002694 |A/C NO :- 9991999999005 BRANCH :-  CHANDINI CHOWK, CUTTACK\nRupees: Two Hundred Ninety Two Only For KYAL AGENCIES PVT. LTD.\n\nCertified that the contents of this invoice are medicines and are of life saving certified that the particualars given\nabove are true and correct and the amount represents the price actually charged\n\nPrint By: ABINASH\n(Computer Generated Invoice) E.80.E Packed By Checked By Delivered By\n\nAuthorised Signatory\n--- KYAL PARTICULARS ---\nIA01979A\tMEVA C TAB 15S"
+    }
+  ],
+  "_comparison_meta": {
+    "mode": "tesseract",
+    "paddle_ocr_enabled": false,
+    "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_KAPL-26-35087.pdf",
+    "elapsed_seconds": 7.23,
+    "http_status": 200,
+    "ran_at_utc": "2026-09-23T06:29:07.746129+00:00"
+  }
+}

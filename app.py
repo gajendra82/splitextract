@@ -15,6 +15,11 @@ from services.excel_invoice_extract import (
     workbook_to_tsv_for_llm,
 )
 from services.prompts import build_excel_table_prompt
+from services.paddle_ocr import (
+    extract_text_with_paddleocr,
+    extract_text_with_paddleocr_relaxed,
+    is_paddle_ocr_enabled,
+)
 from services.reliability import (
     OCR_PAGE_FUTURE_TIMEOUT_SECONDS,
     OCR_SEMAPHORE_LOGGING_ENABLED,
@@ -644,6 +649,7 @@ def create_ocr_stats() -> Dict[str, float]:
         "pdfplumber_success": 0,
         "pymupdf_success": 0,
         "tesseract_success": 0,
+        "paddleocr_success": 0,
         "gemini_vision_calls": 0,
         "gemini_text_calls": 0,
         "total_gemini_calls": 0,
@@ -1181,6 +1187,64 @@ def extract_text_with_tesseract_relaxed(page, page_num: Optional[int] = None) ->
     except Exception as e:
         logger.warning(f"    ⚠️ Tesseract(relaxed) OCR failed: {e}")
         return None, 0.0
+
+
+def extract_scan_ocr_text(
+    page,
+    page_num: Optional[int] = None,
+    relaxed: bool = False,
+) -> Tuple[Optional[str], float, str]:
+    """
+    Tier-3 scan OCR: optional PaddleOCR (feature-flagged, OFF by default),
+    then Tesseract fallback. Never raises into the caller.
+
+    Returns: (text, confidence, ocr_method) where ocr_method is
+    "paddleocr" or "tesseract".
+    """
+    # 1) PaddleOCR primary when enabled
+    if is_paddle_ocr_enabled():
+        try:
+            if relaxed:
+                paddle_text, paddle_conf = extract_text_with_paddleocr_relaxed(
+                    page, page_num=page_num
+                )
+            else:
+                paddle_text, paddle_conf = extract_text_with_paddleocr(
+                    page, page_num=page_num
+                )
+            if paddle_text and len(paddle_text.strip()) > 0:
+                logger.info(
+                    "    ✅ Scan OCR method=paddleocr conf=%.1f%% chars=%s relaxed=%s",
+                    paddle_conf,
+                    len(paddle_text.strip()),
+                    relaxed,
+                )
+                return paddle_text, float(paddle_conf), "paddleocr"
+            logger.info(
+                "    ℹ️ PaddleOCR returned no usable text — falling back to Tesseract "
+                "(conf=%.1f%% relaxed=%s)",
+                paddle_conf,
+                relaxed,
+            )
+        except Exception as paddle_err:
+            logger.warning(
+                "    ⚠️ PaddleOCR path error (fail-soft → Tesseract): %s",
+                paddle_err,
+            )
+
+    # 2) Tesseract fallback (existing behaviour)
+    if relaxed:
+        text, conf = extract_text_with_tesseract_relaxed(page, page_num=page_num)
+    else:
+        text, conf = extract_text_with_tesseract(page, page_num=page_num)
+    if text:
+        logger.info(
+            "    ✅ Scan OCR method=tesseract conf=%.1f%% chars=%s relaxed=%s",
+            conf,
+            len(text.strip()),
+            relaxed,
+        )
+    return text, float(conf or 0.0), "tesseract"
 
 
 def _novacare_norm_name(s) -> str:
@@ -29481,6 +29545,8 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
 
     increment_ocr_stat(ocr_stats, ocr_stats_lock, "total_pages", 1)
     fallback_ocr_text = ""
+    tesseract_text = None  # also holds PaddleOCR text when scan_ocr_method=paddleocr
+    scan_ocr_method = "tesseract"
     _tesseract_gemini_fallback = None
     _text_tier_gemini_fallback = None
     _tier12_ocr_text = ""
@@ -29661,18 +29727,19 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
     if not fallback_ocr_text and _tier12_ocr_text:
         fallback_ocr_text = _tier12_ocr_text
 
-    # ✅ TIER 3: Tesseract OCR (for images)
-    if TESSERACT_AVAILABLE:
-        # ⚡ Fast header-only pre-check (~3-8s) before committing to full Tesseract (~60-160s).
+    # ✅ TIER 3: Scan OCR (PaddleOCR optional → Tesseract) for images/scans
+    if TESSERACT_AVAILABLE or is_paddle_ocr_enabled():
+        # ⚡ Fast header-only pre-check (~3-8s) before committing to full scan OCR.
         # Scans the top 30% of the page at reduced DPI to detect if invoice text is readable.
         # If the header yields no invoice tokens or low confidence, skip straight to Gemini Vision.
         tesseract_text, confidence = None, 0.0
+        scan_ocr_method = "tesseract"
         _probe_viable, _probe_conf, _probe_sample = _quick_page_quality_check(
             page, page_num=page_num)
         if not _probe_viable:
             logger.warning(
                 f"    ⚡ Page quality pre-check: conf={_probe_conf:.1f}%, no invoice tokens in header. "
-                f"Skipping Tesseract → going directly to Gemini Vision."
+                f"Skipping scan OCR → going directly to Gemini Vision."
             )
             if _probe_sample and not fallback_ocr_text:
                 fallback_ocr_text = _probe_sample
@@ -29690,69 +29757,73 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             # HYD-26-* / Novacare DEL-26: avoid skipping OCR when header probe fails on scans
             if _is_hyd26_file:
                 logger.warning(
-                    "    ⚠️ HYD-26: forcing relaxed Tesseract OCR to avoid Gemini Vision throttling"
+                    "    ⚠️ HYD-26: forcing relaxed scan OCR to avoid Gemini Vision throttling"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif _novacare_del26_context(_probe_sample or ""):
                 logger.warning(
-                    "    ⚠️ Novacare DEL-26: forcing relaxed Tesseract OCR for header date recovery"
+                    "    ⚠️ Novacare DEL-26: forcing relaxed scan OCR for header date recovery"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif ocr_suggests_bharath_medical(_probe_sample or ""):
                 logger.warning(
-                    "    ⚠️ Bharath Medical: forcing relaxed Tesseract OCR for scanned invoice"
+                    "    ⚠️ Bharath Medical: forcing relaxed scan OCR for scanned invoice"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif ocr_suggests_tulsyan_pharmaceuticals(_probe_sample or ""):
                 logger.warning(
-                    "    ⚠️ TULSYAN PHARMACEUTICALS: forcing relaxed Tesseract OCR for scanned invoice"
+                    "    ⚠️ TULSYAN PHARMACEUTICALS: forcing relaxed scan OCR for scanned invoice"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif ocr_suggests_ksk_speciality(_probe_sample or ""):
                 logger.warning(
-                    "    ⚠️ KSK SPECIALITY: forcing relaxed Tesseract OCR for scanned invoice"
+                    "    ⚠️ KSK SPECIALITY: forcing relaxed scan OCR for scanned invoice"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif ocr_suggests_sri_lakshmi_pharma(_probe_sample or ""):
                 logger.warning(
-                    "    ⚠️ SRI LAKSHMI PHARMA: forcing relaxed Tesseract OCR for scanned invoice"
+                    "    ⚠️ SRI LAKSHMI PHARMA: forcing relaxed scan OCR for scanned invoice"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             elif _probe_sample and not _ocr_text_has_invoice_cues(_probe_sample):
                 logger.warning(
-                    "    ⚠️ Garbled header probe — forcing relaxed Tesseract OCR"
+                    "    ⚠️ Garbled header probe — forcing relaxed scan OCR"
                 )
-                tesseract_text, confidence = extract_text_with_tesseract_relaxed(
-                    page, page_num=page_num)
+                tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                    page, page_num=page_num, relaxed=True)
             else:
                 tesseract_text, confidence = None, 0.0
         else:
-            logger.info(f"    🔍 Trying Tesseract OCR...")
-            tesseract_text, confidence = extract_text_with_tesseract(
-                page, page_num=page_num)
+            _scan_label = "PaddleOCR/Tesseract" if is_paddle_ocr_enabled() else "Tesseract"
+            logger.info(f"    🔍 Trying {_scan_label} OCR...")
+            tesseract_text, confidence, scan_ocr_method = extract_scan_ocr_text(
+                page, page_num=page_num, relaxed=False)
 
         if tesseract_text and len(tesseract_text.strip()) > 100:
             # Keep OCR text for downstream fallbacks even if we end up using Gemini Vision.
             # NIC-IRP continuation pages: PDFPlumber already has Quantity|UNT|Unit Price;
-            # Tesseract often keeps only Taxable/Total and would break the qty/rate fixer.
+            # scan OCR often keeps only Taxable/Total and would break the qty/rate fixer.
             if _nic_irp_table_ocr_is_richer(_tier12_ocr_text, tesseract_text):
                 _unt_n = _nic_irp_unt_priced_row_count(_tier12_ocr_text)
                 logger.info(
                     "    ✅ NIC-IRP: keeping PDFPlumber table OCR "
                     f"({len(_tier12_ocr_text)} chars, {_unt_n} UNT) "
-                    "over Tesseract"
+                    f"over {scan_ocr_method}"
                 )
                 fallback_ocr_text = _tier12_ocr_text
             else:
                 fallback_ocr_text = tesseract_text
-            increment_ocr_stat(ocr_stats, ocr_stats_lock,
-                               "tesseract_success", 1)
+            _scan_stat_key = (
+                "paddleocr_success" if scan_ocr_method == "paddleocr"
+                else "tesseract_success"
+            )
+            increment_ocr_stat(ocr_stats, ocr_stats_lock, _scan_stat_key, 1)
 
             # 🔍 Check OCR quality before processing
             ocr_quality_issues = 0
@@ -29816,10 +29887,11 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
 
                 if invoice_no or _novacare_scanned:
                     if invoice_no:
-                        logger.info(f"    ✅ Tesseract: invoice# {invoice_no}")
+                        logger.info(
+                            f"    ✅ {scan_ocr_method}: invoice# {invoice_no} (conf={confidence:.1f}%)")
                     else:
                         logger.info(
-                            "    ✅ Tesseract: Novacare scan (invoice# from Gemini text tier)")
+                            f"    ✅ {scan_ocr_method}: Novacare scan (invoice# from Gemini text tier)")
                     full_data = extract_full_data_from_text_gemini(
                         tesseract_text, ocr_stats, ocr_stats_lock)
 
@@ -29850,9 +29922,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                         _tesseract_gemini_fallback = {
                             "invoice_no": invoice_no,
                             "full_data": full_data,
-                            "extraction_method": "tesseract+gemini",
+                            "extraction_method": f"{scan_ocr_method}+gemini",
                             "ocr_text": tesseract_text,
-                            "ocr_method": "tesseract",
+                            "ocr_method": scan_ocr_method,
                             "ocr_confidence": confidence,
                         }
                         # Check if line items were actually extracted
@@ -30051,14 +30123,14 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
                                 return _finalize_bluefox_page_result({
                                     "invoice_no": invoice_no,
                                     "full_data": full_data,
-                                    "extraction_method": "tesseract+gemini",
+                                    "extraction_method": f"{scan_ocr_method}+gemini",
                                     "ocr_text": tesseract_text,  # ✅ Full text
-                                    "ocr_method": "tesseract",
+                                    "ocr_method": scan_ocr_method,
                                     "ocr_confidence": confidence
                                 }, page, page_num=page_num)
                         else:
                             logger.warning(
-                                f"    ⚠️ Tesseract+Gemini extracted 0 line items. Falling back to Gemini Vision...")
+                                f"    ⚠️ {scan_ocr_method}+Gemini extracted 0 line items. Falling back to Gemini Vision...")
 
     # ✅ TIER 4: Gemini Vision (PAID - Last Resort)
     logger.warning(f"    💰 Using Gemini Vision (paid)...")
@@ -30664,7 +30736,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
 
     if (not result or not result.get("full_data")) and _tesseract_gemini_fallback:
         logger.warning(
-            "    ⚠️ Gemini Vision failed; using Tesseract+Gemini fallback result")
+            "    ⚠️ Gemini Vision failed; using scan-OCR+Gemini fallback result "
+            f"(method={_tesseract_gemini_fallback.get('ocr_method', 'tesseract')})"
+        )
         return _tesseract_gemini_fallback
 
     if (
@@ -30683,9 +30757,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             result = {
                 "invoice_no": _nov_fb_inv,
                 "full_data": _nov_fb_data,
-                "extraction_method": "tesseract+gemini_post_vision_fail",
+                "extraction_method": f"{scan_ocr_method}+gemini_post_vision_fail",
                 "ocr_text": fallback_ocr_text,
-                "ocr_method": "tesseract",
+                "ocr_method": scan_ocr_method,
                 "ocr_confidence": 0.0,
             }
 
@@ -30705,9 +30779,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             result = {
                 "invoice_no": _bharath_fb_inv,
                 "full_data": _bharath_fb_data,
-                "extraction_method": "tesseract+gemini_post_vision_fail",
+                "extraction_method": f"{scan_ocr_method}+gemini_post_vision_fail",
                 "ocr_text": fallback_ocr_text,
-                "ocr_method": "tesseract",
+                "ocr_method": scan_ocr_method,
                 "ocr_confidence": 0.0,
             }
 
@@ -30732,9 +30806,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             result = {
                 "invoice_no": _tulsyan_fb_inv,
                 "full_data": _tulsyan_fb_data,
-                "extraction_method": "tesseract+gemini_post_vision_fail",
+                "extraction_method": f"{scan_ocr_method}+gemini_post_vision_fail",
                 "ocr_text": fallback_ocr_text,
-                "ocr_method": "tesseract",
+                "ocr_method": scan_ocr_method,
                 "ocr_confidence": 0.0,
             }
 
@@ -30758,9 +30832,9 @@ def extract_full_invoice_data_combined(page, page_bytes=None, pdf_path=None, pag
             result = {
                 "invoice_no": _ksk_fb_inv,
                 "full_data": _ksk_fb_data,
-                "extraction_method": "tesseract+gemini_post_vision_fail",
+                "extraction_method": f"{scan_ocr_method}+gemini_post_vision_fail",
                 "ocr_text": fallback_ocr_text,
-                "ocr_method": "tesseract",
+                "ocr_method": scan_ocr_method,
                 "ocr_confidence": 0.0,
             }
 
@@ -33241,6 +33315,7 @@ def build_split_extract_response_from_excel(
             "pdfplumber": 0,
             "pymupdf": 0,
             "tesseract": 0,
+            "paddleocr": 0,
             "gemini_vision": 0,
             "gemini_text_api": 0,
             "total_gemini_calls": 0,
@@ -33661,6 +33736,7 @@ def build_split_extract_response_from_sales_statement(
             "pdfplumber": 0,
             "pymupdf": 0,
             "tesseract": 0,
+            "paddleocr": 0,
             "gemini_vision": 0,
             "gemini_text_api": 0,
             "total_gemini_calls": 0,
@@ -33939,7 +34015,7 @@ def split_and_extract_invoices(
     try:
         print(f"\n{'='*70}")
         print(f"🚀 Split + Extract: {source_filename}")
-        print(f"   4-Tier OCR: PDFPlumber → PyMuPDF → Tesseract → Gemini")
+        print(f"   4-Tier OCR: PDFPlumber → PyMuPDF → PaddleOCR?/Tesseract → Gemini")
         print(f"{'='*70}")
 
         total_size = 0
@@ -34106,6 +34182,8 @@ def split_and_extract_invoices(
             f"   PyMuPDF:          {ocr_stats['pymupdf_success']}/{ocr_stats['total_pages']}")
         print(
             f"   Tesseract:        {ocr_stats['tesseract_success']}/{ocr_stats['total_pages']}")
+        print(
+            f"   PaddleOCR:        {ocr_stats.get('paddleocr_success', 0)}/{ocr_stats['total_pages']}")
         print(f"   Gemini Text API:  {int(ocr_stats['gemini_text_calls'])}")
         print(
             f"   Gemini Vision:    {ocr_stats['gemini_vision_calls']}/{ocr_stats['total_pages']}")
@@ -35383,7 +35461,8 @@ def split_and_extract_invoices(
 
         total_time = (datetime.now() - start_time).total_seconds()
         free_extractions = ocr_stats["pdfplumber_success"] + \
-            ocr_stats["pymupdf_success"] + ocr_stats["tesseract_success"]
+            ocr_stats["pymupdf_success"] + ocr_stats["tesseract_success"] + \
+            int(ocr_stats.get("paddleocr_success", 0) or 0)
         ocr_savings_pct = (free_extractions / total_pages_count *
                            100) if total_pages_count > 0 else 0
 
@@ -35428,6 +35507,7 @@ def split_and_extract_invoices(
                 "pdfplumber": ocr_stats["pdfplumber_success"],
                 "pymupdf": ocr_stats["pymupdf_success"],
                 "tesseract": ocr_stats["tesseract_success"],
+                "paddleocr": ocr_stats.get("paddleocr_success", 0),
                 "gemini_vision": ocr_stats["gemini_vision_calls"],
                 "gemini_text_api": ocr_stats["gemini_text_calls"],
                 "total_gemini_calls": ocr_stats["total_gemini_calls"],
@@ -35525,7 +35605,7 @@ def test_extract(
     try:
         print(f"\n{'='*70}")
         print(f"🧪 TEST EXTRACT: {source_filename}")
-        print(f"   4-Tier OCR: PDFPlumber → PyMuPDF → Tesseract → Gemini")
+        print(f"   4-Tier OCR: PDFPlumber → PyMuPDF → PaddleOCR?/Tesseract → Gemini")
         print(f"{'='*70}")
 
         # Read uploaded file (sync endpoint → read spooled file directly)
@@ -35592,6 +35672,8 @@ def test_extract(
             f"   PyMuPDF:          {ocr_stats['pymupdf_success']}/{ocr_stats['total_pages']}")
         print(
             f"   Tesseract:        {ocr_stats['tesseract_success']}/{ocr_stats['total_pages']}")
+        print(
+            f"   PaddleOCR:        {ocr_stats.get('paddleocr_success', 0)}/{ocr_stats['total_pages']}")
         print(f"   Gemini Text API:  {int(ocr_stats['gemini_text_calls'])}")
         print(
             f"   Gemini Vision:    {ocr_stats['gemini_vision_calls']}/{ocr_stats['total_pages']}")
@@ -36499,7 +36581,8 @@ def test_extract(
 
         total_time = (datetime.now() - start_time).total_seconds()
         free_extractions = ocr_stats["pdfplumber_success"] + \
-            ocr_stats["pymupdf_success"] + ocr_stats["tesseract_success"]
+            ocr_stats["pymupdf_success"] + ocr_stats["tesseract_success"] + \
+            int(ocr_stats.get("paddleocr_success", 0) or 0)
 
         response = {
             "success": True,
@@ -36514,6 +36597,7 @@ def test_extract(
                 "pdfplumber": ocr_stats["pdfplumber_success"],
                 "pymupdf": ocr_stats["pymupdf_success"],
                 "tesseract": ocr_stats["tesseract_success"],
+                "paddleocr": ocr_stats.get("paddleocr_success", 0),
                 "gemini_vision": ocr_stats["gemini_vision_calls"],
                 "gemini_text_api": ocr_stats["gemini_text_calls"],
                 "free_extractions": free_extractions,
@@ -36922,7 +37006,7 @@ if __name__ == "__main__":
     print("\n" + "="*80)
     print("🚀 Invoice Splitter + Extractor API v10.0 (FINAL)")
     print("="*80)
-    print("✅ 4-Tier OCR: PDFPlumber → PyMuPDF → Tesseract → Gemini Vision")
+    print("✅ 4-Tier OCR: PDFPlumber → PyMuPDF → PaddleOCR?/Tesseract → Gemini Vision")
     print("✅ 80-95% cost reduction with free OCR")
     print("✅ All fixes: GSTIN, IRN, Vendor/Customer, Qty/Price")
     print("="*80)
@@ -36930,6 +37014,8 @@ if __name__ == "__main__":
         f"📦 PDFPlumber: {'✅ Available' if PDFPLUMBER_AVAILABLE else '❌ Not installed'}")
     print(
         f"📦 Tesseract:  {'✅ Available' if (TESSERACT_AVAILABLE and os.path.exists(TESSERACT_CMD)) else '❌ Not available'}")
+    print(
+        f"📦 PaddleOCR:  {'✅ Flag ON' if is_paddle_ocr_enabled() else '⏸ Flag OFF (default)'}")
     print(f"📦 Tesseract OCR concurrency limit: {MAX_TESSERACT_CONCURRENCY}")
     print("="*80)
     print(f"🌐 Server: http://{args.host}:{args.port}")

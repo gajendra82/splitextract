@@ -1,0 +1,68 @@
+{
+  "success": true,
+  "request_id": "5bcf6c90-43cc-47a0-b092-4adfb2a087ff",
+  "result": {
+    "invoice_summary": {
+      "irn": "2b6fb3ce80e9a1a8e193f67ea7aff4d8b46b85d9c89f80cc338edf1de969830d",
+      "tax": "287.80",
+      "total": "6044.00",
+      "vendor": "SREE PADMAM PHARMA & AGENCIES",
+      "customer": "CREDENCE HOSPITAL, ULLOOR MEDICAL COLLEGE",
+      "invoice_no": "26000730041372",
+      "invoice_date": "2026-08-15",
+      "vendor_gstin": "32AADCC8356R1Z4",
+      "customer_gstin": "32AAJFS9745F1ZY",
+      "customer_address": "Trivandrum C2C = 16 Trivandrum Pin-695001"
+    },
+    "line_items": {
+      "count": 1,
+      "items": [
+        {
+          "hsn_code": "30042069",
+          "quantity": "20",
+          "sku_code": null,
+          "unit_price": "287.80",
+          "total_amount": "5756.00",
+          "lot_batch_number": "GB0405A",
+          "additional_fields": {
+            "mfg": null,
+            "mrp": "462.53",
+            "expiry_date": "02-30",
+            "free_quantity": "0"
+          },
+          "product_description": "PROLUTON DEPOT 500MG"
+        }
+      ],
+      "title": "line items (with lot / batch)",
+      "has_quantity_info": true,
+      "has_lot_batch_info": true,
+      "items_with_quantity": 1,
+      "items_with_lot_batch": 1,
+      "standardized_columns": {
+        "discount": "discount",
+        "hsn_code": "hsn/sac code",
+        "quantity": "quantity",
+        "sku_code": "sku/item code",
+        "tax_amount": "tax %",
+        "unit_price": "unit price",
+        "total_amount": "total amount",
+        "unit_of_measure": "unit of measure",
+        "lot_batch_number": "lot/batch number",
+        "additional_fields": "other detected fields",
+        "product_description": "product/item description"
+      }
+    }
+  },
+  "fallback_used": [],
+  "ocr": {
+    "page_count": 1,
+    "pdfplumber_pages": 1,
+    "pymupdf_pages": 0,
+    "failed_pages": 0,
+    "total_chars": 7159,
+    "extraction_time": 0.297
+  },
+  "_http_status": 200,
+  "_client_elapsed_seconds": 31.217,
+  "_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract"
+}

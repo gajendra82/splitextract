@@ -1,0 +1,76 @@
+{
+  "success": true,
+  "request_id": "8d0e5805-db74-433f-8367-12fa54bfe8ee",
+  "result": {
+    "invoice_summary": {
+      "irn": "e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa",
+      "tax": "13.92",
+      "total": "292.45",
+      "vendor": "KYAL AGENCIES PVT. LTD.",
+      "customer": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "invoice_no": "KAPL-26-35087",
+      "invoice_date": "2026-06-01",
+      "vendor_gstin": "21AAACU9473G1ZB",
+      "customer_gstin": "21AAFCK2829R1Z7",
+      "customer_address": "AT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR NEAR DEFENCE COLONY,BHUBANESWAR"
+    },
+    "line_items": {
+      "count": 2,
+      "items": [
+        {
+          "hsn_code": "30049039",
+          "quantity": "1",
+          "sku_code": null,
+          "unit_price": "278.53",
+          "total_amount": "278.53",
+          "lot_batch_number": "IA01979A",
+          "additional_fields": {
+            "mfg": "ZYDUS CO",
+            "mrp": "389.94",
+            "expiry_date": "05/27",
+            "free_quantity": "0"
+          },
+          "product_description": "MEVA C TAB 15S"
+        },
+        {
+          "hsn_code": "",
+          "quantity": "15",
+          "unit_price": "18.53",
+          "total_amount": "278.53",
+          "lot_batch_number": "IA01979A",
+          "recovered_from_ocr": true,
+          "product_description": "ZYDUS CO"
+        }
+      ],
+      "title": "line items (with lot / batch)",
+      "has_quantity_info": true,
+      "has_lot_batch_info": true,
+      "items_with_quantity": 2,
+      "items_with_lot_batch": 2,
+      "standardized_columns": {
+        "discount": "discount",
+        "hsn_code": "hsn/sac code",
+        "quantity": "quantity",
+        "sku_code": "sku/item code",
+        "tax_amount": "tax %",
+        "unit_price": "unit price",
+        "total_amount": "total amount",
+        "unit_of_measure": "unit of quantity",
+        "lot_batch_number": "lot/batch number",
+        "additional_fields": "other detected fields",
+        "product_description": "product/item description"
+      }
+    }
+  },
+  "fallback_used": [],
+  "ocr": {
+    "page_count": 1,
+    "pdfplumber_pages": 1,
+    "pymupdf_pages": 0,
+    "failed_pages": 0,
+    "total_chars": 5564,
+    "extraction_time": 0.164
+  },
+  "_client_elapsed_seconds": 38.7251844,
+  "_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract"
+}

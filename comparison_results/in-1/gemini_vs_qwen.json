@@ -1,0 +1,164 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-1.pdf",
+  "ran_at_utc": "2026-09-23T10:06:14.848845+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "tesseract_gemini": "26000730041372",
+      "paddleocr_gemini": "26000730041372",
+      "qwen_extract": "26000730041372",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-08-15",
+      "paddleocr_gemini": "2026-08-15",
+      "qwen_extract": "2026-08-15",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "SREE PADMAM PHARMA & AGENCIES",
+      "paddleocr_gemini": "SREE PADMAM PHARMA & AGENCIES",
+      "qwen_extract": "SREE PADMAM PHARMA & AGENCIES",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "32AAJFS9745F1ZY",
+      "paddleocr_gemini": "32AAJFS9745F1ZY",
+      "qwen_extract": "32AADCC8356R1Z4",
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "CREDENCE HOSPITAL",
+      "paddleocr_gemini": "CREDENCE HOSPITAL",
+      "qwen_extract": "CREDENCE HOSPITAL, ULLOOR MEDICAL COLLEGE",
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "32AADCC8356R1Z4",
+      "paddleocr_gemini": "32AADCC8356R1Z4",
+      "qwen_extract": "32AAJFS9745F1ZY",
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "total",
+      "tesseract_gemini": "6044.00",
+      "paddleocr_gemini": "6044.00",
+      "qwen_extract": "6044.00",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": "287.80",
+      "paddleocr_gemini": "287.80",
+      "qwen_extract": "287.80",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": "2b6f3ceB0e9a1aée193167ea7alladsh46b85d9c89f80cc338edt1de969830d",
+      "paddleocr_gemini": "2b6fb3ce80e9a1a8e193f67ea7aff4d8b46b85d9c89f80cc338edf1de969830d",
+      "qwen_extract": "2b6fb3ce80e9a1a8e193f67ea7aff4d8b46b85d9c89f80cc338edf1de969830d",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "line_item_count",
+      "tesseract_gemini": 1,
+      "paddleocr_gemini": 1,
+      "qwen_extract": 1,
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "products",
+      "tesseract_gemini": [
+        "PROLUTON DEPOT S0OMG"
+      ],
+      "paddleocr_gemini": [
+        "PROLUTON DEPOT 500MG"
+      ],
+      "qwen_extract": [
+        "PROLUTON DEPOT 500MG"
+      ],
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "line_qty_rate_amount",
+      "tesseract_gemini": [
+        {
+          "qty": "20",
+          "rate": "287.80",
+          "amt": "5756.00",
+          "batch": "GBO405A"
+        }
+      ],
+      "paddleocr_gemini": [
+        {
+          "qty": "20",
+          "rate": "287.80",
+          "amt": "5756.00",
+          "batch": "GB0405A"
+        }
+      ],
+      "qwen_extract": [
+        {
+          "qty": "20",
+          "rate": "287.80",
+          "amt": "5756.00",
+          "batch": "GB0405A"
+        }
+      ],
+      "gemini_qwen_match": false
+    }
+  ],
+  "summary": [
+    {
+      "source": "tesseract_gemini",
+      "json_valid": true,
+      "total": "6044.00",
+      "invoice_no": "26000730041372",
+      "vendor": "SREE PADMAM PHARMA & AGENCIES",
+      "vendor_gstin": "32AAJFS9745F1ZY",
+      "customer": "CREDENCE HOSPITAL",
+      "customer_gstin": "32AADCC8356R1Z4",
+      "line_items": 1,
+      "ocr_time": 6.593,
+      "llm_time": 3.454,
+      "ocr_chars": 3167
+    },
+    {
+      "source": "paddleocr_gemini",
+      "json_valid": true,
+      "total": "6044.00",
+      "invoice_no": "26000730041372",
+      "vendor": "SREE PADMAM PHARMA & AGENCIES",
+      "vendor_gstin": "32AAJFS9745F1ZY",
+      "customer": "CREDENCE HOSPITAL",
+      "customer_gstin": "32AADCC8356R1Z4",
+      "line_items": 1,
+      "ocr_time": 16.746,
+      "llm_time": 2.357,
+      "ocr_chars": 3007
+    },
+    {
+      "source": "qwen_extract",
+      "json_valid": true,
+      "total": "6044.00",
+      "invoice_no": "26000730041372",
+      "vendor": "SREE PADMAM PHARMA & AGENCIES",
+      "vendor_gstin": "32AADCC8356R1Z4",
+      "customer": "CREDENCE HOSPITAL, ULLOOR MEDICAL COLLEGE",
+      "customer_gstin": "32AAJFS9745F1ZY",
+      "line_items": 1,
+      "ocr_time": 0.297,
+      "llm_time": 31.217,
+      "ocr_chars": 7159,
+      "errors": [],
+      "fallback_used": []
+    }
+  ]
+}

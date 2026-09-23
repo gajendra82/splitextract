@@ -1,0 +1,73 @@
+{
+  "ocr_method": "paddleocr",
+  "ocr_text": "GSTN NO.03AAXFP2091F1Z3\nGST INVOICE\nDLNO.20B-JA1-10851521B-JA1-108\nPARTAP MEDICAL AGENCIES\nE-2 DILKUSHA MARKET\nJALANDHAR\nMOB NO.9872663297\nIRN NO.bcfd2782a203c22f554797e898e18a20ff46202655b0c4f09007a5f5b0507323 ACK NO.132625424614808\nM/S.FORTIS HOSPOTEL LTD OP PHARMA\nACK DT.22/01/2026\nINSIDE FORTIS HOSPITAL\nBILL NO.PMA-16372\nBILL DATE.14/01/2026\nPAYMENT MODE.CREDIT\nGROUND FLOOR\nAGENT.NIL\nGR NO.\nGR DATE\nTRANSPORT NAME.\nMOB.\nGSTN NO.03AAACO2157P1ZD\nDR.REGD.NO-\nDL NO.PB-JA3-130645\nHSN\nITEM NAME\nDL NO.PB-JA3-130646\nSN\nCODE\nPACK\nBATCH\nFREE\nQTY\nRATE\nMRP\nT.D.\nCGST\nSGSTEXPIR\n%\nAMOUNT\n%\n751.001096.00\n2.50\n2.5011/26\n3154.20\nGST SALE TAXFREE\nGST SALE5%\n:\n3004.00\nSGST2.5%\nGST SALE 12%\n75.10CGST2.5%\nTOTAL\n75.10\n3004.00\nGST SALE 18%\n:\nSGST6%\nLESS CD\nCGST6%\nSGST9%\n:\nGST SALE 28%\n:\nLESS TD\nCGST9%\n:\nSGST 14%\n:\nSCHEM\nCGST14%\n:\nCGST\n:\n75.10\nRS.Three Thousand One Hundred Fifty Four Only\nSGST\n75.10\nROUND OFF:\nBILL AMT\n-0.20\nTERMS & CONDITION:\n3154.00\n3.SUBJECT TO JALANDHAR JURISDICITION ONLY.4.Rs.5O0/-WILL BE CHARGED EXTRA FOR DISHONOURED CHEQUE.\nFOR PARTAP MEDICAL AGENCIES JAL\n5.CORRECT GSTIN & POSSESSION OF VALID DRUG LICENSES IS BUYERS RESPOSIBILITY.\nE.&O.E.\nAuth. Signatory.",
+  "ocr_character_count": 1175,
+  "ocr_confidence": 95.41,
+  "ocr_processing_time_seconds": 14.456,
+  "ocr_quality": {
+    "confidence": 95.4,
+    "quality": "GOOD",
+    "reason": "",
+    "score": 110,
+    "text_length": 1175,
+    "readable_ratio": 1.0,
+    "invoice_keyword_score": 100.0,
+    "gstin_detected": true,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": false
+  },
+  "source_image": "C:\\Users\\amnsa\\Downloads\\WhatsApp Image 2026-09-23 at 11.56.00 AM.jpeg",
+  "pdf_used": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\comparison_results\\whatsapp_image\\whatsapp_invoice.pdf",
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 2.301,
+  "final_json": {
+    "invoice_no": "PMA-16372",
+    "vendor": "PARTAP MEDICAL AGENCIES",
+    "vendor_gstin": "03AAXFP2091F1Z3",
+    "customer": "M/S.FORTIS HOSPOTEL LTD OP PHARMA",
+    "customer_address": "INSIDE FORTIS HOSPITAL\nGROUND FLOOR",
+    "customer_gstin": "03AAACO2157P1ZD",
+    "invoice_date": "2026-01-14",
+    "invoice_date_raw": "14/01/2026",
+    "total": "3154.00",
+    "tax": null,
+    "irn": "bcfd2782a203c22f554797e898e18a20ff46202655b0c4f09007a5f5b0507323",
+    "line_items": [
+      {
+        "product_description": "GST SALE TAXFREE",
+        "quantity": "1",
+        "unit_price": "751.00",
+        "total_amount": "751.00",
+        "hsn_code": null,
+        "lot_batch_number": null,
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "1096.00",
+          "mfg": null,
+          "expiry_date": "11/26",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "GST SALE5%",
+        "quantity": "1",
+        "unit_price": "3004.00",
+        "total_amount": "3004.00",
+        "hsn_code": null,
+        "lot_batch_number": null,
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": null,
+          "mfg": null,
+          "expiry_date": null,
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T09:31:22.448671+00:00"
+}

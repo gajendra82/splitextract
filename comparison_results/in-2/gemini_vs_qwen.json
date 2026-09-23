@@ -1,0 +1,179 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-2.pdf",
+  "ran_at_utc": "2026-09-23T09:59:58.313774+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "tesseract_gemini": "2600073005199",
+      "paddleocr_gemini": "2600073005199",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-08-28",
+      "paddleocr_gemini": "2026-08-25",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "ARMA",
+      "paddleocr_gemini": "VADATHU PHARMA",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "32ACAPM3617E128",
+      "paddleocr_gemini": "32ACAPM3517E1Z8",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "IBY MEMORIAL HOSPITAL LTD",
+      "paddleocr_gemini": "BABY MEMORIAL HOSPITAL LTD",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "32AADCB873923ZH",
+      "paddleocr_gemini": "32AADCB7392J3ZH",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "total",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": "11334.0",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": "539.7",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": "35596ce6e7c35346a3fb006e908fe91b7691e1053d4f9c1be57ca8eff5c0f433",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_item_count",
+      "tesseract_gemini": 2,
+      "paddleocr_gemini": 3,
+      "qwen_extract": 0,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "products",
+      "tesseract_gemini": [
+        "CLOP-S NANO LOTION 20ML",
+        "PANTODAC DSR CAPS"
+      ],
+      "paddleocr_gemini": [
+        "FORMONIDE-400 INHALER",
+        "CLOP-S NANO LOTION",
+        "PANTODAC DSR CAPS"
+      ],
+      "qwen_extract": [],
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_qty_rate_amount",
+      "tesseract_gemini": [
+        {
+          "qty": null,
+          "rate": null,
+          "amt": null,
+          "batch": null
+        },
+        {
+          "qty": null,
+          "rate": null,
+          "amt": null,
+          "batch": null
+        }
+      ],
+      "paddleocr_gemini": [
+        {
+          "qty": "120",
+          "rate": "329.14",
+          "amt": "39496.80",
+          "batch": "IB00491A"
+        },
+        {
+          "qty": "10",
+          "rate": "170.71",
+          "amt": "1707.10",
+          "batch": "1B01924A"
+        },
+        {
+          "qty": "20",
+          "rate": "239.52",
+          "amt": "4790.40",
+          "batch": "1B01259A"
+        }
+      ],
+      "qwen_extract": [],
+      "gemini_qwen_match": false
+    }
+  ],
+  "summary": [
+    {
+      "source": "tesseract_gemini",
+      "json_valid": true,
+      "total": null,
+      "invoice_no": "2600073005199",
+      "vendor": "ARMA",
+      "vendor_gstin": "32ACAPM3617E128",
+      "customer": "IBY MEMORIAL HOSPITAL LTD",
+      "customer_gstin": "32AADCB873923ZH",
+      "line_items": 2,
+      "ocr_time": 2.842,
+      "llm_time": 2.98,
+      "ocr_chars": 830
+    },
+    {
+      "source": "paddleocr_gemini",
+      "json_valid": true,
+      "total": "11334.0",
+      "invoice_no": "2600073005199",
+      "vendor": "VADATHU PHARMA",
+      "vendor_gstin": "32ACAPM3517E1Z8",
+      "customer": "BABY MEMORIAL HOSPITAL LTD",
+      "customer_gstin": "32AADCB7392J3ZH",
+      "line_items": 3,
+      "ocr_time": 17.073,
+      "llm_time": 2.66,
+      "ocr_chars": 2678
+    },
+    {
+      "source": "qwen_extract",
+      "json_valid": false,
+      "total": null,
+      "invoice_no": null,
+      "vendor": null,
+      "vendor_gstin": null,
+      "customer": null,
+      "customer_gstin": null,
+      "line_items": 0,
+      "ocr_time": null,
+      "llm_time": 0.309,
+      "ocr_chars": null,
+      "errors": [
+        "HTTPError: HTTP Error 422: Unprocessable Entity",
+        "{\"detail\":{\"success\":false,\"request_id\":\"17a487fa-7439-4997-9b16-d183ff696556\",\"error\":\"No usable text could be extracted from the PDF. Ensure the file is a text-based invoice PDF.\"}}"
+      ],
+      "fallback_used": null
+    }
+  ]
+}

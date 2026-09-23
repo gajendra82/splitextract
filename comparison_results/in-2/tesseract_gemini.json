@@ -1,0 +1,73 @@
+{
+  "ocr_method": "tesseract",
+  "ocr_text": "0 TAXINVOICE creo *2600073005 199*\n\nARMA GST NO. : 32ACAPM3617E128\n\nBWARYA LANE OLNO. : 1.RLF20B2023KL000181\niM BYPASS ROAD, THODUPUZHA 665584 2.RLF21B82023KL000173\n0.:04862 225603, 229896, 294003, 9656410237 Emsil:vedathupharma@gmail.com PANNO : ACAPM3617E\n\nFSSAI. : 11318008000050\nIBY MEMORIAL HOSPITAL LTD\n\nInvoice No. : 2600073005199 Copy\nTHODUPUZHA, THOOUPUZHA Oated $ 2808/2026 12:43:06\nTHODUPUZHAIDUKK! OrderNo. :\nPin685584 Phone:8569924888, Ordar Date.\nDi No:WLF20B2024KL.001949,WLF21B2024KL001897 Eway Bil No :\nFSSAI: VehicleNo : Page 1 of 1\nGSTIN : 32AADCB873923ZH UINNO : Trans Name :\n\nStCode:32 Stata KERALA Pan No: Salesman: TPZ\n[Mfac_ |Description Of Goods Batch No. Gs a8 Amou\n[Rack |HSN/SAC Code au\n\nEe (ia all = =| =| ha Fest = el\n\nCLOP-S NANO LOTION 20ML\n\nPANTODAC DSR CAPS\n\nAck Date: 25-08-28 13:08:00 Ack No.\n\n",
+  "ocr_character_count": 830,
+  "ocr_confidence": 73.75,
+  "ocr_processing_time_seconds": 2.842,
+  "ocr_quality": {
+    "confidence": 73.7,
+    "quality": "POOR",
+    "reason": "confidence 73.7 < 80.0",
+    "score": 92,
+    "text_length": 828,
+    "readable_ratio": 0.9891,
+    "invoice_keyword_score": 83.3,
+    "gstin_detected": false,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": false
+  },
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-2.pdf",
+  "pages": null,
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 2.98,
+  "final_json": {
+    "invoice_no": "2600073005199",
+    "vendor": "ARMA",
+    "vendor_gstin": "32ACAPM3617E128",
+    "customer": "IBY MEMORIAL HOSPITAL LTD",
+    "customer_address": "THODUPUZHA, THOOUPUZHA\nTHODUPUZHAIDUKK!\nPin685584",
+    "customer_gstin": "32AADCB873923ZH",
+    "invoice_date": "2026-08-28",
+    "invoice_date_raw": "2808/2026",
+    "total": null,
+    "tax": null,
+    "irn": null,
+    "line_items": [
+      {
+        "product_description": "CLOP-S NANO LOTION 20ML",
+        "quantity": null,
+        "unit_price": null,
+        "total_amount": null,
+        "hsn_code": null,
+        "lot_batch_number": null,
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": null,
+          "mfg": null,
+          "expiry_date": null,
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "PANTODAC DSR CAPS",
+        "quantity": null,
+        "unit_price": null,
+        "total_amount": null,
+        "hsn_code": null,
+        "lot_batch_number": null,
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": null,
+          "mfg": null,
+          "expiry_date": null,
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T09:59:55.331399+00:00"
+}

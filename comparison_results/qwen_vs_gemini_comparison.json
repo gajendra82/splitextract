@@ -1,0 +1,139 @@
+{
+  "ran_at_utc": "2026-09-23T09:28:52.743123+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "note": "Qwen /extract runs its own PDF text OCR (pdfplumber), not Tesseract/Paddle from splitextract.",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "qwen_extract": "KAPL-26-35087",
+      "paddleocr_gemini": "KAPL-26-35087",
+      "tesseract_gemini": "KAPL-26-35087",
+      "values_match": true
+    },
+    {
+      "field": "invoice_date",
+      "qwen_extract": "2026-06-01",
+      "paddleocr_gemini": "2026-06-01",
+      "tesseract_gemini": "2026-06-01",
+      "values_match": true
+    },
+    {
+      "field": "vendor",
+      "qwen_extract": "KYAL AGENCIES PVT. LTD.",
+      "paddleocr_gemini": "KYAL AGENCIES PVT. LTD",
+      "tesseract_gemini": "KYAL AGENCIES PVT. LTD.",
+      "values_match": false
+    },
+    {
+      "field": "vendor_gstin",
+      "qwen_extract": "21AAACU9473G1ZB",
+      "paddleocr_gemini": "21AAFCK2829R1Z7",
+      "tesseract_gemini": "21AAFCK2829R1Z7",
+      "values_match": false
+    },
+    {
+      "field": "customer",
+      "qwen_extract": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "paddleocr_gemini": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "tesseract_gemini": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "values_match": true
+    },
+    {
+      "field": "customer_gstin",
+      "qwen_extract": "21AAFCK2829R1Z7",
+      "paddleocr_gemini": "21AAACU9473G1ZB",
+      "tesseract_gemini": "21AAACU9473G12B",
+      "values_match": false
+    },
+    {
+      "field": "total",
+      "qwen_extract": "292.45",
+      "paddleocr_gemini": "292.00",
+      "tesseract_gemini": "292.45",
+      "values_match": false
+    },
+    {
+      "field": "tax",
+      "qwen_extract": "13.92",
+      "paddleocr_gemini": "13.92",
+      "tesseract_gemini": "13.92",
+      "values_match": true
+    },
+    {
+      "field": "irn",
+      "qwen_extract": "e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa",
+      "paddleocr_gemini": "e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa",
+      "tesseract_gemini": "e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa",
+      "values_match": false
+    },
+    {
+      "field": "line_item_count",
+      "qwen_extract": 2,
+      "paddleocr_gemini": 1,
+      "tesseract_gemini": 1,
+      "values_match": false
+    },
+    {
+      "field": "first_product",
+      "qwen_extract": "MEVA C TAB 15S",
+      "paddleocr_gemini": "MEVA C TAB 15S",
+      "tesseract_gemini": "MEVA C TAB 15S",
+      "values_match": false
+    },
+    {
+      "field": "first_batch",
+      "qwen_extract": "IA01979A",
+      "paddleocr_gemini": "IA01979A",
+      "tesseract_gemini": "1A01979A",
+      "values_match": false
+    },
+    {
+      "field": "first_qty_rate",
+      "qwen_extract": {
+        "qty": "1",
+        "rate": "278.53"
+      },
+      "paddleocr_gemini": {
+        "qty": "1.00",
+        "rate": "278.53"
+      },
+      "tesseract_gemini": {
+        "qty": "1",
+        "rate": "278.53"
+      },
+      "values_match": false
+    }
+  ],
+  "summary_table": [
+    {
+      "source": "qwen_extract",
+      "json_valid": true,
+      "total": "292.45",
+      "vendor_gstin": "21AAACU9473G1ZB",
+      "customer_gstin": "21AAFCK2829R1Z7",
+      "line_items": 2,
+      "llm_time_approx_s": 38.7251844,
+      "ocr_chars": 5564
+    },
+    {
+      "source": "paddleocr_gemini",
+      "json_valid": true,
+      "total": "292.00",
+      "vendor_gstin": "21AAFCK2829R1Z7",
+      "customer_gstin": "21AAACU9473G1ZB",
+      "line_items": 1,
+      "llm_time_approx_s": 2.302,
+      "ocr_chars": 2109
+    },
+    {
+      "source": "tesseract_gemini",
+      "json_valid": true,
+      "total": "292.45",
+      "vendor_gstin": "21AAFCK2829R1Z7",
+      "customer_gstin": "21AAACU9473G12B",
+      "line_items": 1,
+      "llm_time_approx_s": 3.417,
+      "ocr_chars": 2222
+    }
+  ]
+}

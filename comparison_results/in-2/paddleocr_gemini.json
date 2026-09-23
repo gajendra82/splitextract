@@ -1,0 +1,88 @@
+{
+  "ocr_method": "paddleocr",
+  "ocr_text": "0\nTAX INVOICE\nCREDIT\n*2600073005199*\nPHARMA\nGST NO.32ACAPM3517E1Z8\nSWARYA LANE\nDLNO.\n1.RLF20B2023KL000181\nAM BYPASS ROAD,THODUPUZHA 685584\n2.RLF2182023KL000173\nACAPM3517E\nFSSAL.\nABY MEMORIAL HOSPITAL LTD\n11318006000050\nTHODUPUZHA.THODUPUZHA\nInvoice No.\n2600073005199\nCopy\nDated\nTHODUPUZHAIDUKKI\n25/08/2026\n12:43:06\nOrder No.\nPin685584 Phone8589924888,\nOrder Date.\nDINo:WLF20B2024KL001949.WLF2182024KL001897\nEway Bill No\nFSSAI\nVehicle No\nGSTIN\n32AADCB7392J3ZH\nPage 1 of1\nUIN NO\nTrans Name\nSt.Code32\nState KERALA\nPan No:\nSalesman\nTPZ\nMfac\nDescription Of Goods\nPack\nBatch No\nQty\nM.RP\nPrice\nRack\nHSN/SAC Code\nSch%Disc%\nTaxable\nCGST%SGST%\nAmour\nExp\nSchAmt Dis Amt\nValue\nAmt\nGER\nFORMONIDE-400 INHALER\nAmt\nAUNSUE30049094\n120MD\nIB00491A\n432.00\n329.14\n16.54\n0\n5494.00\n2.50\n250\n5768.7\n02-28\n1088.80\n0.00\n137.35\n137.35\nLIV\nCLOP-S NANO LOTION\n20ML\nAUNSUI30049069\n1B01924A\n224.06\n170.71\n000\n1707.10\n250\n2.50\n1792\n06-28\nPANTODAC DSR CAPS\n0.00\n0.00\n42.68\n42.68\nZYD\n15'S\nAUNSUI30049039\n1B01259A\n20\n314.37\n239.52\n25.00\n3592.80\n2.50\n2.50\n3772\n04-28\n1197.60\n0.00\n89.82\n89.82\nAck Date: 25-08-26 13.06.00\nAck No.152626915345847\nIm No.35596ce6e7c35346a3fb006e908fe91b7691e1053d4f9c1be57ca8eff5c0f433\nRapid News Have a nice Day\nPrep By\nTot Items:3\nTax% Taxable Value SGST%\nAMT\nCGST%\nAMT\nSubTotal\nPRIYA\n10793.90\n13080.\n@5%\n@2.5%\n269.85@2.5%\n269.85\nSch.Disc.\n2286.\nNo.Cs.\nTot Qty 52\n@12%\n@6%\n0.00\n@6%\n0.00\nDiscount\n0.\n@18%\nTax Amt\nSort By.\nRoute\n@9%\n0.00\n@9%\n0.00\n539.7\n:HOSP\nPc/Bc\n@28%\n@14%\n:\n0.\nCkd By\n0.00\n@14%\n0.00\nCrNo.\nPrn Time:13:13\n:\n@0%\n@0%\n0.00\n@0%\n0.00\nCrAmt\n0\nRupees: Eleven Thousand Three Hundred Thirty Four Rupees only\nTcs Tax Amt\nAdd CESS\n0.00Round off\n0.\n0\nDeclaration\nBill No.\nBill Dt.\nBal.Amt. Days\nWe hereby warranty that the medicine purchased under this\n2600073001474\n12-05-26\n40645.00105\nGrand Total:\n11334.0\nmemo do not contravene in any way the provision of\nsection 18 of the Drugs &Cosmetics Act 1940.For the\n2600073001515\n13-05-26\n44433.00\n104\npurpose of Jurisdiction the cause of the action for this\n2600073001533\n13-05-26\n911.00\n104\nfor VADATHU PHARN\ntransaction shal be deemed to have been made in\n2600073001554\n14-05-26\n6429.00\n103\nIdukki and it is agreed by and between parties hereto\n260007300158015-05-26\n14536.00102\nthat Courts in ldukki will have exclusive jurisdiction\nTotal Inv:153\n2293408.00\nAuthorised Signatory\nAcknowledgement Slip\nVADATHU PHARMA\nInv.No.2600073005199\nXI/154 A.AISWARYA LANE\nInv.Dt25-08-2026\nVIMALAYAM BYPASS ROAD,THODUPUZHA 685584\nPhone No.04862225603229896294003.9656410237\nEmall:vadathupharma@gmail.com\nTotal11334.00\nBABY MEMORIAL HOSPITAL LTD [SD0108]\nTo.\nTHODUPUZHATHODUPUZHA\nTHODUPUZHAIDUKKI\nPin:685584 Phone:8589924888.\nSignature With Seal",
+  "ocr_character_count": 2678,
+  "ocr_confidence": 95.62,
+  "ocr_processing_time_seconds": 17.073,
+  "ocr_quality": {
+    "confidence": 95.6,
+    "quality": "GOOD",
+    "reason": "",
+    "score": 113,
+    "text_length": 2678,
+    "readable_ratio": 0.9989,
+    "invoice_keyword_score": 100.0,
+    "gstin_detected": true,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": true
+  },
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-2.pdf",
+  "pages": null,
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 2.66,
+  "final_json": {
+    "invoice_no": "2600073005199",
+    "vendor": "VADATHU PHARMA",
+    "vendor_gstin": "32ACAPM3517E1Z8",
+    "customer": "BABY MEMORIAL HOSPITAL LTD",
+    "customer_address": "THODUPUZHA.THODUPUZHA\nTHODUPUZHAIDUKKI\nPin685584",
+    "customer_gstin": "32AADCB7392J3ZH",
+    "invoice_date": "2026-08-25",
+    "invoice_date_raw": "25/08/2026",
+    "total": "11334.0",
+    "tax": "539.7",
+    "irn": "35596ce6e7c35346a3fb006e908fe91b7691e1053d4f9c1be57ca8eff5c0f433",
+    "line_items": [
+      {
+        "product_description": "FORMONIDE-400 INHALER",
+        "quantity": "120",
+        "unit_price": "329.14",
+        "total_amount": "39496.80",
+        "hsn_code": "30049094",
+        "lot_batch_number": "IB00491A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "432.00",
+          "mfg": "AUNSUE",
+          "expiry_date": "02-28",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "CLOP-S NANO LOTION",
+        "quantity": "10",
+        "unit_price": "170.71",
+        "total_amount": "1707.10",
+        "hsn_code": "30049069",
+        "lot_batch_number": "1B01924A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "224.06",
+          "mfg": "AUNSUI",
+          "expiry_date": "06-28",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "PANTODAC DSR CAPS",
+        "quantity": "20",
+        "unit_price": "239.52",
+        "total_amount": "4790.40",
+        "hsn_code": "30049039",
+        "lot_batch_number": "1B01259A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "314.37",
+          "mfg": "ZYD",
+          "expiry_date": "04-28",
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T09:59:57.992547+00:00"
+}

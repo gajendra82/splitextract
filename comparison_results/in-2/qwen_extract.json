@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "result": null,
+  "errors": [
+    "HTTPError: HTTP Error 422: Unprocessable Entity",
+    "{\"detail\":{\"success\":false,\"request_id\":\"17a487fa-7439-4997-9b16-d183ff696556\",\"error\":\"No usable text could be extracted from the PDF. Ensure the file is a text-based invoice PDF.\"}}"
+  ],
+  "_client_elapsed_seconds": 0.309
+}

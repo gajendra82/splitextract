@@ -1,0 +1,345 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_KAPL-26-35087.pdf",
+  "ran_at_utc": "2026-09-23T07:39:45.965366+00:00",
+  "note": "Winner is based on structured JSON completeness and cross-run agreement, not OCR confidence.",
+  "fields": [
+    {
+      "field": "invoice_number",
+      "tesseract_gemini": "KAPL-26-35087",
+      "paddleocr_gemini": "KAPL-26-35087",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-06-01",
+      "paddleocr_gemini": "2026-06-01",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "21AAFCK2829R1Z7",
+      "paddleocr_gemini": "21AAFCK2829R1Z7",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "21AAACU9473G12B",
+      "paddleocr_gemini": "21AAACU9473G1ZB",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "KYAL AGENCIES PVT. LTD.",
+      "paddleocr_gemini": "KYAL AGENCIES PVT. LTD",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "paddleocr_gemini": "UTKAL HEALTHCARE PVT LTD CENTRAL PHARMA",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "subtotal",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": true
+    },
+    {
+      "field": "cgst",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": true
+    },
+    {
+      "field": "sgst",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": true
+    },
+    {
+      "field": "igst",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": true
+    },
+    {
+      "field": "total_amount",
+      "tesseract_gemini": "292.45",
+      "paddleocr_gemini": "292.00",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": "13.92",
+      "paddleocr_gemini": "13.92",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": "e703665a3d8399b76a2b97b7ad0903b0c7Sbfe289d1219aSc9b6a3479adc32aa",
+      "paddleocr_gemini": "e703665a3d8399b76a2b97b7ad0903b0c78bfe289d12f9a3c9b6a3479adc32aa",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "line_items",
+      "tesseract_gemini": [
+        {
+          "product_description": "MEVA C TAB 15S",
+          "quantity": "1",
+          "unit_price": "278.53",
+          "total_amount": "278.53",
+          "hsn_code": "30049039",
+          "lot_batch_number": "1A01979A",
+          "tax_amount": null
+        }
+      ],
+      "paddleocr_gemini": [
+        {
+          "product_description": "MEVA C TAB 15S",
+          "quantity": "1.00",
+          "unit_price": "278.53",
+          "total_amount": "278.53",
+          "hsn_code": "30049039",
+          "lot_batch_number": "IA01979A",
+          "tax_amount": null
+        }
+      ],
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "quantities",
+      "tesseract_gemini": [
+        "1"
+      ],
+      "paddleocr_gemini": [
+        "1.00"
+      ],
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "rates",
+      "tesseract_gemini": [
+        "278.53"
+      ],
+      "paddleocr_gemini": [
+        "278.53"
+      ],
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "line_taxes",
+      "tesseract_gemini": [
+        null
+      ],
+      "paddleocr_gemini": [
+        null
+      ],
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "customer_address",
+      "tesseract_gemini": "AT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR\nNEAR DEFENCE COLONY,BHUBANESWAR",
+      "paddleocr_gemini": "AT-C/3, REV PL NO-321, BASEMENT-1, NILADRI VIHAR NEAR DEFENCE COLONY,BHUBANESWAR",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    },
+    {
+      "field": "invoice_date_raw",
+      "tesseract_gemini": "01/06/2026",
+      "paddleocr_gemini": "01/06/2026",
+      "tesseract_local_llm": null,
+      "paddleocr_local_llm": null,
+      "values_match": false
+    }
+  ],
+  "summary": [
+    {
+      "ocr": "tesseract",
+      "llm": "gemini",
+      "json_valid": true,
+      "llm_success": true,
+      "missing_fields": [
+        "subtotal",
+        "cgst",
+        "sgst",
+        "igst"
+      ],
+      "missing_field_count": 4,
+      "field_differences_across_runs": [
+        "invoice_number",
+        "invoice_date",
+        "vendor_gstin",
+        "customer_gstin",
+        "vendor",
+        "customer",
+        "total_amount",
+        "tax",
+        "irn",
+        "line_items",
+        "quantities",
+        "rates",
+        "line_taxes",
+        "customer_address",
+        "invoice_date_raw"
+      ],
+      "field_difference_count": 15,
+      "ocr_time_seconds": 4.237,
+      "llm_time_seconds": 3.417,
+      "ocr_confidence": 81.51,
+      "ocr_quality": "GOOD",
+      "ocr_quality_score": 108,
+      "errors": []
+    },
+    {
+      "ocr": "paddleocr",
+      "llm": "gemini",
+      "json_valid": true,
+      "llm_success": true,
+      "missing_fields": [
+        "subtotal",
+        "cgst",
+        "sgst",
+        "igst"
+      ],
+      "missing_field_count": 4,
+      "field_differences_across_runs": [
+        "invoice_number",
+        "invoice_date",
+        "vendor_gstin",
+        "customer_gstin",
+        "vendor",
+        "customer",
+        "total_amount",
+        "tax",
+        "irn",
+        "line_items",
+        "quantities",
+        "rates",
+        "line_taxes",
+        "customer_address",
+        "invoice_date_raw"
+      ],
+      "field_difference_count": 15,
+      "ocr_time_seconds": 23.464,
+      "llm_time_seconds": 2.302,
+      "ocr_confidence": 98.05,
+      "ocr_quality": "GOOD",
+      "ocr_quality_score": 111,
+      "errors": []
+    },
+    {
+      "ocr": "tesseract",
+      "llm": "local_qwen",
+      "json_valid": false,
+      "llm_success": false,
+      "missing_fields": [
+        "llm_call_failed"
+      ],
+      "missing_field_count": null,
+      "field_differences_across_runs": [
+        "invoice_number",
+        "invoice_date",
+        "vendor_gstin",
+        "customer_gstin",
+        "vendor",
+        "customer",
+        "total_amount",
+        "tax",
+        "irn",
+        "line_items",
+        "quantities",
+        "rates",
+        "line_taxes",
+        "customer_address",
+        "invoice_date_raw"
+      ],
+      "field_difference_count": 15,
+      "ocr_time_seconds": 4.237,
+      "llm_time_seconds": 2.075,
+      "ocr_confidence": 81.51,
+      "ocr_quality": "GOOD",
+      "ocr_quality_score": 108,
+      "errors": [
+        "URLError calling http://127.0.0.1:8000/v1/invoice/batch: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+      ]
+    },
+    {
+      "ocr": "paddleocr",
+      "llm": "local_qwen",
+      "json_valid": false,
+      "llm_success": false,
+      "missing_fields": [
+        "llm_call_failed"
+      ],
+      "missing_field_count": null,
+      "field_differences_across_runs": [
+        "invoice_number",
+        "invoice_date",
+        "vendor_gstin",
+        "customer_gstin",
+        "vendor",
+        "customer",
+        "total_amount",
+        "tax",
+        "irn",
+        "line_items",
+        "quantities",
+        "rates",
+        "line_taxes",
+        "customer_address",
+        "invoice_date_raw"
+      ],
+      "field_difference_count": 15,
+      "ocr_time_seconds": 23.464,
+      "llm_time_seconds": 2.041,
+      "ocr_confidence": 98.05,
+      "ocr_quality": "GOOD",
+      "ocr_quality_score": 111,
+      "errors": [
+        "URLError calling http://127.0.0.1:8000/v1/invoice/batch: <urlopen error [WinError 10061] No connection could be made because the target machine actively refused it>"
+      ]
+    }
+  ],
+  "successful_runs": [
+    "tesseract_gemini",
+    "paddleocr_gemini"
+  ],
+  "field_difference_count": 15,
+  "local_llm_url": "http://127.0.0.1:8000/v1/invoice/batch"
+}

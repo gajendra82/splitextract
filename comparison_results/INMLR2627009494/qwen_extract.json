@@ -1,0 +1,131 @@
+{
+  "success": true,
+  "request_id": "d2b9e623-c118-4a85-9517-4105dfd177f3",
+  "result": {
+    "invoice_summary": {
+      "irn": "a4badce510edb4df05453e3373f19cf5409c95fa12e3a258109a80bfeb3c8e68",
+      "tax": "1081.78",
+      "total": "22717.00",
+      "vendor": "ALARIC ENTERPRISES",
+      "customer": "K.M.C. HOSPITAL MEDICAL STORES",
+      "invoice_no": "INMLR2627009494",
+      "invoice_date": "2026-06-23",
+      "vendor_gstin": "29AAGCM5933R2ZK",
+      "customer_gstin": "29AAVFA6895N1Z5",
+      "customer_address": "D NO 1-25 TO 1-25/7 & 1-25/36 TO 1-25/49 G, A UNIT OF MANIPAL HEALTH ENTERPRISES LTD\nD.NO:14-3-211/3,GROUND FLOOR\nMANGALORE"
+    },
+    "line_items": {
+      "count": 5,
+      "items": [
+        {
+          "hsn_code": "30049094",
+          "quantity": "77",
+          "sku_code": null,
+          "unit_price": "242.10",
+          "total_amount": "18641.70",
+          "lot_batch_number": "AFC1051",
+          "additional_fields": {
+            "mfg": "ZYD",
+            "mrp": "554.81",
+            "expiry_date": "03/28",
+            "free_quantity": "0"
+          },
+          "product_description": "FLUTICONE FT 120 MD NASAL SPRAY (1s)"
+        },
+        {
+          "hsn_code": "30049099",
+          "quantity": "2",
+          "sku_code": null,
+          "unit_price": "205.00",
+          "total_amount": "410.00",
+          "lot_batch_number": "IB01075A",
+          "additional_fields": {
+            "mfg": "ZYD",
+            "mrp": "418.69",
+            "expiry_date": "04/28",
+            "free_quantity": "0"
+          },
+          "product_description": "ODIMONT LC TABLETS (15S)"
+        },
+        {
+          "hsn_code": "30049099",
+          "quantity": "50",
+          "sku_code": null,
+          "unit_price": "32.68",
+          "total_amount": "1634.00",
+          "lot_batch_number": "AIF0226",
+          "additional_fields": {
+            "mfg": "ZYD",
+            "mrp": "57.05",
+            "expiry_date": "02/29",
+            "free_quantity": "0"
+          },
+          "product_description": "IVORAL FORTE 400MG DT TABLET (1S)"
+        },
+        {
+          "hsn_code": "30049039",
+          "quantity": "5",
+          "sku_code": null,
+          "unit_price": "200.00",
+          "total_amount": "1000.00",
+          "lot_batch_number": "IB00734A",
+          "additional_fields": {
+            "mfg": "ZYD",
+            "mrp": "445.86",
+            "expiry_date": "02/28",
+            "free_quantity": "0"
+          },
+          "product_description": "CINTODAC CAPSULES (10s)"
+        },
+        {
+          "hsn_code": "30049069",
+          "quantity": "5",
+          "sku_code": null,
+          "unit_price": "170.27",
+          "total_amount": "851.35",
+          "lot_batch_number": "IB00237A",
+          "additional_fields": {
+            "mfg": "ZYD",
+            "mrp": "347.79",
+            "expiry_date": "02/28",
+            "free_quantity": "0"
+          },
+          "product_description": "ZYCEL 200MG CAPSULES (10s)"
+        }
+      ],
+      "title": "line items (with lot / batch)",
+      "has_quantity_info": true,
+      "has_lot_batch_info": true,
+      "items_with_quantity": 5,
+      "items_with_lot_batch": 5,
+      "standardized_columns": {
+        "discount": "discount",
+        "hsn_code": "hsn/sac code",
+        "quantity": "quantity",
+        "sku_code": "sku/item code",
+        "tax_amount": "tax %",
+        "unit_price": "unit price",
+        "total_amount": "total amount",
+        "unit_of_measure": "unit of measure",
+        "lot_batch_number": "lot/batch number",
+        "additional_fields": "other detected fields",
+        "product_description": "product/item description"
+      }
+    }
+  },
+  "fallback_used": [
+    "regex:vendor_gstin",
+    "v1:vendor"
+  ],
+  "ocr": {
+    "page_count": 1,
+    "pdfplumber_pages": 1,
+    "pymupdf_pages": 0,
+    "failed_pages": 0,
+    "total_chars": 5429,
+    "extraction_time": 0.426
+  },
+  "_http_status": 200,
+  "_client_elapsed_seconds": 124.501,
+  "_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract"
+}

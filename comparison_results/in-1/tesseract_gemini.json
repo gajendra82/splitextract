@@ -1,0 +1,57 @@
+{
+  "ocr_method": "tesseract",
+  "ocr_text": "areepadmamo wth\n\nSCAN TO PAY\n\nthe action for this transaction shall be deemed to have been made in\nTrivandrum and it is agreed by and between parties hereto that\nCourts in Trivandrum will have exclusive jurisdiction.\n\nFor : SREE PADMAM PHARMA & AGENCIES\n\n3 Authorised Signatory\n\nSREE PADMAM PHARMA & AGENCIES TAX INVOICE CREDIT] Code : SD0535 Copy SREE PADMAM PHARMA & AGENCIES\nTC 25/3388(OLD) 82/3997(NEW) CREDENCE HOSPITAL, ULLOOR 2 TC 25/3388(OLD) 82/3997(NEW)\nCHIRAKULAM ROAD *9 600073004 1372 * | utooRr CHIRAKULAM ROAD\nTRIVANDRUM, TRIVANDRUM-695001 . MEDICAL COLLEGE, Trivand C2c = 16 TRIVANDRUM\n, Tax Inv.No.  26000730041372 nivangram 0471-4253001\nDINo.: KL-TVM-140020 KL-TVM-140021 Invoice Date + 15-08-2026 Time 15:09 | Mob: 9995551115 Pan No:\nTin No.: Cst No.: Due Date + 15-08-2026 Trivandrum Pin-695001 Ph:04714033333 CIN NO: Copy\nPhone: 0471-4253001 Order No : Dman: UNSURE — MEDICAL COLLEGE GST No.: s2AAJFS9745F1ZY 2\nCin No.: Pan No.: AAJFS9745F Order Date : DL.No:1-343-20/2011 ; *26000730041372*\nGSTIN: 32AAJFS9745F1ZY FLNo.: 11317001000144 Sales Executive :016 ABHILASH GSTIN:32AADCC8356R1Z4 FSSAI :\nEmail: sppapurchase2019@gmail.com Sales Ex. Mobile : 8075228493 State Code: 32 Name: KERALA InvNo26000730041372 15-08-26\nQuantity ; cost SGsT $Man:016 ABHILASH CREDIT\nMirae Rack! jtem Description Pack |HSN/SA‘ Free [Batch Exp) wirp| lade sen Disc] Disc | Taxable Net Value|\nNo Code Billed | Fos Date] Price isc | % | Amt) Value Rate! amt |Ratd Amt\nGER UU25__ PROLUTON DEPOT S0OMG|38 1 30042069 20 0 |GBO405A 02-30 462.53 287.80 0.00 0.00 0.00 5756.00 25 143.9025 143.90 6043.80 Pending Bills\nBill No. Date Bal. Amt. Days\n2600730040091 12-08-2026 15362.00 3\n2600730041250 15-08-2026 1672.00 0\n26000730041372 15-08-2026 6044.00 0\nTotal Inv: 3 23078.00\nCONTACT 8590037126 FOR COMPLAINTS ABOUT SUPPLY OF MEDICINES. Code : SD0535\nPrep BY:\\ipy Tot Items: 1 Tax%| Taxable |SGST% AMT |CGSTM% AMT Sub Total 5756.00 || CREDENCE HOSPITAL, ULLOOR\nNo,Cs. : Tot Qty :20 5% 5756.00 | 2.5% 143.90] 2.5%] 143.90 Total Disc Amt 0.00 |] ULLOOR MEDICAL COLLEGE 7\n7 7 o.oo! 6% 0.00 Sch. Disc 0.00 || Trivandrum ¢2¢=16 Trivandrum Pin-695001\nSort By : Route :UNS [|12% 0.00] 6% B fo - GST Tax Amt 287.80 ||Ph:04714033333\ny 9 9\nCkd By] | Prn Time: 14:43 || 18% o.o| 9% | 0.00} 9% 9.00 PciBe 0.00 ||Sub Total 5756.00\nCash Dis : SaleValue. 5756.00 28% 0.00 | 14% | 0.00 | 14% 0.00 CrNoteNo. 0.00 || Total Disc Amt : 0.00\nSchDisc | TaxAmt: 287.80 [| 0% 0.00] 0% | 0.00 | 0% 0.00 DbNoteNo. 0.00 ||GST Tax Amt 287.80\n+ : 0.00\n= Add CESS 0.00 Rosa! 00 |! Pcie 0.00\nIRN No: 2b6f3ceB0e9a 1aée193167ea7alladsh46b85d9c89f80cc338edt1de969830d CrNoteNo. 0.00\n= AckNo - 152626812815490 Ack Date: 15-08-2026 15:49:00 Grand Total 6044.00 ||DbNoteNo. 0.00\nDeclaration: TCS Tax Amt 0\nWe hereby warranty that the medicine purchased under this memo | CONFIRM THE PENDING BILLS DETAILS MENTIONED IN THE BILL Net Amount : 6044.00\ndo not contraven in any way tho provision of section 18 of ho Dus CONTACT 7994758742 FOR ANY MISMATCH. Prep By + VIDYA\n‘osmetics Act 1940. For the purpose of Jurisdiction the cause of kd : Cis: Covers:\n\nCONTACT 8590037126 FOR COMPLAINTS ABOUT SUPPLY OF MEDICINES.\n",
+  "ocr_character_count": 3167,
+  "ocr_confidence": 81.18,
+  "ocr_processing_time_seconds": 6.593,
+  "ocr_quality": {
+    "confidence": 81.2,
+    "quality": "GOOD",
+    "reason": "",
+    "score": 108,
+    "text_length": 3166,
+    "readable_ratio": 0.9896,
+    "invoice_keyword_score": 100.0,
+    "gstin_detected": true,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": true
+  },
+  "pdf": "C:\\Users\\amnsa\\Downloads\\in-1.pdf",
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 3.454,
+  "final_json": {
+    "invoice_no": "26000730041372",
+    "vendor": "SREE PADMAM PHARMA & AGENCIES",
+    "vendor_gstin": "32AAJFS9745F1ZY",
+    "customer": "CREDENCE HOSPITAL",
+    "customer_address": "ULLOOR MEDICAL COLLEGE, TRIVANDRUM-695001",
+    "customer_gstin": "32AADCC8356R1Z4",
+    "invoice_date": "2026-08-15",
+    "invoice_date_raw": "15-08-2026",
+    "total": "6044.00",
+    "tax": "287.80",
+    "irn": "2b6f3ceB0e9a1aée193167ea7alladsh46b85d9c89f80cc338edt1de969830d",
+    "line_items": [
+      {
+        "product_description": "PROLUTON DEPOT S0OMG",
+        "quantity": "20",
+        "unit_price": "287.80",
+        "total_amount": "5756.00",
+        "hsn_code": "30042069",
+        "lot_batch_number": "GBO405A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "462.53",
+          "mfg": null,
+          "expiry_date": "02-30",
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T10:05:41.258918+00:00"
+}

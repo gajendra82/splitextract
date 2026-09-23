@@ -1,0 +1,58 @@
+{
+  "ocr_method": "tesseract",
+  "ocr_text": "GSTN NO. O3AAXFP2091F1273 GST INVOICE\n\nHao Mar. suka:\n\nPARTAP MEDICAL AGENCIES\n\nE-2 DILKUSHA MARKET\nJALANDHAR\nMOB NO. 9872663297\n\nIRN NO. befd2782a203c226554797 8980\n\n1 8420(14620268Sh0c4109007aS{Sb0807324 ACK NO. 132625424614808\nis. FORTIS HOSPOTEL LTD\n\nACK DT.22/01/2026\n\n-OP PHARMA BILL NO. PMA-16372 PAYMENT MODE .CREDIT\nINSIDE FORTIS HOSPITAL BILL DATE .14/01/2026 AGENT .NIL\nGROUND FLOOR GR NO. GR DATE\nTRANSPORT NAME.\nMOB.\n\nOR. REGD .NO: -\nGSTN NO. O03AAACO2157P1zD\n\nDL NO. PB-JA3-130645 oL NO. PB-JA3-130646\nwTY Mh> oe 4 ) AMOCLT\nfi ma , 7 [ap Sroeet i Cs een cea Thal.\n!\n|\n|\ni}\n!\ni\n'\ni}\ni\n|\n\\ 1\niL —t = ao a t to\nSIS 4 OT\nS340 a3 2.0L: TS, 5 U5 C2 ae\n“Roun cb be:\nBR Se Bunared Flfty Four only BILL amt\nTERMS ¢& CONDITION FOR PARTAP MEDICAL AGENCIES JAL\nion : Node aad i oe rr Pelt eg = Nol t i. . - + I\n4 iD AWvaA, Sbange my\n\n",
+  "ocr_character_count": 836,
+  "ocr_confidence": 69.57,
+  "ocr_processing_time_seconds": 4.056,
+  "ocr_quality": {
+    "confidence": 69.6,
+    "quality": "POOR",
+    "reason": "confidence 69.6 < 80.0",
+    "score": 86,
+    "text_length": 834,
+    "readable_ratio": 0.9832,
+    "invoice_keyword_score": 50.0,
+    "gstin_detected": false,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": false
+  },
+  "source_image": "C:\\Users\\amnsa\\Downloads\\WhatsApp Image 2026-09-23 at 11.56.00 AM.jpeg",
+  "pdf_used": "C:\\Users\\amnsa\\OneDrive\\Desktop\\zydus v1\\splitextract\\comparison_results\\whatsapp_image\\whatsapp_invoice.pdf",
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 6.313,
+  "final_json": {
+    "invoice_no": "PMA-16372",
+    "vendor": "PARTAP MEDICAL AGENCIES",
+    "vendor_gstin": "O3AAXFP2091F1273",
+    "customer": "FORTIS HOSPOTEL LTD",
+    "customer_address": "INSIDE FORTIS HOSPITAL GROUND FLOOR",
+    "customer_gstin": "O03AAACO2157P1zD",
+    "invoice_date": "2026-01-14",
+    "invoice_date_raw": "14/01/2026",
+    "total": "154.54",
+    "tax": null,
+    "irn": "befd2782a203c2265547978980",
+    "line_items": [
+      {
+        "product_description": "AMICIN 500MG INJ VIAL",
+        "quantity": "2",
+        "unit_price": "77.27",
+        "total_amount": "154.54",
+        "hsn_code": "30049099",
+        "lot_batch_number": "JAMICIN",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": null,
+          "mfg": null,
+          "expiry_date": null,
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T09:31:20.145974+00:00"
+}

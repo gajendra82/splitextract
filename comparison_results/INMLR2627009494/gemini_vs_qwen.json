@@ -1,0 +1,241 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_INMLR2627009494.pdf",
+  "ran_at_utc": "2026-09-23T09:48:20.683251+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "tesseract_gemini": "INMLR2627009494",
+      "paddleocr_gemini": "INMLR2627009494",
+      "qwen_extract": "INMLR2627009494",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-06-23",
+      "paddleocr_gemini": "2026-06-23",
+      "qwen_extract": "2026-06-23",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "ALARIC ENTERPRISES",
+      "paddleocr_gemini": "ALARIC ENTERPRISES",
+      "qwen_extract": "ALARIC ENTERPRISES",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "29AAVFA6895N1Z5",
+      "paddleocr_gemini": "29AAGCM5933R2ZK",
+      "qwen_extract": "29AAGCM5933R2ZK",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "K.M.C. HOSPITAL MEDICAL STORES",
+      "paddleocr_gemini": "K.M.C. HOSPITAL MEDICAL STORES",
+      "qwen_extract": "K.M.C. HOSPITAL MEDICAL STORES",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "29AAVFA6895N1Z5",
+      "paddleocr_gemini": "29AAVFA6895N1Z5",
+      "qwen_extract": "29AAVFA6895N1Z5",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "total",
+      "tesseract_gemini": "22717.00",
+      "paddleocr_gemini": "22717.00",
+      "qwen_extract": "22717.00",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": "1081.78",
+      "paddleocr_gemini": "1081.78",
+      "qwen_extract": "1081.78",
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": "adbadce510edb4di05453e3373f19cf5409c95ta12e3a258109a80bfeb3c8e68",
+      "paddleocr_gemini": null,
+      "qwen_extract": "a4badce510edb4df05453e3373f19cf5409c95fa12e3a258109a80bfeb3c8e68",
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_item_count",
+      "tesseract_gemini": 5,
+      "paddleocr_gemini": 5,
+      "qwen_extract": 5,
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "products",
+      "tesseract_gemini": [
+        "FLUTICONE FT 120 MD NASAL SPRAY (1s)",
+        "ODIMONT LC TABLETS (15S)",
+        "IVORAL FORTE 400MG DT TABLET (1S)",
+        "CINTODAC CAPSULES (10s}",
+        "ZYCEL 200MG CAPSULES (10s)"
+      ],
+      "paddleocr_gemini": [
+        "FLUTICONE FT 120 MD NASAL SPRAY (1s)",
+        "ODIMONT LC TABLETS (15S)",
+        "IVORAL FORTE 400MG DT TABLET (1S)",
+        "CINTODAC CAPSULES (10s)",
+        "ZYCEL 200MG CAPSULES (10s)"
+      ],
+      "qwen_extract": [
+        "FLUTICONE FT 120 MD NASAL SPRAY (1s)",
+        "ODIMONT LC TABLETS (15S)",
+        "IVORAL FORTE 400MG DT TABLET (1S)",
+        "CINTODAC CAPSULES (10s)",
+        "ZYCEL 200MG CAPSULES (10s)"
+      ],
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_qty_rate_amount",
+      "tesseract_gemini": [
+        {
+          "qty": "77",
+          "rate": "242.10",
+          "amt": "18641.70",
+          "batch": "AFC1051"
+        },
+        {
+          "qty": "2",
+          "rate": "205.00",
+          "amt": "410.00",
+          "batch": "IBO1075A"
+        },
+        {
+          "qty": "50",
+          "rate": "32.68",
+          "amt": "1634.00",
+          "batch": "AIFO226"
+        },
+        {
+          "qty": "5",
+          "rate": "200.00",
+          "amt": "1000.00",
+          "batch": "1B00734A"
+        },
+        {
+          "qty": "5",
+          "rate": "170.27",
+          "amt": "851.35",
+          "batch": "1B00237A"
+        }
+      ],
+      "paddleocr_gemini": [
+        {
+          "qty": "77",
+          "rate": "242.10",
+          "amt": "18641.70",
+          "batch": "AFC1051"
+        },
+        {
+          "qty": "2",
+          "rate": "205.00",
+          "amt": "410.00",
+          "batch": "IB01075A"
+        },
+        {
+          "qty": "50",
+          "rate": "32.68",
+          "amt": "1634.00",
+          "batch": "AIF0226"
+        },
+        {
+          "qty": "5",
+          "rate": "200.00",
+          "amt": "1000.00",
+          "batch": "IB00734A"
+        },
+        {
+          "qty": "5",
+          "rate": "170.27",
+          "amt": "851.35",
+          "batch": "IB00237A"
+        }
+      ],
+      "qwen_extract": [
+        {
+          "qty": "77",
+          "rate": "242.10",
+          "amt": "18641.70",
+          "batch": "AFC1051"
+        },
+        {
+          "qty": "2",
+          "rate": "205.00",
+          "amt": "410.00",
+          "batch": "IB01075A"
+        },
+        {
+          "qty": "50",
+          "rate": "32.68",
+          "amt": "1634.00",
+          "batch": "AIF0226"
+        },
+        {
+          "qty": "5",
+          "rate": "200.00",
+          "amt": "1000.00",
+          "batch": "IB00734A"
+        },
+        {
+          "qty": "5",
+          "rate": "170.27",
+          "amt": "851.35",
+          "batch": "IB00237A"
+        }
+      ],
+      "gemini_qwen_match": false
+    }
+  ],
+  "summary": [
+    {
+      "source": "tesseract_gemini",
+      "json_valid": true,
+      "total": "22717.00",
+      "invoice_no": "INMLR2627009494",
+      "vendor_gstin": "29AAVFA6895N1Z5",
+      "customer_gstin": "29AAVFA6895N1Z5",
+      "line_items": 5,
+      "ocr_time": 3.908,
+      "llm_time": 9.818,
+      "ocr_chars": 1980
+    },
+    {
+      "source": "paddleocr_gemini",
+      "json_valid": true,
+      "total": "22717.00",
+      "invoice_no": "INMLR2627009494",
+      "vendor_gstin": "29AAGCM5933R2ZK",
+      "customer_gstin": "29AAVFA6895N1Z5",
+      "line_items": 5,
+      "ocr_time": 15.336,
+      "llm_time": 3.28,
+      "ocr_chars": 2078
+    },
+    {
+      "source": "qwen_extract",
+      "json_valid": true,
+      "total": "22717.00",
+      "invoice_no": "INMLR2627009494",
+      "vendor_gstin": "29AAGCM5933R2ZK",
+      "customer_gstin": "29AAVFA6895N1Z5",
+      "line_items": 5,
+      "ocr_time": 0.426,
+      "llm_time": 124.501,
+      "ocr_chars": 5429,
+      "errors": []
+    }
+  ]
+}

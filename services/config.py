@@ -138,6 +138,26 @@ class ExtractionConfig:
         default_factory=lambda: _env_int("EXTRACTION_CACHE_TTL_SECONDS", 0)
     )
 
+    # Optional PaddleOCR Tier-3 (OFF by default — fail-soft when missing)
+    paddle_ocr_enabled: bool = field(
+        default_factory=lambda: _env_bool("PADDLE_OCR_ENABLED", False)
+    )
+    paddle_ocr_lang: str = field(
+        default_factory=lambda: os.getenv("PADDLE_OCR_LANG", "en").strip() or "en"
+    )
+    paddle_ocr_use_gpu: bool = field(
+        default_factory=lambda: _env_bool("PADDLE_OCR_USE_GPU", False)
+    )
+    paddle_ocr_max_concurrency: int = field(
+        default_factory=lambda: _env_int("PADDLE_OCR_MAX_CONCURRENCY", 2)
+    )
+    paddle_ocr_min_confidence: float = field(
+        default_factory=lambda: _env_float("PADDLE_OCR_MIN_CONFIDENCE", 50.0)
+    )
+    paddle_ocr_min_chars: int = field(
+        default_factory=lambda: _env_int("PADDLE_OCR_MIN_CHARS", 100)
+    )
+
     preprocessing: PreprocessingConfig = field(default_factory=PreprocessingConfig)
 
 

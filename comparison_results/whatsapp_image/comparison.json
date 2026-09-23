@@ -1,0 +1,121 @@
+{
+  "source_image": "C:\\Users\\amnsa\\Downloads\\WhatsApp Image 2026-09-23 at 11.56.00 AM.jpeg",
+  "ran_at_utc": "2026-09-23T09:31:23.560469+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "tesseract_gemini": "PMA-16372",
+      "paddleocr_gemini": "PMA-16372",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-01-14",
+      "paddleocr_gemini": "2026-01-14",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "PARTAP MEDICAL AGENCIES",
+      "paddleocr_gemini": "PARTAP MEDICAL AGENCIES",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "O3AAXFP2091F1273",
+      "paddleocr_gemini": "03AAXFP2091F1Z3",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "FORTIS HOSPOTEL LTD",
+      "paddleocr_gemini": "M/S.FORTIS HOSPOTEL LTD OP PHARMA",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "O03AAACO2157P1zD",
+      "paddleocr_gemini": "03AAACO2157P1ZD",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "total",
+      "tesseract_gemini": "154.54",
+      "paddleocr_gemini": "3154.00",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "qwen_extract": null,
+      "values_match": true
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": "befd2782a203c2265547978980",
+      "paddleocr_gemini": "bcfd2782a203c22f554797e898e18a20ff46202655b0c4f09007a5f5b0507323",
+      "qwen_extract": null,
+      "values_match": false
+    },
+    {
+      "field": "line_item_count",
+      "tesseract_gemini": 1,
+      "paddleocr_gemini": 2,
+      "qwen_extract": 0,
+      "values_match": false
+    }
+  ],
+  "summary": [
+    {
+      "ocr": "tesseract",
+      "llm": "gemini",
+      "json_valid": true,
+      "total": "154.54",
+      "vendor_gstin": "O3AAXFP2091F1273",
+      "customer_gstin": "O03AAACO2157P1zD",
+      "line_items": 1,
+      "ocr_time": 4.056,
+      "llm_time": 6.313,
+      "ocr_chars": 836,
+      "errors": []
+    },
+    {
+      "ocr": "paddleocr",
+      "llm": "gemini",
+      "json_valid": true,
+      "total": "3154.00",
+      "vendor_gstin": "03AAXFP2091F1Z3",
+      "customer_gstin": "03AAACO2157P1ZD",
+      "line_items": 2,
+      "ocr_time": 14.456,
+      "llm_time": 2.301,
+      "ocr_chars": 1175,
+      "errors": []
+    },
+    {
+      "ocr": "server_pdfplumber",
+      "llm": "qwen",
+      "json_valid": false,
+      "total": null,
+      "vendor_gstin": null,
+      "customer_gstin": null,
+      "line_items": 0,
+      "ocr_time": null,
+      "llm_time": 1.107,
+      "ocr_chars": null,
+      "errors": [
+        "HTTPError: HTTP Error 422: Unprocessable Entity",
+        "{\"detail\":{\"success\":false,\"request_id\":\"d5c137f6-f7c3-419e-bd0e-d9b12e6422d0\",\"error\":\"No usable text could be extracted from the PDF. Ensure the file is a text-based invoice PDF.\"}}"
+      ]
+    }
+  ]
+}

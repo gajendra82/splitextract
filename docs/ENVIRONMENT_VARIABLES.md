@@ -78,6 +78,24 @@ Never commit production credentials. systemd loads `/var/www/html/.env` for both
 
 ---
 
+## Optional PaddleOCR (Tier-3 scans only)
+
+All default **`false` / safe**. When enabled, PaddleOCR runs **before** Tesseract on the scan path only. Typed PDF tiers (PDFPlumber / PyMuPDF) and Gemini Vision are unchanged. Missing packages or runtime errors fail-soft to Tesseract.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PADDLE_OCR_ENABLED` | `false` | Master switch — leave off until POD A/B tests improve accuracy |
+| `PADDLE_OCR_LANG` | `en` | PaddleOCR language |
+| `PADDLE_OCR_USE_GPU` | `false` | Use GPU if paddlepaddle-gpu installed |
+| `PADDLE_OCR_MAX_CONCURRENCY` | `2` | Concurrent PaddleOCR jobs (capped at 4) |
+| `PADDLE_OCR_MIN_CONFIDENCE` | `50` | Accept threshold (0–100); else fall back to Tesseract |
+| `PADDLE_OCR_MIN_CHARS` | `100` | Minimum characters to accept PaddleOCR text |
+| `PADDLE_OCR_RENDER_SCALE` | `2.0` | PDF page render scale for OCR |
+
+Install separately: paddlepaddle (OS-specific wheel) + `pip install paddleocr`.
+
+---
+
 ## Reliability flags (split-extract)
 
 All default **`false`** for production-safe deploy.

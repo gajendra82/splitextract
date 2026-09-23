@@ -1,0 +1,117 @@
+{
+  "ocr_method": "tesseract",
+  "ocr_text": "ALARIC ENTERPRISES\n\nTAX INVOICE To: K.M.C. HOSPITAL MEDICAL STORES (AEZC10051)\nDINO 1-25 TO 1-25/7 & 1-25/36 TO 1-25/49 G, A UNIT OF MANIPAL HEALTH ENTERPRISES LTD\nFEOOR DESAPPHIRE Inv. No. : INMLR2627009494 D.NO:14-3-211/3,GROUND FLOOR\n(L): : 23-06- MANGALORE\nGSTIN: 29AAVFA6895N1Z5 :\nAckNo — : 112631073856489 Eway No. CRE D IT\nAck Date : 2026-06-23 Valid Upto\nIRN :adbadce5 1 0edb4di05453e3373f19cfS409c95ta 1 2e3a2581 09a80bfeb3c8e68\nISNO| HSN| MFG |Product Name Pack [Batch No Expiry Qty Free Rate MRP] Old MRP|GST%]|_ Old.| Amount|Disc%| Net. |.\n1 [30049094] ZYD |FLUTICONE FT 120 MD NASAL SPRAY (1s) 1s AFC1051 03/28 77 242.10 554.81 5 18641.70 4/18790.83\n2 130049099] ZYD |ODIMONT LC TABLETS (15S) 15s IBO1075A 04/28 2 205.00 418.69 5 410.00 4413.28\n3 130049099] ZYD |IVORAL FORTE 400MG DT TABLET (1S) 1s AIFO226 02/29 50 32.68 57.05 5 1634.00 4/1647.0\n4 [30049039] ZYD [CINTODAC CAPSULES (10s} 10s 1B00734A 02/28 5 200.00! 445.86 5] 1000.00 4]1008.0\n5 [30049069] ZYD [ZYCEL 200MG CAPSULES (10s) 10s 1B00237A 02/28 5 170.27[ 347.79 5] 851.35 4858.16\nNote:\n\n0%\n\n0.00\n\n0.00]\n\nferms and Condilions\n[Terms & Conditions:\n\n1. Delay in Payments can attract interest @ 18% pa till Payments,\nl2. Payments to be made in the name of ALARIC ENTERPRISES,\n\nPowered by Smartpharma360 || +91 7337441325 || www.smartpharma360.in\n\n0.00 0.00 0.00\n5.00% 901.48 21635.57 540.89 540.89) 0.00\n12.00% 0.00] 0.00] 0.00] 0.00] 0.00\n\n| 18.00%| 0.00 0.00 0.00 0.00 0.00\nTotal: 301.48 2160557 540.60 540.89) 0.00\n\nBank Details :\n\nAIC: 50200061827904\nHDFC BANK LTD.\nIFSC: HDFC0000075\nBranch: AIRPORT\nROAD,BANGALORE\n\nPage 1 of 1\n\nCases\n\nTotal Items\n\nTotal Qty\n\nAmt in Words: Twenty Two\n\nFor ALARIC ENTERPRISES\nAuthorised Signatory\n\no|\n|\n139\n\nDisc. Per\nGr/Dr Amt.\nFreight Amt.\nRounding\n\n0.00\n0.00 |\n0.35\n\njousand Seven Hundred Seventeen Flipees Only\n\nNET AMOUNT:\n\nSubtotal\nDiscount\nGST Amt.\nTCS\n\n22537.05\n901.48\n1081.78\n\nRs. 22,717.00\n\nBilled By: AEE10005 || TS1044083 || Taken at: 30-Jun-2026 16:05:53\n\n",
+  "ocr_character_count": 1980,
+  "ocr_confidence": 80.66,
+  "ocr_processing_time_seconds": 3.908,
+  "ocr_quality": {
+    "confidence": 80.7,
+    "quality": "GOOD",
+    "reason": "",
+    "score": 108,
+    "text_length": 1978,
+    "readable_ratio": 0.9863,
+    "invoice_keyword_score": 100.0,
+    "gstin_detected": true,
+    "invoice_number_detected": true,
+    "date_detected": true,
+    "amount_detected": true
+  },
+  "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_INMLR2627009494.pdf",
+  "llm_provider": "gemini",
+  "llm_processing_time_seconds": 9.818,
+  "final_json": {
+    "invoice_no": "INMLR2627009494",
+    "vendor": "ALARIC ENTERPRISES",
+    "vendor_gstin": "29AAVFA6895N1Z5",
+    "customer": "K.M.C. HOSPITAL MEDICAL STORES",
+    "customer_address": "DINO 1-25 TO 1-25/7 & 1-25/36 TO 1-25/49 G, A UNIT OF MANIPAL HEALTH ENTERPRISES LTD\nD.NO:14-3-211/3,GROUND FLOOR\nMANGALORE",
+    "customer_gstin": "29AAVFA6895N1Z5",
+    "invoice_date": "2026-06-23",
+    "invoice_date_raw": "2026-06-23",
+    "total": "22717.00",
+    "tax": "1081.78",
+    "irn": "adbadce510edb4di05453e3373f19cf5409c95ta12e3a258109a80bfeb3c8e68",
+    "line_items": [
+      {
+        "product_description": "FLUTICONE FT 120 MD NASAL SPRAY (1s)",
+        "quantity": "77",
+        "unit_price": "242.10",
+        "total_amount": "18641.70",
+        "hsn_code": "30049094",
+        "lot_batch_number": "AFC1051",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "554.81",
+          "mfg": "ZYD",
+          "expiry_date": "03/28",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "ODIMONT LC TABLETS (15S)",
+        "quantity": "2",
+        "unit_price": "205.00",
+        "total_amount": "410.00",
+        "hsn_code": "30049099",
+        "lot_batch_number": "IBO1075A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "418.69",
+          "mfg": "ZYD",
+          "expiry_date": "04/28",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "IVORAL FORTE 400MG DT TABLET (1S)",
+        "quantity": "50",
+        "unit_price": "32.68",
+        "total_amount": "1634.00",
+        "hsn_code": "30049099",
+        "lot_batch_number": "AIFO226",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "57.05",
+          "mfg": "ZYD",
+          "expiry_date": "02/29",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "CINTODAC CAPSULES (10s}",
+        "quantity": "5",
+        "unit_price": "200.00",
+        "total_amount": "1000.00",
+        "hsn_code": "30049039",
+        "lot_batch_number": "1B00734A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "445.86",
+          "mfg": "ZYD",
+          "expiry_date": "02/28",
+          "free_quantity": "0"
+        }
+      },
+      {
+        "product_description": "ZYCEL 200MG CAPSULES (10s)",
+        "quantity": "5",
+        "unit_price": "170.27",
+        "total_amount": "851.35",
+        "hsn_code": "30049069",
+        "lot_batch_number": "1B00237A",
+        "sku_code": null,
+        "additional_fields": {
+          "mrp": "347.79",
+          "mfg": "ZYD",
+          "expiry_date": "02/28",
+          "free_quantity": "0"
+        }
+      }
+    ]
+  },
+  "json_valid": true,
+  "llm_success": true,
+  "errors": [],
+  "ran_at_utc": "2026-09-23T09:46:12.876443+00:00"
+}

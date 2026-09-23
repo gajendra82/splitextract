@@ -1,0 +1,165 @@
+{
+  "pdf": "C:\\Users\\amnsa\\Downloads\\invoice_2171735586.pdf",
+  "ran_at_utc": "2026-09-23T10:09:50.972828+00:00",
+  "qwen_endpoint": "https://competent-playstation-painted-songs.trycloudflare.com/v1/invoice/extract",
+  "fields": [
+    {
+      "field": "invoice_no",
+      "tesseract_gemini": "2171735586",
+      "paddleocr_gemini": "2171735586",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "invoice_date",
+      "tesseract_gemini": "2026-08-03",
+      "paddleocr_gemini": "2026-08-03",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "vendor",
+      "tesseract_gemini": "Zydus Lifesciences Limited",
+      "paddleocr_gemini": "Zydus Lifesciences Limited",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "vendor_gstin",
+      "tesseract_gemini": "32AAACC625361Z2",
+      "paddleocr_gemini": "32AAACC6253G1Z2",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer",
+      "tesseract_gemini": "AMIRITA ENTERPRISES (P) LTD.",
+      "paddleocr_gemini": "AMRITA ENTERPRISES (P) LTD.",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "customer_gstin",
+      "tesseract_gemini": "32AAECAA257G1Z0",
+      "paddleocr_gemini": "32AAECA4257G1Z0",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "total",
+      "tesseract_gemini": "96600.00",
+      "paddleocr_gemini": "96600.00",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "tax",
+      "tesseract_gemini": null,
+      "paddleocr_gemini": null,
+      "qwen_extract": null,
+      "gemini_qwen_match": true
+    },
+    {
+      "field": "irn",
+      "tesseract_gemini": "482469c7E4141225199cb19bd7149d0447e7befel387aadS3a6d34decabl",
+      "paddleocr_gemini": "452b69c7f4141225fS9cb19bd7f49d0f47e7befe1357aad53a6d34decab15645",
+      "qwen_extract": null,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_item_count",
+      "tesseract_gemini": 1,
+      "paddleocr_gemini": 2,
+      "qwen_extract": 0,
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "products",
+      "tesseract_gemini": [
+        "ZLL Biologies"
+      ],
+      "paddleocr_gemini": [
+        "XEMPTIA INJ 1X1 PFS SALE DOM",
+        "XEMPTIA INJ 1X1 PFS SALE DOM"
+      ],
+      "qwen_extract": [],
+      "gemini_qwen_match": false
+    },
+    {
+      "field": "line_qty_rate_amount",
+      "tesseract_gemini": [
+        {
+          "qty": "7500.00",
+          "rate": "2.30609",
+          "amt": "25575.00",
+          "batch": "OH ODefor cass"
+        }
+      ],
+      "paddleocr_gemini": [
+        {
+          "qty": "100",
+          "rate": "460.00",
+          "amt": "46000.00",
+          "batch": "8B00064B"
+        },
+        {
+          "qty": "100",
+          "rate": "460.00",
+          "amt": "46000.00",
+          "batch": "8B00064B"
+        }
+      ],
+      "qwen_extract": [],
+      "gemini_qwen_match": false
+    }
+  ],
+  "summary": [
+    {
+      "source": "tesseract_gemini",
+      "json_valid": true,
+      "total": "96600.00",
+      "invoice_no": "2171735586",
+      "vendor": "Zydus Lifesciences Limited",
+      "vendor_gstin": "32AAACC625361Z2",
+      "customer": "AMIRITA ENTERPRISES (P) LTD.",
+      "customer_gstin": "32AAECAA257G1Z0",
+      "line_items": 1,
+      "ocr_time": 6.959,
+      "llm_time": 3.566,
+      "ocr_chars": 4696
+    },
+    {
+      "source": "paddleocr_gemini",
+      "json_valid": true,
+      "total": "96600.00",
+      "invoice_no": "2171735586",
+      "vendor": "Zydus Lifesciences Limited",
+      "vendor_gstin": "32AAACC6253G1Z2",
+      "customer": "AMRITA ENTERPRISES (P) LTD.",
+      "customer_gstin": "32AAECA4257G1Z0",
+      "line_items": 2,
+      "ocr_time": 18.101,
+      "llm_time": 6.971,
+      "ocr_chars": 4258
+    },
+    {
+      "source": "qwen_extract",
+      "json_valid": false,
+      "total": null,
+      "invoice_no": null,
+      "vendor": null,
+      "vendor_gstin": null,
+      "customer": null,
+      "customer_gstin": null,
+      "line_items": 0,
+      "ocr_time": null,
+      "llm_time": 0.955,
+      "ocr_chars": null,
+      "errors": [
+        "HTTPError: HTTP Error 422: Unprocessable Entity",
+        "{\"detail\":{\"success\":false,\"request_id\":\"3213d5eb-3c1b-4dbe-8c50-7033c8de1886\",\"error\":\"No usable text could be extracted from the PDF. Ensure the file is a text-based invoice PDF.\"}}"
+      ],
+      "fallback_used": null
+    }
+  ]
+}
