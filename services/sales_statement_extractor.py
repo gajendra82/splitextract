@@ -1082,7 +1082,9 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
     return result
 
 
-def _is_implausible_money(value: Any, *, max_digits: int = 8) -> bool:
+def _is_implausible_money(
+    value: Any, *, max_digits: int = 8, allow_negative: bool = False
+) -> bool:
     """True for OCR-garbage currency (e.g. 75374123024 from merged TOTAL columns)."""
     if value is None:
         return False
@@ -1090,8 +1092,9 @@ def _is_implausible_money(value: Any, *, max_digits: int = 8) -> bool:
         num = float(value)
     except (TypeError, ValueError):
         return True
-    if num < 0:
+    if num < 0 and not allow_negative:
         return True
+    num = abs(num)
     # Secondary-sales stockist totals almost never need > 8 integer digits
     int_digits = len(str(int(abs(num))))
     if int_digits > max_digits:
@@ -1177,6 +1180,10 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
 
     sales_total = totals.get("sales_value")
     closing_total = totals.get("closing_value")
+    allow_negative_money = (
+        str(totals.get("extra", {}).get("extraction_method") or "")
+        == "swil_landscape_qty_value"
+    )
 
     qty_only = (
         len(items) > 0
@@ -1187,7 +1194,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     bogus_sales = (
-        _is_implausible_money(sales_total)
+        _is_implausible_money(sales_total, allow_negative=allow_negative_money)
         or _looks_like_concatenated_totals(sales_total, closing_total)
         or (
             sales_total is not None
@@ -1202,7 +1209,9 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
         # Prefer real line-item money sum; else null for qty-only statements
         totals["sales_value"] = sum_sales_value if sum_sales_value > 0 else None
 
-    if _is_implausible_money(totals.get("closing_value")):
+    if _is_implausible_money(
+        totals.get("closing_value"), allow_negative=allow_negative_money
+    ):
         totals["extra"]["rejected_closing_value"] = totals.get("closing_value")
         totals["closing_value"] = sum_closing_value if sum_closing_value > 0 else None
     elif (
@@ -1221,12 +1230,16 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
     for item in items:
         if not isinstance(item, dict):
             continue
-        if _is_implausible_money(item.get("sales_value")):
+        if _is_implausible_money(
+            item.get("sales_value"), allow_negative=allow_negative_money
+        ):
             item.setdefault("extra", {})
             if isinstance(item["extra"], dict):
                 item["extra"]["rejected_sales_value"] = item.get("sales_value")
             item["sales_value"] = 0.0
-        if _is_implausible_money(item.get("closing_value")):
+        if _is_implausible_money(
+            item.get("closing_value"), allow_negative=allow_negative_money
+        ):
             item.setdefault("extra", {})
             if isinstance(item["extra"], dict):
                 item["extra"]["rejected_closing_value"] = item.get("closing_value")
@@ -4542,6 +4555,429 @@ def _parse_swil_opening_receipt_value_statement(doc, filename: str) -> Optional[
     return result
 
 
+# Landscape SwilERP Sales & Stock (Code / PRODUCT NAME / PACKING / Qty+Value pairs).
+# The fixed _SWIL_VALUE_BUCKETS above target a narrower page. This layout is
+# ~A4 landscape (~842pt) with extra Shortage/Expiry/Dump columns.
+_SWIL_LAND_MIN_WIDTH = 780.0
+_SWIL_LAND_CODE_RE = re.compile(r"^[A-Z]{1,6}\d+[A-Z0-9]*$", re.I)
+_SWIL_LAND_SKIP_RE = re.compile(
+    r"Page\s*No|Sales\s*&\s*Stock|PRODUCT\s+NAME|\bPACKING\b|"
+    r"Powered\s+By|GRAND\s*TOTAL|^TOTAL\b|Purchase\s+Invoice|"
+    r"Receipt\s+Date|Amount\s+Rs|Continued|^\*+|^-+|\bDtd\.?\b",
+    re.I,
+)
+_SWIL_LAND_GROUP_QTY_VALUE = {
+    "op_group": ("opening_qty", "opening_value"),
+    "rec_group": ("receipts_qty", "receipts_value"),
+    "total_group": ("total_qty", None),
+    "issue_group": ("sales_qty", "sales_value"),
+    "shortage_group": ("shortage_qty", "shortage_value"),
+    "expiry_group": ("expiry_qty", "expiry_value"),
+    "closing_group": ("closing_qty", "closing_value"),
+    "dump_group": ("dump_qty", None),
+    "ne_group": ("near_expiry", None),
+}
+
+
+def _is_swil_landscape_qty_value_text(text: str) -> bool:
+    """Detect landscape SwilERP Code/PACKING/Issue-Sales statements from text."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Sales\s*&\s*Stock", text, re.I)
+        and re.search(r"Receipt/Pur", text, re.I)
+        and re.search(r"\bPACKING\b", text)
+        and re.search(r"\bCode\b", text)
+        and re.search(r"Issue/Sales", text, re.I)
+        and re.search(r"Closing", text, re.I)
+    )
+
+
+def _is_swil_landscape_qty_value_doc(doc) -> bool:
+    """True only for wide landscape SwilERP pages with the extra qty/value grid."""
+    try:
+        widths = [float(page.rect.width) for page in doc]
+    except Exception:
+        return False
+    if not widths or max(widths) < _SWIL_LAND_MIN_WIDTH:
+        return False
+    return any(
+        _is_swil_landscape_qty_value_text(page.get_text("text") or "") for page in doc
+    )
+
+
+def _swil_land_header_field(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z0-9/]", "", (token or "").lower())
+    if norm == "code":
+        return "code"
+    if norm in {"product", "name"}:
+        return "product"
+    if norm == "packing":
+        return "pack"
+    if norm in {"op", "opening", "bal"}:
+        return "op_group"
+    if norm.startswith("receipt"):
+        return "rec_group"
+    if norm == "total":
+        return "total_group"
+    if norm.startswith("issue"):
+        return "issue_group"
+    if norm == "shortage":
+        return "shortage_group"
+    if norm in {"expiry", "breakage"}:
+        return "expiry_group"
+    if norm in {"closing", "bala"}:
+        return "closing_group"
+    if norm == "dump":
+        return "dump_group"
+    if norm in {"ne", "expi"}:
+        return "ne_group"
+    return None
+
+
+def _swil_land_sub_role(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z]", "", (token or "").lower())
+    if norm in {"qty", "breakage", "stock", "expi"}:
+        return "qty"
+    if norm == "value":
+        return "value"
+    return None
+
+
+def _swil_land_group_words(words: List[Any], y_tol: float = 3.0) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for w in sorted(words, key=lambda item: (round(item[1], 1), item[0])):
+        x0, y0, x1, _y1, token = w[0], w[1], w[2], w[3], str(w[4]).strip()
+        if not token:
+            continue
+        xc = (x0 + x1) / 2.0
+        if rows and abs(y0 - rows[-1]["y"]) <= y_tol:
+            rows[-1]["words"].append((x0, x1, xc, token))
+        else:
+            rows.append({"y": y0, "words": [(x0, x1, xc, token)]})
+    return rows
+
+
+def _swil_land_row_blob(row: Dict[str, Any]) -> str:
+    return " ".join(tok for _x0, _x1, _xc, tok in row.get("words") or [])
+
+
+def _swil_land_build_buckets(
+    header_row: Dict[str, Any], sub_row: Dict[str, Any]
+) -> Optional[List[Tuple[str, float, float]]]:
+    """Build x-ranges from this page's header + Qty/Value sub-row (not page-fixed)."""
+    groups: List[Dict[str, Any]] = []
+    for x0, x1, xc, token in header_row.get("words") or []:
+        field = _swil_land_header_field(token)
+        if not field:
+            continue
+        if groups and groups[-1]["field"] == field:
+            groups[-1]["x0"] = min(groups[-1]["x0"], x0)
+            groups[-1]["x1"] = max(groups[-1]["x1"], x1)
+            groups[-1]["centers"].append(xc)
+        else:
+            groups.append({"field": field, "x0": x0, "x1": x1, "centers": [xc]})
+    if not any(g["field"] == "product" for g in groups):
+        return None
+    if not any(g["field"] == "op_group" for g in groups):
+        return None
+
+    group_by = {g["field"]: g for g in groups}
+    assigned: Dict[str, List[Tuple[float, str]]] = {
+        g["field"]: [] for g in groups if g["field"] in _SWIL_LAND_GROUP_QTY_VALUE
+    }
+    for _x0, _x1, xc, token in sub_row.get("words") or []:
+        role = _swil_land_sub_role(token)
+        if not role or not assigned:
+            continue
+        nearest = min(
+            assigned.keys(),
+            key=lambda name: abs(
+                (group_by[name]["x0"] + group_by[name]["x1"]) / 2.0 - xc
+            ),
+        )
+        assigned[nearest].append((xc, role))
+
+    centers: List[Tuple[str, float]] = []
+    for group in groups:
+        field = group["field"]
+        mid = sum(group["centers"]) / len(group["centers"])
+        if field in {"code", "product", "pack"}:
+            centers.append((field, mid))
+            continue
+        qty_name, val_name = _SWIL_LAND_GROUP_QTY_VALUE.get(field, (None, None))
+        roles = sorted(assigned.get(field) or [], key=lambda item: item[0])
+        qty_x = next((xc for xc, role in roles if role == "qty"), None)
+        val_x = next((xc for xc, role in roles if role == "value"), None)
+        if qty_name and qty_x is not None:
+            centers.append((qty_name, qty_x))
+        elif qty_name:
+            centers.append((qty_name, group["x0"] + 4.0))
+        if val_name and val_x is not None:
+            centers.append((val_name, val_x))
+        elif val_name:
+            centers.append((val_name, group["x1"] - 4.0))
+
+    if not any(name == "opening_qty" for name, _xc in centers):
+        return None
+    centers.sort(key=lambda item: item[1])
+    buckets: List[Tuple[str, float, float]] = []
+    for idx, (name, xc) in enumerate(centers):
+        lo = 0.0 if idx == 0 else (centers[idx - 1][1] + xc) / 2.0
+        hi = 10000.0 if idx == len(centers) - 1 else (xc + centers[idx + 1][1]) / 2.0
+        buckets.append((name, lo, hi))
+    return buckets
+
+
+def _swil_land_bucket(x: float, buckets: List[Tuple[str, float, float]]) -> Optional[str]:
+    for name, lo, hi in buckets:
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _swil_land_identity_fail_count(items: List[Dict[str, Any]]) -> int:
+    fails = 0
+    for item in items:
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        total = _to_float(extra.get("total_stock"))
+        if total <= 0:
+            total = opening + receipts
+        if abs(round(total - sales, 2) - round(closing, 2)) > 0.51:
+            fails += 1
+    return fails
+
+
+def _swil_fixed_bucket_result_is_weak(result: Dict[str, Any], doc) -> bool:
+    """True when the narrow Swil x-buckets shifted columns on a landscape grid."""
+    if not _is_swil_landscape_qty_value_doc(doc):
+        return False
+    items = result.get("line_items") or []
+    if not items:
+        return True
+    code_in_name = 0
+    for item in items:
+        name = str(item.get("product_name") or "")
+        if re.match(r"^(?:HIM|HM)\w*\s+\S", name, re.I):
+            code_in_name += 1
+    n = len(items)
+    fails = _swil_land_identity_fail_count(items)
+    return (fails / n) >= 0.4 or code_in_name >= max(2, n // 3) or n < 12
+
+
+def _parse_swil_landscape_qty_value_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse landscape SwilERP Sales & Stock using header-derived columns."""
+    if not _is_swil_landscape_qty_value_doc(doc):
+        return None
+
+    result = empty_result(filename, "pdf")
+    items: List[Dict[str, Any]] = []
+    buckets: Optional[List[Tuple[str, float, float]]] = None
+    column_mapping: Dict[str, Any] = {}
+    pages_used = 0
+
+    for page in doc:
+        pages_used += 1
+        text = page.get_text("text") or ""
+        if not result.get("report_title"):
+            m = re.search(
+                r"Sales\s*&\s*Stock\s*Statement\s*\(\s*From\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+Upto\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,
+                re.I,
+            )
+            if m:
+                result["report_title"] = "Sales & Stock Statement"
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+
+        rows = _swil_land_group_words(page.get_text("words") or [])
+        header_row = next(
+            (
+                row
+                for row in rows
+                if re.search(r"PRODUCT", _swil_land_row_blob(row), re.I)
+                and re.search(r"PACKING", _swil_land_row_blob(row), re.I)
+                and re.search(r"Opening|Receipt", _swil_land_row_blob(row), re.I)
+            ),
+            None,
+        )
+        sub_row = None
+        if header_row is not None:
+            header_idx = rows.index(header_row)
+            for row in rows[header_idx + 1 : header_idx + 4]:
+                blob = _swil_land_row_blob(row)
+                if re.search(r"Qty\.?", blob, re.I) and re.search(r"Value", blob, re.I):
+                    sub_row = row
+                    break
+            built = (
+                _swil_land_build_buckets(header_row, sub_row)
+                if sub_row is not None
+                else None
+            )
+            if built:
+                buckets = built
+                if not column_mapping:
+                    column_mapping = {
+                        name: {"x0": lo, "x1": hi} for name, lo, hi in buckets
+                    }
+
+        if not result.get("stockist_name"):
+            limit_y = header_row["y"] if header_row is not None else 120.0
+            for row in rows:
+                if row["y"] >= limit_y - 2:
+                    break
+                wide = _swil_land_row_blob(row).strip()
+                if re.search(r"Page\s*No|Sales\s*&\s*Stock|PRODUCT", wide, re.I):
+                    continue
+                if not result["stockist_name"] and wide and not re.search(
+                    r"HIMALAYA|W/NO", wide, re.I
+                ):
+                    result["stockist_name"] = _clean_name(wide)
+                elif not result.get("stockist_address") and wide and not re.search(
+                    r"HIMALAYA", wide, re.I
+                ):
+                    result["stockist_address"] = _clean_name(wide)
+                elif not result.get("company_name") and re.search(r"HIMALAYA", wide, re.I):
+                    result["company_name"] = _clean_name(
+                        re.sub(r"\($", "", wide).strip()
+                    )
+
+        if not buckets:
+            continue
+
+        skip_y = 0.0
+        if header_row is not None:
+            skip_y = header_row["y"]
+        if sub_row is not None:
+            skip_y = max(skip_y, sub_row["y"]) + 8.0
+        in_footer = False
+        field_names = [name for name, _lo, _hi in buckets]
+
+        for row in rows:
+            if row["y"] <= skip_y:
+                continue
+            cells: Dict[str, List[str]] = {name: [] for name in field_names}
+            for _x0, _x1, xc, token in row["words"]:
+                bucket = _swil_land_bucket(xc, buckets)
+                if bucket:
+                    cells[bucket].append(token)
+            blob = _swil_land_row_blob(row)
+            name = _clean_name(" ".join(cells.get("product") or []))
+            if re.search(r"GRAND\s*TOTAL|^TOTAL\b", blob, re.I):
+                extra = result["totals"]["extra"]
+                open_val = _prompt_cell_number(cells.get("opening_value") or [])
+                rec_val = _prompt_cell_number(cells.get("receipts_value") or [])
+                sale_val = _prompt_cell_number(cells.get("sales_value") or [])
+                close_val = _prompt_cell_number(cells.get("closing_value") or [])
+                if open_val is not None:
+                    extra["opening_value"] = open_val
+                if rec_val is not None:
+                    extra["receipts_value"] = rec_val
+                    result["totals"]["receipts_value"] = rec_val
+                if sale_val is not None:
+                    result["totals"]["sales_value"] = sale_val
+                if close_val is not None:
+                    result["totals"]["closing_value"] = close_val
+                extra["total_row_source"] = "swil_landscape_grand_total"
+                in_footer = True
+                continue
+            if in_footer or _SWIL_LAND_SKIP_RE.search(blob or ""):
+                if re.search(r"Purchase\s+Invoice", blob, re.I):
+                    in_footer = True
+                continue
+
+            code = _clean_name(" ".join(cells.get("code") or [])) or None
+            code_ok = bool(code and _SWIL_LAND_CODE_RE.match(code.split()[0]))
+            has_qty = any(
+                _prompt_cell_number(cells.get(field) or []) is not None
+                for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+            )
+            if name and not has_qty and not code_ok and items:
+                items[-1]["product_name"] = _clean_name(
+                    str(items[-1].get("product_name") or "") + " " + name
+                )
+                continue
+            if not code_ok and not (name and has_qty):
+                continue
+            if not name:
+                continue
+
+            item = empty_line_item()
+            item["product_code"] = code
+            item["product_name"] = name
+            pack = " ".join(cells.get("pack") or []).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            sale_val = _prompt_cell_number(cells.get("sales_value") or [])
+            close_val = _prompt_cell_number(cells.get("closing_value") or [])
+            if sale_val is not None:
+                item["sales_value"] = sale_val
+            if close_val is not None:
+                item["closing_value"] = close_val
+            extra = item["extra"]
+            open_val = _prompt_cell_number(cells.get("opening_value") or [])
+            rec_val = _prompt_cell_number(cells.get("receipts_value") or [])
+            if open_val is not None:
+                extra["opening_value"] = open_val
+            if rec_val is not None:
+                extra["receipts_value"] = rec_val
+                ordered: Dict[str, Any] = {}
+                for key, val in item.items():
+                    ordered[key] = val
+                    if key == "receipts_qty":
+                        ordered["receipts_value"] = rec_val
+                item = ordered
+                extra = item["extra"]
+            total_qty = _prompt_cell_number(cells.get("total_qty") or [])
+            if total_qty is not None:
+                extra["total_stock"] = total_qty
+            for extra_key, cell_key in (
+                ("shortage_qty", "shortage_qty"),
+                ("expiry_qty", "expiry_qty"),
+                ("dump_qty", "dump_qty"),
+                ("near_expiry_qty", "near_expiry"),
+            ):
+                number = _prompt_cell_number(cells.get(cell_key) or [])
+                if number is not None:
+                    extra[extra_key] = number
+            items.append(item)
+
+    if not items:
+        return None
+
+    valid = len(items) - _swil_land_identity_fail_count(items)
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "swil_landscape_qty_value"
+    extra["pages"] = pages_used
+    extra["header_detected"] = result.get("report_title")
+    extra["column_mapping"] = column_mapping
+    extra["rows_detected"] = len(items)
+    extra["valid_rows"] = valid
+    extra["invalid_rows"] = len(items) - valid
+    extra["header_detection_confidence"] = 1.0 if column_mapping else 0.0
+    result["line_items"] = items
+    logger.info(
+        "Swil landscape statement %s pages=%s rows=%s valid=%s invalid=%s",
+        filename,
+        pages_used,
+        len(items),
+        valid,
+        len(items) - valid,
+    )
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -4563,8 +4999,24 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
         swil_stmt = _parse_swil_opening_receipt_value_statement(doc, filename)
         if swil_stmt and swil_stmt.get("line_items"):
+            if _swil_fixed_bucket_result_is_weak(swil_stmt, doc):
+                landscape = _parse_swil_landscape_qty_value_statement(doc, filename)
+                if landscape and landscape.get("line_items"):
+                    landscape["totals"]["extra"]["statement_count"] = 1
+                    landscape["totals"]["extra"]["fallback_used"] = True
+                    landscape["totals"]["extra"]["fallback_from"] = (
+                        "swil_opening_receipt_value"
+                    )
+                    return landscape
             swil_stmt["totals"]["extra"]["statement_count"] = 1
+            swil_stmt["totals"]["extra"]["fallback_used"] = False
             return swil_stmt
+        if _is_swil_landscape_qty_value_doc(doc):
+            landscape = _parse_swil_landscape_qty_value_statement(doc, filename)
+            if landscape and landscape.get("line_items"):
+                landscape["totals"]["extra"]["statement_count"] = 1
+                landscape["totals"]["extra"]["fallback_used"] = True
+                return landscape
 
         page_infos: List[Dict[str, Any]] = []
         for page_index, page in enumerate(doc):
