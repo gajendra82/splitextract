@@ -1201,7 +1201,13 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
             and sum_sales_value > 0
             and float(sales_total) > max(sum_sales_value * 50, sum_sales_value + 100000)
         )
-        or (qty_only and sales_total is not None and float(sales_total) > 0)
+        or (
+            qty_only
+            and sales_total is not None
+            and float(sales_total) > 0
+            and str(totals.get("extra", {}).get("total_row_source") or "")
+            != "daxinsoft_footer"
+        )
     )
 
     if bogus_sales:
@@ -3692,6 +3698,14 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     return _xls_finalize_result(result)
 
 
+def _xls_preamble_texts(row: List[Any]) -> List[str]:
+    """Non-empty cells, collapsing merge-expanded repeats (same value across columns)."""
+    texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
+    if len(texts) > 1 and len(set(texts)) == 1:
+        return [texts[0]]
+    return texts
+
+
 def _xls_fill_from_rows(
     result: Dict[str, Any],
     rows: List[List[Any]],
@@ -3701,15 +3715,26 @@ def _xls_fill_from_rows(
 
     # Metadata scan
     for row in rows[:20]:
-        texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
+        texts = _xls_preamble_texts(row)
         joined = " ".join(texts)
         if not texts:
             continue
-        if not result["stockist_name"] and re.search(
-            r"MEDICAL|STORES|AGENC|PHARMA|MEDICO", texts[0], re.I
+        if (
+            not result["stockist_name"]
+            and not re.search(r"@|E-?Mail|Phone\s*:", texts[0], re.I)
+            and re.search(
+                r"MEDICAL|STORES|AGENC|PHARMA|MEDICO|DISTRIBUT",
+                texts[0],
+                re.I,
+            )
+            and not re.search(r"STOCK\s*(?:&|AND)\s*SALES", texts[0], re.I)
         ):
             result["stockist_name"] = _clean_name(texts[0])
-        if re.search(r"Phone|NAGAR|ROAD|HOUSE|COMPLEX", joined, re.I) and len(joined) > 20:
+        if (
+            re.search(r"NAGAR|ROAD|HOUSE|COMPLEX|STREET|TEMPLE|NEAR|APT", joined, re.I)
+            and len(joined) > 20
+            and not re.search(r"E-?Mail|Phone\s*:", joined, re.I)
+        ):
             if not result["stockist_address"]:
                 result["stockist_address"] = _clean_name(joined)
         if re.search(r"Stock and Sale|Stock & Sale|Sales Report", joined, re.I):
@@ -3799,16 +3824,12 @@ def _xls_fill_from_rows(
         for preamble in rows[:header_idx]:
             if not isinstance(preamble, list):
                 continue
-            texts = [
-                str(c).strip()
-                for c in preamble
-                if c is not None and str(c).strip()
-            ]
+            texts = _xls_preamble_texts(preamble)
             if len(texts) != 1:
                 continue
             name = texts[0]
             if re.search(
-                r"\d|STOCK|SALES|STATEMENT|PRODUCT|ITEM|OPENING|CLOSING|"
+                r"@|\d|STOCK|SALES|STATEMENT|PRODUCT|ITEM|OPENING|CLOSING|"
                 r"REPORT|PHONE|E-?MAIL|D\.?L|PAGE|FROM|DATE|ADDRESS",
                 name,
                 re.I,
@@ -4854,13 +4875,34 @@ def _extract_statement_from_pdf_group(
         merged = empty_result(filename, "pdf")
         merged_items: List[Dict[str, Any]] = []
         used_zandra = False
+        saw_swil_receipt_ocr = False
+        page_results: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
         for p in pages:
             img = p.get("image_bytes")
             if not img:
                 continue
             page_name = f"{filename}#page{p['page_index'] + 1}"
             page_result: Optional[Dict[str, Any]] = None
-            if zandra_hint or _looks_like_zandra_stock_sale_text(p.get("text") or ""):
+            upright_swil = False
+            try:
+                upright_swil = _is_swil_opening_receipt_value_statement(
+                    _ocr_image_to_text(_upright_swil_receipt_image(img))
+                )
+            except Exception:
+                upright_swil = False
+            if upright_swil:
+                saw_swil_receipt_ocr = True
+                page_result = _extract_swil_receipt_value_vision(
+                    img, page_name, ".png"
+                )
+            if (
+                (not page_result or not page_result.get("line_items"))
+                and not upright_swil
+                and (
+                    zandra_hint
+                    or _looks_like_zandra_stock_sale_text(p.get("text") or "")
+                )
+            ):
                 page_result = _extract_zandra_stock_sale_vision(
                     img, page_name, ".png"
                 )
@@ -4869,11 +4911,46 @@ def _extract_statement_from_pdf_group(
                 )
             if not page_result or not page_result.get("line_items"):
                 page_result = _parse_image(img, page_name, ".png")
-                if _looks_like_zandra_stock_sale_result(page_result):
+                if (
+                    _looks_like_zandra_stock_sale_result(page_result)
+                    and not upright_swil
+                    and not re.search(
+                        r"Sales\s*&\s*Stock",
+                        str(page_result.get("report_title") or ""),
+                        re.I,
+                    )
+                ):
                     zandra = _extract_zandra_stock_sale_vision(img, page_name, ".png")
                     if zandra and zandra.get("line_items"):
                         page_result = zandra
                         used_zandra = True
+            page_results.append((p, page_result or empty_result(page_name, "pdf")))
+
+        # Continuation pages often omit the Sales & Stock header. If one page
+        # already kept Receipt/Pur Value, reread pages that dropped it.
+        if saw_swil_receipt_ocr or any(
+            _swil_receipt_value_count(pr) > 0 for _p, pr in page_results
+        ):
+            for idx, (p, pr) in enumerate(page_results):
+                img = p.get("image_bytes")
+                if not img or _swil_receipt_value_count(pr) > 0:
+                    continue
+                if not (pr.get("line_items") or []):
+                    continue
+                page_name = f"{filename}#page{p['page_index'] + 1}"
+                swil = _extract_swil_receipt_value_vision(img, page_name, ".png")
+                if swil and swil.get("line_items"):
+                    page_results[idx] = (p, swil)
+
+        used_swil_receipt = False
+        for _p, page_result in page_results:
+            method = str(
+                ((page_result.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or ""
+            )
+            used_swil_receipt = used_swil_receipt or method == "swil_receipt_pur_value_vision"
             for key in (
                 "stockist_name",
                 "stockist_address",
@@ -4890,16 +4967,72 @@ def _extract_statement_from_pdf_group(
                 merged["totals"]["sales_value"] = totals.get("sales_value")
             if totals.get("closing_value") is not None:
                 merged["totals"]["closing_value"] = totals.get("closing_value")
+            if totals.get("receipts_value") is not None:
+                merged["totals"]["receipts_value"] = totals.get("receipts_value")
+                merged["totals"]["extra"]["receipts_value"] = totals.get("receipts_value")
         merged["line_items"] = _drop_trailing_statement_total_item(merged_items)
-        merged["totals"]["extra"]["extraction_method"] = (
-            "zandra_stock_sale_vision" if used_zandra else "pdf_split_page_images"
+        swil_receipt_doc = (
+            used_swil_receipt
+            or saw_swil_receipt_ocr
+            or _looks_like_swil_receipt_pur_result(merged)
         )
+        if not swil_receipt_doc:
+            title = str(merged.get("report_title") or "")
+            swil_receipt_doc = bool(
+                re.search(r"Sales\s*&\s*Stock", title, re.I)
+                and len(merged.get("line_items") or []) >= 8
+            )
+        if swil_receipt_doc:
+            merged["line_items"] = _dedupe_swil_receipt_overlap_items(
+                merged["line_items"]
+            )
+            used_swil_receipt = True
+            printed = None
+            for p, _pr in reversed(page_results):
+                img = p.get("image_bytes")
+                if not img:
+                    continue
+                try:
+                    from PIL import Image
+
+                    image = Image.open(io.BytesIO(img))
+                    if image.mode not in ("RGB", "L"):
+                        image = image.convert("RGB")
+                    for deg in (0, 90, 270):
+                        rot = image if deg == 0 else image.rotate(deg, expand=True)
+                        buf = io.BytesIO()
+                        rot.save(buf, format="PNG")
+                        printed = _parse_swil_receipt_printed_totals(
+                            _ocr_image_to_text(buf.getvalue())
+                        )
+                        if printed and printed.get("closing_value"):
+                            break
+                        printed = None
+                except Exception:
+                    printed = None
+                if printed and printed.get("closing_value"):
+                    break
+            if printed:
+                merged["totals"]["sales_value"] = printed["sales_value"]
+                merged["totals"]["closing_value"] = printed["closing_value"]
+                merged["totals"]["receipts_value"] = printed["receipts_value"]
+                extra_t = merged["totals"]["extra"]
+                extra_t["opening_value"] = printed["opening_value"]
+                extra_t["receipts_value"] = printed["receipts_value"]
+                extra_t["total_row_source"] = "swil_receipt_pur_total_value"
+        if used_swil_receipt:
+            merged["totals"]["extra"]["extraction_method"] = "swil_receipt_pur_value_vision"
+        elif used_zandra:
+            merged["totals"]["extra"]["extraction_method"] = "zandra_stock_sale_vision"
+        else:
+            merged["totals"]["extra"]["extraction_method"] = "pdf_split_page_images"
         image_nonzero = _statement_nonzero_rows(merged)
         prefer_images = (
             image_nonzero > text_nonzero
             or (image_only and merged.get("line_items"))
             or (_statement_numbers_are_blank(result) and image_nonzero > 0)
             or used_zandra
+            or used_swil_receipt
         )
         if prefer_images:
             logger.info(
@@ -5699,6 +5832,1536 @@ def _parse_swil_landscape_qty_value_statement(
     return result
 
 
+_CODE_ITEM_CODE_RE = re.compile(r"^\d{4,6}$")
+_CODE_ITEM_SKIP_RE = re.compile(
+    r"Stock\s+Stat(?:e)?ment|Item\s+Description|GANESH|Page\s+\d|"
+    r"\bTOTALS?\b|^Batch\b|ExPDt|Stock\s*:|MRP\s*:|^\-+$",
+    re.I,
+)
+
+
+def _is_code_item_stock_statement_text(text: str) -> bool:
+    """Ganesh-style Stock Statement: Code / Item / Packing / Opening / Purchase."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Stock\s+Stat(?:e)?ment", text, re.I)
+        and re.search(r"Item\s+Description", text, re.I)
+        and re.search(r"\bPacking\b", text, re.I)
+        and re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bPurchase\b", text, re.I)
+        and re.search(r"Stock-Value", text, re.I)
+        and re.search(r"Sales-Value", text, re.I)
+    )
+
+
+def _code_item_header_field(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z0-9]", "", (token or "").lower())
+    if norm == "code":
+        return "code"
+    if norm in {"item", "description"}:
+        return "product"
+    if norm == "packing":
+        return "pack"
+    if norm == "opening":
+        return "opening_qty"
+    if norm == "purchase":
+        return "receipts_qty"
+    if norm == "sales":
+        return "sales_qty"
+    if norm == "closing":
+        return "closing_qty"
+    if norm == "stockvalue":
+        return "closing_value"
+    if norm == "salesvalue":
+        return "sales_value"
+    return None
+
+
+def _code_item_build_buckets(
+    header_row: Dict[str, Any],
+) -> Optional[List[Tuple[str, float, float]]]:
+    centers: List[Tuple[str, float]] = []
+    for _x0, _x1, xc, token in header_row.get("words") or []:
+        field = _code_item_header_field(token)
+        if not field:
+            continue
+        if centers and centers[-1][0] == field:
+            prev_name, prev_xc = centers[-1]
+            centers[-1] = (prev_name, (prev_xc + xc) / 2.0)
+        else:
+            centers.append((field, xc))
+    names = {name for name, _xc in centers}
+    if "product" not in names or "opening_qty" not in names:
+        return None
+    centers.sort(key=lambda item: item[1])
+    buckets: List[Tuple[str, float, float]] = []
+    for idx, (name, xc) in enumerate(centers):
+        lo = 0.0 if idx == 0 else (centers[idx - 1][1] + xc) / 2.0
+        hi = 10000.0 if idx == len(centers) - 1 else (xc + centers[idx + 1][1]) / 2.0
+        buckets.append((name, lo, hi))
+    return buckets
+
+
+def _code_item_bucket(
+    x: float, buckets: List[Tuple[str, float, float]]
+) -> Optional[str]:
+    for name, lo, hi in buckets:
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _parse_code_item_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Code/Item Description/Packing/Opening/Purchase/Sales/Closing PDFs."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_code_item_stock_statement_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    items: List[Dict[str, Any]] = []
+    buckets: Optional[List[Tuple[str, float, float]]] = None
+    column_mapping: Dict[str, Any] = {}
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("report_title"):
+            m = re.search(
+                r"Stock\s+Stat(?:e)?ment\s*:\s*(.+)$",
+                text,
+                re.I | re.M,
+            )
+            if m:
+                result["report_title"] = "Stock Statement"
+                company = _clean_name(m.group(1))
+                company = re.sub(r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$", "", company)
+                if company:
+                    result["company_name"] = company
+        if not result.get("period_to"):
+            m_date = re.search(
+                r"Stock\s+Stat(?:e)?ment[\s\S]{0,80}?(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,
+                re.I,
+            )
+            if m_date:
+                result["period_to"] = _normalize_date(m_date.group(1))
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if raw and not re.search(
+                    r"Page\s+\d|Stock\s+Stat|Code\s+Item|^-+$", raw, re.I
+                ):
+                    result["stockist_name"] = _clean_name(raw)
+                    break
+
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=4.0)
+        header_row = next(
+            (
+                row
+                for row in rows
+                if re.search(r"Item", _swil_land_row_blob(row), re.I)
+                and re.search(r"Packing", _swil_land_row_blob(row), re.I)
+                and re.search(r"Opening", _swil_land_row_blob(row), re.I)
+            ),
+            None,
+        )
+        if header_row is not None:
+            built = _code_item_build_buckets(header_row)
+            if built:
+                buckets = built
+                if not column_mapping:
+                    column_mapping = {
+                        name: {"x0": lo, "x1": hi} for name, lo, hi in buckets
+                    }
+        if not buckets:
+            continue
+
+        field_names = [name for name, _lo, _hi in buckets]
+        skip_y = header_row["y"] + 8.0 if header_row is not None else 0.0
+        for row in rows:
+            if row["y"] <= skip_y:
+                continue
+            blob = _swil_land_row_blob(row)
+            if _CODE_ITEM_SKIP_RE.search(blob or ""):
+                if re.search(r"\bTOTALS?\b", blob, re.I):
+                    cells = {name: [] for name in field_names}
+                    for _x0, _x1, xc, token in row["words"]:
+                        bucket = _code_item_bucket(xc, buckets)
+                        if bucket:
+                            cells[bucket].append(token)
+                    stock_val = _prompt_cell_number(cells.get("closing_value") or [])
+                    sale_val = _prompt_cell_number(cells.get("sales_value") or [])
+                    extra = result["totals"]["extra"]
+                    if stock_val is not None:
+                        result["totals"]["closing_value"] = stock_val
+                    if sale_val is not None:
+                        result["totals"]["sales_value"] = sale_val
+                    extra["total_row_source"] = "code_item_totals"
+                continue
+
+            cells = {name: [] for name in field_names}
+            for _x0, _x1, xc, token in row["words"]:
+                bucket = _code_item_bucket(xc, buckets)
+                if bucket:
+                    cells[bucket].append(token)
+            code = _clean_name(" ".join(cells.get("code") or []))
+            name = _clean_name(" ".join(cells.get("product") or []))
+            if not code or not _CODE_ITEM_CODE_RE.match(code):
+                continue
+            if not name or re.match(r"^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$", name):
+                continue
+
+            item = empty_line_item()
+            item["product_code"] = code
+            item["product_name"] = name
+            pack = " ".join(cells.get("pack") or []).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            sale_val = _prompt_cell_number(cells.get("sales_value") or [])
+            close_val = _prompt_cell_number(cells.get("closing_value") or [])
+            if sale_val is not None:
+                item["sales_value"] = sale_val
+            if close_val is not None:
+                item["closing_value"] = close_val
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "code_item_stock_statement"
+    extra["column_mapping"] = column_mapping
+    extra["rows_detected"] = len(items)
+    extra["header_detected"] = result.get("report_title")
+    extra["fallback_used"] = False
+    logger.info(
+        "Code/item stock statement %s rows=%s stockist=%s",
+        filename,
+        len(items),
+        result.get("stockist_name"),
+    )
+    return result
+
+
+_SALEABLE_ROW_RE = re.compile(
+    r"^(?P<name>.+?)\s*\|\s*\|?\s*"
+    r"(?P<opn>[\d.,]+|[—–\-]+)\s*\|\s*"
+    r"(?P<rec>[\d.,]+|[—–\-]+)\s*\|\s*"
+    r"(?P<issue>[\d.,]+|[—–\-]+)\s*\|\s*"
+    r"(?P<bal>[\d.,]+|[—–\-]+)\s*$"
+)
+_SALEABLE_PACK_RE = re.compile(
+    r"^(?P<name>.+?)\s+(?P<pack>(?:\d+\s*X\s*)?\d+(?:\.\d+)?\s*"
+    r"(?:X\s*\d+\s*)?(?:TAB|CAPS?|GM|ML|S)?\.?)$",
+    re.I,
+)
+_SALEABLE_SKIP_NAME_RE = re.compile(
+    r"^(?:Particular|COMPANY(?:\s+Total)?|Firm\s+Total|Saleable|"
+    r"Page\s+No|\(From|\(Q\+F\)|Tel\.|EMail|A\b)",
+    re.I,
+)
+
+
+def _is_saleable_stock_report_text(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(r"Saleable\s+Stock\s+Report", text, re.I)
+        and re.search(r"\bParticular\b", text, re.I)
+        and re.search(r"\bOpn\b", text, re.I)
+        and re.search(r"\bIssue\b", text, re.I)
+        and re.search(r"\bBal\b", text, re.I)
+    )
+
+
+def _saleable_qty(token: str) -> float:
+    raw = str(token or "").strip()
+    if not raw or re.fullmatch(r"[—–\-\s]+", raw):
+        return 0.0
+    return _to_float(raw)
+
+
+def _saleable_split_packing(particular: str) -> Tuple[str, Optional[str]]:
+    text = _clean_name(particular)
+    glued = re.search(
+        r"^(?P<name>.+?)(?P<pack>\d+\s*X\s*\d+\s*(?:TAB|CAPS?|GM|ML|S)?\.?)$",
+        text,
+        re.I,
+    )
+    if glued:
+        name = _clean_name(glued.group("name"))
+        pack = _clean_name(glued.group("pack"))
+        if name and len(name) >= 3:
+            return name, pack or None
+    match = _SALEABLE_PACK_RE.match(text)
+    if not match:
+        return text, None
+    name = _clean_name(match.group("name"))
+    pack = _clean_name(match.group("pack"))
+    if not name or len(name) < 3:
+        return text, None
+    return name, pack or None
+
+
+def _parse_saleable_stock_report(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse Saleable Stock Report (Particular | Opn | Rec | Issue | Bal)."""
+    if not _is_saleable_stock_report_text(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Saleable Stock Report"
+    items: List[Dict[str, Any]] = []
+
+    for ln in text.splitlines():
+        raw = ln.strip()
+        if not raw:
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICO|AGENC|STORES|PHARMA|DISTRIBUT", raw, re.I
+        ):
+            result["stockist_name"] = _clean_name(raw)
+            continue
+        if not result.get("stockist_address") and re.search(
+            r"ROAD|COMPLEX|NAGAR|SONEPAT|HOUSE", raw, re.I
+        ):
+            result["stockist_address"] = _clean_name(raw)
+            continue
+        m_period = re.search(
+            r"\(From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+To\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\)",
+            raw,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+            continue
+        m_co = re.search(r"^COMPANY\s*:\s*(.+)$", raw, re.I)
+        if m_co:
+            company = re.sub(r"\s+\d+\s*$", "", m_co.group(1)).strip()
+            result["company_name"] = _clean_name(company)
+            continue
+
+        if re.search(r"^(?:COMPANY|Firm)\s+Total\b", raw, re.I):
+            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
+            if len(nums) >= 4 and raw.count("|") >= 3:
+                extra = result["totals"]["extra"]
+                extra["opening_qty"] = _to_float(nums[-4])
+                extra["receipts_qty"] = _to_float(nums[-3])
+                extra["sales_qty"] = _to_float(nums[-2])
+                extra["closing_qty"] = _to_float(nums[-1])
+                extra["total_row_source"] = "saleable_company_total"
+            continue
+        if re.search(r"\|A\|", raw):
+            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
+            if len(nums) >= 4:
+                extra = result["totals"]["extra"]
+                extra["opening_value"] = _to_float(nums[-4])
+                extra["receipts_value"] = _to_float(nums[-3])
+                extra["printed_sales_value"] = _to_float(nums[-2])
+                extra["printed_closing_value"] = _to_float(nums[-1])
+            continue
+
+        match = _SALEABLE_ROW_RE.match(raw)
+        if not match:
+            continue
+        name = _clean_name(match.group("name"))
+        if not name or _SALEABLE_SKIP_NAME_RE.search(name):
+            continue
+        name, pack = _saleable_split_packing(name)
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = _saleable_qty(match.group("opn"))
+        item["receipts_qty"] = _saleable_qty(match.group("rec"))
+        item["sales_qty"] = _saleable_qty(match.group("issue"))
+        item["closing_qty"] = _saleable_qty(match.group("bal"))
+        items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "saleable_stock_report"
+    extra["layout"] = "saleable_opn_rec_issue_bal"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+def _parse_saleable_stock_report_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    text = "\n".join((page.get_text("text") or "") for page in doc)
+    return _parse_saleable_stock_report(text, filename, "pdf")
+
+
+_ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
+
+
+def _is_order_form_stock_statement_text(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(r"STOCK\s+STATEMENT", text, re.I)
+        and re.search(r"ORDER\s+FORM", text, re.I)
+        and re.search(r"PRODUCT\s+NAME", text, re.I)
+        and re.search(r"\bPACK\b", text, re.I)
+        and re.search(r"PURCH\.RET", text, re.I)
+        and re.search(r"STOCK\s+VALUE", text, re.I)
+    )
+
+
+def _parse_order_form_stock_statement(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse CODE / PRODUCT NAME / PACK / OPENING / PURCHASE / SALE / STOCK VALUE."""
+    if not _is_order_form_stock_statement_text(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Stock Statement Order Form"
+    items: List[Dict[str, Any]] = []
+    seen: set = set()
+
+    for ln in text.splitlines():
+        raw = ln.replace("\xa0", " ").strip()
+        if not raw or raw.startswith("="):
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICAL|AGENC|STORES|PHARMA|DISTRIBUT", raw, re.I
+        ):
+            if not re.search(r"STOCK\s+STATEMENT|FROM\s+DATE|PRODUCT\s+NAME", raw, re.I):
+                result["stockist_name"] = _clean_name(raw)
+                continue
+        m_period = re.search(
+            r"FROM\s+DATE\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+TO\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            raw,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+            continue
+        m_co = re.search(r"STOCK\s+STATEMENT\s+ORDER\s+FORM\s+(.+)$", raw, re.I)
+        if m_co:
+            result["company_name"] = _clean_name(m_co.group(1))
+            continue
+        if re.match(r"^TOTAL\s+VALUE\b", raw, re.I):
+            nums = _ORDER_FORM_NUM_RE.findall(raw)
+            extra = result["totals"]["extra"]
+            if len(nums) >= 6:
+                extra["opening_value"] = _to_float(nums[0])
+                extra["receipts_value"] = _to_float(nums[1])
+                result["totals"]["sales_value"] = _to_float(nums[3])
+                result["totals"]["closing_value"] = _to_float(nums[-1])
+            elif len(nums) >= 2:
+                result["totals"]["closing_value"] = _to_float(nums[-1])
+            extra["total_row_source"] = "order_form_total_value"
+            continue
+        m_actual = re.search(r"ACTUAL\s+SALE\s+VALUE\s*=\s*([-\d,.]+)", raw, re.I)
+        if m_actual:
+            result["totals"]["extra"]["actual_sale_value"] = _to_float(m_actual.group(1))
+            continue
+        if not re.match(r"^\d{6}\s+\S", raw) or len(raw) < 50:
+            continue
+        code = raw[:6]
+        if code in seen:
+            continue
+        name = _clean_name(raw[7:33])
+        pack = _clean_name(raw[33:44]) or None
+        nums = _ORDER_FORM_NUM_RE.findall(raw[44:] if len(raw) > 44 else "")
+        if not name or len(nums) < 8:
+            continue
+        item = empty_line_item()
+        item["product_code"] = code
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = _to_float(nums[0])
+        item["receipts_qty"] = _to_float(nums[1])
+        purch_ret = _to_float(nums[2])
+        item["sales_qty"] = _to_float(nums[3])
+        item["sales_value"] = _to_float(nums[4])
+        sale_ret = _to_float(nums[5])
+        item["closing_qty"] = _to_float(nums[6])
+        item["closing_value"] = _to_float(nums[7])
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            if purch_ret:
+                extra["purchase_return_qty"] = purch_ret
+            if sale_ret:
+                extra["sale_return_qty"] = sale_ret
+        items.append(item)
+        seen.add(code)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "order_form_stock_statement"
+    extra["layout"] = "code_name_pack_opening_purchase_sale_stock"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+def _parse_order_form_stock_statement_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    text = "\n".join((page.get_text("text") or "") for page in doc)
+    return _parse_order_form_stock_statement(text, filename, "pdf")
+
+
+_SSA_ORI_TOKEN_RE = re.compile(r"^(?:-|\d+(?:\.\d+)?)$")
+_SSA_ORI_PACK_RE = re.compile(
+    r"^(?:\d+\s*\*\s*\d+|\d+X\d+|\d+(?:\.\d+)?(?:ML|GM|GMS|TAB|CC|S)?)$",
+    re.I,
+)
+
+
+def _is_ssa_opening_receipt_issue_value_text(text: str) -> bool:
+    """STOCK & SALES ANALYSIS with Opening/Receipt/Issue/Closing qty+value + DUMP."""
+    if not text:
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    if not re.search(r"ITEM\s+DESCRIPTION", text, re.I):
+        return False
+    if not re.search(r"\bRECEIPT\b", text, re.I):
+        return False
+    if not re.search(r"\bISSUE\b", text, re.I):
+        return False
+    if not re.search(r"\bCLOSING\b", text, re.I):
+        return False
+    if not re.search(r"\bDUMP\b", text, re.I):
+        return False
+    if not re.search(r"\bVALUE\b", text, re.I):
+        return False
+    if (
+        re.search(r"\bPurchases\b", text)
+        and re.search(r"\bOthers\b", text)
+        and re.search(r"\bRate\b", text)
+    ):
+        return False
+    return True
+
+
+def _ssa_ori_number(token: str) -> float:
+    raw = str(token or "").strip()
+    if raw in {"", "-", "—", "--"}:
+        return 0.0
+    return _to_float(raw)
+
+
+def _ssa_ori_split_pack(name: str) -> Tuple[str, Optional[str]]:
+    parts = _clean_name(name).split()
+    if len(parts) >= 2 and parts[-1].upper() in {"ML", "GM", "GMS"} and re.fullmatch(
+        r"\d+(?:\.\d+)?", parts[-2]
+    ):
+        return _clean_name(" ".join(parts[:-2])), f"{parts[-2]} {parts[-1]}"
+    if len(parts) >= 2 and _SSA_ORI_PACK_RE.match(parts[-1]):
+        last = parts[-1]
+        if last.isdigit() and len(last) > 3:
+            return _clean_name(name), None
+        return _clean_name(" ".join(parts[:-1])), last
+    return _clean_name(name), None
+
+
+def _parse_ssa_opening_receipt_issue_value(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing qty+value."""
+    if not _is_ssa_opening_receipt_issue_value_text(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+    in_purchase_detail = False
+
+    for ln in text.splitlines():
+        raw = ln.replace("\xa0", " ").rstrip()
+        stripped = raw.strip()
+        if not stripped or set(stripped) <= {"-", "="}:
+            continue
+        if re.match(r"^PURCHASE\s+DETAIL", stripped, re.I):
+            in_purchase_detail = True
+            continue
+        if in_purchase_detail:
+            continue
+        if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", stripped, re.I):
+            m_period = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–]\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                stripped,
+            )
+            if m_period:
+                result["period_from"] = _normalize_date(m_period.group(1))
+                result["period_to"] = _normalize_date(m_period.group(2))
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICAL|STORE|AGENC|MEDICO|PHARMA", stripped, re.I
+        ):
+            if not re.search(r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION", stripped, re.I):
+                result["stockist_name"] = _clean_name(stripped)
+            continue
+        if re.search(
+            r"Phone\s*:|E-Mail|GSTIN|D\.L\.No|ITEM\s+DESCRIPTION|^QTY\.|"
+            r"SADAR|SUPPLIER\s+NAME",
+            stripped,
+            re.I,
+        ):
+            continue
+        if re.match(r"^TOTAL\b", stripped, re.I):
+            tokens = stripped.split()
+            nums = [t for t in tokens[1:] if _SSA_ORI_TOKEN_RE.match(t)]
+            if len(nums) >= 8:
+                extra = result["totals"]["extra"]
+                extra["opening_qty"] = _ssa_ori_number(nums[0])
+                extra["opening_value"] = _ssa_ori_number(nums[1])
+                extra["receipts_qty"] = _ssa_ori_number(nums[2])
+                extra["receipts_value"] = _ssa_ori_number(nums[3])
+                extra["sales_qty"] = _ssa_ori_number(nums[4])
+                result["totals"]["sales_value"] = _ssa_ori_number(nums[5])
+                extra["closing_qty"] = _ssa_ori_number(nums[6])
+                result["totals"]["closing_value"] = _ssa_ori_number(nums[7])
+                extra["total_row_source"] = "ssa_ori_grand_total"
+            continue
+
+        tokens = stripped.split()
+        if len(tokens) < 10:
+            if (
+                not result.get("company_name")
+                and re.search(r"HIMALAYA|HIMALYA", stripped, re.I)
+                and not re.search(r"\d{2,}", stripped)
+            ):
+                result["company_name"] = _clean_name(stripped)
+            continue
+        tail = tokens[-9:]
+        if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail):
+            continue
+        name = " ".join(tokens[:-9]).strip()
+        if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
+            continue
+        name, pack = _ssa_ori_split_pack(name)
+        if not name:
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = _ssa_ori_number(tail[0])
+        item["receipts_qty"] = _ssa_ori_number(tail[2])
+        item["sales_qty"] = _ssa_ori_number(tail[4])
+        item["sales_value"] = _ssa_ori_number(tail[5])
+        item["closing_qty"] = _ssa_ori_number(tail[6])
+        item["closing_value"] = _ssa_ori_number(tail[7])
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["opening_value"] = _ssa_ori_number(tail[1])
+            extra["receipts_value"] = _ssa_ori_number(tail[3])
+            extra["purchase_value"] = _ssa_ori_number(tail[3])
+            extra["dump_qty"] = _ssa_ori_number(tail[8])
+        items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "ssa_opening_receipt_issue_value"
+    extra["layout"] = "ssa_opening_receipt_issue_value"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+def _parse_ssa_opening_receipt_issue_value_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    text = "\n".join((page.get_text("text") or "") for page in doc)
+    return _parse_ssa_opening_receipt_issue_value(text, filename, "pdf")
+
+
+_SSA_MEXP_DATE_RE = re.compile(r"^\d{1,2}/\d{2}$")
+_SSA_MEXP_BUCKETS = (
+    ("name", 0.0, 172.0),
+    ("pack", 172.0, 238.0),
+    ("opening_qty", 238.0, 290.0),
+    ("opening_value", 290.0, 353.0),
+    ("receipts_qty", 353.0, 406.0),
+    ("receipts_value", 406.0, 463.0),
+    ("sales_qty", 463.0, 514.0),
+    ("sales_value", 514.0, 571.0),
+    ("closing_qty", 571.0, 622.0),
+    ("closing_value", 622.0, 678.0),
+    ("dump_qty", 678.0, 708.0),
+    ("mexp", 708.0, 760.0),
+)
+
+
+def _is_ssa_mexp_stock_sales_text(text: str) -> bool:
+    """Landscape STOCK & SALES ANALYSIS with DUMP + M.EXP (not Prakash dash-DUMP)."""
+    if not _is_ssa_opening_receipt_issue_value_text(text):
+        return False
+    return bool(re.search(r"\bM\.EXP\b", text, re.I))
+
+
+def _ssa_mexp_cell_number(tokens: List[str]) -> Optional[float]:
+    cleaned = [str(t).strip() for t in tokens if str(t).strip()]
+    if cleaned and all(tok in {"-", "—", "--"} for tok in cleaned):
+        return 0.0
+    return _prompt_cell_number(cleaned)
+
+
+def _ssa_mexp_row_cells(row: Dict[str, Any]) -> Dict[str, List[str]]:
+    cells: Dict[str, List[str]] = {name: [] for name, _lo, _hi in _SSA_MEXP_BUCKETS}
+    for _x0, _x1, xc, token in row.get("words") or []:
+        for name, lo, hi in _SSA_MEXP_BUCKETS:
+            if lo <= xc < hi:
+                cells[name].append(token)
+                break
+    return cells
+
+
+def _ssa_mexp_apply_total_tokens(result: Dict[str, Any], nums: List[str]) -> None:
+    if len(nums) < 8:
+        return
+    extra = result["totals"]["extra"]
+    extra["opening_qty"] = _ssa_ori_number(nums[0])
+    extra["opening_value"] = _ssa_ori_number(nums[1])
+    extra["receipts_qty"] = _ssa_ori_number(nums[2])
+    extra["receipts_value"] = _ssa_ori_number(nums[3])
+    extra["sales_qty"] = _ssa_ori_number(nums[4])
+    result["totals"]["sales_value"] = _ssa_ori_number(nums[5])
+    extra["closing_qty"] = _ssa_ori_number(nums[6])
+    result["totals"]["closing_value"] = _ssa_ori_number(nums[7])
+    extra["total_row_source"] = "ssa_mexp_grand_total"
+
+
+def _ssa_mexp_fill_item(name: str, pack: Optional[str], nums: List[str]) -> Dict[str, Any]:
+    item = empty_line_item()
+    item["product_name"] = name
+    item["packing"] = pack
+    item["opening_qty"] = _ssa_ori_number(nums[0])
+    item["receipts_qty"] = _ssa_ori_number(nums[2])
+    item["sales_qty"] = _ssa_ori_number(nums[4])
+    item["sales_value"] = _ssa_ori_number(nums[5])
+    item["closing_qty"] = _ssa_ori_number(nums[6])
+    item["closing_value"] = _ssa_ori_number(nums[7])
+    extra = item.setdefault("extra", {})
+    if isinstance(extra, dict):
+        extra["opening_value"] = _ssa_ori_number(nums[1])
+        extra["receipts_value"] = _ssa_ori_number(nums[3])
+        extra["purchase_value"] = _ssa_ori_number(nums[3])
+        extra["dump_qty"] = _ssa_ori_number(nums[8]) if len(nums) > 8 else 0.0
+    return item
+
+
+def _parse_ssa_mexp_stock_sales(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Text fallback: strip M.EXP dates, then last 9 Opening/Receipt/Issue/Closing tokens."""
+    if not _is_ssa_mexp_stock_sales_text(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+
+    for ln in text.splitlines():
+        stripped = ln.replace("\xa0", " ").strip()
+        if not stripped or set(stripped) <= {"-", "="}:
+            continue
+        if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", stripped, re.I):
+            m_period = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–]\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                stripped,
+            )
+            if m_period:
+                result["period_from"] = _normalize_date(m_period.group(1))
+                result["period_to"] = _normalize_date(m_period.group(2))
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICAL|STORE|AGENC|MEDICO|PHARMA", stripped, re.I
+        ):
+            if not re.search(r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION", stripped, re.I):
+                result["stockist_name"] = _clean_name(stripped)
+            continue
+        if re.search(
+            r"Phone\s*:|E-Mail|GSTIN|D\.L\.No|ITEM\s+DESCRIPTION|^QTY\.|"
+            r"Continued|Page\s+No",
+            stripped,
+            re.I,
+        ):
+            continue
+        if re.match(r"^TOTAL\b", stripped, re.I):
+            tokens = stripped.split()
+            if tokens and _SSA_MEXP_DATE_RE.match(tokens[-1]):
+                tokens = tokens[:-1]
+            nums = [t for t in tokens[1:] if _SSA_ORI_TOKEN_RE.match(t)]
+            _ssa_mexp_apply_total_tokens(result, nums)
+            continue
+        tokens = stripped.split()
+        if tokens and _SSA_MEXP_DATE_RE.match(tokens[-1]):
+            tokens = tokens[:-1]
+        if len(tokens) < 10:
+            if (
+                not result.get("company_name")
+                and re.search(r"HIMALAYA|HIMALYA", stripped, re.I)
+                and not re.search(r"\d{2,}", stripped)
+            ):
+                result["company_name"] = _clean_name(stripped)
+            continue
+        tail = tokens[-9:]
+        if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail):
+            continue
+        name = " ".join(tokens[:-9]).strip()
+        if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
+            continue
+        name, pack = _ssa_ori_split_pack(name)
+        if not name:
+            continue
+        items.append(_ssa_mexp_fill_item(name, pack, tail))
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "ssa_mexp_stock_sales"
+    extra["layout"] = "ssa_opening_receipt_issue_value_mexp"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+def _parse_ssa_mexp_stock_sales_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Word-position parser for landscape SSA with M.EXP (avoids page-break text cuts)."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_ssa_mexp_stock_sales_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if re.search(r"MEDICAL|STORE|AGENC|MEDICO|PHARMA", raw, re.I) and not re.search(
+                    r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION", raw, re.I
+                ):
+                    result["stockist_name"] = _clean_name(raw)
+                    break
+        m_period = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–]\s*"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        if not result.get("company_name"):
+            m_co = re.search(r"^(HIMALAYA\b[^\d\n]{0,40})$", text, re.I | re.M)
+            if m_co:
+                result["company_name"] = _clean_name(m_co.group(1))
+
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=2.8)
+        for row in rows:
+            blob = _swil_land_row_blob(row)
+            if re.search(
+                r"ITEM\s+DESCRIPTION|^QTY\.|STOCK\s*&\s*SALES|Continued|Page\s+No|"
+                r"Phone\s*:|E-Mail|GSTIN",
+                blob,
+                re.I,
+            ):
+                continue
+            if re.match(r"^TOTAL\b", blob.strip(), re.I):
+                cells = _ssa_mexp_row_cells(row)
+                nums = []
+                for key in (
+                    "opening_qty",
+                    "opening_value",
+                    "receipts_qty",
+                    "receipts_value",
+                    "sales_qty",
+                    "sales_value",
+                    "closing_qty",
+                    "closing_value",
+                    "dump_qty",
+                ):
+                    n = _ssa_mexp_cell_number(cells.get(key) or [])
+                    if n is not None:
+                        nums.append(str(n))
+                _ssa_mexp_apply_total_tokens(result, nums)
+                continue
+            cells = _ssa_mexp_row_cells(row)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            pack = _clean_name(" ".join(cells.get("pack") or []))
+            if not name:
+                continue
+            if re.search(r"HIMALAYA|HIMALYA", name, re.I) and _ssa_mexp_cell_number(
+                cells.get("opening_qty") or []
+            ) is None:
+                if not result.get("company_name"):
+                    result["company_name"] = name
+                continue
+            if _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
+                continue
+            qty_hits = sum(
+                1
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+                if _ssa_mexp_cell_number(cells.get(key) or []) is not None
+            )
+            if qty_hits < 3:
+                continue
+            if not pack:
+                name, pack = _ssa_ori_split_pack(name)
+            nums = [
+                str(_ssa_mexp_cell_number(cells.get(key) or []) or 0.0)
+                for key in (
+                    "opening_qty",
+                    "opening_value",
+                    "receipts_qty",
+                    "receipts_value",
+                    "sales_qty",
+                    "sales_value",
+                    "closing_qty",
+                    "closing_value",
+                    "dump_qty",
+                )
+            ]
+            items.append(_ssa_mexp_fill_item(name, pack or None, nums))
+            extra_item = items[-1].setdefault("extra", {})
+            if isinstance(extra_item, dict):
+                mexp = " ".join(cells.get("mexp") or []).strip()
+                if mexp:
+                    extra_item["m_exp"] = mexp
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "ssa_mexp_stock_sales"
+    extra["layout"] = "ssa_opening_receipt_issue_value_mexp"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+_VED_STOCK_BUCKETS = (
+    ("name", 0.0, 150.0),
+    ("pack", 150.0, 205.0),
+    ("opening_qty", 205.0, 247.0),
+    ("receipts_qty", 247.0, 289.0),
+    ("sale_return", 289.0, 337.0),
+    ("sales_qty", 337.0, 368.0),
+    ("misc_out", 368.0, 409.0),
+    ("closing_qty", 409.0, 458.0),
+    ("closing_value", 458.0, 530.0),
+    ("sales_value", 530.0, 700.0),
+)
+_VED_SKIP_NAME_RE = re.compile(
+    r"^(GEN|TOTAL|GRAND|PAGE|PARTICULARS|PKG|OPEN|PURCH|SALES|CLOSE|"
+    r"STOCK|VALUE|COMPANY|REPORT|LIST|PRODUCT|BATCHNO)\b",
+    re.I,
+)
+
+
+def _is_ved_stock_sales_statement_text(text: str) -> bool:
+    if not text:
+        return False
+    return bool(
+        re.search(r"Stock\s+and\s+sales\s+Statement", text, re.I)
+        and re.search(r"\bParticulars\b", text, re.I)
+        and re.search(r"Purch\.?\s*Qty", text, re.I)
+        and re.search(r"Close\s*Stock", text, re.I)
+        and re.search(r"Sales\s*&\s*DC", text, re.I)
+        and re.search(r"\bPkg\.?\b", text, re.I)
+    )
+
+
+def _ved_bucket(x: float) -> Optional[str]:
+    for name, lo, hi in _VED_STOCK_BUCKETS:
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _ved_cell_number(tokens: List[str]) -> Optional[float]:
+    cleaned = [str(t).strip() for t in tokens if str(t).strip()]
+    if cleaned and all(tok in {"-", "—", "--"} for tok in cleaned):
+        return 0.0
+    return _prompt_cell_number(cleaned)
+
+
+def _ved_row_cells(row: Dict[str, Any]) -> Dict[str, List[str]]:
+    cells: Dict[str, List[str]] = {name: [] for name, _lo, _hi in _VED_STOCK_BUCKETS}
+    for _x0, _x1, xc, token in row.get("words") or []:
+        bucket = _ved_bucket(xc)
+        if bucket:
+            cells[bucket].append(token)
+    return cells
+
+
+def _ved_row_has_qty(cells: Dict[str, List[str]]) -> bool:
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        if _ved_cell_number(cells.get(key) or []) is not None:
+            return True
+    return False
+
+
+def _parse_ved_stock_sales_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse VED-style Particulars / Open Qty / Purch Qty / Sales & DC / Close Stock."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_ved_stock_sales_statement_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and sales Statement"
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if re.search(r"PRIVATE\s+LIMITED|MEDISALES|AGENC|STORES|MEDICO", raw, re.I):
+                    if not re.search(r"Stock\s+and\s+sales|Particulars|Company\s*:", raw, re.I):
+                        result["stockist_name"] = _clean_name(raw)
+                        break
+        if not result.get("stockist_address"):
+            m_addr = re.search(r"(PLOT\.?NO\.?.+)", text, re.I)
+            if m_addr:
+                result["stockist_address"] = _clean_name(m_addr.group(1))
+        m_period = re.search(
+            r"from\s*:\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        m_co = re.search(r"Company\s*:\s*(.+?)(?:\s+Report\s+type|\s+Page\s*:|$)", text, re.I)
+        if m_co:
+            result["company_name"] = _clean_name(m_co.group(1))
+
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=4.5)
+        header_y = 0.0
+        in_expiry = False
+        pending_name = ""
+        skip_idx: set = set()
+        for idx, row in enumerate(rows):
+            if idx in skip_idx:
+                continue
+            blob = _swil_land_row_blob(row)
+            if re.search(r"List\s+of\s+Items\s+with\s+expiry", blob, re.I):
+                in_expiry = True
+                continue
+            if in_expiry:
+                continue
+            if re.search(r"Particulars", blob, re.I) and re.search(r"Pkg", blob, re.I):
+                header_y = max(header_y, row["y"])
+                continue
+            if re.search(r"Close\s*Stock|Purch\.?\s*Qty|Sales\s*&\s*DC", blob, re.I):
+                header_y = max(header_y, row["y"])
+                continue
+            if re.search(
+                r"Company\s*:|Page\s*:|Report\s+type|Stock\s+and\s+sales|"
+                r"Bill\s+No|Gross\s+Amount|Net\s+Amount",
+                blob,
+                re.I,
+            ):
+                continue
+            if row["y"] <= header_y + 6:
+                continue
+            cells = _ved_row_cells(row)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            close_val = _ved_cell_number(cells.get("closing_value") or [])
+            sale_val = _ved_cell_number(cells.get("sales_value") or [])
+            is_grand = bool(re.search(r"Grand\s*Total", blob, re.I) or re.search(r"Grand\s*Total", name, re.I))
+            is_money_footer = (
+                not name
+                and close_val is not None
+                and sale_val is not None
+                and close_val > 100
+                and sale_val > 100
+            )
+            if is_grand or is_money_footer:
+                if close_val:
+                    result["totals"]["closing_value"] = close_val
+                if sale_val:
+                    result["totals"]["sales_value"] = sale_val
+                result["totals"]["extra"]["total_row_source"] = "ved_grand_total"
+                continue
+            if re.search(r"Grand\s*Total", blob, re.I) or re.search(r"Grand\s*Total", name, re.I):
+                continue
+            has_qty = _ved_row_has_qty(cells)
+            if not has_qty:
+                if name and not _VED_SKIP_NAME_RE.search(name):
+                    pending_name = _clean_name(f"{pending_name} {name}")
+                continue
+
+            follow = []
+            for nidx, nxt in enumerate(rows[idx + 1 : idx + 3], start=idx + 1):
+                if nxt["y"] - row["y"] > 14:
+                    break
+                nxt_cells = _ved_row_cells(nxt)
+                if _ved_row_has_qty(nxt_cells):
+                    break
+                extra_name = _clean_name(" ".join(nxt_cells.get("name") or []))
+                if extra_name and not _VED_SKIP_NAME_RE.search(extra_name):
+                    follow.append(extra_name)
+                    skip_idx.add(nidx)
+            name = _clean_name(" ".join([pending_name, name] + follow))
+            pending_name = ""
+            if not name or _VED_SKIP_NAME_RE.search(name):
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = " ".join(cells.get("pack") or []).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = _ved_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _ved_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _ved_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _ved_cell_number(cells.get("closing_qty") or []) or 0.0
+            sale_val = _ved_cell_number(cells.get("sales_value") or [])
+            close_val = _ved_cell_number(cells.get("closing_value") or [])
+            if sale_val is not None:
+                item["sales_value"] = sale_val
+            if close_val is not None:
+                item["closing_value"] = close_val
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict):
+                ret = _ved_cell_number(cells.get("sale_return") or [])
+                misc = _ved_cell_number(cells.get("misc_out") or [])
+                if ret:
+                    extra["sale_return_qty"] = ret
+                if misc:
+                    extra["misc_out_qty"] = misc
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "ved_stock_sales_statement"
+    extra["layout"] = "particulars_open_purch_sales_dc_close"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+_DAXIN_DEFAULT_BUCKETS = (
+    ("name", 0.0, 175.0),
+    ("pack", 175.0, 230.0),
+    ("opening_qty", 230.0, 280.0),
+    ("receipts_qty", 280.0, 335.0),
+    ("total_stock", 335.0, 385.0),
+    ("sales_qty", 385.0, 435.0),
+    ("closing_qty", 435.0, 490.0),
+    ("closing_value", 490.0, 543.0),
+    ("age", 543.0, 620.0),
+)
+_DAXIN_SKIP_NAME_RE = re.compile(
+    r"^(DAXINSOFT|PROFITMAKER|COMPANY|PRODUCT|PACKING|OPENING|PURCHASE|"
+    r"CLOSING|SALE\s+VALUE|GENERATED|PAGE|STOCK)\b",
+    re.I,
+)
+
+
+def _is_daxinsoft_stock_sales_text(text: str) -> bool:
+    """Profitmaker Stock & Sales Statement: O.Stk / Purc / Tot / Sale / Qoh / Age."""
+    if not text:
+        return False
+    if re.search(r"\bParticulars\b", text, re.I) and re.search(r"Purch\.?\s*Qty", text, re.I):
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    if re.search(r"Saleable\s+Stock\s+Report", text, re.I):
+        return False
+    return bool(
+        re.search(r"Stock\s*&\s*Sales\s*Statement", text, re.I)
+        and re.search(r"Product\s+Name", text, re.I)
+        and re.search(r"\bPacking\b", text, re.I)
+        and re.search(r"O\.Stk", text, re.I)
+        and re.search(r"\bPurc\b", text, re.I)
+        and re.search(r"\bQoh\b", text, re.I)
+        and re.search(r"\bAge\b", text, re.I)
+    )
+
+
+def _daxin_header_field(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z0-9.]", "", (token or "").lower())
+    return {
+        "product": "name",
+        "name": "name",
+        "packing": "pack",
+        "ostk": "opening_qty",
+        "o.stk": "opening_qty",
+        "purc": "receipts_qty",
+        "tot": "total_stock",
+        "sale": "sales_qty",
+        "qoh": "closing_qty",
+        "value": "closing_value",
+        "age": "age",
+    }.get(norm)
+
+
+def _daxin_buckets_from_header(row: Dict[str, Any]) -> Optional[List[Tuple[str, float, float]]]:
+    found: Dict[str, Tuple[float, float]] = {}
+    for x0, x1, _xc, token in row.get("words") or []:
+        field = _daxin_header_field(token)
+        if not field:
+            continue
+        if field in found:
+            found[field] = (min(found[field][0], x0), max(found[field][1], x1))
+        else:
+            found[field] = (x0, x1)
+    needed = {"name", "pack", "opening_qty", "sales_qty", "closing_qty", "closing_value"}
+    if not needed.issubset(found):
+        return None
+    ordered = sorted(found.items(), key=lambda item: item[1][0])
+    buckets: List[Tuple[str, float, float]] = []
+    for idx, (field, (x0, _x1)) in enumerate(ordered):
+        lo = 0.0 if idx == 0 else max(0.0, x0 - 2.0)
+        if idx + 1 < len(ordered):
+            hi = ordered[idx + 1][1][0] - 2.0
+        else:
+            hi = 700.0
+        if hi <= lo:
+            hi = lo + 8.0
+        buckets.append((field, lo, hi))
+    if buckets and buckets[0][0] == "name":
+        buckets[0] = ("name", 0.0, buckets[0][2])
+    return buckets
+
+
+def _daxin_cell_number(tokens: List[str]) -> Optional[float]:
+    cleaned = [str(t).strip() for t in tokens if str(t).strip()]
+    if cleaned and all(tok in {"-", "—", "--"} for tok in cleaned):
+        return 0.0
+    return _prompt_cell_number(cleaned)
+
+
+def _daxin_row_cells(
+    row: Dict[str, Any], buckets: List[Tuple[str, float, float]]
+) -> Dict[str, List[str]]:
+    cells: Dict[str, List[str]] = {name: [] for name, _lo, _hi in buckets}
+    for _x0, _x1, xc, token in row.get("words") or []:
+        for name, lo, hi in buckets:
+            if lo <= xc < hi:
+                cells[name].append(token)
+                break
+    return cells
+
+
+def _parse_daxinsoft_stock_sales_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Profitmaker O.Stk / Purc / Sale / Qoh / Value (Age is not money)."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_daxinsoft_stock_sales_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock & Sales Statement"
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if not raw or len(raw) > 80:
+                    continue
+                if re.search(r"DAXINSOFT|PROFITMAKER|Stock\s*&|Product\s+Name|Company\s*:", raw, re.I):
+                    continue
+                if re.search(r"AGEN|STORES|MEDICO|DISTRIBUT|MEDICAL", raw, re.I):
+                    result["stockist_name"] = _clean_name(raw)
+                    break
+        m_period = re.search(
+            r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+To\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        m_co = re.search(r"Company\s*:?\s*([A-Z][A-Z0-9 .&()-]+)", text, re.I)
+        if m_co:
+            result["company_name"] = _clean_name(m_co.group(1))
+        m_sale = re.search(r"Sale\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_close = re.search(r"Closing\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        if m_sale:
+            result["totals"]["sales_value"] = _to_float(m_sale.group(1))
+        if m_close:
+            result["totals"]["closing_value"] = _to_float(m_close.group(1))
+        if m_sale or m_close:
+            result["totals"]["extra"]["total_row_source"] = "daxinsoft_footer"
+        m_open = re.search(r"Opening\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_pur = re.search(r"Purchase\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        extra = result["totals"]["extra"]
+        if m_open:
+            extra["opening_value"] = _to_float(m_open.group(1))
+        if m_pur:
+            extra["purchase_value"] = _to_float(m_pur.group(1))
+
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=3.5)
+        buckets = list(_DAXIN_DEFAULT_BUCKETS)
+        header_y = 0.0
+        for row in rows:
+            blob = _swil_land_row_blob(row)
+            if re.search(r"Product\s+Name", blob, re.I) and re.search(r"O\.Stk", blob, re.I):
+                built = _daxin_buckets_from_header(row)
+                if built:
+                    buckets = built
+                header_y = max(header_y, row["y"])
+                continue
+            if re.search(
+                r"Company\s*:|Opening\s+Value|Purchase\s+Value|Generated\s+in|"
+                r"PROFITMAKER|Stock\s*&\s*Sales|Page\s*:",
+                blob,
+                re.I,
+            ):
+                continue
+            if row["y"] <= header_y + 4:
+                continue
+            cells = _daxin_row_cells(row, buckets)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or _DAXIN_SKIP_NAME_RE.search(name):
+                continue
+            qty_hits = sum(
+                1
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+                if _daxin_cell_number(cells.get(key) or []) is not None
+            )
+            if qty_hits < 3:
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = _clean_name(" ".join(cells.get("pack") or []))
+            item["packing"] = pack or None
+            item["opening_qty"] = _daxin_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _daxin_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _daxin_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _daxin_cell_number(cells.get("closing_qty") or []) or 0.0
+            close_val = _daxin_cell_number(cells.get("closing_value") or [])
+            if close_val is not None:
+                item["closing_value"] = close_val
+            extra_item = item.setdefault("extra", {})
+            if isinstance(extra_item, dict):
+                tot = _daxin_cell_number(cells.get("total_stock") or [])
+                age = _daxin_cell_number(cells.get("age") or [])
+                if tot is not None:
+                    extra_item["total_stock"] = tot
+                if age is not None:
+                    extra_item["age_days"] = age
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "daxinsoft_stock_sales"
+    extra["layout"] = "ostk_purc_tot_sale_qoh_value_age"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
+_OSP_BUCKETS = (
+    ("name", 0.0, 120.0),
+    ("pack", 120.0, 185.0),
+    ("opening_qty", 185.0, 240.0),
+    ("sales_qty", 240.0, 285.0),
+    ("sale_free", 285.0, 320.0),
+    ("sales_value", 320.0, 365.0),
+    ("sales_return", 365.0, 400.0),
+    ("receipts_qty", 400.0, 445.0),
+    ("purchase_free", 445.0, 490.0),
+    ("purchase_value", 490.0, 535.0),
+    ("purchase_return", 535.0, 575.0),
+    ("other", 575.0, 618.0),
+    ("closing_qty", 618.0, 668.0),
+    ("closing_value", 668.0, 715.0),
+    ("expiry_in", 715.0, 750.0),
+    ("expiry_out", 750.0, 800.0),
+)
+_OSP_SKIP_NAME_RE = re.compile(
+    r"^(ITEM|DESCRIPTION|OPENING|SALES|SALE|PURCHASE|CLOSING|EXPIRY|"
+    r"BALANCE|PENDING|SUPPLIER|DEBIT|TOTAL|THE\s+HIMALAYA)\b",
+    re.I,
+)
+
+
+def _is_opening_sales_purchase_statement_text(text: str) -> bool:
+    """Item Description + Opening Balance + Sales Qty/Amount + Purchase Qty + Closing."""
+    if not text:
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    if re.search(r"\bParticulars\b", text, re.I) and re.search(r"Purch\.?\s*Qty", text, re.I):
+        return False
+    if re.search(r"O\.Stk", text, re.I) and re.search(r"\bQoh\b", text, re.I):
+        return False
+    return bool(
+        re.search(r"Stock\s+and\s+Sales\s+Statement", text, re.I)
+        and re.search(r"Item\s+Description", text, re.I)
+        and re.search(r"Opening", text, re.I)
+        and re.search(r"\bBalance\b", text, re.I)
+        and re.search(r"Sales", text, re.I)
+        and re.search(r"\bQty\.?\b", text, re.I)
+        and re.search(r"Purchase", text, re.I)
+        and re.search(r"Closing", text, re.I)
+        and re.search(r"\bAmount\b", text, re.I)
+        and re.search(r"Sale\s+Free|Expiry", text, re.I)
+    )
+
+
+def _osp_cell_number(tokens: List[str]) -> Optional[float]:
+    cleaned = [str(t).strip() for t in tokens if str(t).strip()]
+    if cleaned and all(tok in {"-", "—", "--"} for tok in cleaned):
+        return 0.0
+    return _prompt_cell_number(cleaned)
+
+
+def _osp_row_cells(row: Dict[str, Any]) -> Dict[str, List[str]]:
+    cells: Dict[str, List[str]] = {name: [] for name, _lo, _hi in _OSP_BUCKETS}
+    for _x0, _x1, xc, token in row.get("words") or []:
+        for name, lo, hi in _OSP_BUCKETS:
+            if lo <= xc < hi:
+                cells[name].append(token)
+                break
+    return cells
+
+
+def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Item Description / Opening Balance / Sales Qty / Purchase Qty / Closing."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_opening_sales_purchase_statement_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales Statement"
+    items: List[Dict[str, Any]] = []
+    in_debit_notes = False
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if not raw or len(raw) > 80:
+                    continue
+                if re.search(
+                    r"HIMALAYA|Stock\s+and\s+Sales|Item\s+Description|Phone\s*:|E-Mail|GSTIN|D\.L\.No",
+                    raw,
+                    re.I,
+                ):
+                    continue
+                if re.search(r"DRUG|AGENC|STORE|MEDICO|MEDICAL|DISTRIBUT", raw, re.I):
+                    result["stockist_name"] = _clean_name(raw)
+                    break
+        m_period = re.search(
+            r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        if not result.get("company_name"):
+            m_co = re.search(r"THE\s+HIMALAYA[^\n]*", text, re.I)
+            if m_co:
+                result["company_name"] = _clean_name(m_co.group(0))
+
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=2.8)
+        for row in rows:
+            blob = _swil_land_row_blob(row)
+            if re.search(r"PENDING\s+DEBIT\s+NOTES", blob, re.I):
+                in_debit_notes = True
+                continue
+            if in_debit_notes:
+                continue
+            if re.search(
+                r"Item\s+Description|Stock\s+and\s+Sales|^Balance\s+Qty|"
+                r"Phone\s*:|E-Mail|GSTIN|D\.L\.No|THE\s+HIMALAYA",
+                blob,
+                re.I,
+            ):
+                continue
+            cells = _osp_row_cells(row)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if re.match(r"^TOTAL\b", blob.strip(), re.I) or re.match(r"^TOTAL\b", name, re.I):
+                open_q = _osp_cell_number(cells.get("opening_qty") or [])
+                sale_v = _osp_cell_number(cells.get("sales_value") or [])
+                close_v = _osp_cell_number(cells.get("closing_value") or [])
+                if open_q and sale_v and close_v:
+                    extra = result["totals"]["extra"]
+                    extra["opening_qty"] = open_q
+                    extra["sales_qty"] = _osp_cell_number(cells.get("sales_qty") or [])
+                    extra["receipts_qty"] = _osp_cell_number(cells.get("receipts_qty") or [])
+                    extra["receipts_value"] = _osp_cell_number(cells.get("purchase_value") or [])
+                    extra["purchase_value"] = extra["receipts_value"]
+                    extra["closing_qty"] = _osp_cell_number(cells.get("closing_qty") or [])
+                    result["totals"]["sales_value"] = sale_v
+                    result["totals"]["closing_value"] = close_v
+                    extra["total_row_source"] = "osp_grand_total"
+                continue
+            if not name or _OSP_SKIP_NAME_RE.search(name):
+                continue
+            qty_hits = sum(
+                1
+                for key in ("opening_qty", "sales_qty", "receipts_qty", "closing_qty")
+                if _osp_cell_number(cells.get(key) or []) is not None
+            )
+            if qty_hits < 2:
+                continue
+            pack = _clean_name(" ".join(cells.get("pack") or []))
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack or None
+            item["opening_qty"] = _osp_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _osp_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _osp_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _osp_cell_number(cells.get("closing_qty") or []) or 0.0
+            sale_v = _osp_cell_number(cells.get("sales_value") or [])
+            close_v = _osp_cell_number(cells.get("closing_value") or [])
+            if sale_v is not None:
+                item["sales_value"] = sale_v
+            if close_v is not None:
+                item["closing_value"] = close_v
+            extra_item = item.setdefault("extra", {})
+            if isinstance(extra_item, dict):
+                purch_v = _osp_cell_number(cells.get("purchase_value") or [])
+                if purch_v:
+                    extra_item["purchase_value"] = purch_v
+                    extra_item["receipts_value"] = purch_v
+                for src, dest in (
+                    ("sale_free", "sale_free_qty"),
+                    ("sales_return", "sale_return_qty"),
+                    ("purchase_free", "purchase_free_qty"),
+                    ("purchase_return", "purchase_return_qty"),
+                    ("other", "other_qty"),
+                    ("expiry_in", "expiry_in_qty"),
+                    ("expiry_out", "expiry_out_qty"),
+                ):
+                    val = _osp_cell_number(cells.get(src) or [])
+                    if val:
+                        extra_item[dest] = val
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "item_desc_opening_sales_purchase"
+    extra["layout"] = "opening_sales_purchase_closing"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -5738,6 +7401,46 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 landscape["totals"]["extra"]["statement_count"] = 1
                 landscape["totals"]["extra"]["fallback_used"] = True
                 return landscape
+
+        code_item = _parse_code_item_stock_statement(doc, filename)
+        if code_item and code_item.get("line_items"):
+            code_item["totals"]["extra"]["statement_count"] = 1
+            return code_item
+
+        saleable = _parse_saleable_stock_report_doc(doc, filename)
+        if saleable and saleable.get("line_items"):
+            saleable["totals"]["extra"]["statement_count"] = 1
+            return saleable
+
+        order_form = _parse_order_form_stock_statement_doc(doc, filename)
+        if order_form and order_form.get("line_items"):
+            order_form["totals"]["extra"]["statement_count"] = 1
+            return order_form
+
+        ssa_mexp = _parse_ssa_mexp_stock_sales_doc(doc, filename)
+        if ssa_mexp and ssa_mexp.get("line_items"):
+            ssa_mexp["totals"]["extra"]["statement_count"] = 1
+            return ssa_mexp
+
+        ssa_ori = _parse_ssa_opening_receipt_issue_value_doc(doc, filename)
+        if ssa_ori and ssa_ori.get("line_items"):
+            ssa_ori["totals"]["extra"]["statement_count"] = 1
+            return ssa_ori
+
+        ved = _parse_ved_stock_sales_statement(doc, filename)
+        if ved and ved.get("line_items"):
+            ved["totals"]["extra"]["statement_count"] = 1
+            return ved
+
+        daxin = _parse_daxinsoft_stock_sales_statement(doc, filename)
+        if daxin and daxin.get("line_items"):
+            daxin["totals"]["extra"]["statement_count"] = 1
+            return daxin
+
+        osp = _parse_opening_sales_purchase_statement(doc, filename)
+        if osp and osp.get("line_items"):
+            osp["totals"]["extra"]["statement_count"] = 1
+            return osp
 
         page_infos: List[Dict[str, Any]] = []
         for page_index, page in enumerate(doc):
@@ -7058,6 +8761,30 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
         psr["source_format"] = source_format
         return psr
 
+    # 0d) Saleable Stock Report Particular | Opn | Rec | Issue | Bal
+    saleable = _parse_saleable_stock_report(text, filename, source_format)
+    if saleable and saleable.get("line_items"):
+        saleable["source_format"] = source_format
+        return saleable
+
+    # 0e) STOCK STATEMENT ORDER FORM (CODE / PRODUCT NAME / PACK / OPENING)
+    order_form = _parse_order_form_stock_statement(text, filename, source_format)
+    if order_form and order_form.get("line_items"):
+        order_form["source_format"] = source_format
+        return order_form
+
+    # 0f) STOCK & SALES ANALYSIS with DUMP + M.EXP (before dash-DUMP SSA)
+    ssa_mexp = _parse_ssa_mexp_stock_sales(text, filename, source_format)
+    if ssa_mexp and ssa_mexp.get("line_items"):
+        ssa_mexp["source_format"] = source_format
+        return ssa_mexp
+
+    # 0g) STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing qty+value + DUMP
+    ssa_ori = _parse_ssa_opening_receipt_issue_value(text, filename, source_format)
+    if ssa_ori and ssa_ori.get("line_items"):
+        ssa_ori["source_format"] = source_format
+        return ssa_ori
+
     # 1) Local TXT heuristics (works well for Kaveri-like layouts)
     local = _parse_txt(text.encode("utf-8", errors="ignore"), filename)
     local["source_format"] = source_format
@@ -7495,6 +9222,503 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
     return result
 
 
+_SSA_QTY_VALUE_VISION_PROMPT = """
+This image is a "STOCK & SALES ANALYSIS" printout with paired QTY + VALUE columns.
+It is NOT a Product Stock Report, NOT ZANDRA Stock and Sale, and NOT an OpBal sheet.
+
+Columns LEFT TO RIGHT. A dash or blank cell is 0. NEVER shift a later number left.
+
+1 ITEM DESCRIPTION -> product_name
+2 pack / unit (75G, 60, Pcs) -> packing
+3 OPENING QTY -> opening_qty
+4 OPENING VALUE -> opening_value
+5 RECEIPT QTY -> receipts_qty
+6 RECEIPT VALUE -> receipts_value
+7 ISSUE QTY -> sales_qty
+8 ISSUE VALUE -> sales_value
+9 CLOSING QTY -> closing_qty
+10 CLOSING VALUE -> closing_value
+11 DUMP QTY -> extra.dump_qty
+
+Return ONLY valid JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "opening_value": number,
+      "receipts_qty": number,
+      "receipts_value": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {"dump_qty": number}
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null, "extra": {}}
+}
+
+Rules:
+- stockist_name = agency header (e.g. RAHUL AGENCY), not HIMALAYA ZEAL.
+- company_name = HIMALAYA ZEAL / manufacturer line.
+- OPENING VALUE is a printed money column. Copy it into opening_value.
+  Do not leave opening_value 0 when OPENING VALUE is printed.
+- ISSUE QTY is sales_qty. ISSUE VALUE is sales_value.
+- DUMP QTY is extra.dump_qty, not closing_qty.
+- Skip the HIMALAYA ZEAL banner row and the TOTAL footer row as products.
+- Example: AACTARIL SOAP 75G opening 37 / 2648.83, receipt 0 / 0, issue 0 / 0, closing 37 / 2648.83.
+- Example: ABANA TABS 60 opening 63 / 9361.80, receipt 200 / value, issue 30 / 4700.06, closing 233 / 34623.80.
+- Preserve explicit printed values. Do not recalculate closing_value from qty * rate.
+""".strip()
+
+
+def _looks_like_ssa_qty_value_result(result: Optional[Dict[str, Any]]) -> bool:
+    """Busy SSA is qty-only. This printout pairs OPENING/RECEIPT/ISSUE/CLOSING with VALUE."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    money = sum(
+        1
+        for item in items
+        if _to_float(item.get("closing_value")) > 0
+        or _to_float(item.get("sales_value")) > 0
+    )
+    return money >= 3
+
+
+def _ssa_qty_value_opening_count(result: Optional[Dict[str, Any]]) -> int:
+    count = 0
+    for item in (result or {}).get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        value = extra.get("opening_value")
+        if value is None:
+            value = item.get("opening_value")
+        if _to_float(value) > 0:
+            count += 1
+    return count
+
+
+def _ssa_qty_value_opening_missing(result: Optional[Dict[str, Any]]) -> bool:
+    if not _looks_like_ssa_qty_value_result(result):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    opened = sum(1 for item in items if _to_float(item.get("opening_qty")) > 0)
+    return opened >= 3 and _ssa_qty_value_opening_count(result) == 0
+
+
+def _apply_ssa_qty_value_fields(
+    result: Dict[str, Any], parsed: Dict[str, Any]
+) -> Dict[str, Any]:
+    result = _apply_parsed_sales_json(result, parsed)
+    raw_items = parsed.get("line_items") or []
+    for item, raw in zip(result.get("line_items") or [], raw_items):
+        if not isinstance(item, dict) or not isinstance(raw, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        for key in ("opening_value", "receipts_value", "dump_qty"):
+            value = raw.get(key)
+            if value is None and isinstance(raw.get("extra"), dict):
+                value = raw["extra"].get(key)
+            if value is not None:
+                extra[key] = _to_float(value)
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "ssa_qty_value_vision"
+    extra_t["layout"] = "ssa_opening_receipt_issue_value"
+    return result
+
+
+def _extract_ssa_qty_value_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".jpg",
+) -> Optional[Dict[str, Any]]:
+    """Read STOCK & SALES ANALYSIS QTY/VALUE printouts. Other layouts return None."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _SSA_QTY_VALUE_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+    if last_err and not (parsed and parsed.get("line_items")):
+        logger.warning("SSA qty/value vision failed for %s: %s", filename, last_err)
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_ssa_qty_value_fields(result, parsed)
+    if _ssa_qty_value_opening_count(result) == 0:
+        return None
+    return result
+
+
+_SWIL_RECEIPT_VALUE_VISION_PROMPT = """
+You extract a SwilERP Sales & Stock Statement that prints Qty and Value pairs.
+
+The photo may be rotated 90°. Read the table after mentally rotating it upright.
+
+Columns (left to right):
+PRODUCT NAME | PACKING | Opening Qty | Opening Value | Receipt Qty | Receipt/Pur Value
+| Total Qty | Issue/Sales Qty | Issue/Sales Value | Closing Qty | Closing Value
+
+Map:
+1 PRODUCT NAME -> product_name
+2 PACKING -> packing
+3 Opening Qty -> opening_qty
+4 Opening Value -> opening_value
+5 Receipt Qty -> receipts_qty
+6 Receipt/Pur Value -> receipts_value
+7 Total Qty -> extra.total_stock
+8 Issue/Sales Qty -> sales_qty
+9 Issue/Sales Value -> sales_value
+10 Closing Qty -> closing_qty
+11 Closing Value -> closing_value
+
+Return ONLY valid JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Sales & Stock Statement",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "opening_value": number,
+      "receipts_qty": number,
+      "receipts_value": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {"total_stock": number}
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null, "receipts_value": number|null, "extra": {}}
+}
+
+Rules:
+- Receipt/Pur Value is printed money. Copy it into receipts_value. Do not leave
+  receipts_value missing when Receipt/Pur Value is printed (including 0.00).
+- Opening Value is extra.opening_value / opening_value. Do not invent amounts.
+- Issue/Sales Value is sales_value. Closing Value is closing_value.
+- Skip header, HIMALAYA banner, GRAND TOTAL as a product.
+- Period: From DD/MM/YYYY Upto DD/MM/YYYY.
+- company_name = HIMALAYA WELLNESS COMPANY / manufacturer, not the stockist.
+""".strip()
+
+
+def _line_receipts_value(item: Dict[str, Any]) -> float:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for candidate in (
+        item.get("receipts_value"),
+        extra.get("receipts_value"),
+        extra.get("purchase_value"),
+    ):
+        if candidate not in (None, ""):
+            return _to_float(candidate)
+    return 0.0
+
+
+def _looks_like_swil_receipt_pur_result(result: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(result, dict):
+        return False
+    method = str(
+        ((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or ""
+    )
+    if method in {
+        "swil_opening_receipt_value",
+        "swil_landscape_qty_value",
+        "swil_receipt_pur_value_vision",
+    }:
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"Sales\s*&\s*Stock", title, re.I):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    money = sum(
+        1
+        for item in items
+        if _to_float(item.get("sales_value")) > 0
+        or _to_float(item.get("closing_value")) > 0
+    )
+    rec_qty = sum(1 for item in items if _to_float(item.get("receipts_qty")) > 0)
+    return len(items) >= 3 and money >= 2 and rec_qty >= 1
+
+
+def _swil_receipt_value_count(result: Optional[Dict[str, Any]]) -> int:
+    return sum(
+        1
+        for item in (result or {}).get("line_items") or []
+        if isinstance(item, dict) and _line_receipts_value(item) > 0
+    )
+
+
+def _swil_receipt_value_missing(result: Optional[Dict[str, Any]]) -> bool:
+    return _looks_like_swil_receipt_pur_result(result) and _swil_receipt_value_count(result) == 0
+
+
+_SWIL_PRINTED_TOTAL_RE = re.compile(
+    r"TOTAL\s*\(\s*value[^)]*\)\s*"
+    r"(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)",
+    re.I,
+)
+
+
+def _swil_receipt_item_key(item: Dict[str, Any]) -> Tuple[str, str, float, float, float, float]:
+    name = re.sub(r"[^A-Z0-9]+", "", str(item.get("product_name") or "").upper())
+    pack = re.sub(r"[^A-Z0-9]+", "", str(item.get("packing") or "").upper())
+    if pack and name.endswith(pack):
+        name = name[: -len(pack)]
+    return (
+        name[:20],
+        pack,
+        round(_to_float(item.get("receipts_qty")), 2),
+        round(_to_float(item.get("sales_qty")), 2),
+        round(_to_float(item.get("closing_qty")), 2),
+        round(_line_receipts_value(item), 2),
+    )
+
+
+def _swil_receipt_items_overlap(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    name_a, pack_a, rec_a, sale_a, close_a, rval_a = _swil_receipt_item_key(left)
+    name_b, pack_b, rec_b, sale_b, close_b, rval_b = _swil_receipt_item_key(right)
+    names_match = bool(
+        name_a
+        and name_b
+        and (name_a == name_b or name_a.startswith(name_b) or name_b.startswith(name_a))
+    )
+    if not names_match:
+        return False
+    cv_a = round(_to_float(left.get("closing_value")), 2)
+    cv_b = round(_to_float(right.get("closing_value")), 2)
+    if cv_a > 0 and cv_a == cv_b:
+        return True
+    if pack_a and pack_b and pack_a != pack_b:
+        return False
+    if (rec_a, sale_a, rval_a) != (rec_b, sale_b, rval_b):
+        return False
+    if close_a and close_b and close_a != close_b:
+        return False
+    return True
+
+
+def _dedupe_swil_receipt_overlap_items(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Drop continuation-page rows that repeat an earlier product+qty+value."""
+    out: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if any(_swil_receipt_items_overlap(prev, item) for prev in out):
+            continue
+        out.append(item)
+    return out
+
+
+def _parse_swil_receipt_printed_totals(text: str) -> Optional[Dict[str, float]]:
+    """Parse TOTAL (value IN Rs.) opening / receipt / sales / closing."""
+    if not text:
+        return None
+    blob = re.sub(r"(\d)\s*[.,]\s+(\d)", r"\1.\2", text)
+    match = _SWIL_PRINTED_TOTAL_RE.search(blob)
+    if match:
+        return {
+            "opening_value": _to_float(match.group(1)),
+            "receipts_value": _to_float(match.group(2)),
+            "sales_value": _to_float(match.group(3)),
+            "closing_value": _to_float(match.group(4)),
+        }
+    for ln in reversed(blob.splitlines()):
+        if not re.search(r"\bTOTAL\b", ln, re.I):
+            continue
+        if not re.search(r"value|Rs\.?", ln, re.I):
+            continue
+        nums = [_to_float(tok) for tok in re.findall(r"-?\d+(?:,\d{3})*(?:\.\d+)?", ln)]
+        money = [n for n in nums if n == 0 or abs(n) >= 100]
+        if len(money) < 4:
+            continue
+        return {
+            "opening_value": money[-4],
+            "receipts_value": money[-3],
+            "sales_value": money[-2],
+            "closing_value": money[-1],
+        }
+    return None
+
+
+def _attach_receipts_value(item: Dict[str, Any], rec_val: float) -> Dict[str, Any]:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    extra["receipts_value"] = rec_val
+    extra["purchase_value"] = rec_val
+    item["extra"] = extra
+    ordered: Dict[str, Any] = {}
+    for key, val in item.items():
+        ordered[key] = val
+        if key == "receipts_qty":
+            ordered["receipts_value"] = rec_val
+    if "receipts_value" not in ordered:
+        ordered["receipts_value"] = rec_val
+    return ordered
+
+
+def _apply_swil_receipt_value_fields(
+    result: Dict[str, Any], parsed: Dict[str, Any]
+) -> Dict[str, Any]:
+    result = _apply_parsed_sales_json(result, parsed)
+    raw_items = parsed.get("line_items") or []
+    applied: List[Dict[str, Any]] = []
+    for item, raw in zip(result.get("line_items") or [], raw_items):
+        if not isinstance(item, dict) or not isinstance(raw, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        open_val = raw.get("opening_value")
+        rec_val = raw.get("receipts_value")
+        if isinstance(raw.get("extra"), dict):
+            if open_val is None:
+                open_val = raw["extra"].get("opening_value")
+            if rec_val is None:
+                rec_val = raw["extra"].get("receipts_value")
+                if rec_val is None:
+                    rec_val = raw["extra"].get("purchase_value")
+        if open_val is not None:
+            extra["opening_value"] = _to_float(open_val)
+        if rec_val is not None:
+            item = _attach_receipts_value(item, _to_float(rec_val))
+        applied.append(item)
+    result["line_items"] = applied
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "swil_receipt_pur_value_vision"
+    extra_t["layout"] = "swil_receipt_pur_value"
+    totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+    if totals.get("receipts_value") is not None:
+        rec_total = _to_float(totals.get("receipts_value"))
+        extra_t["receipts_value"] = rec_total
+        result["totals"]["receipts_value"] = rec_total
+    return result
+
+
+def _upright_swil_receipt_image(file_bytes: bytes) -> bytes:
+    """Rotate a sideways Sales & Stock screenshot when Receipt/Pur is readable."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return file_bytes
+    try:
+        image = Image.open(io.BytesIO(file_bytes))
+    except Exception:
+        return file_bytes
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    for deg in (0, 90, 270):
+        rot = image if deg == 0 else image.rotate(deg, expand=True)
+        buf = io.BytesIO()
+        rot.save(buf, format="PNG")
+        data = buf.getvalue()
+        try:
+            text = _ocr_image_to_text(data)
+        except Exception:
+            continue
+        if _is_swil_opening_receipt_value_statement(text):
+            return data
+    return file_bytes
+
+
+def _extract_swil_receipt_value_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Read Sales & Stock Receipt/Pur Value. Other layouts return None."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    upright = _upright_swil_receipt_image(file_bytes)
+    mime = "image/png" if upright is not file_bytes else _image_mime(ext)
+    b64 = base64.b64encode(upright).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _SWIL_RECEIPT_VALUE_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+    if last_err and not (parsed and parsed.get("line_items")):
+        logger.warning("Swil Receipt/Pur vision failed for %s: %s", filename, last_err)
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_swil_receipt_value_fields(result, parsed)
+    if _swil_receipt_value_count(result) == 0:
+        return None
+    return result
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -7575,6 +9799,24 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         )
                         result = _psr_fill_missing_sales(result)
                     return result
+                if _ssa_qty_value_opening_missing(result):
+                    ssa = _extract_ssa_qty_value_vision(file_bytes, filename, ext)
+                    if ssa and ssa.get("line_items"):
+                        logger.info(
+                            "STOCK & SALES ANALYSIS qty/value reread for %s kept opening_value on %s rows",
+                            filename,
+                            _ssa_qty_value_opening_count(ssa),
+                        )
+                        return ssa
+                if _swil_receipt_value_missing(result):
+                    swil = _extract_swil_receipt_value_vision(file_bytes, filename, ext)
+                    if swil and swil.get("line_items"):
+                        logger.info(
+                            "Sales & Stock Receipt/Pur reread for %s kept receipts_value on %s rows",
+                            filename,
+                            _swil_receipt_value_count(swil),
+                        )
+                        return swil
                 return result
             last_err = ValueError(f"non-JSON vision response: {(text or '')[:200]}")
         except GeminiProviderError as exc:
@@ -7597,6 +9839,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         logger.error("Tesseract OCR failed for %s: %s", filename, exc)
         result["totals"]["extra"]["error"] = f"vision_failed: {last_err}; ocr_failed: {exc}"
         return result
+
+    if len(re.sub(r"\s+", "", ocr_text or "")) < 80:
+        upright = _upright_swil_receipt_image(file_bytes)
+        if upright is not file_bytes:
+            swil = _extract_swil_receipt_value_vision(file_bytes, filename, ext)
+            if swil and swil.get("line_items"):
+                return swil
 
     if not ocr_text.strip():
         result["totals"]["extra"]["error"] = "empty OCR text"
@@ -7628,6 +9877,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         if parsed and parsed.get("line_items"):
             result = _apply_parsed_sales_json(result, parsed)
             result["totals"]["extra"]["extraction_method"] = "tesseract_plus_gemini_text"
+            if _swil_receipt_value_count(result) == 0 and (
+                _looks_like_swil_receipt_pur_result(result)
+                or _is_swil_opening_receipt_value_statement(ocr_text)
+            ):
+                swil = _extract_swil_receipt_value_vision(file_bytes, filename, ext)
+                if swil and swil.get("line_items"):
+                    return swil
             return _maybe_repair_product_stock_report(
                 result, ocr_text, filename, ext.lstrip(".") or "png"
             )

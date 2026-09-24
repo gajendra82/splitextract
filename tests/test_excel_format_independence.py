@@ -323,5 +323,64 @@ class TestKnownXlsx(unittest.TestCase):
         self.assertEqual(kap["closing_qty"], 30.0)
 
 
+JAY_XLSX = (
+    Path(__file__).resolve().parents[1]
+    / "0000700082_2026_08_ZL_06_748_04092026111159.xlsx"
+)
+
+
+class TestJayDistributorsHeader(unittest.TestCase):
+    def test_merged_title_uses_name_not_email(self):
+        def merge(sh):
+            sh.merge_cells("A1:I1")
+            sh.merge_cells("A2:I2")
+            sh.merge_cells("A3:I3")
+            sh.merge_cells("A4:I4")
+
+        data = _one(
+            [
+                ["JAY DISTRIBUTORS"],
+                ["1974/0,NEHRU STREET NEAR JAIN TEMPLE, VAPI (W)"],
+                ["Phone : 0260-2463112 E-Mail : jaydistributorsvapi@gmail.com"],
+                ["HDC HIMALAYA(ZEAL) STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026"],
+                [
+                    "PRODUCT DESCRIPTION",
+                    "OPENING\nSTOCK",
+                    "OPENING\nVALUE",
+                    "RECEIVE\nQUANTITY",
+                    "RECEIVE\nVALUE",
+                    "ISSUE\nQUANTITY",
+                    "ISSUE\nVALUE",
+                    "CLOSING\nSTOCK",
+                    "CLOSING\nVALUE",
+                ],
+                ["ABANA 60TAB", 76, 11293.6, 0, 0, 3, 493.94, 73, 10847.8],
+            ],
+            setup=merge,
+        )
+        result = extract_sales_statement(data, "jay.xlsx")
+        self.assertEqual(result["stockist_name"], "JAY DISTRIBUTORS")
+        self.assertNotIn("@", str(result.get("stockist_name") or ""))
+        self.assertIn("NEHRU STREET", str(result.get("stockist_address") or ""))
+        self.assertNotIn("@", str(result.get("stockist_address") or ""))
+        self.assertNotIn("gmail", str(result.get("stockist_address") or "").lower())
+        title = str(result.get("report_title") or "")
+        self.assertEqual(title.count("HDC HIMALAYA"), 1)
+        self.assertEqual(result["line_items"][0]["product_name"], "ABANA 60TAB")
+        self.assertEqual(result["line_items"][0]["sales_qty"], 3.0)
+
+    def test_sample_workbook_stockist_is_jay_distributors(self):
+        if not JAY_XLSX.is_file():
+            self.skipTest(f"missing {JAY_XLSX}")
+        result = extract_sales_statement(JAY_XLSX.read_bytes(), JAY_XLSX.name)
+        self.assertEqual(result["stockist_name"], "JAY DISTRIBUTORS")
+        self.assertNotIn("@", str(result.get("stockist_name") or ""))
+        self.assertIn("NEHRU STREET", str(result.get("stockist_address") or ""))
+        self.assertNotIn("gmail", str(result.get("stockist_address") or "").lower())
+        self.assertEqual(result["period_from"], "2026-08-01")
+        self.assertEqual(result["period_to"], "2026-08-31")
+        self.assertGreater(len(result.get("line_items") or []), 10)
+
+
 if __name__ == "__main__":
     unittest.main()
