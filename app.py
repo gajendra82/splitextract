@@ -29719,11 +29719,13 @@ async def extract_sales_statement_endpoint(
     split_id: Optional[str] = Form(None),
     file_name: Optional[str] = Form(None),
 ):
-    """Extract stock/sales/POD GRN statement data.
+    """Extract stock/sales statement data.
 
-    Returns the SAME top-level JSON contract as /split-and-extract
-    (success, Invoices, invoices, summary, queue, ocr_statistics, ...)
-    so Laravel POD screens can treat GRN Excel like other POD uploads.
+    Default JSON is the original sales-statement contract used by Laravel
+    secondary-sales reprocess: stockist_name, line_items, period_from,
+    period_to, totals, optional statements[].
+
+    POD hospital-sales workbooks still return the /split-and-extract wrapper.
     """
     filename = file.filename or "upload"
     # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
@@ -29789,19 +29791,24 @@ async def extract_sales_statement_endpoint(
         if not batch_id:
             batch_id = str(uuid.uuid4())
         sales_result = extract_sales_statement(file_bytes, filename)
-        # Same response schema as /split-and-extract for Laravel POD compatibility
-        response = build_split_extract_response_from_sales_statement(
-            sales_result=sales_result,
-            source_filename=filename,
-            batch_id=batch_id,
-            split_id=split_id,
-            file_name=file_name or filename,
-            use_blob_storage=use_blob_storage,
-            container_name=blob_container,
-            target_invoices_blob_folder=target_invoices_blob_folder,
-            start_time=start_time,
-        )
-        return JSONResponse(content=response)
+        extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
+        # reprocess requires the original statement contract (line_items,
+        # stockist_name, period_from, statements).
+        if extra.get("extraction_method") == "pod_hospital_wise_sales_xlsx":
+            response = build_split_extract_response_from_sales_statement(
+                sales_result=sales_result,
+                source_filename=filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name or filename,
+                use_blob_storage=use_blob_storage,
+                container_name=blob_container,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                start_time=start_time,
+            )
+            return JSONResponse(content=response)
+        return JSONResponse(content=sales_result)
     except HTTPException:
         raise
     except ValueError as e:
