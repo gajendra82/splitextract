@@ -2169,6 +2169,8 @@ _XLS_HEADER_ALIASES = {
     "ob(qty)": "op",
     "ob": "op",
     "openingquantity": "op",
+    "openingbalqty": "op",
+    "openingbalanceqty": "op",
     "pur": "pur",
     "purch": "pur",
     "purchase": "pur",
@@ -2200,6 +2202,8 @@ _XLS_HEADER_ALIASES = {
     "cbqty": "bal",
     "cb(qty)": "bal",
     "cb": "bal",
+    "closingbalqty": "bal",
+    "closingbalanceqty": "bal",
     "date": "date",
     "statementdate": "date",
     "stockdate": "date",
@@ -2798,6 +2802,31 @@ def _xls_fill_from_rows(
 
     # Score title/blank rows away; do not assume row 1 is the header.
     header_idx, colmap, header_score = _xls_best_header(rows)
+    # Himalaya ZL dump: Opening_bal_qty / Primary_qty / Closing_bal_qty / Secondaryrate.
+    # No sales or amount column. Flag only this header so other layouts stay unchanged.
+    zl_bal_layout = False
+    if header_idx is not None and header_idx < len(rows):
+        _zl_compacts = {
+            re.sub(r"[\s_]+", "", str(cell or "").strip().lower())
+            for cell in rows[header_idx]
+            if cell is not None and str(cell).strip()
+        }
+        zl_bal_layout = (
+            "openingbalqty" in _zl_compacts
+            and "closingbalqty" in _zl_compacts
+            and "primaryqty" in _zl_compacts
+            and "secondaryrate" in _zl_compacts
+            and "sale" not in colmap
+        )
+    # Stock & sales sheet: each qty column has a printed value beside it.
+    # Quantity already comes from opening/closing. Do not remap issue/receive qty.
+    paired_value_layout = (
+        header_idx is not None
+        and {"openingvalue", "closingvalue", "issuevalue", "receivevalue", "op", "bal"}
+        <= set(colmap)
+        and "sale" not in colmap
+        and "bval" not in colmap
+    )
     if header_idx is None:
         extra = result.setdefault("totals", {}).setdefault("extra", {})
         extra["sheet"] = sheet_name
@@ -2982,6 +3011,32 @@ def _xls_fill_from_rows(
                 item["sales_value"] = round(item["sales_qty"] * rate, 2)
             if rate and not item.get("closing_value"):
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
+        if zl_bal_layout:
+            item["extra"]["layout"] = "zl_opening_primary_closing"
+            mrp_i = _col("mrp")
+            if mrp_i is not None and mrp_i < len(row) and _xls_cell_has_qty(row[mrp_i]):
+                item["extra"]["mrp"] = _to_float(row[mrp_i])
+        if paired_value_layout:
+            item["extra"]["layout"] = "paired_stock_value"
+
+            def _paired_amount(field: str) -> Optional[float]:
+                idx = colmap.get(field)
+                if idx is None or idx >= len(row) or not _xls_cell_has_qty(row[idx]):
+                    return None
+                return _to_float(row[idx])
+
+            opening_value = _paired_amount("openingvalue")
+            receive_value = _paired_amount("receivevalue")
+            issue_value = _paired_amount("issuevalue")
+            closing_value = _paired_amount("closingvalue")
+            if opening_value is not None:
+                item["extra"]["opening_value"] = opening_value
+            if receive_value is not None:
+                item["extra"]["purchase_value"] = receive_value
+            if issue_value is not None:
+                item["extra"]["issue_value"] = issue_value
+            if closing_value is not None:
+                item["closing_value"] = closing_value
         date_i = _col("date")
         if (
             date_i is not None
