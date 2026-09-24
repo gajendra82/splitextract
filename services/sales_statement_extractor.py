@@ -2247,6 +2247,230 @@ _XLS_HEADER_ALIASES = {
     "#others": "others",
 }
 
+_POD_HOSPITAL_SALES_HEADERS = {
+    "invoice number",
+    "invoice date",
+    "card code",
+    "card name",
+    "item code",
+    "item description",
+    "quantity",
+    "total",
+}
+_POD_STOCK_HEADERS = {
+    "item_code",
+    "item_name",
+    "manufacturer",
+    "opening",
+    "purchases",
+    "sales",
+    "closing",
+}
+
+
+def _normalized_sheet_headers(row: Tuple[Any, ...]) -> set:
+    return {
+        re.sub(r"\s+", " ", str(value or "").strip().lower())
+        for value in row
+        if value is not None and str(value).strip()
+    }
+
+
+def _parse_pod_hospital_sales_xlsx(
+    workbook: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse the two-sheet POD hospital-sales workbook without affecting generic XLSX."""
+    def pod_date(value: Any) -> str:
+        """Preserve Excel date cells; avoid treating YYYY-MM-DD as DD-MM-YY."""
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        text = str(value or "").strip()
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}(?:\s+00:00:00)?", text):
+            return text[:10]
+        return _normalize_date(text) or text
+
+    hospital_sheet = next(
+        (sheet for sheet in workbook.worksheets
+         if _POD_HOSPITAL_SALES_HEADERS.issubset(
+             _normalized_sheet_headers(next(sheet.iter_rows(
+                 min_row=1, max_row=1, values_only=True), ()))
+         )),
+        None,
+    )
+    stock_sheet = next(
+        (sheet for sheet in workbook.worksheets
+         if _POD_STOCK_HEADERS.issubset(
+             _normalized_sheet_headers(next(sheet.iter_rows(
+                 min_row=1, max_row=1, values_only=True), ()))
+         )),
+        None,
+    )
+    if hospital_sheet is None or stock_sheet is None:
+        return None
+
+    result = empty_result(filename, "xlsx")
+    result["report_title"] = "POD Hospital Wise Sales"
+    result["company_name"] = "ZYDUS"
+    result["totals"]["extra"]["extraction_method"] = "pod_hospital_wise_sales_xlsx"
+    result["totals"]["extra"]["hospital_sales_worksheet"] = hospital_sheet.title
+    result["totals"]["extra"]["stock_statement_worksheet"] = stock_sheet.title
+
+    hospital_headers = [
+        re.sub(r"\s+", " ", str(value or "").strip().lower())
+        for value in next(hospital_sheet.iter_rows(
+            min_row=1, max_row=1, values_only=True
+        ))
+    ]
+    hospital_indices = {
+        header: index for index, header in enumerate(hospital_headers) if header
+    }
+
+    def hospital_cell(row: Tuple[Any, ...], header: str) -> Any:
+        index = hospital_indices.get(header)
+        return row[index] if index is not None and index < len(row) else None
+
+    items: List[Dict[str, Any]] = []
+    hospital_summary: Dict[str, Dict[str, Any]] = {}
+    invoice_dates: List[datetime] = []
+    invoice_numbers: set = set()
+    manufacturers: set = set()
+
+    for row in hospital_sheet.iter_rows(min_row=2, values_only=True):
+        invoice_no = str(hospital_cell(row, "invoice number") or "").strip()
+        hospital_name = _clean_name(str(hospital_cell(row, "card name") or ""))
+        product_name = _clean_name(str(hospital_cell(row, "item description") or ""))
+        if not invoice_no or not hospital_name or not product_name:
+            continue
+
+        invoice_date = hospital_cell(row, "invoice date")
+        if isinstance(invoice_date, datetime):
+            invoice_dates.append(invoice_date)
+            invoice_date_value = invoice_date.strftime("%Y-%m-%d")
+        else:
+            invoice_date_value = pod_date(invoice_date)
+
+        quantity = _to_float(hospital_cell(row, "quantity"))
+        total = _to_float(hospital_cell(row, "total"))
+        manufacturer = _clean_name(
+            str(hospital_cell(row, "manufacturer") or "")
+        )
+        if manufacturer:
+            manufacturers.add(manufacturer)
+
+        item = empty_line_item()
+        item["product_code"] = str(hospital_cell(row, "item code") or "").strip() or None
+        item["product_name"] = product_name
+        item["sales_qty"] = quantity
+        item["sales_value"] = total
+        item["extra"] = {
+            "invoice_number": invoice_no,
+            "invoice_date": invoice_date_value,
+            "hospital_code": str(hospital_cell(row, "card code") or "").strip(),
+            "hospital_name": hospital_name,
+            "hsn": str(hospital_cell(row, "hsn") or "").strip(),
+            "manufacturer": manufacturer,
+            "batch": str(hospital_cell(row, "batch") or "").strip(),
+            "expiry": pod_date(hospital_cell(row, "expiry")),
+            "tax_rate": _to_float(hospital_cell(row, "tax rate")),
+            "mrp": _to_float(hospital_cell(row, "mrp")),
+        }
+        items.append(item)
+        invoice_numbers.add(invoice_no)
+
+        summary = hospital_summary.setdefault(
+            hospital_name,
+            {
+                "hospital_code": item["extra"]["hospital_code"],
+                "hospital_name": hospital_name,
+                "line_count": 0,
+                "invoice_numbers": set(),
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+            },
+        )
+        summary["line_count"] += 1
+        summary["invoice_numbers"].add(invoice_no)
+        summary["sales_qty"] += quantity
+        summary["sales_value"] += total
+
+    if not items:
+        return None
+
+    stock_headers = [
+        str(value or "").strip().lower()
+        for value in next(stock_sheet.iter_rows(
+            min_row=1, max_row=1, values_only=True
+        ))
+    ]
+    stock_indices = {
+        header: index for index, header in enumerate(stock_headers) if header
+    }
+
+    def stock_cell(row: Tuple[Any, ...], header: str) -> Any:
+        index = stock_indices.get(header)
+        return row[index] if index is not None and index < len(row) else None
+
+    stock_statement: List[Dict[str, Any]] = []
+    for row in stock_sheet.iter_rows(min_row=2, values_only=True):
+        item_name = _clean_name(str(stock_cell(row, "item_name") or ""))
+        item_code = str(stock_cell(row, "item_code") or "").strip()
+        if not item_name and not item_code:
+            continue
+        stock_statement.append({
+            "item_code": item_code,
+            "item_name": item_name,
+            "manufacturer": _clean_name(str(stock_cell(row, "manufacturer") or "")),
+            "packing_factor": _to_float(stock_cell(row, "packing factor")),
+            "uom": str(stock_cell(row, "uom") or "").strip(),
+            "opening_qty": _to_float(stock_cell(row, "opening")),
+            "purchases_qty": _to_float(stock_cell(row, "purchases")),
+            "sales_qty": _to_float(stock_cell(row, "sales")),
+            "closing_qty": _to_float(stock_cell(row, "closing")),
+        })
+
+    hospital_sales_summary = []
+    for summary in hospital_summary.values():
+        hospital_sales_summary.append({
+            "hospital_code": summary["hospital_code"],
+            "hospital_name": summary["hospital_name"],
+            "line_count": summary["line_count"],
+            "invoice_count": len(summary["invoice_numbers"]),
+            "sales_qty": round(summary["sales_qty"], 2),
+            "sales_value": round(summary["sales_value"], 2),
+        })
+
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item["sales_value"]) for item in items), 2
+    )
+    result["totals"]["extra"].update({
+        "hospital_count": len(hospital_summary),
+        "invoice_count": len(invoice_numbers),
+        "hospital_sales_line_count": len(items),
+        "hospital_sales_summary": hospital_sales_summary,
+        "stock_statement": stock_statement,
+        "stock_statement_line_count": len(stock_statement),
+        "stock_opening_qty": round(
+            sum(_to_float(item["opening_qty"]) for item in stock_statement), 2
+        ),
+        "stock_purchases_qty": round(
+            sum(_to_float(item["purchases_qty"]) for item in stock_statement), 2
+        ),
+        "stock_sales_qty": round(
+            sum(_to_float(item["sales_qty"]) for item in stock_statement), 2
+        ),
+        "stock_closing_qty": round(
+            sum(_to_float(item["closing_qty"]) for item in stock_statement), 2
+        ),
+    })
+    result["stockist_name"] = "POD Hospital Wise Sales"
+    if len(manufacturers) == 1:
+        result["company_name"] = next(iter(manufacturers))
+    if invoice_dates:
+        result["period_from"] = min(invoice_dates).strftime("%Y-%m-%d")
+        result["period_to"] = max(invoice_dates).strftime("%Y-%m-%d")
+    return result
+
 
 def _xls_norm_header(label: Any) -> str:
     text = str(label or "").replace("\u00a0", " ").replace("\r", " ").replace("\n", " ")
@@ -2455,6 +2679,17 @@ def _xls_finalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
+    if ext != ".xls":
+        from openpyxl import load_workbook
+
+        pod_wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
+        try:
+            pod_result = _parse_pod_hospital_sales_xlsx(pod_wb, filename)
+        finally:
+            pod_wb.close()
+        if pod_result is not None:
+            return pod_result
+
     parts: List[Dict[str, Any]] = []
     last_error: Optional[str] = None
     for sheet_name, rows, formats in _xls_iter_sheets(file_bytes, ext):
@@ -2852,9 +3087,17 @@ def _looks_like_stockist_header(line: str) -> bool:
         return False
     if _STOCKIST_NAME_HINT.search(s):
         return True
-    # ALL-CAPS agency-like short header
+    # ALL-CAPS agency-like short header. Reject OCR noise such as "CN SS OO GO".
     letters = re.sub(r"[^A-Za-z]", "", s)
-    if letters and letters.isupper() and len(s.split()) <= 8:
+    words = re.findall(r"[A-Za-z]{4,}", s)
+    if (
+        letters
+        and letters.isupper()
+        and len(s.split()) <= 8
+        and len(letters) >= 6
+        and len(letters) / max(len(s), 1) >= 0.45
+        and words
+    ):
         return True
     return False
 
@@ -3241,6 +3484,56 @@ def _parse_stock_sales_analysis_words(
     return result
 
 
+def _statement_nonzero_rows(result: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(result, dict):
+        return 0
+    count = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if any(
+            _to_float(item.get(key)) > 0
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            )
+        ):
+            count += 1
+    return count
+
+
+def _statement_numbers_are_blank(result: Optional[Dict[str, Any]]) -> bool:
+    """True when product rows exist but qty/value columns are almost all zero.
+
+    Scanned stock-and-sale grids often OCR into names with no usable digits.
+    Those rows must not block the page-image read.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    nonzero = 0
+    for item in items:
+        if any(
+            _to_float(item.get(key)) > 0
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            )
+        ):
+            nonzero += 1
+    return nonzero <= max(1, len(items) // 10)
+
+
 def _extract_statement_from_pdf_group(
     group: Dict[str, Any], filename: str
 ) -> Dict[str, Any]:
@@ -3248,6 +3541,7 @@ def _extract_statement_from_pdf_group(
     pages = group["pages"]
     page_nos = [p["page_index"] + 1 for p in pages]
     combined_text = "\n\n".join(p.get("text") or "" for p in pages).strip()
+    has_page_images = any(p.get("image_bytes") for p in pages)
 
     result: Optional[Dict[str, Any]] = None
 
@@ -3264,8 +3558,16 @@ def _extract_statement_from_pdf_group(
                 or "pdf_split_text"
             )
 
-    # Fall back to per-page image extraction and merge
-    if not result or not result.get("line_items"):
+    text_nonzero = _statement_nonzero_rows(result)
+    # A short/zero OCR parse of a scanned grid must not hide the page image.
+    text_weak = (
+        not result
+        or not result.get("line_items")
+        or _statement_numbers_are_blank(result)
+        or text_nonzero < 8
+    )
+
+    if has_page_images and text_weak:
         merged = empty_result(filename, "pdf")
         merged_items: List[Dict[str, Any]] = []
         for p in pages:
@@ -3293,7 +3595,17 @@ def _extract_statement_from_pdf_group(
                 merged["totals"]["closing_value"] = totals.get("closing_value")
         merged["line_items"] = merged_items
         merged["totals"]["extra"]["extraction_method"] = "pdf_split_page_images"
-        result = merged
+        image_nonzero = _statement_nonzero_rows(merged)
+        if image_nonzero > text_nonzero:
+            logger.info(
+                "Sales statement image read for %s kept (%s rows) over text parse (%s rows)",
+                filename,
+                image_nonzero,
+                text_nonzero,
+            )
+            result = merged
+        elif not result or not result.get("line_items"):
+            result = merged
 
     # Ensure stockist name from split detection wins when vision/OCR confuses manufacturer
     detected = group.get("stockist_name")
@@ -4757,12 +5069,20 @@ Rules:
 - stockist_name = the agency/seller header (e.g. NEW VIKASH MEDICAL AGENCY), NOT the manufacturer.
 - company_name = manufacturer/division line (e.g. VERITAZ HEALTHCARE LTD).
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026). Never invent years like 2001 or 2030.
-- Map Pur.Qnt / Purchase / Receipts -> receipts_qty
-- Map Sl.Qnt / Sales qty / Issue -> sales_qty; Sl.Value -> sales_value
-- Map Cl.Qnt / Closing -> closing_qty; Cl.Value -> closing_value
-- Map Op.Qnt / Opening / OpBal -> opening_qty
+- Map Pur.Qnt / Purchase / Receipts / P Qty -> receipts_qty
+- Map Sl.Qnt / Sales qty / Issue / S Qty -> sales_qty; Sl.Value / S Val -> sales_value
+- Map Cl.Qnt / Closing / Cl Stk -> closing_qty; Cl.Value / Cl Val -> closing_value
+- Map Op.Qnt / Opening / OpBal / Op Stk -> opening_qty
 - For OpBal|Receipt|Total|Issue|Closing: sales_qty=Issue (NOT Total); Dump is not closing_value.
-- Use 0 for missing numeric fields.
+- "Stock and Sale Statement" grid (Item Cd, Item Name, Op Stk, P Qty, P S Qty, P Val, S Qty, S S Qty, S Val, Cl Stk, Cl Val):
+  opening_qty=Op Stk, receipts_qty=P Qty, sales_qty=S Qty (NOT S S Qty),
+  sales_value=S Val, closing_qty=Cl Stk, closing_value=Cl Val.
+  Put P S Qty in extra.purchase_scheme_qty, P Val in extra.purchase_value,
+  S S Qty in extra.sales_scheme_qty.
+  Blank cells are 0. Do NOT shift later columns left when a cell is blank.
+  This layout has money columns. It is NOT qty-only. Never set sales_value or
+  closing_value to 0 when S Val / Cl Val is printed (example: S Qty=2, S Val=495).
+- Use 0 only for a cell that is actually blank.
 - Include every printed product row.
 """.strip()
 
@@ -4803,9 +5123,14 @@ Rules:
 - Ignore handwritten notes.
 - stockist_name = agency/seller header; company_name = manufacturer/division.
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026).
-- Map Op.Qnt/Opening/OpBal -> opening_qty; Pur.Qnt/Purchase/Receipt -> receipts_qty;
-  Sl.Qnt/Sales/Issue -> sales_qty; Sl.Value/Amount -> sales_value;
-  Cl.Qnt/Closing Balance -> closing_qty; Cl.Value -> closing_value.
+- Map Op.Qnt/Opening/OpBal/Op Stk -> opening_qty; Pur.Qnt/Purchase/Receipt/P Qty -> receipts_qty;
+  Sl.Qnt/Sales/Issue/S Qty -> sales_qty; Sl.Value/S Val/Amount -> sales_value;
+  Cl.Qnt/Closing Balance/Cl Stk -> closing_qty; Cl.Value/Cl Val -> closing_value.
+- "Stock and Sale Statement" columns Op Stk | P Qty | P S Qty | P Val | S Qty | S S Qty | S Val | Cl Stk | Cl Val:
+  sales_qty is S Qty, not the scheme column S S Qty. sales_value is S Val (rupees).
+  closing_qty is Cl Stk, closing_value is Cl Val. Blank cells stay 0 but do not
+  shift the next printed number into an earlier column. If S Val or Cl Val is
+  printed, this is NOT qty-only — do not zero those amounts.
 - For OpBal | Receipt | Total | Issue | Closing columns:
   opening_qty=OpBal, receipts_qty=Receipt, sales_qty=Issue (NOT Total),
   closing_qty=Closing. Total/Dump/NearExpiry go in extra only; never map Total to sales_qty
