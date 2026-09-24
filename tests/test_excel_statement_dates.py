@@ -11,7 +11,13 @@ from services.sales_statement_extractor import (
     _apply_excel_header_period,
     _normalize_date,
     _normalize_excel_date,
+    _drop_trailing_statement_total_item,
+    _finalize_zandra_stock_sale,
+    _looks_like_zandra_stock_sale_text,
     _parse_semantic_text_table,
+    _pdf_pages_are_image_only,
+    _statement_numbers_are_blank,
+    _statement_nonzero_rows,
     _to_float,
     _xls_best_header,
     _xls_header_colmap,
@@ -486,6 +492,83 @@ class TestExcelLayoutVariations(unittest.TestCase):
         self.assertEqual(result["line_items"][0]["product_code"], "7002675")
         self.assertEqual(result["line_items"][0]["receipts_qty"], 60.0)
         self.assertEqual(result["line_items"][0]["sales_qty"], 30.0)
+
+
+class TestScannedPdfRouting(unittest.TestCase):
+    def test_image_only_pages_detected(self):
+        self.assertTrue(
+            _pdf_pages_are_image_only(
+                [{"words": []}, {"words": None}]
+            )
+        )
+        self.assertFalse(
+            _pdf_pages_are_image_only(
+                [{"words": [(0, 0, 1, 1, "Item")]}]
+            )
+        )
+
+    def test_gemini_zero_qty_rows_are_blank(self):
+        result = empty_result("scan.pdf", "pdf")
+        result["line_items"] = [
+            {
+                "product_name": "EVECARE CAPSULE",
+                "opening_qty": 0,
+                "receipts_qty": 0,
+                "sales_qty": 0,
+                "sales_value": 0,
+                "closing_qty": 0,
+                "closing_value": 0,
+            }
+            for _ in range(10)
+        ]
+        result["line_items"][0]["opening_qty"] = 130
+        self.assertEqual(_statement_nonzero_rows(result), 1)
+        self.assertTrue(_statement_numbers_are_blank(result))
+
+    def test_trailing_footer_totals_dropped(self):
+        items = [
+            {"product_name": "ARJUNA TABLET", "opening_qty": 49, "receipts_qty": 20}
+            for _ in range(10)
+        ]
+        items.append(
+            {
+                "product_name": "V-GEL CREAM",
+                "opening_qty": 0,
+                "receipts_qty": 2961,
+                "sales_qty": 658,
+                "sales_value": 78083,
+            }
+        )
+        trimmed = _drop_trailing_statement_total_item(items)
+        self.assertEqual(len(trimmed), 10)
+        self.assertEqual(trimmed[-1]["product_name"], "ARJUNA TABLET")
+
+    def test_zandra_header_detected(self):
+        self.assertTrue(
+            _looks_like_zandra_stock_sale_text(
+                "BINAL PHARMA\nStock and Sale Statement\nItem Cd Item Name Op Stk"
+            )
+        )
+
+    def test_zandra_skips_division_row(self):
+        result = empty_result("scan.png", "png")
+        result["line_items"] = [
+            {"product_name": "HIMALAYA ZANDRA DIVISION-ZAN", "opening_qty": 0},
+            {
+                "product_name": "ARJUNA TABLET",
+                "opening_qty": 49,
+                "sales_qty": 2,
+                "closing_qty": 47,
+                "sales_value": 495,
+                "closing_value": 9333,
+                "extra": {},
+            },
+        ]
+        result = _finalize_zandra_stock_sale(result)
+        names = [i["product_name"] for i in result["line_items"]]
+        self.assertEqual(names, ["ARJUNA TABLET"])
+        self.assertEqual(result["line_items"][0]["closing_qty"], 47)
+        self.assertEqual(result["line_items"][0]["closing_value"], 9333)
 
 
 if __name__ == "__main__":

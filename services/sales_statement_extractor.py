@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import re
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -3534,6 +3535,197 @@ def _statement_numbers_are_blank(result: Optional[Dict[str, Any]]) -> bool:
     return nonzero <= max(1, len(items) // 10)
 
 
+def _pdf_pages_are_image_only(pages: List[Dict[str, Any]]) -> bool:
+    """True when every page is a scan (no embedded PDF words)."""
+    if not pages:
+        return False
+    return all(not (page.get("words") or []) for page in pages)
+
+
+def _drop_trailing_statement_total_item(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Drop a footer TOTAL row that vision attached to the last product."""
+    if len(items) < 5:
+        return items
+    last = items[-1]
+    name = str(last.get("product_name") or "")
+    if re.search(r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL)\b", name, re.I):
+        return items[:-1]
+    others = items[:-1]
+    last_rcp = _to_float(last.get("receipts_qty"))
+    others_rcp = sum(_to_float(i.get("receipts_qty")) for i in others)
+    last_op = _to_float(last.get("opening_qty"))
+    others_op = sum(_to_float(i.get("opening_qty")) for i in others)
+    if last_rcp >= 200 and others_rcp > 0 and last_rcp >= others_rcp * 0.8:
+        return others
+    if last_op >= 200 and others_op > 0 and last_op >= others_op * 0.8:
+        return others
+    return items
+
+
+def _looks_like_zandra_stock_sale_text(text: str) -> bool:
+    blob = text or ""
+    if re.search(r"Stock\s+and\s+Sale\s+Statement|Op\s*Stk|Cl\s*Stk", blob, re.I):
+        return True
+    if re.search(r"Sale\s+Statement", blob, re.I) and re.search(
+        r"Item\s*Cd|Op\s*St|BINAL|ZANDR", blob, re.I
+    ):
+        return True
+    return False
+
+
+def _looks_like_zandra_stock_sale_result(result: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    company = str(result.get("company_name") or "")
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if extra.get("extraction_method") == "zandra_stock_sale_vision":
+        return True
+    return bool(
+        re.search(r"Stock\s+and\s+Sale", title, re.I)
+        or re.search(r"ZANDRA", company, re.I)
+    )
+
+
+_ZANDRA_STOCK_SALE_VISION_PROMPT = """
+This image is a Himalaya ZANDRA "Stock and Sale Statement" grid.
+It is NOT a Product Stock Report and NOT an OpBal sheet.
+
+Columns LEFT TO RIGHT. A blank cell is 0. NEVER shift a later number left into a blank cell.
+
+1 Item Cd -> product_code
+2 Item Name -> product_name
+3 Op Stk -> opening_qty
+4 P Qty -> receipts_qty
+5 P S Qty -> extra.purchase_scheme_qty
+6 P Val -> extra.purchase_value
+7 S Qty -> sales_qty
+8 S S Qty -> extra.sales_scheme_qty
+9 S Val -> sales_value
+10 Cl Stk -> closing_qty
+11 Cl Val -> closing_value
+12 Order -> extra.order_qty
+
+S Qty is sales quantity. S S Qty is scheme quantity (different column).
+S Val is sales money. Cl Stk is closing quantity. Cl Val is closing money.
+Do not copy P Val or Cl Val into closing_qty. Do not copy the next product's numbers.
+
+Skip the ZANDRA / HIMALAYA ZANDRA DIVISION header row.
+Skip TOTAL / Grand Total / Aprox Order Value.
+Copy printed cells only. Do not invent or recompute qty.
+This page only.
+
+Examples of correct mapping:
+- ARJUNA TABLET: opening=49, receipts=0, sales=2, scheme=0, sales_value=495, closing=47, closing_value=9333
+- BONNISAN LIQUID: opening=386, sales=132, scheme=5, sales_value=8710, closing=249, closing_value=14217
+- BONNISAN LIQUID 200ML: opening=32, sales=6, scheme=0, sales_value=665, closing=26, closing_value=2371
+- BONNISON DROPS: opening=333, sales=276, scheme=15, sales_value=20457, closing=42, closing_value=2641
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock and Sale Statement",
+  "line_items": [
+    {
+      "product_code": string|null,
+      "product_name": string,
+      "packing": null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {
+        "purchase_scheme_qty": number,
+        "purchase_value": number,
+        "sales_scheme_qty": number,
+        "order_qty": number
+      }
+    }
+  ]
+}
+""".strip()
+
+
+def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        if re.search(
+            r"ZANDRA\s+DIVISION|HIMALAYA\s+ZANDRA|^TOTAL\b|^GRAND\s*TOTAL",
+            name,
+            re.I,
+        ):
+            continue
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra.setdefault("purchase_scheme_qty", 0)
+            extra.setdefault("sales_scheme_qty", extra.get("sales_scheme") or 0)
+        items.append(item)
+    result["line_items"] = _drop_trailing_statement_total_item(items)
+    result["report_title"] = result.get("report_title") or "Stock and Sale Statement"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "zandra_stock_sale_vision"
+    return result
+
+
+def _extract_zandra_stock_sale_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Read one ZANDRA Stock and Sale Statement page with a column-locked prompt."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _ZANDRA_STOCK_SALE_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+    if last_err and not (parsed and parsed.get("line_items")):
+        logger.warning("ZANDRA stock-sale vision failed for %s: %s", filename, last_err)
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_parsed_sales_json(result, parsed)
+    return _finalize_zandra_stock_sale(result)
+
+
 def _extract_statement_from_pdf_group(
     group: Dict[str, Any], filename: str
 ) -> Dict[str, Any]:
@@ -3544,13 +3736,19 @@ def _extract_statement_from_pdf_group(
     has_page_images = any(p.get("image_bytes") for p in pages)
 
     result: Optional[Dict[str, Any]] = None
+    image_only = _pdf_pages_are_image_only(pages) and has_page_images
+    zandra_hint = _looks_like_zandra_stock_sale_text(combined_text)
 
     geometry = _parse_stock_sales_analysis_words(pages, filename)
     if geometry and geometry.get("line_items"):
         result = geometry
 
-    # Prefer structuring combined OCR/embedded text first (fast, no quota)
-    if result is None and len(re.sub(r"\s+", "", combined_text)) >= 80:
+    # Scanned grids: Tesseract+Gemini-text often returns names with qty=0.
+    if (
+        result is None
+        and not image_only
+        and len(re.sub(r"\s+", "", combined_text)) >= 80
+    ):
         result = _structure_sales_text(combined_text, filename, "pdf")
         if result.get("line_items"):
             result["totals"]["extra"]["extraction_method"] = (
@@ -3559,9 +3757,10 @@ def _extract_statement_from_pdf_group(
             )
 
     text_nonzero = _statement_nonzero_rows(result)
-    # A short/zero OCR parse of a scanned grid must not hide the page image.
     text_weak = (
-        not result
+        image_only
+        or zandra_hint
+        or not result
         or not result.get("line_items")
         or _statement_numbers_are_blank(result)
         or text_nonzero < 8
@@ -3570,13 +3769,27 @@ def _extract_statement_from_pdf_group(
     if has_page_images and text_weak:
         merged = empty_result(filename, "pdf")
         merged_items: List[Dict[str, Any]] = []
+        used_zandra = False
         for p in pages:
             img = p.get("image_bytes")
             if not img:
                 continue
-            page_result = _parse_image(
-                img, f"{filename}#page{p['page_index'] + 1}", ".png"
-            )
+            page_name = f"{filename}#page{p['page_index'] + 1}"
+            page_result: Optional[Dict[str, Any]] = None
+            if zandra_hint or _looks_like_zandra_stock_sale_text(p.get("text") or ""):
+                page_result = _extract_zandra_stock_sale_vision(
+                    img, page_name, ".png"
+                )
+                used_zandra = used_zandra or bool(
+                    page_result and page_result.get("line_items")
+                )
+            if not page_result or not page_result.get("line_items"):
+                page_result = _parse_image(img, page_name, ".png")
+                if _looks_like_zandra_stock_sale_result(page_result):
+                    zandra = _extract_zandra_stock_sale_vision(img, page_name, ".png")
+                    if zandra and zandra.get("line_items"):
+                        page_result = zandra
+                        used_zandra = True
             for key in (
                 "stockist_name",
                 "stockist_address",
@@ -3593,10 +3806,18 @@ def _extract_statement_from_pdf_group(
                 merged["totals"]["sales_value"] = totals.get("sales_value")
             if totals.get("closing_value") is not None:
                 merged["totals"]["closing_value"] = totals.get("closing_value")
-        merged["line_items"] = merged_items
-        merged["totals"]["extra"]["extraction_method"] = "pdf_split_page_images"
+        merged["line_items"] = _drop_trailing_statement_total_item(merged_items)
+        merged["totals"]["extra"]["extraction_method"] = (
+            "zandra_stock_sale_vision" if used_zandra else "pdf_split_page_images"
+        )
         image_nonzero = _statement_nonzero_rows(merged)
-        if image_nonzero > text_nonzero:
+        prefer_images = (
+            image_nonzero > text_nonzero
+            or (image_only and merged.get("line_items"))
+            or (_statement_numbers_are_blank(result) and image_nonzero > 0)
+            or used_zandra
+        )
+        if prefer_images:
             logger.info(
                 "Sales statement image read for %s kept (%s rows) over text parse (%s rows)",
                 filename,
@@ -3606,6 +3827,9 @@ def _extract_statement_from_pdf_group(
             result = merged
         elif not result or not result.get("line_items"):
             result = merged
+
+    if result is None:
+        result = empty_result(filename, "pdf")
 
     # Ensure stockist name from split detection wins when vision/OCR confuses manufacturer
     detected = group.get("stockist_name")
@@ -3996,15 +4220,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             if page_index >= max_pages:
                 break
             embedded = (page.get_text("text") or "").strip()
-            image_bytes: Optional[bytes] = None
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            image_bytes = pix.tobytes("png")
             text = embedded
             if len(re.sub(r"\s+", "", embedded)) < 40:
                 # 3.5x needed so digits like Issue=12 are not read as 2 on dense scans
-                text, image_bytes = _ocr_pdf_page_text(page, zoom=max(zoom, 3.5))
+                text, _ocr_img = _ocr_pdf_page_text(page, zoom=max(zoom, 3.5))
             else:
-                # Still render for image fallback if needed later
-                pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
-                image_bytes = pix.tobytes("png")
                 text = _merge_footer_total_into_text(text, image_bytes)
 
             stockist = _detect_stockist_from_page_text(text)
@@ -4192,8 +4414,9 @@ def _stock_expected_closing(item: Dict[str, Any], kind: str) -> float:
         sample = _to_float(extra.get("sample_qty"))
         expiry = _to_float(extra.get("expiry_qty"))
         return round(total - sales_qty - sample - expiry, 2)
-    # OpBal / generic qty statements: Opening + Receipt - Issue
-    return round(opening + receipts - sales_qty, 2)
+    # OpBal / generic: Opening + Receipt - Sale - scheme (ZANDRA S S Qty)
+    scheme = _to_float(extra.get("sales_scheme_qty") or extra.get("sales_scheme"))
+    return round(opening + receipts - sales_qty - scheme, 2)
 
 
 def _stock_row_identity_ok(item: Dict[str, Any], kind: str, tol: float = 0.05) -> bool:
@@ -5788,6 +6011,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
                 result = _apply_parsed_sales_json(result, parsed)
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _looks_like_zandra_stock_sale_result(result):
+                    zandra = _extract_zandra_stock_sale_vision(
+                        file_bytes, filename, ext
+                    )
+                    if zandra and zandra.get("line_items"):
+                        return zandra
                 if _product_stock_report_values_missing(result):
                     logger.info(
                         "Product Stock Report missing Cls Amt values; retrying format-specific vision"
