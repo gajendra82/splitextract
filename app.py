@@ -26919,8 +26919,11 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     prompt_datewise = extra.get("layout") == "prompt_datewise"
     zl_bal = extra.get("layout") == "zl_opening_primary_closing"
     paired_value = extra.get("layout") == "paired_stock_value"
+    # Qty-only Sales & Stock rows: Issue is the quantity, including a real zero.
+    issue_qty = extra.get("layout") == "sales_stock_issue_qty"
     if (
         not prompt_datewise
+        and not issue_qty
         and qty in (None, "", 0, 0.0)
         and line.get("closing_qty") not in (None, "")
     ):
@@ -26928,6 +26931,10 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         qty = line.get("closing_qty")
     amount = line.get("sales_value")
     unit_price = ""
+    if issue_qty:
+        rate = extra.get("unit_rate")
+        if rate not in (None, "", 0, 0.0):
+            unit_price = f"{float(rate):.2f}"
     if zl_bal:
         rate = extra.get("unit_rate")
         if rate not in (None, "", 0, 0.0):

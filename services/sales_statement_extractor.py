@@ -1385,10 +1385,726 @@ _KAVERI_ROW = re.compile(
 )
 
 
+_SALES_STOCK_HEADER_TOKEN = re.compile(
+    r"Op\.?\s*Bal\.?|Opening|Receipt|Total|Issue|Closing|Rate|Value|Amt|Amount",
+    re.I,
+)
+
+
+def _sales_stock_label_kind(label: str) -> str:
+    token = re.sub(r"[^a-z]", "", (label or "").lower())
+    if token.startswith("op") or token.startswith("opening"):
+        return "opening"
+    if token.startswith("receipt"):
+        return "receipt"
+    if token.startswith("total"):
+        return "total"
+    if token.startswith("issue") or token.startswith("iss"):
+        return "issue"
+    if token.startswith("clos"):
+        return "closing"
+    if token.startswith("rate"):
+        return "rate"
+    if "value" in token or token.startswith("amt") or token.startswith("amount"):
+        return "value"
+    return "other"
+
+
+def _sales_stock_column_plan(
+    header_line: str, sub_line: str
+) -> Optional[Dict[str, Any]]:
+    """Column windows and roles from the printed header, not a fixed qty count.
+
+    Data columns on this statement are evenly spaced from the first header
+    token. A Qty/Balance sub-header stays a quantity. Value, Amt, or Rate
+    is stored only when that column is printed.
+    """
+    packing = re.search(r"\bPACKING\b", header_line, re.I)
+    if not packing:
+        return None
+    hits = [
+        m
+        for m in _SALES_STOCK_HEADER_TOKEN.finditer(header_line)
+        if m.start() > packing.start()
+    ]
+    if len(hits) < 2:
+        return None
+    stride = hits[1].start() - hits[0].start()
+    if stride < 4:
+        return None
+    origin = hits[0].start()
+    columns: List[Dict[str, Any]] = []
+    for index, hit in enumerate(hits):
+        start = origin + stride * index
+        end = origin + stride * (index + 1)
+        kind = _sales_stock_label_kind(hit.group(0))
+        sub = ""
+        if sub_line and start < len(sub_line):
+            sub = sub_line[start:end]
+        valueish = kind in {"value", "rate"} or bool(
+            re.search(r"value|amt|amount|rate", sub, re.I)
+        )
+        parent = kind
+        if kind == "value" and columns:
+            parent = str(columns[-1].get("kind") or "value")
+        role = None
+        if parent == "opening":
+            role = "opening_value" if valueish else "opening_qty"
+        elif parent == "receipt":
+            role = "receipts_value" if valueish else "receipts_qty"
+        elif parent == "total":
+            role = "total_value" if valueish else "total_stock"
+        elif parent == "issue":
+            role = "sales_value" if valueish else "sales_qty"
+        elif parent == "closing":
+            role = "closing_value" if valueish else "closing_qty"
+        elif kind == "rate" or parent == "rate":
+            role = "unit_rate"
+        if not role:
+            continue
+        columns.append(
+            {
+                "kind": parent,
+                "role": role,
+                "start": start,
+                "end": end,
+                "label": hit.group(0),
+            }
+        )
+    if not columns:
+        return None
+    return {"packing_at": packing.start(), "columns": columns, "stride": stride}
+
+
+def _slice_fixed_field(line: str, start: int, end: Optional[int]) -> str:
+    if start >= len(line):
+        return ""
+    chunk = line[start:] if end is None else line[start:end]
+    return chunk.strip()
+
+
+def _parse_fixed_sales_stock_statement(
+    text: str, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Srinandan-style Sales & Stock Statement.
+
+    Reads whichever quantity and value columns the header actually prints.
+    """
+    if not text or not re.search(r"Sales\s*&\s*Stock\s*Statement", text, re.I):
+        return None
+    if not re.search(
+        r"PRODUCT\s*NAME\s+PACKING\s+.*Op\.?\s*Bal",
+        text,
+        re.I,
+    ):
+        return None
+
+    raw_lines = text.splitlines()
+    header_idx = next(
+        (
+            i
+            for i, ln in enumerate(raw_lines)
+            if re.search(r"PRODUCT\s*NAME", ln, re.I)
+            and re.search(r"\bPACKING\b", ln, re.I)
+        ),
+        None,
+    )
+    if header_idx is None:
+        return None
+    header_line = raw_lines[header_idx]
+    sub_line = ""
+    if header_idx + 1 < len(raw_lines) and re.search(
+        r"Qty|Value|Amt|Amount|Balance|Rate", raw_lines[header_idx + 1], re.I
+    ):
+        sub_line = raw_lines[header_idx + 1]
+    plan = _sales_stock_column_plan(header_line, sub_line)
+    if not plan:
+        return None
+    columns = plan["columns"]
+    packing_at = int(plan["packing_at"])
+    has_value = any(
+        col["role"] in {
+            "opening_value",
+            "receipts_value",
+            "total_value",
+            "sales_value",
+            "closing_value",
+            "unit_rate",
+        }
+        for col in columns
+    )
+
+    result = empty_result(filename, "txt")
+    items: List[Dict[str, Any]] = []
+    footer_vals: Optional[Dict[str, float]] = None
+
+    for ln in raw_lines:
+        if not ln.strip():
+            continue
+        letters = re.sub(r"[^A-Za-z]", "", ln)
+        if len(letters) < 4:
+            continue
+
+        if re.search(r"Sales\s*&\s*Stock\s*Statement", ln, re.I):
+            title = re.search(
+                r"Sales\s*&\s*Stock\s*Statement\s*\([^)]*\)",
+                ln,
+                re.I,
+            )
+            result["report_title"] = _clean_name(
+                title.group(0) if title else "Sales & Stock Statement"
+            )
+            m_period = re.search(
+                r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+Upto\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                ln,
+                re.I,
+            )
+            if m_period:
+                result["period_from"] = _normalize_date(m_period.group(1))
+                result["period_to"] = _normalize_date(m_period.group(2))
+            continue
+
+        if re.search(r"\bCOMPANY\b", ln, re.I) and not re.search(
+            r"Sales\s*&\s*Stock|PRODUCT\s*NAME|Page\s*No", ln, re.I
+        ):
+            if not result.get("company_name"):
+                result["company_name"] = _clean_name(ln)
+            continue
+
+        if not result.get("stockist_name") and not re.search(
+            r"Page\s*No|PRODUCT\s*NAME|Continued", ln, re.I
+        ):
+            result["stockist_name"] = _clean_name(ln)
+            continue
+
+        if (
+            result.get("stockist_name")
+            and not result.get("stockist_address")
+            and not re.search(
+                r"Page\s*No|PRODUCT\s*NAME|Sales\s*&\s*Stock|COMPANY|Continued",
+                ln,
+                re.I,
+            )
+        ):
+            result["stockist_address"] = _clean_name(ln)
+            continue
+
+        if re.search(
+            r"PRODUCT\s*NAME|^\s*-{5,}|^\s*\*{3,}|Continued|Page\s*No|^\s*Qty\.",
+            ln,
+            re.I,
+        ):
+            continue
+
+        name = _slice_fixed_field(ln, 0, packing_at)
+        packing = _slice_fixed_field(ln, packing_at, int(columns[0]["start"]))
+        present: Dict[str, float] = {}
+        numeric = 0
+        rejected = False
+        for col in columns:
+            cell = _slice_fixed_field(ln, int(col["start"]), int(col["end"]))
+            if not cell:
+                continue
+            if not re.fullmatch(r"-?\d+(?:\.\d+)?", cell):
+                rejected = True
+                break
+            present[col["role"]] = _to_float(cell)
+            numeric += 1
+        if rejected or numeric < 2:
+            continue
+
+        if re.match(r"^(GRAND\s+)?TOTAL\b", name, re.I):
+            footer_vals = present
+            continue
+        if len(name) < 2:
+            continue
+
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        item["packing"] = packing or None
+        item["opening_qty"] = present.get("opening_qty", 0.0)
+        item["receipts_qty"] = present.get("receipts_qty", 0.0)
+        item["sales_qty"] = present.get("sales_qty", 0.0)
+        item["closing_qty"] = present.get("closing_qty", 0.0)
+        item["sales_value"] = present.get("sales_value")
+        item["closing_value"] = present.get("closing_value")
+        if "total_stock" in present:
+            item["extra"]["total_stock"] = present["total_stock"]
+        for extra_key in (
+            "opening_value",
+            "receipts_value",
+            "total_value",
+            "unit_rate",
+        ):
+            if extra_key in present:
+                item["extra"][extra_key] = present[extra_key]
+        if "receipts_value" in present:
+            item["extra"]["purchase_value"] = present["receipts_value"]
+        if "sales_value" in present:
+            item["extra"]["issue_value"] = present["sales_value"]
+        item["extra"]["layout"] = "sales_stock_issue_qty"
+        items.append(item)
+
+    if not items:
+        return None
+
+    result["line_items"] = items
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
+    result["totals"]["extra"]["extraction_method"] = "opbal_sales_stock_txt"
+    result["totals"]["extra"]["qty_only"] = not has_value
+    result["totals"]["extra"]["column_roles"] = [col["role"] for col in columns]
+    if footer_vals:
+        if "opening_qty" in footer_vals:
+            result["totals"]["opening_qty"] = footer_vals["opening_qty"]
+        if "receipts_qty" in footer_vals:
+            result["totals"]["receipts_qty"] = footer_vals["receipts_qty"]
+        if "sales_qty" in footer_vals:
+            result["totals"]["sales_qty"] = footer_vals["sales_qty"]
+        if "closing_qty" in footer_vals:
+            result["totals"]["closing_qty"] = footer_vals["closing_qty"]
+        if "sales_value" in footer_vals:
+            result["totals"]["sales_value"] = footer_vals["sales_value"]
+        if "closing_value" in footer_vals:
+            result["totals"]["closing_value"] = footer_vals["closing_value"]
+        if "total_stock" in footer_vals:
+            result["totals"]["extra"]["total_stock_qty"] = footer_vals["total_stock"]
+        result["totals"]["extra"]["total_row_source"] = "footer_total"
+        result["totals"]["extra"]["total_row_labels"] = [col["label"] for col in columns]
+    return result
+
+
+def _strip_printer_controls(text: str) -> str:
+    """Drop ESC/control bytes that dot-matrix stock reports embed in TXT files."""
+    out = []
+    i = 0
+    raw = text or ""
+    while i < len(raw):
+        ch = raw[i]
+        if ch == "\x1b":
+            i += 1
+            while i < len(raw) and raw[i] in "@0123456789":
+                i += 1
+            if i < len(raw) and raw[i].isalpha():
+                i += 1
+            continue
+        if ord(ch) < 32 and ch not in "\t\n\r":
+            i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _trailing_metrics(line: str, count: int):
+    """Split a row into the left-hand name and the last `count` qty/value cells.
+
+    Standalone dashes are empty cells and still occupy a column.
+    """
+    tokens = line.replace("|", " ").split()
+    metrics = []
+    index = len(tokens)
+    while index > 0 and len(metrics) < count:
+        tok = tokens[index - 1]
+        plain = tok.replace(",", "") if re.fullmatch(r"-?\d{1,3}(?:,\d{3})+(?:\.\d+)?", tok) else tok
+        if plain in {"-", "--", "---"} or re.fullmatch(r"-?\d+(?:\.\d+)?", plain):
+            metrics.append(plain)
+            index -= 1
+            continue
+        break
+    if len(metrics) < count:
+        return None
+    metrics.reverse()
+    return tokens[:index], metrics
+
+
+def _metric_number(raw: str, *, money: bool):
+    if raw in {"-", "--", "---"}:
+        return None if money else 0.0
+    return _to_float(raw)
+
+
+def _text_stock_families():
+    """Header fingerprints for TXT stock statements the Kaveri parser does not cover."""
+    return (
+        (
+            "vineet_sales_stock",
+            r"DESCRIPTION\s*/\s*PACKING",
+            r"OPENING",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "credit_qty",
+                "debit_qty",
+                "closing_qty",
+            ),
+            False,
+        ),
+        (
+            "siva_paired_stock",
+            r"PRODUCT\s*NAME",
+            r"Issue\s*/\s*Sales|Shortage",
+            (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+                "total_stock",
+                "sales_qty",
+                "sales_value",
+                "shortage_qty",
+                "shortage_value",
+                "expiry_qty",
+                "expiry_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            True,
+        ),
+        (
+            "paired_opening_purchases",
+            r"Product\s*Name",
+            r"Opening\s+Stock",
+            (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
+        (
+            "panchaganga_unit",
+            r"Product\s*Name",
+            r"Op\.?\s*St|St-In",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
+        (
+            "code_opening_closing_value",
+            r"Product\s*Name",
+            r"\bOpening\b",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "total_stock",
+                "sales_qty",
+                "closing_qty",
+                "closing_value",
+            ),
+            True,
+        ),
+        (
+            "medicine_with_return",
+            r"MEDICINE\s*NAME",
+            r"\bPRTN\b",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "total_stock",
+                "return_qty",
+                "loose_sale_qty",
+                "adjust_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
+        (
+            "medicine_sal_val",
+            r"MEDICINE\s*NAME",
+            r"SAL\.?\s*VAL",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "total_stock",
+                "loose_sale_qty",
+                "adjust_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
+        (
+            "ps_global_qoh",
+            r"Product\s*Name",
+            r"O\.?\s*Stk",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "total_stock",
+                "sales_qty",
+                "closing_qty",
+                "closing_value",
+                "age_days",
+            ),
+            False,
+        ),
+        (
+            "pipe_opn_recd",
+            r"\bPRODUCT\b",
+            r"\bOPN\.|\bRECD\b",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "return_qty",
+                "total_stock",
+                "sales_qty",
+                "closing_qty",
+                "dump_qty",
+            ),
+            False,
+        ),
+        (
+            "prakash_paired",
+            r"Product\s*Name",
+            r"<[-]+OB[-]+>",
+            (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
+        (
+            "shipra_issued",
+            r"Product\s*name",
+            r"Opng\.?\s*Bal",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "receipt_other_qty",
+                "total_stock",
+                "sales_qty",
+                "sales_value",
+                "issue_other_qty",
+                "closing_qty",
+                "closing_value",
+                "expirable_qty",
+                "dump_qty",
+            ),
+            False,
+        ),
+    )
+
+
+def _match_text_stock_family(text: str):
+    for name, left_pat, right_pat, roles, has_code in _text_stock_families():
+        if re.search(left_pat, text, re.I) and re.search(right_pat, text, re.I):
+            if not re.search(
+                r"STOCK|SALES\s*&\s*STOCK|S\.S\.REPORT|STOCK\s+STATEMENT",
+                text,
+                re.I,
+            ):
+                continue
+            return name, roles, has_code
+    return None
+
+
+def _apply_stock_metrics(item: Dict[str, Any], roles, metrics) -> None:
+    money_roles = {
+        "opening_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+        "shortage_value",
+    }
+    line_roles = {
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+    }
+    for role, raw in zip(roles, metrics):
+        money = role in money_roles or role.endswith("_value")
+        number = _metric_number(raw, money=money)
+        if role in line_roles:
+            if role in {"sales_value", "closing_value"}:
+                item[role] = number
+            elif number is not None:
+                item[role] = number
+            continue
+        if number is None:
+            continue
+        if role == "total_stock":
+            item["extra"]["total_stock"] = number
+        elif role == "receipts_value":
+            item["extra"]["purchase_value"] = number
+            item["extra"]["receipts_value"] = number
+        elif role == "opening_value":
+            item["extra"]["opening_value"] = number
+        else:
+            item["extra"][role] = number
+    if item.get("sales_value") not in (None, "") and "issue_value" not in item["extra"]:
+        item["extra"]["issue_value"] = item["sales_value"]
+
+
+def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse other fixed stock-statement TXT layouts. Unused when a specific parser already matched."""
+    cleaned = _strip_printer_controls(text)
+    matched = _match_text_stock_family(cleaned)
+    if not matched:
+        return None
+    family, roles, has_code = matched
+    result = empty_result(filename, "txt")
+    items: List[Dict[str, Any]] = []
+    for ln in cleaned.splitlines():
+        raw = ln.strip()
+        if not raw or set(raw) <= {"-", "=", "_", " "}:
+            continue
+        if re.search(r"\bFrom\s*:", raw, re.I) and not result.get("stockist_name"):
+            left_name = re.split(r"\bFrom\s*:", raw, flags=re.I)[0].strip()
+            if len(re.sub(r"[^A-Za-z]", "", left_name)) >= 4:
+                result["stockist_name"] = _clean_name(left_name)
+        if re.search(r"COMPANY\s*(?:NAME)?\s*:", raw, re.I):
+            company = re.split(r"COMPANY\s*(?:NAME)?\s*:", raw, flags=re.I)[-1]
+            company = re.split(r"\d{1,2}[./-]\d{1,2}", company)[0]
+            company = re.split(r"\bPage\b", company, flags=re.I)[0]
+            result["company_name"] = _clean_name(company).rstrip(" :")
+        elif not result.get("company_name") and re.search(
+            r"HIMALAYA", raw, re.I
+        ) and not re.search(r"PRODUCT|DESCRIPTION|MEDICINE|Page\s*No", raw, re.I):
+            if len(raw) < 80:
+                result["company_name"] = _clean_name(raw.strip("* "))
+        m_period = re.search(
+            r"(?:FROM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|Upto|and|to|-|–)\s*"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            raw,
+            re.I,
+        )
+        if m_period and not result.get("period_from"):
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        else:
+            m_from = re.search(
+                r"\bFrom\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})", raw, re.I
+            )
+            m_to = re.search(
+                r"\bTo\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})", raw, re.I
+            )
+            if m_from and not result.get("period_from"):
+                result["period_from"] = _normalize_date(m_from.group(1))
+            if m_to and not result.get("period_to"):
+                result["period_to"] = _normalize_date(m_to.group(1))
+        if re.search(r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|S\.S\.REPORT", raw, re.I):
+            if not result.get("report_title"):
+                result["report_title"] = _clean_name(raw)[:80]
+        if '"' in raw or re.search(r"\bSlrt\b", raw, re.I):
+            continue
+        split = _trailing_metrics(raw, len(roles))
+        if not split:
+            if not result.get("stockist_name") and not re.search(
+                r"STOCK|SALES|FROM\s*:|COMPANY|Page|PRODUCT|DESCRIPTION|MEDICINE|GST|BETWEEN",
+                raw,
+                re.I,
+            ):
+                if (
+                    len(re.sub(r"[^A-Za-z]", "", raw)) >= 4
+                    and not re.search(r"TOTAL|Value\s+Rs|Page\b", raw, re.I)
+                ):
+                    result["stockist_name"] = _clean_name(raw)
+            continue
+        left, metrics = split
+        label = _clean_name(" ".join(left))
+        if not label or re.search(
+            r"PRODUCT|DESCRIPTION|PACKING|OPENING|MEDICINE|QTY\.|VALUE|STOCK\b",
+            label,
+            re.I,
+        ):
+            continue
+        if re.match(r"^(GRAND\s+)?TOTAL\b", label, re.I):
+            parsed = {}
+            for role, cell in zip(roles, metrics):
+                money = role.endswith("_value")
+                number = _metric_number(cell, money=money)
+                if number is None:
+                    continue
+                parsed[role] = number
+            if re.search(r"AMOUNT", label, re.I):
+                if "sales_qty" in parsed and "sales_value" not in parsed:
+                    result["totals"]["sales_value"] = parsed.get("sales_qty")
+                result["totals"]["closing_value"] = parsed.get("closing_value", parsed.get("closing_qty"))
+                result["totals"]["extra"]["amount_row"] = parsed
+            else:
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+                    if key in parsed:
+                        result["totals"][key] = parsed[key]
+                result["totals"]["extra"]["total_row_source"] = "footer_total"
+            continue
+        item = empty_line_item()
+        tokens = left
+        if has_code and tokens and re.fullmatch(r"[A-Z0-9./-]{2,12}", tokens[0], re.I):
+            item["product_code"] = tokens[0]
+            tokens = tokens[1:]
+        packing = None
+        if family != "vineet_sales_stock" and len(tokens) >= 2:
+            if (
+                len(tokens) >= 3
+                and re.fullmatch(r"\d+(?:\.\d+)?", tokens[-2])
+                and re.fullmatch(r"[A-Za-z]{1,6}", tokens[-1])
+            ):
+                packing = f"{tokens[-2]} {tokens[-1]}"
+                tokens = tokens[:-2]
+            else:
+                tail = tokens[-1]
+                if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP", tail, re.I):
+                    packing = tail.rstrip(",")
+                    tokens = tokens[:-1]
+        name = _clean_name(" ".join(tokens))
+        if len(name) < 2:
+            continue
+        item["product_name"] = name
+        item["packing"] = packing
+        item["sales_value"] = None
+        item["closing_value"] = None
+        item["extra"]["layout"] = "sales_stock_issue_qty"
+        item["extra"]["txt_family"] = family
+        _apply_stock_metrics(item, roles, metrics)
+        items.append(item)
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "txt_stock_fallback"
+    result["totals"]["extra"]["txt_family"] = family
+    result["totals"]["extra"]["column_roles"] = list(roles)
+    if result["totals"].get("sales_value") is None and not any(
+        role.endswith("_value") for role in roles
+    ):
+        result["totals"]["extra"]["qty_only"] = True
+    return result
+
+
 def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     text = file_bytes.decode("utf-8", errors="ignore")
     if "\x00" in text[:200]:
         text = file_bytes.decode("latin-1", errors="ignore")
+
+    fixed = _parse_fixed_sales_stock_statement(text, filename)
+    if fixed and fixed.get("line_items"):
+        return fixed
 
     if _is_product_stock_report_text(text):
         psr = _parse_product_stock_report(text, filename, "txt")
@@ -1462,6 +2178,11 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         item = _parse_kaveri_line(raw)
         if item:
             items.append(item)
+
+    if not items:
+        fallback = _parse_text_stock_fallback(text, filename)
+        if fallback and fallback.get("line_items"):
+            return fallback
 
     result["line_items"] = items
     return result

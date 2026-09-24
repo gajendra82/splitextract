@@ -778,5 +778,74 @@ class TestProductStockReport(unittest.TestCase):
         self.assertTrue(validated["line_items"][0]["extra"]["stock_identity_ok"])
 
 
+SALES_STOCK_TXT = """
+     SRINANDAN DISTRIBUTING HOUSE
+                     10/1/G/1,AMBIKA BABU LANE,KHAGRA,MSD.
+Page No.1   Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026) Sep  4,2026
+HIMALAYA WELLNESS COMPANY
+-------------------------------------------------------------------------------
+PRODUCT NAME         PACKING     Op.Bal.  Receipt    Total    Issue  Closing
+                                    Qty.     Qty.     Qty.     Qty.  Balance
+-------------------------------------------------------------------------------
+ABANA TAB            50'S             45      100      145       44      101
+DIAPER ADULT (L) 10' 1 *DEFAULT        0        0        0        0        0
+EVECARE CAP          30 'S           237        0      237       14      223
+HIORA-SG GEL 10G     10G              22        0       22       16        6
+-------------------------------------------------------------------------------
+TOTAL                            2104425  1341265  3445690   983119  2637568
+"""
+
+
+class TestFixedSalesStockTxt(unittest.TestCase):
+    def test_columns_stay_on_their_product_row(self):
+        result = extract_sales_statement(
+            SALES_STOCK_TXT.encode("latin-1"), "srinandan.TXT"
+        )
+        self.assertEqual(result["stockist_name"], "SRINANDAN DISTRIBUTING HOUSE")
+        self.assertEqual(result["company_name"], "HIMALAYA WELLNESS COMPANY")
+        self.assertEqual(result["period_from"], "2026-08-01")
+        self.assertEqual(result["period_to"], "2026-08-31")
+        self.assertEqual(len(result["line_items"]), 4)
+        by_name = {i["product_name"]: i for i in result["line_items"]}
+        abana = by_name["ABANA TAB"]
+        self.assertEqual(abana["packing"], "50'S")
+        self.assertEqual(abana["opening_qty"], 45.0)
+        self.assertEqual(abana["receipts_qty"], 100.0)
+        self.assertEqual(abana["extra"]["total_stock"], 145.0)
+        self.assertEqual(abana["sales_qty"], 44.0)
+        self.assertEqual(abana["closing_qty"], 101.0)
+        self.assertIsNone(abana["sales_value"])
+        self.assertIsNone(abana["closing_value"])
+        diaper = by_name["DIAPER ADULT (L) 10'"]
+        self.assertEqual(diaper["packing"], "1 *DEFAULT")
+        self.assertEqual(diaper["sales_qty"], 0.0)
+        self.assertEqual(diaper["closing_qty"], 0.0)
+        hiora = by_name["HIORA-SG GEL 10G"]
+        self.assertEqual(hiora["packing"], "10G")
+        self.assertEqual(hiora["opening_qty"], 22.0)
+        self.assertEqual(hiora["sales_qty"], 16.0)
+        self.assertEqual(hiora["closing_qty"], 6.0)
+        self.assertEqual(result["totals"]["extra"]["stock_identity_fail_count"], 0)
+
+    def test_value_columns_are_read_when_printed(self):
+        text = """
+SRINANDAN DISTRIBUTING HOUSE
+Page No.1   Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026)
+HIMALAYA WELLNESS COMPANY
+PRODUCT NAME         PACKING     Op.Bal.   Receipt   Issue     Value     Closing
+                                 Qty.      Qty.      Qty.      Value     Balance
+ABANA TAB            50'S             45       100        44     1234.50      101
+"""
+        result = extract_sales_statement(text.encode("latin-1"), "value.TXT")
+        item = result["line_items"][0]
+        self.assertEqual(item["opening_qty"], 45.0)
+        self.assertEqual(item["receipts_qty"], 100.0)
+        self.assertEqual(item["sales_qty"], 44.0)
+        self.assertEqual(item["closing_qty"], 101.0)
+        self.assertEqual(item["sales_value"], 1234.50)
+        self.assertIsNone(item["closing_value"])
+        self.assertEqual(item["extra"]["issue_value"], 1234.50)
+
+
 if __name__ == "__main__":
     unittest.main()
