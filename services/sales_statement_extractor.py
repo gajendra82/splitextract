@@ -24,6 +24,7 @@ SUPPORTED_EXTENSIONS = {
     ".docx",
     ".xls",
     ".xlsx",
+    ".xlsm",
     ".pdf",
     ".jpg",
     ".jpeg",
@@ -130,9 +131,16 @@ def _to_float(value: Any, default: float = 0.0) -> float:
     negative = text.startswith("(") and text.endswith(")")
     if negative:
         text = text[1:-1].strip()
-    text = re.sub(r"^(?:₹|\$|(?:Rs\.?|INR)\s*)", "", text, flags=re.I)
-    text = text.replace(",", "")
+    text = re.sub(r"^(?:₹|\$|(?:Rs\.?|INR)\s*)", "", text, flags=re.I).strip()
     text = re.sub(r"\s+", "", text)
+    if text.startswith("="):
+        return default
+    if re.fullmatch(r"-?\d+,\d{1,2}", text):
+        text = text.replace(",", ".")
+    elif re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+,\d+", text):
+        text = text.replace(".", "").replace(",", ".")
+    else:
+        text = text.replace(",", "")
     text = text.replace("L", "").replace("l", "")
     if not text:
         return default
@@ -383,6 +391,21 @@ def _apply_excel_header_period(
         )
         if m and not result.get("period_to"):
             result["period_to"] = _normalize_date(m.group(1))
+
+        if (
+            (not result.get("period_from") or not result.get("period_to"))
+            and re.search(r"STOCK|SALES|STATEMENT|PERIOD|FROM|DATE", joined, re.I)
+        ):
+            m = re.search(
+                rf"({_DATE_TOKEN_RE})\s*(?:to|[-–])\s*({_DATE_TOKEN_RE})",
+                joined,
+                re.I,
+            )
+            if m:
+                pf, pt = _normalize_date(m.group(1)), _normalize_date(m.group(2))
+                if pf and pt:
+                    result["period_from"] = result.get("period_from") or pf
+                    result["period_to"] = result.get("period_to") or pt
 
         if not result.get("period_from") or not result.get("period_to"):
             m = re.search(
@@ -1361,7 +1384,7 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _parse_word(file_bytes, name, ext)
     elif ext == ".pdf":
         result = _parse_pdf(file_bytes, name)
-    elif ext in {".xls", ".xlsx"}:
+    elif ext in {".xls", ".xlsx", ".xlsm"}:
         result = _parse_xls(file_bytes, name, ext)
     elif ext in IMAGE_EXTENSIONS:
         result = _parse_image(file_bytes, name, ext)
@@ -2178,6 +2201,11 @@ _XLS_HEADER_ALIASES = {
     "receipts": "pur",
     "receiptqty": "pur",
     "receiptsqty": "pur",
+    "receive": "pur",
+    "receiveqty": "pur",
+    "inward": "pur",
+    "inwardqty": "pur",
+    "primarypurchase": "pur",
     "primary": "pur",
     "primaryqty": "pur",
     "primary(qty)": "pur",
@@ -2189,6 +2217,10 @@ _XLS_HEADER_ALIASES = {
     "secondaryqtytotal": "sale",
     "secondaryqty": "sale",
     "secondaryquantity": "sale",
+    "secondarysales": "sale",
+    "issue": "sale",
+    "issueqty": "sale",
+    "sold": "sale",
     "bal": "bal",
     "bal.": "bal",
     "clstock": "bal",
@@ -2208,8 +2240,51 @@ _XLS_HEADER_ALIASES = {
     "transactiondate": "date",
     "period": "date",
     "bval": "bval",
+    "closingvalue": "bval",
+    "closingval": "bval",
+    "closingamount": "bval",
+    "closingstockvalue": "bval",
+    "closingvaluation": "bval",
+    "clvalue": "bval",
+    "clval": "bval",
     "sval": "sval",
     "secondaryvalue": "sval",
+    "issuevalue": "sval",
+    "issueval": "sval",
+    "salesvalue": "sval",
+    "salevalue": "sval",
+    "saleamount": "sval",
+    "salesamount": "sval",
+    "secondarysalesvalue": "sval",
+    "valueofsales": "sval",
+    "openingvalue": "opval",
+    "openingval": "opval",
+    "opvalue": "opval",
+    "opval": "opval",
+    "receivevalue": "purval",
+    "receiveval": "purval",
+    "purchasevalue": "purval",
+    "inwardvalue": "purval",
+    "qtyopening": "op",
+    "quantityopening": "op",
+    "stockopening": "op",
+    "qtysales": "sale",
+    "quantitysales": "sale",
+    "qtysale": "sale",
+    "qtyclosing": "bal",
+    "quantityclosing": "bal",
+    "stockclosing": "bal",
+    "valueopening": "opval",
+    "valuesales": "sval",
+    "valuesale": "sval",
+    "valueclosing": "bval",
+    "scheme": "scheme",
+    "free": "free",
+    "freeqty": "free",
+    "sample": "sample",
+    "sampleqty": "sample",
+    "expiry": "expiry",
+    "expiryclos": "expiry",
     "rate": "rate",
     "secondaryrate": "rate",
     "productcode": "product_code",
@@ -2497,13 +2572,64 @@ _XLS_HEADER_SCORE = {
     "cust_code": 2,
     "rate": 1,
     "sval": 1,
+    "bval": 1,
+    "opval": 1,
+    "purval": 1,
     "pack": 1,
     "div": 1,
+}
+
+# Generic group labels used only to join a parent header with the row beneath it.
+_XLS_GENERIC_HEADER_PARENTS = {
+    "stock",
+    "stocks",
+    "quantity",
+    "qty",
+    "value",
+    "values",
+    "amount",
+    "amounts",
+}
+
+# Weaker names stay only when a more specific column for the same field is absent.
+_XLS_WEAK_LABELS = {
+    "sale": {"issue", "issueqty"},
+    "pur": {"receive", "receiveqty", "inward", "inwardqty"},
 }
 
 
 def _xls_score_colmap(colmap: Dict[str, int]) -> int:
     return sum(_XLS_HEADER_SCORE.get(key, 0) for key in colmap)
+
+
+def _xls_label_compact(label: Any) -> str:
+    text = str(label or "").replace("\u00a0", " ").replace("\r", " ").replace("\n", " ")
+    compact = re.sub(r"[\s_]+", "", text.strip().lower())
+    compact = compact.replace("quantity", "qty").replace("material", "mat")
+    return re.sub(r"[^a-z0-9#]+", "", compact)
+
+
+def _xls_parent_token(label: Any) -> str:
+    text = str(label or "").replace("\n", " ").replace("\r", " ")
+    return re.sub(r"[^a-z]", "", text.strip().lower())
+
+
+def _xls_combine_header_pair(upper: List[Any], lower: List[Any]) -> List[Any]:
+    """Join a group header such as Quantity with Opening / Sales / Closing."""
+    width = max(len(upper), len(lower))
+    combined: List[Any] = []
+    for i in range(width):
+        up = upper[i] if i < len(upper) else None
+        low = lower[i] if i < len(lower) else None
+        up_s = str(up).strip() if up not in (None, "") else ""
+        low_s = str(low).strip() if low not in (None, "") else ""
+        if low_s and up_s and _xls_parent_token(up_s) in _XLS_GENERIC_HEADER_PARENTS:
+            combined.append(f"{up_s} {low_s}")
+        elif low_s:
+            combined.append(low)
+        else:
+            combined.append(up)
+    return combined
 
 
 def _xls_best_header(
@@ -2513,34 +2639,48 @@ def _xls_best_header(
     best_idx: Optional[int] = None
     best_map: Dict[str, int] = {}
     best_score = 0
-    for ri, row in enumerate(rows[:scan_rows]):
+    limit = rows[:scan_rows]
+    for ri, row in enumerate(limit):
         if not isinstance(row, list):
             continue
-        colmap = _xls_header_colmap(row)
-        if not _xls_is_stock_header(colmap):
-            continue
-        score = _xls_score_colmap(colmap)
-        if score > best_score:
-            best_idx, best_map, best_score = ri, colmap, score
+        candidates = [row]
+        if ri > 0 and isinstance(limit[ri - 1], list):
+            candidates.append(_xls_combine_header_pair(limit[ri - 1], row))
+        for candidate in candidates:
+            colmap = _xls_header_colmap(candidate)
+            if not _xls_is_stock_header(colmap):
+                continue
+            score = _xls_score_colmap(colmap)
+            if score > best_score:
+                best_idx, best_map, best_score = ri, colmap, score
     return best_idx, best_map, best_score
 
 
 def _xls_header_colmap(row: List[Any]) -> Dict[str, int]:
     colmap: Dict[str, int] = {}
+    weak: Dict[str, bool] = {}
     for ci, cell in enumerate(row):
         if cell is None or not str(cell).strip() or str(cell).strip() in {"-", "—"}:
             continue
         field = _xls_norm_header(cell)
-        if field and field not in colmap:
+        if not field:
+            continue
+        is_weak = _xls_label_compact(cell) in _XLS_WEAK_LABELS.get(field, ())
+        if field not in colmap:
             colmap[field] = ci
+            weak[field] = is_weak
+        elif weak.get(field) and not is_weak:
+            colmap[field] = ci
+            weak[field] = False
     return colmap
 
 
 def _xls_is_stock_header(colmap: Dict[str, int]) -> bool:
     has_name = "item" in colmap
     has_qty = bool({"op", "sale", "bal", "pur"} & set(colmap))
+    has_val = bool({"sval", "bval", "opval"} & set(colmap))
     has_mat = has_name and "product_code" in colmap
-    return (has_name and has_qty) or has_mat
+    return (has_name and (has_qty or has_val)) or has_mat
 
 
 def _xls_cell_code(value: Any) -> Optional[str]:
@@ -2608,11 +2748,29 @@ def _xls_expand_merged(sh: Any, rows: List[List[Any]]) -> None:
                     rows[r][c] = value
 
 
+def _xls_expand_xlrd_merged(sh: Any, rows: List[List[Any]]) -> None:
+    """Copy xlrd merged ranges. Bounds are half-open: (rlo, rhi, clo, chi)."""
+    for rlo, rhi, clo, chi in getattr(sh, "merged_cells", []) or []:
+        if rlo >= len(rows) or clo >= len(rows[rlo]):
+            continue
+        value = rows[rlo][clo]
+        if value in (None, ""):
+            continue
+        for r in range(rlo, min(rhi, len(rows))):
+            while len(rows[r]) < chi:
+                rows[r].append(None)
+            for c in range(clo, chi):
+                if rows[r][c] in (None, ""):
+                    rows[r][c] = value
+
+
 def _xls_iter_sheets(
     file_bytes: bytes, ext: str
-) -> List[Tuple[str, List[List[Any]], List[List[Optional[str]]]]]:
-    sheets: List[Tuple[str, List[List[Any]], List[List[Optional[str]]]]] = []
-    if ext == ".xls":
+) -> List[Tuple[str, List[List[Any]], List[List[Optional[str]]], bool]]:
+    sheets: List[Tuple[str, List[List[Any]], List[List[Optional[str]]], bool]] = []
+    if ext == ".xls" or (
+        file_bytes[:8].startswith(b"\xd0\xcf\x11\xe0") and ext not in {".xlsx", ".xlsm"}
+    ):
         import xlrd
 
         wb = xlrd.open_workbook(file_contents=file_bytes)
@@ -2631,23 +2789,35 @@ def _xls_iter_sheets(
                     )
                 rows.append(vals)
                 formats.append(fmts)
-            sheets.append((sh.name or f"Sheet{idx + 1}", rows, formats))
+            _xls_expand_xlrd_merged(sh, rows)
+            hidden = bool(getattr(sh, "visibility", 0))
+            sheets.append((sh.name or f"Sheet{idx + 1}", rows, formats, hidden))
         return sheets
 
     from openpyxl import load_workbook
 
     wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=False)
+    formulas = load_workbook(io.BytesIO(file_bytes), data_only=False, read_only=False)
     try:
-        for sh in wb.worksheets:
+        for sh, sh_formula in zip(wb.worksheets, formulas.worksheets):
             rows = []
             formats = []
-            for row in sh.iter_rows():
-                rows.append([cell.value for cell in row])
+            for row, formula_row in zip(sh.iter_rows(), sh_formula.iter_rows()):
+                vals = []
+                for cell, formula_cell in zip(row, formula_row):
+                    value = cell.value
+                    formula = formula_cell.value
+                    if value is None and isinstance(formula, str) and formula.startswith("="):
+                        value = formula
+                    vals.append(value)
+                rows.append(vals)
                 formats.append([cell.number_format for cell in row])
             _xls_expand_merged(sh, rows)
-            sheets.append((sh.title or "Sheet1", rows, formats))
+            hidden = str(getattr(sh, "sheet_state", "visible") or "visible") != "visible"
+            sheets.append((sh.title or "Sheet1", rows, formats, hidden))
     finally:
         wb.close()
+        formulas.close()
     return sheets
 
 
@@ -2680,22 +2850,30 @@ def _xls_finalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
 
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     if ext != ".xls":
-        from openpyxl import load_workbook
-
-        pod_wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
         try:
-            pod_result = _parse_pod_hospital_sales_xlsx(pod_wb, filename)
-        finally:
-            pod_wb.close()
-        if pod_result is not None:
-            return pod_result
+            from openpyxl import load_workbook
+
+            pod_wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
+            try:
+                pod_result = _parse_pod_hospital_sales_xlsx(pod_wb, filename)
+            finally:
+                pod_wb.close()
+            if pod_result is not None:
+                return pod_result
+        except Exception as exc:
+            if file_bytes[:8].startswith(b"\xd0\xcf\x11\xe0"):
+                logger.info("OOXML reader failed on OLE workbook; using .xls parser: %s", exc)
+                ext = ".xls"
+            else:
+                raise
 
     parts: List[Dict[str, Any]] = []
     last_error: Optional[str] = None
-    for sheet_name, rows, formats in _xls_iter_sheets(file_bytes, ext):
+    for sheet_name, rows, formats, hidden in _xls_iter_sheets(file_bytes, ext):
         try:
             part = empty_result(filename, ext.lstrip("."))
             part = _xls_fill_from_rows(part, rows, formats, sheet_name)
+            part.setdefault("totals", {}).setdefault("extra", {})["sheet_hidden"] = hidden
         except Exception as exc:
             last_error = f"{sheet_name}: {exc}"
             logger.warning("Excel sheet %s skipped: %s", sheet_name, exc)
@@ -2703,14 +2881,38 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         count = len(part.get("line_items") or [])
         extra = (part.get("totals") or {}).get("extra") or {}
         logger.info(
-            "Excel sheet %s parser=semantic_xls items=%s header_row=%s fields=%s",
+            "Excel sheet %s parser=semantic_xls items=%s header_row=%s fields=%s hidden=%s",
             sheet_name,
             count,
             extra.get("header_row"),
             extra.get("extraction_metadata", {}).get("detected_fields"),
+            hidden,
         )
         if part.get("line_items"):
             parts.append(part)
+    visible_parts = [
+        part
+        for part in parts
+        if not ((part.get("totals") or {}).get("extra") or {}).get("sheet_hidden")
+    ]
+    if visible_parts:
+        parts = visible_parts
+
+    def _product_names(part: Dict[str, Any]) -> set:
+        return {
+            item.get("product_name")
+            for item in (part.get("line_items") or [])
+            if isinstance(item, dict) and item.get("product_name")
+        }
+
+    parts = sorted(parts, key=lambda part: len(part.get("line_items") or []), reverse=True)
+    detailed: List[Dict[str, Any]] = []
+    for part in parts:
+        names = _product_names(part)
+        if any(names and names <= _product_names(other) for other in detailed):
+            continue
+        detailed.append(part)
+    parts = detailed
     if not parts:
         result = empty_result(filename, ext.lstrip("."))
         if last_error:
@@ -2773,6 +2975,14 @@ def _xls_fill_from_rows(
                 result["stockist_address"] = _clean_name(joined)
         if re.search(r"Stock and Sale|Stock & Sale|Sales Report", joined, re.I):
             result["report_title"] = _clean_name(joined)
+            if not result.get("company_name"):
+                brand = re.search(
+                    r"[-–]?\s*([A-Za-z][A-Za-z0-9 .&']{1,40}?)\s+STOCK\s*(?:&|AND)\s*SALES",
+                    joined,
+                    re.I,
+                )
+                if brand:
+                    result["company_name"] = _clean_name(brand.group(1).lstrip("-").strip())
             m = re.search(
                 r"From\s*date\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s*to\s*"
                 r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
@@ -2820,6 +3030,29 @@ def _xls_fill_from_rows(
             if k in colmap:
                 return colmap[k]
         return None
+
+    if header_idx and not result.get("stockist_name"):
+        for preamble in rows[:header_idx]:
+            if not isinstance(preamble, list):
+                continue
+            texts = [
+                str(c).strip()
+                for c in preamble
+                if c is not None and str(c).strip()
+            ]
+            if len(texts) != 1:
+                continue
+            name = texts[0]
+            if re.search(
+                r"\d|STOCK|SALES|STATEMENT|PRODUCT|ITEM|OPENING|CLOSING|"
+                r"REPORT|PHONE|E-?MAIL|D\.?L|PAGE|FROM|DATE|ADDRESS",
+                name,
+                re.I,
+            ):
+                continue
+            if 4 <= len(name) <= 60:
+                result["stockist_name"] = _clean_name(name)
+                break
 
     items: List[Dict[str, Any]] = []
     start = (header_idx + 1) if header_idx is not None else 0
@@ -2893,6 +3126,10 @@ def _xls_fill_from_rows(
                         break
         if not product_name:
             continue
+        if _xls_norm_header(product_name) in {"item", "product_code", "op", "sale", "bal", "pur"}:
+            continue
+        if _xls_is_stock_header(_xls_header_colmap(row)):
+            continue
         if re.search(
             r"^(Item|Item Name|Mat Name|Mat Code|Pack|Manufacturer|Sales\s*:|"
             r"Opening|Closing|Product Name|Product|Description|Customer Name|"
@@ -2904,11 +3141,18 @@ def _xls_fill_from_rows(
         if re.search(r"^(Sales|Opening Val|Closing Val|Purchase|Credit|Branch|Adj)\b", product_name, re.I):
             continue
         if re.search(
-            r"^(Total Of|TOTAL\b|Grand Total|Sub\s*Total|Opening Stock|Closing Stock|"
-            r"Report Generated|Prepared By)\b",
+            r"^(Total Of|TOTAL\b|Grand Total|Sub\s*Total|Net\s*Total|SUMMARY\b|"
+            r"Opening Stock|Closing Stock|Report Generated|Prepared By)\b",
             product_name,
             re.I,
         ):
+            if re.match(r"^(?:grand\s+|net\s+)?total\b", product_name.strip(), re.I):
+                sv = _col("sval", "secondary value")
+                bv = _col("bval")
+                if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
+                    result["totals"]["sales_value"] = _to_float(row[sv])
+                if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
+                    result["totals"]["closing_value"] = _to_float(row[bv])
             continue
         if header_idx is not None:
             qty_cells = [
@@ -2963,24 +3207,42 @@ def _xls_fill_from_rows(
         sval_i = _col("sval", "secondary value")
         rate_i = _col("rate", "secondary rate")
 
-        if op_i is not None:
-            item["opening_qty"] = _to_float(row[op_i] if op_i < len(row) else 0)
-        if pur_i is not None:
-            item["receipts_qty"] = _to_float(row[pur_i] if pur_i < len(row) else 0)
-        if sale_i is not None:
-            item["sales_qty"] = _to_float(row[sale_i] if sale_i < len(row) else 0)
-        if bal_i is not None:
-            item["closing_qty"] = _to_float(row[bal_i] if bal_i < len(row) else 0)
-        if bval_i is not None:
-            item["closing_value"] = _to_float(row[bval_i] if bval_i < len(row) else 0)
-        if sval_i is not None:
-            item["sales_value"] = _to_float(row[sval_i] if sval_i < len(row) else 0)
+        def _assign_number(key: str, idx: Optional[int], into_extra: bool = False) -> None:
+            if idx is None or idx >= len(row):
+                return
+            value = row[idx]
+            if isinstance(value, str) and value.strip().startswith("="):
+                item["extra"]["unresolved_formula"] = True
+                item["extra"]["extraction_warning"] = "formula value was not cached"
+                if not into_extra:
+                    item[key] = None
+                return
+            number = _to_float(value)
+            if into_extra:
+                item["extra"][key] = number
+            else:
+                item[key] = number
+
+        _assign_number("opening_qty", op_i)
+        _assign_number("receipts_qty", pur_i)
+        _assign_number("sales_qty", sale_i)
+        _assign_number("closing_qty", bal_i)
+        _assign_number("closing_value", bval_i)
+        _assign_number("sales_value", sval_i)
+        _assign_number("opening_value", _col("opval"), into_extra=True)
+        _assign_number("receipts_value", _col("purval"), into_extra=True)
+        for extra_field, extra_names in (
+            ("scheme_qty", ("scheme",)),
+            ("free_qty", ("free",)),
+            ("sample_qty", ("sample",)),
+        ):
+            _assign_number(extra_field, _col(*extra_names), into_extra=True)
         if rate_i is not None and rate_i < len(row) and _xls_cell_has_qty(row[rate_i]):
             item["extra"]["unit_rate"] = _to_float(row[rate_i])
             rate = item["extra"]["unit_rate"]
-            if rate and not item.get("sales_value"):
+            if rate and not item.get("sales_value") and item.get("sales_qty") is not None:
                 item["sales_value"] = round(item["sales_qty"] * rate, 2)
-            if rate and not item.get("closing_value"):
+            if rate and not item.get("closing_value") and item.get("closing_qty") is not None:
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
         date_i = _col("date")
         if (
@@ -3020,6 +3282,37 @@ def _xls_fill_from_rows(
             extra["product_column_header"] = str(
                 rows[header_idx][colmap["item"]] or ""
             ).strip()
+    role_fields = {
+        "product": "item",
+        "product_code": "product_code",
+        "opening_qty": "op",
+        "receipts_qty": "pur",
+        "sales_qty": "sale",
+        "closing_qty": "bal",
+        "sales_value": "sval",
+        "closing_value": "bval",
+        "opening_value": "opval",
+        "receipts_value": "purval",
+        "rate": "rate",
+    }
+    column_mapping = {}
+    for role, field in role_fields.items():
+        idx = colmap.get(field)
+        header = None
+        if (
+            idx is not None
+            and header_idx is not None
+            and idx < len(rows[header_idx])
+        ):
+            header = re.sub(r"\s+", " ", str(rows[header_idx][idx] or "")).strip() or None
+        column_mapping[role] = {
+            "column": _xls_col_letter(idx) if idx is not None else None,
+            "header": header,
+            "confidence": 0.9 if idx is not None else 0.0,
+        }
+    if "sale" not in colmap and items:
+        extra["extraction_warning"] = "sales quantity column was not detected"
+    extra["column_mapping"] = column_mapping
     extra["extraction_metadata"] = {
         "source_type": result.get("source_format"),
         "sheet": sheet_name,
@@ -3027,9 +3320,11 @@ def _xls_fill_from_rows(
         "header_detection_confidence": extra["header_detection_confidence"],
         "product_column": extra.get("product_column"),
         "product_column_header": extra.get("product_column_header"),
+        "column_mapping": column_mapping,
         "date_found": bool(result.get("period_from") or result.get("period_to")),
         "stockist_found": bool(result.get("stockist_name")),
         "detected_fields": sorted(colmap.keys()),
+        "extraction_warning": extra.get("extraction_warning"),
     }
     return result
 
