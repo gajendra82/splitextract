@@ -2620,6 +2620,7 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
                 item["closing_qty"] = _prompt_cell_number(cells["closing_qty"]) or 0.0
                 item["closing_value"] = _prompt_cell_number(cells["closing_value"]) or 0.0
                 extra = item["extra"]
+                extra["layout"] = "prompt_datewise"
                 for key in ("a3mn", "ee", "age", "exp"):
                     val = " ".join(cells[key]).strip()
                     if val and val not in {"-", "—"}:
