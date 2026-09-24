@@ -27040,12 +27040,18 @@ def _sales_statement_to_flat_invoices(
     total = (sales_result.get("totals") or {}).get("sales_value")
     if total is None:
         total = (sales_result.get("totals") or {}).get("closing_value")
+    stockist = str(sales_result.get("stockist_name") or "").strip()
+    period = str(
+        sales_result.get("period_from") or sales_result.get("period_to") or ""
+    ).strip()
+    # Filename prefixes like 0000700037_... are batch ids, not invoice numbers.
+    statement_no = str(sales_result.get("report_title") or "").strip()
+    if not statement_no:
+        statement_no = " ".join(part for part in (stockist, period) if part).strip()
+    if not statement_no:
+        statement_no = str(sales_result.get("source_file") or "STATEMENT_1")
     return [{
-        "invoice_no": str(
-            sales_result.get("report_title")
-            or sales_result.get("source_file")
-            or "STATEMENT_1"
-        )[:80],
+        "invoice_no": statement_no[:80],
         "invoice_date": str(sales_result.get("period_to") or sales_result.get("period_from") or ""),
         "invoice_date_raw": str(sales_result.get("period_to") or ""),
         "vendor": str(sales_result.get("company_name") or ""),

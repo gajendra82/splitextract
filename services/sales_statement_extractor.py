@@ -2212,9 +2212,17 @@ def _looks_like_stockist_header(line: str) -> bool:
         return False
     if _STOCKIST_NAME_HINT.search(s):
         return True
-    # ALL-CAPS agency-like short header
+    # ALL-CAPS agency-like short header. Reject OCR noise such as "CN SS OO GO".
     letters = re.sub(r"[^A-Za-z]", "", s)
-    if letters and letters.isupper() and len(s.split()) <= 8:
+    words = re.findall(r"[A-Za-z]{4,}", s)
+    if (
+        letters
+        and letters.isupper()
+        and len(s.split()) <= 8
+        and len(letters) >= 6
+        and len(letters) / max(len(s), 1) >= 0.45
+        and words
+    ):
         return True
     return False
 
@@ -2306,6 +2314,56 @@ def _group_pdf_pages_by_stockist(
     return groups
 
 
+def _statement_nonzero_rows(result: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(result, dict):
+        return 0
+    count = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if any(
+            _to_float(item.get(key)) > 0
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            )
+        ):
+            count += 1
+    return count
+
+
+def _statement_numbers_are_blank(result: Optional[Dict[str, Any]]) -> bool:
+    """True when product rows exist but qty/value columns are almost all zero.
+
+    Scanned stock-and-sale grids often OCR into names with no usable digits.
+    Those rows must not block the page-image read.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    nonzero = 0
+    for item in items:
+        if any(
+            _to_float(item.get(key)) > 0
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            )
+        ):
+            nonzero += 1
+    return nonzero <= max(1, len(items) // 10)
+
+
 def _extract_statement_from_pdf_group(
     group: Dict[str, Any], filename: str
 ) -> Dict[str, Any]:
@@ -2313,6 +2371,7 @@ def _extract_statement_from_pdf_group(
     pages = group["pages"]
     page_nos = [p["page_index"] + 1 for p in pages]
     combined_text = "\n\n".join(p.get("text") or "" for p in pages).strip()
+    has_page_images = any(p.get("image_bytes") for p in pages)
 
     result: Optional[Dict[str, Any]] = None
 
@@ -2325,8 +2384,16 @@ def _extract_statement_from_pdf_group(
                 or "pdf_split_text"
             )
 
-    # Fall back to per-page image extraction and merge
-    if not result or not result.get("line_items"):
+    text_nonzero = _statement_nonzero_rows(result)
+    # A short/zero OCR parse of a scanned grid must not hide the page image.
+    text_weak = (
+        not result
+        or not result.get("line_items")
+        or _statement_numbers_are_blank(result)
+        or text_nonzero < 8
+    )
+
+    if has_page_images and text_weak:
         merged = empty_result(filename, "pdf")
         merged_items: List[Dict[str, Any]] = []
         for p in pages:
@@ -2354,7 +2421,17 @@ def _extract_statement_from_pdf_group(
                 merged["totals"]["closing_value"] = totals.get("closing_value")
         merged["line_items"] = merged_items
         merged["totals"]["extra"]["extraction_method"] = "pdf_split_page_images"
-        result = merged
+        image_nonzero = _statement_nonzero_rows(merged)
+        if image_nonzero > text_nonzero:
+            logger.info(
+                "Sales statement image read for %s kept (%s rows) over text parse (%s rows)",
+                filename,
+                image_nonzero,
+                text_nonzero,
+            )
+            result = merged
+        elif not result or not result.get("line_items"):
+            result = merged
 
     # Ensure stockist name from split detection wins when vision/OCR confuses manufacturer
     detected = group.get("stockist_name")
@@ -2562,12 +2639,20 @@ Rules:
 - stockist_name = the agency/seller header (e.g. NEW VIKASH MEDICAL AGENCY), NOT the manufacturer.
 - company_name = manufacturer/division line (e.g. VERITAZ HEALTHCARE LTD).
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026). Never invent years like 2001 or 2030.
-- Map Pur.Qnt / Purchase / Receipts -> receipts_qty
-- Map Sl.Qnt / Sales qty / Issue -> sales_qty; Sl.Value -> sales_value
-- Map Cl.Qnt / Closing -> closing_qty; Cl.Value -> closing_value
-- Map Op.Qnt / Opening / OpBal -> opening_qty
+- Map Pur.Qnt / Purchase / Receipts / P Qty -> receipts_qty
+- Map Sl.Qnt / Sales qty / Issue / S Qty -> sales_qty; Sl.Value / S Val -> sales_value
+- Map Cl.Qnt / Closing / Cl Stk -> closing_qty; Cl.Value / Cl Val -> closing_value
+- Map Op.Qnt / Opening / OpBal / Op Stk -> opening_qty
 - For OpBal|Receipt|Total|Issue|Closing: sales_qty=Issue (NOT Total); Dump is not closing_value.
-- Use 0 for missing numeric fields.
+- "Stock and Sale Statement" grid (Item Cd, Item Name, Op Stk, P Qty, P S Qty, P Val, S Qty, S S Qty, S Val, Cl Stk, Cl Val):
+  opening_qty=Op Stk, receipts_qty=P Qty, sales_qty=S Qty (NOT S S Qty),
+  sales_value=S Val, closing_qty=Cl Stk, closing_value=Cl Val.
+  Put P S Qty in extra.purchase_scheme_qty, P Val in extra.purchase_value,
+  S S Qty in extra.sales_scheme_qty.
+  Blank cells are 0. Do NOT shift later columns left when a cell is blank.
+  This layout has money columns. It is NOT qty-only. Never set sales_value or
+  closing_value to 0 when S Val / Cl Val is printed (example: S Qty=2, S Val=495).
+- Use 0 only for a cell that is actually blank.
 - Include every printed product row.
 """.strip()
 
@@ -2608,9 +2693,14 @@ Rules:
 - Ignore handwritten notes.
 - stockist_name = agency/seller header; company_name = manufacturer/division.
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026).
-- Map Op.Qnt/Opening/OpBal -> opening_qty; Pur.Qnt/Purchase/Receipt -> receipts_qty;
-  Sl.Qnt/Sales/Issue -> sales_qty; Sl.Value/Amount -> sales_value;
-  Cl.Qnt/Closing Balance -> closing_qty; Cl.Value -> closing_value.
+- Map Op.Qnt/Opening/OpBal/Op Stk -> opening_qty; Pur.Qnt/Purchase/Receipt/P Qty -> receipts_qty;
+  Sl.Qnt/Sales/Issue/S Qty -> sales_qty; Sl.Value/S Val/Amount -> sales_value;
+  Cl.Qnt/Closing Balance/Cl Stk -> closing_qty; Cl.Value/Cl Val -> closing_value.
+- "Stock and Sale Statement" columns Op Stk | P Qty | P S Qty | P Val | S Qty | S S Qty | S Val | Cl Stk | Cl Val:
+  sales_qty is S Qty, not the scheme column S S Qty. sales_value is S Val (rupees).
+  closing_qty is Cl Stk, closing_value is Cl Val. Blank cells stay 0 but do not
+  shift the next printed number into an earlier column. If S Val or Cl Val is
+  printed, this is NOT qty-only — do not zero those amounts.
 - For OpBal | Receipt | Total | Issue | Closing columns:
   opening_qty=OpBal, receipts_qty=Receipt, sales_qty=Issue (NOT Total),
   closing_qty=Closing. Total/Dump/NearExpiry go in extra only; never map Total to sales_qty
