@@ -14,6 +14,8 @@ from services.sales_statement_extractor import (
     _drop_trailing_statement_total_item,
     _finalize_zandra_stock_sale,
     _looks_like_zandra_stock_sale_text,
+    _parse_ps_pharma_statement,
+    _parse_rate_qty_value_statement,
     _parse_semantic_text_table,
     _pdf_pages_are_image_only,
     _statement_numbers_are_blank,
@@ -494,6 +496,29 @@ class TestExcelLayoutVariations(unittest.TestCase):
         self.assertEqual(result["line_items"][0]["sales_qty"], 30.0)
 
 
+    def test_op_purch_sale_others_closing_stay_on_source_columns(self):
+        data = self._xlsx(
+            [
+                ["Product Name", "Pack", "Op. Stock", "Purch", "Sale", "#Others", "Cl Stock"],
+                ["RUMALAYA (LINIMENT)", "60ML", 8, -2, 4, 1, 3],
+                ["LIV.52 SYRUP", "100ML", 0, 0, 0, 0, 4],
+            ]
+        )
+        result = extract_sales_statement(data, "op-purch-sale.xlsx")
+        rumalaya, liv = result["line_items"]
+        self.assertEqual(rumalaya["product_name"], "RUMALAYA (LINIMENT)")
+        self.assertEqual(rumalaya["packing"], "60ML")
+        self.assertEqual(rumalaya["opening_qty"], 8.0)
+        self.assertEqual(rumalaya["receipts_qty"], -2.0)
+        self.assertEqual(rumalaya["sales_qty"], 4.0)
+        self.assertEqual(rumalaya["closing_qty"], 3.0)
+        self.assertEqual(rumalaya["extra"]["others_qty"], 1.0)
+        self.assertEqual(liv["opening_qty"], 0.0)
+        self.assertEqual(liv["sales_qty"], 0.0)
+        self.assertEqual(liv["closing_qty"], 4.0)
+        self.assertNotEqual(liv["sales_qty"], liv["closing_qty"])
+
+
 class TestScannedPdfRouting(unittest.TestCase):
     def test_image_only_pages_detected(self):
         self.assertTrue(
@@ -569,6 +594,184 @@ class TestScannedPdfRouting(unittest.TestCase):
         self.assertEqual(names, ["ARJUNA TABLET"])
         self.assertEqual(result["line_items"][0]["closing_qty"], 47)
         self.assertEqual(result["line_items"][0]["closing_value"], 9333)
+
+class TestSecondarySalesQtyMapping(unittest.TestCase):
+    def test_sale_zero_is_not_replaced_by_closing_stock(self):
+        from app import _sales_line_to_invoice_item
+
+        item = _sales_line_to_invoice_item({
+            "product_name": "RUMALAYA (LINIMENT)",
+            "packing": "60ML",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 4.0,
+            "extra": {"others_qty": 4.0},
+        })
+        self.assertEqual(item["quantity"], "0.0")
+        fields = item["additional_fields"]
+        self.assertEqual(fields["opening_qty"], 0.0)
+        self.assertEqual(fields["receipts_qty"], 0.0)
+        self.assertEqual(fields["sales_qty"], 0.0)
+        self.assertEqual(fields["others_qty"], 4.0)
+        self.assertEqual(fields["closing_qty"], 4.0)
+        self.assertEqual(fields["packing"], "60ML")
+
+    def test_source_columns_stay_on_their_own_fields(self):
+        from app import _sales_line_to_invoice_item
+
+        item = _sales_line_to_invoice_item({
+            "product_name": "RUMALAYA (LINIMENT)",
+            "packing": "60ML",
+            "opening_qty": 8.0,
+            "receipts_qty": -2.0,
+            "sales_qty": 4.0,
+            "closing_qty": 3.0,
+            "extra": {"others_qty": 1.0},
+        })
+        self.assertEqual(item["quantity"], "4.0")
+        fields = item["additional_fields"]
+        self.assertEqual(fields["opening_qty"], 8.0)
+        self.assertEqual(fields["receipts_qty"], -2.0)
+        self.assertEqual(fields["sales_qty"], 4.0)
+        self.assertEqual(fields["others_qty"], 1.0)
+        self.assertEqual(fields["closing_qty"], 3.0)
+
+
+class TestPsPharmaDashCells(unittest.TestCase):
+    def test_dash_cells_stay_zero_and_printed_closing_is_kept(self):
+        text = """LAXMI MEDICAL DISTRIBUTOR
+12-6,FIRST FLOOR
+MAIN ROAD
+MADHIRA - 507203
+STOCK & SALES ANALYSIS 01/08/2026 - 31/08/2026
+ITEM DESCRIPTION OPENING RECEIPT ISSUE CLOSING
+THE HIMALAYA DRUG CO
+RUMALAYA (LINIMENT)        60ML              7         -         4         3
+BONNISAN LIQ  200`ML
+140 - 84 56
+GASEX TAB 100`S 58 - 4 54
+TOTAL 286585 24676 253001 74263
+"""
+        result = _parse_ps_pharma_statement(text, "laxmi.pdf")
+        self.assertIsNotNone(result)
+        by_name = {
+            (item["product_name"], item.get("packing")): item
+            for item in result["line_items"]
+        }
+        rumalaya = by_name[("RUMALAYA (LINIMENT)", "60ML")]
+        self.assertEqual(rumalaya["opening_qty"], 7.0)
+        self.assertEqual(rumalaya["receipts_qty"], 0.0)
+        self.assertEqual(rumalaya["sales_qty"], 4.0)
+        self.assertEqual(rumalaya["closing_qty"], 3.0)
+        wrapped = by_name[("BONNISAN LIQ", "200`ML")]
+        self.assertEqual(
+            (wrapped["opening_qty"], wrapped["receipts_qty"], wrapped["sales_qty"], wrapped["closing_qty"]),
+            (140.0, 0.0, 84.0, 56.0),
+        )
+        gasex = by_name[("GASEX TAB", "100`S")]
+        self.assertEqual(gasex["sales_qty"], 4.0)
+        self.assertEqual(gasex["opening_qty"], 58.0)
+        self.assertEqual(result["totals"]["opening_qty"], 286585.0)
+        self.assertEqual(result["totals"]["closing_qty"], 74263.0)
+
+
+class TestRateQtyValueColumns(unittest.TestCase):
+    def test_blank_receipt_and_issue_stay_in_their_columns(self):
+        def word(x0, x1, y, text):
+            return (x0, y, x1, y + 8, text)
+
+        header = [
+            word(20, 55, 0, "STOCK"),
+            word(58, 66, 0, "&"),
+            word(70, 110, 0, "SALES"),
+            word(20, 42, 10, "ITEM"),
+            word(48, 107, 10, "DESCRIPTION"),
+            word(172, 194, 10, "RATE"),
+            word(242, 280, 10, "OPENING"),
+            word(356, 393, 10, "RECEIPT"),
+            word(464, 491, 10, "ISSUE"),
+            word(572, 609, 10, "CLOSING"),
+            word(647, 669, 10, "DUMP"),
+        ]
+        sub = [
+            word(221, 242, 20, "QTY."),
+            word(280, 307, 20, "VALUE"),
+            word(334, 356, 20, "QTY."),
+            word(393, 420, 20, "VALUE"),
+            word(442, 464, 20, "QTY."),
+            word(501, 528, 20, "VALUE"),
+            word(550, 572, 20, "QTY."),
+            word(609, 636, 20, "VALUE"),
+            word(647, 669, 20, "QTY."),
+        ]
+        syrup = [
+            word(21, 64, 40, "GERIFORT"),
+            word(69, 86, 40, "SYP"),
+            word(91, 113, 40, "200M"),
+            word(118, 145, 40, "200ML"),
+            word(161, 194, 40, "152.47"),
+            word(226, 237, 40, "32"),
+            word(264, 302, 40, "4879.06"),
+            word(345, 350, 40, "-"),
+            word(393, 415, 40, "0.00"),
+            word(453, 458, 40, "-"),
+            word(501, 523, 40, "0.00"),
+            word(555, 566, 40, "32"),
+            word(593, 631, 40, "4879.06"),
+        ]
+        tab = [
+            word(21, 64, 52, "GERIFORT"),
+            word(69, 86, 52, "TAB"),
+            word(91, 107, 52, "100"),
+            word(118, 150, 52, "100TAB"),
+            word(161, 194, 52, "108.18"),
+            word(226, 237, 52, "38"),
+            word(264, 302, 52, "4110.71"),
+            word(345, 350, 52, "-"),
+            word(393, 415, 52, "0.00"),
+            word(453, 458, 52, "-"),
+            word(501, 523, 52, "0.00"),
+            word(555, 566, 52, "38"),
+            word(593, 631, 52, "4110.71"),
+        ]
+        nxt = [
+            word(21, 69, 64, "HIMPLASIA"),
+            word(75, 91, 64, "TAB"),
+            word(118, 140, 64, "1*30"),
+            word(161, 194, 64, "347.52"),
+            word(226, 237, 64, "-5"),
+            word(258, 302, 64, "-1737.59"),
+            word(345, 350, 64, "-"),
+            word(393, 415, 64, "0.00"),
+            word(453, 458, 64, "8"),
+            word(485, 523, 64, "2775.74"),
+            word(550, 566, 64, "-13"),
+            word(588, 631, 64, "-4517.74"),
+        ]
+        text = "KAPEESH MEDICAL STORE\nSTOCK & SALES ANALYSIS 01-08-2026 - 31-08-2026\n"
+        pages = [{
+            "text": text,
+            "words": header + sub + syrup + tab + nxt,
+        }]
+        result = _parse_rate_qty_value_statement(pages, "kapeesh.pdf")
+        self.assertIsNotNone(result)
+        by_pack = {item.get("packing"): item for item in result["line_items"]}
+        tab_row = by_pack["100TAB"]
+        self.assertEqual(tab_row["product_name"], "GERIFORT TAB 100")
+        self.assertEqual(tab_row["opening_qty"], 38.0)
+        self.assertEqual(tab_row["receipts_qty"], 0.0)
+        self.assertEqual(tab_row["sales_qty"], 0.0)
+        self.assertEqual(tab_row["closing_qty"], 38.0)
+        syrup_row = by_pack["200ML"]
+        self.assertEqual(
+            (syrup_row["opening_qty"], syrup_row["closing_qty"]),
+            (32.0, 32.0),
+        )
+        neighbor = by_pack["1*30"]
+        self.assertEqual(neighbor["opening_qty"], -5.0)
+        self.assertEqual(neighbor["sales_qty"], 8.0)
+        self.assertEqual(neighbor["closing_qty"], -13.0)
 
 
 if __name__ == "__main__":

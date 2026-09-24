@@ -551,6 +551,14 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     """Parse P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING stock & sales analysis."""
     if not text:
         return None
+    # RATE + QTY/VALUE pairs (Kapeesh-style). Dashes are blank cells, not
+    # missing columns, so the 4-number tail parser must not claim this table.
+    if (
+        re.search(r"\bRATE\b", text, re.I)
+        and re.search(r"\bRECEIPT\b", text, re.I)
+        and re.search(r"QTY\.?\s+VALUE", text, re.I)
+    ):
+        return None
     # Only P.S. format (OPENING/RECEIPT/ISSUE/CLOSING) — do not steal Mahajan pages
     is_ps = bool(
         re.search(r"P\.?\s*S\.?\s*PHARMACEUTICAL", text, re.I)
@@ -591,52 +599,108 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         ):
             if not re.search(r"Phone|GSTIN|E-Mail|VAT", ln, re.I):
                 result["stockist_address"] = _clean_name(ln)
+        if (
+            not result.get("report_title")
+            and result.get("stockist_name")
+            and _clean_name(ln) != result.get("stockist_name")
+            and re.search(r"\d|ROAD|FLOOR", ln, re.I)
+            and not re.search(r"STOCK\s*&\s*SALES|OPENING\s+RECEIPT", ln, re.I)
+        ):
+            prev = result.get("stockist_address") or ""
+            result["stockist_address"] = _clean_name(f"{prev} {ln}")
 
-    # Row: <product [packing]> opening receipt issue closing
+    # Row: <product [packing]> opening receipt issue closing.
+    # A printed "-" is an empty qty cell, not a missing column.
+    qty_tok = r"(?:-?\d+(?:\.\d+)?|-)"
     row_re = re.compile(
-        r"^(.+?)\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+"
-        r"(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$"
+        rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
+    nums_re = re.compile(
+        rf"^({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
+    )
+    pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)$", re.I)
     pack_token = re.compile(
-        r"^(?:\d+\*\d+|\d+(?:\.\d+)?(?:ML|MG|TAB|CAP|SYP|S)|"
+        r"^(?:\d+\*\d+|\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
         r"\d+ML|\d+MG|0\.\d+ML)$",
         re.I,
     )
 
+    def _ps_qty(token: str) -> float:
+        if str(token).strip() == "-":
+            return 0.0
+        return _to_float(token)
+
+    def _ps_name_pack(left: str) -> Tuple[str, Optional[str]]:
+        tokens = _clean_name(left).split()
+        packing = None
+        name_tokens = tokens
+        if (
+            len(tokens) >= 2
+            and pack_unit.match(tokens[-1])
+            and re.match(r"^\d", tokens[-2])
+        ):
+            packing = f"{tokens[-2]} {tokens[-1]}"
+            name_tokens = tokens[:-2]
+        elif tokens and pack_token.match(tokens[-1].replace("`", "").replace("'", "")):
+            packing = tokens[-1]
+            name_tokens = tokens[:-1]
+        return _clean_name(" ".join(name_tokens)), packing
+
+    def _ps_item(left: str, opening: str, receipt: str, issue: str, closing: str) -> Optional[Dict[str, Any]]:
+        product_name, packing = _ps_name_pack(left)
+        if len(product_name) < 3:
+            return None
+        if re.fullmatch(r"AUROBINDO.*|VERITAZ.*|THE HIMALAYA.*", product_name, re.I):
+            return None
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing
+        item["opening_qty"] = _ps_qty(opening)
+        item["receipts_qty"] = _ps_qty(receipt)
+        item["sales_qty"] = _ps_qty(issue)  # ISSUE
+        item["closing_qty"] = _ps_qty(closing)
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        return item
+
     items: List[Dict[str, Any]] = []
+    pending_name = ""
     for ln in lines:
         if re.match(r"^\s*TOTAL\b", ln, re.I):
+            pending_name = ""
             continue
         if re.search(
             r"^(ITEM|OPENING|STOCK|AUROBINDO|Phone|GSTIN|Page|P\.?S\.?)",
             ln,
             re.I,
         ):
+            pending_name = ""
+            continue
+        if re.search(r"THE HIMALAYA DRUG", ln, re.I):
+            if not result.get("company_name"):
+                result["company_name"] = "THE HIMALAYA DRUG CO"
+            pending_name = ""
             continue
         m = row_re.match(ln)
-        if not m:
+        if m:
+            row = _ps_item(m.group(1), m.group(2), m.group(3), m.group(4), m.group(5))
+            if row:
+                items.append(row)
+            pending_name = ""
             continue
-        left = _clean_name(m.group(1))
-        # Skip manufacturer-only divider rows
-        if re.fullmatch(r"AUROBINDO.*|VERITAZ.*", left, re.I):
+        n = nums_re.match(ln)
+        if n and pending_name:
+            row = _ps_item(pending_name, n.group(1), n.group(2), n.group(3), n.group(4))
+            if row:
+                items.append(row)
+            pending_name = ""
             continue
-        tokens = left.split()
-        packing = None
-        product_name = left
-        if len(tokens) >= 2 and pack_token.match(tokens[-1]):
-            packing = tokens[-1]
-            product_name = " ".join(tokens[:-1]).strip()
-
-        item = empty_line_item()
-        item["product_name"] = product_name
-        item["packing"] = packing
-        item["opening_qty"] = _to_float(m.group(2))
-        item["receipts_qty"] = _to_float(m.group(3))
-        item["sales_qty"] = _to_float(m.group(4))  # ISSUE
-        item["closing_qty"] = _to_float(m.group(5))
-        item["sales_value"] = 0.0
-        item["closing_value"] = 0.0
-        items.append(item)
+        if re.search(r"[A-Za-z]{3}", ln) and not re.search(
+            r"ROAD|FLOOR|PHONE|GSTIN|ANALYSIS", ln, re.I
+        ):
+            pending_name = ln
+        else:
+            pending_name = ""
 
     if not items and not re.search(r"^\s*TOTAL\b", text, re.I | re.M):
         return None
@@ -4810,6 +4874,169 @@ def _extract_zandra_stock_sale_vision(
     return _finalize_zandra_stock_sale(result)
 
 
+def _qv_header_rows(
+    rows: List[Dict[str, Any]],
+) -> Optional[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    """RATE / OPENING / RECEIPT / ISSUE / CLOSING header plus its QTY VALUE row."""
+    for idx, row in enumerate(rows):
+        tokens = set(_ssa_row_tokens(row))
+        if not {"rate", "opening", "receipt", "issue", "closing"} <= tokens:
+            continue
+        for nxt in rows[idx + 1 : idx + 4]:
+            labels = [str(box[4]).upper().rstrip(".") for box in nxt["words"]]
+            if labels.count("QTY") >= 4 and labels.count("VALUE") >= 4:
+                return row, nxt
+    return None
+
+
+def _qv_column_anchors(
+    header: Dict[str, Any], sub: Dict[str, Any]
+) -> Optional[List[Tuple[str, float]]]:
+    rate = next(
+        (box for box in header["words"] if _ssa_token(box[4]) == "rate"), None
+    )
+    if rate is None:
+        return None
+    pairs = (
+        ("opening_qty", "opening_value"),
+        ("receipts_qty", "receipts_value"),
+        ("sales_qty", "sales_value"),
+        ("closing_qty", "closing_value"),
+    )
+    labels = [(str(box[4]).upper().rstrip("."), (box[0] + box[2]) / 2.0) for box in sub["words"]]
+    anchors: List[Tuple[str, float]] = [("rate", (rate[0] + rate[2]) / 2.0)]
+    cursor = 0
+    for qty_name, value_name in pairs:
+        while cursor < len(labels) and labels[cursor][0] != "QTY":
+            cursor += 1
+        if cursor >= len(labels):
+            return None
+        anchors.append((qty_name, labels[cursor][1]))
+        cursor += 1
+        while cursor < len(labels) and labels[cursor][0] != "VALUE":
+            cursor += 1
+        if cursor >= len(labels):
+            return None
+        anchors.append((value_name, labels[cursor][1]))
+        cursor += 1
+    return anchors
+
+
+def _qv_split_packing(name: str) -> Tuple[str, Optional[str]]:
+    tokens = _clean_name(name).split()
+    if not tokens:
+        return "", None
+    last = tokens[-1]
+    if _looks_like_packing_token(last) or re.fullmatch(
+        r"\d+\*\d+[A-Za-z']*|\d+(?:\.\d+)?(?:GM|G|KG)", last, re.I
+    ):
+        return _clean_name(" ".join(tokens[:-1])), last
+    return _clean_name(name), None
+
+
+def _parse_rate_qty_value_statement(
+    pages: List[Dict[str, Any]], filename: str
+) -> Optional[Dict[str, Any]]:
+    """Map RATE + OPENING/RECEIPT/ISSUE/CLOSING QTY/VALUE cells by word x position.
+
+    A printed dash stays in its own column. Later numbers are not shifted left
+    into Opening or Closing.
+    """
+    items: List[Dict[str, Any]] = []
+    blob_parts: List[str] = []
+    carried: Optional[List[Tuple[str, float]]] = None
+    for page in pages:
+        words = page.get("words") or []
+        if not words:
+            continue
+        blob_parts.append(" ".join(str(w[4]) for w in words if len(w) > 4))
+        rows = _ssa_cluster_rows(words)
+        found = _qv_header_rows(rows)
+        anchors = _qv_column_anchors(*found) if found else None
+        if anchors:
+            carried = anchors
+        elif carried:
+            anchors = carried
+        else:
+            continue
+        centers = [x for _name, x in anchors]
+        gaps = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
+        max_dist = max(12.0, min(gaps) / 2.0) if gaps else 18.0
+        for row in rows:
+            if _qv_header_rows([row]) or any(
+                str(box[4]).upper().rstrip(".") == "QTY" for box in row["words"]
+            ):
+                continue
+            cells: Dict[str, List[str]] = {name: [] for name, _x in anchors}
+            name_words: List[Tuple[float, str]] = []
+            for box in row["words"]:
+                cx = (box[0] + box[2]) / 2.0
+                nearest = min(range(len(anchors)), key=lambda i: abs(cx - centers[i]))
+                if abs(cx - centers[nearest]) <= max_dist and cx >= centers[0] - max_dist:
+                    cells[anchors[nearest][0]].append(box[4])
+                elif cx < centers[0]:
+                    name_words.append((box[0], box[4]))
+            name_words.sort(key=lambda pair: pair[0])
+            raw_name = _clean_name(" ".join(text for _x, text in name_words))
+            if _ssa_skip_product(raw_name) or re.search(
+                r"phone|gstin|licence|e-?mail|whatsap|\btin\b|page\s*no|continued",
+                raw_name,
+                re.I,
+            ):
+                continue
+            parsed: Dict[str, Optional[float]] = {}
+            for field, _x in anchors:
+                bits = cells.get(field) or []
+                parsed[field] = _ocr_qty_token(bits[0]) if bits else None
+            if parsed.get("rate") is None and not any(
+                parsed.get(field) is not None
+                for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+            ):
+                continue
+            product_name, packing = _qv_split_packing(raw_name)
+            if _ssa_skip_product(product_name):
+                continue
+            item = empty_line_item()
+            item["product_name"] = product_name
+            item["packing"] = packing
+            for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+                if parsed.get(field) is not None:
+                    item[field] = parsed[field]
+            if parsed.get("sales_value") is not None:
+                item["sales_value"] = parsed["sales_value"]
+            if parsed.get("closing_value") is not None:
+                item["closing_value"] = parsed["closing_value"]
+            if parsed.get("opening_value") is not None:
+                item["opening_value"] = parsed["opening_value"]
+            extra = {"layout": "rate_qty_value"}
+            if parsed.get("rate") is not None:
+                extra["unit_rate"] = parsed["rate"]
+            item["extra"] = extra
+            items.append(item)
+    if len(items) < 3:
+        return None
+    blob = " ".join(blob_parts)
+    if not re.search(r"STOCK\s*&\s*SALES", blob, re.I):
+        return None
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    result["line_items"] = items
+    period = re.search(
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–]+\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        blob,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    for page in pages:
+        found = _detect_stockist_from_page_text(page.get("text") or "")
+        if found and not re.search(r"LAST\s+MONTH\s+SALE", found, re.I):
+            result["stockist_name"] = found
+            break
+    result["totals"]["extra"]["extraction_method"] = "rate_qty_value_columns"
+    return result
+
+
 def _extract_statement_from_pdf_group(
     group: Dict[str, Any], filename: str
 ) -> Dict[str, Any]:
@@ -4826,6 +5053,11 @@ def _extract_statement_from_pdf_group(
     geometry = _parse_stock_sales_analysis_words(pages, filename)
     if geometry and geometry.get("line_items"):
         result = geometry
+
+    if result is None:
+        qty_value = _parse_rate_qty_value_statement(pages, filename)
+        if qty_value and qty_value.get("line_items"):
+            result = qty_value
 
     # Scanned grids: Tesseract+Gemini-text often returns names with qty=0.
     if (
@@ -5738,6 +5970,22 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 landscape["totals"]["extra"]["statement_count"] = 1
                 landscape["totals"]["extra"]["fallback_used"] = True
                 return landscape
+
+        qty_pages = []
+        for page_index, page in enumerate(doc):
+            if page_index >= max_pages:
+                break
+            qty_pages.append(
+                {
+                    "page_index": page_index,
+                    "text": page.get_text("text") or "",
+                    "words": page.get_text("words") or [],
+                }
+            )
+        qty_value = _parse_rate_qty_value_statement(qty_pages, filename)
+        if qty_value and qty_value.get("line_items"):
+            qty_value["totals"]["extra"]["statement_count"] = 1
+            return qty_value
 
         page_infos: List[Dict[str, Any]] = []
         for page_index, page in enumerate(doc):
@@ -7147,7 +7395,8 @@ Return ONLY valid JSON (no markdown) with this exact shape:
 }
 
 Rules:
-- Ignore handwritten notes/circles in margins.
+- Ignore handwritten notes, circles, and signatures outside the table.
+- On an ORDER FORM (SAP Code, Product, Pack, Qty, Value, two side-by-side tables), a number written in a Qty cell is sales_qty, including handwriting. List every left-table product row first, then every right-table product row. A blank Qty cell is sales_qty 0. The Value column is sales_value and is 0 when that cell is blank. Do not put a Qty number into sales_value, and do not copy Qty from another row.
 - stockist_name = the agency/seller header (e.g. NEW VIKASH MEDICAL AGENCY), NOT the manufacturer.
 - company_name = manufacturer/division line (e.g. VERITAZ HEALTHCARE LTD).
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026). Never invent years like 2001 or 2030.
@@ -7495,6 +7744,520 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
     return result
 
 
+def _order_form_row_bands(px, width: int, height: int):
+    """Ruled product rows beside the Qty column."""
+    found = _order_form_row_bands_fixed(px, width, height)
+    if len(found) >= 8:
+        return found
+    return _order_form_row_bands_scaled(px, width, height)
+
+
+def _order_form_row_bands_fixed(px, width: int, height: int):
+    probe_x = int(width * 0.42)
+    span = max(1, 70)
+    raw = []
+    in_band = False
+    start = 0
+    x_lo = max(0, probe_x - 40)
+    x_hi = min(width, probe_x + 80)
+    for y in range(int(height * 0.16), int(height * 0.90)):
+        dark = sum(1 for x in range(x_lo, x_hi, 2) if px[x, y][0] < 70)
+        hot = dark >= span * 0.40
+        if hot and not in_band:
+            start = y
+            in_band = True
+        elif not hot and in_band:
+            if 1 <= (y - start) <= 12:
+                raw.append((start + y - 1) // 2)
+            in_band = False
+    merged: List[int] = []
+    for center in raw:
+        if merged and center - merged[-1] < 18:
+            merged[-1] = (merged[-1] + center) // 2
+        else:
+            merged.append(center)
+    if len(merged) < 10:
+        return []
+    gaps = [merged[i + 1] - merged[i] for i in range(len(merged) - 1)]
+    body = sorted(gap for gap in gaps if 28 <= gap <= 90)
+    if len(body) < 8:
+        return []
+    pitch = body[len(body) // 2]
+    best = (0, 0)
+    run_start = None
+    for index, gap in enumerate(gaps):
+        if abs(gap - pitch) <= max(8, pitch * 0.25):
+            if run_start is None:
+                run_start = index
+        elif run_start is not None:
+            if index - run_start > best[1] - best[0]:
+                best = (run_start, index)
+            run_start = None
+    if run_start is not None and (len(gaps) - run_start) > (best[1] - best[0]):
+        best = (run_start, len(gaps))
+    start_i, end_i = best
+    if end_i - start_i < 8:
+        return []
+    return [(merged[i] + 2, merged[i + 1] - 2) for i in range(start_i, end_i)]
+
+
+def _order_form_row_bands_scaled(px, width: int, height: int):
+    """Same ruled-row search for a smaller or lighter photo of the form."""
+    samples = [
+        px[x, y][0]
+        for y in range(int(height * 0.25), int(height * 0.80), 6)
+        for x in range(int(width * 0.15), int(width * 0.85), 6)
+    ]
+    if not samples:
+        return []
+    samples.sort()
+    rmax = samples[len(samples) // 2] - 40
+    if rmax < 60:
+        return []
+    candidates = []
+    for frac in (0.18, 0.28, 0.36, 0.46, 0.56, 0.66, 0.76, 0.86):
+        probe_x = int(width * frac)
+        x_lo = max(0, probe_x - int(width * 0.03))
+        x_hi = min(width, probe_x + int(width * 0.06))
+        span = max(1, (x_hi - x_lo) // 2)
+        raw: List[int] = []
+        in_band = False
+        start = 0
+        thick = max(4, int(height * 0.004))
+        for y in range(int(height * 0.18), int(height * 0.90)):
+            dark = sum(1 for x in range(x_lo, x_hi) if px[x, y][0] < rmax)
+            hot = dark >= span * 0.45
+            if hot and not in_band:
+                start = y
+                in_band = True
+            elif not hot and in_band:
+                if 1 <= (y - start) <= thick:
+                    raw.append((start + y - 1) // 2)
+                in_band = False
+        merge_d = max(4, int(height * 0.005))
+        merged: List[int] = []
+        for center in raw:
+            if merged and center - merged[-1] < merge_d:
+                merged[-1] = (merged[-1] + center) // 2
+            else:
+                merged.append(center)
+        if len(merged) < 12:
+            continue
+        gaps = [merged[i + 1] - merged[i] for i in range(len(merged) - 1)]
+        body = sorted(
+            gap for gap in gaps if int(height * 0.010) <= gap <= int(height * 0.030)
+        )
+        if len(body) < 8:
+            continue
+        pitch = body[len(body) // 2]
+        best = (0, 0)
+        run_start = None
+        for index, gap in enumerate(gaps):
+            if abs(gap - pitch) <= max(3, pitch * 0.28):
+                if run_start is None:
+                    run_start = index
+            elif run_start is not None:
+                if index - run_start > best[1] - best[0]:
+                    best = (run_start, index)
+                run_start = None
+        if run_start is not None and (len(gaps) - run_start) > (best[1] - best[0]):
+            best = (run_start, len(gaps))
+        start_i, end_i = best
+        if end_i - start_i < 8:
+            continue
+        candidates.append((
+            end_i - start_i,
+            merged[start_i],
+            [(merged[i] + 1, merged[i + 1] - 1) for i in range(start_i, end_i)],
+        ))
+    if not candidates:
+        return []
+    longest = max(item[0] for item in candidates)
+    close = [item for item in candidates if item[0] >= longest - 2]
+    close.sort(key=lambda item: item[1])
+    return close[-1][2]
+
+
+def _order_form_sparse_qty_window(px, bands, x_start: int, x_end: int, page_width: int):
+    """Qty column that holds only a few handwritten numbers."""
+    win = max(22, int(page_width * 0.034))
+    step = max(4, win // 6)
+    rule_hits = max(6, int(len(bands) * 0.28))
+    best = None
+    for x0 in range(x_start, max(x_start, x_end - win), step):
+        x1 = x0 + win
+        if any(
+            sum(
+                1
+                for top, bottom in bands
+                if any(px[x, y][0] < 80 for y in range(top, bottom, 2))
+            )
+            >= rule_hits
+            for x in range(x0, x1, 2)
+        ):
+            continue
+        scores = [
+            _order_form_ink(px, x0, x1, top, bottom, 80)
+            for top, bottom in bands
+        ]
+        ordered = sorted(scores)
+        median = ordered[len(ordered) // 2]
+        if median > 8:
+            continue
+        strong = [
+            index
+            for index, score in enumerate(scores)
+            if score >= median + 40 and score >= 40
+        ]
+        if not (1 <= len(strong) <= 14):
+            continue
+        total = sum(scores[index] for index in strong)
+        if best is None or total > best[0]:
+            best = (total, (x0, x1), strong)
+    return best
+
+
+def _order_form_vertical_rules(px, x0, x1, y0, y1, rmax):
+    scores = [
+        sum(1 for y in range(y0, y1, 3) if px[x, y][0] < rmax)
+        for x in range(x0, x1)
+    ]
+    peak = max(scores) if scores else 0
+    rules: List[int] = []
+    in_band = False
+    start = 0
+    for index, score in enumerate(scores):
+        hot = bool(peak) and score >= peak * 0.42 and score > 30
+        if hot and not in_band:
+            start = index
+            in_band = True
+        elif not hot and in_band:
+            segment = scores[start:index]
+            rules.append(x0 + start + segment.index(max(segment)))
+            in_band = False
+    if in_band:
+        segment = scores[start:]
+        rules.append(x0 + start + segment.index(max(segment)))
+    merged: List[int] = []
+    for rule in rules:
+        if merged and rule - merged[-1] < 14:
+            merged[-1] = (merged[-1] + rule) // 2
+        else:
+            merged.append(rule)
+    return merged
+
+
+def _order_form_ink(px, x0, x1, y0, y1, rmax) -> int:
+    return sum(
+        1
+        for y in range(y0, y1)
+        for x in range(x0, x1)
+        if px[x, y][0] < rmax
+    )
+
+
+def _order_form_qty_window(px, rules, bands, rmax):
+    best = None
+    for left, right in zip(rules, rules[1:]):
+        width = right - left
+        if not (45 <= width <= 170):
+            continue
+        windows = [(left + 6, right - 6)]
+        if width > 80:
+            windows.append((right - 68, right - 6))
+        for x0, x1 in windows:
+            if x1 - x0 < 28:
+                continue
+            scores = [
+                _order_form_ink(px, x0, x1, top, bottom, rmax)
+                for top, bottom in bands
+            ]
+            ordered = sorted(scores)
+            median = ordered[len(ordered) // 2]
+            peak = ordered[-1]
+            if peak < 180:
+                continue
+            cut = median + 0.35 * (peak - median)
+            strong = [
+                index
+                for index, score in enumerate(scores)
+                if score >= cut and score >= median + 150
+            ]
+            if not (4 <= len(strong) <= 14):
+                continue
+            gap = min(scores[index] for index in strong) - median
+            if best is None or gap > best[0]:
+                best = (gap, (x0, x1), strong)
+    return best
+
+
+def _descender_crosses_rule(px, x0, x1, rule_y, height: int) -> bool:
+    if rule_y < 6 or rule_y + 6 >= height:
+        return False
+    mid = x0 + max(8, (x1 - x0) // 2)
+    shared = 0
+    for x in range(x0, mid):
+        above = any(px[x, rule_y - dy][0] < 75 for dy in range(2, 7))
+        below = any(px[x, rule_y + dy][0] < 75 for dy in range(2, 7))
+        if above and below:
+            shared += 1
+    return shared >= 3
+
+
+def _order_form_extra_ring(px, x0: int, x1: int, top: int, bottom: int, width: int, height: int) -> bool:
+    """True when a loop drawn to the right of the digits is wider than the digit beside it."""
+    x0 = max(0, x0 - 8)
+    x1 = min(width, x1 + 24)
+    top = max(0, top - 3)
+    bottom = min(height, bottom + 4)
+    seen = set()
+    comps = []
+    for y in range(top, bottom):
+        for x in range(x0, x1):
+            if (x, y) in seen or px[x, y][0] >= 105:
+                continue
+            stack = [(x, y)]
+            seen.add((x, y))
+            pts = []
+            while stack:
+                cx, cy = stack.pop()
+                pts.append((cx, cy))
+                for nx, ny in ((cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)):
+                    if nx < x0 or ny < top or nx >= x1 or ny >= bottom or (nx, ny) in seen:
+                        continue
+                    if px[nx, ny][0] >= 105:
+                        continue
+                    seen.add((nx, ny))
+                    stack.append((nx, ny))
+            if len(pts) >= 20:
+                xs = [point[0] for point in pts]
+                ys = [point[1] for point in pts]
+                comps.append((min(xs), max(xs), min(ys), max(ys), len(pts)))
+    substantial = [item for item in comps if item[4] >= 40]
+    if len(substantial) < 2:
+        return False
+    substantial.sort(key=lambda item: item[0])
+    prev = substantial[-2]
+    ring = substantial[-1]
+    prev_w = prev[1] - prev[0] + 1
+    ring_w = ring[1] - ring[0] + 1
+    return ring[0] > prev[1] and ring_w > prev_w + 4
+
+
+def _drop_borrowed_leading_one(value: int, borrowed: bool, previous: Optional[int]) -> int:
+    """A tail from the cell above is not an extra leading 1."""
+    if not borrowed or value < 11:
+        return value
+    text = str(int(value))
+    if not text.startswith("1"):
+        return value
+    if value >= 100:
+        return int(text[1:])
+    if previous is not None and int(previous) % 10 == 0 and 11 <= value <= 19:
+        return int(text[1:])
+    return value
+
+
+def _read_order_form_qty_cells(file_bytes: bytes, model: str):
+    """Read handwritten Qty by ruled-row position, using the existing vision model."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    width, height = image.size
+    px = image.load()
+    bands = _order_form_row_bands(px, width, height)
+    if len(bands) < 8:
+        return None
+    y0, y1 = bands[0][0], bands[-1][1]
+    left = _order_form_qty_window(
+        px, _order_form_vertical_rules(px, 40, width // 2, y0, y1, 55), bands, 50
+    )
+    right = _order_form_qty_window(
+        px,
+        _order_form_vertical_rules(px, width // 2, width - 30, y0, y1, 100),
+        bands,
+        78,
+    )
+    if not left:
+        left = _order_form_sparse_qty_window(px, bands, int(width * 0.08), width // 2, width)
+    if not right:
+        right = _order_form_sparse_qty_window(
+            px, bands, width // 2, int(width * 0.90), width
+        )
+    if not left and not right:
+        return None
+    if not left:
+        left = (0, (0, 0), [])
+    if not right:
+        right = (0, (0, 0), [])
+
+    def groups(indexes):
+        grouped: List[List[int]] = []
+        current: List[int] = []
+        for index in indexes:
+            if current and index != current[-1] + 1:
+                grouped.append(current)
+                current = []
+            current.append(index)
+        if current:
+            grouped.append(current)
+        return grouped
+
+    parts = [{
+        "text": (
+            "Each image is one or more Qty cells separated by horizontal lines, top to bottom. "
+            "The label gives the id and the exact cell count. "
+            "Return ONLY JSON {\"reads\":[{\"id\":\"\",\"values\":[number, ...]}]}. "
+            "values must contain exactly that many integers, one per cell, top to bottom. "
+            "A tail hanging across the line from the cell above is not an extra digit. "
+            "A circle drawn around a number is not an extra digit."
+        )
+    }]
+    meta = []
+    for side, picked in (("L", left), ("R", right)):
+        x0, x1 = picked[1]
+        for group in groups(picked[2]):
+            top = bands[group[0]][0]
+            bottom = bands[group[-1]][1]
+            if len(group) > 1:
+                pitch = max(20, bands[group[0]][1] - bands[group[0]][0])
+                top = max(0, top - int(pitch * 0.45))
+                bottom = min(height, bottom + int(pitch * 0.45))
+            pad_x = min(110, max(36, (x1 - x0) + 8))
+            crop = image.crop((
+                max(0, x0 - min(24, pad_x)),
+                max(0, top),
+                min(width, x1 + pad_x),
+                bottom,
+            ))
+            if crop.height < 90:
+                cw, ch = crop.size
+                local = crop.load()
+                xs = []
+                ys = []
+                for cy in range(ch):
+                    dark_cols = [cx for cx in range(cw) if local[cx, cy][0] < 115]
+                    if len(dark_cols) > cw * 0.55:
+                        continue
+                    for cx in dark_cols:
+                        xs.append(cx)
+                        ys.append(cy)
+                if xs:
+                    pad = 5
+                    crop = crop.crop((
+                        max(0, min(xs) - pad),
+                        max(0, min(ys) - pad),
+                        min(cw, max(xs) + pad + 1),
+                        min(ch, max(ys) + pad + 1),
+                    ))
+                crop = ImageEnhance.Contrast(crop).enhance(1.6)
+                scale = max(4, 180 // max(1, crop.height))
+                crop = crop.resize(
+                    (crop.width * scale, crop.height * scale),
+                    Image.Resampling.LANCZOS,
+                )
+            buf = io.BytesIO()
+            crop.save(buf, format="JPEG", quality=92)
+            gid = f"{side}{group[0]}"
+            parts.append({"text": f"id={gid} cells={len(group)}"})
+            parts.append({
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": base64.b64encode(buf.getvalue()).decode("ascii"),
+                }
+            })
+            meta.append((side, group, x0, x1))
+
+    response = generate_content_via_vertex(
+        model=model,
+        payload={
+            "contents": [{"role": "user", "parts": parts}],
+            "generationConfig": {"temperature": 0, "maxOutputTokens": 1024},
+        },
+        timeout=120,
+    )
+    parsed = _extract_json_object(_gemini_response_text(response)) or {}
+    by_id = {
+        str(row.get("id")): row.get("values")
+        for row in (parsed.get("reads") or [])
+        if isinstance(row, dict)
+    }
+    left_qty: Dict[int, float] = {}
+    right_qty: Dict[int, float] = {}
+    for side, group, x0, x1 in meta:
+        gid = f"{side}{group[0]}"
+        values = by_id.get(gid)
+        if not isinstance(values, list) or len(values) != len(group):
+            return None
+        target = left_qty if side == "L" else right_qty
+        previous = None
+        for index, raw in zip(group, values):
+            try:
+                number = int(float(raw))
+            except (TypeError, ValueError):
+                return None
+            if number < 0 or number > 9999:
+                return None
+            borrowed = _descender_crosses_rule(px, x0, x1 + 40, bands[index][0], height)
+            number = _drop_borrowed_leading_one(number, borrowed, previous)
+            if number >= 100 and _order_form_extra_ring(
+                px, x0, x1, bands[index][0], bands[index][1], width, height
+            ):
+                number = int(str(number)[:-1])
+            target[index] = float(number)
+            previous = number
+    return {"bands": len(bands), "left": left_qty, "right": right_qty}
+
+
+def _apply_order_form_handwritten_qty(result: Dict[str, Any], file_bytes: bytes, model: str) -> None:
+    """Put each Qty-cell number on that printed row's sales_qty."""
+    title = str(result.get("report_title") or "")
+    items = result.get("line_items") or []
+    if "ORDER FORM" not in title.upper() or len(items) < 8:
+        return
+    import time
+
+    from services.vertex_gemini_client import GeminiProviderError
+
+    reads = None
+    for attempt in range(3):
+        try:
+            reads = _read_order_form_qty_cells(file_bytes, model)
+            break
+        except GeminiProviderError as exc:
+            logger.warning("Order-form Qty cell read throttled: %s", exc)
+            time.sleep(min(2 ** attempt, 8))
+        except Exception as exc:
+            logger.warning("Order-form Qty cell read failed: %s", exc)
+            return
+    if not reads:
+        return
+    left_n = int(reads["bands"])
+    if not (left_n < len(items) and len(items) - left_n <= left_n):
+        return
+    left_items = items[:left_n]
+    right_items = items[left_n:]
+    if len(right_items) > left_n:
+        return
+
+    def paint(rows, qty_by_index):
+        for index, item in enumerate(rows):
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            extra["layout"] = "order_form"
+            item["extra"] = extra
+            if index in qty_by_index:
+                item["sales_qty"] = qty_by_index[index]
+            else:
+                item["sales_qty"] = 0.0
+            # The Value column is blank. A whole number there is the Qty mis-filed.
+            item["sales_value"] = 0.0
+
+    paint(left_items, reads["left"])
+    paint(right_items, reads["right"])
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -7541,6 +8304,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zandra and zandra.get("line_items"):
                         return zandra
+                _apply_order_form_handwritten_qty(result, file_bytes, model)
                 if _product_stock_report_values_missing(result):
                     logger.info(
                         "Product Stock Report missing Cls Amt values; retrying format-specific vision"
