@@ -5460,6 +5460,23 @@ def _is_swil_landscape_qty_value_doc(doc) -> bool:
     )
 
 
+def _is_swil_qty_value_pair_text(text: str) -> bool:
+    """Sales & Stock with two-line Qty/Value pairs (Opening Bal / Issue/Sales / Closing Bala).
+
+    Portrait pages often omit Code. This is header-based, not filename-based.
+    """
+    if not text:
+        return False
+    return bool(
+        re.search(r"Sales\s*&\s*Stock", text, re.I)
+        and re.search(r"Receipt/Pur", text, re.I)
+        and re.search(r"\bPACKING\b", text)
+        and re.search(r"Opening\s+Bal", text, re.I)
+        and re.search(r"Issue/Sales", text, re.I)
+        and re.search(r"Closing\s+Bala", text, re.I)
+    )
+
+
 def _swil_land_header_field(token: str) -> Optional[str]:
     norm = re.sub(r"[^a-z0-9/]", "", (token or "").lower())
     if norm == "code":
@@ -5484,7 +5501,7 @@ def _swil_land_header_field(token: str) -> Optional[str]:
         return "closing_group"
     if norm == "dump":
         return "dump_group"
-    if norm in {"ne", "expi"}:
+    if norm in {"ne", "expi", "near"}:
         return "ne_group"
     return None
 
@@ -5624,10 +5641,22 @@ def _swil_fixed_bucket_result_is_weak(result: Dict[str, Any], doc) -> bool:
 
 
 def _parse_swil_landscape_qty_value_statement(
-    doc, filename: str
+    doc, filename: str, *, allow_portrait_pair: bool = False
 ) -> Optional[Dict[str, Any]]:
-    """Parse landscape SwilERP Sales & Stock using header-derived columns."""
-    if not _is_swil_landscape_qty_value_doc(doc):
+    """Parse SwilERP Sales & Stock using header-derived Qty/Value columns.
+
+    Default path is the existing landscape Code/PACKING grid.
+    allow_portrait_pair is only for Opening Bal / Issue/Sales / Closing Bala
+    pages that the fixed portrait buckets mis-read. Landscape docs stay on
+    the original detector so their results do not change.
+    """
+    if allow_portrait_pair:
+        if _is_swil_landscape_qty_value_doc(doc):
+            return None
+        page_texts = [(page.get_text("text") or "") for page in doc]
+        if not any(_is_swil_qty_value_pair_text(t) for t in page_texts):
+            return None
+    elif not _is_swil_landscape_qty_value_doc(doc):
         return None
 
     result = empty_result(filename, "pdf")
@@ -5812,7 +5841,14 @@ def _parse_swil_landscape_qty_value_statement(
 
     valid = len(items) - _swil_land_identity_fail_count(items)
     extra = result["totals"]["extra"]
-    extra["extraction_method"] = "swil_landscape_qty_value"
+    extra["extraction_method"] = (
+        "swil_qty_value_pair" if allow_portrait_pair else "swil_landscape_qty_value"
+    )
+    extra["detected_format"] = (
+        "swil_qty_value_pair" if allow_portrait_pair else "swil_landscape_qty_value"
+    )
+    extra["source_type"] = "pdf_text"
+    extra["vertex_ai_used"] = False
     extra["pages"] = pages_used
     extra["header_detected"] = result.get("report_title")
     extra["column_mapping"] = column_mapping
@@ -5820,10 +5856,13 @@ def _parse_swil_landscape_qty_value_statement(
     extra["valid_rows"] = valid
     extra["invalid_rows"] = len(items) - valid
     extra["header_detection_confidence"] = 1.0 if column_mapping else 0.0
+    extra["validation_status"] = "pass" if valid == len(items) else "partial"
+    extra["stock_identity_fail_count_pre"] = len(items) - valid
     result["line_items"] = items
     logger.info(
-        "Swil landscape statement %s pages=%s rows=%s valid=%s invalid=%s",
+        "Swil qty/value statement %s method=%s pages=%s rows=%s valid=%s invalid=%s",
         filename,
+        extra["extraction_method"],
         pages_used,
         len(items),
         valid,
@@ -7380,6 +7419,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if prompt_stmt and prompt_stmt.get("line_items"):
             prompt_stmt["totals"]["extra"]["statement_count"] = 1
             return prompt_stmt
+
+        swil_pair = _parse_swil_landscape_qty_value_statement(
+            doc, filename, allow_portrait_pair=True
+        )
+        if swil_pair and swil_pair.get("line_items"):
+            swil_pair["totals"]["extra"]["statement_count"] = 1
+            swil_pair["totals"]["extra"]["fallback_used"] = False
+            return swil_pair
 
         swil_stmt = _parse_swil_opening_receipt_value_statement(doc, filename)
         if swil_stmt and swil_stmt.get("line_items"):
