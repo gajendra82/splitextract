@@ -11,7 +11,7 @@ Group=root
 WorkingDirectory=/var/www/html/split-extract
 EnvironmentFile=/var/www/html/.env
 
-ExecStart=/var/www/html/venv/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8001 --workers 1 --timeout-keep-alive 1200
+ExecStart=/var/www/html/venv/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 8002 --workers 1 --timeout-keep-alive 1200
 
 Restart=always
 RestartSec=5
