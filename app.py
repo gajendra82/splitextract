@@ -2912,6 +2912,7 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "zl_opening_primary_closing",
             "order_form",
             "rate_qty_value",
+            "qty_value_dump",
         ):
             kept_items.append(item)
             continue
@@ -26969,10 +26970,12 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "sales_scheme",
         "opening_qty",
         "receipts_qty",
+        "receipts_value",
         "sales_qty",
         "closing_qty",
         "closing_value",
         "others_qty",
+        "dump_qty",
     ):
         # A printed 0 is the source value. Dropping it made the page show 0 for
         # a missing field and then reuse Sales as Closing.
@@ -27002,6 +27005,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "order_form"
     if extra.get("layout") == "rate_qty_value":
         additional["layout"] = "rate_qty_value"
+    if extra.get("layout") == "qty_value_dump":
+        additional["layout"] = "qty_value_dump"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:

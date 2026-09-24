@@ -551,12 +551,12 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     """Parse P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING stock & sales analysis."""
     if not text:
         return None
-    # RATE + QTY/VALUE pairs (Kapeesh-style). Dashes are blank cells, not
-    # missing columns, so the 4-number tail parser must not claim this table.
-    if (
-        re.search(r"\bRATE\b", text, re.I)
-        and re.search(r"\bRECEIPT\b", text, re.I)
-        and re.search(r"QTY\.?\s+VALUE", text, re.I)
+    # QTY/VALUE pairs (with or without RATE). A printed dash is an empty cell,
+    # so the 4-number tail parser must not claim these tables.
+    if re.search(r"\bRECEIPT\b", text, re.I) and re.search(
+        r"QTY\.?\s+VALUE", text, re.I
+    ) and (
+        re.search(r"\bRATE\b", text, re.I) or re.search(r"\bDUMP\b", text, re.I)
     ):
         return None
     # Only P.S. format (OPENING/RECEIPT/ISSUE/CLOSING) — do not steal Mahajan pages
@@ -4922,6 +4922,60 @@ def _qv_column_anchors(
     return anchors
 
 
+def _qv_dump_header_rows(
+    rows: List[Dict[str, Any]],
+) -> Optional[Tuple[Dict[str, Any], Dict[str, Any]]]:
+    """OPENING / RECEIPT / ISSUE / CLOSING / DUMP header plus QTY VALUE."""
+    for idx, row in enumerate(rows):
+        tokens = set(_ssa_row_tokens(row))
+        if "rate" in tokens:
+            continue
+        if not {"opening", "receipt", "issue", "closing", "dump"} <= tokens:
+            continue
+        for nxt in rows[idx + 1 : idx + 4]:
+            labels = [str(box[4]).upper().rstrip(".") for box in nxt["words"]]
+            if labels.count("QTY") >= 5 and labels.count("VALUE") >= 4:
+                return row, nxt
+    return None
+
+
+def _qv_dump_column_anchors(
+    _header: Dict[str, Any], sub: Dict[str, Any]
+) -> Optional[List[Tuple[str, float]]]:
+    """Column centers for Qty/Value pairs plus the final Dump Qty."""
+    labels = [
+        (str(box[4]).upper().rstrip("."), (box[0] + box[2]) / 2.0)
+        for box in sub["words"]
+    ]
+    pairs = (
+        ("opening_qty", "opening_value"),
+        ("receipts_qty", "receipts_value"),
+        ("sales_qty", "sales_value"),
+        ("closing_qty", "closing_value"),
+    )
+    anchors: List[Tuple[str, float]] = []
+    cursor = 0
+    for qty_name, value_name in pairs:
+        while cursor < len(labels) and labels[cursor][0] != "QTY":
+            cursor += 1
+        if cursor >= len(labels):
+            return None
+        anchors.append((qty_name, labels[cursor][1]))
+        cursor += 1
+        while cursor < len(labels) and labels[cursor][0] != "VALUE":
+            cursor += 1
+        if cursor >= len(labels):
+            return None
+        anchors.append((value_name, labels[cursor][1]))
+        cursor += 1
+    while cursor < len(labels) and labels[cursor][0] != "QTY":
+        cursor += 1
+    if cursor >= len(labels):
+        return None
+    anchors.append(("dump_qty", labels[cursor][1]))
+    return anchors
+
+
 def _qv_split_packing(name: str) -> Tuple[str, Optional[str]]:
     tokens = _clean_name(name).split()
     if not tokens:
@@ -4953,6 +5007,9 @@ def _parse_rate_qty_value_statement(
         rows = _ssa_cluster_rows(words)
         found = _qv_header_rows(rows)
         anchors = _qv_column_anchors(*found) if found else None
+        if not anchors:
+            dump_header = _qv_dump_header_rows(rows)
+            anchors = _qv_dump_column_anchors(*dump_header) if dump_header else None
         if anchors:
             carried = anchors
         elif carried:
@@ -4993,6 +5050,18 @@ def _parse_rate_qty_value_statement(
                 for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
             ):
                 continue
+            # This grid prints a value beside every qty, including 0.00.
+            # A lone amount from a footer is not a product row.
+            if any(name == "dump_qty" for name, _x in anchors) and any(
+                parsed.get(field) is None
+                for field in (
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                )
+            ):
+                continue
             product_name, packing = _qv_split_packing(raw_name)
             if _ssa_skip_product(product_name):
                 continue
@@ -5008,9 +5077,18 @@ def _parse_rate_qty_value_statement(
                 item["closing_value"] = parsed["closing_value"]
             if parsed.get("opening_value") is not None:
                 item["opening_value"] = parsed["opening_value"]
-            extra = {"layout": "rate_qty_value"}
+            has_dump = any(name == "dump_qty" for name, _x in anchors)
+            extra = {"layout": "qty_value_dump" if has_dump else "rate_qty_value"}
             if parsed.get("rate") is not None:
                 extra["unit_rate"] = parsed["rate"]
+            if has_dump:
+                extra["dump_qty"] = (
+                    parsed["dump_qty"] if parsed.get("dump_qty") is not None else 0.0
+                )
+                if parsed.get("receipts_value") is not None:
+                    extra["receipts_value"] = parsed["receipts_value"]
+                if parsed.get("opening_value") is not None:
+                    extra["opening_value"] = parsed["opening_value"]
             item["extra"] = extra
             items.append(item)
     if len(items) < 3:
@@ -7747,9 +7825,13 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
 def _order_form_row_bands(px, width: int, height: int):
     """Ruled product rows beside the Qty column."""
     found = _order_form_row_bands_fixed(px, width, height)
-    if len(found) >= 8:
+    # A short run is a partial grid. The full table is about 35 rows.
+    if len(found) >= 20:
         return found
-    return _order_form_row_bands_scaled(px, width, height)
+    scaled = _order_form_row_bands_scaled(px, width, height)
+    if len(scaled) > len(found):
+        return scaled
+    return found
 
 
 def _order_form_row_bands_fixed(px, width: int, height: int):
@@ -7824,7 +7906,7 @@ def _order_form_row_bands_scaled(px, width: int, height: int):
         in_band = False
         start = 0
         thick = max(4, int(height * 0.004))
-        for y in range(int(height * 0.18), int(height * 0.90)):
+        for y in range(int(height * 0.18), int(height * 0.94)):
             dark = sum(1 for x in range(x_lo, x_hi) if px[x, y][0] < rmax)
             hot = dark >= span * 0.45
             if hot and not in_band:
@@ -7843,6 +7925,29 @@ def _order_form_row_bands_scaled(px, width: int, height: int):
                 merged.append(center)
         if len(merged) < 12:
             continue
+        # A stroke crossing one rule is seen as two short gaps. Join them
+        # back into a single row when they add up to the row pitch.
+        joined = True
+        while joined and len(merged) >= 12:
+            joined = False
+            gaps = [merged[i + 1] - merged[i] for i in range(len(merged) - 1)]
+            body = sorted(
+                gap for gap in gaps if int(height * 0.010) <= gap <= int(height * 0.030)
+            )
+            if len(body) < 8:
+                break
+            pitch = body[len(body) // 2]
+            limit = max(3, pitch * 0.12)
+            for index in range(len(gaps) - 1):
+                pair = gaps[index] + gaps[index + 1]
+                if (
+                    gaps[index] < pitch * 0.65
+                    and gaps[index + 1] < pitch * 0.65
+                    and abs(pair - pitch) <= limit
+                ):
+                    del merged[index + 1]
+                    joined = True
+                    break
         gaps = [merged[i + 1] - merged[i] for i in range(len(merged) - 1)]
         body = sorted(
             gap for gap in gaps if int(height * 0.010) <= gap <= int(height * 0.030)
@@ -7910,6 +8015,61 @@ def _order_form_sparse_qty_window(px, bands, x_start: int, x_end: int, page_widt
             if score >= median + 40 and score >= 40
         ]
         if not (1 <= len(strong) <= 14):
+            continue
+        total = sum(scores[index] for index in strong)
+        if best is None or total > best[0]:
+            best = (total, (x0, x1), strong)
+    return best
+
+
+def _order_form_light_pen_window(px, bands, x_start: int, x_end: int, page_width: int):
+    """Qty column written with a pen the stricter ink test does not see.
+
+    Printed pack text also darkens, but only further down the table. A real
+    Qty column has a number in one of the first rows.
+    """
+    win = max(22, int(page_width * 0.034))
+    step = max(4, win // 6)
+    rule_hits = max(6, int(len(bands) * 0.28))
+    best = None
+    for x0 in range(x_start, max(x_start, x_end - win), step):
+        x1 = x0 + win
+        if any(
+            sum(
+                1
+                for top, bottom in bands
+                if any(px[x, y][0] < 80 for y in range(top, bottom, 2))
+            )
+            >= rule_hits
+            for x in range(x0, x1, 2)
+        ):
+            continue
+        scores = [
+            _order_form_ink(px, x0, x1, top, bottom, 105)
+            for top, bottom in bands
+        ]
+        ordered = sorted(scores)
+        median = ordered[len(ordered) // 2]
+        if median > 30:
+            continue
+        strong = []
+        for index, score in enumerate(scores):
+            if score < max(50, median + 20):
+                continue
+            top, bottom = bands[index]
+            ink_rows = [
+                y
+                for y in range(top, bottom)
+                if sum(1 for x in range(x0, x1) if px[x, y][0] < 105) >= 3
+            ]
+            if len(ink_rows) < 6:
+                continue
+            if ink_rows[-1] - ink_rows[0] + 1 < (bottom - top) * 0.20:
+                continue
+            strong.append(index)
+        if not (1 <= len(strong) <= 14):
+            continue
+        if not any(index < 5 for index in strong):
             continue
         total = sum(scores[index] for index in strong)
         if best is None or total > best[0]:
@@ -8058,6 +8218,59 @@ def _drop_borrowed_leading_one(value: int, borrowed: bool, previous: Optional[in
     return value
 
 
+def _order_form_upright_image(image):
+    """Turn a sideways photo so product rows run horizontally.
+
+    Portrait pages, and landscape pages that already have a full row grid,
+    are returned unchanged.
+    """
+    from PIL import Image
+
+    width, height = image.size
+    if width <= height:
+        return image
+    px = image.load()
+    if len(_order_form_row_bands(px, width, height)) >= 20:
+        return image
+
+    def header_penalty(turned) -> int:
+        tw, th = turned.size
+        tpx = turned.load()
+
+        def rules(y0, y1) -> int:
+            count = 0
+            previous = False
+            for y in range(y0, y1, 2):
+                dark = sum(
+                    1
+                    for x in range(int(tw * 0.2), int(tw * 0.8), 4)
+                    if tpx[x, y][0] < 90
+                )
+                hot = dark > tw * 0.08
+                if hot and not previous:
+                    count += 1
+                previous = hot
+            return count
+
+        top = rules(int(th * 0.02), int(th * 0.16))
+        bottom = rules(int(th * 0.84), int(th * 0.98))
+        return top - bottom
+
+    best = None
+    for mode in (Image.ROTATE_270, Image.ROTATE_90):
+        turned = image.transpose(mode)
+        tw, th = turned.size
+        tbands = _order_form_row_bands(turned.load(), tw, th)
+        if len(tbands) < 20:
+            continue
+        score = (len(tbands), -header_penalty(turned))
+        if best is None or score > best[0]:
+            best = (score, turned)
+    if best is None:
+        return image
+    return best[1]
+
+
 def _read_order_form_qty_cells(file_bytes: bytes, model: str):
     """Read handwritten Qty by ruled-row position, using the existing vision model."""
     from PIL import Image, ImageEnhance, ImageOps
@@ -8065,6 +8278,7 @@ def _read_order_form_qty_cells(file_bytes: bytes, model: str):
     from services.vertex_gemini_client import generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    image = _order_form_upright_image(image)
     width, height = image.size
     px = image.load()
     bands = _order_form_row_bands(px, width, height)
@@ -8086,6 +8300,26 @@ def _read_order_form_qty_cells(file_bytes: bytes, model: str):
         right = _order_form_sparse_qty_window(
             px, bands, width // 2, int(width * 0.90), width
         )
+
+    def _outside_qty(found, limit: float) -> bool:
+        if not found or found[1][1] <= found[1][0]:
+            return True
+        return found[1][0] < width * limit
+
+    # A window on the page margin, or on printed text beside a lighter pen,
+    # is not the Qty column. The known dark-pen forms sit further in and are
+    # left on the result above.
+    if _outside_qty(left, 0.22):
+        light = _order_form_light_pen_window(
+            px, bands, int(width * 0.20), width // 2, width
+        )
+        left = light or None
+    if _outside_qty(right, 0.72):
+        light = _order_form_light_pen_window(
+            px, bands, width // 2, int(width * 0.90), width
+        )
+        if light:
+            right = light
     if not left and not right:
         return None
     if not left:
@@ -8190,6 +8424,10 @@ def _read_order_form_qty_cells(file_bytes: bytes, model: str):
         gid = f"{side}{group[0]}"
         values = by_id.get(gid)
         if not isinstance(values, list) or len(values) != len(group):
+            # A blank cell comes back with no number. That must not throw
+            # away the numbers read from the other cells.
+            if len(group) == 1 and (values is None or values == []):
+                continue
             return None
         target = left_qty if side == "L" else right_qty
         previous = None

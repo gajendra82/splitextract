@@ -774,5 +774,102 @@ class TestRateQtyValueColumns(unittest.TestCase):
         self.assertEqual(neighbor["closing_qty"], -13.0)
 
 
+class TestQtyValueDumpColumns(unittest.TestCase):
+    def test_dash_stays_in_its_qty_column(self):
+        def word(x0, x1, y, text):
+            return (x0, y, x1, y + 8, text, 0, 0, 0)
+
+        header = [
+            word(20, 40, 10, "ITEM"),
+            word(48, 110, 10, "DESCRIPTION"),
+            word(300, 350, 10, "OPENING"),
+            word(410, 460, 10, "RECEIPT"),
+            word(520, 560, 10, "ISSUE"),
+            word(620, 680, 10, "CLOSING"),
+            word(710, 740, 10, "DUMP"),
+        ]
+        sub = [
+            word(285, 307, 20, "QTY."),
+            word(340, 376, 20, "VALUE"),
+            word(398, 420, 20, "QTY."),
+            word(454, 490, 20, "VALUE"),
+            word(506, 528, 20, "QTY."),
+            word(562, 598, 20, "VALUE"),
+            word(614, 636, 20, "QTY."),
+            word(670, 706, 20, "VALUE"),
+            word(712, 734, 20, "QTY."),
+        ]
+        soap = [
+            word(20, 60, 40, "AACTRIL"),
+            word(66, 90, 40, "SOAP"),
+            word(292, 306, 40, "50"),
+            word(330, 376, 40, "3118.16"),
+            word(412, 418, 40, "-"),
+            word(458, 490, 40, "0.00"),
+            word(520, 526, 40, "-"),
+            word(566, 598, 40, "0.00"),
+            word(620, 636, 40, "50"),
+            word(658, 706, 40, "3118.16"),
+            word(718, 734, 40, "50"),
+        ]
+        syrup = [
+            word(20, 55, 52, "MENTAT"),
+            word(60, 80, 52, "SYP"),
+            word(86, 110, 52, "200"),
+            word(116, 132, 52, "ML"),
+            word(298, 304, 52, "-"),
+            word(344, 376, 52, "0.00"),
+            word(404, 418, 52, "28"),
+            word(448, 490, 52, "4617.23"),
+            word(514, 528, 52, "10"),
+            word(556, 598, 52, "1655.49"),
+            word(624, 636, 52, "18"),
+            word(660, 706, 52, "3116.08"),
+            word(726, 732, 52, "-"),
+        ]
+        tablet = [
+            word(20, 40, 64, "LIV"),
+            word(46, 60, 64, "52"),
+            word(66, 80, 64, "DS"),
+            word(86, 104, 64, "TAB"),
+            word(298, 304, 64, "-"),
+            word(344, 376, 64, "0.00"),
+            word(400, 422, 64, "600"),
+            word(440, 500, 64, "110463.60"),
+            word(512, 530, 64, "200"),
+            word(548, 598, 64, "36966.50"),
+            word(620, 638, 64, "400"),
+            word(656, 706, 64, "77325.08"),
+            word(726, 732, 64, "-"),
+        ]
+        title = [word(200, 360, 0, "STOCK & SALES ANALYSIS")]
+        result = _parse_rate_qty_value_statement(
+            [{"text": "", "words": title + header + sub + soap + syrup + tablet}],
+            "prakash.pdf",
+        )
+        self.assertIsNotNone(result)
+        by_name = {item["product_name"]: item for item in result["line_items"]}
+        soap_row = by_name["AACTRIL SOAP"]
+        self.assertEqual(soap_row["opening_qty"], 50.0)
+        self.assertEqual(soap_row["opening_value"], 3118.16)
+        self.assertEqual(soap_row["receipts_qty"], 0.0)
+        self.assertEqual(soap_row["extra"]["receipts_value"], 0.0)
+        self.assertEqual(soap_row["sales_qty"], 0.0)
+        self.assertEqual(soap_row["sales_value"], 0.0)
+        self.assertEqual(soap_row["closing_qty"], 50.0)
+        self.assertEqual(soap_row["closing_value"], 3118.16)
+        self.assertEqual(soap_row["extra"]["dump_qty"], 50.0)
+        mentat = by_name["MENTAT SYP 200 ML"]
+        self.assertEqual(mentat["opening_qty"], 0.0)
+        self.assertEqual(mentat["receipts_qty"], 28.0)
+        self.assertEqual(mentat["sales_qty"], 10.0)
+        self.assertEqual(mentat["closing_qty"], 18.0)
+        liv = by_name["LIV 52 DS TAB"]
+        self.assertEqual(liv["opening_qty"], 0.0)
+        self.assertEqual(liv["receipts_qty"], 600.0)
+        self.assertEqual(liv["sales_qty"], 200.0)
+        self.assertEqual(liv["closing_qty"], 400.0)
+
+
 if __name__ == "__main__":
     unittest.main()
