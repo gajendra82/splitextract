@@ -2161,6 +2161,331 @@ def _extract_statement_from_pdf_group(
     return result
 
 
+# PROMPT "Stock Statement (Datewise)" column x-ranges (A4, points).
+# Plain text extraction interleaves these columns; positions stay stable.
+_PROMPT_DATEWISE_BUCKETS = (
+    ("sr", 0.0, 40.0),
+    ("name", 40.0, 145.0),
+    ("pack", 145.0, 200.0),
+    ("opening_qty", 200.0, 245.0),
+    ("receipts_qty", 245.0, 285.0),
+    ("sales_qty", 285.0, 325.0),
+    ("sales_value", 325.0, 370.0),
+    ("closing_qty", 370.0, 408.0),
+    ("closing_value", 408.0, 460.0),
+    ("a3mn", 460.0, 485.0),
+    ("ee", 485.0, 520.0),
+    ("age", 520.0, 560.0),
+    ("exp", 560.0, 10000.0),
+)
+
+
+def _prompt_datewise_bucket(x: float) -> Optional[str]:
+    for name, lo, hi in _PROMPT_DATEWISE_BUCKETS:
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _is_prompt_datewise_stock_statement(text: str) -> bool:
+    """PROMPT software datewise stock statement (OpStk / Pur / Sales / ClStk)."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Stock\s+Statement", text, re.I)
+        and re.search(r"\bOpStk\b", text)
+        and re.search(r"\bClStk\b", text)
+    )
+
+
+def _prompt_cell_number(tokens: List[str]) -> Optional[float]:
+    """Last plain number in a cell. Ignores labels that share the row (AppExp)."""
+    found = None
+    for tok in tokens:
+        raw = str(tok).replace(",", "").strip()
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+            found = float(raw)
+    return found
+
+
+def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse PROMPT Stock Statement (Datewise) from word positions.
+
+    Returns None when the PDF is a different statement format.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_prompt_datewise_stock_statement(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock Statement (Datewise)"
+    items: List[Dict[str, Any]] = []
+    company_name = None
+
+    for page, text in zip(doc, page_texts):
+        words = page.get_text("words") or []
+        words = sorted(words, key=lambda w: (round(w[1], 1), w[0]))
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, _x1, _y1, token = w[0], w[1], w[2], w[3], w[4]
+            bucket = _prompt_datewise_bucket(x0)
+            if not bucket or not str(token).strip():
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 3.0:
+                row = rows[-1]
+            else:
+                row = {
+                    "y": y0,
+                    "tokens": [],
+                    "cells": {name: [] for name, _lo, _hi in _PROMPT_DATEWISE_BUCKETS},
+                }
+                rows.append(row)
+            row["tokens"].append((x0, str(token)))
+            row["cells"][bucket].append(str(token))
+
+        header_y = None
+        for row in rows:
+            blob = " ".join(tok for cell in row["cells"].values() for tok in cell)
+            if re.search(r"\bOpStk\b", blob) and re.search(r"\bClStk\b", blob):
+                header_y = row["y"]
+            if result["period_from"] is None and re.search(r"From\s*:", blob, re.I):
+                dates = re.findall(r"\d{1,2}-\d{1,2}-\d{4}", blob)
+                if dates:
+                    result["period_from"] = _normalize_date(dates[0])
+                if len(dates) > 1:
+                    result["period_to"] = _normalize_date(dates[1])
+
+        if not result["stockist_name"]:
+            for row in rows:
+                if header_y is not None and row["y"] >= header_y - 2:
+                    break
+                # Header lines sit left of the period dates (From/To).
+                left = " ".join(
+                    tok for x, tok in sorted(row["tokens"], key=lambda t: t[0]) if x < 400
+                ).strip()
+                if not left or re.search(r"Phone|Stock\s+Statement|From\s*:", left, re.I):
+                    continue
+                if not result["stockist_name"]:
+                    result["stockist_name"] = _clean_name(left)
+                else:
+                    result["stockist_address"] = _clean_name(
+                        (result.get("stockist_address") or "") + " " + left
+                    ).strip()
+
+        for row in rows:
+            if header_y is not None and row["y"] <= header_y + 8:
+                continue
+            cells = row["cells"]
+            sr_txt = "".join(cells["sr"]).strip()
+            name = _clean_name(" ".join(cells["name"]))
+            label = _clean_name(" ".join(cells["sr"] + cells["name"]))
+            if re.match(r"^Total\s*:?\s*$", label, re.I):
+                result["totals"]["sales_value"] = _prompt_cell_number(cells["sales_value"])
+                result["totals"]["closing_value"] = _prompt_cell_number(cells["closing_value"])
+                extra = result["totals"]["extra"]
+                extra["opening_qty"] = _prompt_cell_number(cells["opening_qty"])
+                extra["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"])
+                extra["sales_qty"] = _prompt_cell_number(cells["sales_qty"])
+                extra["closing_qty"] = _prompt_cell_number(cells["closing_qty"])
+                extra["total_row_source"] = "prompt_datewise_footer"
+                continue
+            if not re.fullmatch(r"\d{1,4}", sr_txt):
+                banner = _clean_name(" ".join(cells["sr"] + cells["name"]))
+                if (
+                    company_name is None
+                    and not items
+                    and banner
+                    and not re.match(r"^(Total|Bills|Product|Pack)\b", banner, re.I)
+                    and not _prompt_cell_number(cells["opening_qty"])
+                ):
+                    company_name = banner
+                continue
+            if name and not re.match(r"^(Total|Bills)\b", name, re.I):
+                item = empty_line_item()
+                item["product_code"] = sr_txt
+                item["product_name"] = name
+                pack = " ".join(cells["pack"]).strip()
+                item["packing"] = pack or None
+                item["opening_qty"] = _prompt_cell_number(cells["opening_qty"]) or 0.0
+                item["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"]) or 0.0
+                item["sales_qty"] = _prompt_cell_number(cells["sales_qty"]) or 0.0
+                item["sales_value"] = _prompt_cell_number(cells["sales_value"]) or 0.0
+                item["closing_qty"] = _prompt_cell_number(cells["closing_qty"]) or 0.0
+                item["closing_value"] = _prompt_cell_number(cells["closing_value"]) or 0.0
+                extra = item["extra"]
+                for key in ("a3mn", "ee", "age", "exp"):
+                    val = " ".join(cells[key]).strip()
+                    if val and val not in {"-", "—"}:
+                        extra[key] = val
+                items.append(item)
+
+    if company_name:
+        result["company_name"] = company_name
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "prompt_datewise_layout"
+    return result
+
+
+_SWIL_VALUE_BUCKETS = (
+    ("name", 0.0, 96.0),
+    ("pack", 96.0, 155.0),
+    ("opening_qty", 155.0, 200.0),
+    ("opening_value", 200.0, 240.0),
+    ("receipts_qty", 240.0, 272.0),
+    ("receipts_value", 272.0, 330.0),
+    ("total_qty", 330.0, 365.0),
+    ("sales_qty", 365.0, 405.0),
+    ("sales_value", 405.0, 455.0),
+    ("closing_qty", 455.0, 490.0),
+    ("closing_value", 490.0, 548.0),
+    ("near_expiry", 548.0, 700.0),
+)
+
+
+def _swil_value_bucket(x: float) -> Optional[str]:
+    for name, lo, hi in _SWIL_VALUE_BUCKETS:
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _is_swil_opening_receipt_value_statement(text: str) -> bool:
+    """SwilERP Sales & Stock with Opening/Receipt qty and value columns."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Sales\s*&\s*Stock", text, re.I)
+        and re.search(r"Receipt/Pur", text, re.I)
+        and re.search(r"Opening", text, re.I)
+    )
+
+
+def _parse_swil_opening_receipt_value_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse SwilERP statements that print a Receipt value next to Receipt qty.
+
+    Returns None for other layouts, including qty-only OpBal statements.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_swil_opening_receipt_value_statement(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("report_title"):
+            m = re.search(
+                r"Sales\s*&\s*Stock\s*Statement\s*\(\s*From\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+Upto\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,
+                re.I,
+            )
+            if m:
+                result["report_title"] = "Sales & Stock Statement"
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, x1, _y1, token = w[0], w[1], w[2], w[3], w[4]
+            center = (x0 + x1) / 2.0
+            bucket = _swil_value_bucket(center)
+            if not bucket or not str(token).strip():
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 2.5:
+                row = rows[-1]
+            else:
+                row = {
+                    "y": y0,
+                    "cells": {name: [] for name, _lo, _hi in _SWIL_VALUE_BUCKETS},
+                }
+                rows.append(row)
+            row["cells"][bucket].append(str(token))
+
+        header_y = None
+        for row in rows:
+            blob = " ".join(tok for cell in row["cells"].values() for tok in cell)
+            if re.search(r"Receipt/Pur", blob, re.I) and re.search(r"Opening", blob, re.I):
+                header_y = row["y"]
+
+        if not result.get("stockist_name"):
+            for row in rows:
+                if header_y is not None and row["y"] >= header_y - 2:
+                    break
+                line = " ".join(row["cells"]["name"]).strip()
+                wide = " ".join(tok for cell in row["cells"].values() for tok in cell).strip()
+                if re.search(r"Page\s*No|Sales\s*&\s*Stock|PRODUCT", wide, re.I):
+                    continue
+                if not result["stockist_name"] and wide and not re.search(r"HIMALAYA|W/NO", wide, re.I):
+                    result["stockist_name"] = _clean_name(wide)
+                elif not result.get("stockist_address") and re.search(r"W/NO|NEAR|HALL|ROAD", wide, re.I):
+                    result["stockist_address"] = _clean_name(wide)
+                elif not result.get("company_name") and line and re.fullmatch(r"[A-Z][A-Z .&-]{2,}", line):
+                    result["company_name"] = _clean_name(line)
+
+        for row in rows:
+            if header_y is not None and row["y"] <= header_y + 14:
+                continue
+            cells = row["cells"]
+            name = _clean_name(" ".join(cells["name"]))
+            if not name or re.match(
+                r"^(PRODUCT|Page|Powered|\*+|-+|GRAND)\b", name, re.I
+            ):
+                if re.match(r"^GRAND\s*TOTAL\b", name, re.I):
+                    extra = result["totals"]["extra"]
+                    if _prompt_cell_number(cells["opening_value"]) is not None:
+                        extra["opening_value"] = _prompt_cell_number(cells["opening_value"])
+                    rec_val = _prompt_cell_number(cells["receipts_value"])
+                    if rec_val is not None:
+                        result["totals"]["receipts_value"] = rec_val
+                    if _prompt_cell_number(cells["sales_value"]) is not None:
+                        result["totals"]["sales_value"] = _prompt_cell_number(cells["sales_value"])
+                    if _prompt_cell_number(cells["closing_value"]) is not None:
+                        result["totals"]["closing_value"] = _prompt_cell_number(cells["closing_value"])
+                    extra["total_row_source"] = "swil_grand_total"
+                continue
+            if _prompt_cell_number(cells["opening_qty"]) is None:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = " ".join(cells["pack"]).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = _prompt_cell_number(cells["opening_qty"]) or 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"]) or 0.0
+            rec_val = _prompt_cell_number(cells["receipts_value"])
+            item["sales_qty"] = _prompt_cell_number(cells["sales_qty"]) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells["closing_qty"]) or 0.0
+            if _prompt_cell_number(cells["sales_value"]) is not None:
+                item["sales_value"] = _prompt_cell_number(cells["sales_value"])
+            if _prompt_cell_number(cells["closing_value"]) is not None:
+                item["closing_value"] = _prompt_cell_number(cells["closing_value"])
+            extra = item["extra"]
+            if _prompt_cell_number(cells["opening_value"]) is not None:
+                extra["opening_value"] = _prompt_cell_number(cells["opening_value"])
+            if rec_val is not None:
+                ordered = {}
+                for key, val in item.items():
+                    ordered[key] = val
+                    if key == "receipts_qty":
+                        ordered["receipts_value"] = rec_val
+                item = ordered
+            if _prompt_cell_number(cells["total_qty"]) is not None:
+                extra["total_stock_qty"] = _prompt_cell_number(cells["total_qty"])
+            if _prompt_cell_number(cells["near_expiry"]) is not None:
+                extra["near_expiry_qty"] = _prompt_cell_number(cells["near_expiry"])
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "swil_opening_receipt_value"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -2175,6 +2500,16 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        prompt_stmt = _parse_prompt_datewise_stock_statement(doc, filename)
+        if prompt_stmt and prompt_stmt.get("line_items"):
+            prompt_stmt["totals"]["extra"]["statement_count"] = 1
+            return prompt_stmt
+
+        swil_stmt = _parse_swil_opening_receipt_value_statement(doc, filename)
+        if swil_stmt and swil_stmt.get("line_items"):
+            swil_stmt["totals"]["extra"]["statement_count"] = 1
+            return swil_stmt
+
         page_infos: List[Dict[str, Any]] = []
         for page_index, page in enumerate(doc):
             if page_index >= max_pages:
