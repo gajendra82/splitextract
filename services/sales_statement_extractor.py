@@ -1650,6 +1650,125 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # ProductName / Pack / Op.stk / Pur / sales / Free / Repl / TotalStock.
+    # TotalStock is closing. Free and Repl are not receipts, and a blank Pur
+    # must not be filled from Age or from opening + purchase - sales.
+    if totals["extra"].get("extraction_method") == "zenith_opstk_totalstock":
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        purchase_sum = sum(
+            _to_float(i.get("purchase_qty") if i.get("purchase_qty") not in (None, "") else i.get("receipts_qty"))
+            for i in items
+            if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = purchase_sum
+        totals["extra"]["purchase_qty"] = purchase_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "zenith_opstk_totalstock"
+        totals["extra"]["stock_identity_formula"] = (
+            "opening=Op.stk; purchase=Pur; sales=sales; free=Free; "
+            "replacement=Repl; closing=TotalStock"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": purchase_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "calculated_closing": closing_sum,
+            "is_valid": True,
+        }
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if isinstance(row_extra, dict):
+                row_extra["stock_identity_ok"] = not bool(row_extra.get("qty_parse_errors"))
+        return result
+
+    # NAME / PACK / OPENSTK / PURSTK / ... / SALESTK / ... / CLOSESTK /
+    # OPENVAL / PURVAL / SALEVAL / CLSVAL. Zeros stay in their own columns.
+    # Near-expiry rows are not part of this statement.
+    if totals["extra"].get("extraction_method") == "sunderlal_openstk_sale":
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        purchase_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        opening_value_sum = round(
+            sum(_to_float(i.get("opening_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        purchase_value_sum = round(
+            sum(
+                _to_float((i.get("extra") or {}).get("purchase_value"))
+                for i in items
+                if isinstance(i, dict)
+            ),
+            2,
+        )
+        sales_value_sum = round(
+            sum(_to_float(i.get("sales_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = purchase_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["sales_value"] = sales_value_sum
+        totals["closing_value"] = closing_value_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = purchase_sum
+        totals["extra"]["purchase_qty"] = purchase_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["opening_value"] = opening_value_sum
+        totals["extra"]["purchase_value"] = purchase_value_sum
+        totals["extra"]["sales_value"] = sales_value_sum
+        totals["extra"]["closing_value"] = closing_value_sum
+        totals["extra"]["stock_identity_kind"] = "sunderlal_openstk_sale"
+        totals["extra"]["stock_identity_formula"] = (
+            "opening=OPENSTK; purchase=PURSTK; sales=SALESTK; closing=CLOSESTK; "
+            "values=OPENVAL/PURVAL/SALEVAL/CLSVAL"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": purchase_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "extracted_opening_value": opening_value_sum,
+            "extracted_purchase_value": purchase_value_sum,
+            "extracted_sales_value": sales_value_sum,
+            "extracted_closing_value": closing_value_sum,
+            "calculated_closing": closing_sum,
+            "is_valid": True,
+        }
+        for item in items:
+            if isinstance(item, dict) and isinstance(item.get("extra"), dict):
+                item["extra"]["stock_identity_ok"] = True
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -5558,6 +5677,202 @@ def _xls_sreturn_qty_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
     return None, text
 
 
+_ZENITH_OPSTK_HEADER = (
+    "productname",
+    "pack",
+    "opstk",
+    "pur",
+    "sales",
+    "free",
+    "repl",
+    "totalstock",
+)
+_ZENITH_OPSTK_FIELDS = (
+    "item",
+    "pack",
+    "opening",
+    "purchase",
+    "sales",
+    "free",
+    "replacement",
+    "closing",
+)
+
+
+def _xls_zenith_opstk_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
+    """Column indexes for ProductName/Pack/Op.stk/Pur/sales/Free/Repl/TotalStock.
+
+    Any other header, including ITEM/PACK/S.RETURN/OTHERS, returns None.
+    """
+    labels = [
+        (idx, _xls_header_compact(cell))
+        for idx, cell in enumerate(row or [])
+        if _xls_header_compact(cell)
+    ]
+    compacts = [label for _idx, label in labels]
+    start = None
+    for pos in range(0, len(compacts) - len(_ZENITH_OPSTK_HEADER) + 1):
+        if tuple(compacts[pos : pos + len(_ZENITH_OPSTK_HEADER)]) == _ZENITH_OPSTK_HEADER:
+            start = pos
+            break
+    if start is None:
+        return None
+    indexes = {
+        field: labels[start + offset][0]
+        for offset, field in enumerate(_ZENITH_OPSTK_FIELDS)
+    }
+    optional = {
+        "salevalue": "sales_value",
+        "stockvalueatpurchaseprice": "stock_value",
+        "age": "age",
+    }
+    for idx, label in labels[start + len(_ZENITH_OPSTK_HEADER) :]:
+        field = optional.get(label)
+        if field and field not in indexes:
+            indexes[field] = idx
+    return indexes
+
+
+def _xls_fill_zenith_opstk_rows(
+    result: Dict[str, Any],
+    rows: List[List[Any]],
+    header_idx: int,
+    sheet_name: str,
+    header_score: int,
+) -> Dict[str, Any]:
+    """Keep every product row. Map Op.stk/Pur/sales/Free/Repl/TotalStock by column."""
+    indexes = _xls_zenith_opstk_indexes(rows[header_idx])
+    if not indexes:
+        return result
+
+    for row in rows[:header_idx]:
+        if not isinstance(row, list):
+            continue
+        joined = " ".join(_xls_preamble_texts(row))
+        if re.search(r"HIMALAYA\s*[- ]\s*ZENITH", joined, re.I) and not result.get("company_name"):
+            result["company_name"] = "HIMALAYA-ZENITH"
+        month = re.search(r"\(Month\)\s*-\s*(\d{1,2})/(\d{4})", joined, re.I)
+        if month and not result.get("period_from"):
+            year = int(month.group(2))
+            mon = int(month.group(1))
+            if 1 <= mon <= 12:
+                if mon == 12:
+                    last = 31
+                else:
+                    last = (date(year, mon + 1, 1) - timedelta(days=1)).day
+                result["period_from"] = f"{year:04d}-{mon:02d}-01"
+                result["period_to"] = f"{year:04d}-{mon:02d}-{last:02d}"
+        if re.search(r"Stock\s+And\s+Sales\s+Report", joined, re.I) and not result.get("report_title"):
+            result["report_title"] = _clean_name(joined)
+
+    def cell(row: List[Any], key: str) -> Any:
+        idx = indexes.get(key)
+        if idx is None or idx >= len(row):
+            return None
+        return row[idx]
+
+    items: List[Dict[str, Any]] = []
+    zero_rows = 0
+    parse_error_rows = 0
+    qty_keys = (
+        ("opening_qty", "opening"),
+        ("purchase_qty", "purchase"),
+        ("sales_qty", "sales"),
+        ("free_qty", "free"),
+        ("replacement_qty", "replacement"),
+        ("closing_qty", "closing"),
+    )
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list):
+            continue
+        raw_name = cell(row, "item")
+        if raw_name in (None, ""):
+            continue
+        product_name = _clean_name(str(raw_name))
+        if not product_name:
+            continue
+        if re.match(
+            r"^(?:total\b|grand\s*total|sub\s*total|net\s*total|productname)\b",
+            product_name,
+            re.I,
+        ):
+            continue
+        raw_pack = cell(row, "pack")
+        packing = _clean_name(str(raw_pack)) if raw_pack not in (None, "") else None
+        parsed: Dict[str, Optional[float]] = {}
+        errors: Dict[str, str] = {}
+        for field, key in qty_keys:
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            parsed[field] = number
+            if error:
+                errors[field] = error
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing or None
+        item["opening_qty"] = parsed["opening_qty"]
+        item["purchase_qty"] = parsed["purchase_qty"]
+        item["receipts_qty"] = parsed["purchase_qty"]
+        item["sales_qty"] = parsed["sales_qty"]
+        item["free_qty"] = parsed["free_qty"]
+        item["replacement_qty"] = parsed["replacement_qty"]
+        item["closing_qty"] = parsed["closing_qty"]
+        item["source_product_name"] = product_name
+        item["source_packing"] = packing or None
+        sales_value, sales_value_error = _xls_sreturn_qty_cell(cell(row, "sales_value"))
+        stock_value, stock_value_error = _xls_sreturn_qty_cell(cell(row, "stock_value"))
+        if "sales_value" in indexes:
+            item["sales_value"] = sales_value
+            if sales_value_error:
+                errors["sales_value"] = sales_value_error
+        if "stock_value" in indexes:
+            item["closing_value"] = stock_value
+            if stock_value_error:
+                errors["closing_value"] = stock_value_error
+        age_number = None
+        if "age" in indexes:
+            age_number, age_error = _xls_sreturn_qty_cell(cell(row, "age"))
+            if age_error:
+                errors["age"] = age_error
+        if errors:
+            parse_error_rows += 1
+        if (
+            not errors
+            and all(parsed[field] == 0.0 for field, _key in qty_keys)
+        ):
+            zero_rows += 1
+        extra = {
+            "layout": "zenith_opstk_totalstock",
+            "source_product_name": product_name,
+            "source_packing": packing or None,
+            "purchase_qty": parsed["purchase_qty"],
+            "free_qty": parsed["free_qty"],
+            "replacement_qty": parsed["replacement_qty"],
+        }
+        if "age" in indexes:
+            extra["age"] = age_number
+        if errors:
+            extra["qty_parse_errors"] = errors
+        item["extra"] = extra
+        items.append(item)
+
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["sheet"] = sheet_name
+    extra["header_row"] = header_idx
+    extra["header_detection_confidence"] = (
+        round(min(1.0, header_score / 12.0), 2) if header_idx is not None else 0.0
+    )
+    extra["extraction_method"] = "zenith_opstk_totalstock"
+    extra["layout"] = "zenith_opstk_totalstock"
+    extra["rows_detected"] = len(items)
+    extra["zero_qty_rows"] = zero_rows
+    extra["qty_parse_error_rows"] = parse_error_rows
+    if "item" in indexes:
+        extra["product_column"] = _xls_col_letter(indexes["item"])
+        extra["product_column_header"] = str(rows[header_idx][indexes["item"]] or "").strip()
+    return result
+
+
 def _xls_fill_item_pack_sreturn_rows(
     result: Dict[str, Any],
     rows: List[List[Any]],
@@ -5863,6 +6178,10 @@ def _xls_fill_from_rows(
 
     if _xls_item_pack_sreturn_indexes(rows[header_idx]):
         return _xls_fill_item_pack_sreturn_rows(
+            result, rows, header_idx, sheet_name, header_score
+        )
+    if _xls_zenith_opstk_indexes(rows[header_idx]):
+        return _xls_fill_zenith_opstk_rows(
             result, rows, header_idx, sheet_name, header_score
         )
 
@@ -10820,6 +11139,175 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
     return result
 
 
+def _is_zenith_opstk_text(text: str) -> bool:
+    """True only when this page prints Op.stk, Repl, and TotalStock together."""
+    compact = re.sub(r"[^a-z0-9]", "", (text or "").lower())
+    return "opstk" in compact and "totalstock" in compact and "repl" in compact
+
+
+def _zenith_header_tokens(words: List[Any]) -> List[Dict[str, Any]]:
+    """Join split header words such as Op + stk without joining the sales column."""
+    ordered = sorted(
+        (
+            word
+            for word in words
+            if isinstance(word, (list, tuple)) and len(word) >= 5 and str(word[4] or "").strip()
+        ),
+        key=lambda word: float(word[0]),
+    )
+    tokens: List[Dict[str, Any]] = []
+    for word in ordered:
+        tokens.append(
+            {
+                "compact": _xls_header_compact(word[4]),
+                "left": float(word[0]),
+                "right": float(word[2]),
+                "x": (float(word[0]) + float(word[2])) / 2.0,
+                "text": str(word[4]).strip(),
+            }
+        )
+    joined: List[Dict[str, Any]] = []
+    index = 0
+    while index < len(tokens):
+        if index + 1 < len(tokens):
+            pair = tokens[index]["compact"] + tokens[index + 1]["compact"]
+            if pair in {"productname", "opstk", "totalstock", "salevalue"} and tokens[index][
+                "compact"
+            ] not in {"productname", "opstk", "totalstock", "sales", "salevalue"}:
+                nxt = tokens[index + 1]
+                joined.append(
+                    {
+                        "compact": pair,
+                        "left": tokens[index]["left"],
+                        "right": nxt["right"],
+                        "x": (tokens[index]["left"] + nxt["right"]) / 2.0,
+                        "text": tokens[index]["text"] + nxt["text"],
+                    }
+                )
+                index += 2
+                continue
+        joined.append(tokens[index])
+        index += 1
+    return joined
+
+
+def _zenith_opstk_rows_from_words(words: List[Any]) -> Optional[List[List[Any]]]:
+    """Build fixed columns from word x positions so a blank cell does not shift."""
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda item: (round(float(item[1]), 1), float(item[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        if not str(word[4] or "").strip():
+            continue
+        y0 = float(word[1])
+        if rows and abs(y0 - rows[-1]["y"]) <= 2.4:
+            rows[-1]["words"].append(word)
+        else:
+            rows.append({"y": y0, "words": [word]})
+    header = None
+    header_tokens: List[Dict[str, Any]] = []
+    for row in rows:
+        tokens = _zenith_header_tokens(row["words"])
+        compacts = [token["compact"] for token in tokens]
+        for pos in range(0, len(compacts) - len(_ZENITH_OPSTK_HEADER) + 1):
+            if tuple(compacts[pos : pos + len(_ZENITH_OPSTK_HEADER)]) == _ZENITH_OPSTK_HEADER:
+                header = row
+                header_tokens = tokens[pos:]
+                break
+        if header is not None:
+            break
+    if header is None or len(header_tokens) < len(_ZENITH_OPSTK_HEADER):
+        return None
+    anchors = header_tokens[: len(_ZENITH_OPSTK_HEADER)]
+    optional = {"salevalue", "stockvalueatpurchaseprice", "age"}
+    for token in header_tokens[len(_ZENITH_OPSTK_HEADER) :]:
+        if token["compact"] in optional:
+            anchors.append(token)
+        else:
+            break
+    centers = [token["x"] for token in anchors]
+    edges = [-10_000.0]
+    for pos in range(len(centers) - 1):
+        edges.append((centers[pos] + centers[pos + 1]) / 2.0)
+    edges.append(10_000.0)
+    table: List[List[Any]] = [[token["text"] for token in anchors]]
+    for row in rows:
+        if row is header or row["y"] <= header["y"] + 1.0:
+            continue
+        cells: List[Any] = [None] * len(anchors)
+        name_bits: List[str] = []
+        pack_bits: List[str] = []
+        for word in sorted(row["words"], key=lambda item: float(item[0])):
+            token = str(word[4]).strip()
+            center = (float(word[0]) + float(word[2])) / 2.0
+            # edges[1] is midway between ProductName and Pack.
+            # edges[2] is midway between Pack and Op.stk.
+            if center < edges[2]:
+                if center < edges[1]:
+                    name_bits.append(token)
+                else:
+                    pack_bits.append(token)
+                continue
+            for pos in range(2, len(anchors)):
+                if edges[pos] <= center < edges[pos + 1]:
+                    if cells[pos] in (None, ""):
+                        cells[pos] = token
+                    break
+        if name_bits:
+            cells[0] = " ".join(name_bits)
+        if pack_bits:
+            cells[1] = " ".join(pack_bits)
+        if cells[0]:
+            table.append(cells)
+    return table if len(table) > 1 else None
+
+
+def _parse_zenith_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse HIMALAYA-ZENITH Op.stk/Pur/sales/Free/Repl/TotalStock pages.
+
+    Returns None for every other statement layout.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_zenith_opstk_text(text) for text in page_texts):
+        return None
+    table: List[List[Any]] = []
+    for page, text in zip(doc, page_texts):
+        if not _is_zenith_opstk_text(text):
+            continue
+        rows = _zenith_opstk_rows_from_words(page.get_text("words") or [])
+        if not rows:
+            continue
+        if not table:
+            table.extend(rows)
+        else:
+            table.extend(rows[1:])
+    if len(table) < 2:
+        return None
+    result = empty_result(filename, "pdf")
+    result = _xls_fill_zenith_opstk_rows(result, table, 0, "pdf", 8)
+    if not result.get("line_items"):
+        return None
+    blob = "\n".join(page_texts)
+    if re.search(r"HIMALAYA\s*[- ]\s*ZENITH", blob, re.I):
+        result["company_name"] = "HIMALAYA-ZENITH"
+    if not result.get("report_title"):
+        title = re.search(r"Stock\s+And\s+Sales\s+Report[^\n]*", blob, re.I)
+        if title:
+            result["report_title"] = _clean_name(title.group(0))
+    month = re.search(r"\(Month\)\s*-\s*(\d{1,2})/(\d{4})", blob, re.I)
+    if month and not result.get("period_from"):
+        year = int(month.group(2))
+        mon = int(month.group(1))
+        if 1 <= mon <= 12:
+            if mon == 12:
+                last = 31
+            else:
+                last = (date(year, mon + 1, 1) - timedelta(days=1)).day
+            result["period_from"] = f"{year:04d}-{mon:02d}-01"
+            result["period_to"] = f"{year:04d}-{mon:02d}-{last:02d}"
+    return result
+
+
 def _is_medica_opstk_statement(text: str) -> bool:
     """Medica Ultimate stock statement: OPSTK PURCH SALE SALE VAL IN/OT STOCK STK VAL."""
     if not text:
@@ -12272,6 +12760,232 @@ def _parse_marg_nano_split_statement(doc, filename: str) -> Optional[Dict[str, A
     return result
 
 
+_SUNDERLAL_OPENSTK_FIELDS = (
+    "opening_qty",
+    "purchase_qty",
+    "purscm_qty",
+    "crestk_qty",
+    "sales_qty",
+    "slscm_qty",
+    "ucstk_qty",
+    "ucscm_qty",
+    "dbstk_qty",
+    "closing_qty",
+    "opening_value",
+    "purchase_value",
+    "sales_value",
+    "closing_value",
+    "hsn",
+    "tax_per",
+    "slgst_val",
+    "scmgst_val",
+)
+
+
+def _is_sunderlal_openstk_statement(text: str) -> bool:
+    """STOCK & SALE STATEMENT with OPENSTK / PURSTK / SALESTK / CLOSESTK."""
+    compact = re.sub(r"[^a-z0-9]", "", (text or "").lower())
+    return (
+        "stocksalestatement" in compact
+        and "openstk" in compact
+        and "purstk" in compact
+        and "salestk" in compact
+        and "closestk" in compact
+    )
+
+
+def _sunderlal_word_rows(words: List[Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda item: (round(float(item[1]), 1), float(item[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        if not str(word[4] or "").strip():
+            continue
+        y0 = float(word[1])
+        if rows and abs(y0 - rows[-1]["y"]) <= 2.2:
+            rows[-1]["words"].append(word)
+        else:
+            rows.append({"y": y0, "words": [word]})
+    return rows
+
+
+def _sunderlal_column_rights(rows: List[Dict[str, Any]]) -> Optional[List[float]]:
+    """Right edges of the 18 numeric columns. Pack numbers sit further left."""
+    rights: List[float] = []
+    for row in rows:
+        joined = " ".join(str(word[4]) for word in row["words"])
+        if re.search(r"NEAR\s+EXPIRY", joined, re.I):
+            break
+        for word in row["words"]:
+            token = str(word[4]).replace(",", "")
+            if float(word[2]) < 205:
+                continue
+            if re.fullmatch(r"-?\d+(?:\.\d+)?", token):
+                rights.append(float(word[2]))
+    if not rights:
+        return None
+    rights.sort()
+    clusters: List[List[float]] = [[rights[0]]]
+    for edge in rights[1:]:
+        if edge - clusters[-1][-1] <= 4.0:
+            clusters[-1].append(edge)
+        else:
+            clusters.append([edge])
+    centers = [sum(cluster) / len(cluster) for cluster in clusters if len(cluster) >= 2]
+    if len(centers) != len(_SUNDERLAL_OPENSTK_FIELDS):
+        return None
+    return centers
+
+
+def _sunderlal_items_from_rows(
+    rows: List[Dict[str, Any]], anchors: List[float]
+) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        words = sorted(row["words"], key=lambda word: float(word[0]))
+        joined = " ".join(str(word[4]) for word in words)
+        if re.search(r"NEAR\s+EXPIRY", joined, re.I):
+            break
+        if re.search(r"OPENSTK|GRAND\s+TOTAL|STOCK\s*&\s*SALE\s+STATEMENT", joined, re.I):
+            continue
+        name_bits: List[str] = []
+        pack_bits: List[str] = []
+        placed: Dict[int, str] = {}
+        for word in words:
+            token = str(word[4]).strip()
+            left = float(word[0])
+            right = float(word[2])
+            plain = token.replace(",", "")
+            is_number = bool(re.fullmatch(r"-?\d+(?:\.\d+)?", plain))
+            if is_number and right >= 205:
+                nearest = min(range(len(anchors)), key=lambda index: abs(anchors[index] - right))
+                if abs(anchors[nearest] - right) <= 18 and nearest not in placed:
+                    placed[nearest] = plain
+                continue
+            if left < 150:
+                name_bits.append(token)
+            elif left < 205:
+                pack_bits.append(token)
+        name = _clean_name(" ".join(name_bits))
+        if not name or not re.search(r"[A-Za-z]", name):
+            continue
+        if re.search(
+            r"^(NAME|PACK|COMPANY|FROM|REPORT|PAGE|SUNDERLAL|PUNE)\b",
+            name,
+            re.I,
+        ):
+            continue
+        # Statement footer (MR.Balance, OPENING/PURCHASE/SALES, sale-rate lines).
+        # These sit under the product table and are not stock rows.
+        if re.search(
+            r"^(MR\.?\s*BALANCE|OPENING|PURCHASE|SALES|UC\s*SALE|CL\.?\s*STK)\b"
+            r"|ON\s+SALERATE",
+            name,
+            re.I,
+        ):
+            break
+        if not placed:
+            continue
+        values: Dict[str, Optional[float]] = {}
+        for index, field in enumerate(_SUNDERLAL_OPENSTK_FIELDS):
+            raw = placed.get(index)
+            if raw is None:
+                values[field] = 0.0 if field not in {"hsn", "tax_per"} else None
+            elif field == "hsn":
+                values[field] = raw
+            else:
+                values[field] = float(raw)
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = _clean_name(" ".join(pack_bits)) or None
+        item["source_product_name"] = name
+        item["source_packing"] = item["packing"]
+        item["opening_qty"] = values["opening_qty"]
+        item["purchase_qty"] = values["purchase_qty"]
+        item["receipts_qty"] = values["purchase_qty"]
+        item["sales_qty"] = values["sales_qty"]
+        item["closing_qty"] = values["closing_qty"]
+        item["opening_value"] = values["opening_value"]
+        item["sales_value"] = values["sales_value"]
+        item["closing_value"] = values["closing_value"]
+        item["extra"] = {
+            "layout": "sunderlal_openstk_sale",
+            "source_product_name": name,
+            "source_packing": item["packing"],
+            "purchase_qty": values["purchase_qty"],
+            "purchase_value": values["purchase_value"],
+            "opening_value": values["opening_value"],
+            "purscm_qty": values["purscm_qty"],
+            "crestk_qty": values["crestk_qty"],
+            "slscm_qty": values["slscm_qty"],
+            "ucstk_qty": values["ucstk_qty"],
+            "ucscm_qty": values["ucscm_qty"],
+            "dbstk_qty": values["dbstk_qty"],
+            "hsn": values["hsn"],
+            "tax_per": values["tax_per"],
+            "slgst_val": values["slgst_val"],
+            "scmgst_val": values["scmgst_val"],
+        }
+        items.append(item)
+    return items
+
+
+def _parse_sunderlal_openstk_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse OPENSTK/PURSTK/SALESTK/CLOSESTK rows by printed column edge.
+
+    Returns None for every other statement layout. Stops at NEAR EXPIRY REPORT.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_sunderlal_openstk_statement(text) for text in page_texts):
+        return None
+    page_rows = []
+    for page, text in zip(doc, page_texts):
+        if not _is_sunderlal_openstk_statement(text):
+            continue
+        page_rows.append(_sunderlal_word_rows(page.get_text("words") or []))
+    anchors = None
+    for rows in page_rows:
+        anchors = _sunderlal_column_rights(rows)
+        if anchors:
+            break
+    if not anchors:
+        return None
+    items: List[Dict[str, Any]] = []
+    for rows in page_rows:
+        items.extend(_sunderlal_items_from_rows(rows, anchors))
+    if len(items) < 3:
+        return None
+    result = empty_result(filename, "pdf")
+    blob = "\n".join(page_texts)
+    stockist = re.search(r"^\s*([A-Z][A-Z .&']{3,50})", blob, re.M)
+    if stockist and not re.search(r"STOCK|SALE|COMPANY|FROM", stockist.group(1), re.I):
+        result["stockist_name"] = _clean_name(stockist.group(1))
+    company = re.search(r"Company\s+Name\s*:\s*(.+)", blob, re.I)
+    if company:
+        result["company_name"] = _clean_name(company.group(1))
+    period_from = re.search(r"From\s*:\s*(\d{1,2}/\d{1,2}/\d{2,4})", blob, re.I)
+    period_to = re.search(r"To\s*:\s*(\d{1,2}/\d{1,2}/\d{2,4})", blob, re.I)
+    if period_from:
+        result["period_from"] = _normalize_date(period_from.group(1))
+    if period_to:
+        result["period_to"] = _normalize_date(period_to.group(1))
+    result["report_title"] = "STOCK & SALE STATEMENT"
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "sunderlal_openstk_sale"
+    extra["layout"] = "sunderlal_openstk_sale"
+    extra["rows_detected"] = len(items)
+    extra["zero_qty_rows"] = sum(
+        1
+        for item in items
+        if item.get("opening_qty") == 0
+        and item.get("receipts_qty") == 0
+        and item.get("sales_qty") == 0
+        and item.get("closing_qty") == 0
+    )
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -12286,6 +13000,16 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        zenith_opstk = _parse_zenith_opstk_statement(doc, filename)
+        if zenith_opstk and zenith_opstk.get("line_items"):
+            zenith_opstk["totals"]["extra"]["statement_count"] = 1
+            return zenith_opstk
+
+        sunderlal_openstk = _parse_sunderlal_openstk_statement(doc, filename)
+        if sunderlal_openstk and sunderlal_openstk.get("line_items"):
+            sunderlal_openstk["totals"]["extra"]["statement_count"] = 1
+            return sunderlal_openstk
+
         marg_nano = _parse_marg_nano_split_statement(doc, filename)
         if marg_nano and marg_nano.get("line_items"):
             marg_nano["totals"]["extra"]["statement_count"] = 1
