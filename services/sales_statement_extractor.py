@@ -3806,6 +3806,97 @@ def _xls_finalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _parse_marg_opening_receipt_issue(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    sheet_name: str,
+) -> Optional[Dict[str, Any]]:
+    """MARG ERP qty grid: ITEM DESCRIPTION, OPENING, RECEIPT, ISSUE, CLOSING.
+
+    A printed dash is 0. Other Excel headers return None.
+    """
+    header_idx = None
+    for index, row in enumerate(rows[:20]):
+        labels = [
+            re.sub(r"[^a-z]", "", str(cell or "").lower())
+            for cell in (row or [])
+        ]
+        if labels[:5] == ["itemdescription", "opening", "receipt", "issue", "closing"]:
+            header_idx = index
+            break
+    if header_idx is None:
+        return None
+
+    result = empty_result(filename, ext.lstrip(".") or "xls")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    for row in rows[:header_idx]:
+        text = " ".join(str(cell).strip() for cell in row if str(cell or "").strip())
+        if not text:
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICAL|AGENC|PHARMA|DISTRIBUT", text, re.I
+        ):
+            result["stockist_name"] = _clean_name(text.split("Phone")[0])
+        elif not result.get("stockist_address") and re.search(
+            r"MANSION|COLONY|ROAD|NAGAR|STREET", text, re.I
+        ):
+            result["stockist_address"] = _clean_name(text)
+        company = re.search(r"\(\s*([A-Za-z][A-Za-z ]{2,30})\s*\)", text)
+        if company and not result.get("company_name"):
+            result["company_name"] = _clean_name(company.group(1))
+        period = re.search(
+            r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
+            text,
+        )
+        if period and result.get("period_from") is None:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    for row in rows[header_idx + 1 :]:
+        raw_name = str(row[0] or "").strip() if row else ""
+        if not raw_name or re.search(r"^(TOTAL|Digital)\b", raw_name, re.I):
+            continue
+        parts = re.split(r"\s{2,}", raw_name, maxsplit=1)
+        name = _clean_name(parts[0])
+        packing = _clean_name(parts[1]) if len(parts) > 1 else None
+        if not name:
+            continue
+
+        def cell_qty(index: int) -> float:
+            if index >= len(row):
+                return 0.0
+            text = str(row[index] if row[index] is not None else "").strip()
+            if text in {"", "-", "—", "--"}:
+                return 0.0
+            return _to_float(text)
+
+        opening = cell_qty(1)
+        receipt = cell_qty(2)
+        issue = cell_qty(3)
+        closing = cell_qty(4)
+        if opening == receipt == issue == closing == 0 and not packing:
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipt
+        item["sales_qty"] = issue
+        item["closing_qty"] = closing
+        item["extra"]["layout"] = "marg_opening_receipt_issue"
+        items.append(item)
+    if not items:
+        return None
+    result["line_items"] = items
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "marg_opening_receipt_issue"
+    result["totals"]["extra"]["layout"] = "marg_opening_receipt_issue"
+    result["totals"]["extra"]["sheet"] = sheet_name
+    return result
+
+
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     if ext != ".xls":
         try:
@@ -3828,6 +3919,9 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     parts: List[Dict[str, Any]] = []
     last_error: Optional[str] = None
     for sheet_name, rows, formats, hidden in _xls_iter_sheets(file_bytes, ext):
+        marg = _parse_marg_opening_receipt_issue(rows, filename, ext, sheet_name)
+        if marg and marg.get("line_items"):
+            return _xls_finalize_result(marg)
         try:
             part = empty_result(filename, ext.lstrip("."))
             part = _xls_fill_from_rows(part, rows, formats, sheet_name)
@@ -9861,6 +9955,172 @@ def _parse_pharmassist_stock_sale_report(doc, filename: str) -> Optional[Dict[st
     return result
 
 
+def _marg_nano_split_pages(doc) -> Optional[Dict[str, Any]]:
+    """Wide MARG ERP NANO sheet printed as name pages plus ISSUE/CLOSING pages.
+
+    Page 2 products must use the later value page, not the first page's closing numbers.
+    Other statements return None.
+    """
+    product_rows: List[Dict[str, Any]] = []
+    value_rows: List[List[float]] = []
+    meta = {"stockist_name": None, "company_name": None, "period_from": None, "period_to": None}
+    saw_product_header = False
+    saw_value_header = False
+
+    for page in doc:
+        words = page.get_text("words") or []
+        if not words:
+            continue
+        labels = " ".join(str(w[4]) for w in words)
+        is_value = bool(
+            re.search(r"\bISSUE\b", labels)
+            and re.search(r"\bCLOSING\b", labels)
+            and re.search(r"\bSTOCK\b", labels)
+            and not re.search(r"\bPRODUCT\b", labels)
+        )
+        is_product = bool(
+            re.search(r"\bPRODUCT\b", labels)
+            and re.search(r"\bRECEIVE\b", labels)
+            and re.search(r"\bOPENING\b", labels)
+        )
+        if is_product:
+            saw_product_header = True
+        if is_value:
+            saw_value_header = True
+        header_y = None
+        for w in words:
+            token = str(w[4]).upper()
+            if token in {"PRODUCT", "ISSUE"} and float(w[1]) > 100:
+                header_y = float(w[1])
+                break
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            y0 = float(w[1])
+            if header_y is not None and y0 < header_y + 12:
+                continue
+            token = str(w[4]).strip()
+            if not token:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 2.0:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "words": []}
+                rows.append(row)
+            row["words"].append((float(w[0]), token))
+        if is_product or (saw_product_header and not is_value and any(
+            re.search(r"[A-Za-z]", tok) and x < 180
+            for row in rows for x, tok in row["words"]
+        )):
+            for row in rows:
+                name_bits = [tok for x, tok in row["words"] if x < 220]
+                nums = [
+                    _to_float(tok)
+                    for x, tok in sorted(row["words"], key=lambda pair: pair[0])
+                    if x >= 230 and re.fullmatch(r"-?\d+(?:\.\d+)?", tok.replace(",", ""))
+                ]
+                name = _clean_name(" ".join(name_bits))
+                if (
+                    not name
+                    or not nums
+                    or re.search(r"MARG|Chemist|Phone|Licence|E-Mail", name, re.I)
+                ):
+                    continue
+                product_rows.append({"name": name, "nums": nums})
+        elif is_value or (saw_value_header and not is_product):
+            for row in rows:
+                nums = [
+                    _to_float(tok)
+                    for x, tok in sorted(row["words"], key=lambda pair: pair[0])
+                    if re.fullmatch(r"-?\d+(?:\.\d+)?", tok.replace(",", ""))
+                ]
+                if len(nums) >= 3:
+                    value_rows.append(nums[:3])
+
+        blob = " ".join(str(w[4]) for w in words)
+        if not meta["stockist_name"]:
+            stockist = re.search(
+                r"([A-Z][A-Z .&']{2,40}(?:DRUG HOUSE|MEDICAL|AGENCY|PHARMA))",
+                blob,
+            )
+            if stockist:
+                meta["stockist_name"] = _clean_name(stockist.group(1))
+        if not meta["company_name"]:
+            company = re.search(r"(HIMALAYA(?:\s+ZEAL)?)", blob, re.I)
+            if company:
+                meta["company_name"] = _clean_name(company.group(1))
+        if meta["period_from"] is None:
+            period = re.search(
+                r"(\d{1,2}/\d{1,2}/\d{4})\s*-\s*(\d{1,2}/\d{1,2}/\d{2,4})",
+                blob,
+            )
+            if period:
+                meta["period_from"] = _normalize_date(period.group(1))
+                end = _normalize_date(period.group(2))
+                start = meta["period_from"] or ""
+                if (
+                    end
+                    and start
+                    and end[:4] < "2000"
+                    and start[:4] >= "2000"
+                ):
+                    end = f"{start[:4]}-{end[5:]}"
+                meta["period_to"] = end
+
+    if not saw_product_header or not saw_value_header or len(product_rows) < 3:
+        return None
+    return {"products": product_rows, "values": value_rows, "meta": meta}
+
+
+def _parse_marg_nano_split_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Pair each product page with the ISSUE VALUE page that follows it."""
+    found = _marg_nano_split_pages(doc)
+    if not found:
+        return None
+    products = found["products"]
+    values = found["values"]
+    if len(values) < len(products):
+        return None
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES STATEMENT"
+    meta = found["meta"]
+    result["stockist_name"] = meta.get("stockist_name")
+    result["company_name"] = meta.get("company_name")
+    result["period_from"] = meta.get("period_from")
+    result["period_to"] = meta.get("period_to")
+    items: List[Dict[str, Any]] = []
+    for product, triple in zip(products, values):
+        name = product["name"]
+        nums = product["nums"]
+        if re.match(r"^TOTAL\b", name, re.I):
+            continue
+        while len(nums) < 5:
+            nums.append(0.0)
+        item = empty_line_item()
+        item["product_name"] = name
+        item["opening_qty"] = nums[0]
+        item["opening_value"] = nums[1]
+        item["receipts_qty"] = nums[2]
+        item["receipts_value"] = nums[3]
+        item["sales_qty"] = nums[4]
+        item["sales_value"] = triple[0]
+        item["closing_qty"] = triple[1]
+        item["closing_value"] = triple[2]
+        item["extra"]["layout"] = "marg_nano_split_columns"
+        items.append(item)
+    if len(items) < 3:
+        return None
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item.get("sales_value")) for item in items), 2
+    )
+    result["totals"]["closing_value"] = round(
+        sum(_to_float(item.get("closing_value")) for item in items), 2
+    )
+    result["totals"]["extra"]["extraction_method"] = "marg_nano_split_columns"
+    result["totals"]["extra"]["layout"] = "marg_nano_split_columns"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -9875,6 +10135,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        marg_nano = _parse_marg_nano_split_statement(doc, filename)
+        if marg_nano and marg_nano.get("line_items"):
+            marg_nano["totals"]["extra"]["statement_count"] = 1
+            return marg_nano
+
         pharmassist = _parse_pharmassist_stock_sale_report(doc, filename)
         if pharmassist and pharmassist.get("line_items"):
             pharmassist["totals"]["extra"]["statement_count"] = 1
