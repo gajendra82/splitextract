@@ -26921,6 +26921,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     # Copying Cl Stock into quantity made Secondary Sales show Sale = Closing
     # (for example Sale 0 and Cl Stock 4 both displayed as 4).
     prompt_datewise = extra.get("layout") == "prompt_datewise"
+    detail_opval = extra.get("layout") == "stock_sales_detail_opval"
     zl_bal = extra.get("layout") == "zl_opening_primary_closing"
     paired_value = extra.get("layout") == "paired_stock_value"
     # Qty-only Sales & Stock rows: Issue is the quantity, including a real zero.
@@ -26985,7 +26986,9 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "sales_qty",
             "closing_qty",
             "others_qty",
-        }
+        } or (detail_opval and key == "opening_value")
+        if detail_opval and key == "opening_value":
+            continue
         if key in extra and extra.get(key) not in (None, ""):
             additional[key] = extra[key]
         elif prompt_datewise and key in line and line.get(key) not in (None, ""):
@@ -26995,6 +26998,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             or (keep_zero and line.get(key) not in (None, ""))
         ):
             additional[key] = line.get(key)
+        if detail_opval and key == "opening_qty":
+            additional["opening_value"] = line.get("opening_value")
     if extra.get("others_qty") not in (None, "") and "others_qty" not in additional:
         additional["others_qty"] = extra.get("others_qty")
     if line.get("packing"):

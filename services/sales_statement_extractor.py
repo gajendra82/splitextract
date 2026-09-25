@@ -1246,7 +1246,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
     closing_total = totals.get("closing_value")
     allow_negative_money = (
         str(totals.get("extra", {}).get("extraction_method") or "")
-        == "swil_landscape_qty_value"
+        in {"swil_landscape_qty_value", "purc_sale_cl_layout"}
     )
 
     qty_only = (
@@ -7912,6 +7912,378 @@ def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict
     return result
 
 
+def _is_purc_sale_cl_header(blob: str) -> bool:
+    """MediVision Stock and Sales: Purc / Purc val / Sale / Sa val / Cl qty / Cl val."""
+    if not blob:
+        return False
+    return bool(
+        re.search(r"\bProduct\b", blob, re.I)
+        and re.search(r"\bUnit\b", blob, re.I)
+        and re.search(r"\bPurc\b", blob, re.I)
+        and re.search(r"\bSale\b", blob, re.I)
+        and re.search(r"Cl\s*qty", blob, re.I)
+        and re.search(r"Cl\s*val", blob, re.I)
+    )
+
+
+def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[List[Tuple[str, float]]]:
+    """Column starts from this header only. Other layouts never reach here."""
+    starts: List[Tuple[str, float]] = []
+    seen_purc = False
+    seen_cl = False
+    for x, token in header_words:
+        norm = re.sub(r"[^a-z]", "", token.lower())
+        field = None
+        if norm in {"product", "name"} and not any(n == "name" for n, _ in starts):
+            field = "name"
+        elif norm == "unit":
+            field = "pack"
+        elif norm == "purc":
+            field = "receipts_value" if seen_purc else "receipts_qty"
+            seen_purc = True
+        elif norm == "sale":
+            field = "sales_qty"
+        elif norm == "sa":
+            field = "sales_value"
+        elif norm == "cl":
+            field = "closing_value" if seen_cl else "closing_qty"
+            seen_cl = True
+        if field:
+            starts.append((field, x))
+    needed = {
+        "name",
+        "pack",
+        "receipts_qty",
+        "receipts_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }
+    if not needed.issubset({name for name, _x in starts}):
+        return None
+    return starts
+
+
+def _purc_sale_cl_field(x: float, starts: List[Tuple[str, float]]) -> Optional[str]:
+    field = None
+    for name, start in starts:
+        if x + 0.5 >= start:
+            field = name
+        else:
+            break
+    return field
+
+
+def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Purc / Sale / Cl qty sheets from word positions.
+
+    Returns None unless that header is printed, so other PDFs stay unchanged.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_purc_sale_cl_header(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales"
+    items: List[Dict[str, Any]] = []
+    columns: Optional[List[Tuple[str, float]]] = None
+
+    for page, text in zip(doc, page_texts):
+        if result["period_from"] is None:
+            m = re.search(
+                r"(\d{1,2}-\d{1,2}-\d{2,4})\s+to\s+(\d{1,2}-\d{1,2}-\d{2,4})",
+                text,
+                re.I,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+        company = re.search(r"Company:\s*(.+)", text, re.I)
+        if company and not result.get("company_name"):
+            result["company_name"] = _clean_name(company.group(1).split("\n")[0])
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, token = float(w[0]), float(w[1]), str(w[4]).strip()
+            if not token:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 2.0:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "words": []}
+                rows.append(row)
+            row["words"].append((x0, token))
+
+        for row in rows:
+            blob = " ".join(tok for _x, tok in row["words"])
+            if _is_purc_sale_cl_header(blob):
+                found = _purc_sale_cl_columns(row["words"])
+                if found:
+                    columns = found
+                if not result.get("stockist_name"):
+                    for prev in rows:
+                        if prev["y"] >= row["y"] - 2:
+                            break
+                        line = " ".join(tok for _x, tok in prev["words"]).strip()
+                        if not line or re.search(
+                            r"Phone|Email|Stock|Company|Page|MediVision|@",
+                            line,
+                            re.I,
+                        ):
+                            continue
+                        result["stockist_name"] = _clean_name(line)
+                        break
+                continue
+            if not columns:
+                continue
+            if re.search(r"Continued|Page\s*No|MediVision", blob, re.I):
+                continue
+            cells: Dict[str, List[str]] = {}
+            for x, token in row["words"]:
+                field = _purc_sale_cl_field(x, columns)
+                if field:
+                    cells.setdefault(field, []).append(token)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or re.match(r"^(Product|Unit|Total|Page)\b", name, re.I):
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = " ".join(cells.get("pack") or []).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["sales_value"] = _prompt_cell_number(cells.get("sales_value") or []) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            item["closing_value"] = _prompt_cell_number(cells.get("closing_value") or []) or 0.0
+            extra = item["extra"]
+            extra["layout"] = "purc_sale_cl"
+            pur_val = _prompt_cell_number(cells.get("receipts_value") or [])
+            if pur_val is not None:
+                extra["purchase_value"] = pur_val
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "purc_sale_cl_layout"
+    result["totals"]["extra"]["layout"] = "purc_sale_cl"
+    return result
+
+
+_DETAIL_OPVAL_LABELS = {
+    "sl.no": "sr",
+    "slno": "sr",
+    "op.qty": "opening_qty",
+    "opqty": "opening_qty",
+    "op.val": "opening_value",
+    "opval": "opening_value",
+    "p.qty": "receipts_qty",
+    "p.sch": "purchase_scheme",
+    "p.val": "purchase_value",
+    "s.qty": "sales_qty",
+    "s.sch": "sales_scheme",
+    "s.val": "sales_value",
+    "cl.qty": "closing_qty",
+    "cl.val": "closing_value",
+}
+
+
+def _detail_opval_number(tokens: List[str]) -> Optional[float]:
+    found = None
+    for tok in tokens:
+        raw = str(tok).replace(",", "").strip().rstrip("Ll")
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+            found = float(raw)
+    return found
+
+
+def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Landscape Stock and Sales Detail with a printed Op.Val column.
+
+    Returns None for every other statement so existing parsers are unchanged.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(
+        re.search(r"Stock\s+and\s+Sales\s+Detail", text, re.I)
+        and re.search(r"Op\.Val", text, re.I)
+        for text in page_texts
+    ):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales Detail Report"
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        seller = re.search(r"Seller\s*:\s*(.+)", text, re.I)
+        if seller and not result.get("stockist_name"):
+            result["stockist_name"] = _clean_name(seller.group(1).split("From")[0])
+        if result["period_from"] is None:
+            m = re.search(
+                r"From\s+(\d{1,2}-\d{1,2}-\d{4})\s+to\s+(\d{1,2}-\d{1,2}-\d{4})",
+                text,
+                re.I,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, x1, y0, token = float(w[0]), float(w[2]), float(w[1]), str(w[4]).strip()
+            if not token:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 2.0:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "words": []}
+                rows.append(row)
+            row["words"].append((x0, x1, token))
+
+        columns: Optional[List[Tuple[str, float]]] = None
+        header_i = None
+        for i, row in enumerate(rows):
+            blob = " ".join(tok for _a, _b, tok in row["words"])
+            if re.search(r"Op\.Qty", blob) and re.search(r"Op\.Val", blob) and re.search(r"Cl\.Qty", blob):
+                starts: List[Tuple[Optional[str], float]] = []
+                for x0, _x1, token in row["words"]:
+                    key = re.sub(r"[^a-z.]", "", token.lower())
+                    field = _DETAIL_OPVAL_LABELS.get(key)
+                    starts.append((field, x0))
+                if any(name == "opening_value" for name, _x in starts) and any(
+                    name == "opening_qty" for name, _x in starts
+                ):
+                    columns = starts
+                    header_i = i
+        if not columns:
+            continue
+        op_qty_x = next(x for name, x in columns if name == "opening_qty")
+
+        spans: List[Tuple[Optional[str], float, float]] = []
+        for idx, (name, start) in enumerate(columns):
+            end = columns[idx + 1][1] if idx + 1 < len(columns) else 10000.0
+            spans.append((name, start, end))
+
+        def field_for(x1: float) -> Optional[str]:
+            # Right edge of a right-aligned number, and only inside that header's span.
+            probe = x1 - 0.5
+            for name, start, end in spans:
+                if start <= probe < end:
+                    return name
+            return None
+
+        serial_at: List[int] = []
+        for i, row in enumerate(rows):
+            if header_i is not None and i <= header_i:
+                continue
+            for x0, x1, token in row["words"]:
+                if (x0 + x1) / 2.0 < 50 and re.fullmatch(r"\d{1,4}", token):
+                    serial_at.append(i)
+                    break
+
+        def item_words(row: Dict[str, Any]) -> List[str]:
+            out = []
+            for x0, x1, token in row["words"]:
+                center = (x0 + x1) / 2.0
+                if 48 <= center < op_qty_x and not re.fullmatch(r"\d{1,4}", token):
+                    out.append(token)
+            return out
+
+        for n, i in enumerate(serial_at):
+            names: List[str] = []
+            prev_y = rows[i]["y"]
+            j = i - 1
+            while j > (header_i or 0):
+                if rows[j]["y"] < prev_y - 16:
+                    break
+                if j in serial_at:
+                    break
+                part = item_words(rows[j])
+                if part:
+                    names = part + names
+                prev_y = rows[j]["y"]
+                j -= 1
+            names.extend(item_words(rows[i]))
+            prev_y = rows[i]["y"]
+            j = i + 1
+            next_serial = serial_at[n + 1] if n + 1 < len(serial_at) else len(rows)
+            while j < next_serial:
+                if rows[j]["y"] > prev_y + 16:
+                    break
+                part = item_words(rows[j])
+                if not part:
+                    break
+                names.extend(part)
+                prev_y = rows[j]["y"]
+                j += 1
+
+            cells: Dict[str, List[str]] = {}
+            for _x0, x1, token in rows[i]["words"]:
+                field = field_for(x1)
+                if field and field != "sr":
+                    cells.setdefault(field, []).append(token)
+            name = _clean_name(" ".join(names))
+            if not name:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = _detail_opval_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _detail_opval_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _detail_opval_number(cells.get("sales_qty") or []) or 0.0
+            item["sales_value"] = _detail_opval_number(cells.get("sales_value") or []) or 0.0
+            item["closing_qty"] = _detail_opval_number(cells.get("closing_qty") or []) or 0.0
+            item["closing_value"] = _detail_opval_number(cells.get("closing_value") or []) or 0.0
+            opening_value = _detail_opval_number(cells.get("opening_value") or []) or 0.0
+            ordered: Dict[str, Any] = {}
+            for key, value in item.items():
+                ordered[key] = value
+                if key == "opening_qty":
+                    ordered["opening_value"] = opening_value
+            item.clear()
+            item.update(ordered)
+            extra = item["extra"]
+            extra["layout"] = "stock_sales_detail_opval"
+            for key in ("purchase_scheme", "purchase_value", "sales_scheme"):
+                num = _detail_opval_number(cells.get(key) or [])
+                if num is not None:
+                    extra[key] = num
+            items.append(item)
+
+        for row in rows:
+            blob = " ".join(tok for _a, _b, tok in row["words"])
+            if not re.search(r"\bTotal\b", blob, re.I):
+                continue
+            cells = {}
+            for _x0, x1, token in row["words"]:
+                field = field_for(x1)
+                if field:
+                    cells.setdefault(field, []).append(token)
+            op_val = _detail_opval_number(cells.get("opening_value") or [])
+            if op_val is not None:
+                result["totals"]["opening_value"] = op_val
+            if not result.get("company_name"):
+                for prev in rows:
+                    if prev["y"] >= row["y"]:
+                        break
+                    left = " ".join(
+                        tok for x0, _x1, tok in prev["words"] if x0 < 200
+                    ).strip()
+                    if left and not re.search(r"Stock|Seller|Sl\.No|Op\.Qty", left, re.I):
+                        result["company_name"] = _clean_name(left)
+                        break
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "stock_sales_detail_opval"
+    result["totals"]["extra"]["layout"] = "stock_sales_detail_opval"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -7926,6 +8298,16 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
+        if detail_stmt and detail_stmt.get("line_items"):
+            detail_stmt["totals"]["extra"]["statement_count"] = 1
+            return detail_stmt
+
+        purc_stmt = _parse_purc_sale_cl_statement(doc, filename)
+        if purc_stmt and purc_stmt.get("line_items"):
+            purc_stmt["totals"]["extra"]["statement_count"] = 1
+            return purc_stmt
+
         prompt_stmt = _parse_prompt_datewise_stock_statement(doc, filename)
         if prompt_stmt and prompt_stmt.get("line_items"):
             prompt_stmt["totals"]["extra"]["statement_count"] = 1
