@@ -6481,6 +6481,326 @@ def _parse_swil_landscape_qty_value_statement(
     return result
 
 
+# Scanned portrait Sales & Stock (Opening Bal / Issue/Sales / Closing Bala).
+# Digital pair/landscape parsers need embedded words. This path OCRs image-only
+# PDFs and maps the 9-number Qty/Value sequence. Existing Swil parsers and
+# swil_receipt_pur_value_vision are unchanged.
+_SWIL_SCAN_PACK_RE = re.compile(
+    r"(?P<pack>"
+    r"1X\s*['’]?\s*\d+\s*['’]?S?"
+    r"|\d+\s*['’]S"
+    r"|[A-Z]{0,8}\d+(?:ML|MI\d*|GM|GMS)\b"
+    r")",
+    re.I,
+)
+_SWIL_SCAN_NUM_RE = re.compile(r"-?\d{1,7}(?:[.,]\d{1,2})?")
+_SWIL_SCAN_SKIP_RE = re.compile(
+    r"Sales\s*&\s*Stock|PRODUCT\s+NAM|PACKING|Opening\s+Bal|Issue/Sales|"
+    r"Closing\s+Bala|Powered\s+By|Contin|Page\s*No|Qty\.\s+Value",
+    re.I,
+)
+_SWIL_SCAN_TOTAL_RE = re.compile(r"GRAND\s*TOTAL|TOTAL\s*\(\s*Value", re.I)
+
+
+def _pdf_embedded_text_len(doc) -> int:
+    try:
+        return sum(
+            len(re.sub(r"\s+", "", page.get_text("text") or "")) for page in doc
+        )
+    except Exception:
+        return 0
+
+
+def _swil_scan_pair_clean_line(text: str) -> str:
+    line = (text or "").replace("\u00a0", " ")
+    line = line.replace("—", " ").replace("–", " ").replace("«", " ")
+    line = line.replace("~", " ").replace("=", " ").replace("*", " ")
+    line = re.sub(r"(?<=\d),(?=\d{2}\b)", ".", line)
+    line = re.sub(r"(\d)[^\d\s.]+(?=\d)", r"\1 ", line)
+    line = re.sub(r"[^\w./' -]", " ", line)
+    return re.sub(r"\s+", " ", line).strip()
+
+
+def _swil_scan_pair_parse_numbers(text: str) -> List[float]:
+    found: List[float] = []
+    for raw in _SWIL_SCAN_NUM_RE.findall(text or ""):
+        token = raw.replace(",", ".")
+        if re.fullmatch(r"20\d{2}", token):
+            continue
+        found.append(round(_to_float(token), 2))
+    return found
+
+
+def _swil_scan_pair_join_split_money(nums: List[float]) -> List[float]:
+    """Join OCR-split money such as 6 + 731.20 -> 6731.20."""
+    out: List[float] = []
+    idx = 0
+    while idx < len(nums):
+        cur = nums[idx]
+        nxt = nums[idx + 1] if idx + 1 < len(nums) else None
+        if (
+            nxt is not None
+            and 1 <= cur <= 9
+            and cur == int(cur)
+            and abs(nxt - int(nxt)) > 0.001
+            and 100 <= nxt < 1000
+        ):
+            out.append(round(cur * 1000 + nxt, 2))
+            idx += 2
+            continue
+        out.append(cur)
+        idx += 1
+    return out
+
+
+def _swil_scan_pair_is_qty(value: float) -> bool:
+    return value >= 0 and abs(value - round(value)) < 0.001 and value < 30000
+
+
+def _swil_scan_pair_is_money(value: float) -> bool:
+    return value == 0 or abs(value - round(value)) > 0.001 or value >= 80
+
+
+def _swil_scan_pair_try_nine(nums: List[float]) -> Optional[Tuple[float, ...]]:
+    if len(nums) != 9 or any(n < 0 for n in nums):
+        return None
+    opening_qty, opening_value, receipts_qty, receipts_value, total_qty, sales_qty, sales_value, closing_qty, closing_value = nums
+    if not all(
+        _swil_scan_pair_is_qty(n)
+        for n in (opening_qty, receipts_qty, total_qty, sales_qty, closing_qty)
+    ):
+        return None
+    if not all(
+        _swil_scan_pair_is_money(n)
+        for n in (opening_value, receipts_value, sales_value, closing_value)
+    ):
+        return None
+    ident_total = abs((opening_qty + receipts_qty) - total_qty) <= 1.1
+    ident_close = abs((total_qty - sales_qty) - closing_qty) <= 1.1
+    if ident_total and ident_close:
+        return tuple(nums)
+    if abs((opening_qty + receipts_qty - sales_qty) - closing_qty) <= 1.1:
+        inferred = opening_qty + receipts_qty
+        return (
+            opening_qty,
+            opening_value,
+            receipts_qty,
+            receipts_value,
+            inferred,
+            sales_qty,
+            sales_value,
+            closing_qty,
+            closing_value,
+        )
+    return None
+
+
+def _swil_scan_pair_try_eight(nums: List[float]) -> Optional[Tuple[float, ...]]:
+    if len(nums) != 8 or any(n < 0 for n in nums):
+        return None
+    opening_value, receipts_qty, receipts_value, total_qty, sales_qty, sales_value, closing_qty, closing_value = nums
+    if not all(
+        _swil_scan_pair_is_qty(n)
+        for n in (receipts_qty, total_qty, sales_qty, closing_qty)
+    ):
+        return None
+    if not all(
+        _swil_scan_pair_is_money(n)
+        for n in (opening_value, receipts_value, sales_value, closing_value)
+    ):
+        return None
+    # Avoid treating a qty (112) as Opening Value when Receipt/Pur was split.
+    if opening_value > 0 and abs(opening_value - round(opening_value)) < 0.001 and opening_value < 200:
+        return None
+    if abs((total_qty - sales_qty) - closing_qty) > 1.1:
+        return None
+    opening_qty = total_qty - receipts_qty
+    if opening_qty < -0.1:
+        return None
+    return (
+        opening_qty,
+        opening_value,
+        receipts_qty,
+        receipts_value,
+        total_qty,
+        sales_qty,
+        sales_value,
+        closing_qty,
+        closing_value,
+    )
+
+
+def _swil_scan_pair_cores(nums: List[float]) -> Optional[Tuple[float, ...]]:
+    candidates = [list(nums), _swil_scan_pair_join_split_money(nums)]
+    seen = []
+    for work in candidates:
+        if work in seen:
+            continue
+        seen.append(work)
+        trimmed = list(work)
+        if len(trimmed) >= 10 and trimmed[-1] == int(trimmed[-1]) and trimmed[-1] < 20:
+            trimmed = trimmed[:-1]
+        if len(trimmed) >= 9:
+            got = _swil_scan_pair_try_nine(trimmed[-9:])
+            if got:
+                return got
+        if len(trimmed) >= 8:
+            got = _swil_scan_pair_try_eight(trimmed[-8:])
+            if got:
+                return got
+    return None
+
+
+def _swil_scan_pair_parse_line(
+    raw: str,
+) -> Optional[Tuple[str, Optional[str], Tuple[float, ...]]]:
+    """Parse one OCR product line. None for headers and other layouts."""
+    line = _swil_scan_pair_clean_line(raw)
+    if not line or _SWIL_SCAN_SKIP_RE.search(line):
+        return None
+    if _SWIL_SCAN_TOTAL_RE.search(line):
+        return None
+    packs = list(_SWIL_SCAN_PACK_RE.finditer(line))
+    name = line
+    pack = None
+    rest = line
+    if packs:
+        last = packs[-1]
+        pack = last.group("pack")
+        name = line[: last.start()].strip(" -_.")
+        rest = line[last.end() :]
+    cores = _swil_scan_pair_cores(_swil_scan_pair_parse_numbers(rest))
+    if cores is None:
+        cores = _swil_scan_pair_cores(_swil_scan_pair_parse_numbers(line))
+    if cores is None:
+        return None
+    name = _swil_scan_pair_trim_name(name)
+    letters = re.sub(r"[^A-Za-z]", "", name)
+    if len(letters) < 3:
+        return None
+    if re.match(r"^(TOTAL|GRAND|PRODUCT|PAGE|POWERED|HIMALAYA\s+OTX|HIMALAYA\s+ZANDRA)\b", name, re.I):
+        return None
+    if pack:
+        pack = re.sub(r"\s+", "", pack)
+        pack = re.sub(r"MI\d*$", "ML", pack, flags=re.I)
+    return name, pack, cores
+
+
+def _swil_scan_pair_trim_name(name: str) -> str:
+    """Keep the product words; drop OCR qty/value tail when packing was not split."""
+    cut = re.search(
+        r"^(.*?(?:TAB|SYP|CAP|DROP|GEL|PASTE|WASH|GUMMIES|GRA|"
+        r"LOZEN\w*|LINCTU?S?|NASAL|LINIM\w*|HANDS\s+\w+))\b",
+        name or "",
+        re.I,
+    )
+    if cut:
+        return _clean_name(cut.group(1))
+    return _clean_name(re.sub(r"(?:\s+-?\d{1,7}(?:[.,]\d{1,2})?)+$", "", name or ""))
+
+
+def _parse_swil_scanned_qty_value_pair_text(
+    texts: List[str], filename: str
+) -> Optional[Dict[str, Any]]:
+    combined = "\n".join(texts)
+    if not _is_swil_qty_value_pair_text(combined):
+        return None
+    result = empty_result(filename, "pdf")
+    period = re.search(
+        r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+Upto\s+"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        combined,
+        re.I,
+    )
+    if period:
+        result["report_title"] = "Sales & Stock Statement"
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    if re.search(r"ZANDRA", combined, re.I):
+        result["company_name"] = "HIMALAYA ZANDRA DIVI"
+    else:
+        company = re.search(
+            r"HIMALAYA(?:\s+WELLNESS(?:\s+COMPANY)?|\s+OTX(?:\s+DIVI)?)",
+            combined,
+            re.I,
+        )
+        if company:
+            result["company_name"] = _clean_name(company.group(0))
+    items: List[Dict[str, Any]] = []
+    grand: Optional[Tuple[float, ...]] = None
+    for text in texts:
+        for raw in (text or "").splitlines():
+            cleaned = _swil_scan_pair_clean_line(raw)
+            if _SWIL_SCAN_TOTAL_RE.search(cleaned):
+                nums = _swil_scan_pair_parse_numbers(cleaned)
+                if len(nums) >= 10 and nums[-1] == int(nums[-1]) and nums[-1] < 500:
+                    nums = nums[:-1]
+                core = _swil_scan_pair_try_nine(nums[-9:]) if len(nums) >= 9 else None
+                if core and re.search(r"GRAND\s*TOTAL", cleaned, re.I):
+                    grand = core
+                elif core and grand is None:
+                    grand = core
+                continue
+            parsed = _swil_scan_pair_parse_line(raw)
+            if not parsed:
+                continue
+            name, pack, core = parsed
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack
+            (
+                item["opening_qty"],
+                opening_value,
+                item["receipts_qty"],
+                receipts_value,
+                total_qty,
+                item["sales_qty"],
+                item["sales_value"],
+                item["closing_qty"],
+                item["closing_value"],
+            ) = core
+            extra = item["extra"]
+            extra["opening_value"] = opening_value
+            extra["total_stock"] = total_qty
+            extra["receipts_value"] = receipts_value
+            extra["purchase_value"] = receipts_value
+            ordered: Dict[str, Any] = {}
+            for key, val in item.items():
+                ordered[key] = val
+                if key == "receipts_qty":
+                    ordered["receipts_value"] = receipts_value
+            items.append(ordered)
+    if len(items) < 8:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "swil_scanned_qty_value_pair"
+    extra["detected_format"] = "swil_scanned_qty_value_pair"
+    extra["source_type"] = "pdf_ocr"
+    extra["vertex_ai_used"] = False
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    if grand:
+        extra["opening_value"] = grand[1]
+        extra["receipts_value"] = grand[3]
+        result["totals"]["receipts_value"] = grand[3]
+        result["totals"]["sales_value"] = grand[6]
+        result["totals"]["closing_value"] = grand[8]
+        extra["total_row_source"] = "swil_scanned_pair_grand_total"
+    return result
+
+
+def _parse_swil_scanned_qty_value_pair_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Image-only Opening Bal / Issue/Sales / Closing Bala scans. Text PDFs return None."""
+    if _pdf_embedded_text_len(doc) >= 40:
+        return None
+    texts: List[str] = []
+    for page in doc:
+        text, _img = _ocr_pdf_page_text(page, zoom=3.5)
+        texts.append(text or "")
+    return _parse_swil_scanned_qty_value_pair_text(texts, filename)
+
+
 _CODE_ITEM_CODE_RE = re.compile(r"^\d{4,6}$")
 _CODE_ITEM_SKIP_RE = re.compile(
     r"Stock\s+Stat(?:e)?ment|Item\s+Description|GANESH|Page\s+\d|"
@@ -9052,6 +9372,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 landscape["totals"]["extra"]["statement_count"] = 1
                 landscape["totals"]["extra"]["fallback_used"] = True
                 return landscape
+
+        scanned_pair = _parse_swil_scanned_qty_value_pair_doc(doc, filename)
+        if scanned_pair and scanned_pair.get("line_items"):
+            scanned_pair["totals"]["extra"]["statement_count"] = 1
+            return scanned_pair
 
         code_item = _parse_code_item_stock_statement(doc, filename)
         if code_item and code_item.get("line_items"):
