@@ -1100,6 +1100,14 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
     """Attach parsed footer TOTAL qty columns onto statement totals."""
     if not isinstance(result, dict) or result.get("multi_statement"):
         return result
+    # This portrait sheet's footer is qty/value pairs. The qty-only mapper
+    # would shift Opening Value into receipts_qty. The portrait parser maps
+    # that row itself.
+    portrait_method = str(
+        ((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or ""
+    )
+    if portrait_method == "portrait_opening_balance_columns":
+        return result
     parsed = _parse_statement_total_row(text)
     if not parsed:
         return result
@@ -1499,6 +1507,30 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # SALE / CLOSING / RE-ORDER sheets have no opening or receipt columns.
+    # Do not score them with opening + receipts - sales, and do not fill those totals.
+    if totals["extra"].get("extraction_method") == "ssa_sale_closing_reorder":
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "sale_closing_reorder"
+        totals["extra"]["stock_identity_formula"] = (
+            "sales=SALE; closing=CLOSING; reorder=RE-ORDER; "
+            "no opening or receipt columns"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": True,
+        }
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -1568,8 +1600,27 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             _ensure_stock_qty_value_fields(stmt) for stmt in result["statements"]
         ]
         return result
+    sale_closing_reorder = (
+        str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
+        == "ssa_sale_closing_reorder"
+    )
     for item in result.get("line_items") or []:
         if not isinstance(item, dict):
+            continue
+        # This print has no opening or receipt columns. Leave them empty
+        # instead of turning a missing column into a false 0.
+        if sale_closing_reorder:
+            for key in (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+            ):
+                if key not in item:
+                    item[key] = None
+            for key in ("sales_qty", "sales_value", "closing_qty", "closing_value"):
+                if item.get(key) in (None, ""):
+                    item[key] = 0.0
             continue
         for key in (
             "opening_qty",
@@ -4489,6 +4540,11 @@ def _looks_like_stockist_header(line: str) -> bool:
         return False
     if re.search(r"^\d", s):
         return False
+    # Footer on a SALE/CLOSING sheet. It is not a new stockist.
+    if re.search(r"\bLAST\s+MONTH\s+SALE\b", s, re.I):
+        return False
+    if re.match(r"(?:QUANTITY|VALUE)\s+[-+]?\d", s, re.I):
+        return False
     if re.search(
         r"PRODUCT|PACKING|ITEM\s+DESCRIPT|OpBal|OPENING|CLOSING|GSTIN|Phone\s*:|"
         r"E-Mail|Page\s*No|Continued|STOCK\s*&\s*SALES|Sales\s*&\s*Stock",
@@ -5754,6 +5810,7 @@ def _extract_statement_from_pdf_group(
         merged_items: List[Dict[str, Any]] = []
         used_zandra = False
         saw_swil_receipt_ocr = False
+        used_portrait_balance = False
         page_results: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
         for p in pages:
             img = p.get("image_bytes")
@@ -5762,13 +5819,26 @@ def _extract_statement_from_pdf_group(
             page_name = f"{filename}#page{p['page_index'] + 1}"
             page_result: Optional[Dict[str, Any]] = None
             upright_swil = False
+            page_ocr = ""
             try:
-                upright_swil = _is_swil_opening_receipt_value_statement(
-                    _ocr_image_to_text(_upright_swil_receipt_image(img))
-                )
+                page_ocr = _ocr_image_to_text(_upright_swil_receipt_image(img))
+                upright_swil = _is_swil_opening_receipt_value_statement(page_ocr)
             except Exception:
                 upright_swil = False
-            if upright_swil:
+            # Receipt/Pur is often OCR'd without the slash, so the older Swil
+            # detector misses this portrait sheet. The column parser returns
+            # None unless Opening Bal / PACKING / Near Expiry are really there.
+            portrait_candidate = upright_swil or bool(
+                re.search(r"Sales\s*&\s*Stock", page_ocr, re.I)
+                and re.search(r"Opening", page_ocr, re.I)
+                and re.search(r"PACKING|Receipt", page_ocr, re.I)
+            )
+            if portrait_candidate:
+                portrait = _parse_portrait_opening_balance_image(img, page_name)
+                if portrait and portrait.get("line_items"):
+                    page_result = portrait
+                    used_portrait_balance = True
+            if upright_swil and not (page_result and page_result.get("line_items")):
                 saw_swil_receipt_ocr = True
                 page_result = _extract_swil_receipt_value_vision(
                     img, page_name, ".png"
@@ -5854,18 +5924,44 @@ def _extract_statement_from_pdf_group(
             if totals.get("receipts_value") is not None:
                 merged["totals"]["receipts_value"] = totals.get("receipts_value")
                 merged["totals"]["extra"]["receipts_value"] = totals.get("receipts_value")
+            page_extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+            if page_extra.get("total_row_source") == "portrait_grand_total":
+                for key in (
+                    "opening_qty",
+                    "opening_value",
+                    "receipts_qty",
+                    "receipts_value",
+                    "sales_qty",
+                    "sales_value",
+                    "closing_qty",
+                    "closing_value",
+                ):
+                    if key in totals:
+                        merged["totals"][key] = totals.get(key)
+                for key in (
+                    "opening_value",
+                    "total_stock_qty",
+                    "near_expiry_qty",
+                    "total_row_numbers",
+                    "total_row_format",
+                    "total_row_source",
+                ):
+                    if key in page_extra:
+                        merged["totals"]["extra"][key] = page_extra[key]
         merged["line_items"] = _drop_trailing_statement_total_item(merged_items)
         swil_receipt_doc = (
             used_swil_receipt
             or saw_swil_receipt_ocr
             or _looks_like_swil_receipt_pur_result(merged)
         )
-        if not swil_receipt_doc:
+        if not swil_receipt_doc and not used_portrait_balance:
             title = str(merged.get("report_title") or "")
             swil_receipt_doc = bool(
                 re.search(r"Sales\s*&\s*Stock", title, re.I)
                 and len(merged.get("line_items") or []) >= 8
             )
+        if used_portrait_balance:
+            swil_receipt_doc = False
         if swil_receipt_doc:
             merged["line_items"] = _dedupe_swil_receipt_overlap_items(
                 merged["line_items"]
@@ -5904,7 +6000,14 @@ def _extract_statement_from_pdf_group(
                 extra_t["opening_value"] = printed["opening_value"]
                 extra_t["receipts_value"] = printed["receipts_value"]
                 extra_t["total_row_source"] = "swil_receipt_pur_total_value"
-        if used_swil_receipt:
+        if used_portrait_balance and not used_swil_receipt:
+            merged["totals"]["extra"]["extraction_method"] = (
+                "portrait_opening_balance_columns"
+            )
+            for index, item in enumerate(merged.get("line_items") or [], 1):
+                if isinstance(item, dict) and isinstance(item.get("extra"), dict):
+                    item["extra"]["source_row"] = index
+        elif used_swil_receipt:
             merged["totals"]["extra"]["extraction_method"] = "swil_receipt_pur_value_vision"
         elif used_zandra:
             merged["totals"]["extra"]["extraction_method"] = "zandra_stock_sale_vision"
@@ -9624,6 +9727,359 @@ def _parse_summary_rtl_statement(doc, filename: str) -> Optional[Dict[str, Any]]
     return _summary_rtl_finish(items, "\n".join(blobs), filename, "pdf")
 
 
+_SSA_SCR_METHOD = "ssa_sale_closing_reorder"
+_SSA_SCR_MONTHS = {
+    "JANUARY",
+    "FEBRUARY",
+    "MARCH",
+    "APRIL",
+    "MAY",
+    "JUNE",
+    "JULY",
+    "AUGUST",
+    "SEPTEMBER",
+    "OCTOBER",
+    "NOVEMBER",
+    "DECEMBER",
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+}
+
+
+def _ssa_scr_letters(token: str) -> str:
+    return re.sub(r"[^A-Z]", "", str(token or "").upper())
+
+
+def _ssa_scr_rows(words: List[Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda w: (round(float(w[1]), 1), float(w[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        token = str(word[4] or "").strip()
+        if not token or token.startswith("---"):
+            continue
+        x0, x1, y0 = float(word[0]), float(word[2]), float(word[1])
+        if rows and abs(y0 - rows[-1]["y"]) <= 1.6:
+            row = rows[-1]
+        else:
+            row = {"y": y0, "words": []}
+            rows.append(row)
+        row["words"].append((x0, x1, token))
+    return rows
+
+
+def _ssa_scr_header(rows: List[Dict[str, Any]], index: int) -> Optional[Dict[str, Any]]:
+    """SALE qty/value + CLOSING qty/value + RE-ORDER. Other SSA headers return None."""
+    if index + 1 >= len(rows):
+        return None
+    parent = rows[index]["words"]
+    sub = rows[index + 1]["words"]
+    parent_norm = [_ssa_scr_letters(token) for _x0, _x1, token in parent]
+    sub_norm = [_ssa_scr_letters(token) for _x0, _x1, token in sub]
+    blocked = {"OPENING", "RECEIPT", "ISSUE", "DUMP", "PURCHASE", "PURCHASES", "RATE"}
+    if blocked.intersection(parent_norm) or blocked.intersection(sub_norm):
+        return None
+    if "SALE" not in parent_norm and "SALES" not in parent_norm:
+        return None
+    if "CLOSING" not in parent_norm:
+        return None
+    if "RE" not in parent_norm and "REORDER" not in parent_norm and "ORDER" not in sub_norm:
+        return None
+    if sub_norm.count("QTY") < 2 or sub_norm.count("VALUE") < 2 or "ORDER" not in sub_norm:
+        return None
+
+    anchors: Dict[str, Tuple[float, float, float]] = {}
+    seen_qty = 0
+    seen_value = 0
+    for x0, x1, token in sub:
+        label = _ssa_scr_letters(token)
+        center = (x0 + x1) / 2.0
+        if label == "QTY":
+            seen_qty += 1
+            field = "sales_qty" if seen_qty == 1 else "closing_qty" if seen_qty == 2 else ""
+            if field:
+                anchors[field] = (center, x0, x1)
+        elif label == "VALUE":
+            seen_value += 1
+            field = "sales_value" if seen_value == 1 else "closing_value" if seen_value == 2 else ""
+            if field:
+                anchors[field] = (center, x0, x1)
+        elif label == "ORDER":
+            anchors["order_header"] = (center, x0, x1)
+    needed = {"sales_qty", "sales_value", "closing_qty", "closing_value", "order_header"}
+    if not needed.issubset(anchors):
+        return None
+    order_center = anchors["order_header"][0]
+    closing_center = anchors["closing_value"][0]
+    reorder_center = order_center + (order_center - closing_center)
+    anchors["reorder"] = (reorder_center, reorder_center, reorder_center)
+    return {"anchors": anchors, "next_index": index + 2}
+
+
+def _ssa_scr_plain_number(token: str) -> Optional[float]:
+    raw = str(token or "").strip()
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return None
+    return float(raw)
+
+
+def _ssa_scr_reorder_value(header_token: str, right_token: str) -> Any:
+    """Far-right column is reorder. A printed 0 there yields to a heading quantity.
+
+    AMYRON prints 12 under RE-ORDER and 0 in the far column. Section totals print
+    the reorder figure in the far column (27K / 29K). A dash under the heading
+    with 0 on the right stays 0.
+    """
+    right = str(right_token or "").strip()
+    header = str(header_token or "").strip()
+    if re.fullmatch(r"\d+(?:\.\d+)?K", right, re.I):
+        return right.upper()
+    right_num = _ssa_scr_plain_number(right)
+    header_num = _ssa_scr_plain_number(header)
+    if right_num not in (None, 0.0):
+        return right_num
+    if header_num is not None:
+        return header_num
+    if right_num is not None:
+        return right_num
+    return None
+
+
+def _ssa_scr_assign(
+    words: List[Tuple[float, float, str]], anchors: Dict[str, Tuple[float, float, float]]
+) -> Tuple[str, Optional[str], Dict[str, str]]:
+    pack_min = anchors["sales_qty"][1] - 55.0
+    number_min = anchors["sales_qty"][1] - 8.0
+    name_bits: List[str] = []
+    pack_bits: List[str] = []
+    cells: Dict[str, str] = {}
+    fields = (
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "order_header",
+        "reorder",
+    )
+    for x0, x1, token in words:
+        if x0 < pack_min:
+            name_bits.append(token)
+            continue
+        if x0 < number_min:
+            pack_bits.append(token)
+            continue
+        center = (x0 + x1) / 2.0
+        field = min(fields, key=lambda name: abs(center - anchors[name][0]))
+        cells[field] = token
+    name = _clean_name(" ".join(name_bits))
+    packing = _clean_name(" ".join(pack_bits)) or None
+    return name, packing, cells
+
+
+def _parse_ssa_sale_closing_reorder(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """STOCK & SALES ANALYSIS with SALE, CLOSING, and RE-ORDER only.
+
+    Opening and receipt columns are not printed. Continuation pages, including
+    rows above a repeated header, stay in the same statement. Other layouts
+    return None.
+    """
+    page_rows: List[List[Dict[str, Any]]] = []
+    blobs: List[str] = []
+    detected = False
+    for page in doc:
+        text = page.get_text("text") or ""
+        blobs.append(text)
+        rows = _ssa_scr_rows(page.get_text("words") or [])
+        page_rows.append(rows)
+        for index in range(len(rows)):
+            if _ssa_scr_header(rows, index):
+                detected = True
+                break
+    if not detected:
+        return None
+
+    blob = "\n".join(blobs)
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    company = re.search(r"\(\s*(HIMALAYA[^)]*)\)", blob, re.I)
+    if company:
+        result["company_name"] = _clean_name(company.group(1))
+    elif re.search(r"\bHIMALAYA\b", blob, re.I):
+        result["company_name"] = "HIMALAYA"
+    for line in blob.splitlines():
+        stripped = line.strip()
+        if stripped and not re.search(
+            r"STOCK|---|ITEM|GSTIN|SALE|CLOSING|Reorder|Page|Continued",
+            stripped,
+            re.I,
+        ):
+            result["stockist_name"] = _clean_name(stripped)
+            break
+    period = re.search(
+        r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
+        blob,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    section_totals: List[Dict[str, Any]] = []
+    last_month_sales: List[Dict[str, Any]] = []
+    anchors: Optional[Dict[str, Tuple[float, float, float]]] = None
+    pending_month: Optional[str] = None
+    pending_qty: Optional[float] = None
+
+    def _row_number(cells: Dict[str, str], packing: Optional[str], name: str) -> Optional[float]:
+        tokens = list(cells.values())
+        if packing:
+            tokens.append(packing)
+        tokens.extend(name.split())
+        for token in tokens:
+            number = _ssa_scr_plain_number(str(token))
+            if number is not None:
+                return number
+        return None
+
+    for rows in page_rows:
+        index = 0
+        while index < len(rows):
+            header = _ssa_scr_header(rows, index)
+            if header:
+                anchors = header["anchors"]
+                pending_month = None
+                pending_qty = None
+                index = header["next_index"]
+                continue
+            if not anchors:
+                index += 1
+                continue
+            name, packing, cells = _ssa_scr_assign(rows[index]["words"], anchors)
+            index += 1
+            if not name:
+                continue
+            upper = name.upper()
+            if upper.startswith("LAST MONTH SALE"):
+                month = next(
+                    (part for part in name.split() if part.upper() in _SSA_SCR_MONTHS),
+                    None,
+                )
+                pending_month = month or pending_month
+                pending_qty = None
+                continue
+            if pending_month and upper.startswith("QUANTITY"):
+                pending_qty = _row_number(cells, packing, name)
+                continue
+            if pending_month and upper.startswith("VALUE"):
+                value = _row_number(cells, packing, name)
+                if pending_qty is not None and value is not None:
+                    last_month_sales.append(
+                        {
+                            "month": pending_month,
+                            "quantity": pending_qty,
+                            "value": value,
+                        }
+                    )
+                pending_month = None
+                pending_qty = None
+                continue
+            if upper == "TOTAL":
+                sales_qty = _ssa_scr_plain_number(cells.get("sales_qty", ""))
+                sales_value = _ssa_scr_plain_number(cells.get("sales_value", ""))
+                closing_qty = _ssa_scr_plain_number(cells.get("closing_qty", ""))
+                closing_value = _ssa_scr_plain_number(cells.get("closing_value", ""))
+                reorder = _ssa_scr_reorder_value(
+                    cells.get("order_header", ""),
+                    cells.get("reorder", ""),
+                )
+                if sales_qty is None and closing_qty is None:
+                    continue
+                section_totals.append(
+                    {
+                        "sales_qty": sales_qty,
+                        "sales_value": sales_value,
+                        "closing_qty": closing_qty,
+                        "closing_value": closing_value,
+                        "reorder": reorder,
+                    }
+                )
+                continue
+            if re.search(
+                r"^(ITEM|DESCRIPTION|STOCK|PAGE|CONTINUED|HIMALAYA|REORDER)\b",
+                name,
+                re.I,
+            ):
+                continue
+            if "sales_qty" not in cells and "closing_qty" not in cells:
+                continue
+            if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+                continue
+            sales_qty = _ssa_scr_plain_number(cells.get("sales_qty", ""))
+            sales_value = _ssa_scr_plain_number(cells.get("sales_value", ""))
+            closing_qty = _ssa_scr_plain_number(cells.get("closing_qty", ""))
+            closing_value = _ssa_scr_plain_number(cells.get("closing_value", ""))
+            if None in (sales_qty, sales_value, closing_qty, closing_value):
+                continue
+            reorder = _ssa_scr_reorder_value(
+                cells.get("order_header", ""),
+                cells.get("reorder", ""),
+            )
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = None
+            item["opening_value"] = None
+            item["receipts_qty"] = None
+            item["receipts_value"] = None
+            item["receipt_value"] = None
+            item["sales_qty"] = sales_qty
+            item["sales_value"] = sales_value
+            item["closing_qty"] = closing_qty
+            item["closing_value"] = closing_value
+            item["reorder_qty"] = reorder
+            extra = item["extra"]
+            extra["layout"] = _SSA_SCR_METHOD
+            extra["opening_value"] = None
+            extra["receipts_value"] = None
+            extra["receipt_value"] = None
+            extra["reorder_qty"] = reorder
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"].setdefault("extra", {})
+    extra["extraction_method"] = _SSA_SCR_METHOD
+    extra["layout"] = _SSA_SCR_METHOD
+    extra["section_totals"] = section_totals
+    extra["split_pages"] = list(range(1, len(page_rows) + 1))
+    result["split_pages"] = extra["split_pages"]
+    if last_month_sales:
+        extra["last_month_sale"] = last_month_sales[0]
+        extra["last_month_sales"] = last_month_sales
+    if section_totals:
+        last_total = section_totals[-1]
+        result["totals"]["sales_qty"] = last_total.get("sales_qty")
+        result["totals"]["sales_value"] = last_total.get("sales_value")
+        result["totals"]["closing_qty"] = last_total.get("closing_qty")
+        result["totals"]["closing_value"] = last_total.get("closing_value")
+        extra["reorder"] = last_total.get("reorder")
+    result["totals"]["opening_qty"] = None
+    result["totals"]["receipts_qty"] = None
+    result["totals"]["opening_value"] = None
+    result["totals"]["receipts_value"] = None
+    return result
+
+
 def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     """STOCK & SALES ANALYSIS: TOTAL STOCK is not the SALES QTY column.
 
@@ -10154,6 +10610,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if summary_rtl and summary_rtl.get("line_items"):
             summary_rtl["totals"]["extra"]["statement_count"] = 1
             return summary_rtl
+
+        sale_closing = _parse_ssa_sale_closing_reorder(doc, filename)
+        if sale_closing and sale_closing.get("line_items"):
+            sale_closing["multi_statement"] = False
+            sale_closing["statement_count"] = 1
+            sale_closing["totals"]["extra"]["statement_count"] = 1
+            return sale_closing
 
         analysis_stmt = _parse_stock_sales_analysis(doc, filename)
         if analysis_stmt and analysis_stmt.get("line_items"):
@@ -12658,6 +13121,814 @@ def _upright_swil_receipt_image(file_bytes: bytes) -> bytes:
         if _is_swil_opening_receipt_value_statement(text):
             return data
     return file_bytes
+
+
+_PORTRAIT_BALANCE_FIELDS = (
+    "opening_qty",
+    "opening_value",
+    "receipts_qty",
+    "receipts_value",
+    "total_qty",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value",
+    "near_expiry",
+)
+
+
+def _is_portrait_opening_balance_text(text: str) -> bool:
+    """Sales & Stock with Opening Bal, Receipt/Pur, Issue/Sales, and Near Expiry.
+
+    Landscape Code grids stay on the existing Swil parser. This detector only
+    matches the portrait qty/value sheet that has no Code column.
+    """
+    if not text or re.search(r"\bCode\b", text):
+        return False
+    structural = bool(
+        re.search(r"\bPACKING\b", text, re.I)
+        and re.search(r"Opening\s+Bal", text, re.I)
+        and re.search(r"Issue/Sales", text, re.I)
+        and re.search(r"Near|Expir", text, re.I)
+    )
+    if not structural:
+        return False
+    # Continuation pages often OCR Receipt/Pur without the slash, so the
+    # older Swil detector misses them. The column header above is enough.
+    return bool(
+        _is_swil_opening_receipt_value_statement(text)
+        or re.search(r"Receipt", text, re.I)
+    )
+
+
+def _portrait_balance_label(token: str) -> str:
+    return re.sub(r"[^a-z]", "", (token or "").lower())
+
+
+def _portrait_balance_number(token: str) -> Optional[float]:
+    """Read one cell. Trailing dots and letter/digit swaps are OCR noise."""
+    s = str(token or "").replace(",", ".").replace(" ", "")
+    s = re.sub(r"[oO]", "0", s).replace("l", "1").replace("|", "1")
+    s = re.sub(r"[^0-9.]", "", s).strip(".")
+    if s.count(".") > 1:
+        parts = s.split(".")
+        if len(parts[-1]) in {1, 2}:
+            s = "".join(parts[:-1]) + "." + parts[-1]
+        else:
+            s = "".join(parts)
+    if not re.fullmatch(r"\d+(?:\.\d+)?", s or ""):
+        return None
+    return float(s)
+
+
+def _portrait_balance_ocr_words(image) -> List[Dict[str, Any]]:
+    import pytesseract
+
+    data = pytesseract.image_to_data(
+        image, config="--psm 6", output_type=pytesseract.Output.DICT
+    )
+    words: List[Dict[str, Any]] = []
+    for index, token in enumerate(data["text"]):
+        token = str(token or "").strip()
+        if not token:
+            continue
+        x0 = int(data["left"][index])
+        y0 = int(data["top"][index])
+        words.append(
+            {
+                "x0": x0,
+                "y0": y0,
+                "x1": x0 + int(data["width"][index]),
+                "y1": y0 + int(data["height"][index]),
+                "t": token,
+                "yc": y0 + int(data["height"][index]) / 2.0,
+            }
+        )
+    return words
+
+
+def _portrait_balance_headers(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Column right-edges from this page's PACKING header. None for other layouts."""
+    headers: List[Dict[str, Any]] = []
+    packings = [
+        word
+        for word in words
+        if _portrait_balance_label(word["t"]).startswith("packin")
+    ]
+    for packing in packings:
+        band = [
+            word
+            for word in words
+            if packing["y0"] - 30 <= word["yc"] <= packing["y0"] + 90
+            and word["x0"] > packing["x0"] - 8
+        ]
+        sub = [
+            word
+            for word in band
+            if _portrait_balance_label(word["t"]) in {"qty", "value", "expiry"}
+        ]
+        sub.sort(key=lambda word: word["x1"])
+        if len(sub) >= 8:
+            headers.append(
+                {
+                    "y": packing["y1"],
+                    "pack_x0": packing["x0"],
+                    "edges": [word["x1"] for word in sub[:10]],
+                    "kind": "sub",
+                }
+            )
+            continue
+        role: Dict[str, float] = {}
+        closings: List[Dict[str, Any]] = []
+        for word in band:
+            label = _portrait_balance_label(word["t"])
+            if label == "op":
+                role["opening_qty"] = word["x1"]
+            elif label in {"opening", "bal"}:
+                role["opening_value"] = max(role.get("opening_value", 0), word["x1"])
+            elif label == "receipt":
+                role["receipts_qty"] = word["x1"]
+            elif label.startswith("recei") and label != "receipt":
+                role["receipts_value"] = word["x1"]
+            elif "total" in label:
+                role["total_qty"] = word["x1"]
+            elif label == "issue":
+                role["sales_qty"] = word["x1"]
+            elif "issue" in label:
+                role["sales_value"] = word["x1"]
+            elif label == "closing":
+                closings.append(word)
+            elif label == "bala":
+                role["closing_value"] = max(role.get("closing_value", 0), word["x1"])
+            elif label in {"near", "expiry", "new"}:
+                role["near_expiry"] = max(role.get("near_expiry", 0), word["x1"])
+        closings.sort(key=lambda word: word["x0"])
+        if closings:
+            role["closing_qty"] = closings[0]["x1"]
+            if len(closings) > 1:
+                role["closing_value"] = max(
+                    role.get("closing_value", 0), closings[-1]["x1"]
+                )
+        if all(field in role for field in _PORTRAIT_BALANCE_FIELDS):
+            edges = [role[field] for field in _PORTRAIT_BALANCE_FIELDS]
+            if edges == sorted(edges):
+                headers.append(
+                    {
+                        "y": packing["y1"],
+                        "pack_x0": packing["x0"],
+                        "edges": edges,
+                        "kind": "group",
+                    }
+                )
+    headers.sort(key=lambda header: header["y"])
+    kept: List[Dict[str, Any]] = []
+    for header in headers:
+        if kept and abs(header["y"] - kept[-1]["y"]) < 60:
+            if header["kind"] == "sub":
+                kept[-1] = header
+            continue
+        kept.append(header)
+    return kept
+
+
+def _portrait_balance_row_ok(item: Dict[str, Any]) -> bool:
+    total = _to_float(item.get("opening_qty")) + _to_float(item.get("receipts_qty"))
+    closing = _to_float(item.get("extra", {}).get("total_stock_qty")) - _to_float(
+        item.get("sales_qty")
+    )
+    return (
+        abs(total - _to_float(item.get("extra", {}).get("total_stock_qty"))) <= 0.51
+        and abs(closing - _to_float(item.get("closing_qty"))) <= 0.51
+    )
+
+
+def _portrait_balance_items(
+    words: List[Dict[str, Any]],
+    header: Dict[str, Any],
+    y_end: float,
+    alt_words: Optional[List[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Assign right-aligned numbers to this page's header edges."""
+    edges: List[float] = header["edges"]
+    name_hi = header["pack_x0"] - 4
+    names = [
+        word
+        for word in words
+        if header["y"] + 2 < word["yc"] < y_end
+        and word["x1"] < name_hi
+        and re.search(r"[A-Za-z]{2,}", word["t"])
+    ]
+    names.sort(key=lambda word: word["y0"])
+    anchors: List[Dict[str, Any]] = []
+    for word in names:
+        if re.search(r"^(GRAND|TOTAL|PRODUCT|Powered|Page)\b", word["t"], re.I):
+            continue
+        if anchors and abs(word["yc"] - anchors[-1]["y"]) <= 16:
+            anchors[-1]["toks"].append(word)
+            anchors[-1]["y"] = sum(tok["yc"] for tok in anchors[-1]["toks"]) / len(
+                anchors[-1]["toks"]
+            )
+        else:
+            anchors.append(
+                {
+                    "y": word["yc"],
+                    "toks": [word],
+                    "pack": [],
+                    "plain": {field: [] for field in _PORTRAIT_BALANCE_FIELDS},
+                    "alt": {field: [] for field in _PORTRAIT_BALANCE_FIELDS},
+                }
+            )
+    if len(anchors) < 2:
+        return []
+    gaps = [anchors[i + 1]["y"] - anchors[i]["y"] for i in range(len(anchors) - 1)]
+    body = [gap for gap in gaps if gap > 8] or [28]
+    pitch = sorted(body)[len(body) // 2]
+    limit = max(14.0, min(22.0, pitch * 0.55))
+
+    def _fill(source: List[Dict[str, Any]], slot: str) -> None:
+        for word in source:
+            if not (header["y"] + 2 < word["yc"] < y_end) or word["x1"] < name_hi:
+                continue
+            best = min(anchors, key=lambda anchor: abs(anchor["y"] - word["yc"]))
+            if abs(best["y"] - word["yc"]) > limit:
+                continue
+            # 60'S / 200ML stay in packing. A lone o/l inside digits is still a number.
+            ocr_digits = re.fullmatch(r"[0-9oOlI|.,]+", word["t"] or "")
+            if re.search(r"[A-Za-z]", word["t"]) and not ocr_digits:
+                if slot == "plain" and name_hi - 8 <= word["x0"] < edges[0] - 4:
+                    best["pack"].append(word["t"])
+                continue
+            number = _portrait_balance_number(word["t"])
+            if number is not None and number > 9999999:
+                continue
+            if number is None and word["x1"] < edges[0] - 6:
+                if slot == "plain":
+                    best["pack"].append(word["t"])
+                continue
+            if number is None:
+                continue
+            index = min(range(10), key=lambda i: abs(edges[i] - word["x1"]))
+            if abs(edges[index] - word["x1"]) > 55:
+                continue
+            best[slot][_PORTRAIT_BALANCE_FIELDS[index]].append(
+                (abs(edges[index] - word["x1"]), number)
+            )
+
+    _fill(words, "plain")
+    if alt_words:
+        _fill(alt_words, "alt")
+
+    items: List[Dict[str, Any]] = []
+    for anchor in anchors:
+        name = " ".join(
+            tok["t"] for tok in sorted(anchor["toks"], key=lambda word: word["x0"])
+        )
+        name = re.sub(r"\s+", " ", name).strip(" |_.,")
+        if re.search(r"GRAND|TOTAL|PRODUCT NAME|Powered|Page No|Value\s*IN", name, re.I):
+            continue
+        if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+            continue
+        values: Dict[str, float] = {}
+        for field in _PORTRAIT_BALANCE_FIELDS:
+            plain = sorted(anchor["plain"][field], key=lambda pair: pair[0])
+            alt = sorted(anchor["alt"][field], key=lambda pair: pair[0])
+            if plain:
+                values[field] = plain[0][1]
+            elif alt:
+                values[field] = alt[0][1]
+            else:
+                values[field] = 0.0
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        pack = " ".join(anchor["pack"]).strip()
+        item["packing"] = _clean_name(pack) or None
+        item["opening_qty"] = values["opening_qty"]
+        item["receipts_qty"] = values["receipts_qty"]
+        item["sales_qty"] = values["sales_qty"]
+        item["sales_value"] = values["sales_value"]
+        item["closing_qty"] = values["closing_qty"]
+        item["closing_value"] = values["closing_value"]
+        extra = item["extra"]
+        extra["opening_value"] = values["opening_value"]
+        extra["total_stock_qty"] = values["total_qty"]
+        extra["near_expiry_qty"] = values["near_expiry"]
+        extra["layout"] = "portrait_opening_balance"
+        item["opening_value"] = values["opening_value"]
+        item = _attach_receipts_value(item, values["receipts_value"])
+        # A faint page can miss a qty on the plain pass. Use the darker
+        # read only when it restores Opening+Receipt=Total and Total-Issue=Closing.
+        if alt_words and not _portrait_balance_row_ok(item):
+            trial = dict(values)
+            for field in _PORTRAIT_BALANCE_FIELDS:
+                alt = sorted(anchor["alt"][field], key=lambda pair: pair[0])
+                if alt:
+                    trial[field] = alt[0][1]
+            trial_item = dict(item)
+            trial_item["opening_qty"] = trial["opening_qty"]
+            trial_item["receipts_qty"] = trial["receipts_qty"]
+            trial_item["sales_qty"] = trial["sales_qty"]
+            trial_item["closing_qty"] = trial["closing_qty"]
+            trial_item["extra"] = dict(extra)
+            trial_item["extra"]["total_stock_qty"] = trial["total_qty"]
+            if _portrait_balance_row_ok(trial_item):
+                item["opening_qty"] = trial["opening_qty"]
+                item["receipts_qty"] = trial["receipts_qty"]
+                item["sales_qty"] = trial["sales_qty"]
+                item["sales_value"] = trial["sales_value"]
+                item["closing_qty"] = trial["closing_qty"]
+                item["closing_value"] = trial["closing_value"]
+                item["opening_value"] = trial["opening_value"]
+                item["extra"]["opening_value"] = trial["opening_value"]
+                item["extra"]["total_stock_qty"] = trial["total_qty"]
+                item["extra"]["near_expiry_qty"] = trial["near_expiry"]
+                item = _attach_receipts_value(item, trial["receipts_value"])
+        items.append(item)
+    return items
+
+
+def _portrait_pack_norm(pack: str) -> Optional[str]:
+    """Clean a packing token. Letter/digit swaps stay inside the packing cell."""
+    p = str(pack or "").upper().strip(" .,_")
+    p = re.sub(r"\s+", "", p)
+    p = re.sub(r"MIL$", "ML", p)
+    p = re.sub(r"(?<=\d)MI$", "ML", p)
+    p = re.sub(r"(?<=\d)M1$", "ML", p)
+    sized = re.match(r"^(?P<size>.*?)(?P<unit>ML|GM)$", p)
+    if sized:
+        size = (
+            sized.group("size")
+            .replace("I", "1")
+            .replace("L", "1")
+            .replace("S", "5")
+            .replace("O", "0")
+        )
+        size = re.sub(r"[^0-9]", "", size)
+        p = (size or "0") + sized.group("unit")
+    return p or None
+
+
+def _portrait_name_norm(name: str) -> str:
+    name = re.sub(r"\s+", " ", name or "").strip(" .|_")
+    # A lone lowercase L in an otherwise capital name is the letter L (V-GEL).
+    if name and "l" in name and not re.search(r"[a-z]", name.replace("l", "")):
+        name = name.replace("l", "L")
+    # A trailing 1 on a capital token is the letter L (V-GEL read as V-GE1).
+    name = re.sub(r"(?<=[A-Za-z])1\b", "L", name)
+    name = name.replace("$", "5")
+    name = re.sub(r"[\s._—–]+$", "", name)
+    return _clean_name(name)
+
+
+def _portrait_balance_split_pack(text: str) -> Tuple[str, Optional[str]]:
+    s = re.sub(r"[|]+", " ", text or "")
+    s = re.sub(r"\s+", " ", s).strip(" ._")
+    glued = re.search(
+        r"^(?P<name>.*\D)\s*(?P<pack>\d+\s*X\s*'?\s*\d+|\d[\w.'’/-]{0,14})$",
+        s,
+        re.I,
+    )
+    if not glued:
+        parts = s.split()
+        if len(parts) >= 2 and re.search(r"\d|ML|GM|'S", parts[-1], re.I):
+            pack_toks = [parts[-1]]
+            name_toks = parts[:-1]
+            if name_toks and re.fullmatch(r"\d*X", name_toks[-1], re.I):
+                pack_toks.insert(0, name_toks.pop())
+            glued_name = " ".join(name_toks)
+            glued_pack = "".join(pack_toks)
+        else:
+            return _portrait_name_norm(s), None
+    else:
+        glued_name = glued.group("name")
+        glued_pack = glued.group("pack")
+    name = re.sub(r"[\(\[\]\|._]+$", "", glued_name).strip()
+    pack = _portrait_pack_norm(glued_pack)
+    if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+        return _portrait_name_norm(s), None
+    return _portrait_name_norm(name), pack
+
+
+def _portrait_balance_name_lines(image, top: float, bottom: float, right: float):
+    """One line per product from the name/packing column of this scan."""
+    import pytesseract
+    from PIL import ImageOps
+
+    gray = image.convert("L") if getattr(image, "mode", "") != "L" else image
+    x1 = int(min(max(right, 80), gray.width - 2))
+    y0 = int(max(0, top))
+    y1 = int(min(gray.height - 1, bottom))
+    if y1 - y0 < 20 or x1 < 40:
+        return []
+    crop = ImageOps.autocontrast(gray.crop((40, y0, x1, y1)))
+    data = pytesseract.image_to_data(
+        crop, config="--psm 6", output_type=pytesseract.Output.DICT
+    )
+    rows: Dict[float, List[Tuple[int, str]]] = {}
+    for index, token in enumerate(data["text"]):
+        token = str(token or "").strip()
+        if not token:
+            continue
+        y = y0 + int(data["top"][index]) + int(data["height"][index]) / 2.0
+        hit = None
+        for key in rows:
+            if abs(key - y) <= 10:
+                hit = key
+                break
+        if hit is None:
+            rows[y] = [(int(data["left"][index]), token)]
+        else:
+            rows[hit].append((int(data["left"][index]), token))
+    lines = []
+    for y in sorted(rows):
+        text = " ".join(tok for _, tok in sorted(rows[y], key=lambda pair: pair[0]))
+        text = re.sub(r"\s+", " ", text).strip()
+        if sum(c.isalpha() for c in text) < 3:
+            continue
+        if not re.search(r"[B-DF-HJ-NP-TV-Zb-df-hj-np-tv-z]", text):
+            continue
+        if re.search(r"^(PRODUCT|TOTAL|Powered|Page)\b", text, re.I):
+            continue
+        lines.append({"y": y, "text": text})
+    return lines
+
+
+def _portrait_row_column_boxes(image, y: float, edges: List[float]):
+    """Right-aligned ink on this row, grouped onto the ten header edges."""
+    gray = image.convert("L") if getattr(image, "mode", "") != "L" else image
+    left = int(max(0, edges[0] - 140))
+    right = int(min(gray.width - 1, edges[-1] + 80))
+    top = int(max(0, y - 14))
+    bottom = int(min(gray.height - 1, y + 16))
+    if right - left < 40 or bottom - top < 8:
+        return [None] * 10
+    strip = gray.crop((left, top, right, bottom))
+    width, height = strip.size
+    pixels = strip.load()
+    dark = [0] * width
+    for x in range(width):
+        dark[x] = sum(1 for yy in range(height) if pixels[x, yy] < 165)
+    runs = []
+    start = None
+    for x, count in enumerate(dark):
+        if count > 2 and start is None:
+            start = x
+        elif count <= 2 and start is not None:
+            runs.append((start, x))
+            start = None
+    if start is not None:
+        runs.append((start, width))
+    merged = []
+    for run_left, run_right in runs:
+        if run_right - run_left < 3 or run_right - run_left > 150:
+            continue
+        abs_left = run_left + left
+        abs_right = run_right + left
+        if merged and abs_left - merged[-1][1] < 10:
+            merged[-1] = (merged[-1][0], abs_right)
+        else:
+            merged.append((abs_left, abs_right))
+    groups: List[Optional[List[float]]] = [None] * 10
+    for run_left, run_right in merged:
+        index = min(range(10), key=lambda col: abs(edges[col] - run_right))
+        if abs(edges[index] - run_right) > 80:
+            continue
+        if groups[index] is None:
+            groups[index] = [run_left, run_right]
+        else:
+            groups[index][0] = min(groups[index][0], run_left)
+            groups[index][1] = max(groups[index][1], run_right)
+    boxes = []
+    for group in groups:
+        if group is None:
+            boxes.append(None)
+            continue
+        boxes.append((group[0] - 2, y - 16, group[1] + 4, y + 18))
+    return boxes
+
+
+def _portrait_balance_read_cell(
+    image, box, money: bool, recover_above: bool = False
+) -> float:
+    """OCR one right-aligned cell. A blank cell on this sheet is a printed 0."""
+    import pytesseract
+    from PIL import Image, ImageOps
+
+    gray = image.convert("L") if getattr(image, "mode", "") != "L" else image
+    left, top, right, bottom = box
+    left = int(max(0, left))
+    top = int(max(0, top))
+    right = int(min(gray.width - 1, right))
+    bottom = int(min(gray.height - 1, bottom))
+    if right - left < 8 or bottom - top < 8:
+        return 0.0
+    def _prepare(x0: int, y0: int, x1: int, y1: int):
+        cell = gray.crop((x0, y0, x1, y1))
+        return ImageOps.autocontrast(cell).resize(
+            (max(1, cell.width * 3), max(1, cell.height * 3)),
+            Image.Resampling.LANCZOS,
+        )
+
+    def _once(prepared, threshold: int) -> str:
+        binary = ImageOps.expand(
+            prepared.point(lambda pixel, limit=threshold: 0 if pixel < limit else 255),
+            border=8,
+            fill=255,
+        )
+        return pytesseract.image_to_string(
+            binary,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789.",
+        ).strip()
+
+    def _best_of(prepared) -> str:
+        chosen = ""
+        for threshold in (185, 210):
+            token = _once(prepared, threshold).strip().strip(".")
+            digits = re.sub(r"\D", "", token)
+            if not digits or len(digits) > 9 or (not money and len(digits) > 6):
+                continue
+            if len(digits) > len(re.sub(r"\D", "", chosen)):
+                chosen = token
+        return chosen
+
+    best = _best_of(_prepare(left, top, right, bottom))
+    if not best and recover_above:
+        best = _best_of(
+            _prepare(left, max(0, top - 4), right, min(gray.height - 1, top + 18))
+        )
+    if not best:
+        return 0.0
+    if money:
+        if re.fullmatch(r"\d+\.\d{2}", best):
+            value = float(best)
+            if value > 20000000:
+                return 0.0
+            return value
+        digits = re.sub(r"\D", "", best)
+        if len(digits) > 9:
+            return 0.0
+        if len(digits) >= 3:
+            return float(digits[:-2] + "." + digits[-2:])
+        if digits:
+            return float(digits)
+        return 0.0
+    number = _portrait_balance_number(best)
+    if number is None or number > 9999999:
+        return 0.0
+    return float(number)
+
+
+def _portrait_balance_grid_items(image, headers: List[Dict[str, Any]]):
+    """Read each product cell from its column. Returns items and the grand-total row."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    gray = image.convert("L") if getattr(image, "mode", "") != "L" else image
+    jobs = []
+    grand = None
+    for index, header in enumerate(headers):
+        edges = header["edges"]
+        y_lo = 40.0
+        if index == 0:
+            y_lo = max(40.0, header["y"] - 420)
+        y_hi = headers[index + 1]["y"] - 12 if index + 1 < len(headers) else gray.height - 20
+        lines = _portrait_balance_name_lines(
+            gray, y_lo, y_hi, header["pack_x0"] + 90
+        )
+        for line in lines:
+            if line["y"] > header["y"] + 8 and re.search(r"^GRAND\b", line["text"], re.I):
+                grand = {"y": line["y"], "edges": edges}
+                continue
+            if line["y"] < header["y"] - 8 and line["y"] > header["y"] - 40:
+                continue
+            name, pack = _portrait_balance_split_pack(line["text"])
+            if line["y"] < header["y"]:
+                if not pack or not re.search(r"ML|GM|'S|X", pack, re.I):
+                    continue
+            if not pack or not name or re.search(r"PRODUCT|TOTAL|GRAND|Powered", name, re.I):
+                continue
+            jobs.append(
+                {
+                    "y": line["y"],
+                    "name": name,
+                    "pack": pack,
+                    "edges": edges,
+                    "order": (index, line["y"]),
+                }
+            )
+    if len(jobs) < 4:
+        return [], None
+
+    def _align_y(y, edges):
+        x0 = int(max(0, edges[0] - 80))
+        x1 = int(min(gray.width - 1, edges[-1] + 40))
+        best_y, best_ink = y, -1
+        for delta in range(-16, 10, 2):
+            yy = int(y + delta)
+            if yy < 8 or yy + 8 >= gray.height:
+                continue
+            strip = gray.crop((x0, yy - 8, x1, yy + 8))
+            ink = sum(1 for pixel in strip.getdata() if pixel < 165)
+            if ink > best_ink:
+                best_y, best_ink = yy, ink
+        return best_y
+
+    def _cells(job):
+        y = job["y"]
+        if job.get("grand"):
+            y = _align_y(y, job["edges"])
+        boxes = _portrait_row_column_boxes(gray, y, job["edges"])
+        values = []
+        for col, box in enumerate(boxes):
+            if box is None:
+                values.append(0.0)
+                continue
+            values.append(
+                _portrait_balance_read_cell(
+                    gray,
+                    box,
+                    money=col in {1, 3, 6, 8},
+                    recover_above=(col == 0),
+                )
+            )
+        return values
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        read = list(pool.map(_cells, jobs))
+    items = []
+    for job, values in zip(jobs, read):
+        if not job["pack"] and sum(values) <= 0:
+            continue
+        item = empty_line_item()
+        item["product_name"] = job["name"]
+        item["packing"] = job["pack"]
+        item["opening_qty"] = values[0]
+        item["receipts_qty"] = values[2]
+        item["sales_qty"] = values[5]
+        item["sales_value"] = values[6]
+        item["closing_qty"] = values[7]
+        item["closing_value"] = values[8]
+        extra = item["extra"]
+        extra["opening_value"] = values[1]
+        extra["total_stock_qty"] = values[4]
+        extra["near_expiry_qty"] = values[9]
+        extra["layout"] = "portrait_opening_balance"
+        extra["source_row"] = len(items) + 1
+        item["opening_value"] = values[1]
+        item = _attach_receipts_value(item, values[3])
+        items.append(item)
+    grand_values = None
+    if grand:
+        grand_values = _cells(
+            {"y": grand["y"], "edges": grand["edges"], "grand": True}
+        )
+    return items, grand_values
+
+
+def _parse_portrait_opening_balance_image(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Portrait Sales & Stock: Opening Bal / Receipt/Pur / Issue/Sales / Near Expiry.
+
+    Returns None for every other image so the existing vision path still runs.
+    """
+    try:
+        import pytesseract
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    import os
+
+    cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    elif os.name == "nt":
+        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(win_cmd):
+            pytesseract.pytesseract.tesseract_cmd = win_cmd
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        return None
+    if image.width < 1500:
+        image = image.resize(
+            (int(image.width * 1.5), int(image.height * 1.5)),
+            Image.Resampling.LANCZOS,
+        )
+    plain_words = _portrait_balance_ocr_words(image)
+    preview = " ".join(word["t"] for word in plain_words)
+    if not _is_portrait_opening_balance_text(preview):
+        return None
+    headers = _portrait_balance_headers(plain_words)
+    if not headers:
+        return None
+    items, grand_values = _portrait_balance_grid_items(image, headers)
+    if len(items) < 4:
+        gray = ImageOps.autocontrast(image.convert("L"))
+        binary = gray.point(lambda pixel: 0 if pixel < 140 else 255)
+        alt_words = _portrait_balance_ocr_words(binary)
+        items = []
+        grand_values = None
+        for index, header in enumerate(headers):
+            y_end = headers[index + 1]["y"] - 15 if index + 1 < len(headers) else 10**9
+            for word in plain_words:
+                if re.fullmatch(r"GRAND", word["t"], re.I) and word["yc"] > header["y"]:
+                    y_end = min(y_end, word["y0"] - 6)
+            items.extend(
+                _portrait_balance_items(plain_words, header, y_end, alt_words)
+            )
+    if len(items) < 4:
+        return None
+    valued = sum(
+        1
+        for item in items
+        if _to_float(item.get("opening_value")) > 0
+        or _to_float(item.get("closing_value")) > 0
+    )
+    if valued < max(3, len(items) // 3):
+        return None
+    result = empty_result(filename, "png")
+    result["line_items"] = items
+    result["report_title"] = "Sales & Stock Statement"
+    period = re.search(
+        r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+Upto\s+"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        preview,
+        re.I,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    for word in plain_words:
+        if word["yc"] >= headers[0]["y"]:
+            break
+        blob = word["t"]
+        if re.search(r"ZANDRA", blob, re.I) and not result.get("stockist_name"):
+            result["stockist_name"] = _clean_name(blob)
+        elif re.search(r"HIMALAYA\s+WELLNESS", blob, re.I):
+            result["company_name"] = "HIMALAYA WELLNESS COMPANY"
+    if not result.get("stockist_name"):
+        above = [
+            word["t"]
+            for word in plain_words
+            if word["yc"] < headers[0]["y"] and re.search(r"ZANDRA", word["t"], re.I)
+        ]
+        if above:
+            result["stockist_name"] = _clean_name(" ".join(above))
+    # Stockist is often split across adjacent words on the line that contains ZANDRA.
+    zandra_y = next(
+        (
+            word["yc"]
+            for word in plain_words
+            if word["yc"] < headers[0]["y"] and re.search(r"ZANDRA", word["t"], re.I)
+        ),
+        None,
+    )
+    if zandra_y is not None:
+        line = [
+            word["t"]
+            for word in sorted(plain_words, key=lambda item: item["x0"])
+            if abs(word["yc"] - zandra_y) <= 14 and word["x0"] < image.width * 0.55
+        ]
+        joined = _clean_name(
+            " ".join(tok for tok in line if re.search(r"[A-Za-z]{3,}", tok))
+        )
+        if joined and re.search(r"ZANDRA", joined, re.I):
+            result["stockist_name"] = joined
+    result["totals"]["extra"]["extraction_method"] = "portrait_opening_balance_columns"
+    result["totals"]["extra"]["layout"] = "portrait_opening_balance"
+    if grand_values and len(grand_values) >= 10:
+        # Printed GRAND TOTAL, same column order as the product rows.
+        keys = (
+            ("opening_qty", 0, False),
+            ("opening_value", 1, True),
+            ("receipts_qty", 2, False),
+            ("receipts_value", 3, True),
+            ("sales_qty", 5, False),
+            ("sales_value", 6, True),
+            ("closing_qty", 7, False),
+            ("closing_value", 8, True),
+        )
+        for key, index, _money in keys:
+            result["totals"][key] = grand_values[index]
+        result["totals"]["extra"]["opening_value"] = grand_values[1]
+        result["totals"]["extra"]["total_stock_qty"] = grand_values[4]
+        result["totals"]["extra"]["near_expiry_qty"] = grand_values[9]
+        result["totals"]["extra"]["total_row_numbers"] = grand_values
+        result["totals"]["extra"]["total_row_format"] = "portrait_opening_balance"
+        result["totals"]["extra"]["total_row_source"] = "portrait_grand_total"
+    else:
+        result["totals"]["sales_value"] = round(
+            sum(_to_float(item.get("sales_value")) for item in items), 2
+        )
+        result["totals"]["closing_value"] = round(
+            sum(_to_float(item.get("closing_value")) for item in items), 2
+        )
+        result["totals"]["receipts_value"] = round(
+            sum(_line_receipts_value(item) for item in items), 2
+        )
+        result["totals"]["extra"]["opening_value"] = round(
+            sum(_to_float(item.get("opening_value")) for item in items), 2
+        )
+    return result
 
 
 def _extract_swil_receipt_value_vision(
