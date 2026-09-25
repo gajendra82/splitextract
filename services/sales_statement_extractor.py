@@ -1754,9 +1754,1270 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     return result
 
 
+def _ocr_image_to_text(file_bytes: bytes, *, psm: int = 6, enhance: bool = False) -> str:
+    """Local Tesseract OCR fallback for sales-statement images."""
+    try:
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageOps
+    except ImportError as exc:
+        raise RuntimeError("pytesseract/Pillow required for image OCR fallback") from exc
+
+    import os
+
+    cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    elif os.name == "nt":
+        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(win_cmd):
+            pytesseract.pytesseract.tesseract_cmd = win_cmd
+
+    image = Image.open(io.BytesIO(file_bytes))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    if enhance:
+        image = ImageOps.autocontrast(image.convert("L"))
+        image = ImageEnhance.Sharpness(image).enhance(1.5)
+    # psm 6 (uniform block) reads dense OpBal/Issue qty tables more reliably than default
+    # psm 4 (single column) is better for Group Wise Sales sparse grids
+    return pytesseract.image_to_string(image, config=f"--psm {psm}") or ""
+
+
+def _is_group_wise_sales_opstock_format(text: str) -> bool:
+    """Detect AMAR-style Group Wise Sales with Op.Stock / Purchase / Sales / Cl.Stock."""
+    if not text:
+        return False
+    # OCR often drops the leading 'G' ("roup Wise Sales")
+    if not re.search(r"G?roup\s*Wise\s*Sales", text, re.I):
+        return False
+    # Exclude Received/Issue variant (e.g. GANESH MEDICAL)
+    if re.search(r"Recevied|Received", text, re.I) and not re.search(
+        r"Purchase\s*Rtn|Purchase\s*Qty|Op\.?\s*Stock", text, re.I
+    ):
+        return False
+    return bool(
+        re.search(
+            r"Op\.?\s*Stock|Cl\.?\s*Stock|Purchase\s*Rtn|Sales\s*Ret|Strength",
+            text,
+            re.I,
+        )
+    )
+
+
+def _group_wise_clean_qty_tokens(tokens: List[str]) -> List[float]:
+    """Extract qty floats from OCR tokens, mapping common glyph noise to 0."""
+    out: List[float] = []
+    for tok in tokens:
+        t = (tok or "").strip()
+        if not t:
+            continue
+        if t in {")", "]", "}", "|", "!", "I", "l", "o", "O", "°", "r)", "a)", "ol", "Oo"}:
+            out.append(0.0)
+            continue
+        t2 = t.replace(",", "")
+        t2 = re.sub(r"[^\d.\-()]", "", t2)
+        if re.fullmatch(r"\(?-?\d+(?:\.\d+)?\)?", t2 or ""):
+            out.append(float(t2.strip("()")))
+    return out
+
+
+def _group_wise_split_name_strength_nums(
+    line: str,
+) -> Tuple[str, Optional[str], List[float]]:
+    """Split a Group Wise Sales row into name, packing/strength, qty list."""
+    # Drop glyph-noise tokens that break right-to-left qty scanning
+    toks = [
+        t
+        for t in (line or "").split()
+        if t and re.search(r"[A-Za-z0-9]", t)
+    ]
+    if not toks:
+        return "", None, []
+    # Walk from right collecting qty-like tokens; stop at clear name words
+    qty_toks: List[str] = []
+    cut = len(toks)
+    for i in range(len(toks) - 1, -1, -1):
+        tok = toks[i]
+        # Strength tokens sit between name and qty grid — stop once qtys collected
+        if qty_toks and (
+            re.search(r"(?i)(ML|MG|GM|GR|'S)$", tok)
+            or re.fullmatch(r"(?i)\d+'?S", tok)
+            or re.fullmatch(r"(?i)\d+ML", tok)
+        ):
+            break
+        cleaned = _group_wise_clean_qty_tokens([tok])
+        looks_qty = bool(cleaned) or bool(
+            re.fullmatch(r"[oO0-9\)\]\}\|!Il.,rFaT()'\-]+", tok)
+        )
+        if looks_qty and (
+            cleaned
+            or re.search(r"\d", tok)
+            or tok in {")", "]", "r)", "a)", "aT", "F", "ry", "W"}
+        ):
+            qty_toks.append(tok)
+            cut = i
+            continue
+        break
+    head = toks[:cut]
+    nums = _group_wise_clean_qty_tokens(list(reversed(qty_toks)))
+    packing = None
+    # Peel trailing strength tokens (200ML, 60'S, 30GR, 10s)
+    while head and re.search(
+        r"(?i)(\d+\s*(ML|MG|GM|GR|G)|(\d+X)?\d+\s*'?S|^\d+s$|^\d+$)",
+        head[-1],
+    ):
+        cand = head[-1]
+        if re.fullmatch(r"(?i)LIV-?52", cand):
+            break
+        packing = cand if packing is None else f"{cand} {packing}"
+        head.pop()
+        if packing and packing.count(" ") >= 2:
+            break
+    name = _clean_name(" ".join(head).strip(" -_|[]/"))
+    return name, packing, nums
+
+
+def _finalize_group_wise_qty(
+    opening: float, purchase: float, sales: float, closing: float
+) -> Tuple[float, float, float, float]:
+    """Repair common OCR truncations using the stock equation (no invented digits)."""
+    if abs(opening) < 1e-9 and abs(purchase) < 1e-9 and sales > 0:
+        opening = closing + sales - purchase
+    if sales > 0 and closing > 0:
+        computed = opening + purchase - sales
+        if computed > 0 and abs(computed - closing) > 0.5:
+            cs = str(int(round(computed)))
+            os_ = str(int(round(closing)))
+            if cs.startswith(os_) and len(os_) < len(cs):
+                closing = computed
+    if sales > 0 and closing > 0 and opening > 0:
+        computed_op = closing + sales - purchase
+        if computed_op > 0 and abs(computed_op - opening) > 0.5:
+            cs = str(int(round(computed_op)))
+            os_ = str(int(round(opening)))
+            if cs.startswith(os_) and len(os_) < len(cs):
+                opening = computed_op
+    # When purchase is ~0, Op/Cl are readable, but Sales OCR is wrong/zeroed
+    if abs(purchase) < 1e-9 and opening > closing > 0:
+        implied_sales = opening - closing
+        if implied_sales > 0 and abs(sales - implied_sales) > 0.5:
+            sales = float(implied_sales)
+    return opening, purchase, sales, closing
+
+
+def _map_group_wise_qty_columns(nums: List[float]) -> Tuple[float, float, float, float]:
+    """Map Op/Purchase/.../Sales/Free/Cl columns -> opening, receipts, sales, closing."""
+    if len(nums) >= 10:
+        q = nums[-10:]
+        opening, purchase, sales, closing = q[0], q[1], q[7], q[9]
+        # Same nonzero glyph repeated across purchase/mid columns is OCR bleed
+        if purchase > 0 and all(abs(x - purchase) < 1e-9 for x in q[2:7]):
+            purchase = 0.0
+        return _finalize_group_wise_qty(opening, purchase, sales, closing)
+    if len(nums) == 9:
+        q = nums
+        opening, purchase = q[0], q[1]
+        # Incomplete 10-col grid missing Cl.Stock: … Sales Free (Cl omitted)
+        if abs(q[6]) < 1e-9 and q[7] > 0 and q[0] > 0:
+            sales = q[7]
+            free = q[8]
+            computed = opening + purchase - sales
+            if abs(free) < 1e-9 or (
+                computed > 0 and abs((opening + purchase - sales) - free) > 0.5
+            ):
+                return _finalize_group_wise_qty(
+                    opening, purchase, sales, float(computed)
+                )
+        return _finalize_group_wise_qty(q[0], q[1], q[6], q[8])
+    if len(nums) >= 9:
+        q = nums[-9:]
+        return _finalize_group_wise_qty(q[0], q[1], q[6], q[8])
+    if len(nums) >= 6:
+        # Truncated OCR of the 10-col grid.
+        # Op + zeros + Sales (Free/Cl dropped): reconstruct closing
+        if (
+            7 <= len(nums) <= 8
+            and nums[0] > 0
+            and nums[-1] > 0
+            and abs(nums[-2]) < 1e-9
+            and sum(1 for x in nums[1:-1] if abs(x) > 1e-9) <= 1
+        ):
+            opening, sales = nums[0], nums[-1]
+            return _finalize_group_wise_qty(
+                opening, 0.0, sales, opening - sales
+            )
+        if (
+            len(nums) <= 8
+            and nums[-1] > 0
+            and nums[-2] > 0
+            and (len(nums) < 3 or abs(nums[-3]) < 1e-9)
+        ):
+            sales, closing = nums[-2], nums[-1]
+            purchase = 0.0
+            opening = nums[0]
+            if abs(opening) < 1e-9:
+                opening = closing + sales - purchase
+            return _finalize_group_wise_qty(opening, purchase, sales, closing)
+        sales, _free, closing = nums[-3], nums[-2], nums[-1]
+        purchase = nums[0] if len(nums) >= 4 else 0.0
+        if len(nums) == 6 and all(abs(x) < 1e-9 for x in nums[:3]):
+            purchase = 0.0
+            opening = closing + sales - purchase
+            return _finalize_group_wise_qty(opening, purchase, sales, closing)
+        opening = nums[0]
+        purchase = nums[1] if len(nums) > 4 else 0.0
+        return _finalize_group_wise_qty(opening, purchase, sales, closing)
+    if len(nums) >= 4:
+        return _finalize_group_wise_qty(nums[0], nums[1], nums[-2], nums[-1])
+    if len(nums) == 3:
+        return _finalize_group_wise_qty(nums[0], 0.0, nums[1], nums[2])
+    if len(nums) == 2:
+        return _finalize_group_wise_qty(nums[0], 0.0, 0.0, nums[1])
+    if len(nums) == 1:
+        return _finalize_group_wise_qty(nums[0], 0.0, 0.0, nums[0])
+    return 0.0, 0.0, 0.0, 0.0
+
+
+def _split_group_wise_glued_ocr_line(line: str) -> List[str]:
+    """Split psm-4 mega-lines that glue many products onto one OCR line."""
+    s = (line or "").strip()
+    if not s:
+        return []
+    starts = list(
+        re.finditer(
+            r"(?i)(?=(?:\b(?:GASEX|HADJOD|ADJOD|LIV-?5S?2|PILEX|TENTEX|ENTEX|TENTEY|"
+            r"ABANA|DIABECON|DIAREX|HERBOLEX|HIMCOCID|OXITARD|RENALKA|SHALLAKI|"
+            r"SHIGRU|TALEKT|TRIPHALA|CONFIDO|CLARINA|BLEMINOR|HAIR\s+ZONE|"
+            r"HIOWNA|QUISTA|SEMINOR|ALEKT|AACTARIL|CHIROPEX|OROT|ORO-T)\b))",
+            s,
+        )
+    )
+    if len(starts) < 2:
+        return [s]
+    parts = []
+    for i, m in enumerate(starts):
+        end = starts[i + 1].start() if i + 1 < len(starts) else len(s)
+        chunk = s[m.start() : end].strip(" |-_")
+        if chunk:
+            parts.append(chunk)
+    return parts or [s]
+
+
+def _group_wise_line_qty_score(line: str) -> Tuple[int, float, int, int]:
+    """Score an OCR product line: prefer stock-equation balance, then richness."""
+    _name, _pack, nums = _group_wise_split_name_strength_nums(line)
+    if len(nums) < 2:
+        return (0, -999.0, 0, 0)
+    op, pur, sale, cl = _map_group_wise_qty_columns(nums)
+    bal = abs((op + pur - sale) - cl)
+    nonzero = sum(1 for n in (op, sale, cl) if abs(n) > 1e-9)
+    return (1 if bal < 0.6 else 0, -bal, nonzero, len(nums))
+
+
+def _looks_like_group_wise_product_line(line: str) -> bool:
+    s = (line or "").strip().lstrip("|").strip()
+    if len(s) < 3:
+        return False
+    if re.search(
+        r"(?i)Group\s*Wise|Product\s*Name|Strength|Cl\.?\s*Stock|Page\s*\d|"
+        r"UpTo\s+\d|/31/\d{4}|HIMALAYA\s+DRUG|Purchase\s*Rtn|Sales\s*Ret|"
+        r"^\d{1,2}/\d{1,2}/\d{2,4}|AMAR\s+PHARM|Phone\s*:|DIST:",
+        s,
+    ):
+        return False
+    if re.fullmatch(r"[\d./:\sAPMapm]+", s):
+        return False
+    return bool(re.match(r"^[A-Za-z\[/]", s))
+
+
+def _parse_group_wise_sales_statement(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse AMAR-style Group Wise Sales Op.Stock/Purchase/Sales/Cl.Stock statements."""
+    if not _is_group_wise_sales_opstock_format(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Group Wise Sales"
+    result["totals"]["extra"]["extraction_method"] = "group_wise_sales_opstock"
+
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in (text or "").splitlines()]
+    lines = [ln for ln in lines if ln]
+
+    # Metadata
+    for ln in lines[:15]:
+        if re.search(r"G?roup\s*Wise\s*Sales", ln, re.I):
+            m = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}).{0,40}?"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,  # search full text — date may be split across OCR lines
+                re.I | re.S,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+        if re.search(r"HIMALAYA", ln, re.I) and not result["company_name"]:
+            result["company_name"] = "HIMALAYA DRUG CO ZEAL"
+    # Stockist: first non-empty header line before Group Wise title
+    for ln in lines[:8]:
+        if re.search(r"G?roup\s*Wise\s*Sales|Product\s*Name|HIMALAYA", ln, re.I):
+            break
+        if re.search(r"AT\s*/?\s*P\.?O|Phone|DIST:|Street|Road", ln, re.I):
+            if not result["stockist_address"]:
+                result["stockist_address"] = _clean_name(ln)
+            continue
+        if not result["stockist_name"] and re.search(
+            r"[A-Za-z]{3,}", ln
+        ) and not re.search(r"^\d", ln):
+            name = _clean_name(
+                re.sub(r"(?i)PHAR\s*ENCIES", "PHARMACEUTICAL AGENCIES", ln)
+            )
+            name = re.sub(r"(?i)PHARMAC(?:Y|)\s*CAL", "PHARMACEUTICAL", name)
+            name = re.sub(r"(?i)\s*AGENCIE\b", " AGENCIES", name)
+            # Drop trailing address fragments OCR-glued onto the name line
+            name = re.sub(r"(?i)\s*(R-?\d{4,}.*|DIST:.*|BERHAMPUR.*)$", "", name)
+            name = _clean_name(name)
+            if len(name) >= 4:
+                result["stockist_name"] = name
+                break
+
+    # Merge wrapped product / trailing qty lines
+    merged: List[str] = []
+    for ln in lines:
+        if not merged:
+            merged.append(ln)
+            continue
+        if _looks_like_group_wise_product_line(ln):
+            merged.append(ln)
+            continue
+        # Continuation: mostly qtys or strength fragment
+        _name, _pack, nums = _group_wise_split_name_strength_nums(ln)
+        qty_heavy = len(nums) >= 2 and len(ln.split()) <= len(nums) + 2
+        if qty_heavy and _looks_like_group_wise_product_line(merged[-1]):
+            merged[-1] = merged[-1] + " " + ln
+        elif (
+            _looks_like_group_wise_product_line(merged[-1])
+            and not re.search(r"Page\s*\d|/31/\d{4}", ln, re.I)
+            and len(ln) < 40
+            and re.search(r"[A-Za-z]{3,}", ln)
+            and not re.match(r"^\d", ln)
+            and not re.search(r"[^\x20-\x7E]", ln)
+        ):
+            merged[-1] = merged[-1] + " " + ln
+
+    items: List[Dict[str, Any]] = []
+    for ln in merged:
+        if not _looks_like_group_wise_product_line(ln):
+            continue
+        name, packing, nums = _group_wise_split_name_strength_nums(ln)
+        name = _normalize_group_wise_product_name(name)
+        name = re.sub(r"^[\|\s/_-]+", "", name)
+        if len(name) < 3:
+            continue
+        if re.search(r"/31/\d{4}|Page\s*\d", name, re.I):
+            continue
+        if len(nums) < 2:
+            continue
+
+        opening, purchase, sales, closing = _map_group_wise_qty_columns(nums)
+        # Reconstruct opening when OCR dropped leading qty columns
+        if (
+            len(nums) < 9
+            and abs(opening) < 1e-9
+            and sales > 0
+            and closing + sales - purchase > 0
+        ):
+            opening = closing + sales - purchase
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = float(opening)
+        item["receipts_qty"] = float(purchase)
+        item["sales_qty"] = float(sales)
+        item["closing_qty"] = float(closing)
+        # No value columns in this layout
+        item["sales_value"] = None
+        item["closing_value"] = None
+        if packing:
+            item["extra"]["strength"] = packing
+        item["extra"]["_qty_n"] = len(nums)
+        items.append(item)
+
+    # Dedupe same product: keep the row with richer/more consistent qty columns
+    deduped: List[Dict[str, Any]] = []
+    by_key: Dict[str, Dict[str, Any]] = {}
+
+    def _gw_key(it: Dict[str, Any]) -> str:
+        return re.sub(r"[^A-Z0-9]+", "", (it.get("product_name") or "").upper())
+
+    def _gw_score(it: Dict[str, Any]) -> Tuple[int, float, int]:
+        n = int((it.get("extra") or {}).get("_qty_n") or 0)
+        op = float(it.get("opening_qty") or 0)
+        sale = float(it.get("sales_qty") or 0)
+        cl = float(it.get("closing_qty") or 0)
+        pur = float(it.get("receipts_qty") or 0)
+        bal = abs((op + pur - sale) - cl)
+        nonzero = sum(1 for x in (op, sale, cl) if abs(x) > 1e-9)
+        # Prefer balanced stock equation, then richer qty grids
+        return (1 if bal < 0.6 else 0, -bal, nonzero * 10 + n)
+
+    for it in items:
+        key = _gw_key(it)
+        if not key:
+            continue
+        prev = by_key.get(key)
+        if prev is None or _gw_score(it) > _gw_score(prev):
+            by_key[key] = it
+    # Preserve first-seen order
+    seen = set()
+    for it in items:
+        key = _gw_key(it)
+        if key in seen:
+            continue
+        if key in by_key:
+            cleaned = dict(by_key[key])
+            if isinstance(cleaned.get("extra"), dict):
+                cleaned["extra"] = {
+                    k: v for k, v in cleaned["extra"].items() if not str(k).startswith("_")
+                }
+            deduped.append(cleaned)
+            seen.add(key)
+
+    if not deduped:
+        return None
+    result["line_items"] = deduped
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
+    return result
+
+
+def _normalize_group_wise_product_name(name: str) -> str:
+    """Fix common Tesseract misreads for Himalaya product names (format-specific)."""
+    text = _clean_name(name or "")
+    replacements = (
+        (r"(?i)\bHADIOD\b", "HADJOD"),
+        (r"(?i)\bHADJ0D\b", "HADJOD"),
+        (r"(?i)\bHADJOO\b", "HADJOD"),
+        (r"(?i)\bADJOD\b", "HADJOD"),
+        (r"(?i)\bHADJODCAPS\b", "HADJOD CAPS"),
+        (r"(?i)\bENTEX\b", "TENTEX"),
+        (r"(?i)\bTENTEY\b", "TENTEX"),
+        (r"(?i)\bVASEX\b", "GASEX"),
+        (r"(?i)\bMASEA\b", "GASEX"),
+        (r"(?i)\bLIV-?5S2\b", "LIV-52"),
+        (r"(?i)\bFOTE\b", "FORTE"),
+        (r"(?i)\bFORTETAB\b", "FORTE TAB"),
+        (r"(?i)\bTENTEXX?\b", "TENTEX"),
+        (r"(?i)\bGASEX\s+TAB\b.*", "GASEX TAB"),
+        (r"(?i)^/+", ""),
+        (r"(?i)\s+\d+\s+\d+\s+[a-zA-Z)]{1,3}\s+[a-zA-Z)]{1,3}.*$", ""),  # trailing OCR junk on name
+    )
+    for pat, repl in replacements:
+        text = re.sub(pat, repl, text)
+    # Collapse "GASEX TAB 100'S 7 7 5 a a F)" style junk after TAB
+    text = re.sub(
+        r"(?i)^(GASEX\s+TAB)\b.*$",
+        r"\1",
+        text,
+    )
+    text = re.sub(
+        r"(?i)^(HADJOD\s+CAPS)\b.*$",
+        r"\1",
+        text,
+    )
+    text = re.sub(
+        r"(?i)^(TENTEX\s+FORTE\s+TAB)\b.*$",
+        r"\1",
+        text,
+    )
+    return _clean_name(text)
+
+
+def _tesseract_configure() -> None:
+    import os
+
+    try:
+        import pytesseract
+    except ImportError:
+        return
+    cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    elif os.name == "nt":
+        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(win_cmd):
+            pytesseract.pytesseract.tesseract_cmd = win_cmd
+
+
+def _ocr_pil_text(image, *, psm: int, whitelist: Optional[str] = None) -> str:
+    import pytesseract
+
+    _tesseract_configure()
+    cfg = f"--psm {psm}"
+    if whitelist:
+        cfg += f" -c tessedit_char_whitelist={whitelist}"
+    return re.sub(r"\s+", " ", pytesseract.image_to_string(image, config=cfg) or "").strip()
+
+
+def _crop_group_wise_table_region(image):
+    """Crop to table body: drop top letterhead and bottom footer/date band."""
+    from PIL import Image
+
+    if not isinstance(image, Image.Image):
+        return image
+    w, h = image.size
+    # Keep from ~12% (below address) through ~92% (above /31/2026 footer)
+    top = int(h * 0.10)
+    bottom = int(h * 0.92)
+    left = int(w * 0.01)
+    right = int(w * 0.995)
+    if bottom - top < h * 0.4:
+        return image
+    return image.crop((left, top, right, bottom))
+
+
+def _upscale_group_wise_image(image, target_dpi: int = 280):
+    """Upscale rendered page toward ~250–300 DPI equivalent for denser digits."""
+    from PIL import Image
+
+    # Pages are typically rendered ~2.0–3.5x (144–252 DPI). Aim ~280 DPI.
+    w, h = image.size
+    # Assume source ~200 DPI if unknown; scale up if smaller than ~2400px wide
+    if w >= 2400:
+        scale = max(1.0, target_dpi / 220.0)
+    else:
+        scale = max(1.35, (2500 / max(w, 1)))
+    scale = min(scale, 2.2)
+    if scale <= 1.05:
+        return image
+    new_size = (int(w * scale), int(h * scale))
+    return image.resize(new_size, Image.Resampling.LANCZOS)
+
+
+def _shear_group_wise_gray(gray, slope: float):
+    """Counteract page skew so name column and qty columns share a horizontal band."""
+    import cv2
+    import numpy as np
+
+    h, w = gray.shape[:2]
+    if abs(slope) < 1e-6:
+        return gray
+    M = np.array([[1.0, 0.0, 0.0], [-slope, 1.0, slope * w / 2.0]], dtype=np.float32)
+    return cv2.warpAffine(
+        gray, M, (w, h), flags=cv2.INTER_CUBIC, borderValue=255
+    )
+
+
+def _ocr_group_wise_qty_crop(qty_crop_gray) -> str:
+    """OCR a single-row qty strip; prefer digit-rich psm 6/7 readings."""
+    import cv2
+    from PIL import Image, ImageOps
+
+    best = ""
+    best_n = -1
+    for fx in (2.0, 2.5):
+        up = cv2.resize(
+            qty_crop_gray, None, fx=fx, fy=fx, interpolation=cv2.INTER_CUBIC
+        )
+        pil = ImageOps.autocontrast(Image.fromarray(up))
+        for psm in (6, 7):
+            txt = _ocr_pil_text(pil, psm=psm, whitelist="0123456789 ")
+            n = len(re.findall(r"\d+", txt or ""))
+            if n > best_n:
+                best_n = n
+                best = txt or ""
+    return best
+
+
+def _ocr_group_wise_rows_at_slope(gray, slope: float) -> str:
+    """Detect horizontal row bands after optional shear; OCR name + qty separately."""
+    import cv2
+    from PIL import Image, ImageOps
+
+    gray = _shear_group_wise_gray(gray, slope)
+    h, w = gray.shape
+    thr = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 31, 12
+    )
+    horiz = cv2.morphologyEx(
+        thr,
+        cv2.MORPH_OPEN,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (max(50, w // 25), 1)),
+    )
+    proj = (horiz > 0).sum(axis=1)
+    ys = [i for i, v in enumerate(proj) if v > w * 0.22]
+    mids: List[int] = []
+    if ys:
+        start = prev = ys[0]
+        for y in ys[1:]:
+            if y - prev > 3:
+                mids.append((start + prev) // 2)
+                start = y
+            prev = y
+        mids.append((start + prev) // 2)
+
+    name_x1 = int(w * 0.40)
+    qty_x0 = int(w * 0.36)
+    lines: List[str] = []
+    for i in range(len(mids) - 1):
+        y0, y1 = mids[i], mids[i + 1]
+        band_h = y1 - y0
+        if band_h < 28:
+            continue
+        # Merged double-rows (common near page bottom) — OCR each half
+        sub_bands = [(y0, y1)]
+        if 80 < band_h <= 120:
+            mid_y = (y0 + y1) // 2
+            sub_bands = [(y0, mid_y), (mid_y, y1)]
+        elif band_h > 120:
+            continue
+        for y0b, y1b in sub_bands:
+            row = gray[max(0, y0b + 2) : min(h, y1b - 1), :]
+            if row.size == 0 or row.shape[0] < 16:
+                continue
+            name_crop = cv2.resize(
+                row[:, :name_x1], None, fx=1.8, fy=1.8, interpolation=cv2.INTER_CUBIC
+            )
+            name_txt = _ocr_pil_text(
+                ImageOps.autocontrast(Image.fromarray(name_crop)), psm=7
+            )
+            name_txt = re.sub(r"[^\x20-\x7E]", " ", name_txt)
+            name_txt = _clean_name(name_txt)
+            if not name_txt or len(re.sub(r"[^A-Za-z]", "", name_txt)) < 3:
+                continue
+            if re.search(
+                r"(?i)product\s*name|strength|cl\.?\s*stock|page\s*\d|/31/\d{4}",
+                name_txt,
+            ):
+                continue
+            if re.fullmatch(r"[\d./:\sAPMapm]+", name_txt):
+                continue
+            qty_txt = _ocr_group_wise_qty_crop(row[:, qty_x0:])
+            lines.append(f"{name_txt} {qty_txt}".strip())
+    return "\n".join(lines)
+
+
+def _ocr_group_wise_rows_positional(image) -> str:
+    """OCR each table row with skew-corrected passes; preserve name/qty positions."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return ""
+
+    rgb = image.convert("RGB")
+    gray = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2GRAY)
+
+    # Scanned pages lean so left-side names and right-side digits fall in
+    # different horizontal bands without a corrective shear.
+    merged: Dict[str, str] = {}
+    for slope in (0.0, 0.023, 0.025, 0.027):
+        try:
+            text = _ocr_group_wise_rows_at_slope(gray, slope)
+        except Exception as exc:
+            logger.warning("Group Wise row OCR slope=%s failed: %s", slope, exc)
+            continue
+        for ln in text.splitlines():
+            s = ln.strip()
+            if not s:
+                continue
+            norm = _normalize_group_wise_product_name(
+                re.split(r"\s+\d", s, maxsplit=1)[0]
+            )
+            key = re.sub(r"[^A-Z0-9]+", "", norm.upper())[:14]
+            if len(key) < 4:
+                continue
+            prev = merged.get(key)
+            if prev is None or _group_wise_line_qty_score(s) > _group_wise_line_qty_score(
+                prev
+            ):
+                merged[key] = s
+    return "\n".join(merged.values())
+
+
+def _ocr_group_wise_sales_image(file_bytes: bytes) -> str:
+    """High-DPI, table-cropped OCR for Group Wise Sales pages (psm 4/6 + row OCR)."""
+    try:
+        from PIL import Image, ImageOps, ImageEnhance
+    except ImportError as exc:
+        raise RuntimeError("Pillow required for Group Wise Sales OCR") from exc
+
+    image = Image.open(io.BytesIO(file_bytes))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+
+    # Pass A — full-page at ~200 DPI equivalent (300dpi downscales blur this grid)
+    classic_src = image
+    target_w = 1800
+    if classic_src.size[0] != target_w:
+        scale = target_w / classic_src.size[0]
+        classic_src = classic_src.resize(
+            (target_w, max(1, int(classic_src.size[1] * scale))),
+            Image.Resampling.LANCZOS,
+        )
+    classic_img = ImageOps.autocontrast(classic_src.convert("L"))
+    classic_img = ImageEnhance.Sharpness(classic_img).enhance(1.4)
+    classic_img = ImageEnhance.Contrast(classic_img).enhance(1.2)
+    text4 = _ocr_pil_text(classic_img, psm=4)
+    text6 = _ocr_pil_text(classic_img, psm=6)
+
+    # Pass B — crop table body at ~250–280 DPI; mild contrast only
+    table = _crop_group_wise_table_region(image)
+    if table.size[0] < 2200:
+        table = _upscale_group_wise_image(table, target_dpi=260)
+    elif table.size[0] > 2600:
+        scale = 2500 / table.size[0]
+        table = table.resize(
+            (int(table.size[0] * scale), int(table.size[1] * scale)),
+            Image.Resampling.LANCZOS,
+        )
+    row_src = ImageOps.autocontrast(table.convert("L"))
+    text4_hi = _ocr_pil_text(row_src, psm=4)
+    row_text = ""
+    try:
+        row_text = _ocr_group_wise_rows_positional(row_src)
+    except Exception as exc:
+        logger.warning("Group Wise row OCR failed: %s", exc)
+
+    candidates = [t for t in (text4, text6, text4_hi, row_text) if t and t.strip()]
+    if not candidates:
+        return ""
+
+    def _digit_count(t: str) -> int:
+        return len(re.findall(r"\d+", t))
+
+    best = max(candidates, key=lambda t: (_digit_count(t), len(t)))
+
+    def _product_key(s: str) -> str:
+        norm = _normalize_group_wise_product_name(
+            re.split(r"\s+\d", s, maxsplit=1)[0]
+        )
+        return re.sub(r"[^A-Z0-9]+", "", norm.upper())[:14]
+
+    def _product_lines(t: str) -> Dict[str, str]:
+        out: Dict[str, str] = {}
+        for ln in t.splitlines():
+            for s in _split_group_wise_glued_ocr_line(ln.strip()):
+                s = s.lstrip("|").strip()
+                if not s or not re.match(r"^[A-Za-z\[/]", s):
+                    continue
+                if re.search(
+                    r"(?i)group\s*wise|product\s*name|strength|cl\.?\s*stock|page\s*\d|/31/",
+                    s,
+                ):
+                    continue
+                key = _product_key(s)
+                if len(key) < 4:
+                    continue
+                prev = out.get(key)
+                if prev is None or _group_wise_line_qty_score(s) > _group_wise_line_qty_score(
+                    prev
+                ):
+                    out[key] = s
+        return out
+
+    merged_map: Dict[str, str] = {}
+    for alt in sorted(candidates, key=lambda t: (_digit_count(t), len(t)), reverse=True):
+        for key, ln in _product_lines(alt).items():
+            prev = merged_map.get(key)
+            if prev is None or _group_wise_line_qty_score(ln) > _group_wise_line_qty_score(
+                prev
+            ):
+                merged_map[key] = ln
+
+    body_lines: List[str] = []
+    seen = set()
+    for ln in best.splitlines():
+        key = _product_key(ln)
+        if key in merged_map and key not in seen:
+            body_lines.append(merged_map[key])
+            seen.add(key)
+        elif key not in merged_map and ln.strip():
+            body_lines.append(ln)
+    for key, ln in merged_map.items():
+        if key not in seen:
+            body_lines.append(ln)
+            seen.add(key)
+
+    best = "\n".join(body_lines)
+    if not re.search(r"G?roup\s*Wise\s*Sales", best, re.I):
+        best = (
+            "Group Wise Sales Op.Stock Purchase Qty Sales Qty Cl.Stock Strength\n"
+            + best
+        )
+    if not re.search(r"(?i)strength|op\.?\s*stock|cl\.?\s*stock", best):
+        best = "Product Name Strength Op.Stock Purchase Qty Sales Qty Cl.Stock\n" + best
+    return best
+
+
+def _ocr_group_wise_sales_pages(
+    pages: List[Dict[str, Any]],
+) -> str:
+    """Re-OCR page images with settings tuned for Group Wise Sales grids."""
+    parts: List[str] = []
+    for p in pages:
+        img = p.get("image_bytes")
+        if not img:
+            continue
+        try:
+            parts.append(_ocr_group_wise_sales_image(img))
+        except Exception as exc:
+            logger.warning("Group Wise Sales OCR failed: %s", exc)
+            try:
+                parts.append(_ocr_image_to_text(img, psm=4, enhance=True))
+            except Exception:
+                pass
+    return "\n\n".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # XLS / XLSX (Victory-style sparse grid)
 # ---------------------------------------------------------------------------
+
+def _norm_xls_header_label(value: Any) -> str:
+    text = str(value or "").replace("\n", " ").replace("\r", " ")
+    return re.sub(r"\s+", " ", text).strip().upper()
+
+
+def _find_marg_erp_xls_header(
+    rows: List[List[Any]],
+) -> Optional[Tuple[int, Dict[str, int], str]]:
+    """Detect Marg ERP Himalaya/Zeal stock-statement headers.
+
+    Returns (header_row_index, role->col_index, variant) or None.
+    Variants:
+      - purchase_sale_rate: OPENING/PURCHASE/SALE/CLOSING + RATE
+      - receive_issue_value: OPENING/RECEIVE/ISSUE/CLOSING + values
+    """
+    for ri, row in enumerate(rows[:40]):
+        labels = [_norm_xls_header_label(c) for c in row]
+        if not any(lab == "PRODUCT DESCRIPTION" for lab in labels):
+            continue
+        if not any("OPENING" in lab for lab in labels):
+            continue
+        if not any("CLOSING" in lab for lab in labels):
+            continue
+
+        roles: Dict[str, int] = {}
+        replace_seen = 0
+        for ci, lab in enumerate(labels):
+            if not lab:
+                continue
+            if lab == "PRODUCT DESCRIPTION" or lab.startswith("PRODUCT DESC"):
+                roles["product_name"] = ci
+            elif lab in {"OPENING STOCK", "OPENING"}:
+                roles.setdefault("opening_qty", ci)
+            elif lab == "OPENING VALUE":
+                roles["opening_value"] = ci
+            elif lab in {"PURCHASE QUANTITY", "PURCHASE QTY", "PURCHASE"}:
+                roles["purchase_qty"] = ci
+            elif "SALE RETURN" in lab:
+                roles["sale_return_qty"] = ci
+            elif lab in {"TOTAL RECEIVE", "TOTAL RECEIVED"}:
+                roles["total_receive_qty"] = ci
+            elif lab in {"RECEIVE QUANTITY", "RECEIVE QTY"}:
+                roles["receive_qty"] = ci
+            elif lab == "RECEIVE VALUE":
+                roles["receive_value"] = ci
+            elif lab in {"SALE QUANTITY", "SALE QTY", "SALES QUANTITY", "SALES QTY"}:
+                roles["sales_qty"] = ci
+            elif lab in {"P/R QUANTITY", "P/R QTY", "PR QUANTITY", "PR QTY"}:
+                roles["pr_qty"] = ci
+            elif lab in {"ISSUE QUANTITY", "ISSUE QTY"}:
+                roles["issue_qty"] = ci
+            elif lab == "ISSUE VALUE":
+                roles["issue_value"] = ci
+            elif lab in {"CLOSING STOCK", "CLOSING"}:
+                roles.setdefault("closing_qty", ci)
+            elif lab == "CLOSING VALUE":
+                roles["closing_value"] = ci
+            elif lab == "RATE":
+                roles["rate"] = ci
+            elif "REPLACE" in lab:
+                replace_seen += 1
+                if replace_seen == 1:
+                    roles["replace_in_qty"] = ci
+                else:
+                    roles["replace_out_qty"] = ci
+
+        if "product_name" not in roles or "opening_qty" not in roles:
+            continue
+        if "closing_qty" not in roles:
+            continue
+
+        if "rate" in roles or "purchase_qty" in roles or "sales_qty" in roles:
+            variant = "purchase_sale_rate"
+        elif "issue_qty" in roles or "receive_qty" in roles:
+            variant = "receive_issue_value"
+        else:
+            variant = "generic"
+        return ri, roles, variant
+    return None
+
+
+def _cell_at(row: List[Any], idx: Optional[int]) -> Any:
+    if idx is None or idx < 0 or idx >= len(row):
+        return None
+    return row[idx]
+
+
+def _parse_marg_erp_xls(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    header_info: Tuple[int, Dict[str, int], str],
+) -> Dict[str, Any]:
+    """Parse Marg ERP Nano chemist STOCK & SALES STATEMENT (.xls).
+
+    Format-specific path — does not alter the legacy Item/Op./Sale/Bal. parser.
+    """
+    header_idx, roles, variant = header_info
+    result = empty_result(filename, ext.lstrip("."))
+    result["totals"]["extra"]["extraction_method"] = f"marg_erp_xls_{variant}"
+
+    # Header metadata above the product grid
+    for row in rows[:header_idx]:
+        texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
+        if not texts:
+            continue
+        joined = " ".join(texts)
+        first = texts[0]
+
+        if not result["stockist_name"] and not re.search(
+            r"Phone\s*:|D\.?L\.?\s*No|STOCK\s*&?\s*SALES|PRODUCT\s+DESC|TOTAL\s+|MARG\s+ERP",
+            first,
+            re.I,
+        ):
+            result["stockist_name"] = _clean_name(first)
+            continue
+
+        if (
+            not result["stockist_address"]
+            and result["stockist_name"]
+            and not re.search(r"Phone\s*:|D\.?L\.?\s*No|STOCK\s*&?\s*SALES", first, re.I)
+            and (
+                re.search(
+                    r"ROAD|NAGAR|PLOT|FLOOR|BUILDING|DIST|STATE|PIN|BHUBANESWAR|"
+                    r"ROURKELA|ODISHA|ORISSA|\d{6}",
+                    joined,
+                    re.I,
+                )
+                or (len(joined) > 25 and "," in joined)
+            )
+        ):
+            result["stockist_address"] = _clean_name(joined)
+            continue
+
+        if re.search(r"STOCK\s*&?\s*SALES\s+STATEMENT", joined, re.I):
+            result["report_title"] = _clean_name(joined.lstrip("-–— ").strip())
+            m_period = re.search(
+                r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\s*[-–—to]+\s*"
+                r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})",
+                joined,
+                re.I,
+            )
+            if m_period:
+                result["period_from"] = _normalize_date(m_period.group(1))
+                result["period_to"] = _normalize_date(m_period.group(2))
+            m_co = re.search(
+                r"^\s*-?\s*(.+?)\s+STOCK\s*&?\s*SALES\s+STATEMENT",
+                joined,
+                re.I,
+            )
+            if m_co:
+                company = _clean_name(m_co.group(1).strip(" -–—"))
+                if company:
+                    result["company_name"] = company
+
+    items: List[Dict[str, Any]] = []
+    for row in rows[header_idx + 1 :]:
+        texts = [str(c).strip() for c in row if c is not None and str(c).strip() != ""]
+        if not texts:
+            continue
+        name_raw = _cell_at(row, roles.get("product_name"))
+        product_name = str(name_raw).strip() if name_raw not in (None, "") else ""
+        if not product_name:
+            continue
+
+        if re.search(r"^TOTAL(?:\s+(QUANTITY|VALUE|QTY))?\b", product_name, re.I):
+            nums_by_role = {
+                role: _to_float(_cell_at(row, idx))
+                for role, idx in roles.items()
+                if role != "product_name"
+            }
+            is_value_total = bool(re.search(r"VALUE", product_name, re.I))
+            is_qty_total = bool(re.search(r"QUANTITY|QTY", product_name, re.I))
+            # Plain "TOTAL" rows (receive/issue layout) carry qty + value together.
+            is_combined_total = not is_value_total and not is_qty_total
+
+            if is_value_total or is_combined_total:
+                # TOTAL VALUE / combined TOTAL: money sits under matching columns.
+                if variant == "purchase_sale_rate":
+                    if "sales_qty" in nums_by_role:
+                        result["totals"]["sales_value"] = nums_by_role["sales_qty"]
+                    if "closing_qty" in nums_by_role:
+                        result["totals"]["closing_value"] = nums_by_role["closing_qty"]
+                    if "opening_qty" in nums_by_role:
+                        result["totals"]["extra"]["opening_value"] = nums_by_role[
+                            "opening_qty"
+                        ]
+                    if "purchase_qty" in nums_by_role:
+                        result["totals"]["extra"]["purchase_value"] = nums_by_role[
+                            "purchase_qty"
+                        ]
+                    if "total_receive_qty" in nums_by_role:
+                        result["totals"]["extra"]["total_receive_value"] = nums_by_role[
+                            "total_receive_qty"
+                        ]
+                else:
+                    if "issue_value" in nums_by_role:
+                        result["totals"]["sales_value"] = nums_by_role["issue_value"]
+                    elif "issue_qty" in nums_by_role:
+                        result["totals"]["sales_value"] = nums_by_role["issue_qty"]
+                    if "closing_value" in nums_by_role:
+                        result["totals"]["closing_value"] = nums_by_role["closing_value"]
+                    elif "closing_qty" in nums_by_role:
+                        result["totals"]["closing_value"] = nums_by_role["closing_qty"]
+                    if "opening_value" in nums_by_role:
+                        result["totals"]["extra"]["opening_value"] = nums_by_role[
+                            "opening_value"
+                        ]
+                    if "receive_value" in nums_by_role:
+                        result["totals"]["extra"]["purchase_value"] = nums_by_role[
+                            "receive_value"
+                        ]
+
+            if is_qty_total or is_combined_total:
+                for key in (
+                    "opening_qty",
+                    "purchase_qty",
+                    "receive_qty",
+                    "sales_qty",
+                    "issue_qty",
+                    "closing_qty",
+                    "total_receive_qty",
+                ):
+                    if key in nums_by_role:
+                        result["totals"]["extra"][f"total_{key}"] = nums_by_role[key]
+            continue
+
+        if re.search(
+            r"MARG\s+ERP|PRODUCT\s+DESC|STOCK\s*&?\s*SALES|Phone\s*:|D\.?L\.?\s*No|"
+            r"^Page\s*\d|Printed|Signature",
+            product_name,
+            re.I,
+        ):
+            continue
+
+        item = empty_line_item()
+        item["product_name"] = _clean_name(product_name)
+
+        opening = _to_float(_cell_at(row, roles.get("opening_qty")))
+        closing = _to_float(_cell_at(row, roles.get("closing_qty")))
+        item["opening_qty"] = opening
+        item["closing_qty"] = closing
+
+        if variant == "purchase_sale_rate":
+            purchase = _to_float(_cell_at(row, roles.get("purchase_qty")))
+            sale_return = _to_float(_cell_at(row, roles.get("sale_return_qty")))
+            replace_in = _to_float(_cell_at(row, roles.get("replace_in_qty")))
+            total_receive = _to_float(_cell_at(row, roles.get("total_receive_qty")))
+            sales_qty = _to_float(_cell_at(row, roles.get("sales_qty")))
+            pr_qty = _to_float(_cell_at(row, roles.get("pr_qty")))
+            replace_out = _to_float(_cell_at(row, roles.get("replace_out_qty")))
+            rate = _to_nullable_float(_cell_at(row, roles.get("rate")))
+
+            # Receipts = inbound stock beyond opening (purchase + sale return + replace-in)
+            if total_receive or opening:
+                item["receipts_qty"] = max(
+                    0.0, (total_receive or (opening + purchase + sale_return + replace_in)) - opening
+                )
+            else:
+                item["receipts_qty"] = purchase + sale_return + replace_in
+            item["sales_qty"] = sales_qty
+            if rate is not None:
+                item["extra"]["rate"] = rate
+                item["sales_value"] = round(sales_qty * rate, 2)
+                item["closing_value"] = round(closing * rate, 2)
+            if purchase:
+                item["extra"]["purchase_qty"] = purchase
+            if sale_return:
+                item["extra"]["sale_return_qty"] = sale_return
+            if replace_in:
+                item["extra"]["replace_in_qty"] = replace_in
+            if total_receive:
+                item["extra"]["total_receive_qty"] = total_receive
+            if pr_qty:
+                item["extra"]["purchase_return_qty"] = pr_qty
+            if replace_out:
+                item["extra"]["replace_out_qty"] = replace_out
+        else:
+            receive_qty = _to_float(_cell_at(row, roles.get("receive_qty")))
+            issue_qty = _to_float(_cell_at(row, roles.get("issue_qty")))
+            opening_value = _to_nullable_float(_cell_at(row, roles.get("opening_value")))
+            receive_value = _to_nullable_float(_cell_at(row, roles.get("receive_value")))
+            issue_value = _to_nullable_float(_cell_at(row, roles.get("issue_value")))
+            closing_value = _to_nullable_float(_cell_at(row, roles.get("closing_value")))
+
+            item["receipts_qty"] = receive_qty
+            item["sales_qty"] = issue_qty
+            if issue_value is not None:
+                item["sales_value"] = issue_value
+            if closing_value is not None:
+                item["closing_value"] = closing_value
+            if opening_value is not None:
+                item["extra"]["opening_value"] = opening_value
+            if receive_value is not None:
+                item["extra"]["receive_value"] = receive_value
+
+        items.append(item)
+
+    result["line_items"] = items
+    return result
+
+
+def _norm_tabular_col_key(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def _find_zl_secondary_xlsx_header(
+    rows: List[List[Any]],
+) -> Optional[Tuple[int, Dict[str, int]]]:
+    """Detect ZL secondary stock tabular export headers.
+
+    Expected columns include Customer_name, Material_code/Material_name,
+    Opening_bal_qty, Primary_qty, Closing_bal_qty.
+    """
+    for ri, row in enumerate(rows[:20]):
+        keys = {_norm_tabular_col_key(c): ci for ci, c in enumerate(row) if c not in (None, "")}
+        has_material = "materialname" in keys or "materialcode" in keys
+        has_opening = "openingbalqty" in keys or "openingbalquantity" in keys
+        has_customer = "customername" in keys or "customercode" in keys
+        if has_material and has_opening and has_customer:
+            return ri, keys
+    return None
+
+
+def _year_month_period(year: int, month: int) -> Tuple[Optional[str], Optional[str]]:
+    try:
+        y, mo = int(year), int(month)
+        start = datetime(y, mo, 1)
+        if mo == 12:
+            end = datetime(y, 12, 31)
+        else:
+            from datetime import timedelta
+
+            end = datetime(y, mo + 1, 1) - timedelta(days=1)
+        return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+    except (TypeError, ValueError):
+        return None, None
+
+
+def _parse_zl_secondary_xlsx(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    header_info: Tuple[int, Dict[str, int]],
+) -> Dict[str, Any]:
+    """Parse ZL Customer/Material secondary stock .xlsx export.
+
+    Format-specific path — does not alter Marg ERP or legacy Item/Op./Bal. parsers.
+    This layout has no sales qty/value or stock value columns; those fields stay null.
+    """
+    header_idx, keys = header_info
+    result = empty_result(filename, ext.lstrip("."))
+    result["totals"]["extra"]["extraction_method"] = "zl_secondary_xlsx"
+    result["report_title"] = "ZL Secondary Stock Statement"
+
+    def _col(*names: str) -> Optional[int]:
+        for n in names:
+            k = _norm_tabular_col_key(n)
+            if k in keys:
+                return keys[k]
+        return None
+
+    col_customer = _col("Customer_name")
+    col_code = _col("Material_code")
+    col_name = _col("Material_name")
+    col_mrp = _col("Mrp")
+    col_rate = _col("Secondaryrate")
+    col_open = _col("Opening_bal_qty", "Opening_bal_quantity")
+    col_primary = _col("Primary_qty", "Primary_quantity")
+    col_close = _col("Closing_bal_qty", "Closing_bal_quantity")
+    col_year = _col("Year")
+    col_month = _col("Month")
+    col_div = _col("Division")
+    col_cust_code = _col("Customer_code")
+
+    items: List[Dict[str, Any]] = []
+    for row in rows[header_idx + 1 :]:
+        if not row or all(c is None or str(c).strip() == "" for c in row):
+            continue
+
+        material_name = _cell_at(row, col_name)
+        material_code = _cell_at(row, col_code)
+        name_text = str(material_name).strip() if material_name not in (None, "") else ""
+        code_text = str(material_code).strip() if material_code not in (None, "") else ""
+        if not name_text and not code_text:
+            continue
+        # Skip accidental re-header rows
+        if _norm_tabular_col_key(name_text) in {"materialname", "customername"}:
+            continue
+
+        if not result["stockist_name"] and col_customer is not None:
+            cust = _cell_at(row, col_customer)
+            if cust not in (None, ""):
+                result["stockist_name"] = _clean_name(str(cust))
+
+        if result["period_from"] is None and col_year is not None and col_month is not None:
+            y_raw = _cell_at(row, col_year)
+            m_raw = _cell_at(row, col_month)
+            try:
+                pf, pt = _year_month_period(int(float(str(y_raw))), int(float(str(m_raw))))
+                result["period_from"], result["period_to"] = pf, pt
+            except (TypeError, ValueError):
+                pass
+
+        if col_div is not None and "division" not in result["totals"]["extra"]:
+            div = _cell_at(row, col_div)
+            if div not in (None, ""):
+                result["totals"]["extra"]["division"] = str(div).strip()
+        if col_cust_code is not None and "customer_code" not in result["totals"]["extra"]:
+            cc = _cell_at(row, col_cust_code)
+            if cc not in (None, ""):
+                # Preserve leading zeros from Excel text/codes
+                result["totals"]["extra"]["customer_code"] = str(cc).strip()
+                if isinstance(cc, float) and cc == int(cc):
+                    result["totals"]["extra"]["customer_code"] = f"{int(cc):010d}"
+
+        item = empty_line_item()
+        item["product_code"] = code_text or None
+        item["product_name"] = _clean_name(name_text) if name_text else None
+        # Qty fields: preserve genuine zeros from source
+        item["opening_qty"] = _to_float(_cell_at(row, col_open), 0.0)
+        item["receipts_qty"] = _to_float(_cell_at(row, col_primary), 0.0)
+        item["closing_qty"] = _to_float(_cell_at(row, col_close), 0.0)
+        # No sales / value columns in this export — do not invent
+        item["sales_qty"] = None
+        item["sales_value"] = None
+        item["closing_value"] = None
+
+        mrp = _to_nullable_float(_cell_at(row, col_mrp))
+        rate = _to_nullable_float(_cell_at(row, col_rate))
+        if mrp is not None:
+            item["extra"]["mrp"] = mrp
+        if rate is not None:
+            item["extra"]["secondary_rate"] = rate
+
+        items.append(item)
+
+    result["line_items"] = items
+    # Totals: no value columns present
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
+    return result
+
 
 def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     result = empty_result(filename, ext.lstrip("."))
@@ -1777,7 +3038,17 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         for row in sh.iter_rows(values_only=True):
             rows.append(list(row))
 
-    # Metadata scan
+    # ZL secondary tabular export (Customer_name / Material_* / *_bal_qty)
+    zl_header = _find_zl_secondary_xlsx_header(rows)
+    if zl_header is not None:
+        return _parse_zl_secondary_xlsx(rows, filename, ext, zl_header)
+
+    # Marg ERP Himalaya/Zeal STOCK & SALES STATEMENT — format-specific early exit
+    marg_header = _find_marg_erp_xls_header(rows)
+    if marg_header is not None:
+        return _parse_marg_erp_xls(rows, filename, ext, marg_header)
+
+    # Metadata scan (legacy Item / Op. / Sale / Bal. layout)
     for row in rows[:20]:
         texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
         joined = " ".join(texts)
@@ -2086,6 +3357,32 @@ def _extract_statement_from_pdf_group(
 
     result: Optional[Dict[str, Any]] = None
 
+    # Format-specific: Group Wise Sales Op.Stock/Purchase/Sales/Cl.Stock (image OCR)
+    # Always re-OCR with psm=4 when this layout is suspected — default psm=6 shifts columns.
+    gw_text = combined_text
+    suspects_group_wise = bool(
+        re.search(r"G?roup\s*Wise\s*Sales", combined_text, re.I)
+    ) or (
+        not combined_text.strip() and any(p.get("image_bytes") for p in pages)
+    )
+    if suspects_group_wise or _is_group_wise_sales_opstock_format(combined_text):
+        if any(p.get("image_bytes") for p in pages):
+            retry = _ocr_group_wise_sales_pages(pages)
+            if retry.strip():
+                gw_text = retry
+    if _is_group_wise_sales_opstock_format(gw_text):
+        gw = _parse_group_wise_sales_statement(gw_text, filename, "pdf")
+        if gw and gw.get("line_items"):
+            names = [str(i.get("product_name") or "") for i in gw["line_items"]]
+            if not any(re.search(r"/31/\d{4}", n) for n in names):
+                result = gw
+                result["totals"]["extra"]["split_pages"] = page_nos
+                if group.get("stockist_name") and not re.search(
+                    r"^Statement_\d+$", group["stockist_name"]
+                ):
+                    result["stockist_name"] = group["stockist_name"]
+                return result
+
     # Prefer structuring combined OCR/embedded text first (fast, no quota)
     if len(re.sub(r"\s+", "", combined_text)) >= 80:
         result = _structure_sales_text(combined_text, filename, "pdf")
@@ -2183,8 +3480,9 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             image_bytes: Optional[bytes] = None
             text = embedded
             if len(re.sub(r"\s+", "", embedded)) < 40:
-                # 3.5x needed so digits like Issue=12 are not read as 2 on dense scans
-                text, image_bytes = _ocr_pdf_page_text(page, zoom=max(zoom, 3.5))
+                # Image-only statements: ~300 DPI helps Group Wise Sales digit columns
+                render_zoom = max(zoom, 300.0 / 72.0)
+                text, image_bytes = _ocr_pdf_page_text(page, zoom=render_zoom)
             else:
                 # Still render for image fallback if needed later
                 pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
@@ -2233,13 +3531,18 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
     """Turn free-form sales-statement text into unified JSON."""
     import os
 
-    # 0) P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING (before Gemini)
+    # 0) Group Wise Sales Op.Stock/Purchase/Sales/Cl.Stock (before other PDF heuristics)
+    gw = _parse_group_wise_sales_statement(text, filename, source_format)
+    if gw and gw.get("line_items"):
+        return gw
+
+    # 0b) P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING (before Gemini)
     ps = _parse_ps_pharma_statement(text, filename)
     if ps and (ps.get("line_items") or ps.get("totals", {}).get("opening_qty") is not None):
         ps["source_format"] = source_format
         return ps
 
-    # 0b) Mahajan-style OpBal/Receipt/Total/Issue/Closing (before Gemini)
+    # 0c) Mahajan-style OpBal/Receipt/Total/Issue/Closing (before Gemini)
     opbal = _parse_opbal_receipt_issue_statement(text, filename, source_format)
     if opbal and opbal.get("line_items"):
         return opbal
@@ -2409,31 +3712,6 @@ def _image_mime(ext: str) -> str:
         ".tiff": "image/tiff",
         ".webp": "image/webp",
     }.get(ext, "image/jpeg")
-
-
-def _ocr_image_to_text(file_bytes: bytes) -> str:
-    """Local Tesseract OCR fallback for sales-statement images."""
-    try:
-        import pytesseract
-        from PIL import Image
-    except ImportError as exc:
-        raise RuntimeError("pytesseract/Pillow required for image OCR fallback") from exc
-
-    import os
-
-    cmd = os.getenv("TESSERACT_CMD", "").strip()
-    if cmd:
-        pytesseract.pytesseract.tesseract_cmd = cmd
-    elif os.name == "nt":
-        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-        if os.path.exists(win_cmd):
-            pytesseract.pytesseract.tesseract_cmd = win_cmd
-
-    image = Image.open(io.BytesIO(file_bytes))
-    if image.mode not in ("RGB", "L"):
-        image = image.convert("RGB")
-    # psm 6 (uniform block) reads dense OpBal/Issue qty tables more reliably than default
-    return pytesseract.image_to_string(image, config="--psm 6") or ""
 
 
 def _gemini_response_text(response) -> str:
