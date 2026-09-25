@@ -2910,6 +2910,9 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
         if isinstance(additional, dict) and additional.get("layout") in (
             "prompt_datewise",
             "zl_opening_primary_closing",
+            "order_form",
+            "rate_qty_value",
+            "qty_value_dump",
         ):
             kept_items.append(item)
             continue
@@ -26914,8 +26917,9 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         or ""
     ).strip()
     qty = line.get("sales_qty")
-    # PROMPT datewise statements print Sales Qty separately from ClStk.
-    # Do not copy closing qty into quantity, or one product's stock shows as another's sale.
+    # Sales Qty is the printed Sale column. Closing Stock stays in closing_qty.
+    # Copying Cl Stock into quantity made Secondary Sales show Sale = Closing
+    # (for example Sale 0 and Cl Stock 4 both displayed as 4).
     prompt_datewise = extra.get("layout") == "prompt_datewise"
     zl_bal = extra.get("layout") == "zl_opening_primary_closing"
     paired_value = extra.get("layout") == "paired_stock_value"
@@ -26924,10 +26928,11 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     if (
         not prompt_datewise
         and not issue_qty
+        and (zl_bal or paired_value)
         and qty in (None, "", 0, 0.0)
         and line.get("closing_qty") not in (None, "")
     ):
-        # Stock-only rows still expose a quantity for UI tables
+        # These two layouts have no sales column. Their displayed quantity is closing.
         qty = line.get("closing_qty")
     amount = line.get("sales_value")
     unit_price = ""
@@ -26965,19 +26970,43 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "sales_scheme",
         "opening_qty",
         "receipts_qty",
+        "receipts_value",
+        "sales_qty",
         "closing_qty",
         "closing_value",
+        "others_qty",
+        "dump_qty",
     ):
+        # A printed 0 is the source value. Dropping it made the page show 0 for
+        # a missing field and then reuse Sales as Closing.
+        keep_zero = key in {
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "others_qty",
+        }
         if key in extra and extra.get(key) not in (None, ""):
             additional[key] = extra[key]
         elif prompt_datewise and key in line and line.get(key) not in (None, ""):
             additional[key] = line.get(key)
-        elif key in line and line.get(key) not in (None, "", 0, 0.0):
+        elif key in line and (
+            line.get(key) not in (None, "", 0, 0.0)
+            or (keep_zero and line.get(key) not in (None, ""))
+        ):
             additional[key] = line.get(key)
+    if extra.get("others_qty") not in (None, "") and "others_qty" not in additional:
+        additional["others_qty"] = extra.get("others_qty")
     if line.get("packing"):
         additional["packing"] = line.get("packing")
     if prompt_datewise:
         additional["layout"] = "prompt_datewise"
+    if extra.get("layout") == "order_form":
+        additional["layout"] = "order_form"
+    if extra.get("layout") == "rate_qty_value":
+        additional["layout"] = "rate_qty_value"
+    if extra.get("layout") == "qty_value_dump":
+        additional["layout"] = "qty_value_dump"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
