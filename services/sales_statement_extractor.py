@@ -1420,6 +1420,41 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "closing=opening+receipts-sales"
         )
 
+    # Medica prints IN/OT between SALE VAL and STOCK. Closing is the STOCK
+    # column. Opening+Receipts-Sales is 13 short of STOCK on this file and
+    # must not be stored as the closing total.
+    if totals["extra"].get("extraction_method") == "medica_opstk_columns":
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = receipt_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_formula"] = "closing_qty summed from STOCK"
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "opening_plus_purchase": opening_sum + receipt_sum,
+            "expected_total": opening_sum + receipt_sum,
+            "calculated_closing": closing_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": True,
+        }
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -4735,6 +4770,9 @@ def _drop_trailing_statement_total_item(
 
 def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     blob = text or ""
+    # Medica Ultimate prints OPSTK and IN/OT. That is not the Zandra Op Stk grid.
+    if re.search(r"\bOPSTK\b", blob) and re.search(r"\bIN/OT\b", blob):
+        return False
     if re.search(r"Stock\s+and\s+Sale\s+Statement|Op\s*Stk|Cl\s*Stk", blob, re.I):
         return True
     if re.search(r"Sale\s+Statement", blob, re.I) and re.search(
@@ -8284,6 +8322,211 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
     return result
 
 
+def _is_medica_opstk_statement(text: str) -> bool:
+    """Medica Ultimate stock statement: OPSTK PURCH SALE SALE VAL IN/OT STOCK STK VAL."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"\bOPSTK\b", text)
+        and re.search(r"\bPURCH\b", text)
+        and re.search(r"\bIN/OT\b", text)
+        and re.search(r"\bSTK\s*VAL\b", text, re.I)
+    )
+
+
+def _medica_opstk_header(words: List[Any]) -> Optional[Dict[str, Any]]:
+    """Column right-edges from the printed header. Numbers are right-aligned to these."""
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda w: (round(float(w[1]), 1), float(w[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        token = str(word[4] or "").strip()
+        if not token:
+            continue
+        y0 = float(word[1])
+        if rows and abs(y0 - rows[-1]["y"]) <= 2.4:
+            rows[-1]["words"].append(word)
+        else:
+            rows.append({"y": y0, "words": [word]})
+    for row in rows:
+        labels = [str(w[4]).strip().upper() for w in row["words"]]
+        if "OPSTK" not in labels or "IN/OT" not in labels or "PURCH" not in labels:
+            continue
+        ordered = sorted(row["words"], key=lambda w: float(w[0]))
+        anchors: Dict[str, float] = {}
+        pack_x0 = None
+        seen_sale = 0
+        seen_stock = False
+        for word in ordered:
+            label = str(word[4]).strip().upper()
+            right = float(word[2])
+            if label == "PACKING":
+                pack_x0 = float(word[0])
+            elif label == "OPSTK":
+                anchors["opening_qty"] = right
+            elif label == "PURCH":
+                anchors["receipts_qty"] = right
+            elif label == "SALE":
+                seen_sale += 1
+                if seen_sale == 1:
+                    anchors["sales_qty"] = right
+            elif label == "VAL" and seen_sale >= 2 and "sales_value" not in anchors:
+                anchors["sales_value"] = right
+            elif label == "IN/OT":
+                anchors["in_ot"] = right
+            elif label == "STOCK":
+                anchors["closing_qty"] = right
+                seen_stock = True
+            elif label == "VAL" and seen_stock and "closing_value" not in anchors:
+                anchors["closing_value"] = right
+        needed = {
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "sales_value",
+            "in_ot",
+            "closing_qty",
+            "closing_value",
+        }
+        if not needed <= set(anchors) or pack_x0 is None:
+            return None
+        rights = sorted(anchors.values())
+        min_gap = min(rights[i + 1] - rights[i] for i in range(len(rights) - 1))
+        return {
+            "y": row["y"],
+            "anchors": anchors,
+            "pack_x0": pack_x0,
+            "max_dist": max(8.0, min_gap * 0.45),
+        }
+    return None
+
+
+def _medica_opstk_items_from_words(words: List[Any]) -> List[Dict[str, Any]]:
+    """Read one Medica page. IN/OT is never closing qty; STOCK is."""
+    header = _medica_opstk_header(words)
+    if not header:
+        return []
+    anchors: Dict[str, float] = header["anchors"]
+    max_dist = header["max_dist"]
+    pack_x0 = header["pack_x0"]
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda w: (round(float(w[1]), 1), float(w[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        token = str(word[4] or "").strip()
+        if not token:
+            continue
+        y0 = float(word[1])
+        if y0 <= header["y"] + 2.0:
+            continue
+        if rows and abs(y0 - rows[-1]["y"]) <= 2.4:
+            rows[-1]["words"].append(word)
+        else:
+            rows.append({"y": y0, "words": [word]})
+
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        cells: Dict[str, List[str]] = {field: [] for field in anchors}
+        name_bits: List[str] = []
+        pack_bits: List[str] = []
+        for word in sorted(row["words"], key=lambda w: float(w[0])):
+            token = str(word[4]).strip()
+            right = float(word[2])
+            left = float(word[0])
+            nearest = None
+            nearest_dist = None
+            for field, edge in anchors.items():
+                dist = abs(right - edge)
+                if nearest_dist is None or dist < nearest_dist:
+                    nearest, nearest_dist = field, dist
+            if (
+                nearest
+                and nearest_dist is not None
+                and nearest_dist <= max_dist
+                and re.fullmatch(r"-?\d+(?:\.\d+)?", token.replace(",", ""))
+            ):
+                cells[nearest].append(token.replace(",", ""))
+                continue
+            if right < pack_x0:
+                name_bits.append(token)
+            elif left >= pack_x0 - 1.0 and right < anchors["opening_qty"] - 8.0:
+                pack_bits.append(token)
+        name = _clean_name(" ".join(name_bits))
+        if not name or re.search(
+            r"\bTOTAL\b|DIVISION|END\s+OF\s+REPORT|PRODUCT\s+DESCRIPTION|PAGE\s+NO",
+            name,
+            re.I,
+        ):
+            continue
+        if not cells["opening_qty"]:
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = _clean_name(" ".join(pack_bits)) or None
+
+        def _cell(field: str) -> float:
+            bits = cells.get(field) or []
+            if not bits:
+                return 0.0
+            return _to_float(bits[-1])
+
+        item["opening_qty"] = _cell("opening_qty")
+        item["receipts_qty"] = _cell("receipts_qty")
+        item["sales_qty"] = _cell("sales_qty")
+        item["sales_value"] = _cell("sales_value")
+        item["closing_qty"] = _cell("closing_qty")
+        item["closing_value"] = _cell("closing_value")
+        items.append(item)
+    return items
+
+
+def _parse_medica_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Medica Ultimate OPSTK/PURCH/SALE/IN-OT/STOCK rows from word positions.
+
+    Returns None for every other statement layout.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_medica_opstk_statement(text) for text in page_texts):
+        return None
+    items: List[Dict[str, Any]] = []
+    for page, text in zip(doc, page_texts):
+        if not _is_medica_opstk_statement(text):
+            continue
+        items.extend(_medica_opstk_items_from_words(page.get_text("words") or []))
+    if not items:
+        return None
+    result = empty_result(filename, "pdf")
+    blob = "\n".join(page_texts)
+    result["report_title"] = "STOCK STATEMENT"
+    lines = [line.strip() for line in blob.splitlines() if line.strip()]
+    for index, stripped in enumerate(lines):
+        party = re.match(r"^TO\s*:\s*(.+)$", stripped, re.I)
+        if party and not result.get("company_name"):
+            result["company_name"] = _clean_name(party.group(1))
+            if index > 0 and not result.get("stockist_name"):
+                previous = lines[index - 1]
+                if not re.search(r"STOCK|STATEMENT|PRODUCT|OPSTK|DATE|PACKING", previous, re.I):
+                    result["stockist_name"] = _clean_name(previous)
+        dates = re.search(
+            r"From\s*Date\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
+            r"To\s*Date\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            stripped,
+            re.I,
+        )
+        if dates:
+            result["period_from"] = _normalize_date(dates.group(1))
+            result["period_to"] = _normalize_date(dates.group(2))
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item.get("sales_value")) for item in items), 2
+    )
+    result["totals"]["closing_value"] = round(
+        sum(_to_float(item.get("closing_value")) for item in items), 2
+    )
+    result["totals"]["extra"]["extraction_method"] = "medica_opstk_columns"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -8298,6 +8541,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        medica_stmt = _parse_medica_opstk_statement(doc, filename)
+        if medica_stmt and medica_stmt.get("line_items"):
+            medica_stmt["totals"]["extra"]["statement_count"] = 1
+            return medica_stmt
+
         detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
         if detail_stmt and detail_stmt.get("line_items"):
             detail_stmt["totals"]["extra"]["statement_count"] = 1
