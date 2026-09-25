@@ -1507,6 +1507,30 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # SALE / CLOSING / RE-ORDER sheets have no opening or receipt columns.
+    # Do not score them with opening + receipts - sales, and do not fill those totals.
+    if totals["extra"].get("extraction_method") == "ssa_sale_closing_reorder":
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "sale_closing_reorder"
+        totals["extra"]["stock_identity_formula"] = (
+            "sales=SALE; closing=CLOSING; reorder=RE-ORDER; "
+            "no opening or receipt columns"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": True,
+        }
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -1576,8 +1600,27 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             _ensure_stock_qty_value_fields(stmt) for stmt in result["statements"]
         ]
         return result
+    sale_closing_reorder = (
+        str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
+        == "ssa_sale_closing_reorder"
+    )
     for item in result.get("line_items") or []:
         if not isinstance(item, dict):
+            continue
+        # This print has no opening or receipt columns. Leave them empty
+        # instead of turning a missing column into a false 0.
+        if sale_closing_reorder:
+            for key in (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+            ):
+                if key not in item:
+                    item[key] = None
+            for key in ("sales_qty", "sales_value", "closing_qty", "closing_value"):
+                if item.get(key) in (None, ""):
+                    item[key] = 0.0
             continue
         for key in (
             "opening_qty",
@@ -4402,6 +4445,11 @@ def _looks_like_stockist_header(line: str) -> bool:
     if len(s) < 4 or len(s) > 90:
         return False
     if re.search(r"^\d", s):
+        return False
+    # Footer on a SALE/CLOSING sheet. It is not a new stockist.
+    if re.search(r"\bLAST\s+MONTH\s+SALE\b", s, re.I):
+        return False
+    if re.match(r"(?:QUANTITY|VALUE)\s+[-+]?\d", s, re.I):
         return False
     if re.search(
         r"PRODUCT|PACKING|ITEM\s+DESCRIPT|OpBal|OPENING|CLOSING|GSTIN|Phone\s*:|"
@@ -9585,6 +9633,359 @@ def _parse_summary_rtl_statement(doc, filename: str) -> Optional[Dict[str, Any]]
     return _summary_rtl_finish(items, "\n".join(blobs), filename, "pdf")
 
 
+_SSA_SCR_METHOD = "ssa_sale_closing_reorder"
+_SSA_SCR_MONTHS = {
+    "JANUARY",
+    "FEBRUARY",
+    "MARCH",
+    "APRIL",
+    "MAY",
+    "JUNE",
+    "JULY",
+    "AUGUST",
+    "SEPTEMBER",
+    "OCTOBER",
+    "NOVEMBER",
+    "DECEMBER",
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+}
+
+
+def _ssa_scr_letters(token: str) -> str:
+    return re.sub(r"[^A-Z]", "", str(token or "").upper())
+
+
+def _ssa_scr_rows(words: List[Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words or [], key=lambda w: (round(float(w[1]), 1), float(w[0]))):
+        if not isinstance(word, (list, tuple)) or len(word) < 5:
+            continue
+        token = str(word[4] or "").strip()
+        if not token or token.startswith("---"):
+            continue
+        x0, x1, y0 = float(word[0]), float(word[2]), float(word[1])
+        if rows and abs(y0 - rows[-1]["y"]) <= 1.6:
+            row = rows[-1]
+        else:
+            row = {"y": y0, "words": []}
+            rows.append(row)
+        row["words"].append((x0, x1, token))
+    return rows
+
+
+def _ssa_scr_header(rows: List[Dict[str, Any]], index: int) -> Optional[Dict[str, Any]]:
+    """SALE qty/value + CLOSING qty/value + RE-ORDER. Other SSA headers return None."""
+    if index + 1 >= len(rows):
+        return None
+    parent = rows[index]["words"]
+    sub = rows[index + 1]["words"]
+    parent_norm = [_ssa_scr_letters(token) for _x0, _x1, token in parent]
+    sub_norm = [_ssa_scr_letters(token) for _x0, _x1, token in sub]
+    blocked = {"OPENING", "RECEIPT", "ISSUE", "DUMP", "PURCHASE", "PURCHASES", "RATE"}
+    if blocked.intersection(parent_norm) or blocked.intersection(sub_norm):
+        return None
+    if "SALE" not in parent_norm and "SALES" not in parent_norm:
+        return None
+    if "CLOSING" not in parent_norm:
+        return None
+    if "RE" not in parent_norm and "REORDER" not in parent_norm and "ORDER" not in sub_norm:
+        return None
+    if sub_norm.count("QTY") < 2 or sub_norm.count("VALUE") < 2 or "ORDER" not in sub_norm:
+        return None
+
+    anchors: Dict[str, Tuple[float, float, float]] = {}
+    seen_qty = 0
+    seen_value = 0
+    for x0, x1, token in sub:
+        label = _ssa_scr_letters(token)
+        center = (x0 + x1) / 2.0
+        if label == "QTY":
+            seen_qty += 1
+            field = "sales_qty" if seen_qty == 1 else "closing_qty" if seen_qty == 2 else ""
+            if field:
+                anchors[field] = (center, x0, x1)
+        elif label == "VALUE":
+            seen_value += 1
+            field = "sales_value" if seen_value == 1 else "closing_value" if seen_value == 2 else ""
+            if field:
+                anchors[field] = (center, x0, x1)
+        elif label == "ORDER":
+            anchors["order_header"] = (center, x0, x1)
+    needed = {"sales_qty", "sales_value", "closing_qty", "closing_value", "order_header"}
+    if not needed.issubset(anchors):
+        return None
+    order_center = anchors["order_header"][0]
+    closing_center = anchors["closing_value"][0]
+    reorder_center = order_center + (order_center - closing_center)
+    anchors["reorder"] = (reorder_center, reorder_center, reorder_center)
+    return {"anchors": anchors, "next_index": index + 2}
+
+
+def _ssa_scr_plain_number(token: str) -> Optional[float]:
+    raw = str(token or "").strip()
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return None
+    return float(raw)
+
+
+def _ssa_scr_reorder_value(header_token: str, right_token: str) -> Any:
+    """Far-right column is reorder. A printed 0 there yields to a heading quantity.
+
+    AMYRON prints 12 under RE-ORDER and 0 in the far column. Section totals print
+    the reorder figure in the far column (27K / 29K). A dash under the heading
+    with 0 on the right stays 0.
+    """
+    right = str(right_token or "").strip()
+    header = str(header_token or "").strip()
+    if re.fullmatch(r"\d+(?:\.\d+)?K", right, re.I):
+        return right.upper()
+    right_num = _ssa_scr_plain_number(right)
+    header_num = _ssa_scr_plain_number(header)
+    if right_num not in (None, 0.0):
+        return right_num
+    if header_num is not None:
+        return header_num
+    if right_num is not None:
+        return right_num
+    return None
+
+
+def _ssa_scr_assign(
+    words: List[Tuple[float, float, str]], anchors: Dict[str, Tuple[float, float, float]]
+) -> Tuple[str, Optional[str], Dict[str, str]]:
+    pack_min = anchors["sales_qty"][1] - 55.0
+    number_min = anchors["sales_qty"][1] - 8.0
+    name_bits: List[str] = []
+    pack_bits: List[str] = []
+    cells: Dict[str, str] = {}
+    fields = (
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "order_header",
+        "reorder",
+    )
+    for x0, x1, token in words:
+        if x0 < pack_min:
+            name_bits.append(token)
+            continue
+        if x0 < number_min:
+            pack_bits.append(token)
+            continue
+        center = (x0 + x1) / 2.0
+        field = min(fields, key=lambda name: abs(center - anchors[name][0]))
+        cells[field] = token
+    name = _clean_name(" ".join(name_bits))
+    packing = _clean_name(" ".join(pack_bits)) or None
+    return name, packing, cells
+
+
+def _parse_ssa_sale_closing_reorder(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """STOCK & SALES ANALYSIS with SALE, CLOSING, and RE-ORDER only.
+
+    Opening and receipt columns are not printed. Continuation pages, including
+    rows above a repeated header, stay in the same statement. Other layouts
+    return None.
+    """
+    page_rows: List[List[Dict[str, Any]]] = []
+    blobs: List[str] = []
+    detected = False
+    for page in doc:
+        text = page.get_text("text") or ""
+        blobs.append(text)
+        rows = _ssa_scr_rows(page.get_text("words") or [])
+        page_rows.append(rows)
+        for index in range(len(rows)):
+            if _ssa_scr_header(rows, index):
+                detected = True
+                break
+    if not detected:
+        return None
+
+    blob = "\n".join(blobs)
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    company = re.search(r"\(\s*(HIMALAYA[^)]*)\)", blob, re.I)
+    if company:
+        result["company_name"] = _clean_name(company.group(1))
+    elif re.search(r"\bHIMALAYA\b", blob, re.I):
+        result["company_name"] = "HIMALAYA"
+    for line in blob.splitlines():
+        stripped = line.strip()
+        if stripped and not re.search(
+            r"STOCK|---|ITEM|GSTIN|SALE|CLOSING|Reorder|Page|Continued",
+            stripped,
+            re.I,
+        ):
+            result["stockist_name"] = _clean_name(stripped)
+            break
+    period = re.search(
+        r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
+        blob,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    section_totals: List[Dict[str, Any]] = []
+    last_month_sales: List[Dict[str, Any]] = []
+    anchors: Optional[Dict[str, Tuple[float, float, float]]] = None
+    pending_month: Optional[str] = None
+    pending_qty: Optional[float] = None
+
+    def _row_number(cells: Dict[str, str], packing: Optional[str], name: str) -> Optional[float]:
+        tokens = list(cells.values())
+        if packing:
+            tokens.append(packing)
+        tokens.extend(name.split())
+        for token in tokens:
+            number = _ssa_scr_plain_number(str(token))
+            if number is not None:
+                return number
+        return None
+
+    for rows in page_rows:
+        index = 0
+        while index < len(rows):
+            header = _ssa_scr_header(rows, index)
+            if header:
+                anchors = header["anchors"]
+                pending_month = None
+                pending_qty = None
+                index = header["next_index"]
+                continue
+            if not anchors:
+                index += 1
+                continue
+            name, packing, cells = _ssa_scr_assign(rows[index]["words"], anchors)
+            index += 1
+            if not name:
+                continue
+            upper = name.upper()
+            if upper.startswith("LAST MONTH SALE"):
+                month = next(
+                    (part for part in name.split() if part.upper() in _SSA_SCR_MONTHS),
+                    None,
+                )
+                pending_month = month or pending_month
+                pending_qty = None
+                continue
+            if pending_month and upper.startswith("QUANTITY"):
+                pending_qty = _row_number(cells, packing, name)
+                continue
+            if pending_month and upper.startswith("VALUE"):
+                value = _row_number(cells, packing, name)
+                if pending_qty is not None and value is not None:
+                    last_month_sales.append(
+                        {
+                            "month": pending_month,
+                            "quantity": pending_qty,
+                            "value": value,
+                        }
+                    )
+                pending_month = None
+                pending_qty = None
+                continue
+            if upper == "TOTAL":
+                sales_qty = _ssa_scr_plain_number(cells.get("sales_qty", ""))
+                sales_value = _ssa_scr_plain_number(cells.get("sales_value", ""))
+                closing_qty = _ssa_scr_plain_number(cells.get("closing_qty", ""))
+                closing_value = _ssa_scr_plain_number(cells.get("closing_value", ""))
+                reorder = _ssa_scr_reorder_value(
+                    cells.get("order_header", ""),
+                    cells.get("reorder", ""),
+                )
+                if sales_qty is None and closing_qty is None:
+                    continue
+                section_totals.append(
+                    {
+                        "sales_qty": sales_qty,
+                        "sales_value": sales_value,
+                        "closing_qty": closing_qty,
+                        "closing_value": closing_value,
+                        "reorder": reorder,
+                    }
+                )
+                continue
+            if re.search(
+                r"^(ITEM|DESCRIPTION|STOCK|PAGE|CONTINUED|HIMALAYA|REORDER)\b",
+                name,
+                re.I,
+            ):
+                continue
+            if "sales_qty" not in cells and "closing_qty" not in cells:
+                continue
+            if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+                continue
+            sales_qty = _ssa_scr_plain_number(cells.get("sales_qty", ""))
+            sales_value = _ssa_scr_plain_number(cells.get("sales_value", ""))
+            closing_qty = _ssa_scr_plain_number(cells.get("closing_qty", ""))
+            closing_value = _ssa_scr_plain_number(cells.get("closing_value", ""))
+            if None in (sales_qty, sales_value, closing_qty, closing_value):
+                continue
+            reorder = _ssa_scr_reorder_value(
+                cells.get("order_header", ""),
+                cells.get("reorder", ""),
+            )
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = None
+            item["opening_value"] = None
+            item["receipts_qty"] = None
+            item["receipts_value"] = None
+            item["receipt_value"] = None
+            item["sales_qty"] = sales_qty
+            item["sales_value"] = sales_value
+            item["closing_qty"] = closing_qty
+            item["closing_value"] = closing_value
+            item["reorder_qty"] = reorder
+            extra = item["extra"]
+            extra["layout"] = _SSA_SCR_METHOD
+            extra["opening_value"] = None
+            extra["receipts_value"] = None
+            extra["receipt_value"] = None
+            extra["reorder_qty"] = reorder
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"].setdefault("extra", {})
+    extra["extraction_method"] = _SSA_SCR_METHOD
+    extra["layout"] = _SSA_SCR_METHOD
+    extra["section_totals"] = section_totals
+    extra["split_pages"] = list(range(1, len(page_rows) + 1))
+    result["split_pages"] = extra["split_pages"]
+    if last_month_sales:
+        extra["last_month_sale"] = last_month_sales[0]
+        extra["last_month_sales"] = last_month_sales
+    if section_totals:
+        last_total = section_totals[-1]
+        result["totals"]["sales_qty"] = last_total.get("sales_qty")
+        result["totals"]["sales_value"] = last_total.get("sales_value")
+        result["totals"]["closing_qty"] = last_total.get("closing_qty")
+        result["totals"]["closing_value"] = last_total.get("closing_value")
+        extra["reorder"] = last_total.get("reorder")
+    result["totals"]["opening_qty"] = None
+    result["totals"]["receipts_qty"] = None
+    result["totals"]["opening_value"] = None
+    result["totals"]["receipts_value"] = None
+    return result
+
+
 def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     """STOCK & SALES ANALYSIS: TOTAL STOCK is not the SALES QTY column.
 
@@ -9944,6 +10345,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if summary_rtl and summary_rtl.get("line_items"):
             summary_rtl["totals"]["extra"]["statement_count"] = 1
             return summary_rtl
+
+        sale_closing = _parse_ssa_sale_closing_reorder(doc, filename)
+        if sale_closing and sale_closing.get("line_items"):
+            sale_closing["multi_statement"] = False
+            sale_closing["statement_count"] = 1
+            sale_closing["totals"]["extra"]["statement_count"] = 1
+            return sale_closing
 
         analysis_stmt = _parse_stock_sales_analysis(doc, filename)
         if analysis_stmt and analysis_stmt.get("line_items"):

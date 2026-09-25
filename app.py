@@ -26975,6 +26975,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "sales_qty",
         "closing_qty",
         "closing_value",
+        "reorder_qty",
         "others_qty",
         "dump_qty",
     ):
