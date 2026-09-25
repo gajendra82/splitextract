@@ -4659,6 +4659,162 @@ def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     return False
 
 
+def _looks_like_zl_opening_bal_sheet(result: Optional[Dict[str, Any]]) -> bool:
+    """Phone screenshot of the ZL Opening_bal_qty / Secondaryrate grid.
+
+    Title is the spreadsheet tab (Sheet1). There is no sales-qty column.
+    Other stock statements are not titled SheetN, so they stay on their parsers.
+    """
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if extra.get("extraction_method") == "zl_opening_bal_sheet_vision":
+        return True
+    title = str(result.get("report_title") or "").strip()
+    if not re.fullmatch(r"Sheet\s*\d+", title, re.I):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    if any(abs(_to_float(i.get("sales_qty"))) > 0 for i in items):
+        return False
+    return sum(1 for i in items if _to_float(i.get("opening_qty")) > 0) >= 3
+
+
+_ZL_OPENING_BAL_SHEET_PROMPT = """
+This image is a spreadsheet screenshot of a Himalaya ZL stock dump.
+Use it ONLY when the header row is:
+Material_name | Mrp | Secondaryrate | Opening_bal_qty | Primary_qty | Closing_bal_qty
+
+There is NO sales quantity column and NO amount column.
+Do not map Secondaryrate to sales_qty. Do not map Mrp to opening or closing.
+
+Column mapping, left to right:
+- Material_name -> product_name
+- Mrp -> extra.mrp
+- Secondaryrate -> extra.unit_rate
+- Opening_bal_qty -> opening_qty
+- Primary_qty -> receipts_qty
+- Closing_bal_qty -> closing_qty
+- sales_qty = 0
+- sales_value = 0
+- closing_value = 0
+
+Ignore the phone status bar, Excel toolbar, and row numbers.
+Read only rows that are fully visible. Do not invent products.
+Copy printed numbers. Do not recompute closing from opening.
+
+Example: CONFIDO TABS (FC) 60s (AG)
+opening_qty=100, receipts_qty=0, closing_qty=85, extra.mrp=255, extra.unit_rate=172.23
+
+Return ONLY JSON:
+{
+  "stockist_name": null,
+  "stockist_address": null,
+  "company_name": null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": "Sheet1",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": string,
+      "packing": null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": 0,
+      "sales_value": 0,
+      "closing_qty": number,
+      "closing_value": 0,
+      "extra": {"mrp": number, "unit_rate": number}
+    }
+  ]
+}
+""".strip()
+
+
+def _finalize_zl_opening_bal_sheet(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Match the Excel ZL layout: rate and MRP live in extra, sales qty stays 0."""
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if not name or re.fullmatch(r"Material_?name|Mrp|Sheet\s*\d+", name, re.I):
+            continue
+        extra = item.get("extra")
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        extra["layout"] = "zl_opening_primary_closing"
+        if extra.get("mrp") not in (None, ""):
+            extra["mrp"] = _to_float(extra.get("mrp"))
+        rate = extra.get("unit_rate")
+        if rate not in (None, ""):
+            rate = _to_float(rate)
+            extra["unit_rate"] = rate
+        item["sales_qty"] = 0.0
+        item["sales_value"] = 0.0
+        if rate not in (None, "", 0, 0.0) and item.get("closing_qty") is not None:
+            item["closing_value"] = round(_to_float(item.get("closing_qty")) * rate, 2)
+        items.append(item)
+    result["line_items"] = items
+    result["report_title"] = result.get("report_title") or "Sheet1"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "zl_opening_bal_sheet_vision"
+    result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    return result
+
+
+def _extract_zl_opening_bal_sheet_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Re-read a ZL Opening_bal_qty screenshot with a column-locked prompt."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _ZL_OPENING_BAL_SHEET_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 32768},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+    if not parsed or not parsed.get("line_items"):
+        if last_err:
+            logger.warning(
+                "ZL opening-bal sheet vision failed for %s: %s", filename, last_err
+            )
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_parsed_sales_json(result, parsed)
+    return _finalize_zl_opening_bal_sheet(result)
+
+
 def _looks_like_zandra_stock_sale_result(result: Optional[Dict[str, Any]]) -> bool:
     if not isinstance(result, dict):
         return False
@@ -4969,11 +5125,55 @@ _PROMPT_DATEWISE_BUCKETS = (
 )
 
 
-def _prompt_datewise_bucket(x: float) -> Optional[str]:
-    for name, lo, hi in _PROMPT_DATEWISE_BUCKETS:
+def _prompt_datewise_bucket(
+    x: float, buckets: Optional[Tuple] = None
+) -> Optional[str]:
+    for name, lo, hi in buckets or _PROMPT_DATEWISE_BUCKETS:
         if lo <= x < hi:
             return name
     return None
+
+
+def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
+    """Keep the standard columns unless Sales Qty sits inside the Pur span.
+
+    On this Datewise variant the Sales Qty header is near x=275, so those
+    numbers fall in receipts_qty (245–285). Other PROMPT files, where Sales
+    Qty is already at or right of 285, keep the original ranges.
+    """
+    sales_x = None
+    free_x = None
+    qty_xs: List[float] = []
+    for w in words or []:
+        token = str(w[4]).strip()
+        x = float(w[0])
+        if token == "Sales":
+            sales_x = x
+        elif token == "Free":
+            free_x = x
+        elif token == "Qty":
+            qty_xs.append(x)
+    if sales_x is None:
+        return _PROMPT_DATEWISE_BUCKETS
+    sales_qty_x = max((x for x in qty_xs if x < sales_x), default=None)
+    if sales_qty_x is None or sales_qty_x >= 285:
+        return _PROMPT_DATEWISE_BUCKETS
+    pur_qty_x = max((x for x in qty_xs if x < sales_qty_x - 5), default=245.0)
+    split = max(250.0, min((pur_qty_x + sales_qty_x) / 2.0, 284.0))
+    sales_hi = 325.0
+    if free_x is not None and free_x > sales_qty_x + 8:
+        sales_hi = min(sales_hi, free_x - 4)
+    adjusted = []
+    for name, lo, hi in _PROMPT_DATEWISE_BUCKETS:
+        if name == "receipts_qty":
+            adjusted.append((name, lo, split))
+        elif name == "sales_qty":
+            adjusted.append((name, split, sales_hi))
+        elif name == "sales_value":
+            adjusted.append((name, sales_hi, hi))
+        else:
+            adjusted.append((name, lo, hi))
+    return tuple(adjusted)
 
 
 def _is_prompt_datewise_stock_statement(text: str) -> bool:
@@ -5014,10 +5214,11 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
     for page, text in zip(doc, page_texts):
         words = page.get_text("words") or []
         words = sorted(words, key=lambda w: (round(w[1], 1), w[0]))
+        buckets = _prompt_datewise_buckets_for_words(words)
         rows: List[Dict[str, Any]] = []
         for w in words:
             x0, y0, _x1, _y1, token = w[0], w[1], w[2], w[3], w[4]
-            bucket = _prompt_datewise_bucket(x0)
+            bucket = _prompt_datewise_bucket(x0, buckets)
             if not bucket or not str(token).strip():
                 continue
             if rows and abs(y0 - rows[-1]["y"]) <= 3.0:
@@ -7535,6 +7736,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
                 result = _apply_parsed_sales_json(result, parsed)
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _looks_like_zl_opening_bal_sheet(result):
+                    zl_sheet = _extract_zl_opening_bal_sheet_vision(
+                        file_bytes, filename, ext
+                    )
+                    if zl_sheet and zl_sheet.get("line_items"):
+                        return zl_sheet
                 if _looks_like_zandra_stock_sale_result(result):
                     zandra = _extract_zandra_stock_sale_vision(
                         file_bytes, filename, ext
