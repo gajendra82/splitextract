@@ -1450,6 +1450,75 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _insert_line_field(item: Dict[str, Any], after: str, key: str, value: float) -> None:
+    """Place a missing qty/value column beside its pair. Existing numbers stay."""
+    if key in item and item.get(key) not in (None, ""):
+        return
+    ordered: Dict[str, Any] = {}
+    placed = False
+    for name, current in item.items():
+        ordered[name] = current
+        if name == after:
+            ordered[key] = value
+            placed = True
+    if not placed:
+        ordered[key] = value
+    item.clear()
+    item.update(ordered)
+
+
+def _extra_number(item: Dict[str, Any], *names: str) -> Optional[float]:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for name in names:
+        if name in item and item.get(name) not in (None, ""):
+            return _to_float(item.get(name))
+        if isinstance(extra, dict) and name in extra and extra.get(name) not in (None, ""):
+            return _to_float(extra.get(name))
+    return None
+
+
+def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Always return the eight stock columns. A missing column is 0.
+
+    Does not replace a number a parser already stored.
+    """
+    if not isinstance(result, dict):
+        return result
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            _ensure_stock_qty_value_fields(stmt) for stmt in result["statements"]
+        ]
+        return result
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+        ):
+            if item.get(key) in (None, ""):
+                item[key] = 0.0
+        opening_value = _extra_number(item, "opening_value")
+        _insert_line_field(
+            item,
+            "opening_qty",
+            "opening_value",
+            0.0 if opening_value is None else opening_value,
+        )
+        receipts_value = _extra_number(item, "receipts_value", "purchase_value")
+        _insert_line_field(
+            item,
+            "receipts_qty",
+            "receipts_value",
+            0.0 if receipts_value is None else receipts_value,
+        )
+    return result
+
+
 def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Dispatch by extension and return unified sales-statement JSON."""
     name = Path(filename or "upload").name
@@ -1476,7 +1545,8 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         raise ValueError(f"Unsupported format '{ext}'")
 
     result = _sanitize_statement_financials(result)
-    return _apply_stock_identity_validation(result)
+    result = _apply_stock_identity_validation(result)
+    return _ensure_stock_qty_value_fields(result)
 
 
 # ---------------------------------------------------------------------------
@@ -4900,6 +4970,161 @@ def _extract_zl_opening_bal_sheet_vision(
     return _finalize_zl_opening_bal_sheet(result)
 
 
+def _zl_opening_bal_sheet_strips(file_bytes: bytes) -> List[bytes]:
+    """Header plus short row bands for a dense phone screenshot of this sheet.
+
+    Full-image reads shift Closing_bal_qty onto the next product. Bands stay on
+    the 11px grid so a row is never split. Other statement images are not cropped.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return [file_bytes]
+    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    width, height = image.size
+    pixels = image.load()
+    teal_rows = []
+    for y in range(height):
+        teals = 0
+        for x in range(0, width, 4):
+            red, green, blue = pixels[x, y]
+            if red < 80 and green > 100 and blue > 80 and green + 5 >= blue:
+                teals += 1
+        if teals > 25:
+            teal_rows.append(y)
+    if not teal_rows:
+        return [file_bytes]
+    header_y0 = teal_rows[0]
+    header_y1 = teal_rows[0]
+    for y in teal_rows:
+        if y <= header_y1 + 4:
+            header_y1 = y
+        else:
+            break
+    grid_rows = []
+    for y in range(header_y1 + 1, height):
+        gray = 0
+        for x in range(40, width - 30, 4):
+            red, green, blue = pixels[x, y]
+            if abs(red - green) < 8 and abs(green - blue) < 8 and 230 <= red <= 245:
+                gray += 1
+        if gray > 40 and (not grid_rows or y - grid_rows[-1] > 4):
+            grid_rows.append(y)
+    last_text = 0
+    for index, top in enumerate(grid_rows[:-1]):
+        bottom = grid_rows[index + 1]
+        if bottom - top > 20:
+            break
+        dark = 0
+        for y in range(top + 1, bottom):
+            for x in range(50, min(width, 420), 3):
+                red, green, blue = pixels[x, y]
+                if red + green + blue < 400:
+                    dark += 1
+        if dark > 8:
+            last_text = index + 1
+    if last_text < 4:
+        return [file_bytes]
+    grid_rows = grid_rows[: last_text + 1]
+    header = image.crop((0, max(0, header_y0 - 1), width, header_y1 + 1))
+    rows_per_band = 11
+    strips: List[bytes] = []
+    index = 0
+    while index < last_text:
+        top = grid_rows[index]
+        end_index = min(index + rows_per_band, last_text)
+        bottom = grid_rows[end_index]
+        band = image.crop((0, top, width, min(height, bottom + 1)))
+        piece = Image.new("RGB", (width, header.height + band.height), "white")
+        piece.paste(header, (0, 0))
+        piece.paste(band, (0, header.height))
+        piece = piece.resize((width * 3, piece.height * 3), Image.Resampling.NEAREST)
+        buf = io.BytesIO()
+        piece.save(buf, format="JPEG", quality=92)
+        strips.append(buf.getvalue())
+        index += rows_per_band
+    return strips or [file_bytes]
+
+
+def _extract_zl_opening_bal_sheet_strips(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Read a truncated Sheet1 screenshot in row bands. Full-image ZL reads stay unchanged."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    strips = _zl_opening_bal_sheet_strips(file_bytes)
+    if len(strips) <= 1 and strips[:1] == [file_bytes]:
+        return None
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    prompt = _ZL_OPENING_BAL_SHEET_PROMPT.replace(
+        "Example: CONFIDO TABS (FC) 60s (AG)\n"
+        "opening_qty=100, receipts_qty=0, closing_qty=85, extra.mrp=255, extra.unit_rate=172.23\n\n",
+        "Copy only the cells in this image. Do not reuse numbers from any other sheet.\n\n",
+    )
+    prompt += (
+        "\n\nThis crop is the header plus a few rows of one taller sheet. "
+        "Read every fully visible data row. Keep Opening_bal_qty, Primary_qty, "
+        "and Closing_bal_qty on that same product. A printed 0.00 is 0."
+    )
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+    for strip in strips:
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(strip).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
+        }
+        parsed = None
+        for attempt in range(3):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                logger.warning("ZL opening-bal strip vision failed: %s", exc)
+                time.sleep(min(2 ** attempt, 4))
+        if not parsed:
+            continue
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            name = _clean_name(str(raw.get("product_name") or ""))
+            if not name or re.fullmatch(r"Material_?name|Mrp|Sheet\s*\d+", name, re.I):
+                continue
+            key = re.sub(r"[^A-Z0-9]", "", name.upper())
+            if key in seen:
+                continue
+            seen.add(key)
+            raw["product_name"] = name
+            merged.append(raw)
+    if not merged:
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_parsed_sales_json(
+        result, {"report_title": "Sheet1", "line_items": merged}
+    )
+    return _finalize_zl_opening_bal_sheet(result)
+
+
 def _looks_like_zandra_stock_sale_result(result: Optional[Dict[str, Any]]) -> bool:
     if not isinstance(result, dict):
         return False
@@ -8284,6 +8509,157 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
     return result
 
 
+def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """STOCK & SALES ANALYSIS: TOTAL STOCK is not the SALES QTY column.
+
+    Returns None unless that two-line header is printed.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+
+    def parent_field(token: str) -> Optional[str]:
+        norm = re.sub(r"[^A-Z]", "", token.upper())
+        if norm == "OPENING":
+            return "opening"
+        if norm == "PURCHASE":
+            return "purchase"
+        if norm == "TOTAL":
+            return "total"
+        if norm == "SALES":
+            return "sales"
+        if norm == "CLOSING":
+            return "closing"
+        return None
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for line in text.splitlines():
+                line = line.strip()
+                if line and not re.search(r"GSTIN|STOCK|---|ITEM", line, re.I):
+                    result["stockist_name"] = _clean_name(line)
+                    break
+        if not result.get("company_name"):
+            company = re.search(r"\((HIMALAYA[^)]+)\)", text, re.I)
+            if company:
+                result["company_name"] = _clean_name(company.group(1))
+        if result["period_from"] is None:
+            m = re.search(
+                r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
+                text,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, x1, y0, token = float(w[0]), float(w[2]), float(w[1]), str(w[4]).strip()
+            if not token or token.startswith("---"):
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 1.6:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "words": []}
+                rows.append(row)
+            row["words"].append((x0, x1, token))
+
+        columns: Optional[List[Tuple[str, float, float]]] = None
+        name_end = 160.0
+        for i, row in enumerate(rows[:-1]):
+            parents = []
+            for x0, x1, token in row["words"]:
+                field = parent_field(token)
+                if field:
+                    parents.append((field, (x0 + x1) / 2.0))
+            if not {"opening", "purchase", "total", "sales", "closing"}.issubset(
+                {field for field, _c in parents}
+            ):
+                continue
+            sub = rows[i + 1]
+            starts: List[Tuple[Optional[str], float]] = []
+            for x0, x1, token in sub["words"]:
+                norm = re.sub(r"[^A-Z]", "", token.upper())
+                center = (x0 + x1) / 2.0
+                nearest, dist = min(
+                    ((field, abs(center - mid)) for field, mid in parents),
+                    key=lambda item: item[1],
+                )
+                parent = nearest if dist <= 28 else ""
+                field = None
+                if parent == "opening" and norm == "STOCK":
+                    field = "opening_qty"
+                elif parent == "purchase" and norm == "QTY":
+                    field = "receipts_qty"
+                elif parent == "total" and norm == "STOCK":
+                    field = "total_stock"
+                elif parent == "sales" and norm == "QTY":
+                    field = "sales_qty"
+                elif parent == "closing" and norm == "STOCK":
+                    field = "closing_qty"
+                starts.append((field, x0))
+            if not {"opening_qty", "total_stock", "sales_qty", "closing_qty"}.issubset(
+                {name for name, _x in starts}
+            ):
+                continue
+            spans = []
+            for idx, (name, start) in enumerate(starts):
+                end = starts[idx + 1][1] if idx + 1 < len(starts) else 10000.0
+                spans.append((name, start, end))
+            columns = spans
+            name_end = next(x for name, x in starts if name == "opening_qty") - 55
+            break
+        if not columns:
+            continue
+
+        def field_for(x1: float) -> Optional[str]:
+            probe = x1 - 0.5
+            for name, start, end in columns:
+                if start <= probe < end:
+                    return name
+            return None
+
+        for row in rows:
+            cells: Dict[str, List[str]] = {}
+            name_tokens: List[str] = []
+            for x0, x1, token in row["words"]:
+                if x0 < name_end and not re.fullmatch(r"[\d.]+", token):
+                    name_tokens.append(token)
+                    continue
+                field = field_for(x1)
+                if field and re.fullmatch(r"-?\d+(?:\.\d+)?", token):
+                    cells.setdefault(field, []).append(token)
+            name = _clean_name(" ".join(name_tokens))
+            if not name or re.search(r"ITEM|DESCRIPTION|OPENING|TOTAL", name, re.I):
+                continue
+            if "opening_qty" not in cells and "sales_qty" not in cells:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = _detail_opval_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _detail_opval_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _detail_opval_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _detail_opval_number(cells.get("closing_qty") or []) or 0.0
+            extra = item["extra"]
+            extra["layout"] = "stock_sales_analysis"
+            total = _detail_opval_number(cells.get("total_stock") or [])
+            if total is not None:
+                extra["total_stock"] = total
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "stock_sales_analysis"
+    result["totals"]["extra"]["layout"] = "stock_sales_analysis"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -8298,6 +8674,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        analysis_stmt = _parse_stock_sales_analysis(doc, filename)
+        if analysis_stmt and analysis_stmt.get("line_items"):
+            analysis_stmt["totals"]["extra"]["statement_count"] = 1
+            return analysis_stmt
+
         detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
         if detail_stmt and detail_stmt.get("line_items"):
             detail_stmt["totals"]["extra"]["statement_count"] = 1
@@ -9839,6 +10220,16 @@ Rules:
 - Map Sl.Qnt / Sales qty / Issue / S Qty -> sales_qty; Sl.Value / S Val -> sales_value
 - Map Cl.Qnt / Closing / Cl Stk -> closing_qty; Cl.Value / Cl Val -> closing_value
 - Map Op.Qnt / Opening / OpBal / Op Stk -> opening_qty
+- Map Op.Amt / OP AMT / Opening Amount -> extra.opening_value (not sales_value)
+- Map Receipt Amt / Purchase Value -> extra.receipts_value when that column is printed
+- When the header is OP QTY | OP AMT | SALE AMT | CLOSING | CLOSING AMT
+  (no purchase column and no sale-qty column):
+  opening_qty=OP QTY, extra.opening_value=OP AMT, receipts_qty=0, extra.receipts_value=0,
+  sales_qty=0, sales_value=SALE AMT, closing_qty=CLOSING, closing_value=CLOSING AMT.
+  Example: BONNISAN 100 SYP opening_qty=64, extra.opening_value=4038.72, sales_qty=0,
+  sales_value=0, closing_qty=64, closing_value=4038.72.
+  Example: CYSTONE TAB opening_qty=262, extra.opening_value=45152.2, sales_value=4769.06,
+  closing_qty=236, closing_value=40671.41.
 - For OpBal|Receipt|Total|Issue|Closing: sales_qty=Issue (NOT Total); Dump is not closing_value.
 - "Stock and Sale Statement" grid (Item Cd, Item Name, Op Stk, P Qty, P S Qty, P Val, S Qty, S S Qty, S Val, Cl Stk, Cl Val):
   opening_qty=Op Stk, receipts_qty=P Qty, sales_qty=S Qty (NOT S S Qty),
@@ -11350,6 +11741,179 @@ def _apply_order_form_handwritten_qty(result: Dict[str, Any], file_bytes: bytes,
     paint(right_items, reads["right"])
 
 
+def _looks_like_medica_stock_statement(result: Optional[Dict[str, Any]]) -> bool:
+    """Phone photo of a Medica STOCK STATEMENT (OPSTK / SALE VAL / N/O/STOCK / STK VAL)."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if extra.get("extraction_method") == "medica_stock_statement_vision":
+        return True
+    title = re.sub(r"\s+", " ", str(result.get("report_title") or "")).strip()
+    if not re.fullmatch(r"STOCK STATEMENT", title, re.I):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    return sum(1 for i in items if i.get("packing")) >= 3
+
+
+_MEDICA_STOCK_STATEMENT_PROMPT = """
+This image is a Medica Ultimate STOCK STATEMENT.
+Columns left to right:
+PRODUCT DESCRIPTION, PACKING, OPSTK, PURCH, SALE, SALE VAL, N/O/STOCK, STK VAL, JUL, JUN, STK126, EXP3M
+
+Keep every number on the same product row. Never move STK VAL or SALE VAL onto the previous or next product.
+
+Map:
+- PRODUCT DESCRIPTION -> product_name
+- PACKING -> packing
+- OPSTK -> opening_qty
+- PURCH -> receipts_qty
+- SALE -> sales_qty
+- SALE VAL -> sales_value
+- N/O/STOCK -> closing_qty
+- STK VAL -> closing_value
+- JUL -> extra.jul_qty
+- JUN -> extra.jun_qty
+
+Skip the division banner (HIMALAYA-ZEAL) and the Division Total row.
+Ignore the phone status bar and the PDF viewer toolbar.
+STK VAL is the column immediately after N/O/STOCK. JUL is the next column and is not the stock value, even when JUL is a large number.
+
+Examples on one row each:
+- AACTARIL SOAP, packing 75 GM, opening 2, receipts 0, sales 2, sales_value 176, closing_qty 0, closing_value 0
+- ABANA TAB, packing 60 TAB, opening 0, receipts 3, sales 0, sales_value 0, closing_qty 3, closing_value 455, jul_qty 3
+- ACTARIL SOAP, packing NA, opening 64, receipts 0, sales 3, sales_value 262, closing_qty 0, closing_value 61, jul_qty 4738
+- CONFIDO TAB, packing 60 TAB, opening 37, receipts 0, sales 28, sales_value 5184, closing_qty 2, closing_value 11, jul_qty 1805
+
+Return ONLY JSON with stockist_name, company_name, period_from, period_to, report_title "STOCK STATEMENT", and line_items using the fields above.
+""".strip()
+
+
+def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
+    """Header plus short table bands so one product's STK VAL cannot slide onto the next."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return [file_bytes]
+    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    width, height = image.size
+    pixels = image.load()
+    red_rows = []
+    for y in range(height):
+        reds = 0
+        for x in range(0, width, 4):
+            red, green, blue = pixels[x, y]
+            if red > 140 and green < 80 and blue < 80:
+                reds += 1
+        if reds > 40:
+            red_rows.append(y)
+    if len(red_rows) < 2:
+        return [file_bytes]
+    gap_at = max(range(len(red_rows) - 1), key=lambda i: red_rows[i + 1] - red_rows[i])
+    header_y, footer_y = red_rows[gap_at], red_rows[gap_at + 1]
+    header = image.crop((0, max(0, header_y - 6), width, header_y + 36))
+    strips: List[bytes] = []
+    top = header_y + 36
+    while top < footer_y - 8:
+        band = image.crop((0, top, width, min(footer_y, top + 150)))
+        canvas = Image.new("RGB", (width, header.height + band.height), "white")
+        canvas.paste(header, (0, 0))
+        canvas.paste(band, (0, header.height))
+        buf = io.BytesIO()
+        canvas.save(buf, format="JPEG", quality=90)
+        strips.append(buf.getvalue())
+        top += 120
+    return strips or [file_bytes]
+
+
+def _extract_medica_stock_statement_vision(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+    parsed_meta: Dict[str, Any] = {}
+    for strip in _medica_statement_strips(file_bytes):
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": _MEDICA_STOCK_STATEMENT_PROMPT},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(strip).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed = None
+        for attempt in range(2):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                logger.warning("Medica stock statement vision failed: %s", exc)
+                time.sleep(min(2 ** attempt, 4))
+        if not parsed:
+            continue
+        for key in ("stockist_name", "company_name", "period_from", "period_to"):
+            if parsed.get(key) and not parsed_meta.get(key):
+                parsed_meta[key] = parsed[key]
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            name = _clean_name(str(raw.get("product_name") or ""))
+            if not name or re.search(
+                r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b", name, re.I
+            ):
+                continue
+            key = name.upper()
+            if key in seen:
+                continue
+            seen.add(key)
+            raw["product_name"] = name
+            merged.append(raw)
+    if not merged:
+        return None
+    parsed_meta["report_title"] = "STOCK STATEMENT"
+    parsed_meta["line_items"] = merged
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed_meta)
+    kept = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        if re.search(r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b", name, re.I):
+            continue
+        extra = item.get("extra")
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        extra["layout"] = "medica_stock_statement"
+        kept.append(item)
+    result["line_items"] = kept
+    result["report_title"] = "STOCK STATEMENT"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "medica_stock_statement_vision"
+    result["totals"]["extra"]["layout"] = "medica_stock_statement"
+    return result
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -11396,6 +11960,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zl_sheet and zl_sheet.get("line_items"):
                         return zl_sheet
+                if _looks_like_medica_stock_statement(result):
+                    medica = _extract_medica_stock_statement_vision(
+                        file_bytes, filename, ext
+                    )
+                    if medica and medica.get("line_items"):
+                        return medica
                 if _looks_like_zandra_stock_sale_result(result):
                     zandra = _extract_zandra_stock_sale_vision(
                         file_bytes, filename, ext
@@ -11456,6 +12026,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         )
                         return swil
                 return result
+            if re.search(r'"report_title"\s*:\s*"Sheet\s*\d+"', text or "", re.I):
+                zl_sheet = _extract_zl_opening_bal_sheet_strips(
+                    file_bytes, filename, ext
+                )
+                if not (zl_sheet and zl_sheet.get("line_items")):
+                    zl_sheet = _extract_zl_opening_bal_sheet_vision(
+                        file_bytes, filename, ext
+                    )
+                if zl_sheet and zl_sheet.get("line_items"):
+                    return zl_sheet
             last_err = ValueError(f"non-JSON vision response: {(text or '')[:200]}")
         except GeminiProviderError as exc:
             last_err = exc

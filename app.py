@@ -26982,9 +26982,13 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         # a missing field and then reuse Sales as Closing.
         keep_zero = key in {
             "opening_qty",
+            "opening_value",
             "receipts_qty",
+            "receipts_value",
             "sales_qty",
+            "sales_value",
             "closing_qty",
+            "closing_value",
             "others_qty",
         } or (detail_opval and key == "opening_value")
         if detail_opval and key == "opening_value":
