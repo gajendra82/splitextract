@@ -9681,6 +9681,186 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     return result
 
 
+def _is_pharmassist_stock_sale_report(text: str) -> bool:
+    """C-Square PharmAssist Stock and Sale Report (Jul/Jun/Op./Pur/Sale/Bal./BVal/SVal)."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Stock\s+and\s+Sale\s+Report", text, re.I)
+        and re.search(r"PharmAssist", text, re.I)
+        and re.search(r"\bBVal\b", text)
+        and re.search(r"\bSVal\b", text)
+    )
+
+
+def _pharmassist_header_field(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z]", "", (token or "").lower())
+    return {
+        "pack": "packing",
+        "jul": "jul_qty",
+        "jun": "jun_qty",
+        "op": "opening_qty",
+        "pur": "receipts_qty",
+        "sp": "sp_qty",
+        "sale": "sales_qty",
+        "ss": "ss_qty",
+        "br": "br_qty",
+        "bsc": "bsc_qty",
+        "cr": "cr_qty",
+        "db": "db_qty",
+        "adj": "adj_qty",
+        "bal": "closing_qty",
+        "bval": "closing_value",
+        "sval": "sales_value",
+        "order": "order_qty",
+    }.get(norm)
+
+
+def _parse_pharmassist_stock_sale_report(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Map PharmAssist columns by header position. Other layouts return None."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_pharmassist_stock_sale_report(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sale Report"
+    items: List[Dict[str, Any]] = []
+    line_fields = {
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }
+
+    for page, text in zip(doc, page_texts):
+        if not _is_pharmassist_stock_sale_report(text):
+            continue
+        if not result.get("stockist_name"):
+            for line in text.splitlines():
+                raw = line.strip()
+                if raw and not re.search(r"Stock\s+and\s+Sale|Phone|Item|Pack", raw, re.I):
+                    result["stockist_name"] = _clean_name(raw)
+                    break
+        if not result.get("stockist_address"):
+            address = re.search(r"([A-Z0-9 .,'/-]+Phone\s*-\s*[^\n]+)", text, re.I)
+            if address:
+                result["stockist_address"] = _clean_name(address.group(1))
+        if result["period_from"] is None:
+            period = re.search(
+                r"From\s+date\s+(\d{1,2}-[A-Za-z]{3}-\d{2,4})\s+to\s+(\d{1,2}-[A-Za-z]{3}-\d{2,4})",
+                text,
+                re.I,
+            )
+            if period:
+                result["period_from"] = _normalize_date(period.group(1))
+                result["period_to"] = _normalize_date(period.group(2))
+        if not result.get("company_name"):
+            company = re.search(
+                r"For\s+Manufacturer\s*:\s*(.+)",
+                text,
+                re.I,
+            )
+            if company:
+                result["company_name"] = _clean_name(company.group(1).split("\n")[0])
+
+        words = page.get_text("words") or []
+        header_ys = [
+            float(w[1])
+            for w in words
+            if re.fullmatch(r"Item", str(w[4]), re.I)
+        ]
+        if not header_ys:
+            continue
+        header_y = header_ys[0]
+        fences: List[Tuple[Optional[str], float]] = []
+        for w in words:
+            if abs(float(w[1]) - header_y) > 3:
+                continue
+            token = str(w[4])
+            if re.fullmatch(r"Item|qt", token, re.I):
+                fences.append((None, float(w[0])))
+                continue
+            fences.append((_pharmassist_header_field(token), float(w[0])))
+        fences.sort(key=lambda pair: pair[1])
+        if not any(name == "opening_qty" for name, _x in fences):
+            continue
+        if not any(name == "sales_value" for name, _x in fences):
+            continue
+        pack_x = next((x for name, x in fences if name == "packing"), 110.0)
+
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            y0 = float(w[1])
+            if y0 <= header_y + 4:
+                continue
+            token = str(w[4]).strip()
+            if not token:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 2.5:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "words": []}
+                rows.append(row)
+            row["words"].append((float(w[0]), float(w[2]), token))
+
+        for row in rows:
+            name_bits = [tok for x0, _x1, tok in row["words"] if x0 < pack_x - 4]
+            name = _clean_name(" ".join(name_bits))
+            if not name or re.search(
+                r"^(Manufacturer|Opening|Closing|Sales|Purchase|Credit|Adj|Branch|For|Report|Printed|Page|Order)\b",
+                name,
+                re.I,
+            ):
+                continue
+            if re.search(r"\bWELLNESS\b", name, re.I):
+                continue
+            cells: Dict[str, List[str]] = {}
+            pack_bits: List[str] = []
+            for x0, x1, tok in row["words"]:
+                if x0 < pack_x - 4:
+                    continue
+                edge = x1 - 0.5
+                chosen = None
+                for index, (field, start) in enumerate(fences):
+                    end = fences[index + 1][1] if index + 1 < len(fences) else 10_000.0
+                    if start <= edge < end:
+                        chosen = field
+                        break
+                if chosen == "packing":
+                    pack_bits.append(tok)
+                elif chosen:
+                    cells.setdefault(chosen, []).append(tok)
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = _clean_name(" ".join(pack_bits)) or None
+            extra = item["extra"]
+            extra["layout"] = "pharmassist_stock_sale"
+            for field, bits in cells.items():
+                number = _prompt_cell_number(bits)
+                if number is None:
+                    continue
+                if field in line_fields:
+                    item[field] = number
+                else:
+                    extra[field] = number
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(item.get("sales_value")) for item in items), 2
+    )
+    result["totals"]["closing_value"] = round(
+        sum(_to_float(item.get("closing_value")) for item in items), 2
+    )
+    result["totals"]["extra"]["extraction_method"] = "pharmassist_stock_sale"
+    result["totals"]["extra"]["layout"] = "pharmassist_stock_sale"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -9695,6 +9875,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        pharmassist = _parse_pharmassist_stock_sale_report(doc, filename)
+        if pharmassist and pharmassist.get("line_items"):
+            pharmassist["totals"]["extra"]["statement_count"] = 1
+            return pharmassist
+
         medica_stmt = _parse_medica_opstk_statement(doc, filename)
         if medica_stmt and medica_stmt.get("line_items"):
             medica_stmt["totals"]["extra"]["statement_count"] = 1
@@ -13108,6 +13293,229 @@ def _extract_medica_stock_statement_vision(
     return result
 
 
+_MAIN_STOCK_SALES_PROMPT = """
+This image is an Excel screenshot titled MAIN STOCK & SALES STATEMENT.
+Use it only for this header, left to right:
+PRODUCT DESCRIPTION | OPENING STOCK | OPENING VALUE | RECEIVE QUANTITY | RECEIVE VALUE | ISSUE QUANTITY | ISSUE VALUE | CLOSING STOCK | CLOSING VALUE
+
+Column mapping:
+- PRODUCT DESCRIPTION -> product_name
+- OPENING STOCK -> opening_qty
+- OPENING VALUE -> extra.opening_value
+- RECEIVE QUANTITY -> receipts_qty
+- RECEIVE VALUE -> extra.receipts_value
+- ISSUE QUANTITY -> sales_qty
+- ISSUE VALUE -> sales_value
+- CLOSING STOCK -> closing_qty
+- CLOSING VALUE -> closing_value
+
+RECEIVE VALUE is the money column immediately after RECEIVE QUANTITY.
+Do not leave extra.receipts_value at 0 when that cell has a number.
+A printed 0 stays 0. Do not shift a later number left into a blank cell.
+Skip the TOTAL row. Skip the phone status bar and Excel row numbers.
+
+Example: ABANA TAB 1*60
+opening_qty=2, extra.opening_value=291.54, receipts_qty=5, extra.receipts_value=728.86,
+sales_qty=6, sales_value=958.79, closing_qty=1, closing_value=145.7
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "MAIN STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": string,
+      "packing": null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {"opening_value": number, "receipts_value": number}
+    }
+  ]
+}
+""".strip()
+
+
+def _main_stock_receive_value_missing(result: Optional[Dict[str, Any]]) -> bool:
+    """This Excel sheet prints RECEIVE VALUE. Other titles are left alone."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"MAIN\s+STOCK\s*&\s*SALES\s+STATEMENT", title, re.I):
+        return False
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if _to_float(item.get("receipts_qty")) <= 0:
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if (
+            _to_float(item.get("receipts_value")) == 0
+            and _to_float(extra.get("receipts_value")) == 0
+            and _to_float(extra.get("purchase_value")) == 0
+        ):
+            return True
+    return False
+
+
+def _main_stock_sales_strips(file_bytes: bytes) -> List[bytes]:
+    """Header plus row bands for this sideways phone photo. Other images are unchanged."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return [file_bytes]
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    width, height = image.size
+    pixels = image.load()
+    blue_rows = []
+    for y in range(height):
+        blue = 0
+        for x in range(0, width, 6):
+            red, green, blue_px = pixels[x, y]
+            if blue_px > red + 20 and blue_px > 80:
+                blue += 1
+        if blue > 80:
+            blue_rows.append(y)
+    if len(blue_rows) < 8:
+        return [file_bytes]
+    header_y0 = blue_rows[0]
+    header_y1 = blue_rows[0]
+    for y in blue_rows:
+        if y <= header_y1 + 6:
+            header_y1 = y
+        elif y - header_y1 > 40:
+            break
+    footer = next((y for y in blue_rows if y > header_y1 + 200), height - 20)
+    header = image.crop((0, max(0, header_y0 - 2), width, header_y1 + 2))
+    strips: List[bytes] = []
+    top = header_y1 + 2
+    while top < footer - 20:
+        band = image.crop((0, top, width, min(footer, top + 520)))
+        piece = Image.new("RGB", (width, header.height + band.height), "white")
+        piece.paste(header, (0, 0))
+        piece.paste(band, (0, header.height))
+        buf = io.BytesIO()
+        piece.save(buf, format="JPEG", quality=85)
+        strips.append(buf.getvalue())
+        top += 400
+    return strips or [file_bytes]
+
+
+def _extract_main_stock_sales_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    fallback: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Read this statement in row bands so ISSUE and RECEIVE values stay on the row."""
+    import os
+    import time
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    merged: List[Dict[str, Any]] = []
+    seen: Dict[str, float] = {}
+    parsed_meta: Dict[str, Any] = {}
+    strips = _main_stock_sales_strips(file_bytes)
+    for strip_index, strip in enumerate(strips):
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": _MAIN_STOCK_SALES_PROMPT},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(strip).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed = None
+        for attempt in range(2):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                logger.warning("MAIN STOCK statement vision failed: %s", exc)
+                time.sleep(min(2 ** attempt, 4))
+        if not parsed:
+            continue
+        rows = [raw for raw in (parsed.get("line_items") or []) if isinstance(raw, dict)]
+        for key in ("stockist_name", "company_name", "period_from", "period_to"):
+            if parsed.get(key) and not parsed_meta.get(key):
+                parsed_meta[key] = parsed[key]
+        for raw in rows:
+            name = _clean_name(str(raw.get("product_name") or ""))
+            key = re.sub(r"[^A-Z0-9]", "", name.upper())
+            if not key or key.startswith("TOTAL"):
+                continue
+            raw["product_name"] = name
+            amount_keys = (
+                "opening_value",
+                "receipts_value",
+                "sales_value",
+                "closing_value",
+            )
+            extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+            score = sum(
+                _to_float(extra.get(amount) if amount in ("opening_value", "receipts_value") else raw.get(amount))
+                for amount in amount_keys
+            )
+            if key in seen and score <= seen[key]:
+                continue
+            seen[key] = score
+            merged = [
+                old
+                for old in merged
+                if re.sub(r"[^A-Z0-9]", "", str(old.get("product_name") or "").upper()) != key
+            ]
+            extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+            receive = extra.get("receipts_value", raw.get("receipts_value"))
+            if receive not in (None, ""):
+                raw["receipts_value"] = _to_float(receive)
+                extra["receipts_value"] = raw["receipts_value"]
+                raw["extra"] = extra
+            merged.append(raw)
+    if len(merged) < 5:
+        return None
+    parsed_meta["report_title"] = "MAIN STOCK & SALES STATEMENT"
+    parsed_meta["line_items"] = merged
+    for key in ("stockist_name", "company_name", "period_from", "period_to"):
+        current = str(parsed_meta.get(key) or "")
+        if not current or (key == "company_name" and re.search(r"STATEMENT", current, re.I)):
+            parsed_meta[key] = fallback.get(key)
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed_meta)
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if extra.get("receipts_value") not in (None, ""):
+            item["receipts_value"] = _to_float(extra.get("receipts_value"))
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "main_stock_sales_statement"
+    result["totals"]["extra"]["layout"] = "main_stock_sales_statement"
+    return result
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -13162,6 +13570,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     return result
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _main_stock_receive_value_missing(result):
+                    main_stock = _extract_main_stock_sales_vision(
+                        file_bytes, filename, ext, result
+                    )
+                    if main_stock and main_stock.get("line_items"):
+                        return main_stock
                 if _looks_like_zl_opening_bal_sheet(result):
                     zl_sheet = _extract_zl_opening_bal_sheet_vision(
                         file_bytes, filename, ext
