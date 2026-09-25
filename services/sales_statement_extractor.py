@@ -1531,6 +1531,125 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # ITEM / PACK / OPENING / PURCHASE / S.RETURN / OTHERS / SUB TOTAL /
+    # SALE / P.RETURN / OTHERS / CLOSING. Closing includes Others Out, so
+    # opening + purchase - sale must not replace or fail these rows.
+    if totals["extra"].get("extraction_method") == "item_pack_sreturn_others":
+        mismatch = 0
+        parse_fail = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            parse_errors = row_extra.get("qty_parse_errors") or {}
+            if parse_errors:
+                parse_fail += 1
+                row_extra["stock_identity_ok"] = False
+                row_extra["validation"] = {
+                    "is_valid": False,
+                    "reason": "Quantity cell could not be parsed",
+                }
+                continue
+
+            def _src(field: str, *fallbacks: str) -> float:
+                if field in item and item.get(field) not in (None, ""):
+                    return _to_float(item.get(field))
+                for name in fallbacks:
+                    if name in row_extra and row_extra.get(name) not in (None, ""):
+                        return _to_float(row_extra.get(name))
+                    if name in item and item.get(name) not in (None, ""):
+                        return _to_float(item.get(name))
+                return 0.0
+
+            opening = _src("opening_qty")
+            purchase = _src("purchase_qty", "receipts_qty")
+            sales_return = _src("sales_return_qty")
+            others_in = _src("others_in_qty")
+            subtotal = _src("subtotal_qty")
+            sale = _src("sales_qty")
+            purchase_return = _src("purchase_return_qty")
+            others_out = _src("others_out_qty")
+            closing = _src("closing_qty")
+            # Printed subtotal and closing stay as extracted. These figures
+            # only detect a discrepancy; they are not written back onto the row.
+            calculated_subtotal = round(opening + purchase + sales_return + others_in, 2)
+            calculated_closing = round(
+                subtotal - sale - purchase_return - others_out, 2
+            )
+            row_extra["expected_total"] = calculated_subtotal
+            row_extra["expected_closing"] = calculated_closing
+            ok = (
+                abs(calculated_subtotal - subtotal) <= 0.05
+                and abs(calculated_closing - closing) <= 0.05
+            )
+            row_extra["stock_identity_ok"] = ok
+            row_extra["qty_reconcile_ok"] = ok
+            if ok:
+                row_extra["validation"] = {"is_valid": True}
+                row_extra.pop("qty_reconcile_flags", None)
+            else:
+                mismatch += 1
+                row_extra["qty_reconcile_flags"] = [
+                    name
+                    for name, left, right in (
+                        ("subtotal", calculated_subtotal, subtotal),
+                        ("closing", calculated_closing, closing),
+                    )
+                    if abs(left - right) > 0.05
+                ]
+                row_extra["validation"] = {
+                    "is_valid": False,
+                    "reason": "Source values do not reconcile",
+                }
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "item_pack_sreturn_others"
+        totals["extra"]["stock_identity_formula"] = (
+            "subtotal=opening+purchase+sales_return+others_in; "
+            "closing=subtotal-sale-purchase_return-others_out"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch + parse_fail
+        totals["extra"]["qty_mismatch_rows"] = mismatch
+        totals["extra"]["qty_parse_error_rows"] = parse_fail
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": receipt_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "calculated_closing": round(
+                sum(
+                    _to_float((i.get("extra") or {}).get("expected_closing"))
+                    for i in items
+                    if isinstance(i, dict)
+                ),
+                2,
+            ),
+            "qty_mismatch_rows": mismatch,
+            "qty_parse_error_rows": parse_fail,
+            "is_valid": mismatch == 0 and parse_fail == 0,
+            "reason": None
+            if mismatch == 0 and parse_fail == 0
+            else "Source values do not reconcile",
+        }
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -1634,6 +1753,11 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 if item.get(key) in (None, ""):
                     item[key] = 0.0
             continue
+
+        parse_errors = {}
+        item_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if isinstance(item_extra.get("qty_parse_errors"), dict):
+            parse_errors = item_extra["qty_parse_errors"]
         for key in (
             "opening_qty",
             "receipts_qty",
@@ -1642,6 +1766,9 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "closing_qty",
             "closing_value",
         ):
+            # A flagged cell is ambiguous. Do not turn that parse error into 0.
+            if key in parse_errors:
+                continue
             if item.get(key) in (None, ""):
                 item[key] = 0.0
         opening_value = _extra_number(item, "opening_value")
@@ -5340,6 +5467,249 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     return _xls_finalize_result(result)
 
 
+_ITEM_PACK_SRETURN_HEADER = (
+    "item",
+    "pack",
+    "opening",
+    "purchase",
+    "sreturn",
+    "others",
+    "subtotal",
+    "sale",
+    "preturn",
+    "others",
+    "closing",
+)
+_ITEM_PACK_SRETURN_FIELDS = (
+    "item",
+    "pack",
+    "opening",
+    "purchase",
+    "sales_return",
+    "others_in",
+    "subtotal",
+    "sale",
+    "purchase_return",
+    "others_out",
+    "closing",
+)
+_ITEM_PACK_QTY_FIELDS = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_return_qty",
+    "others_in_qty",
+    "subtotal_qty",
+    "sales_qty",
+    "purchase_return_qty",
+    "others_out_qty",
+    "closing_qty",
+)
+
+
+def _xls_header_compact(label: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(label or "").strip().lower())
+
+
+def _xls_item_pack_sreturn_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
+    """Column indexes for ITEM/PACK/.../S.RETURN/OTHERS/SUB TOTAL/.../OTHERS/CLOSING.
+
+    Other stock sheets do not have this pair of OTHERS columns and return None.
+    """
+    labels = [
+        (idx, _xls_header_compact(cell))
+        for idx, cell in enumerate(row or [])
+        if _xls_header_compact(cell)
+    ]
+    if len(labels) < len(_ITEM_PACK_SRETURN_HEADER):
+        return None
+    head = [label for _idx, label in labels[: len(_ITEM_PACK_SRETURN_HEADER)]]
+    if head != list(_ITEM_PACK_SRETURN_HEADER):
+        return None
+    indexes = {
+        field: labels[pos][0]
+        for pos, field in enumerate(_ITEM_PACK_SRETURN_FIELDS)
+    }
+    for idx, label in labels[len(_ITEM_PACK_SRETURN_HEADER) :]:
+        if label == "itemcode" and "itemcode" not in indexes:
+            indexes["itemcode"] = idx
+    return indexes
+
+
+def _xls_sreturn_qty_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
+    """Parse one quantity cell. Dash and blank are 0. Ambiguous text stays unset."""
+    if value is None:
+        return 0.0, None
+    if isinstance(value, bool):
+        return None, "ambiguous"
+    if isinstance(value, (int, float)):
+        return float(value), None
+    text = str(value).replace("\u00a0", " ").strip()
+    if text in {"", "-", "—", "--", "–"}:
+        return 0.0, None
+    if text.upper() in _EMPTY_NUMERIC or text.upper() in {"?", "NIL"}:
+        return None, text
+    negative = text.startswith("(") and text.endswith(")")
+    if negative:
+        text = text[1:-1].strip()
+    cleaned = text.replace(",", "")
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", cleaned):
+        number = float(cleaned)
+        return (-abs(number) if negative and number else number), None
+    return None, text
+
+
+def _xls_fill_item_pack_sreturn_rows(
+    result: Dict[str, Any],
+    rows: List[List[Any]],
+    header_idx: int,
+    sheet_name: str,
+    header_score: int,
+) -> Dict[str, Any]:
+    """Keep every source row, including all-zero rows, and both OTHERS columns."""
+    indexes = _xls_item_pack_sreturn_indexes(rows[header_idx])
+    if not indexes:
+        return result
+
+    for row in rows[:header_idx]:
+        if not isinstance(row, list):
+            continue
+        joined = " ".join(_xls_preamble_texts(row))
+        company = re.search(r"Company\s*:\s*(.+)", joined, re.I)
+        if company and not result.get("company_name"):
+            result["company_name"] = _clean_name(company.group(1))
+
+    def cell(row: List[Any], key: str) -> Any:
+        idx = indexes.get(key)
+        if idx is None or idx >= len(row):
+            return None
+        return row[idx]
+
+    items: List[Dict[str, Any]] = []
+    zero_rows = 0
+    mismatch_rows = 0
+    parse_error_rows = 0
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list):
+            continue
+        raw_name = cell(row, "item")
+        if raw_name in (None, ""):
+            continue
+        product_name = _clean_name(str(raw_name))
+        if not product_name:
+            continue
+        if re.match(r"^division\s*:", product_name, re.I):
+            continue
+        if re.match(
+            r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
+            product_name,
+            re.I,
+        ):
+            continue
+
+        raw_pack = cell(row, "pack")
+        packing = _clean_name(str(raw_pack)) if raw_pack not in (None, "") else None
+        parsed: Dict[str, Optional[float]] = {}
+        errors: Dict[str, str] = {}
+        sources = (
+            ("opening_qty", "opening"),
+            ("purchase_qty", "purchase"),
+            ("sales_return_qty", "sales_return"),
+            ("others_in_qty", "others_in"),
+            ("subtotal_qty", "subtotal"),
+            ("sales_qty", "sale"),
+            ("purchase_return_qty", "purchase_return"),
+            ("others_out_qty", "others_out"),
+            ("closing_qty", "closing"),
+        )
+        for field, key in sources:
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            parsed[field] = number
+            if error:
+                errors[field] = error
+
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing or None
+        item["product_code"] = _xls_cell_code(cell(row, "itemcode"))
+        item["opening_qty"] = parsed["opening_qty"]
+        item["receipts_qty"] = parsed["purchase_qty"]
+        item["sales_qty"] = parsed["sales_qty"]
+        item["closing_qty"] = parsed["closing_qty"]
+        item["purchase_qty"] = parsed["purchase_qty"]
+        item["sales_return_qty"] = parsed["sales_return_qty"]
+        item["others_in_qty"] = parsed["others_in_qty"]
+        item["subtotal_qty"] = parsed["subtotal_qty"]
+        item["purchase_return_qty"] = parsed["purchase_return_qty"]
+        item["others_out_qty"] = parsed["others_out_qty"]
+        item["source_product_name"] = product_name
+        item["source_packing"] = packing or None
+
+        flags: List[str] = []
+        numbers = [parsed[field] for field in _ITEM_PACK_QTY_FIELDS]
+        if errors:
+            parse_error_rows += 1
+        elif all(number is not None for number in numbers):
+            opening = parsed["opening_qty"] or 0.0
+            purchase = parsed["purchase_qty"] or 0.0
+            sales_return = parsed["sales_return_qty"] or 0.0
+            others_in = parsed["others_in_qty"] or 0.0
+            subtotal = parsed["subtotal_qty"] or 0.0
+            sale = parsed["sales_qty"] or 0.0
+            purchase_return = parsed["purchase_return_qty"] or 0.0
+            others_out = parsed["others_out_qty"] or 0.0
+            closing = parsed["closing_qty"] or 0.0
+            expected_subtotal = opening + purchase + sales_return + others_in
+            expected_closing = subtotal - sale - purchase_return - others_out
+            if abs(expected_subtotal - subtotal) > 0.05:
+                flags.append("subtotal")
+            if abs(expected_closing - closing) > 0.05:
+                flags.append("closing")
+        if flags:
+            mismatch_rows += 1
+        if (
+            not errors
+            and all(parsed[field] == 0.0 for field in _ITEM_PACK_QTY_FIELDS)
+        ):
+            zero_rows += 1
+
+        extra = {
+            "layout": "item_pack_sreturn_others",
+            "source_product_name": product_name,
+            "source_packing": packing or None,
+            "purchase_qty": parsed["purchase_qty"],
+            "sales_return_qty": parsed["sales_return_qty"],
+            "others_in_qty": parsed["others_in_qty"],
+            "subtotal_qty": parsed["subtotal_qty"],
+            "purchase_return_qty": parsed["purchase_return_qty"],
+            "others_out_qty": parsed["others_out_qty"],
+            "qty_reconcile_ok": not errors and not flags,
+        }
+        if errors:
+            extra["qty_parse_errors"] = errors
+        if flags:
+            extra["qty_reconcile_flags"] = flags
+        item["extra"] = extra
+        items.append(item)
+
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["sheet"] = sheet_name
+    extra["header_row"] = header_idx
+    extra["header_detection_confidence"] = (
+        round(min(1.0, header_score / 12.0), 2) if header_idx is not None else 0.0
+    )
+    extra["extraction_method"] = "item_pack_sreturn_others"
+    extra["layout"] = "item_pack_sreturn_others"
+    extra["rows_detected"] = len(items)
+    extra["zero_qty_rows"] = zero_rows
+    extra["qty_mismatch_rows"] = mismatch_rows
+    extra["qty_parse_error_rows"] = parse_error_rows
+    if "item" in indexes:
+        extra["product_column"] = _xls_col_letter(indexes["item"])
+        extra["product_column_header"] = str(rows[header_idx][indexes["item"]] or "").strip()
+    return result
+
+
 def _xls_preamble_texts(row: List[Any]) -> List[str]:
     """Non-empty cells, collapsing merge-expanded repeats (same value across columns)."""
     texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
@@ -5490,6 +5860,11 @@ def _xls_fill_from_rows(
             if 4 <= len(name) <= 60:
                 result["stockist_name"] = _clean_name(name)
                 break
+
+    if _xls_item_pack_sreturn_indexes(rows[header_idx]):
+        return _xls_fill_item_pack_sreturn_rows(
+            result, rows, header_idx, sheet_name, header_score
+        )
 
     items: List[Dict[str, Any]] = []
     start = (header_idx + 1) if header_idx is not None else 0

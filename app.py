@@ -2913,6 +2913,7 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "order_form",
             "rate_qty_value",
             "qty_value_dump",
+            "item_pack_sreturn_others",
         ):
             kept_items.append(item)
             continue
@@ -26977,6 +26978,14 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "closing_value",
         "reorder_qty",
         "others_qty",
+        "purchase_qty",
+        "sales_return_qty",
+        "others_in_qty",
+        "subtotal_qty",
+        "purchase_return_qty",
+        "others_out_qty",
+        "source_product_name",
+        "source_packing",
         "dump_qty",
     ):
         # A printed 0 is the source value. Dropping it made the page show 0 for
@@ -26991,6 +27000,12 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "closing_qty",
             "closing_value",
             "others_qty",
+            "purchase_qty",
+            "sales_return_qty",
+            "others_in_qty",
+            "subtotal_qty",
+            "purchase_return_qty",
+            "others_out_qty",
         } or (detail_opval and key == "opening_value")
         if detail_opval and key == "opening_value":
             continue
@@ -27017,6 +27032,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "rate_qty_value"
     if extra.get("layout") == "qty_value_dump":
         additional["layout"] = "qty_value_dump"
+    if extra.get("layout") == "item_pack_sreturn_others":
+        additional["layout"] = "item_pack_sreturn_others"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
