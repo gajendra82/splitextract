@@ -1278,7 +1278,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
             and sales_total is not None
             and float(sales_total) > 0
             and str(totals.get("extra", {}).get("total_row_source") or "")
-            != "daxinsoft_footer"
+            not in {"daxinsoft_footer", "psr_closstock_footer"}
         )
     )
 
@@ -8560,6 +8560,292 @@ def _parse_daxinsoft_stock_sales_statement(doc, filename: str) -> Optional[Dict[
     return result
 
 
+def _is_daxinsoft_detailed_stock_sales_text(text: str) -> bool:
+    """Profitmaker Stock & Sales Statement Detailed: O.Bal / Rcpts / Sal.Ret / Cl.Bal."""
+    if not text:
+        return False
+    if re.search(r"\bO\.Stk\b", text, re.I) and re.search(r"\bQoh\b", text, re.I):
+        return False
+    if re.search(r"\bParticulars\b", text, re.I) and re.search(r"Purch\.?\s*Qty", text, re.I):
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    return bool(
+        re.search(r"Stock\s*&\s*Sales\s*Statement\s*Detailed", text, re.I)
+        and re.search(r"\bO\.Bal\b", text, re.I)
+        and re.search(r"\bRcpts\b", text, re.I)
+        and re.search(r"Sal\.Ret", text, re.I)
+        and re.search(r"\bCl\.Bal\b", text, re.I)
+        and re.search(r"Cl\.Value", text, re.I)
+        and re.search(r"\bAge\b", text, re.I)
+    )
+
+
+def _daxin_detailed_field(token: str, total_seen: int) -> Optional[str]:
+    norm = re.sub(r"[^a-z]", "", (token or "").lower())
+    if norm == "total":
+        return "opening_total" if total_seen == 0 else "sales_total"
+    return {
+        "product": "name",
+        "name": "name",
+        "packing": "pack",
+        "obal": "opening_qty",
+        "rcpts": "receipts_qty",
+        "salret": "sale_return",
+        "sales": "sales_qty",
+        "purret": "purchase_return",
+        "clbal": "closing_qty",
+        "clvalue": "closing_value",
+        "age": "age",
+    }.get(norm)
+
+
+def _daxin_detailed_buckets(
+    row: Dict[str, Any],
+) -> Optional[List[Tuple[str, float, float]]]:
+    spans: List[Tuple[str, float, float]] = []
+    total_seen = 0
+    for x0, x1, _xc, token in sorted(row.get("words") or [], key=lambda item: item[0]):
+        field = _daxin_detailed_field(token, total_seen)
+        if not field:
+            continue
+        if field in {"opening_total", "sales_total"}:
+            total_seen += 1
+        if spans and spans[-1][0] == field:
+            prev = spans[-1]
+            spans[-1] = (field, min(prev[1], x0), max(prev[2], x1))
+        else:
+            spans.append((field, x0, x1))
+    needed = {
+        "name",
+        "pack",
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "closing_value",
+        "sale_return",
+        "purchase_return",
+    }
+    if not needed.issubset({field for field, _x0, _x1 in spans}):
+        return None
+    buckets: List[Tuple[str, float, float]] = []
+    for idx, (field, x0, x1) in enumerate(spans):
+        lo = 0.0 if idx == 0 else max(0.0, x0 - 8.0)
+        if idx + 1 < len(spans):
+            hi = spans[idx + 1][1] - 2.0
+        else:
+            hi = max(x1 + 40.0, x0 + 36.0)
+        if hi <= lo:
+            hi = lo + 8.0
+        buckets.append((field, lo, hi))
+    if buckets and buckets[0][0] == "name":
+        buckets[0] = ("name", 0.0, buckets[0][2])
+    return buckets
+
+
+def _daxin_detailed_horizontal_words(page) -> List[Tuple[Any, ...]]:
+    """Words from upright text only. Diagonal watermark letters are not columns."""
+    words: List[Tuple[Any, ...]] = []
+    raw = page.get_text("rawdict") or {}
+    for block in raw.get("blocks") or []:
+        if block.get("type") != 0:
+            continue
+        for line in block.get("lines") or []:
+            dx, dy = line.get("dir") or (1.0, 0.0)
+            if abs(dx) < 0.95 or abs(dy) > 0.15:
+                continue
+            chars: List[Dict[str, Any]] = []
+            for span in line.get("spans") or []:
+                chars.extend(span.get("chars") or [])
+            chars.sort(key=lambda ch: ch["bbox"][0])
+            buf: List[Dict[str, Any]] = []
+
+            def flush() -> None:
+                if not buf:
+                    return
+                text = "".join(ch.get("c") or "" for ch in buf).strip()
+                if text:
+                    x0 = min(ch["bbox"][0] for ch in buf)
+                    y0 = min(ch["bbox"][1] for ch in buf)
+                    x1 = max(ch["bbox"][2] for ch in buf)
+                    y1 = max(ch["bbox"][3] for ch in buf)
+                    words.append((x0, y0, x1, y1, text, 0, 0, 0))
+                buf.clear()
+
+            for ch in chars:
+                if str(ch.get("c") or "").isspace():
+                    flush()
+                else:
+                    buf.append(ch)
+            flush()
+    return words
+
+
+def _daxin_detailed_join_name(parts: List[str]) -> str:
+    """Join a stockist name split across a rotated text run and an upright run."""
+    out = ""
+    for part in parts:
+        piece = re.sub(r"\s+", " ", (part or "").strip())
+        if not piece or re.fullmatch(r"[A-Za-z]", piece):
+            continue
+        if not out:
+            out = piece
+            continue
+        left_u = out.upper()
+        head = piece.upper().split()[0]
+        merged = None
+        for size in range(min(len(left_u), len(head)), 2, -1):
+            if left_u.endswith(head[:size]):
+                merged = out[: len(out) - size] + piece
+                break
+        out = merged if merged else f"{out} {piece}"
+    return _clean_name(out)
+
+
+_DAXIN_DETAILED_SKIP_NAME_RE = re.compile(
+    r"^(DAXINSOFT|PROFITMAKER|COMPANY|PRODUCT|PACKING|OPENING|PURCHASE|"
+    r"CLOSING|CLOSE|SALE\s+VALUE|SALERETURN|GENERATED|PAGE|STOCK|"
+    r"PUR\.?\s*RETURN|FROM|TOTAL)\b",
+    re.I,
+)
+
+
+def _parse_daxinsoft_detailed_stock_sales_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse Profitmaker Detailed rows: O.Bal Rcpts Sal.Ret Sales Pur.Ret Cl.Bal Cl.Value."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_daxinsoft_detailed_stock_sales_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock & Sales Statement Detailed"
+    items: List[Dict[str, Any]] = []
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            parts: List[str] = []
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if re.search(r"Stock\s*&\s*Sales", raw, re.I):
+                    break
+                if not raw or len(raw) > 80:
+                    continue
+                if re.fullmatch(r"[A-Za-z]", raw):
+                    continue
+                if re.search(r"^(Page|From|Product|Company)\b", raw, re.I):
+                    continue
+                parts.append(raw)
+            stockist = _daxin_detailed_join_name(parts)
+            if stockist and not re.search(r"DAXINSOFT|PROFITMAKER", stockist, re.I):
+                result["stockist_name"] = stockist
+        m_period = re.search(
+            r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+To\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if m_period:
+            result["period_from"] = _normalize_date(m_period.group(1))
+            result["period_to"] = _normalize_date(m_period.group(2))
+        m_co = re.search(r"Company\s*:?\s*([A-Z][A-Z0-9 .&()-]+)", text, re.I)
+        if m_co:
+            result["company_name"] = _clean_name(m_co.group(1))
+        m_sale = re.search(r"(?<![A-Za-z])Sale\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_close = re.search(r"Close\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        if m_sale:
+            result["totals"]["sales_value"] = _to_float(m_sale.group(1))
+        if m_close:
+            result["totals"]["closing_value"] = _to_float(m_close.group(1))
+        if m_sale or m_close:
+            result["totals"]["extra"]["total_row_source"] = "daxinsoft_footer"
+        extra = result["totals"]["extra"]
+        m_open = re.search(r"Opening\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_pur = re.search(r"Purchase\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_sret = re.search(r"SaleReturn\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_pret = re.search(r"Pur\.?\s*Return\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        if m_open:
+            extra["opening_value"] = _to_float(m_open.group(1))
+        if m_pur:
+            extra["purchase_value"] = _to_float(m_pur.group(1))
+        if m_sret:
+            extra["sale_return_value"] = _to_float(m_sret.group(1))
+        if m_pret:
+            extra["purchase_return_value"] = _to_float(m_pret.group(1))
+
+        rows = _swil_land_group_words(_daxin_detailed_horizontal_words(page), y_tol=1.5)
+        buckets = None
+        header_y = 0.0
+        for row in rows:
+            blob = _swil_land_row_blob(row)
+            if re.search(r"Product\s+Name", blob, re.I) and re.search(r"O\.Bal", blob, re.I):
+                built = _daxin_detailed_buckets(row)
+                if built:
+                    buckets = built
+                header_y = max(header_y, row["y"])
+                continue
+            if not buckets or row["y"] <= header_y + 2:
+                continue
+            if re.search(
+                r"Company\s*:|Opening\s+Value|Purchase\s+Value|SaleReturn|"
+                r"Sale\s+Value|Close\s+Value|Pur\.?\s*Return\s+Value|"
+                r"Generated\s+in|PROFITMAKER|Stock\s*&\s*Sales|Page\s*:",
+                blob,
+                re.I,
+            ):
+                continue
+            cells = _daxin_row_cells(row, buckets)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            if _DAXIN_DETAILED_SKIP_NAME_RE.search(name):
+                continue
+            qty_hits = sum(
+                1
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+                if _daxin_cell_number(cells.get(key) or []) is not None
+            )
+            if qty_hits < 4:
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = _clean_name(" ".join(cells.get("pack") or []))
+            item["packing"] = pack or None
+            item["opening_qty"] = _daxin_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _daxin_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _daxin_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _daxin_cell_number(cells.get("closing_qty") or []) or 0.0
+            close_val = _daxin_cell_number(cells.get("closing_value") or [])
+            if close_val is not None:
+                item["closing_value"] = close_val
+            extra_item = item.setdefault("extra", {})
+            if isinstance(extra_item, dict):
+                extra_item["layout"] = "daxinsoft_detailed_obal_clbal"
+                for src, dest in (
+                    ("sale_return", "sale_return_qty"),
+                    ("purchase_return", "purchase_return_qty"),
+                    ("opening_total", "opening_side_total"),
+                    ("sales_total", "sales_side_total"),
+                    ("age", "age_days"),
+                ):
+                    val = _daxin_cell_number(cells.get(src) or [])
+                    if val is not None:
+                        extra_item[dest] = val
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "daxinsoft_detailed_stock_sales"
+    extra["layout"] = "obal_rcpts_saleret_sales_clbal"
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
+
+
 _OSP_BUCKETS = (
     ("name", 0.0, 120.0),
     ("pack", 120.0, 185.0),
@@ -10702,6 +10988,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             ved["totals"]["extra"]["statement_count"] = 1
             return ved
 
+        daxin_detailed = _parse_daxinsoft_detailed_stock_sales_statement(doc, filename)
+        if daxin_detailed and daxin_detailed.get("line_items"):
+            daxin_detailed["totals"]["extra"]["statement_count"] = 1
+            return daxin_detailed
+
         daxin = _parse_daxinsoft_stock_sales_statement(doc, filename)
         if daxin and daxin.get("line_items"):
             daxin["totals"]["extra"]["statement_count"] = 1
@@ -10711,6 +11002,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if osp and osp.get("line_items"):
             osp["totals"]["extra"]["statement_count"] = 1
             return osp
+
+        closstock = _parse_psr_closstock_statement(doc, filename)
+        if closstock and closstock.get("line_items"):
+            closstock["totals"]["extra"]["statement_count"] = 1
+            return closstock
 
         qty_pages = []
         for page_index, page in enumerate(doc):
@@ -11332,6 +11628,13 @@ def _psr_fill_missing_sales(result: Dict[str, Any]) -> Dict[str, Any]:
     """
     if not isinstance(result, dict) or not _is_product_stock_report_result(result):
         return result
+    # ClosStock / Clos.Amt sheets have no line sale-amount column. Do not
+    # derive one from the closing rate; that overwrites the printed cells.
+    if (
+        str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
+        == "psr_closstock_columns"
+    ):
+        return result
     kind = _stock_identity_kind(result)
     items = result.get("line_items") or []
     _psr_repair_cls_amt_scale(items)
@@ -11626,6 +11929,220 @@ def _psr_fill_metadata(result: Dict[str, Any], text: str) -> None:
                 continue
             result["stockist_name"] = _clean_name(s)
             break
+
+
+def _is_psr_closstock_text(text: str) -> bool:
+    """Landscape Product Stock Report whose headers are ClosStock and Clos.Amt.
+
+    The ZANDRA sheet uses "Closing Stock" and "Cls Amt" on one text line.
+    This print puts each cell on its own line, so that parser never sees a row.
+    """
+    if not text or not _PRODUCT_STOCK_REPORT_TITLE.search(text):
+        return False
+    return bool(
+        re.search(r"\bClosStock\b", text)
+        and re.search(r"Clos\.Amt", text)
+        and re.search(r"\bSaleRet\b", text)
+        and re.search(r"Exp/Dmg", text)
+        and re.search(r"\bOrderQty\b", text)
+    )
+
+
+def _psr_closstock_field(token: str) -> Optional[str]:
+    norm = re.sub(r"[^a-z]", "", (token or "").lower())
+    return {
+        "product": "name",
+        "name": "name",
+        "opening": "opening_qty",
+        "purchase": "receipts_qty",
+        "total": "total_stock",
+        "sale": "sales_qty",
+        "saleret": "sale_return",
+        "expdmg": "exp_damage",
+        "closstock": "closing_qty",
+        "closamt": "closing_value",
+        "orderqty": "order_qty",
+    }.get(norm)
+
+
+def _psr_closstock_buckets(
+    row: Dict[str, Any],
+) -> Optional[List[Tuple[str, float, float]]]:
+    spans: List[Tuple[str, float, float]] = []
+    for x0, x1, _xc, token in sorted(row.get("words") or [], key=lambda item: item[0]):
+        field = _psr_closstock_field(token)
+        if not field:
+            continue
+        if spans and spans[-1][0] == field:
+            prev = spans[-1]
+            spans[-1] = (field, min(prev[1], x0), max(prev[2], x1))
+        else:
+            spans.append((field, x0, x1))
+    needed = {
+        "name",
+        "opening_qty",
+        "receipts_qty",
+        "total_stock",
+        "sales_qty",
+        "sale_return",
+        "exp_damage",
+        "closing_qty",
+        "closing_value",
+        "order_qty",
+    }
+    if not needed.issubset({field for field, _x0, _x1 in spans}):
+        return None
+    buckets: List[Tuple[str, float, float]] = []
+    for idx, (field, x0, x1) in enumerate(spans):
+        lo = 0.0 if idx == 0 else max(0.0, x0 - 8.0)
+        if idx + 1 < len(spans):
+            hi = spans[idx + 1][1] - 2.0
+        else:
+            hi = max(x1 + 48.0, x0 + 36.0)
+        if hi <= lo:
+            hi = lo + 8.0
+        buckets.append((field, lo, hi))
+    if buckets and buckets[0][0] == "name":
+        buckets[0] = ("name", 0.0, buckets[0][2])
+    return buckets
+
+
+def _parse_psr_closstock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse ClosStock / SaleRet / Exp/Dmg / Clos.Amt from word positions."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_psr_closstock_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Product Stock Report"
+    items: List[Dict[str, Any]] = []
+    joined = "\n".join(page_texts)
+    m_stockist = re.search(
+        r"Product\s+Stock\s+Report\s*\n\s*([^\n]+)", joined, re.I
+    )
+    if m_stockist:
+        stockist = _clean_name(m_stockist.group(1))
+        if stockist and not re.search(r"MFG\s+Company|From\s*:", stockist, re.I):
+            result["stockist_name"] = stockist
+    m_co = re.search(r"MFG\s+Company:\s*([^\n]+)", joined, re.I)
+    if m_co:
+        result["company_name"] = _clean_name(m_co.group(1))
+    m_from = re.search(r"From:\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})", joined, re.I)
+    m_to = re.search(r"\bTo:\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})", joined, re.I)
+    if m_from:
+        result["period_from"] = _normalize_date(m_from.group(1))
+    if m_to:
+        result["period_to"] = _normalize_date(m_to.group(1))
+
+    for page in doc:
+        rows = _swil_land_group_words(page.get_text("words") or [], y_tol=2.0)
+        buckets = None
+        header_y = 0.0
+        for row in rows:
+            blob = _swil_land_row_blob(row)
+            if re.search(r"\bClosStock\b", blob) and re.search(r"Clos\.Amt", blob):
+                built = _psr_closstock_buckets(row)
+                if built:
+                    buckets = built
+                header_y = max(header_y, row["y"])
+                continue
+            if not buckets or row["y"] <= header_y + 2:
+                continue
+            cells = _daxin_row_cells(row, buckets)
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            numbers = {
+                key: _daxin_cell_number(cells.get(key) or [])
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "total_stock",
+                    "sales_qty",
+                    "sale_return",
+                    "exp_damage",
+                    "closing_qty",
+                    "closing_value",
+                    "order_qty",
+                )
+            }
+            extra = result["totals"]["extra"]
+            if re.match(r"^GRAND\s+TOTAL\b", name, re.I):
+                for src, dest in (
+                    ("opening_qty", "opening_qty"),
+                    ("receipts_qty", "receipts_qty"),
+                    ("total_stock", "total_qty"),
+                    ("sales_qty", "sales_qty"),
+                    ("sale_return", "saleret_qty"),
+                    ("exp_damage", "exp_dmg_qty"),
+                    ("closing_qty", "closing_qty"),
+                    ("order_qty", "order_qty"),
+                ):
+                    if numbers[src] is not None:
+                        extra[dest] = numbers[src]
+                if numbers["closing_value"] is not None:
+                    result["totals"]["closing_value"] = numbers["closing_value"]
+                extra["total_row_source"] = "psr_closstock_footer"
+                continue
+            if re.match(r"^AMOUNT\s+TOTAL\b", name, re.I):
+                for src, dest in (
+                    ("opening_qty", "opening_value"),
+                    ("receipts_qty", "purchase_value"),
+                    ("total_stock", "total_value"),
+                    ("sales_qty", "sales_amount"),
+                    ("sale_return", "sale_return_value"),
+                    ("exp_damage", "exp_dmg_value"),
+                    ("closing_qty", "closing_stock_value"),
+                    ("closing_value", "closing_amount"),
+                ):
+                    if numbers[src] is not None:
+                        extra[dest] = numbers[src]
+                if numbers["sales_qty"] is not None:
+                    result["totals"]["sales_value"] = numbers["sales_qty"]
+                extra["total_row_source"] = "psr_closstock_footer"
+                continue
+            if re.match(r"^(PRODUCT|OPENING|TOTAL)\b", name, re.I):
+                continue
+            qty_hits = sum(
+                1
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+                if numbers[key] is not None
+            )
+            if qty_hits < 4:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = numbers["opening_qty"] or 0.0
+            item["receipts_qty"] = numbers["receipts_qty"] or 0.0
+            item["sales_qty"] = numbers["sales_qty"] or 0.0
+            item["sales_value"] = 0.0
+            item["closing_qty"] = numbers["closing_qty"] or 0.0
+            if numbers["closing_value"] is not None:
+                item["closing_value"] = numbers["closing_value"]
+            item_extra = item.setdefault("extra", {})
+            if isinstance(item_extra, dict):
+                item_extra["layout"] = "psr_closstock"
+                for src, dest in (
+                    ("total_stock", "total_stock"),
+                    ("sale_return", "sale_return"),
+                    ("exp_damage", "exp_damage"),
+                    ("order_qty", "order_qty"),
+                ):
+                    if numbers[src] is not None:
+                        item_extra[dest] = numbers[src]
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "psr_closstock_columns"
+    extra["layout"] = "closstock_saleret_expdmg"
+    extra["psr_column_layout"] = "saleret"
+    extra["stock_identity_kind"] = STOCK_IDENTITY_SALERET
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    return result
 
 
 def _parse_product_stock_report(
