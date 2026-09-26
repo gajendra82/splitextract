@@ -1720,6 +1720,84 @@ def _sniff_extension(file_bytes: bytes, filename: str) -> str:
     return ext
 
 
+def _is_monthly_ss_statement(result: Dict[str, Any]) -> bool:
+    """Monthly SS is identified by its parser marker, not by Sale Ret. Qty."""
+    totals = (result or {}).get("totals") or {}
+    extra = totals.get("extra") if isinstance(totals, dict) else {}
+    if not isinstance(extra, dict):
+        return False
+    return (
+        extra.get("extraction_method") == "monthly_ss_report"
+        or extra.get("layout") == "monthly_ss_opening_pur_sale_closing"
+    )
+
+
+def _apply_monthly_ss_stock_validation(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Report whether parsed Monthly SS qtys agree. Do not replace them.
+
+    Sale Ret. Qty is stored even when it is 0. That key must not select the
+    product-stock sale-return formula. This diagnostic uses the canonical
+    qty fields only and does not write them back.
+    """
+    items = result.get("line_items") or []
+    totals = result.setdefault(
+        "totals", {"sales_value": None, "closing_value": None, "extra": {}}
+    )
+    if not isinstance(totals.get("extra"), dict):
+        totals["extra"] = {}
+    fail = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.get("extra")
+        if not isinstance(row_extra, dict):
+            row_extra = {}
+            item["extra"] = row_extra
+        calculated = round(
+            _to_float(item.get("opening_qty"))
+            + _to_float(item.get("receipts_qty"))
+            - _to_float(item.get("sales_qty")),
+            2,
+        )
+        closing = round(_to_float(item.get("closing_qty")), 2)
+        ok = abs(calculated - closing) <= 0.05
+        row_extra["expected_closing"] = calculated
+        row_extra["stock_identity_ok"] = ok
+        if not ok:
+            fail += 1
+    opening_sum = round(
+        sum(_to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    receipt_sum = round(
+        sum(_to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    sales_sum = round(
+        sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    closing_sum = round(
+        sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    calculated_closing = round(opening_sum + receipt_sum - sales_sum, 2)
+    totals["extra"]["stock_identity_kind"] = "monthly_ss_report"
+    totals["extra"]["stock_identity_formula"] = (
+        "diagnostic closing=opening_qty+receipts_qty-sales_qty; "
+        "parsed source columns are not rewritten"
+    )
+    totals["extra"]["stock_identity_fail_count"] = fail
+    totals["extra"]["stock_validation"] = {
+        "opening_plus_purchase": round(opening_sum + receipt_sum, 2),
+        "expected_total": round(opening_sum + receipt_sum, 2),
+        "calculated_closing": calculated_closing,
+        "extracted_closing": closing_sum,
+        "is_valid": fail == 0 and abs(calculated_closing - closing_sum) <= 0.05,
+    }
+    return result
+
+
 def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     """Validate stock identity using columns present in the detected format.
 
@@ -1732,6 +1810,9 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             _apply_stock_identity_validation(stmt) for stmt in result["statements"]
         ]
         return result
+
+    if _is_monthly_ss_statement(result):
+        return _apply_monthly_ss_stock_validation(result)
 
     kind = _stock_identity_kind(result)
     items = result.get("line_items") or []
@@ -14235,6 +14316,295 @@ def _parse_sunderlal_openstk_statement(doc, filename: str) -> Optional[Dict[str,
     return result
 
 
+_MONTHLY_SS_ROLES = (
+    ("item_code", ("itemcode",)),
+    ("item_name", ("itemname",)),
+    ("pack", ("packsize",)),
+    ("pur_rate", ("purrate",)),
+    ("ptr", ("ptr",)),
+    ("opening", ("opening",)),
+    ("pur_fqty", ("purfqty",)),
+    ("pur_qty", ("purqty",)),
+    ("pur_value", ("purvalue",)),
+    ("pur_r_qty", ("purrqty",)),
+    ("pur_ret_fqty", ("purretfqty",)),
+    ("rpl_qty", ("rplqty",)),
+    ("sale_fqty", ("salefqty",)),
+    ("sale_qty", ("saleqty",)),
+    ("sale_value", ("salevalue",)),
+    ("sale_ret_fqty", ("saleretfqty",)),
+    ("sale_ret_qty", ("saleretqty",)),
+    ("other_qty", ("otherqty",)),
+    ("closing_amt", ("closingamt",)),
+    ("closing", ("closing",)),
+    ("stock_amt", ("stockamt",)),
+    ("status", ("status",)),
+)
+
+
+def _is_monthly_ss_report_text(text: str) -> bool:
+    """Srinivasa-style Monthly SS Report: Opening / Pur. Qty / Sale Qty / Closing."""
+    if not text or not re.search(r"Monthly\s+SS\s+Report", text, re.I):
+        return False
+    return bool(
+        re.search(r"\bOpening\b", text)
+        and re.search(r"\bClosing\b", text)
+        and re.search(r"Item\s+Code|Item\s+Name", text, re.I)
+        and re.search(r"Pur\.?\s*Qty", text, re.I)
+        and re.search(r"Sale\s+Qty", text, re.I)
+    )
+
+
+def _monthly_ss_role(label: str) -> Optional[str]:
+    key = re.sub(r"[^a-z0-9]", "", (label or "").lower())
+    if not key:
+        return None
+    if key.startswith("closing") and "ptr" in key:
+        return "closing_amt"
+    best = None
+    best_len = -1
+    for role, aliases in _MONTHLY_SS_ROLES:
+        for alias in aliases:
+            if key == alias or key.startswith(alias):
+                if len(alias) > best_len:
+                    best = role
+                    best_len = len(alias)
+    return best
+
+
+def _monthly_ss_join_number(parts: List[Tuple[float, float, str]]) -> Optional[float]:
+    """Join a wrapped cell such as 13622.2 + 8 into 13622.28. Do not add the pieces."""
+    ordered = sorted(parts, key=lambda item: (item[1], item[0]))
+    blob = "".join(part[2].replace(",", "").replace(" ", "") for part in ordered)
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", blob):
+        return float(blob)
+    for _vx, _vy, token in ordered:
+        plain = token.replace(",", "")
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", plain):
+            return float(plain)
+    return None
+
+
+def _monthly_ss_join_text(parts: List[Tuple[float, float, str]]) -> str:
+    if not parts:
+        return ""
+    ordered = sorted(parts, key=lambda item: (item[1], item[0]))
+    lines: List[List[str]] = []
+    current: List[Tuple[float, float, str]] = [ordered[0]]
+    for part in ordered[1:]:
+        if abs(part[1] - current[-1][1]) <= 4:
+            current.append(part)
+        else:
+            lines.append([token for _vx, _vy, token in sorted(current, key=lambda item: item[0])])
+            current = [part]
+    lines.append([token for _vx, _vy, token in sorted(current, key=lambda item: item[0])])
+    return _clean_name(" ".join(" ".join(line) for line in lines))
+
+
+def _parse_monthly_ss_report(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Read Monthly SS Report columns from their printed positions."""
+    import fitz
+
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_monthly_ss_report_text(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Monthly SS Report"
+    blob = "\n".join(page_texts)
+    m_period = re.search(
+        r"(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})",
+        blob,
+    )
+    if m_period:
+        result["period_from"] = m_period.group(1)
+        result["period_to"] = m_period.group(2)
+    m_mfr = re.search(r"Manufacturer\s+Name\s*:\s*([A-Z][A-Z0-9 .&()-]+)", blob, re.I)
+    if m_mfr:
+        result["company_name"] = _clean_name(m_mfr.group(1))
+    m_div = re.search(r"Division\s+Name\s*:\s*([A-Z][A-Z0-9 .&()-]+)", blob, re.I)
+    if m_div:
+        result["totals"]["extra"]["division"] = _clean_name(m_div.group(1))
+
+    items: List[Dict[str, Any]] = []
+    printed: Dict[str, float] = {}
+    for page in doc:
+        matrix = page.rotation_matrix
+        visual: List[Tuple[float, float, str]] = []
+        for x0, y0, x1, y1, token, *_rest in page.get_text("words") or []:
+            token = str(token or "").strip()
+            if not token:
+                continue
+            point = fitz.Point((x0 + x1) / 2.0, (y0 + y1) / 2.0) * matrix
+            visual.append((point.x, point.y, token))
+        opening_hits = [word for word in visual if word[2] == "Opening"]
+        if not opening_hits:
+            continue
+        band_y = opening_hits[0][1]
+        header_words = [word for word in visual if abs(word[1] - band_y) <= 12]
+        header_words.sort(key=lambda word: word[0])
+        clusters: List[List[Tuple[float, float, str]]] = []
+        for word in header_words:
+            if not clusters or word[0] - max(item[0] for item in clusters[-1]) > 12:
+                clusters.append([word])
+            else:
+                clusters[-1].append(word)
+
+        def _cluster_label(cluster: List[Tuple[float, float, str]]) -> str:
+            ordered = sorted(cluster, key=lambda word: (word[1], word[0]))
+            return " ".join(word[2] for word in ordered)
+
+        merged: List[List[Tuple[float, float, str]]] = []
+        for cluster in clusters:
+            if not merged:
+                merged.append(cluster)
+                continue
+            gap = min(word[0] for word in cluster) - max(word[0] for word in merged[-1])
+            left_role = _monthly_ss_role(_cluster_label(merged[-1]))
+            right_role = _monthly_ss_role(_cluster_label(cluster))
+            combined_role = _monthly_ss_role(_cluster_label(merged[-1] + cluster))
+            if gap <= 22 and combined_role and (left_role is None or right_role is None):
+                merged[-1].extend(cluster)
+            else:
+                merged.append(cluster)
+        columns: List[Tuple[str, float]] = []
+        for cluster in merged:
+            role = _monthly_ss_role(_cluster_label(cluster))
+            if not role:
+                continue
+            center = sum(word[0] for word in cluster) / len(cluster)
+            columns.append((role, center))
+        needed = {"item_name", "opening", "pur_qty", "sale_qty", "closing"}
+        if not needed.issubset({role for role, _center in columns}):
+            continue
+        if not result.get("stockist_name"):
+            title_words = [
+                word for word in visual
+                if word[1] < 38 and re.fullmatch(r"[A-Z][A-Z.&'-]*", word[2])
+            ]
+            title_words.sort(key=lambda word: word[0])
+            title = _clean_name(" ".join(word[2] for word in title_words))
+            if len(re.sub(r"[^A-Za-z]", "", title)) >= 6:
+                result["stockist_name"] = title
+        data_words = [word for word in visual if word[1] > band_y + 18]
+        data_words.sort(key=lambda word: (word[1], word[0]))
+        rows: List[List[Tuple[float, float, str]]] = []
+        for word in data_words:
+            if not rows or word[1] - rows[-1][-1][1] > 12:
+                rows.append([word])
+            else:
+                rows[-1].append(word)
+        columns.sort(key=lambda col: col[1])
+        for row in rows:
+            cells: Dict[str, List[Tuple[float, float, str]]] = {role: [] for role, _center in columns}
+            for word in row:
+                idx = min(range(len(columns)), key=lambda i: abs(word[0] - columns[i][1]))
+                role, center = columns[idx]
+                pack_center = next((col[1] for col in columns if col[0] == "pack"), None)
+                name_center = next((col[1] for col in columns if col[0] == "item_name"), None)
+                if (
+                    role == "pack"
+                    and name_center is not None
+                    and pack_center is not None
+                    and word[0] < pack_center - 10
+                ):
+                    role = "item_name"
+                    center = name_center
+                left = columns[idx - 1][1] if idx else center - 40
+                right = columns[idx + 1][1] if idx + 1 < len(columns) else center + 40
+                limit = min(abs(center - left), abs(right - center))
+                if role != "item_name" and abs(word[0] - center) > limit + 1:
+                    continue
+                cells[role].append(word)
+            name = _monthly_ss_join_text(cells.get("item_name") or [])
+            code = _monthly_ss_join_text(cells.get("item_code") or [])
+            if re.search(r"\bTOTAL\b", f"{name} {code}", re.I):
+                for role, key in (
+                    ("opening", "opening_qty"),
+                    ("pur_qty", "receipts_qty"),
+                    ("pur_fqty", "purchase_free_qty"),
+                    ("pur_value", "purchase_value"),
+                    ("sale_qty", "sales_qty"),
+                    ("sale_value", "sales_value"),
+                    ("closing", "closing_qty"),
+                    ("closing_amt", "closing_value"),
+                ):
+                    number = _monthly_ss_join_number(cells.get(role) or [])
+                    if number is not None:
+                        printed[key] = number
+                continue
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["product_code"] = code or None
+            item["packing"] = _monthly_ss_join_text(cells.get("pack") or []) or None
+
+            def qty(role: str) -> float:
+                number = _monthly_ss_join_number(cells.get(role) or [])
+                return 0.0 if number is None else number
+
+            item["opening_qty"] = qty("opening")
+            item["receipts_qty"] = qty("pur_qty")
+            item["sales_qty"] = qty("sale_qty")
+            item["closing_qty"] = qty("closing")
+            sale_value = _monthly_ss_join_number(cells.get("sale_value") or [])
+            close_value = _monthly_ss_join_number(cells.get("closing_amt") or [])
+            pur_value = _monthly_ss_join_number(cells.get("pur_value") or [])
+            if sale_value is not None:
+                item["sales_value"] = sale_value
+            if close_value is not None:
+                item["closing_value"] = close_value
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["layout"] = "monthly_ss_report"
+                if pur_value is not None:
+                    extra["purchase_value"] = pur_value
+                    extra["receipts_value"] = pur_value
+                for role, field in (
+                    ("pur_fqty", "purchase_free_qty"),
+                    ("pur_r_qty", "purchase_return_qty"),
+                    ("pur_ret_fqty", "purchase_return_free_qty"),
+                    ("rpl_qty", "repl_qty"),
+                    ("sale_fqty", "sales_free"),
+                    ("sale_ret_qty", "sale_return_qty"),
+                    ("sale_ret_fqty", "sale_return_free_qty"),
+                    ("other_qty", "other_qty"),
+                    ("ptr", "ptr"),
+                    ("pur_rate", "pur_rate"),
+                    ("stock_amt", "stock_amt"),
+                ):
+                    number = _monthly_ss_join_number(cells.get(role) or [])
+                    if number is not None:
+                        extra[field] = number
+                status = _monthly_ss_join_text(cells.get("status") or [])
+                if status:
+                    extra["status"] = status
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "monthly_ss_report"
+    extra["layout"] = "monthly_ss_opening_pur_sale_closing"
+    extra["rows_detected"] = len(items)
+    extra["total_row_source"] = "product_row_sum"
+    result["totals"]["opening_qty"] = round(sum(_to_float(item.get("opening_qty")) for item in items), 2)
+    result["totals"]["receipts_qty"] = round(sum(_to_float(item.get("receipts_qty")) for item in items), 2)
+    result["totals"]["sales_qty"] = round(sum(_to_float(item.get("sales_qty")) for item in items), 2)
+    result["totals"]["closing_qty"] = round(sum(_to_float(item.get("closing_qty")) for item in items), 2)
+    result["totals"]["sales_value"] = round(sum(_to_float(item.get("sales_value")) for item in items), 2)
+    result["totals"]["closing_value"] = round(sum(_to_float(item.get("closing_value")) for item in items), 2)
+    extra["purchase_value"] = round(
+        sum(_to_float((item.get("extra") or {}).get("purchase_value")) for item in items),
+        2,
+    )
+    if printed:
+        extra["printed_totals"] = printed
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -14249,6 +14619,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        monthly_ss = _parse_monthly_ss_report(doc, filename)
+        if monthly_ss and monthly_ss.get("line_items"):
+            monthly_ss["totals"]["extra"]["statement_count"] = 1
+            return monthly_ss
+
         zenith_opstk = _parse_zenith_opstk_statement(doc, filename)
         if zenith_opstk and zenith_opstk.get("line_items"):
             zenith_opstk["totals"]["extra"]["statement_count"] = 1
