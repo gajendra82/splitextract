@@ -2099,6 +2099,92 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
                 item["extra"]["stock_identity_ok"] = True
         return result
 
+    # SALES QTY and SALES FREE are separate columns. Closing is total stock
+    # minus sales qty, sales free, sample, stock transfer, purchase return,
+    # and the outgoing repl/other column. This does not rewrite those qtys.
+    if totals["extra"].get("extraction_method") == "ssa_sales_free_columns" or (
+        totals["extra"].get("layout") == "ssa_sales_free_columns"
+    ):
+        def _col(item: Dict[str, Any], name: str) -> float:
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            if name in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+                return _to_float(item.get(name))
+            if isinstance(extra, dict) and extra.get(name) not in (None, ""):
+                return _to_float(extra.get(name))
+            return 0.0
+
+        deducted = (
+            "sales_qty",
+            "sales_free",
+            "sample_qty",
+            "stock_tf_qty",
+            "pr_qty",
+            "repl_other_out",
+        )
+        mismatch = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            total_stock = _col(item, "total_stock")
+            calculated = total_stock - sum(_col(item, name) for name in deducted)
+            calculated = round(calculated, 2)
+            closing = _col(item, "closing_qty")
+            ok = abs(calculated - closing) <= 0.05
+            row_extra["expected_closing"] = calculated
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(_col(i, "opening_qty") for i in items if isinstance(i, dict))
+        receipt_sum = sum(_col(i, "receipts_qty") for i in items if isinstance(i, dict))
+        total_sum = sum(_col(i, "total_stock") for i in items if isinstance(i, dict))
+        sales_sum = sum(_col(i, "sales_qty") for i in items if isinstance(i, dict))
+        sales_free_sum = sum(_col(i, "sales_free") for i in items if isinstance(i, dict))
+        sample_sum = sum(_col(i, "sample_qty") for i in items if isinstance(i, dict))
+        transfer_sum = sum(_col(i, "stock_tf_qty") for i in items if isinstance(i, dict))
+        pr_sum = sum(_col(i, "pr_qty") for i in items if isinstance(i, dict))
+        repl_out_sum = sum(_col(i, "repl_other_out") for i in items if isinstance(i, dict))
+        closing_sum = sum(_col(i, "closing_qty") for i in items if isinstance(i, dict))
+        calculated_closing = round(
+            total_sum - sales_sum - sales_free_sum - sample_sum - transfer_sum - pr_sum - repl_out_sum,
+            2,
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["total_stock"] = total_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["sales_free"] = sales_free_sum
+        totals["extra"]["sample_qty"] = sample_sum
+        totals["extra"]["stock_tf_qty"] = transfer_sum
+        totals["extra"]["pr_qty"] = pr_sum
+        totals["extra"]["repl_other_out"] = repl_out_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "ssa_sales_free_columns"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=total_stock-sales_qty-sales_free-sample_qty"
+            "-stock_tf_qty-pr_qty-repl_other_out"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        identity_ok = mismatch == 0 and abs(calculated_closing - closing_sum) <= 0.05
+        totals["extra"]["stock_validation"] = {
+            "opening_qty": opening_sum,
+            "receipts_qty": receipt_sum,
+            "total_stock": total_sum,
+            "sales_qty": sales_sum,
+            "sales_free": sales_free_sum,
+            "sample_qty": sample_sum,
+            "stock_tf_qty": transfer_sum,
+            "pr_qty": pr_sum,
+            "repl_other_out": repl_out_sum,
+            "calculated_closing": calculated_closing,
+            "extracted_closing": closing_sum,
+            "is_valid": identity_ok,
+        }
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -12597,6 +12683,508 @@ def _parse_ssa_sale_closing_reorder(doc, filename: str) -> Optional[Dict[str, An
     return result
 
 
+_SSA_FREE_ROLE_FIELD = {
+    ("opening", "QTY"): "opening_qty",
+    ("opening", "STOCK"): "opening_qty",
+    ("opening", "VALUE"): "opening_value",
+    ("purchase", "QTY"): "receipts_qty",
+    ("purchase", "FREE"): "purchase_free",
+    ("purchase", "VALUE"): "purchase_value",
+    ("sales_return", "QTY"): "sr_qty",
+    ("sales_return", "FREE"): "sr_free",
+    ("sales_return", "VALUE"): "sr_value",
+    ("other_in", "QTY"): "repl_other",
+    ("other_in", "OTHER"): "repl_other",
+    ("total", "QTY"): "total_stock",
+    ("total", "STOCK"): "total_stock",
+    ("sales", "QTY"): "sales_qty",
+    ("sales", "FREE"): "sales_free",
+    ("sales", "VALUE"): "sales_value",
+    ("sample", "QTY"): "sample_qty",
+    ("stock_tf", "QTY"): "stock_tf_qty",
+    ("stock_tf", "VALUE"): "stock_tf_value",
+    ("purchase_return", "QTY"): "pr_qty",
+    ("purchase_return", "VALUE"): "pr_value",
+    ("other_out", "QTY"): "repl_other_out",
+    ("other_out", "OTHER"): "repl_other_out",
+    ("closing", "QTY"): "closing_qty",
+    ("closing", "STOCK"): "closing_qty",
+    ("closing", "VALUE"): "closing_value",
+}
+
+
+def _is_ssa_sales_free_text(text: str) -> bool:
+    """Grouped STOCK & SALES ANALYSIS with SALES QTY and SALES FREE apart."""
+    if not text:
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
+        return False
+    if not re.search(r"\bSAMPLE\b", text, re.I):
+        return False
+    if not re.search(r"STOCK\s*T\s*/\s*F", text, re.I):
+        return False
+    if not re.search(r"\bFREE\b", text, re.I):
+        return False
+    return bool(re.search(r"OPENING\s+STOCK", text, re.I) and re.search(r"CLOSING\s+STOCK", text, re.I))
+
+
+def _ssa_free_label(token: str) -> str:
+    raw = str(token or "").upper()
+    if re.fullmatch(r"T\s*/\s*F", raw.strip()):
+        return "TF"
+    return re.sub(r"[^A-Z]", "", raw)
+
+
+def _ssa_free_number(token: str) -> Optional[float]:
+    text = str(token or "").strip()
+    if text in {"-", "–", "—", "--"}:
+        return 0.0
+    if re.fullmatch(r"\d+(?:\.\d+)?", text):
+        return float(text)
+    return None
+
+
+def _ssa_free_parent_groups(words: List[Tuple[float, float, str]]) -> List[Tuple[str, float]]:
+    """Parent labels left to right. SALES RETURN is not the SALES group."""
+    labels = []
+    for x0, x1, token in words:
+        if re.fullmatch(r"[<\-=]+>?", token) or set(token) <= set("-<=>"):
+            continue
+        label = _ssa_free_label(token)
+        if not label:
+            continue
+        labels.append((label, (x0 + x1) / 2.0))
+    groups: List[Tuple[str, float]] = []
+    seen_total = False
+    index = 0
+    while index < len(labels):
+        label, center = labels[index]
+        nxt = labels[index + 1][0] if index + 1 < len(labels) else ""
+        if label == "OPENING":
+            groups.append(("opening", center))
+            index += 2 if nxt == "STOCK" else 1
+        elif label == "PURCHASE" and nxt == "RETURN":
+            groups.append(("purchase_return", center))
+            index += 2
+        elif label == "PURCHASE":
+            groups.append(("purchase", center))
+            index += 1
+        elif label == "SALES" and nxt == "RETURN":
+            groups.append(("sales_return", center))
+            index += 2
+        elif label == "SALES":
+            groups.append(("sales", center))
+            index += 1
+        elif label in {"OTHER", "REPL"}:
+            groups.append(("other_out" if seen_total else "other_in", center))
+            index += 1
+        elif label == "SR":
+            groups.append(("sales_return", center))
+            index += 1
+        elif label == "PR":
+            groups.append(("purchase_return", center))
+            index += 1
+        elif label == "TOTAL":
+            groups.append(("total", center))
+            seen_total = True
+            index += 1
+        elif label == "SAMPLE":
+            groups.append(("sample", center))
+            index += 1
+        elif label == "STOCK" and nxt == "TF":
+            groups.append(("stock_tf", center))
+            index += 2
+        elif label == "STOCK":
+            if seen_total:
+                groups.append(("stock_tf", center))
+            index += 1
+        elif label == "CLOSING":
+            groups.append(("closing", center))
+            index += 2 if nxt == "STOCK" else 1
+        else:
+            index += 1
+    return groups
+
+
+def _ssa_free_columns(groups: List[Tuple[str, float]], sub_words: List[Tuple[float, float, str]]):
+    if not groups:
+        return []
+    columns = []
+    for x0, x1, token in sub_words:
+        role = _ssa_free_label(token)
+        if role not in {"QTY", "FREE", "VALUE", "STOCK", "OTHER", "SAMPLE", "TF"}:
+            continue
+        center = (x0 + x1) / 2.0
+        if role == "SAMPLE":
+            columns.append(("sample_qty", center, x0))
+            continue
+        if role == "TF":
+            columns.append(("stock_tf_qty", center, x0))
+            continue
+        distances = sorted((abs(center - mid), name) for name, mid in groups)
+        dist, parent = distances[0]
+        second = distances[1][0] if len(distances) > 1 else dist + 80.0
+        # A subheader may sit under the group label rather than on the QTY word.
+        # Keep the old 40pt acceptance, and also accept a farther word when the
+        # next group is still further away.
+        if dist > max(40.0, second * 0.6):
+            continue
+        field = _SSA_FREE_ROLE_FIELD.get((parent, role))
+        if field is None:
+            continue
+        columns.append((field, center, x0))
+    needed = {"opening_qty", "receipts_qty", "sales_qty", "sales_free", "closing_qty"}
+    if not needed.issubset({field for field, _c, _x in columns}):
+        return []
+    return columns
+
+
+def _ssa_free_cluster_rows(words: List[Any], y_tol: float = 2.0) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    for word in sorted(words, key=lambda item: (round(float(item[1]), 1), float(item[0]))):
+        token = str(word[4]).strip()
+        if not token or token.startswith("---"):
+            continue
+        y0 = float(word[1])
+        box = (float(word[0]), float(word[2]), token)
+        if rows and abs(y0 - rows[-1]["y"]) <= y_tol:
+            rows[-1]["words"].append(box)
+        else:
+            rows.append({"y": y0, "words": [box]})
+    for row in rows:
+        row["words"].sort(key=lambda box: box[0])
+    return rows
+
+
+def _parse_ssa_sales_free_columns(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Map SALES QTY and SALES FREE by their own subheader, not the SALES label.
+
+    Returns None for every other statement. A blank cell stays in that column.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_ssa_sales_free_text(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    columns = None
+    items: List[Dict[str, Any]] = []
+    for page, text in zip(doc, page_texts):
+        if not _is_ssa_sales_free_text(text):
+            continue
+        if not result.get("stockist_name"):
+            for line in text.splitlines():
+                raw = line.strip()
+                if not raw or len(raw) > 80:
+                    continue
+                if re.search(r"STOCK|ITEM|GSTIN|PHONE|ROAD|FLOOR|PIN|@", raw, re.I):
+                    continue
+                result["stockist_name"] = _clean_name(raw)
+                break
+        if not result.get("company_name"):
+            company = re.search(r"\(([^)]+)\)", text)
+            if company:
+                result["company_name"] = _clean_name(company.group(1))
+        if result.get("period_from") is None:
+            period = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*-\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                text,
+            )
+            if period:
+                result["period_from"] = _normalize_date(period.group(1))
+                result["period_to"] = _normalize_date(period.group(2))
+        rows = _ssa_free_cluster_rows(page.get_text("words") or [])
+        if columns is None:
+            for index, row in enumerate(rows[:-1]):
+                groups = _ssa_free_parent_groups(row["words"])
+                names = {name for name, _mid in groups}
+                if not {"opening", "purchase", "sales", "closing"}.issubset(names):
+                    continue
+                built = _ssa_free_columns(groups, rows[index + 1]["words"])
+                if built:
+                    columns = built
+                    break
+        if not columns:
+            continue
+        opening_x0 = next(x0 for field, _c, x0 in columns if field == "opening_qty")
+        centers = [center for _f, center, _x in columns]
+        gaps = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
+        pitch = sorted(gaps)[len(gaps) // 2] if gaps else 20.0
+        numbered_rows = []
+        for row in rows:
+            cells: Dict[str, List[Tuple[float, float]]] = {}
+            left: List[Tuple[float, float, str]] = []
+            for x0, x1, token in row["words"]:
+                center = (x0 + x1) / 2.0
+                if center < opening_x0 - 2:
+                    left.append((x0, x1, token))
+                    continue
+                nearest = min(range(len(columns)), key=lambda i: abs(centers[i] - center))
+                if abs(centers[nearest] - center) <= pitch * 0.65:
+                    number = _ssa_free_number(token)
+                    if number is not None:
+                        cells.setdefault(columns[nearest][0], []).append((abs(centers[nearest] - center), number))
+            if cells:
+                numbered_rows.append((left, cells))
+        pack_counts: Dict[int, int] = {}
+        for left, _cells in numbered_rows:
+            for x0, _x1, _token in left[1:]:
+                if x0 > 60:
+                    pack_counts[round(x0)] = pack_counts.get(round(x0), 0) + 1
+        pack_floor = None
+        if numbered_rows:
+            min_hits = max(2, int(len(numbered_rows) * 0.6))
+            shared = [x for x, count in pack_counts.items() if count >= min_hits]
+            if shared:
+                pack_floor = min(shared) - 1
+        for left, cells in numbered_rows:
+            if pack_floor is None:
+                name_bits = [token for _x0, _x1, token in left]
+                pack_bits: List[str] = []
+            else:
+                name_bits = [token for x0, _x1, token in left if x0 < pack_floor]
+                pack_bits = [token for x0, _x1, token in left if x0 >= pack_floor]
+            name = _clean_name(" ".join(name_bits))
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            if re.match(r"^(?:TOTAL|GRAND|ITEM|DESCRIPTION|HIMALAYA)\b", name, re.I):
+                continue
+            if re.search(r"STOCK\s*&\s*SALES|SALES\s+ANALYSIS|REORDER", name, re.I):
+                continue
+
+            def cell_value(field: str) -> float:
+                picks = cells.get(field) or []
+                if not picks:
+                    return 0.0
+                picks.sort(key=lambda item: item[0])
+                return picks[0][1]
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = _clean_name(" ".join(pack_bits)) or None
+            item["opening_qty"] = cell_value("opening_qty")
+            item["receipts_qty"] = cell_value("receipts_qty")
+            item["sales_qty"] = cell_value("sales_qty")
+            item["sales_value"] = cell_value("sales_value")
+            item["closing_qty"] = cell_value("closing_qty")
+            item["closing_value"] = cell_value("closing_value")
+            item["extra"] = {
+                "layout": "ssa_sales_free_columns",
+                "source_product_name": name,
+                "source_packing": item["packing"],
+                "purchase_free": cell_value("purchase_free"),
+                "sr_qty": cell_value("sr_qty"),
+                "sr_free": cell_value("sr_free"),
+                "repl_other": cell_value("repl_other"),
+                "total_stock": cell_value("total_stock"),
+                "sales_free": cell_value("sales_free"),
+                "sample_qty": cell_value("sample_qty"),
+                "stock_tf_qty": cell_value("stock_tf_qty"),
+                "pr_qty": cell_value("pr_qty"),
+                "repl_other_out": cell_value("repl_other_out"),
+                "opening_value": cell_value("opening_value"),
+                "purchase_value": cell_value("purchase_value"),
+            }
+            items.append(item)
+    if not columns or not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "ssa_sales_free_columns"
+    extra["layout"] = "ssa_sales_free_columns"
+    extra["rows_detected"] = len(items)
+    extra["total_row_source"] = "product_row_sum"
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        total = sum(_to_float(item.get(key)) for item in items)
+        result["totals"][key] = total
+        extra[key] = total
+    return result
+
+
+def _is_ssa_sales_free_image_text(text: str) -> bool:
+    """Screenshot of SALES QTY / SALES FREE. Not the ISSUE / DUMP qty-value print."""
+    if not text or re.search(r"\bDUMP\b", text, re.I):
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
+        return False
+    if not re.search(r"\bOPENING\b", text, re.I):
+        return False
+    if not re.search(r"\bPURCHASE\b", text, re.I):
+        return False
+    if not re.search(r"\bSALES\b", text, re.I):
+        return False
+    if not re.search(r"\bCLOSING\b", text, re.I):
+        return False
+    if not re.search(r"\bFREE\b", text, re.I):
+        return False
+    return bool(re.search(r"\bSAMPLE\b|T\s*/\s*F", text, re.I))
+
+
+def _ssa_free_items_from_rows(rows: List[Dict[str, Any]], columns, pack_gap: float) -> List[Dict[str, Any]]:
+    opening_x0 = next(x0 for field, _c, x0 in columns if field == "opening_qty")
+    centers = [center for _f, center, _x in columns]
+    gaps = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
+    pitch = sorted(gaps)[len(gaps) // 2] if gaps else 20.0
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        cells: Dict[str, List[Tuple[float, float]]] = {}
+        left: List[Tuple[float, float, str]] = []
+        for x0, x1, token in row["words"]:
+            center = (x0 + x1) / 2.0
+            if center < opening_x0 - 2:
+                left.append((x0, x1, token))
+                continue
+            nearest = min(range(len(columns)), key=lambda i: abs(centers[i] - center))
+            if abs(centers[nearest] - center) <= pitch * 0.65:
+                number = _ssa_free_number(token)
+                if number is not None:
+                    cells.setdefault(columns[nearest][0], []).append(
+                        (abs(centers[nearest] - center), number)
+                    )
+        if not cells:
+            continue
+        split_at = None
+        if len(left) >= 2 and pack_gap > 0:
+            best = 0.0
+            for prev, nxt in zip(left, left[1:]):
+                gap = nxt[0] - prev[1]
+                if gap > best:
+                    best = gap
+                    split_at = nxt[0]
+            if best < pack_gap:
+                split_at = None
+        if split_at is None:
+            name_bits = [token for _x0, _x1, token in left]
+            pack_bits: List[str] = []
+        else:
+            name_bits = [token for x0, _x1, token in left if x0 < split_at]
+            pack_bits = [token for x0, _x1, token in left if x0 >= split_at]
+        name = _clean_name(" ".join(name_bits))
+        if not name or not re.search(r"[A-Za-z]", name):
+            continue
+        if re.match(r"^(?:TOTAL|GRAND|ITEM|DESCRIPTION|HIMALAYA|QUANTITY|VALUE)\b", name, re.I):
+            continue
+        if re.search(r"STOCK\s*&\s*SALES|SALES\s+ANALYSIS|REORDER", name, re.I):
+            continue
+
+        def cell_value(field: str) -> float:
+            picks = cells.get(field) or []
+            if not picks:
+                return 0.0
+            picks.sort(key=lambda item: item[0])
+            return picks[0][1]
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = _clean_name(" ".join(pack_bits)) or None
+        item["opening_qty"] = cell_value("opening_qty")
+        item["receipts_qty"] = cell_value("receipts_qty")
+        item["sales_qty"] = cell_value("sales_qty")
+        item["sales_value"] = cell_value("sales_value")
+        item["closing_qty"] = cell_value("closing_qty")
+        item["closing_value"] = cell_value("closing_value")
+        item["extra"] = {
+            "layout": "ssa_sales_free_columns",
+            "source_product_name": name,
+            "source_packing": item["packing"],
+            "purchase_free": cell_value("purchase_free"),
+            "sr_qty": cell_value("sr_qty"),
+            "sr_free": cell_value("sr_free"),
+            "repl_other": cell_value("repl_other"),
+            "total_stock": cell_value("total_stock"),
+            "sales_free": cell_value("sales_free"),
+            "sample_qty": cell_value("sample_qty"),
+            "stock_tf_qty": cell_value("stock_tf_qty"),
+            "pr_qty": cell_value("pr_qty"),
+            "repl_other_out": cell_value("repl_other_out"),
+            "opening_value": cell_value("opening_value"),
+            "purchase_value": cell_value("purchase_value"),
+        }
+        items.append(item)
+    return items
+
+
+def _parse_ssa_sales_free_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Read a sideways photo of SALES QTY / SALES FREE by column x position."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    candidates = [image]
+    if image.height > image.width * 1.15:
+        candidates = [
+            image.rotate(90, expand=True),
+            image.rotate(270, expand=True),
+        ]
+    pytesseract = _a2z_tesseract()
+    for candidate in candidates:
+        width, height = candidate.size
+        page = candidate.crop((int(width * 0.02), 4, width - 4, height - 4))
+        page = ImageOps.autocontrast(page)
+        page = ImageEnhance.Contrast(page).enhance(1.4)
+        page = page.resize((page.width * 2, page.height * 2), Image.Resampling.LANCZOS)
+        preview = pytesseract.image_to_string(page, config="--psm 6") or ""
+        if not _is_ssa_sales_free_image_text(preview):
+            continue
+        data = pytesseract.image_to_data(page, config="--psm 6", output_type=pytesseract.Output.DICT)
+        words = []
+        heights = []
+        for index, token in enumerate(data["text"]):
+            token = str(token or "").strip()
+            if not token:
+                continue
+            x0 = int(data["left"][index])
+            y0 = int(data["top"][index])
+            word_h = int(data["height"][index])
+            words.append((x0, y0, x0 + int(data["width"][index]), y0 + word_h, token))
+            if word_h > 0:
+                heights.append(word_h)
+        if not words:
+            continue
+        heights.sort()
+        y_tol = max(8.0, heights[len(heights) // 2] * 0.55)
+        rows = _ssa_free_cluster_rows(words, y_tol=y_tol)
+        columns = None
+        for index, row in enumerate(rows[:-1]):
+            groups = _ssa_free_parent_groups(row["words"])
+            names = {name for name, _mid in groups}
+            if not {"opening", "purchase", "sales", "closing"}.issubset(names):
+                continue
+            built = _ssa_free_columns(groups, rows[index + 1]["words"])
+            if built:
+                columns = built
+                break
+        if not columns:
+            continue
+        items = _ssa_free_items_from_rows(rows, columns, pack_gap=max(24.0, y_tol * 3))
+        if len(items) < 3:
+            continue
+        result = empty_result(filename, ext.lstrip(".") or "jpg")
+        result["report_title"] = "STOCK & SALES ANALYSIS"
+        if re.search(r"HIMALAYA\s+ZANDRA", preview, re.I):
+            result["company_name"] = "HIMALAYA ZANDRA DIVISION"
+        period = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*-\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            preview,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+        result["line_items"] = items
+        extra = result["totals"]["extra"]
+        extra["extraction_method"] = "ssa_sales_free_columns"
+        extra["layout"] = "ssa_sales_free_columns"
+        extra["rows_detected"] = len(items)
+        extra["total_row_source"] = "product_row_sum"
+        for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            total = sum(_to_float(item.get(key)) for item in items)
+            result["totals"][key] = total
+            extra[key] = total
+        return result
+    return None
+
+
 def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     """STOCK & SALES ANALYSIS: TOTAL STOCK is not the SALES QTY column.
 
@@ -13383,6 +13971,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             sale_closing["statement_count"] = 1
             sale_closing["totals"]["extra"]["statement_count"] = 1
             return sale_closing
+
+        sales_free_cols = _parse_ssa_sales_free_columns(doc, filename)
+        if sales_free_cols and sales_free_cols.get("line_items"):
+            sales_free_cols["totals"]["extra"]["statement_count"] = 1
+            return sales_free_cols
 
         analysis_stmt = _parse_stock_sales_analysis(doc, filename)
         if analysis_stmt and analysis_stmt.get("line_items"):
@@ -18154,6 +18747,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     a2z = _parse_a2z_opening_mexp_image(file_bytes, filename, ext)
     if a2z and a2z.get("line_items"):
         return a2z
+    sales_free = _parse_ssa_sales_free_image(file_bytes, filename, ext)
+    if sales_free and sales_free.get("line_items"):
+        return sales_free
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
