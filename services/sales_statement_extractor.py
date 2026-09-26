@@ -1815,7 +1815,8 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     result = _sanitize_statement_financials(result)
     result = _apply_stock_identity_validation(result)
-    return _ensure_stock_qty_value_fields(result)
+    result = _ensure_stock_qty_value_fields(result)
+    return _product_wise_drop_banner_items(result)
 
 
 # ---------------------------------------------------------------------------
@@ -7175,6 +7176,402 @@ def _extract_zandra_stock_sale_vision(
     result = empty_result(filename, ext.lstrip(".") or "png")
     result = _apply_parsed_sales_json(result, parsed)
     return _finalize_zandra_stock_sale(result)
+
+
+_PRODUCT_WISE_STOCK_SALE_RE = re.compile(
+    r"PRODUCT\s+WISE\s+STOCK\s*(?:&|AND)\s*(?:SALE|BALE)",
+    re.I,
+)
+
+
+def _looks_like_product_wise_stock_sale_text(text: str) -> bool:
+    """Printed PRODUCT WISE STOCK & SALE, not ZANDRA Stock and Sale Statement."""
+    return bool(_PRODUCT_WISE_STOCK_SALE_RE.search(text or ""))
+
+
+def _product_wise_is_company_banner(name: str) -> bool:
+    """Division / salesman header, not an ITEM NAME on PRODUCT WISE STOCK & SALE."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if re.search(r"HIMALAYA\s*DRUG", text, re.I) and re.search(
+        r"ZEAL|INZMAM", text, re.I
+    ):
+        return True
+    if re.search(r"HIMALAYA.{0,16}ZEAL", text, re.I) and re.search(
+        r"INZMAM|DRUG", text, re.I
+    ):
+        return True
+    return bool(re.fullmatch(r"HIMALAYA\s*-?\s*ZEAL", text, re.I))
+
+
+def _product_wise_drop_banner_items(result: Dict[str, Any]) -> Dict[str, Any]:
+    """HIMALAYA DRUG(ZEAL)--(INZMAM) is a division line, never ITEM NAME."""
+    if not isinstance(result, dict):
+        return result
+    result["line_items"] = [
+        item
+        for item in (result.get("line_items") or [])
+        if not (
+            isinstance(item, dict)
+            and _product_wise_is_company_banner(item.get("product_name"))
+        )
+    ]
+    for stmt in result.get("statements") or []:
+        if isinstance(stmt, dict):
+            _product_wise_drop_banner_items(stmt)
+    return result
+
+
+def _looks_like_product_wise_stock_sale_result(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if extra.get("extraction_method") == "product_wise_stock_sale_vision":
+        return True
+    names = " ".join(
+        str(item.get("product_name") or "")
+        for item in (result.get("line_items") or [])
+        if isinstance(item, dict)
+    )
+    blob = " ".join(
+        str(result.get(key) or "")
+        for key in ("report_title", "stockist_name", "company_name")
+    )
+    blob = f"{blob} {names}"
+    return _looks_like_product_wise_stock_sale_text(blob)
+
+
+_PRODUCT_WISE_STOCK_SALE_VISION_PROMPT = """
+This photo is a printed "PRODUCT WISE STOCK & SALE" sheet. It may be tilted.
+Mentally rotate it upright. It is NOT a Product Stock Report, NOT SUMMARY RTL,
+and NOT a ZANDRA "Stock and Sale Statement" (no Item Cd / P S Qty / S S Qty).
+
+Columns LEFT TO RIGHT:
+SNO | ITEM NAME | PACKING | OP STK | OP VALUE | PUR VALUE | SALE VALUE | CLOSING VALUE | SALE QTY | CL STOCK | PUR QTY
+
+Map:
+- ITEM NAME -> product_name
+- PACKING -> packing (60, 30ML, 30GM). NEVER use packing as opening_qty.
+- OP STK -> opening_qty
+- OP VALUE -> opening_value
+- PUR VALUE -> receipts_value (blank = 0)
+- SALE VALUE -> sales_value
+- CLOSING VALUE -> closing_value
+- SALE QTY -> sales_qty (right-side integer). Do not leave 0 when printed.
+- CL STOCK -> closing_qty
+- PUR QTY -> receipts_qty (last column; blank = 0)
+
+stockist_name = agency header (e.g. NAGAL ENTERPRISE).
+company_name = HIMALAYA ZEAL / division line, not the stockist.
+Never list HIMALAYA DRUG, HIMALAYA ZEAL, INZMAM, or
+"HIMALAYA DRUG(ZEAL)--(INZMAM)" as a product — that is company/salesman.
+Period: FROM DD/MM/YYYY TO DD/MM/YYYY. Keep the printed TO year
+(01/08/2026 TO 31/03/2027 -> period_to=2027-03-31).
+report_title = "PRODUCT WISE STOCK & SALE".
+Skip SNO, header, division banner, and TOTAL as a product. Copy printed cells only.
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "PRODUCT WISE STOCK & SALE",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "opening_value": number,
+      "receipts_qty": number,
+      "receipts_value": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {}
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null, "extra": {}}
+}
+""".strip()
+
+
+def _restore_product_wise_cross_year_period(
+    result: Dict[str, Any], parsed: Optional[Dict[str, Any]] = None
+) -> None:
+    """Keep FROM 2026 TO 2027. Shared apply aligns years and would force 2026-03-31."""
+    parsed = parsed or {}
+    blob = " ".join(
+        str(part or "")
+        for part in (
+            parsed.get("report_title"),
+            result.get("report_title"),
+            parsed.get("period_from"),
+            parsed.get("period_to"),
+        )
+    )
+    match = re.search(
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|-)\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if match:
+        start = _normalize_date(match.group(1))
+        end = _normalize_date(match.group(2))
+        if start:
+            result["period_from"] = start
+        if end:
+            result["period_to"] = end
+        return
+    raw_to = parsed.get("period_to")
+    end = _normalize_date(str(raw_to)) if raw_to else None
+    if end:
+        result["period_to"] = end
+
+
+_PW_PACK_QTYS = {10.0, 15.0, 20.0, 30.0, 50.0, 60.0, 75.0, 100.0, 120.0, 150.0, 180.0, 200.0}
+
+
+def _product_wise_line_opening_value(item: Dict[str, Any]) -> float:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if item.get("opening_value") not in (None, ""):
+        return _to_float(item.get("opening_value"))
+    return _to_float(extra.get("opening_value"))
+
+
+def _product_wise_fix_pack_used_as_opening(item: Dict[str, Any]) -> Dict[str, Any]:
+    """PACKING 60 leaked into OP STK. Recover OP STK from printed opening/closing values."""
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    if abs((opening + receipts - sales) - closing) <= 1.1:
+        return item
+    if opening not in _PW_PACK_QTYS:
+        return item
+    pack_text = str(item.get("packing") or "").strip()
+    pack_match = re.search(r"(\d+(?:\.\d+)?)", pack_text)
+    pack_num = _to_float(pack_match.group(1)) if pack_match else None
+    if pack_text and pack_num is not None and abs(pack_num - opening) > 0.01:
+        return item
+    open_val = _product_wise_line_opening_value(item)
+    close_val = _to_float(item.get("closing_value"))
+    if open_val <= 0 or close_val <= 0 or closing <= 0:
+        return item
+    inferred = open_val / close_val * closing
+    recovered = int(round(inferred))
+    if recovered <= 0 or abs(recovered - opening) < 0.01:
+        return item
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    extra["pack_as_opening_qty"] = opening
+    extra["opening_qty_from_values"] = recovered
+    item["extra"] = extra
+    if not pack_text:
+        item["packing"] = str(int(opening)) if opening == int(opening) else str(opening)
+    item["opening_qty"] = float(recovered)
+    return item
+
+
+def _product_wise_is_footer_total(item: Dict[str, Any]) -> bool:
+    """True for the printed TOTAL row, even when vision puts it on the last name."""
+    name = str(item.get("product_name") or "")
+    if re.search(r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL)\b", name, re.I):
+        return True
+    opening = _to_float(item.get("opening_qty"))
+    sales_qty = _to_float(item.get("sales_qty"))
+    closing_qty = _to_float(item.get("closing_qty"))
+    sales_value = _to_float(item.get("sales_value"))
+    closing_value = _to_float(item.get("closing_value"))
+    if sales_qty >= 400 and closing_qty >= 1500:
+        return True
+    return opening >= 1000 and (sales_value >= 50000 or closing_value >= 100000)
+
+
+def _product_wise_item_key(item: Dict[str, Any]) -> str:
+    """Name only — overlapping top/bottom crops reprint the same product."""
+    return re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper())[:22]
+
+
+def _product_wise_table_crops(file_bytes: bytes) -> List[bytes]:
+    """Top table + continuation table. A full-page read often drops SNO 34-41."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return [file_bytes]
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        return [file_bytes]
+    width, height = image.size
+    if height < 900:
+        return [file_bytes]
+    bands = (
+        (0, 0, width, int(height * 0.74)),
+        (0, int(height * 0.50), width, height),
+    )
+    crops: List[bytes] = []
+    for box in bands:
+        piece = image.crop(box)
+        scale = 2
+        piece = piece.resize(
+            (piece.width * scale, piece.height * scale), Image.Resampling.LANCZOS
+        )
+        buf = io.BytesIO()
+        piece.save(buf, format="JPEG", quality=92)
+        crops.append(buf.getvalue())
+    return crops or [file_bytes]
+
+
+def _finalize_product_wise_stock_sale(
+    result: Dict[str, Any], parsed: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    parsed = parsed or {}
+    raw_items = parsed.get("line_items") or []
+    items: List[Dict[str, Any]] = []
+    for index, item in enumerate(result.get("line_items") or []):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        if re.search(r"^(TOTAL|GRAND\s*TOTAL|SNO|ITEM\s*NAME)\b", name, re.I):
+            continue
+        if _product_wise_is_company_banner(name):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        raw = raw_items[index] if index < len(raw_items) and isinstance(raw_items[index], dict) else {}
+        rec_val = raw.get("receipts_value")
+        if rec_val in (None, "") and isinstance(raw.get("extra"), dict):
+            rec_val = raw["extra"].get("receipts_value")
+        if rec_val not in (None, ""):
+            rec_val = _to_float(rec_val)
+            extra["receipts_value"] = rec_val
+            extra["purchase_value"] = rec_val
+            ordered: Dict[str, Any] = {}
+            for key, val in item.items():
+                ordered[key] = val
+                if key == "receipts_qty":
+                    ordered["receipts_value"] = rec_val
+            item = ordered
+        extra["layout"] = "product_wise_stock_sale"
+        if _product_wise_is_footer_total(item):
+            if item.get("sales_value"):
+                result.setdefault("totals", {})["sales_value"] = _to_float(
+                    item.get("sales_value")
+                )
+            if item.get("closing_value"):
+                result.setdefault("totals", {})["closing_value"] = _to_float(
+                    item.get("closing_value")
+                )
+            continue
+        items.append(_product_wise_fix_pack_used_as_opening(item))
+    result["line_items"] = _drop_trailing_statement_total_item(items)
+    result["report_title"] = "PRODUCT WISE STOCK & SALE"
+    _restore_product_wise_cross_year_period(result, parsed)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "product_wise_stock_sale_vision"
+    extra["layout"] = "product_wise_stock_sale"
+    extra["vertex_ai_used"] = True
+    return result
+
+
+def _extract_product_wise_stock_sale_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Read PRODUCT WISE STOCK & SALE with locked OP STK / SALE QTY columns."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    crops = _product_wise_table_crops(file_bytes)
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+    header: Dict[str, Any] = {}
+    last_err: Optional[Exception] = None
+    for crop in crops:
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": _PRODUCT_WISE_STOCK_SALE_VISION_PROMPT},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(crop).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed = None
+        for attempt in range(3):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                last_err = exc
+                time.sleep(min(2 ** attempt, 8))
+        if not parsed:
+            continue
+        for key in (
+            "stockist_name",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if parsed.get(key) and not header.get(key):
+                header[key] = parsed[key]
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            name = _clean_name(str(raw.get("product_name") or ""))
+            if not name or _product_wise_is_company_banner(name):
+                continue
+            if _product_wise_is_footer_total(raw):
+                header.setdefault("totals", raw)
+                continue
+            raw["product_name"] = name
+            key = _product_wise_item_key(raw)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            merged.append(raw)
+    if len(merged) < 8:
+        if last_err:
+            logger.warning(
+                "PRODUCT WISE STOCK & SALE vision failed for %s: %s",
+                filename,
+                last_err,
+            )
+        return None
+    parsed_all = dict(header)
+    parsed_all["line_items"] = merged
+    parsed_all["report_title"] = "PRODUCT WISE STOCK & SALE"
+    footer = header.get("totals") if isinstance(header.get("totals"), dict) else {}
+    parsed_all["totals"] = {
+        "sales_value": footer.get("sales_value"),
+        "closing_value": footer.get("closing_value"),
+        "extra": {},
+    }
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_parsed_sales_json(result, parsed_all)
+    return _finalize_product_wise_stock_sale(result, parsed_all)
 
 
 def _qv_header_rows(
@@ -16771,7 +17168,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             text = _gemini_response_text(response)
             parsed = _extract_json_object(text)
             if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
+                had_pw_banner = any(
+                    isinstance(raw, dict)
+                    and _product_wise_is_company_banner(raw.get("product_name"))
+                    for raw in (parsed.get("line_items") or [])
+                )
                 result = _apply_parsed_sales_json(result, parsed)
+                result = _product_wise_drop_banner_items(result)
                 if _looks_like_summary_rtl_result(result):
                     result = _fill_summary_rtl_amounts_from_image(
                         result, b64, mime, model
@@ -16788,6 +17191,26 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if main_stock and main_stock.get("line_items"):
                         return main_stock
+                looks_pw = _looks_like_product_wise_stock_sale_result(result)
+                banner_only_pw = False
+                if not looks_pw and had_pw_banner:
+                    if not (
+                        _looks_like_zl_opening_bal_sheet(result)
+                        or _looks_like_medica_stock_statement(result)
+                        or _looks_like_zandra_stock_sale_result(result)
+                    ):
+                        looks_pw = True
+                        banner_only_pw = True
+                if looks_pw:
+                    product_wise = _extract_product_wise_stock_sale_vision(
+                        file_bytes, filename, ext
+                    )
+                    pw_items = (product_wise or {}).get("line_items") or []
+                    if pw_items and (
+                        not banner_only_pw
+                        or len(pw_items) > len(result.get("line_items") or [])
+                    ):
+                        return product_wise
                 if _looks_like_zl_opening_bal_sheet(result):
                     zl_sheet = _extract_zl_opening_bal_sheet_vision(
                         file_bytes, filename, ext

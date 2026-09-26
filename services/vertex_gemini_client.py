@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
@@ -137,6 +138,161 @@ def payload_to_generate_config(payload: Dict[str, Any]) -> Optional[types.Genera
     return types.GenerateContentConfig(**kwargs) if kwargs else None
 
 
+_VERTEX_ERROR_APPROVED_KEYS = {
+    "code",
+    "status",
+    "message",
+    "quotametric",
+    "quota_metric",
+    "quotaid",
+    "quota_id",
+    "quotalimit",
+    "quota_limit",
+    "quotalimitvalue",
+    "quota_limit_value",
+    "retrydelay",
+    "retry_delay",
+    "retryinfo",
+    "retry_info",
+    "reason",
+    "@type",
+}
+_VERTEX_ERROR_CONTAINER_KEYS = {
+    "error",
+    "details",
+    "metadata",
+    "violations",
+}
+_VERTEX_ERROR_DENIED_KEYS = {
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "set_cookie",
+    "private_key",
+    "privatekey",
+    "private_key_id",
+    "api_key",
+    "apikey",
+    "access_token",
+    "id_token",
+    "refresh_token",
+    "client_secret",
+    "password",
+    "secret",
+    "credential",
+    "credentials",
+    "bearer",
+    "token",
+}
+_VERTEX_SAFE_HEADER_EXACT = {"retry-after", "x-goog-retry-info"}
+_VERTEX_ERROR_VALUE_MAX_LEN = 400
+
+
+def _vertex_error_key_norm(key: Any) -> str:
+    return str(key or "").strip().lower().replace("-", "_")
+
+
+def _vertex_error_value_is_sensitive(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text:
+        return False
+    if text.startswith("-----BEGIN"):
+        return True
+    if text.lower().startswith("bearer "):
+        return True
+    if text.startswith("AIza"):
+        return True
+    return False
+
+
+def _vertex_error_clip(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > _VERTEX_ERROR_VALUE_MAX_LEN:
+        return value[:_VERTEX_ERROR_VALUE_MAX_LEN] + "…"
+    return value
+
+
+def _sanitize_vertex_error_details(value: Any) -> Any:
+    """Keep only quota/capacity diagnostic fields from a Google APIError body."""
+    if isinstance(value, dict):
+        cleaned: Dict[str, Any] = {}
+        for raw_key, raw_val in value.items():
+            key = str(raw_key)
+            norm = _vertex_error_key_norm(key)
+            if norm in _VERTEX_ERROR_DENIED_KEYS or "authorization" in norm:
+                continue
+            if _vertex_error_value_is_sensitive(raw_val):
+                continue
+            if norm in _VERTEX_ERROR_APPROVED_KEYS or key == "@type":
+                cleaned[key] = _sanitize_vertex_error_details(raw_val)
+            elif norm in _VERTEX_ERROR_CONTAINER_KEYS:
+                nested = _sanitize_vertex_error_details(raw_val)
+                if nested not in (None, {}, []):
+                    cleaned[key] = nested
+        return cleaned
+    if isinstance(value, list):
+        items = [
+            _sanitize_vertex_error_details(item)
+            for item in value
+        ]
+        return [item for item in items if item not in (None, {}, [])]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return _vertex_error_clip(value)
+    return None
+
+
+def _safe_vertex_error_headers(response: Any) -> Dict[str, str]:
+    headers = getattr(response, "headers", None) if response is not None else None
+    if headers is None:
+        return {}
+    try:
+        items = headers.items()
+    except Exception:
+        return {}
+    safe: Dict[str, str] = {}
+    for raw_key, raw_val in items:
+        key = str(raw_key)
+        low = key.lower()
+        norm = _vertex_error_key_norm(key)
+        if norm in _VERTEX_ERROR_DENIED_KEYS or "authorization" in low:
+            continue
+        if low not in _VERTEX_SAFE_HEADER_EXACT and "quota" not in low:
+            continue
+        if _vertex_error_value_is_sensitive(raw_val):
+            continue
+        safe[key] = str(_vertex_error_clip(raw_val))
+    return safe
+
+
+def _vertex_provider_error_diag(exc: Any, model: str) -> Dict[str, Any]:
+    """Build a journal-safe diagnostic payload from google-genai APIError."""
+    details = _sanitize_vertex_error_details(getattr(exc, "details", None))
+    headers = _safe_vertex_error_headers(getattr(exc, "response", None))
+    payload: Dict[str, Any] = {
+        "event": "VERTEX_GEMINI_PROVIDER_ERROR",
+        "http_code": getattr(exc, "code", None),
+        "status": getattr(exc, "status", None),
+        "message": _vertex_error_clip(getattr(exc, "message", None)),
+        "model": model,
+        "project": GOOGLE_CLOUD_PROJECT or None,
+        "location": GOOGLE_CLOUD_LOCATION or None,
+    }
+    if details not in (None, {}, []):
+        payload["details"] = details
+    if headers:
+        payload["headers"] = headers
+    return payload
+
+
+def _log_vertex_provider_error(exc: Any, model: str) -> None:
+    diag = _vertex_provider_error_diag(exc, model)
+    logger.warning(
+        "VERTEX_GEMINI_PROVIDER_ERROR %s",
+        json.dumps(diag, default=str, sort_keys=True),
+    )
+
+
 def payload_to_contents(payload: Dict[str, Any]):
     contents = payload.get("contents") or []
     sdk_contents = []
@@ -190,6 +346,7 @@ def generate_content_via_vertex(
             )
         except genai_errors.APIError as exc:
             if exc.code in (429, 503):
+                _log_vertex_provider_error(exc, model)
                 raise GeminiProviderError(exc.code, str(exc)) from exc
             raise
 
