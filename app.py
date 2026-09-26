@@ -2913,6 +2913,10 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "order_form",
             "rate_qty_value",
             "qty_value_dump",
+            "item_pack_sreturn_others",
+            "zenith_opstk_totalstock",
+            "sunderlal_openstk_sale",
+            "pack_opening_receipt_issue_mexp",
         ):
             kept_items.append(item)
             continue
@@ -26926,6 +26930,7 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
     paired_value = extra.get("layout") == "paired_stock_value"
     # Qty-only Sales & Stock rows: Issue is the quantity, including a real zero.
     issue_qty = extra.get("layout") == "sales_stock_issue_qty"
+    sunderlal_openstk = extra.get("layout") == "sunderlal_openstk_sale"
     if (
         not prompt_datewise
         and not issue_qty
@@ -26977,6 +26982,16 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "closing_value",
         "reorder_qty",
         "others_qty",
+        "purchase_qty",
+        "sales_return_qty",
+        "others_in_qty",
+        "subtotal_qty",
+        "purchase_return_qty",
+        "others_out_qty",
+        "free_qty",
+        "replacement_qty",
+        "source_product_name",
+        "source_packing",
         "dump_qty",
     ):
         # A printed 0 is the source value. Dropping it made the page show 0 for
@@ -26991,7 +27006,17 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "closing_qty",
             "closing_value",
             "others_qty",
-        } or (detail_opval and key == "opening_value")
+            "purchase_qty",
+            "sales_return_qty",
+            "others_in_qty",
+            "subtotal_qty",
+            "purchase_return_qty",
+            "others_out_qty",
+            "free_qty",
+            "replacement_qty",
+        } or (detail_opval and key == "opening_value") or (
+            sunderlal_openstk and key == "purchase_value"
+        )
         if detail_opval and key == "opening_value":
             continue
         if key in extra and extra.get(key) not in (None, ""):
@@ -27017,6 +27042,14 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "rate_qty_value"
     if extra.get("layout") == "qty_value_dump":
         additional["layout"] = "qty_value_dump"
+    if extra.get("layout") == "item_pack_sreturn_others":
+        additional["layout"] = "item_pack_sreturn_others"
+    if extra.get("layout") == "zenith_opstk_totalstock":
+        additional["layout"] = "zenith_opstk_totalstock"
+    if extra.get("layout") == "sunderlal_openstk_sale":
+        additional["layout"] = "sunderlal_openstk_sale"
+    if extra.get("layout") == "pack_opening_receipt_issue_mexp":
+        additional["layout"] = "pack_opening_receipt_issue_mexp"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
