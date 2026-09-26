@@ -547,9 +547,336 @@ def _merge_footer_total_into_text(page_text: str, image_bytes: Optional[bytes]) 
     return text + "\n" + "\n".join(total_lines)
 
 
+_PACK_MEXP_QTY_RE = re.compile(r"^(?:-|–|—|--|\d+(?:\.\d+)?)$")
+_PACK_MEXP_DATE_RE = re.compile(r"^\d{1,2}/\d{2,4}$")
+_PACK_MEXP_PACK_RE = re.compile(
+    r"^(?:"
+    r"\d{1,4}"
+    r"|\d+\s*\*\s*\d+"
+    r"|\d+[xX]\d+\S*"
+    r"|\d+(?:[.,']\d+)?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S|PCS)?"
+    r"|\d+[,']S"
+    r")$",
+    re.I,
+)
+
+
+def _is_pack_mexp_qty_statement(text: str) -> bool:
+    """ITEM DESCRIPTION / PACK / OPENING / RECEIPT / ISSUE / CLOSING / M.EXP.
+
+    Qty columns only. The paired QTY/VALUE + DUMP layout is a different parser.
+    A PACK header is enough when M.EXP is absent. Statements with no PACK
+    column stay on the existing OPENING/RECEIPT/ISSUE/CLOSING parser.
+    """
+    if not text:
+        return False
+    if re.search(r"\bDUMP\b", text, re.I) or re.search(r"QTY\.?\s+VALUE", text, re.I):
+        return False
+    if not re.search(r"ITEM\s+DESCRIPTION", text, re.I):
+        return False
+    # Pipes are column rules in this grid. They are not part of the header words.
+    sep = r"(?:\s*\|\s*|\s+)"
+    pack_header = re.search(
+        rf"ITEM{sep}DESCRIPTION{sep}PACK{sep}OPENING{sep}RECEIPT{sep}ISSUE{sep}CLOSING",
+        text,
+        re.I,
+    )
+    mexp_header = re.search(
+        rf"OPENING{sep}RECEIPT{sep}ISSUE{sep}CLOSING{sep}M\.?\s*EXP",
+        text,
+        re.I,
+    )
+    return bool(pack_header or mexp_header)
+
+
+def _parse_pack_mexp_qty_statement(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse pack as its own column and total quantities from product rows.
+
+    A bare pack such as 10 stays packing. A dash is 0. The printed TOTAL row
+    is not copied into opening/receipt/issue/closing.
+    """
+    if not _is_pack_mexp_qty_statement(text):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+    # Qty columns sometimes land on the next text line. Keep them with the product.
+    qty_only = re.compile(
+        r"^(?:-|\d+(?:\.\d+)?|\d{1,2}/\d{2,4})"
+        r"(?:\s+(?:-|\d+(?:\.\d+)?|\d{1,2}/\d{2,4}))*$"
+    )
+    logical_lines: List[str] = []
+    pending = ""
+    for ln in text.splitlines():
+        stripped = ln.replace("\xa0", " ").strip()
+        if not stripped:
+            continue
+        if pending and qty_only.match(stripped):
+            pending = f"{pending} {stripped}"
+            continue
+        if pending:
+            logical_lines.append(pending)
+        pending = stripped
+    if pending:
+        logical_lines.append(pending)
+
+    for stripped in logical_lines:
+        if not stripped or set(stripped) <= {"-", "="}:
+            continue
+        if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", stripped, re.I):
+            result["report_title"] = _clean_name(stripped)
+            period = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–]+\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                stripped,
+            )
+            if period:
+                result["period_from"] = _normalize_date(period.group(1))
+                result["period_to"] = _normalize_date(period.group(2))
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"MEDICAL|STORE|AGENC|MEDICO|PHARMA|DISTRIBUT", stripped, re.I
+        ):
+            if not re.search(r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION", stripped, re.I):
+                result["stockist_name"] = _clean_name(stripped)
+            continue
+        if re.search(
+            r"ITEM\s+DESCRIPTION|Phone\s*:|E-Mail|GSTIN|Page\s+No|^QTY\.",
+            stripped,
+            re.I,
+        ):
+            continue
+        if re.match(r"^(?:TOTAL|GRAND\s+TOTAL)\b", stripped, re.I):
+            continue
+        tokens = stripped.replace("|", " ").split()
+        mexp = None
+        if tokens and _PACK_MEXP_DATE_RE.match(tokens[-1]):
+            mexp = tokens[-1]
+            tokens = tokens[:-1]
+        split_at = len(tokens)
+        while split_at > 0 and _PACK_MEXP_QTY_RE.match(tokens[split_at - 1]):
+            split_at -= 1
+        qty_tokens = tokens[split_at:]
+        head = tokens[:split_at]
+        if len(qty_tokens) < 4 or not head:
+            continue
+        pack = None
+        # A unit pack (200ML, 10TAB, 100'S) sits in the name. A bare integer
+        # pack is only peeled when it is an extra number in front of the
+        # four quantity columns, so "LIV 52" is not treated as a pack.
+        if len(qty_tokens) == 4 and re.search(r"[A-Za-z']", head[-1]) and _PACK_MEXP_PACK_RE.match(head[-1]):
+            pack = head[-1]
+            head = head[:-1]
+        elif len(qty_tokens) > 4 and _PACK_MEXP_PACK_RE.match(qty_tokens[0]):
+            pack = qty_tokens[0]
+            qty_tokens = qty_tokens[1:]
+        if len(qty_tokens) < 4 or not head:
+            continue
+        opening, receipt, issue, closing = qty_tokens[:4]
+        name = _clean_name(" ".join(head))
+        if not name or not re.search(r"[A-Za-z]", name):
+            continue
+        if re.match(r"^(?:TOTAL|HIMALAYA|COMPANY)\b", name, re.I):
+            continue
+
+        def _qty(token: str) -> float:
+            return 0.0 if token in {"-", "–", "—", "--"} else _to_float(token)
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = _qty(opening)
+        item["receipts_qty"] = _qty(receipt)
+        item["sales_qty"] = _qty(issue)
+        item["closing_qty"] = _qty(closing)
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        item["extra"] = {
+            "layout": "pack_opening_receipt_issue_mexp",
+            "source_product_name": name,
+            "source_packing": pack,
+            "m_exp": mexp,
+            "expiry": mexp,
+        }
+        items.append(item)
+
+    if not items:
+        return None
+    return _pack_mexp_finish(result, items)
+
+
+def _pack_mexp_columns_collapsed(result: Dict[str, Any]) -> bool:
+    """True when later qty tokens were swallowed into the pack cell."""
+    for item in result.get("line_items") or []:
+        parts = str(item.get("packing") or "").split()
+        if len(parts) < 2:
+            continue
+        if any(
+            part in {"-", "—", "--"} or re.fullmatch(r"\d+(?:\.\d+)?", part)
+            for part in parts[1:]
+        ):
+            return True
+    return False
+
+
+def _pack_mexp_finish(result: Dict[str, Any], items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    result["line_items"] = items
+    opening_sum = sum(_to_float(item.get("opening_qty")) for item in items)
+    receipt_sum = sum(_to_float(item.get("receipts_qty")) for item in items)
+    issue_sum = sum(_to_float(item.get("sales_qty")) for item in items)
+    closing_sum = sum(_to_float(item.get("closing_qty")) for item in items)
+    totals = result["totals"]
+    totals["opening_qty"] = opening_sum
+    totals["receipts_qty"] = receipt_sum
+    totals["sales_qty"] = issue_sum
+    totals["closing_qty"] = closing_sum
+    totals["sales_value"] = None
+    totals["closing_value"] = None
+    extra = totals["extra"]
+    extra["extraction_method"] = "pack_opening_receipt_issue_mexp"
+    extra["layout"] = "pack_opening_receipt_issue_mexp"
+    extra["rows_detected"] = len(items)
+    extra["opening_qty"] = opening_sum
+    extra["receipts_qty"] = receipt_sum
+    extra["sales_qty"] = issue_sum
+    extra["closing_qty"] = closing_sum
+    extra["total_row_source"] = "product_row_sum"
+    extra["stock_identity_formula"] = "opening + receipt - issue = closing"
+    return result
+
+
+def _pack_mexp_header_centers(rows: List[Dict[str, Any]]) -> Optional[List[Tuple[str, float]]]:
+    """PACK / OPENING / RECEIPT / ISSUE / CLOSING centers from the header row."""
+    wanted = (
+        ("pack", "pack"),
+        ("opening", "opening_qty"),
+        ("receipt", "receipts_qty"),
+        ("issue", "sales_qty"),
+        ("closing", "closing_qty"),
+    )
+    for row in rows:
+        found: Dict[str, float] = {}
+        for box in row.get("words") or []:
+            token = _ssa_token(box[4])
+            if token == "mexp":
+                token = "mexp"
+            center = (float(box[0]) + float(box[2])) / 2.0
+            if token in {name for name, _field in wanted} or token == "mexp":
+                found[token] = center
+        if not all(name in found for name, _field in wanted):
+            continue
+        anchors = [(field, found[name]) for name, field in wanted]
+        if "mexp" in found:
+            anchors.append(("mexp", found["mexp"]))
+        return anchors
+    return None
+
+
+def _parse_pack_mexp_qty_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Assign PACK and the four qty columns by header x position.
+
+    A blank or dash stays in that column. The pack number is not reused as
+    opening, and opening is not moved into sales.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_pack_mexp_qty_statement(text) for text in page_texts):
+        return None
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    blob = "\n".join(page_texts)
+    period = re.search(
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–]+\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    anchors = None
+    page_rows: List[List[Dict[str, Any]]] = []
+    for page in doc:
+        rows = _ssa_cluster_rows(page.get_text("words") or [])
+        page_rows.append(rows)
+        if anchors is None:
+            anchors = _pack_mexp_header_centers(rows)
+    if not anchors:
+        return None
+    centers = [x for _name, x in anchors]
+    gaps = [centers[i + 1] - centers[i] for i in range(len(centers) - 1)]
+    half = max(8.0, min(gaps) / 2.0) if gaps else 18.0
+    # Right-aligned qty sits on the column's right side. Bin by the midpoint
+    # between header centers so pack 10 cannot land in OPENING or ISSUE.
+    bounds = [(centers[i] + centers[i + 1]) / 2.0 for i in range(len(centers) - 1)]
+    pack_left = centers[0] - half
+    items: List[Dict[str, Any]] = []
+    for rows in page_rows:
+        for row in rows:
+            words = row.get("words") or []
+            blob_row = " ".join(str(box[4]) for box in words)
+            if re.search(r"\bPACK\b", blob_row, re.I) and re.search(r"\bOPENING\b", blob_row, re.I):
+                continue
+            cells: Dict[str, List[str]] = {name: [] for name, _x in anchors}
+            name_bits: List[str] = []
+            for box in words:
+                token = str(box[4]).strip().strip("|")
+                if not token or token == "|":
+                    continue
+                left = float(box[0])
+                right = float(box[2])
+                center = (left + right) / 2.0
+                if center < pack_left:
+                    name_bits.append(token)
+                    continue
+                probe = right if re.fullmatch(r"-?\d+(?:\.\d+)?|-|—", token) else center
+                nearest = 0
+                while nearest < len(bounds) and probe >= bounds[nearest]:
+                    nearest += 1
+                if abs(centers[nearest] - probe) <= half + 4:
+                    cells[anchors[nearest][0]].append(token)
+            name = _clean_name(" ".join(name_bits))
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            if re.match(r"^(?:TOTAL|GRAND|HIMALAYA|COMPANY)\b", name, re.I):
+                continue
+            pack = _clean_name(" ".join(cells.get("pack") or [])) or None
+            def _cell_qty(field: str) -> float:
+                raw = " ".join(cells.get(field) or []).strip()
+                if raw in {"", "-", "—", "--"}:
+                    return 0.0
+                match = re.search(r"-?\d+(?:\.\d+)?", raw.replace(",", ""))
+                return _to_float(match.group(0)) if match else 0.0
+            if not pack and _cell_qty("opening_qty") == _cell_qty("receipts_qty") == _cell_qty("sales_qty") == _cell_qty("closing_qty") == 0:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack
+            item["opening_qty"] = _cell_qty("opening_qty")
+            item["receipts_qty"] = _cell_qty("receipts_qty")
+            item["sales_qty"] = _cell_qty("sales_qty")
+            item["closing_qty"] = _cell_qty("closing_qty")
+            item["sales_value"] = 0.0
+            item["closing_value"] = 0.0
+            item["extra"] = {
+                "layout": "pack_opening_receipt_issue_mexp",
+                "source_product_name": name,
+                "source_packing": pack,
+                "m_exp": _clean_name(" ".join(cells.get("mexp") or [])) or None,
+                "expiry": _clean_name(" ".join(cells.get("mexp") or [])) or None,
+            }
+            items.append(item)
+    if len(items) < 1:
+        return None
+    return _pack_mexp_finish(result, items)
+
+
 def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, Any]]:
     """Parse P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING stock & sales analysis."""
     if not text:
+        return None
+    if _is_pack_mexp_qty_statement(text):
         return None
     # QTY/VALUE pairs (with or without RATE). A printed dash is an empty cell,
     # so the 4-number tail parser must not claim these tables.
@@ -1107,6 +1434,9 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
         ((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or ""
     )
     if portrait_method == "portrait_opening_balance_columns":
+        return result
+    # This layout's printed TOTAL does not match the product rows.
+    if portrait_method == "pack_opening_receipt_issue_mexp":
         return result
     parsed = _parse_statement_total_row(text)
     if not parsed:
@@ -7353,6 +7683,10 @@ def _looks_like_zandra_stock_sale_result(result: Optional[Dict[str, Any]]) -> bo
     extra = ((result.get("totals") or {}).get("extra") or {})
     if extra.get("extraction_method") == "zandra_stock_sale_vision":
         return True
+    # A2Z STOCK & SALES ANALYSIS has PACK / OPENING / RECEIPT / ISSUE / CLOSING.
+    # The parenthetical division name ZANDRA must not select the Op Stk grid.
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I):
+        return False
     return bool(
         re.search(r"Stock\s+and\s+Sale", title, re.I)
         or re.search(r"ZANDRA", company, re.I)
@@ -13010,6 +13344,19 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             sunderlal_openstk["totals"]["extra"]["statement_count"] = 1
             return sunderlal_openstk
 
+        pack_mexp_text = "\n".join((page.get_text("text") or "") for page in doc)
+        pack_doc = _parse_pack_mexp_qty_doc(doc, filename)
+        pack_text = _parse_pack_mexp_qty_statement(pack_mexp_text, filename, "pdf")
+        # Header x positions keep pack 10 out of opening. A one-line text
+        # layer has no column gaps, so that read falls back to the line parser.
+        if pack_doc and pack_doc.get("line_items") and not _pack_mexp_columns_collapsed(pack_doc):
+            pack_mexp = pack_doc
+        else:
+            pack_mexp = pack_text
+        if pack_mexp and pack_mexp.get("line_items"):
+            pack_mexp["totals"]["extra"]["statement_count"] = 1
+            return pack_mexp
+
         marg_nano = _parse_marg_nano_split_statement(doc, filename)
         if marg_nano and marg_nano.get("line_items"):
             marg_nano["totals"]["extra"]["statement_count"] = 1
@@ -14461,6 +14808,12 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
         rtl_items = _summary_rtl_items_from_text(text)
         if rtl_items:
             return _summary_rtl_finish(rtl_items, text, filename, source_format)
+
+    # ITEM DESCRIPTION / PACK / OPENING / RECEIPT / ISSUE / CLOSING / M.EXP.
+    # Totals are the product-row sums. The printed TOTAL row is not used.
+    pack_mexp = _parse_pack_mexp_qty_statement(text, filename, source_format)
+    if pack_mexp and pack_mexp.get("line_items"):
+        return pack_mexp
 
     # 0b) P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING (before Gemini)
     ps = _parse_ps_pharma_statement(text, filename)
@@ -17452,6 +17805,336 @@ def _extract_main_stock_sales_vision(
     return result
 
 
+def _is_a2z_opening_mexp_text(text: str) -> bool:
+    """A2Z STOCK & SALES ANALYSIS: ITEM DESCRIPTION, qty columns, and M.EXP.
+
+    Pack is its own column even when the header line has no PACK word.
+    The Zandra Op Stk / P Qty grid is a different statement.
+    """
+    if not text:
+        return False
+    if re.search(r"\bDUMP\b|QTY\.?\s+VALUE|\bOp\s*Stk\b|\bP\s*Qty\b|Item\s*Cd", text, re.I):
+        return False
+    if not re.search(r"ITEM\s+DESCRIPTION", text, re.I):
+        return False
+    if not re.search(r"\bOPENING\b", text, re.I):
+        return False
+    if not re.search(r"\bRECEIPT\b", text, re.I):
+        return False
+    if not re.search(r"\bCLOSING\b", text, re.I):
+        return False
+    if not re.search(r"M\.?\s*\\?\s*EXP", text, re.I):
+        return False
+    return bool(re.search(r"ISSUE|TSSUE", text, re.I))
+
+
+def _a2z_header_token(text: str) -> str:
+    return re.sub(r"[^A-Z]", "", str(text or "").upper())
+
+
+def _a2z_page_image(file_bytes: bytes):
+    """Use the bright statement page inside a photo of a monitor."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    gray = image.convert("L")
+    width, height = gray.size
+    pixels = gray.load()
+    top_light = sum(1 for x in range(0, width, 4) if pixels[x, min(8, height - 1)] > 170)
+    if top_light > width / 8:
+        page = image
+    else:
+        ys = [
+            y
+            for y in range(height)
+            if sum(1 for x in range(0, width, 6) if pixels[x, y] > 170) > width / 6 * 0.35
+        ]
+        xs = [
+            x
+            for x in range(width)
+            if sum(1 for y in range(height // 5, 4 * height // 5, 8) if pixels[x, y] > 170) > 20
+        ]
+        if not ys or not xs:
+            page = image
+        else:
+            x0, y0, x1, y1 = min(xs), min(ys), max(xs) + 1, max(ys) + 1
+            pad_x = int((x1 - x0) * 0.045)
+            pad_y = int((y1 - y0) * 0.035)
+            page = image.crop((x0 + pad_x, y0 + pad_y, x1 - pad_x, y1 - pad_y))
+    page = ImageOps.autocontrast(page)
+    page = ImageEnhance.Contrast(page).enhance(1.4)
+    return page.resize((page.width * 2, page.height * 2), Image.Resampling.LANCZOS)
+
+
+def _a2z_tesseract():
+    import os
+    import pytesseract
+
+    cmd = os.getenv("TESSERACT_CMD", "").strip()
+    if cmd:
+        pytesseract.pytesseract.tesseract_cmd = cmd
+    elif os.name == "nt":
+        win_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if os.path.exists(win_cmd):
+            pytesseract.pytesseract.tesseract_cmd = win_cmd
+    return pytesseract
+
+
+def _a2z_reread_digits(page, box: Dict[str, Any]) -> str:
+    pytesseract = _a2z_tesseract()
+    from PIL import Image
+
+    pad = 4
+    cell = page.crop((
+        max(0, int(box["x0"]) - pad),
+        max(0, int(box["y0"]) - pad),
+        int(box["x1"]) + pad,
+        int(box["y1"]) + pad,
+    ))
+    cell = cell.resize((max(1, cell.width * 3), max(1, cell.height * 3)), Image.Resampling.LANCZOS)
+    return pytesseract.image_to_string(
+        cell,
+        config="--psm 7 -c tessedit_char_whitelist=0123456789",
+    ).strip()
+
+
+def _a2z_reread_date(page, boxes: List[Dict[str, Any]]) -> str:
+    """Re-read an M.EXP cell. Monitor stripes turn 11/24 into UL/24."""
+    from PIL import Image, ImageOps
+
+    if page is None or not boxes:
+        return ""
+    pytesseract = _a2z_tesseract()
+    pad = 3
+    cell = page.crop((
+        max(0, min(int(box["x0"]) for box in boxes) - pad),
+        max(0, min(int(box["y0"]) for box in boxes) - pad),
+        max(int(box["x1"]) for box in boxes) + pad,
+        max(int(box["y1"]) for box in boxes) + pad,
+    ))
+    gray = ImageOps.grayscale(cell)
+    # Collapse the vertical phosphor stripes, then scale back up.
+    squeezed = gray.resize((max(1, gray.width // 3), gray.height), Image.Resampling.BOX)
+    wide = squeezed.resize((gray.width * 6, gray.height * 6), Image.Resampling.LANCZOS)
+    wide = ImageOps.autocontrast(wide)
+    text = pytesseract.image_to_string(
+        wide,
+        config="--psm 8 -c tessedit_char_whitelist=0123456789/",
+    )
+    text = re.sub(r"\s+", "", text or "")
+    return text if re.fullmatch(r"\d{1,2}/\d{2,4}", text) else ""
+
+
+def _a2z_cell_qty(tokens: List[Dict[str, Any]], page) -> float:
+    cleaned = [
+        str(token["t"]).strip()
+        for token in tokens
+        if str(token["t"]).strip() not in {"", "|"}
+    ]
+    if any(token in {"-", "–", "—", "--"} for token in cleaned) and not any(
+        re.fullmatch(r"\d+(?:\.\d+)?", token) for token in cleaned
+    ):
+        return 0.0
+    for token in cleaned:
+        if re.fullmatch(r"\d+(?:\.\d+)?", token):
+            return float(token)
+    for token in tokens:
+        raw = str(token["t"]).strip()
+        if page is None or not raw or raw.isalpha() or len(raw) > 3:
+            continue
+        if re.fullmatch(r"\d+(?:\.\d+)?", raw):
+            continue
+        digits = _a2z_reread_digits(page, token)
+        if re.fullmatch(r"\d+", digits or ""):
+            return float(digits)
+    return 0.0
+
+
+def _a2z_items_from_ocr_words(
+    words: List[Dict[str, Any]], page
+) -> List[Dict[str, Any]]:
+    """Place each glyph in PACK / OPENING / RECEIPT / ISSUE / CLOSING by header x.
+
+    The pack number sits left of OPENING. It is not the opening quantity.
+    """
+    if not words:
+        return []
+    heights = sorted(box["y1"] - box["y0"] for box in words)
+    tol = max(2.0, heights[len(heights) // 2] * 0.6)
+    ordered = sorted(words, key=lambda box: ((box["y0"] + box["y1"]) / 2.0, box["x0"]))
+    rows: List[Dict[str, Any]] = []
+    for box in ordered:
+        cy = (box["y0"] + box["y1"]) / 2.0
+        if rows and abs(cy - rows[-1]["cy"]) <= tol:
+            rows[-1]["words"].append(box)
+            count = len(rows[-1]["words"])
+            rows[-1]["cy"] = ((rows[-1]["cy"] * (count - 1)) + cy) / count
+        else:
+            rows.append({"cy": cy, "words": [box]})
+    for row in rows:
+        row["words"].sort(key=lambda box: box["x0"])
+    header = None
+    for row in rows:
+        labels = [_a2z_header_token(box["t"]) for box in row["words"]]
+        blob = " ".join(labels)
+        if "OPENING" in blob and "RECEIPT" in blob and "CLOSING" in blob:
+            header = row
+            break
+    if header is None:
+        return []
+    anchors: Dict[str, Tuple[float, float]] = {}
+    for box in header["words"]:
+        label = _a2z_header_token(box["t"])
+        center = (box["x0"] + box["x1"]) / 2.0
+        if label == "OPENING":
+            anchors["opening"] = (box["x0"], center)
+        elif label == "RECEIPT":
+            anchors["receipt"] = (box["x0"], center)
+        elif label.startswith("ISS") or label.startswith("TSS"):
+            anchors["issue"] = (box["x0"], center)
+        elif label.startswith("CLOS"):
+            anchors["closing"] = (box["x0"], center)
+        elif "EXP" in label:
+            anchors["mexp"] = (box["x0"], center)
+    if "issue" not in anchors and "receipt" in anchors and "closing" in anchors:
+        receipt_center = anchors["receipt"][1]
+        closing_center = anchors["closing"][1]
+        between = [
+            box
+            for box in header["words"]
+            if receipt_center < (box["x0"] + box["x1"]) / 2.0 < closing_center
+            and not _a2z_header_token(box["t"]).startswith("CLOS")
+        ]
+        if between:
+            box = between[0]
+            anchors["issue"] = (box["x0"], (box["x0"] + box["x1"]) / 2.0)
+        else:
+            anchors["issue"] = (
+                (anchors["receipt"][0] + anchors["closing"][0]) / 2.0,
+                (receipt_center + closing_center) / 2.0,
+            )
+    needed = ("opening", "receipt", "issue", "closing")
+    if any(name not in anchors for name in needed):
+        return []
+    fields = ["opening", "receipt", "issue", "closing"]
+    if "mexp" in anchors:
+        fields.append("mexp")
+    centers = [anchors[name][1] for name in fields]
+    gaps = [centers[index + 1] - centers[index] for index in range(len(centers) - 1)]
+    pitch = sorted(gaps)[len(gaps) // 2] if gaps else 80.0
+    opening_left = anchors["opening"][0]
+    pack_left = opening_left - pitch
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        if row is header:
+            continue
+        name_bits: List[str] = []
+        pack_bits: List[str] = []
+        cells: Dict[str, List[Dict[str, Any]]] = {name: [] for name in fields}
+        for box in row["words"]:
+            token = str(box["t"]).strip().strip("|")
+            if not token:
+                continue
+            center = (box["x0"] + box["x1"]) / 2.0
+            compact = token.replace(" ", "")
+            if "mexp" in cells and (
+                _PACK_MEXP_DATE_RE.match(compact) or re.search(r"/\d{2,4}$", compact)
+            ):
+                cells["mexp"].append(box)
+                continue
+            if center < pack_left:
+                name_bits.append(token)
+                continue
+            if center < opening_left:
+                pack_bits.append(token)
+                continue
+            nearest = min(range(len(centers)), key=lambda index: abs(centers[index] - center))
+            if abs(centers[nearest] - center) <= pitch * 0.65:
+                cells[fields[nearest]].append(box)
+        name = _clean_name(" ".join(name_bits))
+        if not name or not re.search(r"[A-Za-z]", name):
+            continue
+        if re.match(r"^(?:TOTAL|GRAND|HIMALAYA\s+WELLNESS|COMPANY)\b", name, re.I):
+            continue
+        pack = _clean_name(" ".join(pack_bits)) or None
+        opening = _a2z_cell_qty(cells["opening"], page)
+        receipt = _a2z_cell_qty(cells["receipt"], page)
+        issue = _a2z_cell_qty(cells["issue"], page)
+        closing = _a2z_cell_qty(cells["closing"], page)
+        mexp_boxes = cells.get("mexp") or []
+        mexp_text = " ".join(str(box["t"]).strip() for box in mexp_boxes)
+        expiry_match = re.search(r"\d{1,2}\s*/\s*\d{2,4}", mexp_text)
+        if expiry_match:
+            expiry = expiry_match.group(0).replace(" ", "")
+        elif any("/" in str(box["t"]) for box in mexp_boxes):
+            expiry = _a2z_reread_date(page, mexp_boxes) or None
+        else:
+            expiry = None
+        if pack is None and opening == receipt == issue == closing == 0:
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipt
+        item["sales_qty"] = issue
+        item["closing_qty"] = closing
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        item["extra"] = {
+            "layout": "pack_opening_receipt_issue_mexp",
+            "source_product_name": name,
+            "source_packing": pack,
+            "m_exp": expiry,
+            "expiry": expiry,
+        }
+        items.append(item)
+    return items
+
+
+def _parse_a2z_opening_mexp_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Read the A2Z photo by column position. Pack stays left of OPENING."""
+    preview = _ocr_image_to_text(file_bytes, psm=6)
+    if not _is_a2z_opening_mexp_text(preview):
+        return None
+    page = _a2z_page_image(file_bytes)
+    pytesseract = _a2z_tesseract()
+    data = pytesseract.image_to_data(page, config="--psm 6", output_type=pytesseract.Output.DICT)
+    words: List[Dict[str, Any]] = []
+    for index, token in enumerate(data["text"]):
+        token = str(token or "").strip()
+        if not token:
+            continue
+        x0 = int(data["left"][index])
+        y0 = int(data["top"][index])
+        words.append({
+            "x0": x0,
+            "y0": y0,
+            "x1": x0 + int(data["width"][index]),
+            "y1": y0 + int(data["height"][index]),
+            "t": token,
+        })
+    items = _a2z_items_from_ocr_words(words, page)
+    if len(items) < 3:
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    if re.search(r"A2Z\s+PHARMA", preview, re.I):
+        result["stockist_name"] = "A2Z PHARMA"
+    if re.search(r"HIMALAYA\s+WELLNESS\s+COMPANY", preview, re.I):
+        result["company_name"] = "HIMALAYA WELLNESS COMPANY"
+    period = re.search(
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}).{0,12}(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        preview,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    return _pack_mexp_finish(result, items)
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -17468,6 +18151,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     )
     if rtl and rtl.get("line_items"):
         return rtl
+    a2z = _parse_a2z_opening_mexp_image(file_bytes, filename, ext)
+    if a2z and a2z.get("line_items"):
+        return a2z
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()

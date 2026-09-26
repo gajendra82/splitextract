@@ -2916,6 +2916,7 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "item_pack_sreturn_others",
             "zenith_opstk_totalstock",
             "sunderlal_openstk_sale",
+            "pack_opening_receipt_issue_mexp",
         ):
             kept_items.append(item)
             continue
@@ -27047,6 +27048,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "zenith_opstk_totalstock"
     if extra.get("layout") == "sunderlal_openstk_sale":
         additional["layout"] = "sunderlal_openstk_sale"
+    if extra.get("layout") == "pack_opening_receipt_issue_mexp":
+        additional["layout"] = "pack_opening_receipt_issue_mexp"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
