@@ -26993,6 +26993,16 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "source_product_name",
         "source_packing",
         "dump_qty",
+        "dump_stock",
+        "near_expiry_qty",
+        "near_expiry",
+        "shortage_qty",
+        "total_stock_qty",
+        "total_qty",
+        "msr_price",
+        "expected_total",
+        "expected_closing",
+        "stock_identity_ok",
     ):
         # A printed 0 is the source value. Dropping it made the page show 0 for
         # a missing field and then reuse Sales as Closing.
@@ -27014,6 +27024,17 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "others_out_qty",
             "free_qty",
             "replacement_qty",
+            "dump_qty",
+            "dump_stock",
+            "near_expiry_qty",
+            "near_expiry",
+            "shortage_qty",
+            "total_stock_qty",
+            "total_qty",
+            "msr_price",
+            "expected_total",
+            "expected_closing",
+            "stock_identity_ok",
         } or (detail_opval and key == "opening_value") or (
             sunderlal_openstk and key == "purchase_value"
         )
@@ -27036,6 +27057,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["packing"] = line.get("packing")
     if prompt_datewise:
         additional["layout"] = "prompt_datewise"
+    if extra.get("layout") == "himalaya_dump_statement":
+        additional["layout"] = "himalaya_dump_statement"
     if extra.get("layout") == "order_form":
         additional["layout"] = "order_form"
     if extra.get("layout") == "rate_qty_value":
