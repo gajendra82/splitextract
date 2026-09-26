@@ -27073,6 +27073,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "sunderlal_openstk_sale"
     if extra.get("layout") == "pack_opening_receipt_issue_mexp":
         additional["layout"] = "pack_opening_receipt_issue_mexp"
+    if extra.get("layout") == "product_wise_stock_statement":
+        additional["layout"] = "product_wise_stock_statement"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:

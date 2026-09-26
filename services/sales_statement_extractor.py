@@ -872,6 +872,444 @@ def _parse_pack_mexp_qty_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
     return _pack_mexp_finish(result, items)
 
 
+def _is_product_wise_stock_statement_text(text: str) -> bool:
+    """Product wise stock statement: Opening/Receipt/Issues + Sales/Closing amounts.
+
+    Distinct from STOCK & SALES ANALYSIS and from Product Stock Report
+    (Opening/Purchase/Sale).
+    """
+    if not text:
+        return False
+    if not re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    if re.search(r"\bDUMP\b", text, re.I) and re.search(r"QTY\.?\s+VALUE", text, re.I):
+        return False
+    has_qty = (
+        re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bReceipt\b", text, re.I)
+        and re.search(r"\bIssues?\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+    )
+    # Sales amount is required. Closing amount may be split across lines
+    # ("Closing" / "amount") or abbreviated in the text layer.
+    has_money = re.search(r"Sales\s+amount", text, re.I)
+    return bool(has_qty and has_money)
+
+
+def _pws_header_bounds(rows: List[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+    """X midpoints for Product wise stock statement columns from the header row."""
+    for row in rows:
+        words = row.get("words") or []
+        blob = " ".join(str(box[4]) for box in words)
+        if not (
+            re.search(r"\bOpening\b", blob, re.I)
+            and re.search(r"\bReceipt\b", blob, re.I)
+            and re.search(r"\bIssues?\b", blob, re.I)
+            and re.search(r"\bPacking\b", blob, re.I)
+        ):
+            continue
+        found: Dict[str, Tuple[float, float]] = {}
+        for box in words:
+            token = _ssa_token(box[4])
+            left, right = float(box[0]), float(box[2])
+            center = (left + right) / 2.0
+            if token in {"product", "name", "productname"} and "name" not in found:
+                found["name"] = (left, right)
+            elif token == "packing":
+                found["packing"] = (left, right)
+            elif token == "box":
+                found["box"] = (left, right)
+            elif token == "opening":
+                found["opening"] = (left, right)
+            elif token == "receipt":
+                found["receipt"] = (left, right)
+            elif token == "issues":
+                found["issues"] = (left, right)
+            elif token == "issue" and "issues" not in found:
+                # "Issue" from "Issue Goods Closing" — only keep if left of Closing.
+                found["issues"] = (left, right)
+            elif token == "closing" and "closing_qty" not in found:
+                found["closing_qty"] = (left, right)
+            elif token in {"shexp", "shexpliquidation"}:
+                found["shexp"] = (left, right)
+            elif token == "sales":
+                found["sales"] = (left, right)
+            elif token == "amount":
+                # Rightmost "amount" is Closing amount; left one is Sales amount.
+                if "sales_amount" not in found and "sales" in found:
+                    found["sales_amount"] = (left, right)
+                else:
+                    found["closing_amount"] = (left, right)
+        if "opening" not in found or "receipt" not in found or "issues" not in found:
+            continue
+        if "closing_qty" not in found or "sales" not in found:
+            continue
+
+        open_c = (found["opening"][0] + found["opening"][1]) / 2.0
+        rec_c = (found["receipt"][0] + found["receipt"][1]) / 2.0
+        iss_c = (found["issues"][0] + found["issues"][1]) / 2.0
+        clo_left = found["closing_qty"][0]
+        clo_right = found["closing_qty"][1]
+        clo_c = (clo_left + clo_right) / 2.0
+        sales_left = found["sales"][0]
+        if "sales_amount" in found:
+            sales_right = max(found["sales"][1], found["sales_amount"][1])
+        else:
+            sales_right = found["sales"][1] + 30.0
+        if "closing_amount" in found:
+            close_amt_left = found["closing_amount"][0]
+        else:
+            close_amt_left = sales_right + 8.0
+
+        # Issues header must sit left of Closing qty. Ignore the "Issue"
+        # fragment from "Issue Goods Closing" when it lands too far right.
+        if iss_c > clo_c or found["issues"][0] > clo_left:
+            found["issues"] = (
+                found["receipt"][1] + 4.0,
+                clo_left - 4.0,
+            )
+            iss_c = (found["issues"][0] + found["issues"][1]) / 2.0
+
+        pack_left = found["packing"][0] if "packing" in found else open_c * 0.55
+        if "box" in found:
+            pack_right = (
+                (found["packing"][1] + found["box"][0]) / 2.0
+                if "packing" in found
+                else found["box"][0]
+            )
+            box_right = (found["box"][1] + found["opening"][0]) / 2.0
+        else:
+            pack_right = (
+                (found["packing"][1] + found["opening"][0]) / 2.0
+                if "packing" in found
+                else found["opening"][0] - 8.0
+            )
+            box_right = found["opening"][0] - 2.0
+
+        open_right = found["receipt"][0] - 1.0
+        rec_right = found["issues"][0] - 1.0
+        # Printed Sh.Exp qty sits between Issues and Closing even when the
+        # Sh.Exp header glyph is drawn to the right of Closing.
+        iss_right = (found["issues"][1] + clo_left) / 2.0
+        # Split Sh.Exp (just left of Closing header center) from Closing qty.
+        shexp_right = (clo_left + clo_right) / 2.0
+        # Keep Closing qty band open through to Sales so right-aligned
+        # closing digits (x≈385) are not swallowed by Sales amount.
+        close_right = (clo_right + sales_left) / 2.0
+        if close_right < clo_right + 8.0:
+            close_right = clo_right + 20.0
+
+        return {
+            "name_right": pack_left,
+            "pack_left": pack_left,
+            "pack_right": pack_right,
+            "box_right": box_right,
+            "open_left": box_right,
+            "open_right": open_right,
+            "rec_right": rec_right,
+            "iss_right": iss_right,
+            "shexp_right": shexp_right,
+            "close_right": close_right,
+            "sales_right": (sales_right + close_amt_left) / 2.0,
+        }
+    return None
+
+
+def _pws_parse_number(raw: str) -> Optional[float]:
+    text = str(raw or "").strip().replace(",", "").replace("₹", "")
+    if not text or text in {"-", "–", "—", "--", "."}:
+        return 0.0
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", text):
+        return None
+    return _to_float(text)
+
+
+def _pws_is_skip_name(name: str) -> bool:
+    if not name:
+        return True
+    upper = name.upper().strip()
+    if re.match(
+        r"^(?:TOTAL|GRAND|PAGE|PRODUCT|PACKING|OPENING|RECEIPT|ISSUES?|"
+        r"CLOSING|SALES|AMOUNT|SH\.?EXP|BOX|THE HIMALAYA|HIMALAYA|"
+        r"AMIT |AKASH |\*\*LIQU)",
+        upper,
+    ):
+        return True
+    if re.search(r"DRUG\s+CO|WELLNESS|ZANDRA|ZEAL|\bOTX\b|PAGE\s*NO", upper):
+        return True
+    return False
+
+
+def _parse_product_wise_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Coordinate parse for Product wise stock statement (qty + sales/closing amounts).
+
+    Columns: Product Name | Packing | Box | Opening | Receipt | Issues |
+    Closing | Sh.Exp | Sales amount | Closing amount (Issue Goods Closing).
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    blob = "\n".join(page_texts)
+    if not any(_is_product_wise_stock_statement_text(text) for text in page_texts):
+        if not _is_product_wise_stock_statement_text(blob):
+            return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Product wise stock statement"
+    period = re.search(
+        r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    stockist = re.search(
+        r"^([A-Z][A-Z0-9 .,'&/-]{3,80}),\s*([A-Z][A-Z0-9 .,'&/-]{2,40})\s*$",
+        blob,
+        re.M,
+    )
+    if stockist:
+        result["stockist_name"] = _clean_name(
+            f"{stockist.group(1)}, {stockist.group(2)}"
+        )
+    elif not result.get("stockist_name"):
+        for line in blob.splitlines()[:8]:
+            if re.search(r"AGENC|ENTERPRIS|MEDICAL|DISTRIB", line, re.I):
+                result["stockist_name"] = _clean_name(line)
+                break
+
+    bounds = None
+    page_rows: List[List[Dict[str, Any]]] = []
+    for page in doc:
+        rows = _ssa_cluster_rows(page.get_text("words") or [])
+        page_rows.append(rows)
+        if bounds is None:
+            bounds = _pws_header_bounds(rows)
+    if not bounds:
+        return None
+
+    items: List[Dict[str, Any]] = []
+    printed_amount_totals: List[Dict[str, float]] = []
+    pending_name = ""
+
+    def _assign(box, field_tokens: Dict[str, List[str]]) -> None:
+        token = str(box[4]).strip()
+        if not token or token == "|":
+            return
+        center = (float(box[0]) + float(box[2])) / 2.0
+        # Right-aligned qty: prefer the glyph's right edge for binning.
+        probe = float(box[2]) if re.fullmatch(r"-?[\d,]+(?:\.\d+)?|-|—", token) else center
+        if probe < bounds["name_right"] or center < bounds["name_right"]:
+            if center < bounds["name_right"]:
+                field_tokens["name"].append(token)
+                return
+        if center < bounds["pack_right"] and center >= bounds["name_right"]:
+            field_tokens["packing"].append(token)
+        elif center < bounds["box_right"]:
+            field_tokens["box"].append(token)
+        elif probe < bounds["open_right"]:
+            field_tokens["opening"].append(token)
+        elif probe < bounds["rec_right"]:
+            field_tokens["receipt"].append(token)
+        elif probe < bounds["iss_right"]:
+            field_tokens["issues"].append(token)
+        elif probe < bounds["shexp_right"]:
+            field_tokens["shexp"].append(token)
+        elif probe < bounds["close_right"]:
+            field_tokens["closing"].append(token)
+        elif probe < bounds["sales_right"] or center < bounds["sales_right"]:
+            field_tokens["sales_value"].append(token)
+        else:
+            field_tokens["closing_value"].append(token)
+
+    for rows in page_rows:
+        for row in rows:
+            words = row.get("words") or []
+            blob_row = " ".join(str(box[4]) for box in words)
+            if re.search(
+                r"Product\s+Name|Sales\s+amount|Packing|Page\s*No|Opening\s+Receipt",
+                blob_row,
+                re.I,
+            ) and re.search(r"\bOpening\b|\bReceipt\b|\bPacking\b|\bPage\b", blob_row, re.I):
+                if re.search(r"\bOpening\b.*\bReceipt\b|\bProduct\s+Name\b|\bPage\s*No", blob_row, re.I):
+                    continue
+            cells: Dict[str, List[str]] = {
+                "name": [],
+                "packing": [],
+                "box": [],
+                "opening": [],
+                "receipt": [],
+                "issues": [],
+                "shexp": [],
+                "closing": [],
+                "sales_value": [],
+                "closing_value": [],
+            }
+            for box in words:
+                _assign(box, cells)
+
+            name = _clean_name(" ".join(cells["name"]))
+            packing = _clean_name(" ".join(cells["packing"])) or None
+
+            def _qty(field: str) -> float:
+                values = []
+                for tok in cells.get(field) or []:
+                    parsed = _pws_parse_number(tok)
+                    if parsed is not None:
+                        values.append(parsed)
+                if values:
+                    # Right-most token in a qty band is the printed column value.
+                    return values[-1]
+                return 0.0
+
+            def _money(field: str) -> float:
+                values = []
+                for tok in cells.get(field) or []:
+                    parsed = _pws_parse_number(tok)
+                    if parsed is not None:
+                        values.append(parsed)
+                if values:
+                    return values[-1]
+                return 0.0
+
+            opening = _qty("opening")
+            receipt = _qty("receipt")
+            issues = _qty("issues")
+            closing = _qty("closing")
+            sales_value = _money("sales_value")
+            closing_value = _money("closing_value")
+            has_qty = any(
+                cells.get(k) for k in ("opening", "receipt", "issues", "closing")
+            )
+            has_money = bool(cells.get("sales_value") or cells.get("closing_value"))
+
+            if name and _pws_is_skip_name(name):
+                pending_name = ""
+                continue
+
+            # Section/company amount totals: money only, no product name.
+            if not name and not packing and has_money and not has_qty:
+                if sales_value or closing_value:
+                    printed_amount_totals.append(
+                        {
+                            "sales_value": sales_value,
+                            "closing_value": closing_value,
+                        }
+                    )
+                pending_name = ""
+                continue
+
+            # Name continuation under a wrapped product description.
+            if name and not has_qty and not has_money and not packing:
+                if items and not _pws_is_skip_name(name):
+                    prev = items[-1]
+                    prev["product_name"] = _clean_name(
+                        f"{prev.get('product_name') or ''} {name}"
+                    )
+                    prev.setdefault("extra", {})["source_product_name"] = prev[
+                        "product_name"
+                    ]
+                elif not _pws_is_skip_name(name):
+                    pending_name = _clean_name(f"{pending_name} {name}".strip())
+                continue
+
+            if not name and pending_name and (has_qty or has_money):
+                name = pending_name
+                pending_name = ""
+            elif name and pending_name:
+                name = _clean_name(f"{pending_name} {name}")
+                pending_name = ""
+
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            if _pws_is_skip_name(name):
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = opening
+            item["receipts_qty"] = receipt
+            item["sales_qty"] = issues
+            item["closing_qty"] = closing
+            item["sales_value"] = sales_value
+            item["closing_value"] = closing_value
+            expected_close = round(opening + receipt - issues, 2)
+            item["extra"] = {
+                "layout": "product_wise_stock_statement",
+                "source_product_name": name,
+                "source_packing": packing,
+                "box": _clean_name(" ".join(cells.get("box") or [])) or None,
+                "sh_exp": _qty("shexp"),
+                "expected_closing": expected_close,
+                "stock_identity_ok": abs(expected_close - closing) <= 0.05,
+            }
+            items.append(item)
+
+    if len(items) < 1:
+        return None
+
+    opening_sum = sum(_to_float(i.get("opening_qty")) for i in items)
+    receipt_sum = sum(_to_float(i.get("receipts_qty")) for i in items)
+    issue_sum = sum(_to_float(i.get("sales_qty")) for i in items)
+    closing_sum = sum(_to_float(i.get("closing_qty")) for i in items)
+    sales_value_sum = round(sum(_to_float(i.get("sales_value")) for i in items), 2)
+    closing_value_sum = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
+
+    result["line_items"] = items
+    totals = result["totals"]
+    totals["opening_qty"] = opening_sum
+    totals["receipts_qty"] = receipt_sum
+    totals["sales_qty"] = issue_sum
+    totals["closing_qty"] = closing_sum
+    totals["sales_value"] = sales_value_sum
+    totals["closing_value"] = closing_value_sum
+    extra = totals["extra"]
+    extra["extraction_method"] = "product_wise_stock_statement"
+    extra["layout"] = "product_wise_stock_statement"
+    extra["rows_detected"] = len(items)
+    extra["opening_qty"] = opening_sum
+    extra["receipts_qty"] = receipt_sum
+    extra["sales_qty"] = issue_sum
+    extra["closing_qty"] = closing_sum
+    extra["sales_value"] = sales_value_sum
+    extra["closing_value"] = closing_value_sum
+    extra["total_row_source"] = "product_row_sum"
+    extra["stock_identity_formula"] = "opening + receipt - issues = closing"
+    extra["printed_section_amount_totals"] = printed_amount_totals
+    if printed_amount_totals:
+        printed_sales = round(
+            sum(_to_float(t.get("sales_value")) for t in printed_amount_totals), 2
+        )
+        printed_closing = round(
+            sum(_to_float(t.get("closing_value")) for t in printed_amount_totals), 2
+        )
+        extra["printed_amount_total_sales_value"] = printed_sales
+        extra["printed_amount_total_closing_value"] = printed_closing
+        extra["amount_total_mismatches"] = []
+        if abs(printed_sales - sales_value_sum) > 0.05:
+            extra["amount_total_mismatches"].append(
+                {
+                    "field": "sales_value",
+                    "source_total": printed_sales,
+                    "extracted_product_sum": sales_value_sum,
+                    "difference": round(printed_sales - sales_value_sum, 2),
+                }
+            )
+        if abs(printed_closing - closing_value_sum) > 0.05:
+            extra["amount_total_mismatches"].append(
+                {
+                    "field": "closing_value",
+                    "source_total": printed_closing,
+                    "extracted_product_sum": closing_value_sum,
+                    "difference": round(printed_closing - closing_value_sum, 2),
+                }
+            )
+    return result
+
+
 def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, Any]]:
     """Parse P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING stock & sales analysis."""
     if not text:
@@ -2284,6 +2722,65 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         for item in items:
             if isinstance(item, dict) and isinstance(item.get("extra"), dict):
                 item["extra"]["stock_identity_ok"] = True
+        return result
+
+    # Product wise stock statement: Opening/Receipt/Issues qty + Sales/Closing amounts.
+    # Source values stay as extracted; identity is diagnostic only.
+    if totals["extra"].get("extraction_method") == "product_wise_stock_statement":
+        mismatch = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            opening = _to_float(item.get("opening_qty"))
+            receipt = _to_float(item.get("receipts_qty"))
+            sales_qty = _to_float(item.get("sales_qty"))
+            closing = _to_float(item.get("closing_qty"))
+            expected_close = round(opening + receipt - sales_qty, 2)
+            row_extra["expected_closing"] = expected_close
+            ok = abs(expected_close - closing) <= 0.05
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(_to_float(i.get("opening_qty")) for i in items if isinstance(i, dict))
+        receipt_sum = sum(_to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict))
+        sales_sum = sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict))
+        closing_sum = sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict))
+        sales_value_sum = round(
+            sum(_to_float(i.get("sales_value")) for i in items if isinstance(i, dict)), 2
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)), 2
+        )
+        calculated_closing = round(opening_sum + receipt_sum - sales_sum, 2)
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = receipt_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["sales_value"] = sales_value_sum
+        totals["closing_value"] = closing_value_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["sales_value"] = sales_value_sum
+        totals["extra"]["closing_value"] = closing_value_sum
+        totals["extra"]["stock_identity_kind"] = "product_wise_stock_statement"
+        totals["extra"]["stock_identity_formula"] = "opening + receipt - issues = closing"
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        totals["extra"]["stock_validation"] = {
+            "opening_qty": opening_sum,
+            "receipts_qty": receipt_sum,
+            "sales_qty": sales_sum,
+            "calculated_closing": calculated_closing,
+            "extracted_closing": closing_sum,
+            "sales_value": sales_value_sum,
+            "closing_value": closing_value_sum,
+            "is_valid": mismatch == 0 and abs(calculated_closing - closing_sum) <= 0.05,
+        }
         return result
 
     # SALES QTY and SALES FREE are separate columns. Closing is total stock
@@ -16059,6 +16556,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if sunderlal_openstk and sunderlal_openstk.get("line_items"):
             sunderlal_openstk["totals"]["extra"]["statement_count"] = 1
             return sunderlal_openstk
+
+        product_wise = _parse_product_wise_stock_statement(doc, filename)
+        if product_wise and product_wise.get("line_items"):
+            product_wise["totals"]["extra"]["statement_count"] = 1
+            return product_wise
 
         pack_mexp_text = "\n".join((page.get_text("text") or "") for page in doc)
         pack_doc = _parse_pack_mexp_qty_doc(doc, filename)
