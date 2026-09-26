@@ -1798,6 +1798,102 @@ def _apply_monthly_ss_stock_validation(result: Dict[str, Any]) -> Dict[str, Any]
     return result
 
 
+def _is_himalaya_dump_statement(result: Dict[str, Any]) -> bool:
+    """Himalaya Wellness Dump statement is identified by its parser marker."""
+    totals = (result or {}).get("totals") or {}
+    extra = totals.get("extra") if isinstance(totals, dict) else {}
+    if not isinstance(extra, dict):
+        return False
+    return (
+        extra.get("extraction_method") == "himalaya_wellness_dump_statement"
+        or extra.get("layout") == "himalaya_dump_statement"
+    )
+
+
+def _apply_himalaya_dump_stock_validation(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Report whether parsed Himalaya dump statement qtys agree. Do not replace them.
+
+    closing = opening_qty + receipts_qty - sales_qty - shortage_qty
+    Authoritative values come directly from the PDF columns.
+    """
+    items = [
+        item for item in (result.get("line_items") or [])
+        if isinstance(item, dict)
+        and not re.search(r"\b(?:GRAND\s+)?TOTAL\b", str(item.get("product_name") or ""), re.I)
+    ]
+    result["line_items"] = items
+    totals = result.setdefault(
+        "totals", {"sales_value": None, "closing_value": None, "extra": {}}
+    )
+    if not isinstance(totals.get("extra"), dict):
+        totals["extra"] = {}
+    fail = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.get("extra")
+        if not isinstance(row_extra, dict):
+            row_extra = {}
+            item["extra"] = row_extra
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        shortage = _to_float(row_extra.get("shortage_qty"))
+        closing = round(_to_float(item.get("closing_qty")), 2)
+        calculated = round(opening + receipts - sales - shortage, 2)
+        expected_total = round(opening + receipts, 2)
+        ok = abs(calculated - closing) <= 0.05
+        row_extra["expected_total"] = expected_total
+        row_extra["expected_closing"] = calculated
+        row_extra["stock_identity_ok"] = ok
+        if "dump_qty" in row_extra and "dump_stock" not in row_extra:
+            row_extra["dump_stock"] = row_extra["dump_qty"]
+        if "near_expiry_qty" in row_extra and "near_expiry" not in row_extra:
+            row_extra["near_expiry"] = row_extra["near_expiry_qty"]
+        if not ok:
+            fail += 1
+            row_extra["stock_identity_discrepancy"] = {
+                "expected": calculated,
+                "extracted": closing,
+            }
+
+    opening_sum = round(
+        sum(_to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    receipt_sum = round(
+        sum(_to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    sales_sum = round(
+        sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    closing_sum = round(
+        sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    shortage_sum = round(
+        sum(_to_float((i.get("extra") or {}).get("shortage_qty")) for i in items if isinstance(i, dict)),
+        2,
+    )
+    calculated_closing = round(opening_sum + receipt_sum - sales_sum - shortage_sum, 2)
+    totals["extra"]["stock_identity_kind"] = "himalaya_wellness_dump_statement"
+    totals["extra"]["stock_identity_formula"] = (
+        "diagnostic closing=opening_qty+receipts_qty-sales_qty-shortage_qty; "
+        "parsed source columns are not rewritten"
+    )
+    totals["extra"]["stock_identity_fail_count"] = fail
+    totals["extra"]["stock_validation"] = {
+        "opening_plus_purchase": round(opening_sum + receipt_sum, 2),
+        "expected_total": round(opening_sum + receipt_sum, 2),
+        "calculated_closing": calculated_closing,
+        "extracted_closing": closing_sum,
+        "is_valid": fail == 0 and abs(calculated_closing - closing_sum) <= 0.05,
+    }
+    return result
+
+
 def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     """Validate stock identity using columns present in the detected format.
 
@@ -1813,6 +1909,9 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
 
     if _is_monthly_ss_statement(result):
         return _apply_monthly_ss_stock_validation(result)
+
+    if _is_himalaya_dump_statement(result):
+        return _apply_himalaya_dump_stock_validation(result)
 
     kind = _stock_identity_kind(result)
     items = result.get("line_items") or []
@@ -2348,6 +2447,8 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     )
     for item in result.get("line_items") or []:
         if not isinstance(item, dict):
+            continue
+        if method == "summary_rtl_op_amt":
             continue
         # This print has no opening or receipt columns. Leave them empty
         # instead of turning a missing column into a false 0.
@@ -14605,6 +14706,262 @@ def _parse_monthly_ss_report(doc, filename: str) -> Optional[Dict[str, Any]]:
     return result
 
 
+def _is_himalaya_wellness_dump_statement_text(text: str) -> bool:
+    """Detect Himalaya Wellness Dump/Near Expiry Sales & Stock statement format."""
+    if not text:
+        return False
+    if not re.search(r"Sales\s*&\s*Stock\s*Statement", text, re.I):
+        return False
+    if "HIMALAYA WELLNESS COMPANY" not in text.upper():
+        return False
+    for pat in [
+        r"Op\.?\s*Bal",
+        r"\bReceipt\b",
+        r"\bTotal\b",
+        r"\bIssue\b",
+        r"\bShortage\b",
+        r"\bClosing\b",
+        r"\bBalance\b",
+        r"\bDump\b",
+        r"\bNear\b",
+        r"\bExpiry\b",
+        r"\bMSR\b",
+        r"\bPrice\b",
+    ]:
+        if not re.search(pat, text, re.I):
+            return False
+    return True
+
+
+def _parse_himalaya_wellness_dump_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Himalaya Wellness Sales & Stock Statement with Dump/Near Expiry columns."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_himalaya_wellness_dump_statement_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Sales & Stock Statement"
+    result["company_name"] = "HIMALAYA WELLNESS COMPANY"
+
+    blob = "\n".join(page_texts)
+    m_period = re.search(
+        r"From\s+(\d{2}/\d{2}/\d{4})\s+Upto\s+(\d{2}/\d{2}/\d{4})",
+        blob,
+        re.I,
+    )
+    if m_period:
+        f_d, f_m, f_y = m_period.group(1).split("/")
+        t_d, t_m, t_y = m_period.group(2).split("/")
+        result["period_from"] = f"{f_y}-{f_m}-{f_d}"
+        result["period_to"] = f"{t_y}-{t_m}-{t_d}"
+
+    for line in page_texts[0].splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if re.search(r"Page\s+No|Sales\s*&\s*Stock", line, re.I):
+            break
+        if not result.get("stockist_name") and len(re.sub(r"[^A-Za-z]", "", line)) >= 4:
+            result["stockist_name"] = _clean_name(line)
+
+    items: List[Dict[str, Any]] = []
+    printed_totals: Dict[str, float] = {}
+
+    default_col_bounds = [
+        ("op_bal", 145.0, 186.4),
+        ("receipt", 186.4, 227.5),
+        ("total", 227.5, 268.6),
+        ("issue", 268.6, 306.5),
+        ("shortage", 306.5, 345.2),
+        ("closing", 345.2, 388.3),
+        ("dump", 388.3, 433.7),
+        ("near_expiry", 433.7, 475.3),
+        ("msr_price", 475.3, 530.0),
+    ]
+
+    for pno, page in enumerate(doc):
+        words = page.get_text("words")
+        if not words:
+            continue
+
+        # Group words by visual row (y-coordinate within ~3 points)
+        line_groups: Dict[float, List[Any]] = {}
+        for w in sorted(words, key=lambda x: (x[1], x[0])):
+            matched_y = None
+            for y in line_groups:
+                if abs(y - w[1]) <= 3.0:
+                    matched_y = y
+                    break
+            if matched_y is None:
+                matched_y = w[1]
+                line_groups[matched_y] = []
+            line_groups[matched_y].append(w)
+
+        # Find header y on this page
+        header_y = None
+        header_words: List[Any] = []
+        for y, lwords in sorted(line_groups.items()):
+            ltxt = " ".join(w[4] for w in lwords)
+            if "Op.Bal" in ltxt and "Receipt" in ltxt:
+                header_y = y
+                header_words = lwords
+                break
+
+        # Compute dynamic column boundaries from headers if present, else default
+        col_bounds = default_col_bounds
+        if header_words:
+            centers: Dict[str, float] = {}
+            for w in header_words:
+                token = w[4]
+                mid = (w[0] + w[2]) / 2.0
+                if "Op.Bal" in token:
+                    centers["op_bal"] = mid
+                elif "Receipt" in token:
+                    centers["receipt"] = mid
+                elif "Total" in token:
+                    centers["total"] = mid
+                elif "Issue" in token:
+                    centers["issue"] = mid
+                elif "Shortage" in token:
+                    centers["shortage"] = mid
+                elif "Closing" in token:
+                    centers["closing"] = mid
+                elif "Dump" in token:
+                    centers["dump"] = mid
+                elif "Near" in token:
+                    centers["near_expiry"] = mid
+                elif "MSR" in token:
+                    centers["msr_price"] = mid
+            required_cols = ["op_bal", "receipt", "total", "issue", "shortage", "closing", "dump", "near_expiry", "msr_price"]
+            if all(k in centers for k in required_cols):
+                dyn_bounds = []
+                c_prev = 145.0
+                for i in range(len(required_cols) - 1):
+                    c1 = centers[required_cols[i]]
+                    c2 = centers[required_cols[i+1]]
+                    boundary = (c1 + c2) / 2.0
+                    dyn_bounds.append((required_cols[i], c_prev, boundary))
+                    c_prev = boundary
+                dyn_bounds.append((required_cols[-1], c_prev, centers[required_cols[-1]] + 40.0))
+                col_bounds = dyn_bounds
+
+        for y, lwords in sorted(line_groups.items()):
+            ltxt = " ".join(w[4] for w in lwords).strip()
+
+            # Skip header or pre-header lines
+            if header_y is not None and y <= header_y + 15:
+                continue
+            # Skip page footer or non-product lines
+            if "..." in ltxt or "****" in ltxt or "Purchase Invoice" in ltxt or "Powered By" in ltxt:
+                continue
+
+            # Check for TOTAL / GRAND TOTAL summary rows
+            if re.match(r"^(?:GRAND\s+)?TOTAL\b", ltxt, re.I):
+                row_totals: Dict[str, float] = {}
+                for col_role, cmin, cmax in col_bounds:
+                    matching = [w[4] for w in lwords if cmin <= (w[0] + w[2]) / 2.0 < cmax]
+                    if matching:
+                        val = _to_float(matching[0])
+                        row_totals[col_role] = val
+                if row_totals and any(v > 0 for v in row_totals.values()) and not printed_totals:
+                    op = row_totals.get("op_bal", 0.0)
+                    rc = row_totals.get("receipt", 0.0)
+                    tot = row_totals.get("total", 0.0)
+                    iss = row_totals.get("issue", 0.0)
+                    sh = row_totals.get("shortage", 0.0)
+                    cl = row_totals.get("closing", 0.0)
+                    dmp = row_totals.get("dump", 0.0)
+                    ne = row_totals.get("near_expiry", 0.0)
+                    printed_totals = {
+                        "opening_qty": op,
+                        "opening": op,
+                        "receipts_qty": rc,
+                        "receipts": rc,
+                        "total_stock_qty": tot,
+                        "total_qty": tot,
+                        "total": tot,
+                        "sales_qty": iss,
+                        "issue": iss,
+                        "shortage_qty": sh,
+                        "shortage": sh,
+                        "closing_qty": cl,
+                        "closing": cl,
+                        "dump_qty": dmp,
+                        "dump": dmp,
+                        "dump_stock": dmp,
+                        "near_expiry_qty": ne,
+                        "near_expiry": ne,
+                    }
+                continue
+
+            # Product rows must have text in product name area (x < 92)
+            name_words = [w[4] for w in lwords if w[0] < 92.0]
+            pack_words = [w[4] for w in lwords if 92.0 <= w[0] < 145.0]
+            product_name = _clean_name(" ".join(name_words))
+            packing = _clean_name(" ".join(pack_words)) or None
+
+            if not product_name or not re.search(r"[A-Za-z]", product_name):
+                continue
+            if re.search(r"\b(?:GRAND\s+)?TOTAL\b", product_name, re.I):
+                continue
+
+            cols: Dict[str, float] = {}
+            for col_role, cmin, cmax in col_bounds:
+                matching = [w[4] for w in lwords if cmin <= (w[0] + w[2]) / 2.0 < cmax]
+                cols[col_role] = _to_float(matching[0]) if matching else 0.0
+
+            item = empty_line_item()
+            item["product_name"] = product_name
+            item["packing"] = packing
+            item["opening_qty"] = cols.get("op_bal", 0.0)
+            item["receipts_qty"] = cols.get("receipt", 0.0)
+            item["sales_qty"] = cols.get("issue", 0.0)
+            item["sales_value"] = None
+            item["closing_qty"] = cols.get("closing", 0.0)
+            item["closing_value"] = None
+            row_extra = item.setdefault("extra", {})
+            if isinstance(row_extra, dict):
+                row_extra["layout"] = "himalaya_dump_statement"
+                row_extra["total_stock_qty"] = cols.get("total", 0.0)
+                row_extra["total_qty"] = cols.get("total", 0.0)
+                row_extra["shortage_qty"] = cols.get("shortage", 0.0)
+                row_extra["dump_qty"] = cols.get("dump", 0.0)
+                row_extra["dump_stock"] = cols.get("dump", 0.0)
+                row_extra["near_expiry_qty"] = cols.get("near_expiry", 0.0)
+                row_extra["near_expiry"] = cols.get("near_expiry", 0.0)
+                row_extra["msr_price"] = cols.get("msr_price", 0.0)
+            items.append(item)
+
+    items = [
+        item for item in items
+        if not re.search(r"\b(?:GRAND\s+)?TOTAL\b", str(item.get("product_name") or ""), re.I)
+    ]
+    if not items:
+        return None
+
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "himalaya_wellness_dump_statement"
+    extra["layout"] = "himalaya_dump_statement"
+    extra["rows_detected"] = len(items)
+    extra["total_row_source"] = "product_row_sum"
+
+    result["totals"]["opening_qty"] = round(sum(_to_float(i["opening_qty"]) for i in items), 2)
+    result["totals"]["receipts_qty"] = round(sum(_to_float(i["receipts_qty"]) for i in items), 2)
+    result["totals"]["sales_qty"] = round(sum(_to_float(i["sales_qty"]) for i in items), 2)
+    result["totals"]["closing_qty"] = round(sum(_to_float(i["closing_qty"]) for i in items), 2)
+    extra["total_stock_qty"] = round(sum(_to_float((i.get("extra") or {}).get("total_stock_qty")) for i in items), 2)
+    extra["shortage_qty"] = round(sum(_to_float((i.get("extra") or {}).get("shortage_qty")) for i in items), 2)
+    extra["dump_qty"] = round(sum(_to_float((i.get("extra") or {}).get("dump_qty")) for i in items), 2)
+    extra["near_expiry_qty"] = round(sum(_to_float((i.get("extra") or {}).get("near_expiry_qty")) for i in items), 2)
+
+    if printed_totals:
+        extra["printed_totals"] = printed_totals
+        extra["printed_grand_totals"] = printed_totals
+
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -14619,6 +14976,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        himalaya_dump = _parse_himalaya_wellness_dump_statement(doc, filename)
+        if himalaya_dump and himalaya_dump.get("line_items"):
+            himalaya_dump["totals"]["extra"]["statement_count"] = 1
+            return himalaya_dump
+
         monthly_ss = _parse_monthly_ss_report(doc, filename)
         if monthly_ss and monthly_ss.get("line_items"):
             monthly_ss["totals"]["extra"]["statement_count"] = 1
