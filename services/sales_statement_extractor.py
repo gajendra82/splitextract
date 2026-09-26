@@ -2890,7 +2890,41 @@ def _text_stock_families():
     )
 
 
+def _is_ostk_purc_sale_qoh_text(text: str) -> bool:
+    """Product Name / Pack / O.Stk / Purc / Tot / Sale / Qoh / Value / Age."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s*&\s*Sales|Stock\s+and\s+Sales|Stock\s+Statement", text, re.I):
+        return False
+    return bool(
+        re.search(r"Product\s+Name", text, re.I)
+        and re.search(r"\bPack\b", text, re.I)
+        and re.search(r"O\.Stk", text, re.I)
+        and re.search(r"\bPurc\b", text, re.I)
+        and re.search(r"\bTot\b", text, re.I)
+        and re.search(r"\bSale\b", text, re.I)
+        and re.search(r"\bQoh\b", text, re.I)
+        and re.search(r"\bValue\b", text, re.I)
+        and re.search(r"\bAge\b", text, re.I)
+    )
+
+
+_OSTK_PURC_SALE_QOH_ROLES = (
+    "opening_qty",
+    "receipts_qty",
+    "total_stock",
+    "sales_qty",
+    "closing_qty",
+    "closing_value",
+    "age_days",
+)
+
+
 def _match_text_stock_family(text: str):
+    # This header includes the word Opening in the footer ("Opening Value").
+    # That must not select a shorter column list that reads Tot as Sale.
+    if _is_ostk_purc_sale_qoh_text(text):
+        return "ps_global_qoh", _OSTK_PURC_SALE_QOH_ROLES, False
     for name, left_pat, right_pat, roles, has_code in _text_stock_families():
         if re.search(left_pat, text, re.I) and re.search(right_pat, text, re.I):
             if not re.search(
@@ -3071,6 +3105,13 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
     result["totals"]["extra"]["extraction_method"] = "txt_stock_fallback"
     result["totals"]["extra"]["txt_family"] = family
     result["totals"]["extra"]["column_roles"] = list(roles)
+    if family == "ps_global_qoh" and _is_ostk_purc_sale_qoh_text(cleaned):
+        result["totals"]["extra"]["layout"] = "ostk_purc_tot_sale_qoh_value_age"
+        stockist = str(result.get("stockist_name") or "")
+        if re.search(r"[^\x00-\x7f]", stockist):
+            readable = re.findall(r"[A-Za-z][A-Za-z .&'-]{3,}", stockist)
+            if readable:
+                result["stockist_name"] = _clean_name(readable[-1])
     if result["totals"].get("sales_value") is None and not any(
         role.endswith("_value") for role in roles
     ):
