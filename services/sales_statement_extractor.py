@@ -988,6 +988,8 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         item["closing_qty"] = _ps_qty(closing)
         item["sales_value"] = 0.0
         item["closing_value"] = 0.0
+        item["opening_value"] = None
+        item["receipts_value"] = None
         return item
 
     items: List[Dict[str, Any]] = []
@@ -1034,6 +1036,7 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
 
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "ps_pharma_parser"
+    result["totals"]["extra"]["qty_only"] = True
     result = _apply_total_row_to_result(result, text)
 
     # If footer TOTAL still missing, fall back to line sums for qty totals
@@ -2399,7 +2402,9 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def _insert_line_field(item: Dict[str, Any], after: str, key: str, value: float) -> None:
+def _insert_line_field(
+    item: Dict[str, Any], after: str, key: str, value: Optional[float]
+) -> None:
     """Place a missing qty/value column beside its pair. Existing numbers stay."""
     if key in item and item.get(key) not in (None, ""):
         return
@@ -2430,6 +2435,7 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     """Always return the eight stock columns. A missing column is 0.
 
     Does not replace a number a parser already stored.
+    Formats that never print opening/receipt value (or any money) keep null.
     """
     if not isinstance(result, dict):
         return result
@@ -2438,20 +2444,37 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             _ensure_stock_qty_value_fields(stmt) for stmt in result["statements"]
         ]
         return result
+    extra = (result.get("totals") or {}).get("extra") or {}
     sale_closing_reorder = (
-        str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
-        == "ssa_sale_closing_reorder"
+        str(extra.get("extraction_method") or "") == "ssa_sale_closing_reorder"
     )
-    method = str(
-        ((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or ""
-    )
+    method = str(extra.get("extraction_method") or "")
+    title = str(result.get("report_title") or "")
     # Formats with no sales/value columns must keep explicit nulls (not coerce to 0).
-    preserve_null_sales = method.startswith("zl_secondary") or method.startswith(
-        "group_wise_sales"
+    preserve_null_sales = (
+        method.startswith("zl_secondary")
+        or method.startswith("group_wise_sales")
+        or bool(re.search(r"group\s*wise\s*sales", title, re.I))
+        or "group_wise" in method
     )
-    for item in result.get("line_items") or []:
-        if not isinstance(item, dict):
-            continue
+    # Qty-only / no opening-or-receipt money columns: do not invent 0 values.
+    preserve_null_pair_values = (
+        preserve_null_sales
+        or method.startswith("prompt_datewise")
+        or method.startswith("ps_pharma")
+        or method.startswith("product_wise")
+        or method.startswith("ezeal_inward_outward")
+        or bool(extra.get("qty_only"))
+    )
+    line_items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    has_printed_opening_value = any(
+        _extra_number(i, "opening_value") is not None for i in line_items
+    )
+    has_printed_receipts_value = any(
+        _extra_number(i, "receipts_value", "purchase_value") is not None
+        for i in line_items
+    )
+    for item in line_items:
         if method == "summary_rtl_op_amt":
             continue
         # This print has no opening or receipt columns. Leave them empty
@@ -2473,6 +2496,14 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             for key in ("opening_qty", "receipts_qty", "closing_qty"):
                 if item.get(key) in (None, ""):
                     item[key] = 0.0
+            # No money columns on these layouts (incl. Gemini Group Wise path).
+            for key in (
+                "sales_value",
+                "closing_value",
+                "opening_value",
+                "receipts_value",
+            ):
+                item[key] = None
             continue
 
         parse_errors = {}
@@ -2483,29 +2514,42 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "opening_qty",
             "receipts_qty",
             "sales_qty",
-            "sales_value",
             "closing_qty",
-            "closing_value",
         ):
             # A flagged cell is ambiguous. Do not turn that parse error into 0.
             if key in parse_errors:
                 continue
             if item.get(key) in (None, ""):
                 item[key] = 0.0
+        for key in ("sales_value", "closing_value"):
+            if item.get(key) in (None, ""):
+                # Qty-only layouts (product-wise / E-ZEAL PTR) keep money null.
+                if preserve_null_pair_values and extra.get("qty_only"):
+                    item[key] = None
+                else:
+                    item[key] = 0.0
         opening_value = _extra_number(item, "opening_value")
-        _insert_line_field(
-            item,
-            "opening_qty",
-            "opening_value",
-            0.0 if opening_value is None else opening_value,
-        )
+        if preserve_null_pair_values or not has_printed_opening_value:
+            if opening_value is None:
+                _insert_line_field(item, "opening_qty", "opening_value", None)
+        else:
+            _insert_line_field(
+                item,
+                "opening_qty",
+                "opening_value",
+                0.0 if opening_value is None else opening_value,
+            )
         receipts_value = _extra_number(item, "receipts_value", "purchase_value")
-        _insert_line_field(
-            item,
-            "receipts_qty",
-            "receipts_value",
-            0.0 if receipts_value is None else receipts_value,
-        )
+        if preserve_null_pair_values or not has_printed_receipts_value:
+            if receipts_value is None:
+                _insert_line_field(item, "receipts_qty", "receipts_value", None)
+        else:
+            _insert_line_field(
+                item,
+                "receipts_qty",
+                "receipts_value",
+                0.0 if receipts_value is None else receipts_value,
+            )
     return result
 
 
@@ -7767,13 +7811,21 @@ def _drop_trailing_statement_total_item(
     items: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """Drop a footer TOTAL row that vision attached to the last product."""
-    if len(items) < 5:
+    if not items:
         return items
-    last = items[-1]
+    cleaned = [
+        item
+        for item in items
+        if isinstance(item, dict)
+        and not _is_non_product_line_name(str(item.get("product_name") or ""))
+    ]
+    if len(cleaned) < 5:
+        return cleaned
+    last = cleaned[-1]
     name = str(last.get("product_name") or "")
-    if re.search(r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL)\b", name, re.I):
-        return items[:-1]
-    others = items[:-1]
+    if re.search(r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL|AMOUNT\s*TOTAL)\b", name, re.I):
+        return cleaned[:-1]
+    others = cleaned[:-1]
     last_rcp = _to_float(last.get("receipts_qty"))
     others_rcp = sum(_to_float(i.get("receipts_qty")) for i in others)
     last_op = _to_float(last.get("opening_qty"))
@@ -7782,7 +7834,31 @@ def _drop_trailing_statement_total_item(
         return others
     if last_op >= 200 and others_op > 0 and last_op >= others_op * 0.8:
         return others
-    return items
+    return cleaned
+
+
+def _is_non_product_line_name(name: str) -> bool:
+    """True for footer/total/date/header rows that must not be line items."""
+    text = _clean_name(name)
+    if not text:
+        return True
+    if re.match(
+        r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL|AMOUNT\s*TOTAL|NET\s*TOTAL)\b",
+        text,
+        re.I,
+    ):
+        return True
+    if re.fullmatch(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text):
+        return True
+    if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", text):
+        return True
+    if re.match(
+        r"^(PRODUCT(\s+NAME)?|PAGE\s*\d|POWERED\s+BY|CONTINUED|HIMALAYA\s+(OTX|ZANDRA|ZEAL)\b)",
+        text,
+        re.I,
+    ):
+        return True
+    return False
 
 
 def _looks_like_zandra_stock_sale_text(text: str) -> bool:
@@ -8199,7 +8275,7 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(item, dict):
             continue
         name = str(item.get("product_name") or "")
-        if re.search(
+        if _is_non_product_line_name(name) or re.search(
             r"ZANDRA\s+DIVISION|HIMALAYA\s+ZANDRA|^TOTAL\b|^GRAND\s*TOTAL",
             name,
             re.I,
@@ -9277,46 +9353,160 @@ def _prompt_datewise_bucket(
     return None
 
 
-def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
-    """Keep the standard columns unless Sales Qty sits inside the Pur span.
+def _prompt_datewise_nearest_qty(
+    label_x: float,
+    qty_xs: List[float],
+    *,
+    lo: Optional[float] = None,
+    hi: Optional[float] = None,
+) -> float:
+    """Pick the Qty header closest to a column label within optional bounds."""
+    cands = [
+        q
+        for q in qty_xs
+        if (lo is None or q >= lo) and (hi is None or q <= hi)
+    ]
+    if not cands:
+        return label_x
+    return min(cands, key=lambda q: abs(q - label_x))
 
-    On this Datewise variant the Sales Qty header is near x=275, so those
-    numbers fall in receipts_qty (245–285). Other PROMPT files, where Sales
-    Qty is already at or right of 285, keep the original ranges.
+
+def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
+    """Build OpStk/Pur/Sales/ClStk ranges from printed header positions.
+
+    Some Datewise prints shift the whole qty grid right (OpStk Qty near x=256),
+    so fixed 200–245 opening buckets map opening into receipts. Others put
+    Sales Qty inside the Pur span (near x=275). Both are handled from anchors.
     """
-    sales_x = None
-    free_x = None
+    pack_x: Optional[float] = None
+    free_x: Optional[float] = None
+    label_x: Dict[str, float] = {}
     qty_xs: List[float] = []
+    amount_xs: List[float] = []
     for w in words or []:
         token = str(w[4]).strip()
-        x = float(w[0])
-        if token == "Sales":
-            sales_x = x
+        x0 = float(w[0])
+        xc = (float(w[0]) + float(w[2])) / 2.0
+        if token == "Pack":
+            pack_x = xc
+        elif token == "OpStk":
+            label_x["opening_qty"] = xc
+        elif token == "Pur":
+            label_x["receipts_qty"] = xc
+        elif token == "Sales":
+            label_x["sales_qty"] = xc
+        elif token == "ClStk":
+            label_x["closing_qty"] = xc
         elif token == "Free":
-            free_x = x
+            free_x = x0
         elif token == "Qty":
-            qty_xs.append(x)
-    if sales_x is None:
-        return _PROMPT_DATEWISE_BUCKETS
-    sales_qty_x = max((x for x in qty_xs if x < sales_x), default=None)
-    if sales_qty_x is None or sales_qty_x >= 285:
-        return _PROMPT_DATEWISE_BUCKETS
-    pur_qty_x = max((x for x in qty_xs if x < sales_qty_x - 5), default=245.0)
-    split = max(250.0, min((pur_qty_x + sales_qty_x) / 2.0, 284.0))
-    sales_hi = 325.0
-    if free_x is not None and free_x > sales_qty_x + 8:
-        sales_hi = min(sales_hi, free_x - 4)
-    adjusted = []
-    for name, lo, hi in _PROMPT_DATEWISE_BUCKETS:
-        if name == "receipts_qty":
-            adjusted.append((name, lo, split))
-        elif name == "sales_qty":
-            adjusted.append((name, split, sales_hi))
-        elif name == "sales_value":
-            adjusted.append((name, sales_hi, hi))
+            qty_xs.append(xc)
+        elif token == "Amount":
+            amount_xs.append(xc)
+
+    if "opening_qty" not in label_x or "closing_qty" not in label_x:
+        # Legacy variant: Sales Qty sits inside the Pur span (near x=275).
+        sales_x = label_x.get("sales_qty")
+        if sales_x is None:
+            return _PROMPT_DATEWISE_BUCKETS
+        sales_qty_x = max((x for x in qty_xs if x < sales_x), default=None)
+        if sales_qty_x is None or sales_qty_x >= 285:
+            return _PROMPT_DATEWISE_BUCKETS
+        pur_qty_x = max((x for x in qty_xs if x < sales_qty_x - 5), default=245.0)
+        split = max(250.0, min((pur_qty_x + sales_qty_x) / 2.0, 284.0))
+        sales_hi = 325.0
+        if free_x is not None and free_x > sales_qty_x + 8:
+            sales_hi = min(sales_hi, free_x - 4)
+        adjusted = []
+        for name, lo, hi in _PROMPT_DATEWISE_BUCKETS:
+            if name == "receipts_qty":
+                adjusted.append((name, lo, split))
+            elif name == "sales_qty":
+                adjusted.append((name, split, sales_hi))
+            elif name == "sales_value":
+                adjusted.append((name, sales_hi, hi))
+            else:
+                adjusted.append((name, lo, hi))
+        return tuple(adjusted)
+
+    op_label = label_x["opening_qty"]
+    pur_label = label_x.get("receipts_qty", op_label + 40.0)
+    sales_label = label_x.get("sales_qty", pur_label + 40.0)
+    close_label = label_x["closing_qty"]
+
+    op_x = _prompt_datewise_nearest_qty(
+        op_label, qty_xs, lo=op_label - 15, hi=(pur_label + op_label) / 2.0 + 5
+    )
+    pur_x = _prompt_datewise_nearest_qty(
+        pur_label, qty_xs, lo=(op_x + pur_label) / 2.0 - 5, hi=(sales_label + pur_label) / 2.0 + 8
+    )
+    sales_x = _prompt_datewise_nearest_qty(
+        sales_label,
+        qty_xs,
+        lo=(pur_x + sales_label) / 2.0 - 5,
+        hi=(close_label + sales_label) / 2.0 + 8,
+    )
+    close_x = _prompt_datewise_nearest_qty(
+        close_label, qty_xs, lo=(sales_x + close_label) / 2.0 - 5, hi=close_label + 40
+    )
+
+    sales_amt_cands = [a for a in amount_xs if sales_x + 8 < a < close_x - 5]
+    if free_x is not None:
+        sales_amt_cands = [a for a in sales_amt_cands if a > free_x]
+    if sales_amt_cands:
+        sales_val_x = min(sales_amt_cands)
+    elif free_x is not None and sales_x < free_x < close_x:
+        # Free sits between Sales Qty and ClStk; money starts after Free.
+        sales_val_x = max(sales_x + 20.0, min(free_x + 18.0, close_x - 12.0))
+    else:
+        sales_val_x = (sales_x + close_x) / 2.0
+
+    close_amt_cands = [a for a in amount_xs if a >= close_x - 2]
+    close_val_x = min(close_amt_cands) if close_amt_cands else close_x + 35.0
+
+    anchors: List[Tuple[str, float]] = [
+        ("opening_qty", op_x),
+        ("receipts_qty", pur_x),
+        ("sales_qty", sales_x),
+        ("sales_value", sales_val_x),
+        ("closing_qty", close_x),
+        ("closing_value", close_val_x),
+    ]
+    # Keep sr/name/pack relative to Pack / OpStk so product text stays left.
+    pack_hi = ((pack_x + op_x) / 2.0) if pack_x is not None else max(145.0, op_x - 35.0)
+    pack_lo = 145.0 if pack_x is None else max(100.0, min(pack_x - 20.0, pack_hi - 20.0))
+    name_hi = max(40.0, pack_lo)
+    fixed_left = [
+        ("sr", 0.0, 40.0),
+        ("name", 40.0, name_hi),
+        ("pack", pack_lo, pack_hi),
+    ]
+    numeric: List[Tuple[str, float, float]] = []
+    for idx, (name, center) in enumerate(anchors):
+        if idx == 0:
+            lo = pack_hi
         else:
-            adjusted.append((name, lo, hi))
-    return tuple(adjusted)
+            prev_c = anchors[idx - 1][1]
+            lo = (prev_c + center) / 2.0
+        if idx + 1 < len(anchors):
+            next_c = anchors[idx + 1][1]
+            hi = (center + next_c) / 2.0
+        else:
+            hi = center + 45.0
+        if name == "sales_qty" and free_x is not None and sales_x < free_x < sales_val_x:
+            hi = min(hi, free_x - 2.0)
+        if hi <= lo:
+            hi = lo + 8.0
+        numeric.append((name, lo, hi))
+    # Trailing age/expiry bands after closing value (same as stock template).
+    tail_lo = numeric[-1][2]
+    tail = [
+        ("a3mn", tail_lo, tail_lo + 25.0),
+        ("ee", tail_lo + 25.0, tail_lo + 60.0),
+        ("age", tail_lo + 60.0, tail_lo + 100.0),
+        ("exp", tail_lo + 100.0, 10000.0),
+    ]
+    return tuple(fixed_left + numeric + tail)
 
 
 def _is_prompt_datewise_stock_statement(text: str) -> bool:
@@ -9445,6 +9635,9 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
                 item["sales_value"] = _prompt_cell_number(cells["sales_value"]) or 0.0
                 item["closing_qty"] = _prompt_cell_number(cells["closing_qty"]) or 0.0
                 item["closing_value"] = _prompt_cell_number(cells["closing_value"]) or 0.0
+                # This layout has no opening/receipt money columns.
+                item["opening_value"] = None
+                item["receipts_value"] = None
                 extra = item["extra"]
                 extra["layout"] = "prompt_datewise"
                 for key in ("a3mn", "ee", "age", "exp"):
@@ -9459,6 +9652,355 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
         return None
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "prompt_datewise_layout"
+    result["totals"]["extra"]["qty_only"] = False
+    return result
+
+
+def _is_product_wise_stock_statement_text(text: str) -> bool:
+    """ASHOK-style Product wise stock statement (Opening/Receipt/Issues/Closing)."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Product\s+wise\s+stock\s+statement", text, re.I)
+        and re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bReceipt\b", text, re.I)
+        and re.search(r"\bIssues?\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+    )
+
+
+def _product_wise_header_centers(
+    words: List,
+) -> Optional[Dict[str, float]]:
+    found: Dict[str, float] = {}
+    for w in words or []:
+        token = str(w[4]).strip()
+        xc = (float(w[0]) + float(w[2])) / 2.0
+        key = None
+        if re.fullmatch(r"Opening", token, re.I):
+            key = "opening_qty"
+        elif re.fullmatch(r"Receipt", token, re.I):
+            key = "receipts_qty"
+        elif re.fullmatch(r"Issues?", token, re.I):
+            key = "sales_qty"
+        elif re.fullmatch(r"Closing", token, re.I):
+            key = "closing_qty"
+        elif re.fullmatch(r"Packing", token, re.I):
+            key = "pack"
+        if key and key not in found:
+            found[key] = xc
+    needed = {"opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+    if not needed.issubset(found):
+        return None
+    return found
+
+
+def _product_wise_buckets_from_centers(
+    centers: Dict[str, float],
+) -> List[Tuple[str, float, float]]:
+    ordered = sorted(
+        ((name, x) for name, x in centers.items() if name != "pack"),
+        key=lambda item: item[1],
+    )
+    pack_x = centers.get("pack")
+    name_hi = (pack_x - 8.0) if pack_x is not None else max(40.0, ordered[0][1] - 40.0)
+    buckets: List[Tuple[str, float, float]] = [
+        ("name", 0.0, max(40.0, name_hi)),
+    ]
+    if pack_x is not None:
+        buckets.append(("pack", name_hi, (pack_x + ordered[0][1]) / 2.0))
+    for idx, (name, center) in enumerate(ordered):
+        lo = buckets[-1][2]
+        if idx + 1 < len(ordered):
+            hi = (center + ordered[idx + 1][1]) / 2.0
+        else:
+            hi = center + 40.0
+        if hi <= lo:
+            hi = lo + 8.0
+        buckets.append((name, lo, hi))
+    return buckets
+
+
+def _parse_product_wise_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Product wise stock statement from word positions (qty-only)."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_product_wise_stock_statement_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Product wise stock statement"
+    items: List[Dict[str, Any]] = []
+    buckets: Optional[List[Tuple[str, float, float]]] = None
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("stockist_name"):
+            for ln in text.splitlines():
+                raw = ln.strip()
+                if not raw:
+                    continue
+                if re.search(r"Product\s+wise\s+stock|HIMALAYA|Page\s*\d", raw, re.I):
+                    break
+                result["stockist_name"] = _clean_name(raw)
+                break
+        m = re.search(
+            r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if m and not result.get("period_from"):
+            result["period_from"] = _normalize_date(m.group(1))
+            result["period_to"] = _normalize_date(m.group(2))
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        centers = _product_wise_header_centers(words)
+        if centers:
+            buckets = _product_wise_buckets_from_centers(centers)
+        if not buckets:
+            continue
+
+        header_y = None
+        for w in words:
+            if re.fullmatch(r"Opening", str(w[4]), re.I):
+                header_y = float(w[1])
+                break
+
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, x1, _y1, token = w[0], w[1], w[2], w[3], str(w[4])
+            if header_y is not None and y0 <= header_y + 6:
+                continue
+            if not token.strip():
+                continue
+            xc = (x0 + x1) / 2.0
+            bucket = None
+            for name, lo, hi in buckets:
+                if lo <= xc < hi:
+                    bucket = name
+                    break
+            if not bucket:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 5.5:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "cells": {name: [] for name, _lo, _hi in buckets}}
+                rows.append(row)
+            row["cells"][bucket].append(token)
+            # Keep row y as the median-ish left label so wrapped qty digits stay attached.
+            if bucket == "name":
+                row["y"] = y0
+
+        for row in rows:
+            cells = row["cells"]
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or _is_non_product_line_name(name):
+                continue
+            if re.match(r"^(HIMALAYA|Product|Packing|Opening|Box)\b", name, re.I):
+                continue
+            # Division banners have no packing and little/no qty signal.
+            has_qty = any(
+                _prompt_cell_number(cells.get(field) or []) is not None
+                for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+            )
+            pack_tokens = [
+                t
+                for t in (cells.get("pack") or [])
+                if not re.fullmatch(r"-?\d+(?:\.\d+)?", str(t).replace(",", ""))
+            ]
+            pack = " ".join(pack_tokens).strip()
+            # Box qty sometimes lands in pack; fold a lone leading digit into opening.
+            pack_nums = [
+                t
+                for t in (cells.get("pack") or [])
+                if re.fullmatch(r"-?\d+(?:\.\d+)?", str(t).replace(",", ""))
+            ]
+            if not has_qty and not pack_nums:
+                continue
+            if not has_qty:
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack or None
+            item["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["opening_value"] = None
+            item["receipts_value"] = None
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
+    result["totals"]["extra"]["extraction_method"] = "product_wise_stock_statement"
+    result["totals"]["extra"]["qty_only"] = True
+    return result
+
+
+def _is_ezeal_inward_outward_text(text: str) -> bool:
+    """E-ZEAL Stock & Sales with Opening / Inward / Outward / Closing / PTR / MRP."""
+    if not text:
+        return False
+    if re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
+        return False
+    if re.search(r"\bOpStk\b|\bClStk\b|Receipt/Pur|O\.Stk", text, re.I):
+        return False
+    return bool(
+        re.search(r"Stock\s*&\s*Sales\s*Statement", text, re.I)
+        and re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bInward\b", text, re.I)
+        and re.search(r"\bOutward\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+        and re.search(r"\bPTR\b", text, re.I)
+        and re.search(r"\bMRP\b", text, re.I)
+    )
+
+
+def _ezeal_header_centers(words: List) -> Optional[Dict[str, float]]:
+    found: Dict[str, float] = {}
+    for w in words or []:
+        token = str(w[4]).strip()
+        xc = (float(w[0]) + float(w[2])) / 2.0
+        key = {
+            "Sr": "sr",
+            "Item": "name",
+            "Packing": "pack",
+            "Opening": "opening_qty",
+            "Inward": "receipts_qty",
+            "Outward": "sales_qty",
+            "Closing": "closing_qty",
+            "PTR": "ptr",
+            "MRP": "mrp",
+        }.get(token)
+        if key and key not in found:
+            found[key] = xc
+    needed = {"name", "opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+    if not needed.issubset(found):
+        return None
+    return found
+
+
+def _parse_ezeal_inward_outward_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse E-ZEAL Opening/Inward/Outward/Closing/PTR/MRP digital PDFs."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_ezeal_inward_outward_text(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock & Sales Statement"
+    items: List[Dict[str, Any]] = []
+    buckets: Optional[List[Tuple[str, float, float]]] = None
+
+    for page, text in zip(doc, page_texts):
+        if not result.get("company_name") and re.search(r"HIMALAYA", text, re.I):
+            for ln in text.splitlines():
+                if re.search(r"HIMALAYA", ln, re.I):
+                    result["company_name"] = _clean_name(ln)
+                    break
+        dates = re.findall(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text)
+        if len(dates) >= 2 and not result.get("period_from"):
+            result["period_from"] = _normalize_date(dates[0])
+            result["period_to"] = _normalize_date(dates[1])
+
+        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        centers = _ezeal_header_centers(words)
+        if centers:
+            ordered = sorted(centers.items(), key=lambda item: item[1])
+            built: List[Tuple[str, float, float]] = []
+            for idx, (name, center) in enumerate(ordered):
+                if idx == 0:
+                    lo = 0.0
+                else:
+                    prev_c = ordered[idx - 1][1]
+                    # Numbers are right-aligned under headers; bias splits rightward.
+                    lo = prev_c * 0.15 + center * 0.85
+                if idx + 1 < len(ordered):
+                    next_c = ordered[idx + 1][1]
+                    hi = center * 0.15 + next_c * 0.85
+                else:
+                    hi = center + 50.0
+                if hi <= lo:
+                    hi = lo + 8.0
+                built.append((name, lo, hi))
+            buckets = built
+        if not buckets:
+            continue
+
+        header_y = None
+        for w in words:
+            if str(w[4]).strip() == "Opening":
+                header_y = float(w[1])
+                break
+
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, x1, _y1, token = w[0], w[1], w[2], w[3], str(w[4])
+            if header_y is not None and y0 <= header_y + 6:
+                continue
+            if not token.strip():
+                continue
+            xc = (x0 + x1) / 2.0
+            bucket = None
+            for name, lo, hi in buckets:
+                if lo <= xc < hi:
+                    bucket = name
+                    break
+            if not bucket:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 3.0:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "cells": {name: [] for name, _lo, _hi in buckets}}
+                rows.append(row)
+            row["cells"][bucket].append(token)
+
+        for row in rows:
+            cells = row["cells"]
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or _is_non_product_line_name(name):
+                continue
+            if re.match(r"^(Sr|Item|Packing|Opening|Inward|Outward)\b", name, re.I):
+                continue
+            has_qty = any(
+                _prompt_cell_number(cells.get(field) or []) is not None
+                for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+            )
+            if not has_qty:
+                continue
+            item = empty_line_item()
+            sr = " ".join(cells.get("sr") or []).strip()
+            if re.fullmatch(r"\d{1,4}", sr or ""):
+                item["product_code"] = sr
+            item["product_name"] = name
+            pack = " ".join(cells.get("pack") or []).strip()
+            item["packing"] = pack or None
+            item["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+            item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+            item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            # PTR/MRP are rates, not stock value columns.
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["opening_value"] = None
+            item["receipts_value"] = None
+            ptr = _prompt_cell_number(cells.get("ptr") or [])
+            mrp = _prompt_cell_number(cells.get("mrp") or [])
+            if ptr is not None:
+                item["extra"]["ptr"] = ptr
+            if mrp is not None:
+                item["extra"]["mrp"] = mrp
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
+    result["totals"]["extra"]["extraction_method"] = "ezeal_inward_outward_layout"
+    result["totals"]["extra"]["qty_only"] = True
     return result
 
 
@@ -15583,6 +16125,16 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             prompt_stmt["totals"]["extra"]["statement_count"] = 1
             return prompt_stmt
 
+        product_wise = _parse_product_wise_stock_statement(doc, filename)
+        if product_wise and product_wise.get("line_items"):
+            product_wise["totals"]["extra"]["statement_count"] = 1
+            return product_wise
+
+        ezeal = _parse_ezeal_inward_outward_statement(doc, filename)
+        if ezeal and ezeal.get("line_items"):
+            ezeal["totals"]["extra"]["statement_count"] = 1
+            return ezeal
+
         swil_pair = _parse_swil_landscape_qty_value_statement(
             doc, filename, allow_portrait_pair=True
         )
@@ -17542,7 +18094,23 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
         if parsed and parsed.get("line_items"):
             result = empty_result(filename, source_format)
             result = _apply_parsed_sales_json(result, parsed)
-            result["totals"]["extra"]["extraction_method"] = "pdf_text_gemini"
+            method = "pdf_text_gemini"
+            title = str(result.get("report_title") or "")
+            if re.search(r"group\s*wise\s*sales", title, re.I) or re.search(
+                r"group\s*wise\s*sales", text[:800], re.I
+            ):
+                method = "pdf_text_gemini_group_wise"
+                result["report_title"] = result.get("report_title") or "Group Wise Sales"
+                for item in result.get("line_items") or []:
+                    if not isinstance(item, dict):
+                        continue
+                    item["sales_value"] = None
+                    item["closing_value"] = None
+                    item["opening_value"] = None
+                    item["receipts_value"] = None
+                result["totals"]["sales_value"] = None
+                result["totals"]["closing_value"] = None
+            result["totals"]["extra"]["extraction_method"] = method
             return _apply_total_row_to_result(result, text)
     except Exception as exc:
         logger.warning("PDF text Gemini structuring failed: %s", exc)
@@ -17933,6 +18501,8 @@ def _apply_parsed_sales_json(
         item = empty_line_item()
         item["product_code"] = raw.get("product_code")
         item["product_name"] = _clean_name(str(raw.get("product_name") or ""))
+        if not item["product_name"] or _is_non_product_line_name(item["product_name"]):
+            continue
         item["packing"] = raw.get("packing")
         item["opening_qty"] = _to_float(raw.get("opening_qty"))
         item["receipts_qty"] = _to_float(raw.get("receipts_qty"))
@@ -17948,9 +18518,8 @@ def _apply_parsed_sales_json(
         if opening_value not in (None, ""):
             item["opening_value"] = _to_float(opening_value)
             item.setdefault("extra", {})["opening_value"] = item["opening_value"]
-        if item["product_name"]:
-            items.append(item)
-    result["line_items"] = items
+        items.append(item)
+    result["line_items"] = _drop_trailing_statement_total_item(items)
     result = _clear_summary_rtl_fabricated_qty(result)
 
     totals = parsed.get("totals") or {}
@@ -18027,6 +18596,8 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
 
         item = empty_line_item()
         item["product_name"] = _clean_name(name_part)
+        if _is_non_product_line_name(item["product_name"]):
+            continue
         # Common Vikash: Op Pur Sl SlVal Cl ClVal
         if len(floats) >= 6:
             item["opening_qty"] = floats[0]
@@ -18462,13 +19033,23 @@ def _apply_swil_receipt_value_fields(
     result: Dict[str, Any], parsed: Dict[str, Any]
 ) -> Dict[str, Any]:
     result = _apply_parsed_sales_json(result, parsed)
-    raw_items = parsed.get("line_items") or []
+    raw_by_name: Dict[str, Dict[str, Any]] = {}
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or _is_non_product_line_name(name):
+            continue
+        raw_by_name[name.upper()] = raw
     applied: List[Dict[str, Any]] = []
-    for item, raw in zip(result.get("line_items") or [], raw_items):
-        if not isinstance(item, dict) or not isinstance(raw, dict):
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if _is_non_product_line_name(str(item.get("product_name") or "")):
             continue
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
         item["extra"] = extra
+        raw = raw_by_name.get(str(item.get("product_name") or "").upper()) or {}
         open_val = raw.get("opening_value")
         rec_val = raw.get("receipts_value")
         if isinstance(raw.get("extra"), dict):
@@ -18483,7 +19064,7 @@ def _apply_swil_receipt_value_fields(
         if rec_val is not None:
             item = _attach_receipts_value(item, _to_float(rec_val))
         applied.append(item)
-    result["line_items"] = applied
+    result["line_items"] = _drop_trailing_statement_total_item(applied)
     extra_t = result.setdefault("totals", {}).setdefault("extra", {})
     extra_t["extraction_method"] = "swil_receipt_pur_value_vision"
     extra_t["layout"] = "swil_receipt_pur_value"
@@ -18492,6 +19073,13 @@ def _apply_swil_receipt_value_fields(
         rec_total = _to_float(totals.get("receipts_value"))
         extra_t["receipts_value"] = rec_total
         result["totals"]["receipts_value"] = rec_total
+    # Qty-only Swil prints: no Receipt/Pur value column on any row.
+    if not any(
+        _extra_number(i, "receipts_value", "purchase_value") is not None
+        for i in (result.get("line_items") or [])
+        if isinstance(i, dict)
+    ):
+        extra_t["qty_only"] = True
     return result
 
 

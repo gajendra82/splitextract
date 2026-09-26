@@ -35,6 +35,26 @@ class TestPromptDatewiseSalesQty(unittest.TestCase):
         self.assertEqual(_prompt_datewise_bucket(283, buckets), "sales_qty")
         self.assertNotEqual(_prompt_datewise_bucket(323, buckets), "sales_qty")
 
+    def test_right_shifted_opstk_maps_opening_not_receipts(self):
+        """OpStk Qty near x=256 must not land in the fixed receipts band."""
+        words = [
+            (195.6, 91.3, 216.2, 100, "Pack"),
+            (245.9, 91.3, 272.9, 100, "OpStk"),
+            (300.6, 91.3, 316.4, 100, "Pur"),
+            (326.2, 91.3, 347.4, 100, "Sales"),
+            (386.5, 91.3, 410.3, 100, "ClStk"),
+            (256.1, 103.3, 271.9, 110, "Qty"),
+            (298.1, 103.3, 313.9, 110, "Qty"),
+            (340.1, 103.3, 355.9, 110, "Qty"),
+            (376.7, 103.3, 392.4, 110, "Qty"),
+            (414.0, 103.3, 440.0, 110, "Amount"),
+        ]
+        buckets = _prompt_datewise_buckets_for_words(words)
+        self.assertEqual(_prompt_datewise_bucket(262.1, buckets), "opening_qty")
+        self.assertEqual(_prompt_datewise_bucket(312.6, buckets), "receipts_qty")
+        self.assertEqual(_prompt_datewise_bucket(352.6, buckets), "sales_qty")
+        self.assertEqual(_prompt_datewise_bucket(380.6, buckets), "closing_qty")
+
 
 if __name__ == "__main__":
     unittest.main()
