@@ -6920,6 +6920,8 @@ def _find_marg_erp_xls_header(
                 roles["closing_value"] = ci
             elif lab == "RATE":
                 roles["rate"] = ci
+            elif lab in {"LAST MONTH SALE", "LAST MONTH SALES"}:
+                roles["last_month_sale"] = ci
             elif "REPLACE" in lab:
                 replace_seen += 1
                 if replace_seen == 1:
@@ -7056,6 +7058,10 @@ def _parse_marg_erp_xls(
                         result["totals"]["extra"]["total_receive_value"] = nums_by_role[
                             "total_receive_qty"
                         ]
+                    if "last_month_sale" in nums_by_role:
+                        result["totals"]["extra"]["last_month_sale_value"] = (
+                            nums_by_role["last_month_sale"]
+                        )
                 else:
                     if "issue_value" in nums_by_role:
                         result["totals"]["sales_value"] = nums_by_role["issue_value"]
@@ -7086,6 +7092,10 @@ def _parse_marg_erp_xls(
                 ):
                     if key in nums_by_role:
                         result["totals"]["extra"][f"total_{key}"] = nums_by_role[key]
+                if "last_month_sale" in nums_by_role:
+                    result["totals"]["extra"]["last_month_sale_qty"] = nums_by_role[
+                        "last_month_sale"
+                    ]
             continue
 
         if re.search(
@@ -7138,6 +7148,10 @@ def _parse_marg_erp_xls(
                 item["extra"]["purchase_return_qty"] = pr_qty
             if replace_out:
                 item["extra"]["replace_out_qty"] = replace_out
+            if "last_month_sale" in roles:
+                last_month = _to_float(_row_cell_at(row, roles.get("last_month_sale")))
+                if last_month:
+                    item["extra"]["last_month_sale"] = last_month
         else:
             receive_qty = _to_float(_row_cell_at(row, roles.get("receive_qty")))
             issue_qty = _to_float(_row_cell_at(row, roles.get("issue_qty")))
