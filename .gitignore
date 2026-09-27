@@ -28,3 +28,6 @@ credentials/
 
 # Sales statement verification outputs
 output_sales_statements/
+
+# Batch QA outputs (history is regenerated locally)
+qa_results/
