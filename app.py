@@ -2917,6 +2917,8 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "zenith_opstk_totalstock",
             "sunderlal_openstk_sale",
             "pack_opening_receipt_issue_mexp",
+            "opening_receipt_issue_closing",
+            "group_wise_received_issue_value",
         ):
             kept_items.append(item)
             continue
@@ -3453,6 +3455,22 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
     Returns: Updated list with any recovered missing items appended.
     """
     if not ocr_text:
+        return existing_items
+
+    # Sales-statement wrap: product rows are already authoritative. Generic
+    # invoice OCR recovery invents merged/garbage names from statement dumps.
+    if re.search(
+        r"(?i)^\s*SOURCE:\s*(?:SALES_STATEMENT|EXCEL)\b",
+        ocr_text,
+    ) or (
+        existing_items
+        and isinstance(existing_items[0].get("additional_fields"), dict)
+        and existing_items[0]["additional_fields"].get("layout")
+        == "group_wise_received_issue_value"
+    ):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for sales-statement layout"
+        )
         return existing_items
 
     # JACKSON MEDICALS: FIX12j already owns paid qty/rate rows. OCR row recovery
@@ -27073,6 +27091,12 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "sunderlal_openstk_sale"
     if extra.get("layout") == "pack_opening_receipt_issue_mexp":
         additional["layout"] = "pack_opening_receipt_issue_mexp"
+    if extra.get("layout") == "opening_receipt_issue_closing":
+        additional["layout"] = "opening_receipt_issue_closing"
+    if extra.get("layout") == "group_wise_received_issue_value":
+        additional["layout"] = "group_wise_received_issue_value"
+    if extra.get("layout") == "product_wise_stock_statement":
+        additional["layout"] = "product_wise_stock_statement"
     if zl_bal:
         additional["layout"] = "zl_opening_primary_closing"
     if paired_value:
@@ -27343,7 +27367,19 @@ def build_split_extract_response_from_sales_statement(
         del pdf_bytes
 
     total_time = (datetime.now() - started).total_seconds()
-    totals_extra = ((sales_result.get("totals") or {}).get("extra") or {})
+    totals = sales_result.get("totals") or {}
+    totals_extra = totals.get("extra") or {}
+    # Statement-level qty totals (OPENING/RECEIPT/ISSUE/CLOSING). Prefer
+    # explicit stock_* keys when present; else fall back to totals.* so the
+    # footer ISSUE stays available without overwriting per-product sales_qty.
+    def _meta_stock_qty(*keys: str):
+        for key in keys:
+            if key in totals_extra and totals_extra.get(key) is not None:
+                return totals_extra.get(key)
+        for key in keys:
+            if key in totals and totals.get(key) is not None:
+                return totals.get(key)
+        return None
 
     invoices_filled = []
     for inv in all_invoices:
@@ -27383,18 +27419,26 @@ def build_split_extract_response_from_sales_statement(
                 "company_name": sales_result.get("company_name"),
                 "period_from": sales_result.get("period_from"),
                 "period_to": sales_result.get("period_to"),
-                "sales_value": (sales_result.get("totals") or {}).get("sales_value"),
-                "closing_value": (sales_result.get("totals") or {}).get("closing_value"),
+                "sales_value": totals.get("sales_value"),
+                "closing_value": totals.get("closing_value"),
                 "extraction_method": totals_extra.get("extraction_method"),
                 "hospital_count": totals_extra.get("hospital_count"),
                 "invoice_count": totals_extra.get("invoice_count"),
                 "hospital_sales_summary": totals_extra.get("hospital_sales_summary"),
                 "stock_statement": totals_extra.get("stock_statement"),
                 "stock_statement_line_count": totals_extra.get("stock_statement_line_count"),
-                "stock_opening_qty": totals_extra.get("stock_opening_qty"),
-                "stock_purchases_qty": totals_extra.get("stock_purchases_qty"),
-                "stock_sales_qty": totals_extra.get("stock_sales_qty"),
-                "stock_closing_qty": totals_extra.get("stock_closing_qty"),
+                "stock_opening_qty": _meta_stock_qty(
+                    "stock_opening_qty", "opening_qty"
+                ),
+                "stock_purchases_qty": _meta_stock_qty(
+                    "stock_purchases_qty", "receipts_qty"
+                ),
+                "stock_sales_qty": _meta_stock_qty(
+                    "stock_sales_qty", "sales_qty"
+                ),
+                "stock_closing_qty": _meta_stock_qty(
+                    "stock_closing_qty", "closing_qty"
+                ),
             },
         },
         "cost_optimization": {
