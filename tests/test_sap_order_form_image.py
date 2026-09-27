@@ -2,8 +2,14 @@
 
 import unittest
 
+from pathlib import Path
+
+from PIL import Image
+
 from services.sales_statement_extractor import (
     _looks_like_unfilled_sap_order_form,
+    _overlay_closer_sap_qty,
+    _sap_order_form_pixel_boxes,
     _zip_sap_order_form_rows,
 )
 
@@ -62,6 +68,50 @@ class SapOrderFormZipTests(unittest.TestCase):
         self.assertTrue(
             _looks_like_unfilled_sap_order_form({"line_items": items})
         )
+
+    def test_tall_photo_crop_includes_the_first_sap_row(self):
+        path = Path("0000732417_2026_08_ZA_07_322_06092026011854.jpeg")
+        if not path.exists():
+            self.skipTest("order form photo is not in the workspace")
+        image = Image.open(path).convert("RGB")
+        boxes = _sap_order_form_pixel_boxes(image)
+        self.assertIsNotNone(boxes)
+        _x0, top, _x1, bottom = boxes["products"]
+        self.assertLess(top, 140)
+        self.assertGreater(bottom, top + 200)
+        self.assertGreater(boxes["packs"][0], boxes["products"][2] - 5)
+
+    def test_closer_qty_fills_a_blank_and_can_replace_a_lower_misread(self):
+        full = [
+            {"packing": "200 ml", "qty": 12},
+            {"packing": "60s", "qty": None},
+            {"packing": "200 ml", "qty": None},
+        ]
+        _overlay_closer_sap_qty(
+            full,
+            [
+                {"packing": "200 ml", "qty": 17},
+                {"packing": "60s", "qty": 198},
+                {"packing": "200 ml", "qty": 40},
+            ],
+            overwrite=False,
+        )
+        self.assertEqual([row["qty"] for row in full], [12, 198, 40])
+        lower = [
+            {"packing": "60s", "qty": 56},
+            {"packing": "60s", "qty": None},
+            {"packing": "30 g", "qty": None},
+        ]
+        _overlay_closer_sap_qty(
+            lower,
+            [
+                {"packing": "60s", "qty": 86},
+                {"packing": "60s", "qty": None},
+                {"packing": "30 g", "qty": None},
+            ],
+            overwrite=True,
+        )
+        self.assertEqual(lower[0]["qty"], 86)
 
 
 if __name__ == "__main__":

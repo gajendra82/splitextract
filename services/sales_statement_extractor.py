@@ -3368,6 +3368,38 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _sales_reader_engine(ext: str, method: str) -> str:
+    """Name the tool that produced the statement, for the service log."""
+    text = f"{method} {ext}".lower()
+    if "tesseract" in text:
+        return "tesseract"
+    if "pdfplumber" in text:
+        return "pdfplumber"
+    if "gemini" in text or "vision" in text:
+        return "paid_gemini_vision"
+    if ext == ".pdf":
+        return "pymupdf"
+    if ext in {".xls", ".xlsx", ".xlsm"}:
+        return "excel_parser"
+    if ext in {".doc", ".docx"}:
+        return "word_parser"
+    if ext == ".txt":
+        return "text_parser"
+    if ext in {".htm", ".html"}:
+        return "html_parser"
+    return "parser"
+
+
+def _log_sales_reader(filename: str, ext: str, result: Dict[str, Any]) -> None:
+    method = str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=%s method=%s",
+        filename,
+        _sales_reader_engine(ext, method),
+        method or "unknown",
+    )
+
+
 def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Dispatch by extension and return unified sales-statement JSON."""
     name = Path(filename or "upload").name
@@ -3397,6 +3429,10 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     result = _apply_stock_identity_validation(result)
     result = _ensure_stock_qty_value_fields(result)
     result = _product_wise_drop_banner_items(result)
+    from services.gemini_extraction_fallback import maybe_apply_gemini_fallback
+
+    result = maybe_apply_gemini_fallback(result, file_bytes, name, ext)
+    _log_sales_reader(name, ext, result)
     return _group_statements_by_stockist_month(result)
 
 
@@ -23381,6 +23417,26 @@ def _read_order_form_qty_cells(file_bytes: bytes, model: str):
     return {"bands": len(bands), "left": left_qty, "right": right_qty}
 
 
+def _unfilled_sap_order_photo(result: Dict[str, Any], file_bytes: bytes) -> bool:
+    """True when this photo is an SAP order form and the Qty cells were not read."""
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 8:
+        return False
+    filled = sum(1 for item in items if _to_float(item.get("sales_qty")) > 0)
+    if filled >= 3:
+        return False
+    import io
+
+    from PIL import Image, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        return _sap_order_form_pixel_boxes(image) is not None
+    except Exception as exc:
+        logger.info("SAP order form photo check skipped: %s", exc)
+        return False
+
+
 def _looks_like_unfilled_sap_order_form(result: Optional[Dict[str, Any]]) -> bool:
     """Printed SAP order form whose Qty handwriting was not read."""
     if not isinstance(result, dict):
@@ -23438,7 +23494,50 @@ def _sap_order_form_column_jpeg(image, box) -> bytes:
     return buf.getvalue()
 
 
-def _sap_order_form_vision_rows(file_bytes: bytes, prompt: str, box) -> List[Dict[str, Any]]:
+def _sap_order_form_pixel_boxes(image) -> Optional[Dict[str, tuple]]:
+    """Locate this photo's SAP code column and the Qty column on its right.
+
+    Fixed fractions miss the first rows on a tall photo. When Tesseract cannot
+    see at least eight SAP codes, the caller keeps the original fractions.
+    """
+    import pytesseract
+
+    width, height = image.size
+    scale = 2 if width < 1400 else 1
+    sample = image.resize((width * scale, height * scale)) if scale != 1 else image
+    _tesseract_configure()
+    data = pytesseract.image_to_data(
+        sample, config="--psm 11", output_type=pytesseract.Output.DICT
+    )
+    codes: List[tuple] = []
+    total_y = None
+    for index, token in enumerate(data.get("text") or []):
+        text = str(token or "").strip()
+        if not text:
+            continue
+        x = int(data["left"][index] / scale)
+        y = int(data["top"][index] / scale)
+        digits = re.sub(r"\D", "", text)
+        if re.fullmatch(r"700\d{4}", digits) and len(text) <= 10:
+            codes.append((x, y))
+        elif total_y is None and re.match(r"^total\b", text, re.I) and y > height * 0.4:
+            total_y = y
+    if len(codes) < 8:
+        return None
+    first_y = min(y for _x, y in codes)
+    # Handwritten Qty sits above the printed code baseline, so keep that ink in the crop.
+    top = max(0, first_y - 28)
+    bottom = int(total_y - 6) if total_y and total_y > top + 80 else int(height * 0.80)
+    bottom = min(height, max(bottom, top + 40))
+    return {
+        "products": (int(width * 0.28), top, int(width * 0.72), bottom),
+        "packs": (int(width * 0.73), top, width - 1, bottom),
+    }
+
+
+def _sap_order_form_vision_rows(
+    file_bytes: bytes, prompt: str, box, pixel_box: Optional[tuple] = None
+) -> List[Dict[str, Any]]:
     import io
     import os
 
@@ -23447,13 +23546,14 @@ def _sap_order_form_vision_rows(file_bytes: bytes, prompt: str, box) -> List[Dic
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
-    left, top, right, bottom = box
-    pixel_box = (
-        int(width * left),
-        int(height * top),
-        int(width * right),
-        int(height * bottom),
-    )
+    if pixel_box is None:
+        left, top, right, bottom = box
+        pixel_box = (
+            int(width * left),
+            int(height * top),
+            int(width * right),
+            int(height * bottom),
+        )
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
         "contents": [
@@ -23489,6 +23589,33 @@ def _sap_order_form_vision_rows(file_bytes: bytes, prompt: str, box) -> List[Dic
     return []
 
 
+def _sap_pack_key(row: Dict[str, Any]) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(row.get("packing") or "").lower())
+
+
+def _overlay_closer_sap_qty(
+    full_rows: List[Dict[str, Any]],
+    closer_rows: List[Dict[str, Any]],
+    overwrite: bool = False,
+) -> None:
+    """Fill Qty from a zoomed slice when that slice lines up with the full column."""
+    if len(closer_rows) < 3 or len(closer_rows) > len(full_rows):
+        return
+    full_keys = [_sap_pack_key(row) for row in full_rows]
+    closer_keys = [_sap_pack_key(row) for row in closer_rows]
+    for start in range(len(full_rows) - len(closer_rows) + 1):
+        if full_keys[start : start + len(closer_rows)] != closer_keys:
+            continue
+        for offset, row in enumerate(closer_rows):
+            if row.get("qty") in (None, ""):
+                continue
+            target = full_rows[start + offset]
+            if not overwrite and target.get("qty") not in (None, ""):
+                continue
+            target["qty"] = row.get("qty")
+        return
+
+
 def _extract_sap_order_form_vision(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -23496,6 +23623,19 @@ def _extract_sap_order_form_vision(
 
     Does not change other image formats. The left Pack/Qty list is ignored.
     """
+    import io
+
+    from PIL import Image, ImageOps
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    boxes = _sap_order_form_pixel_boxes(image)
+    product_box = None if boxes is None else boxes["products"]
+    pack_box = None if boxes is None else boxes["packs"]
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=sap_order_form_qty boxes=%s",
+        filename,
+        "tesseract_rows" if boxes else "fixed_fractions",
+    )
     products = _sap_order_form_vision_rows(
         file_bytes,
         "This crop is only the SAP Code and Product columns. "
@@ -23504,6 +23644,7 @@ def _extract_sap_order_form_vision(
         'Return JSON {"rows":[{"code":string|null,"product_name":string}]}. '
         "Do not invent products.",
         (0.30, 0.11, 0.72, 0.80),
+        product_box,
     )
     packs = _sap_order_form_vision_rows(
         file_bytes,
@@ -23513,7 +23654,25 @@ def _extract_sap_order_form_vision(
         'Return JSON {"rows":[{"packing":string|null,"qty":number|null}]}. '
         "Do not invent rows and do not move a number onto another row.",
         (0.62, 0.11, 0.99, 0.82),
+        pack_box,
     )
+    if pack_box is not None and packs:
+        x0, y0, x1, y1 = pack_box
+        span = max(1, y1 - y0)
+        closer_prompt = (
+            "This crop is only Pack and handwritten Qty. "
+            "Read every data row. A blank Qty cell is null. Do not skip blank rows. "
+            'Return JSON {"rows":[{"packing":string|null,"qty":number|null}]}.'
+        )
+        slices = (
+            ((x0, y0, x1, min(y1, y0 + int(span * 0.45))), False),
+            ((x0, max(y0, y1 - int(span * 0.35)), x1, y1), True),
+        )
+        for pixel_box, overwrite in slices:
+            closer = _sap_order_form_vision_rows(
+                file_bytes, closer_prompt, (0, 0, 1, 1), pixel_box
+            )
+            _overlay_closer_sap_qty(packs, closer, overwrite=overwrite)
     items = _zip_sap_order_form_rows(products, packs)
     if not items:
         return None
@@ -24301,6 +24460,365 @@ def _parse_a2z_opening_mexp_image(
     return _pack_mexp_finish(result, items)
 
 
+def _datewise_photo_openings_missing(result: Optional[Dict[str, Any]]) -> bool:
+    """Datewise photo whose OpStk Qty was left at 0 on rows that still have stock."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"Stock\s+Statement", title, re.I):
+        return False
+    if not re.search(r"Datewise", title, re.I):
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 8:
+        return False
+    filled = sum(1 for item in items if _to_float(item.get("opening_qty")) > 0)
+    missing = 0
+    for item in items:
+        if _to_float(item.get("opening_qty")) > 0:
+            continue
+        if (
+            _to_float(item.get("closing_value")) > 0
+            or _to_float(item.get("sales_value")) > 0
+            or _to_float(item.get("closing_qty")) > 0
+            or _to_float(item.get("sales_qty")) > 0
+        ):
+            missing += 1
+    if filled < max(4, len(items) // 5):
+        return True
+    return missing >= 4
+
+
+_DATEWISE_PHOTO_PROMPT = """
+This photo is a PROMPT Stock Statement (Datewise). Read the page upright.
+Columns left to right:
+serial, Product Name, Pack, OpStk Qty, Pur Qty, Sales Qty, Sales Amount, ClStk Qty, ClStk Amount.
+Ignore A3Mn, E/E, Age, and Exp.
+
+Return JSON only:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock Statement (Datewise)",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number
+    }
+  ],
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {
+      "opening_qty": number|null,
+      "receipts_qty": number|null,
+      "sales_qty": number|null,
+      "closing_qty": number|null
+    }
+  }
+}
+
+Rules:
+- OpStk Qty is opening_qty. Pur Qty is receipts_qty. Sales Qty is sales_qty. Sales Amount is sales_value. ClStk Qty is closing_qty. ClStk Amount is closing_value.
+- A printed 0 stays 0. Never skip a 0, and never move Sales Qty or ClStk Qty into OpStk Qty or Pur Qty.
+- Keep every number on the same product row.
+- Company and division lines such as THE HIMALAYA DRUG COMPANY or HIMALAYA ZANDRA DIV are not products.
+- stockist_name is the agency header, not the manufacturer. company_name is the manufacturer.
+- From/To dates are DD-MM-YYYY. Do not use the photo date or filename date.
+- The Total row fills totals. It is not a product. Bills is not a sales total.
+"""
+
+
+def _upright_datewise_jpeg(file_bytes: bytes) -> Optional[bytes]:
+    """Rotate a photographed Datewise statement so OpStk reads left to right."""
+    import io
+
+    import pytesseract
+    from PIL import Image, ImageEnhance, ImageOps
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    upright = None
+    for angle in (0, 90, 270, 180):
+        rotated = image if angle == 0 else image.rotate(angle, expand=True)
+        sample = rotated.copy()
+        sample.thumbnail((1400, 1400))
+        text = pytesseract.image_to_string(sample, config="--psm 6")
+        # Photo OCR often splits "Stock Statement" and never emits the word OpStk.
+        if re.search(r"Datewise", text, re.I) and re.search(r"Stock", text, re.I):
+            upright = rotated
+            break
+    if upright is None:
+        return None
+    upright.thumbnail((1800, 2400))
+    upright = ImageEnhance.Contrast(upright).enhance(1.25)
+    buf = io.BytesIO()
+    upright.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _repair_datewise_photo_qty(item: Dict[str, Any]) -> None:
+    """Put a dropped OpStk or a copied Pur Qty back on this Datewise photo row."""
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    if abs(opening + receipts - sales - closing) < 0.01:
+        return
+    if (
+        receipts > 0
+        and abs(receipts - sales) < 0.01
+        and abs(opening - sales - closing) < 0.01
+    ):
+        item["receipts_qty"] = 0.0
+        receipts = 0.0
+    if abs(opening + receipts - sales - closing) < 0.01:
+        return
+    if opening == 0:
+        implied = closing - receipts + sales
+        if implied > 0 and abs(implied + receipts - sales - closing) < 0.01:
+            item["opening_qty"] = implied
+
+
+def _extract_prompt_datewise_photo(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    previous: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Reread a Datewise photo whose OpStk column was dropped. PDF parsing is unchanged."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    jpeg = _upright_datewise_jpeg(file_bytes)
+    if not jpeg:
+        return None
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _DATEWISE_PHOTO_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("Datewise photo vision failed: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, (ext or ".jpg").lstrip("."))
+    result = _apply_parsed_sales_json(result, parsed)
+    kept: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        if not name or re.search(
+            r"HIMALAYA\s+DRUG|ZANDRA|^TOTAL\b|^Bills\b", name, re.I
+        ):
+            continue
+        item["product_name"] = name
+        _repair_datewise_photo_qty(item)
+        item["opening_value"] = None
+        item["receipts_value"] = None
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra["layout"] = "prompt_datewise_photo"
+        item["extra"] = extra
+        kept.append(item)
+    previous_items = [
+        item for item in (previous.get("line_items") or []) if isinstance(item, dict)
+    ]
+    if len(kept) < max(8, len(previous_items) - 3):
+        return None
+    filled = sum(1 for item in kept if _to_float(item.get("opening_qty")) > 0)
+    previous_filled = sum(
+        1 for item in previous_items if _to_float(item.get("opening_qty")) > 0
+    )
+    if filled <= previous_filled:
+        return None
+    result["line_items"] = kept
+    result["report_title"] = "Stock Statement (Datewise)"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "prompt_datewise_photo"
+    result["totals"]["extra"]["layout"] = "prompt_datewise_photo"
+    result["totals"]["extra"]["qty_only"] = False
+    result["totals"]["extra"]["total_row_source"] = "prompt_datewise_footer"
+    return result
+
+
+def _looks_like_two_column_closing_photo(result: Optional[Dict[str, Any]]) -> bool:
+    """Printed PRODUCT NAME | CLOSING STOCK sheet, twice side by side, with handwriting."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"CLOSING\s+STOCK", title, re.I):
+        return False
+    if re.search(r"Datewise|OpStk|STOCK\s*&\s*SALES", title, re.I):
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 15:
+        return False
+    sales = sum(
+        1
+        for item in items
+        if _to_float(item.get("sales_qty")) > 0 or _to_float(item.get("sales_value")) > 0
+    )
+    closing = sum(1 for item in items if _to_float(item.get("closing_qty")) > 0)
+    return sales == 0 and closing >= 3
+
+
+_TWO_COLUMN_CLOSING_PROMPT = """
+This photo is a stock sheet with TWO tables side by side.
+Each table is only: PRODUCT NAME | CLOSING STOCK.
+The closing quantity is the blue handwriting in that row's CLOSING STOCK cell.
+Read the page upright.
+
+Return JSON only:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "CLOSING STOCK",
+  "line_items": [
+    {"product_name": string, "closing_qty": number}
+  ]
+}
+
+Rules:
+- List every LEFT-table product from top to bottom, then every RIGHT-table product from top to bottom.
+- closing_qty is the handwritten number in the CLOSING STOCK cell of that same row. A blank cell is 0.
+- Do not move a number onto the product above or below it.
+- A circle, tick, or loop drawn beside a number is not an extra digit. 45 with a circle beside it is 45, not 450.
+- Copy the printed spelling. These labels use B, R, and 52: ARJUNA, BONNISAN, BRESOL, HIORA, LIV.52. Do not turn those into KRAUNA, SOMISAN, or LIV 12.
+- Handwritten product names written into blank rows are products. Keep the number on that handwritten row.
+- This sheet has no opening, purchase, sales quantity, or money columns. Do not invent them.
+- stockist_name is the handwritten name after STOCKIST NAME.
+- If the only date on the page is like Aug 26 and no year is printed, period_from and period_to are null.
+- Do not use a filename date.
+"""
+
+
+def _portrait_closing_stock_jpeg(file_bytes: bytes) -> bytes:
+    """Turn a sideways closing-stock photo so the product rows run left to right."""
+    import io
+
+    from PIL import Image, ImageEnhance, ImageOps
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    if image.size[0] > image.size[1]:
+        image = image.rotate(270, expand=True)
+    image.thumbnail((2200, 3000))
+    image = ImageEnhance.Contrast(image).enhance(1.3)
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _extract_two_column_closing_stock_photo(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Reread a two-column closing-stock photo. Other image formats are unchanged."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    jpeg = _portrait_closing_stock_jpeg(file_bytes)
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _TWO_COLUMN_CLOSING_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("Two-column closing stock vision failed: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, (ext or ".jpg").lstrip("."))
+    result = _apply_parsed_sales_json(result, parsed)
+    kept: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        if not name or re.search(r"PRODUCT\s+NAME|CLOSING\s+STOCK|STOCKIST", name, re.I):
+            continue
+        item["product_name"] = name
+        item["opening_qty"] = 0.0
+        item["receipts_qty"] = 0.0
+        item["sales_qty"] = 0.0
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra["layout"] = "two_column_closing_stock"
+        item["extra"] = extra
+        kept.append(item)
+    if len(kept) < 15:
+        return None
+    result["line_items"] = kept
+    result["report_title"] = "CLOSING STOCK"
+    if result.get("period_from") and not result.get("period_to"):
+        result["period_to"] = result["period_from"]
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "two_column_closing_stock_photo"
+    result["totals"]["extra"]["layout"] = "two_column_closing_stock"
+    result["totals"]["closing_value"] = 0.0
+    result["totals"]["sales_value"] = 0.0
+    return result
+
+
+
+
 def _looks_like_opening_purchased_sold_report(result: Optional[Dict[str, Any]]) -> bool:
     """Photo of Product / Opening Stock / Purchased / Sold / Closing Stock.
 
@@ -24572,6 +25090,10 @@ def _extract_opening_purchased_sold_vision(
     return _finalize_opening_purchased_sold(result)
 
 
+
+
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -24622,6 +25144,10 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     }
 
     # Retry Gemini Vision briefly on 429/503, then fall back to OCR.
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=image",
+        filename,
+    )
     last_err: Optional[Exception] = None
     for attempt in range(3):
         try:
@@ -24648,6 +25174,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     return result
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _datewise_photo_openings_missing(result):
+                    datewise = _extract_prompt_datewise_photo(
+                        file_bytes, filename, ext, result
+                    )
+                    if datewise and datewise.get("line_items"):
+                        return datewise
+                if _looks_like_two_column_closing_photo(result):
+                    closing_sheet = _extract_two_column_closing_stock_photo(
+                        file_bytes, filename, ext
+                    )
+                    if closing_sheet and closing_sheet.get("line_items"):
+                        return closing_sheet
                 if _main_stock_receive_value_missing(result):
                     main_stock = _extract_main_stock_sales_vision(
                         file_bytes, filename, ext, result
@@ -24692,7 +25230,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zandra and zandra.get("line_items"):
                         return zandra
-                if _looks_like_unfilled_sap_order_form(result):
+                if _looks_like_unfilled_sap_order_form(result) or _unfilled_sap_order_photo(
+                    result, file_bytes
+                ):
                     sap_form = _extract_sap_order_form_vision(
                         file_bytes, filename, ext
                     )
@@ -24771,8 +25311,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             logger.warning("Gemini vision failed for %s: %s", filename, exc)
             break
 
-    logger.warning(
-        "Falling back to Tesseract OCR for sales image %s (%s)",
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=tesseract stage=image_fallback reason=%s",
         filename,
         last_err,
     )
