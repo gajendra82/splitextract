@@ -777,6 +777,97 @@ class TestProductStockReport(unittest.TestCase):
         validated = _apply_stock_identity_validation(result)
         self.assertTrue(validated["line_items"][0]["extra"]["stock_identity_ok"])
 
+    def test_stacked_opbal_pdf_text_collapses_to_rows(self):
+        """Biswas-style PDF text: product / packing / 5 qtys on separate lines."""
+        text = """
+M/S BISWAS MEDICINE AGENCY
+48/S/6,K.P.CHATTARA ROAD
+Page No.1
+Sales & Stock Statement(From 01/08/2026 Upto 31/08/202
+Aug 31,202
+HIMALAYA (ZANDRA)
+PRODUCT NAME
+PACKING
+Op.Bal.
+Receipt
+Total
+Issue
+Closing
+Qty.
+Qty.
+Qty.
+Qty.
+Balance
+BONNISAN DROPS
+30ML
+94
+0
+94
+26
+68
+BRESOL TAB
+60'S
+13
+0
+13
+7
+6
+EVECARE FORTE LIQ 20
+200 ML
+17
+0
+17
+4
+13
+PUREHANDS
+500 ML
+0
+0
+0
+0
+0
+TOTAL
+153747
+220779
+374525
+157192
+244748
+"""
+        result = _parse_opbal_receipt_issue_statement(text, "biswas.pdf", "pdf")
+        self.assertIsNotNone(result)
+        self.assertTrue(result["totals"]["extra"].get("opbal_stacked_lines"))
+        self.assertEqual(result["stockist_name"], "M/S BISWAS MEDICINE AGENCY")
+        self.assertEqual(result["company_name"], "HIMALAYA (ZANDRA)")
+        self.assertEqual(result["period_from"], "2026-08-01")
+        self.assertEqual(result["period_to"], "2026-08-31")
+        self.assertEqual(len(result["line_items"]), 4)
+        by_name = {i["product_name"]: i for i in result["line_items"]}
+        bonn = by_name["BONNISAN DROPS"]
+        self.assertEqual(bonn["packing"], "30ML")
+        self.assertEqual(bonn["opening_qty"], 94.0)
+        self.assertEqual(bonn["receipts_qty"], 0.0)
+        self.assertEqual(bonn["sales_qty"], 26.0)
+        self.assertEqual(bonn["closing_qty"], 68.0)
+        bresol = by_name["BRESOL TAB"]
+        self.assertEqual(bresol["packing"], "60'S")
+        self.assertEqual(bresol["opening_qty"], 13.0)
+        self.assertEqual(bresol["sales_qty"], 7.0)
+        self.assertEqual(bresol["closing_qty"], 6.0)
+        eve = next(i for i in result["line_items"] if "EVECARE FORTE LIQ" in i["product_name"])
+        self.assertEqual(eve["opening_qty"], 17.0)
+        self.assertEqual(eve["sales_qty"], 4.0)
+        self.assertEqual(eve["closing_qty"], 13.0)
+        pure = by_name["PUREHANDS"]
+        self.assertEqual(pure["packing"], "500ML")
+        self.assertEqual(pure["opening_qty"], 0.0)
+        # Single-line Mahajan sample must not set stacked flag
+        single = _parse_opbal_receipt_issue_statement(
+            OPBAL_SAMPLE, "opbal.pdf", "pdf"
+        )
+        self.assertFalse(
+            ((single.get("totals") or {}).get("extra") or {}).get("opbal_stacked_lines")
+        )
+
 
 SALES_STOCK_TXT = """
      SRINANDAN DISTRIBUTING HOUSE
