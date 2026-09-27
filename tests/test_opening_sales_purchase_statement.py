@@ -27,6 +27,10 @@ PRAKASH = (
     Path(__file__).resolve().parents[1]
     / "0000736167_2026_08_ZA_24_8137_03092026173805.pdf"
 )
+LAXMI = (
+    Path(__file__).resolve().parents[1]
+    / "0000735847_2026_08_ZA_24_267_05092026165246.PDF"
+)
 
 HEADER = (
     "AGRAWAL DRUGS\n"
@@ -161,6 +165,23 @@ class TestExistingSsaNotStolen(unittest.TestCase):
             (prakash.get("totals") or {}).get("extra", {}).get("extraction_method"),
             "ssa_opening_receipt_issue_value",
         )
+
+
+@unittest.skipUnless(LAXMI.is_file(), "missing Laxmi Chemist fixture")
+class TestLaxmiChemistStockist(unittest.TestCase):
+    def test_chemist_header_is_the_stockist(self):
+        result = extract_sales_statement(LAXMI.read_bytes(), LAXMI.name)
+        self.assertEqual(result["stockist_name"], "LAXMI CHEMIST")
+        self.assertEqual(result["period_from"], "2026-08-01")
+        self.assertEqual(result["period_to"], "2026-08-29")
+        bonnisan = next(
+            item
+            for item in result["line_items"]
+            if item["product_name"] == "BONNISAN LIQUID" and item["packing"] == "100ML"
+        )
+        self.assertEqual(bonnisan["opening_qty"], 27.0)
+        self.assertEqual(bonnisan["sales_qty"], 1.0)
+        self.assertEqual(bonnisan["closing_qty"], 26.0)
 
 
 if __name__ == "__main__":

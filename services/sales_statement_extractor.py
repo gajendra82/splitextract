@@ -1545,13 +1545,18 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
+    # This sheet prints a fifth number after Closing. The four qty columns
+    # are the ones before it. A 4-column row still uses row_re.
+    row5_re = re.compile(
+        rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
+    )
     nums_re = re.compile(
         rf"^({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
     pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)$", re.I)
     pack_token = re.compile(
-        r"^(?:\d+\*\d+|\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
-        r"\d+ML|\d+MG|0\.\d+ML)$",
+        r"^(?:\d+\*\d+S?|\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
+        r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
 
@@ -1611,6 +1616,13 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         if re.search(r"THE HIMALAYA DRUG", ln, re.I):
             if not result.get("company_name"):
                 result["company_name"] = "THE HIMALAYA DRUG CO"
+            pending_name = ""
+            continue
+        m5 = row5_re.match(ln)
+        if m5 and _ps_name_pack(m5.group(1))[1]:
+            row = _ps_item(m5.group(1), m5.group(2), m5.group(3), m5.group(4), m5.group(5))
+            if row:
+                items.append(row)
             pending_name = ""
             continue
         m = row_re.match(ln)
@@ -15459,7 +15471,9 @@ def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict
                     re.I,
                 ):
                     continue
-                if re.search(r"DRUG|AGENC|STORE|MEDICO|MEDICAL|DISTRIBUT", raw, re.I):
+                if re.search(
+                    r"DRUG|AGENC|STORE|MEDICO|MEDICAL|DISTRIBUT|CHEMIST", raw, re.I
+                ):
                     result["stockist_name"] = _clean_name(raw)
                     break
         m_period = re.search(
@@ -23602,6 +23616,297 @@ def _overlay_closer_sap_qty(
         return
 
 
+def _zandra_two_column_order_text(text: str) -> bool:
+    """Printed Zandra ORDER FORM with two product tables. Other sheets do not match."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"\bZANDRA\b", text, re.I)
+        and re.search(r"ORDER\s*FOR", text, re.I)
+    )
+
+
+def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[float]:
+    """Y fraction of the Zandra ORDER FORM title. None for other photos.
+
+    The title is not always at the top. A tall photo can show the table first.
+    The older right-Qty SAP photo does not print these words, so it stays out.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return None
+    width, height = image.size
+    if width < 200 or height < 200:
+        return None
+    pytesseract = _a2z_tesseract()
+    for top_frac, bot_frac in ((0.0, 0.42), (0.18, 0.55)):
+        origin = int(height * top_frac)
+        crop = image.crop((0, origin, width, int(height * bot_frac)))
+        probe = crop.copy()
+        probe.thumbnail((1000, 1000))
+        if not probe.height:
+            continue
+        try:
+            preview = _ocr_image_to_text(_pil_jpeg_bytes(probe), psm=6)
+        except Exception:
+            continue
+        if not _zandra_two_column_order_text(preview):
+            continue
+        scale = crop.height / float(probe.height)
+        data = pytesseract.image_to_data(
+            probe, config="--psm 6", output_type=pytesseract.Output.DICT
+        )
+        title_y = None
+        for index, token in enumerate(data.get("text") or []):
+            word = str(token or "").strip()
+            if re.search(r"ORDER|^ZAND", word, re.I):
+                title_y = origin + int(int(data["top"][index]) * scale)
+                if re.search(r"ORDER", word, re.I):
+                    break
+        if title_y is None:
+            title_y = origin + int(crop.height * 0.35)
+        return max(0.0, min(0.8, title_y / float(height)))
+    return None
+
+
+def _zandra_two_column_order_photo(file_bytes: bytes) -> bool:
+    """True only when the photo prints Zandra and ORDER FORM."""
+    return _zandra_order_form_anchor(file_bytes) is not None
+
+
+def _pil_jpeg_bytes(image) -> bytes:
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=90)
+    return buf.getvalue()
+
+
+def _zandra_order_form_rows(file_bytes: bytes, box: tuple, prompt: str) -> List[Dict[str, Any]]:
+    import io
+    import os
+
+    from PIL import Image, ImageEnhance, ImageOps
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    width, height = image.size
+    left, top, right, bottom = box
+    crop = image.crop(
+        (int(width * left), int(height * top), int(width * right), int(height * bottom))
+    )
+    crop = ImageEnhance.Contrast(crop).enhance(1.45)
+    if crop.width < 1000:
+        crop = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS)
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(_pil_jpeg_bytes(crop)).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            rows = (parsed or {}).get("rows")
+            if isinstance(rows, list) and rows:
+                return [row for row in rows if isinstance(row, dict)]
+        except Exception as exc:
+            logger.warning("Zandra order form read failed: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    return []
+
+
+def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[str]:
+    import io
+    import os
+
+    from PIL import Image, ImageOps
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    width, height = image.size
+    top = max(0.0, anchor + 0.045)
+    bottom = min(0.95, anchor + 0.10)
+    crop = image.crop(
+        (int(width * 0.04), int(height * top), int(width * 0.55), int(height * bottom))
+    )
+    if crop.width < 1400:
+        crop = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS)
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    prompt = (
+        "This crop is the From line of an order form. "
+        "stockist_name is the handwritten party name. "
+        "A circle around the first word is not an extra letter. "
+        "Do not include the word From. "
+        'Return ONLY JSON {"stockist_name": string|null}.'
+    )
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(_pil_jpeg_bytes(crop)).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 256},
+    }
+    try:
+        response = generate_content_via_vertex(model=model, payload=payload, timeout=60)
+        parsed = _extract_json_object(_gemini_response_text(response)) or {}
+    except Exception as exc:
+        logger.warning("Zandra order form stockist read failed: %s", exc)
+        return None
+    name = _clean_name(str(parsed.get("stockist_name") or ""))
+    name = re.sub(r"\s+\d+\s*$", "", name).strip(" .")
+    name = " ".join(part[:1].upper() + part[1:] for part in name.split())
+    name = re.sub(r"\bDr\b\.?", "Dr.", name)
+    name = re.sub(r"\b([A-Za-z])-([A-Za-z])\b", r"\1.\2", name)
+    name = re.sub(r"-([A-Z])", r". \1", name)
+    name = re.sub(r"\.{2,}", ".", name)
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    if name.startswith("Dr "):
+        name = "Dr." + name[2:]
+    if not name or re.search(r"^FROM$|ORDER\s*FORM|ZANDRA", name, re.I):
+        return None
+    return name
+
+
+_ZANDRA_ORDER_SIDE_PROMPT = (
+    "This crop is one side of a Zandra ORDER FORM. "
+    "Columns left to right: SAP Code, Product, Pack, Qty, Value. "
+    "qty is the handwritten number in that row's Qty cell. A blank Qty cell is null. "
+    "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
+    "A separate stroke after a number is not an extra zero. "
+    "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "Do not copy a number onto another row. "
+    "Do not add a row for the blank lines under the last printed product, "
+    "even when a number is written there. Skip the header and Total. "
+    'Return ONLY JSON {"rows":[{"code":string|null,"product_name":string,'
+    '"packing":string|null,"qty":number|null}]}.'
+)
+
+
+def _zandra_order_side_items(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for raw in rows:
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or re.search(
+            r"^(TOTAL|PRODUCT|SAP\s*CODE|FROM|ORDER\s*FORM)\b|signature|head office",
+            name,
+            re.I,
+        ):
+            continue
+        code = re.sub(r"\D", "", str(raw.get("code") or ""))
+        item = empty_line_item()
+        item["product_code"] = code if re.fullmatch(r"700\d{4}", code) else None
+        item["product_name"] = name
+        packing = _clean_name(str(raw.get("packing") or ""))
+        item["packing"] = packing or None
+        qty = raw.get("qty")
+        qty_val = 0.0 if qty in (None, "") else _to_float(qty)
+        # A stroke after the last digit is sometimes read as an extra zero.
+        if qty_val >= 1000 and float(qty_val).is_integer() and int(qty_val) % 10 == 0:
+            qty_val = qty_val / 10.0
+        item["sales_qty"] = qty_val
+        item["sales_value"] = 0.0
+        item["extra"] = {"layout": "zandra_two_column_order_form"}
+        items.append(item)
+    return items
+
+
+def _zandra_order_form_items(
+    file_bytes: bytes, left: float, right: float, anchor: float
+) -> List[Dict[str, Any]]:
+    """Read one side in two bands so a long column is not cut off or zero-padded."""
+    items: List[Dict[str, Any]] = []
+    seen = set()
+    # Bands are measured from the printed title, which is not always near y=0.
+    bands = (
+        (anchor + 0.08, anchor + 0.36),
+        (anchor + 0.32, anchor + 0.58),
+    )
+    for top, bottom in bands:
+        top = max(0.0, min(0.92, top))
+        bottom = max(top + 0.05, min(0.98, bottom))
+        band = _zandra_order_side_items(
+            _zandra_order_form_rows(
+                file_bytes, (left, top, right, bottom), _ZANDRA_ORDER_SIDE_PROMPT
+            )
+        )
+        # A band that fills almost every Qty cell is reading the Pack column.
+        if sum(1 for item in band if item["sales_qty"] > 0) > 6:
+            for item in band:
+                item["sales_qty"] = 0.0
+        for item in band:
+            pack = re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper())
+            name = re.sub(r"[^A-Z0-9]", "", item["product_name"].upper())
+            key = (name[:22], pack)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(item)
+    return items
+
+
+def _extract_zandra_two_column_order_photo(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Read both product tables on a Zandra ORDER FORM photo.
+
+    The older SAP photo that keeps only the right-hand Qty column does not
+    match this detector and is left unchanged.
+    """
+    anchor = _zandra_order_form_anchor(file_bytes)
+    if anchor is None:
+        return None
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=zandra_two_column_order_form",
+        filename,
+    )
+    items = _zandra_order_form_items(
+        file_bytes, 0.01, 0.50, anchor
+    ) + _zandra_order_form_items(file_bytes, 0.49, 0.99, anchor)
+    if len(items) < 12:
+        return None
+    result = empty_result(filename, (ext or ".jpg").lstrip("."))
+    result["stockist_name"] = _zandra_order_form_stockist(file_bytes, anchor)
+    result["report_title"] = "ORDER FORM"
+    result["line_items"] = items
+    result["period_from"] = None
+    result["period_to"] = None
+    result["totals"]["sales_value"] = 0.0
+    result["totals"]["extra"] = {
+        "extraction_method": "zandra_two_column_order_form",
+        "layout": "zandra_two_column_order_form",
+    }
+    return result
+
+
 def _extract_sap_order_form_vision(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -25080,6 +25385,740 @@ def _extract_opening_purchased_sold_vision(
 
 
 
+def _ssa_mexp_photo_header(text: str) -> bool:
+    """Sideways photo of STOCK & SALES ANALYSIS with M.EXP and qty/value columns."""
+    if not text:
+        return False
+    if not re.search(r"STOCK\s*(?:&|AND)\s*SALES", text, re.I):
+        return False
+    if not re.search(r"M\s*\.?\s*EXP", text, re.I):
+        return False
+    if re.search(r"\bDUMP\b", text, re.I):
+        return True
+    # Phone OCR often drops the DUMP heading but still reads the VALUE pairs.
+    return len(re.findall(r"\bVALUE\b", text, re.I)) >= 3
+
+
+def _ssa_mexp_photo_loose_json(text: str) -> Optional[Dict[str, Any]]:
+    parsed = _extract_json_object(text or "")
+    if parsed and parsed.get("line_items"):
+        return parsed
+    if not text or '"line_items"' not in text:
+        return None
+    start = text.find("{")
+    if start < 0:
+        return None
+    chunk = text[start:]
+    last = chunk.rfind("}")
+    if last < 0:
+        return None
+    chunk = chunk[: last + 1]
+    for suffix in ("", "]}", "]}}", "}]}", "}]}]}"):
+        try:
+            obj = json.loads(chunk + suffix)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict) and obj.get("line_items"):
+            return obj
+    return None
+
+
+_SSA_MEXP_PHOTO_PROMPT = """
+This image is one band of a printed STOCK & SALES ANALYSIS.
+The column heading is pasted across the top. Read each number in the column under that heading.
+Columns LEFT TO RIGHT. A dash or blank cell is 0. Do not move an OPENING number into RECEIPT.
+
+1 ITEM DESCRIPTION -> product_name
+2 packing (75GM, 1X60, 200ML) -> packing
+3 OPENING QTY -> opening_qty
+4 OPENING VALUE -> opening_value
+5 RECEIPT QTY -> receipts_qty
+6 RECEIPT VALUE -> receipts_value
+7 ISSUE QTY -> sales_qty
+8 ISSUE VALUE -> sales_value
+9 CLOSING QTY -> closing_qty
+10 CLOSING VALUE -> closing_value
+11 DUMP QTY -> dump_qty
+12 M.EXP (a date such as 4/28) -> ignore. It is not a quantity and not the statement period.
+
+Return ONLY valid JSON:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": null,
+  "period_to": null,
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "opening_value": number,
+      "receipts_qty": number,
+      "receipts_value": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "dump_qty": number
+    }
+  ]
+}
+
+Rules:
+- The stockist is the party printed above the title, such as M PHARMA. It is not a product.
+- company_name is the manufacturer only when that name is printed. Do not invent Himalaya.
+- period_from and period_to stay null. M.EXP dates are expiry, not the statement period.
+- Skip TOTAL, Continued, Page No, and column headers.
+- Copy printed numbers. Do not calculate closing from opening and issue.
+- The band may start or end in the middle of the table. Read every full product row you can see.
+""".strip()
+
+
+def _ssa_mexp_photo_upright(file_bytes: bytes):
+    """Upright PIL image for this DUMP + M.EXP photo. Other images return None."""
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    if image.width <= image.height:
+        return None
+    pytesseract = _a2z_tesseract()
+    for angle in (270, 90):
+        turned = image.rotate(angle, expand=True)
+        width, height = turned.size
+        # The title often sits mid-page when the photo continues onto page 2.
+        for top_frac, bot_frac in ((0.52, 0.82), (0.0, 0.30)):
+            crop = turned.crop(
+                (0, int(height * top_frac), width, int(height * bot_frac))
+            )
+            crop.thumbnail((1600, 1600))
+            preview = pytesseract.image_to_string(crop, config="--psm 6") or ""
+            if _ssa_mexp_photo_header(preview):
+                return turned
+    return None
+
+
+def _ssa_mexp_photo_stockist(image) -> Optional[str]:
+    """Party name printed just above STOCK & SALES ANALYSIS."""
+    pytesseract = _a2z_tesseract()
+    small = image.copy()
+    small.thumbnail((1600, 1600))
+    if not small.width:
+        return None
+    scale = image.width / float(small.width)
+    data = pytesseract.image_to_data(
+        small, config="--psm 6", output_type=pytesseract.Output.DICT
+    )
+    stock_y = None
+    for index, token in enumerate(data.get("text") or []):
+        if re.search(r"^STOCK$", str(token or "").strip(), re.I):
+            stock_y = int(data["top"][index])
+            break
+    if stock_y is None:
+        return None
+    top = max(0, int((stock_y - 110) * scale))
+    bottom = min(image.height, int((stock_y + 8) * scale))
+    crop = image.crop((0, top, image.width, bottom))
+    text = pytesseract.image_to_string(crop, config="--psm 6") or ""
+    for line in text.splitlines():
+        raw = re.split(r"[:|]", line.strip())[0].strip()
+        if not raw or re.search(r"STOCK|HIMALAYA|ITEM|OPENING|PAGE", raw, re.I):
+            continue
+        if re.search(r"\bPHARMA\b|\bMEDICAL\b|\bAGENC|\bCHEMIST\b|\bMEDICO", raw, re.I):
+            name = _clean_name(raw)
+            if name and len(name) >= 3:
+                return name
+    return None
+
+
+def _ssa_mexp_header_span(image) -> Optional[Tuple[int, int]]:
+    """Y range of the OPENING / VALUE / M.EXP heading, in full-image pixels."""
+    pytesseract = _a2z_tesseract()
+    width, height = image.size
+    for top_frac, bot_frac in ((0.48, 0.80), (0.0, 0.36)):
+        origin = int(height * top_frac)
+        crop = image.crop((0, origin, width, int(height * bot_frac)))
+        probe = crop.copy()
+        probe.thumbnail((1600, 1600))
+        if not probe.height:
+            continue
+        scale = crop.height / float(probe.height)
+        data = pytesseract.image_to_data(
+            probe, config="--psm 6", output_type=pytesseract.Output.DICT
+        )
+        tops: List[int] = []
+        for index, token in enumerate(data.get("text") or []):
+            word = str(token or "").strip()
+            if re.search(r"^(OPENING|RECEIPT|DUMP|ITEM)$", word, re.I) or re.search(
+                r"VALUE|M\s*\.?\s*EXP", word, re.I
+            ):
+                tops.append(int(data["top"][index]))
+        if len(tops) < 3:
+            continue
+        return (
+            max(0, origin + int(min(tops) * scale) - 8),
+            min(height, origin + int(max(tops) * scale) + 28),
+        )
+    return None
+
+
+def _ssa_mexp_photo_bands(image) -> List[bytes]:
+    """Product slices with the printed column header pasted on top.
+
+    A full-page read is cut off, and a slice without the heading shifts
+    OPENING into RECEIPT. Other statement photos are not cropped.
+    """
+    from PIL import Image
+
+    width, height = image.size
+    span = _ssa_mexp_header_span(image)
+    if not span:
+        span = (0, 0)
+    header = image.crop((0, span[0], width, max(span[1], span[0] + 1)))
+    if span[1] <= span[0]:
+        header = None
+        regions = [(0, height)]
+    else:
+        regions = [(0, span[0]), (span[1], height)]
+    band_h = 820
+    overlap = 50
+    bands: List[bytes] = []
+    for top, bottom in regions:
+        y = top
+        while y < bottom - 30:
+            cut = min(bottom, y + band_h)
+            body = image.crop((0, y, width, cut))
+            if header is None:
+                piece = body
+            else:
+                piece = Image.new("RGB", (width, header.height + body.height), "white")
+                piece.paste(header, (0, 0))
+                piece.paste(body, (0, header.height))
+            buf = io.BytesIO()
+            piece.save(buf, format="JPEG", quality=85)
+            bands.append(buf.getvalue())
+            if cut >= bottom:
+                break
+            y = cut - overlap
+    return bands
+
+
+def _ssa_mexp_photo_read_band(
+    jpeg_bytes: bytes, filename: str, model: str
+) -> Optional[Dict[str, Any]]:
+    from services.vertex_gemini_client import GeminiProviderError, generate_content_via_vertex
+
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _SSA_MEXP_PHOTO_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg_bytes).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 16384},
+    }
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _ssa_mexp_photo_loose_json(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                return parsed
+            last_err = ValueError("SSA M.EXP band returned no rows")
+        except GeminiProviderError as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+        except Exception as exc:
+            last_err = exc
+            break
+    logger.warning("SSA M.EXP photo band failed for %s: %s", filename, last_err)
+    return None
+
+
+def _extract_ssa_mexp_photo(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Read a sideways STOCK & SALES ANALYSIS photo with DUMP and M.EXP.
+
+    Other images return None. The sheet is sliced so one vision response is
+    not cut off mid-JSON.
+    """
+    import os
+
+    upright = _ssa_mexp_photo_upright(file_bytes)
+    if upright is None:
+        return None
+    bands = _ssa_mexp_photo_bands(upright)
+    if not bands:
+        return None
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=ssa_mexp_photo bands=%s",
+        filename,
+        len(bands),
+    )
+    raw_items: List[Dict[str, Any]] = []
+    stockist = _ssa_mexp_photo_stockist(upright)
+    company = None
+    for band in bands:
+        parsed = _ssa_mexp_photo_read_band(band, filename, model)
+        if not parsed:
+            continue
+        if not stockist:
+            candidate = _clean_name(str(parsed.get("stockist_name") or ""))
+            if candidate and not re.search(r"HIMALAYA|STOCK\s*&", candidate, re.I):
+                stockist = candidate
+        if not company:
+            candidate = _clean_name(str(parsed.get("company_name") or ""))
+            if candidate and not re.search(r"\bPHARMA\b", candidate, re.I):
+                company = candidate
+        for raw in parsed.get("line_items") or []:
+            if isinstance(raw, dict):
+                raw_items.append(raw)
+    if len(raw_items) < 8:
+        return None
+    seen = set()
+    unique: List[Dict[str, Any]] = []
+    for raw in raw_items:
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or re.search(
+            r"ITEM\s*DESCRIPTION|OPENING|RECEIPT|^TOTAL\b|PAGE\s*NO|CONTINUED|STOCK\s*&",
+            name,
+            re.I,
+        ):
+            continue
+        pack = re.sub(r"[^A-Z0-9]+", "", str(raw.get("packing") or "").upper())
+        key = (re.sub(r"[^A-Z0-9]+", "", name.upper()), pack)
+        if key in seen:
+            continue
+        seen.add(key)
+        extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+        for key in ("opening_value", "receipts_value", "dump_qty"):
+            value = raw.get(key)
+            if value is None:
+                value = extra.get(key)
+            if value is not None and not re.search(r"/", str(value)):
+                extra[key] = _to_float(value)
+        raw["extra"] = extra
+        unique.append(raw)
+    if len(unique) < 8:
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(
+        result,
+        {
+            "stockist_name": stockist,
+            "company_name": company,
+            "report_title": "STOCK & SALES ANALYSIS",
+            "line_items": unique,
+        },
+    )
+    result["period_from"] = None
+    result["period_to"] = None
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "ssa_mexp_photo"
+    extra_t["layout"] = "ssa_opening_receipt_issue_value_mexp"
+    return result
+
+
+def _particular_packing_stock_report_text(text: str) -> bool:
+    """Firm name, STOCK REPORT, a To period, and For HIMALAYA / ZEAL.
+
+    Himalaya Drugs Zeal sheets and order forms are a different layout.
+    """
+    if not text or not re.search(r"\bSTOCK\s+REPORT\b", text, re.I):
+        return False
+    if re.search(r"HIMALAYA\s+DRUGS|M\.?\s*EXP|ORDER\s*FOR|\bZANDRA\b", text, re.I):
+        return False
+    if not re.search(
+        r"\d{1,2}[./]\d{1,2}[./]\d{2,4}\s*To\s*:?\s*\d{1,2}[./]\d{1,2}[./]\d{2,4}",
+        text,
+        re.I,
+    ):
+        return False
+    return bool(re.search(r"\bZEAL\b", text, re.I))
+
+
+def _particular_packing_header_fields(text: str) -> Dict[str, Optional[str]]:
+    """Stockist is the firm above STOCK REPORT. Company is the For line."""
+    lines = [re.sub(r"\s+", " ", ln).strip(" :|") for ln in (text or "").splitlines()]
+    lines = [ln for ln in lines if ln and not re.fullmatch(r"[\W_]+", ln)]
+    title_at = next(
+        (i for i, ln in enumerate(lines) if re.search(r"STOCK\s+REPORT", ln, re.I)),
+        None,
+    )
+    stockist = None
+    address_lines: List[str] = []
+    if title_at:
+        above = lines[:title_at]
+        for idx, ln in enumerate(above):
+            if re.search(r"[A-Za-z]{3}", ln) and not re.search(
+                r"STOCK|REPORT|HIMALAYA", ln, re.I
+            ):
+                stockist = _clean_name(ln)
+                address_lines = above[idx + 1 :]
+                break
+    company = None
+    if re.search(r"HIMALAYA", text or "", re.I) and re.search(r"\bZEAL\b", text or "", re.I):
+        company = "HIMALAYA (ZEAL)"
+    period_from = period_to = None
+    m = re.search(
+        r"(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s*To\s*:?\s*(\d{1,2}[./]\d{1,2}[./]\d{2,4})",
+        text or "",
+        re.I,
+    )
+    if m:
+        period_from = _normalize_date(m.group(1))
+        period_to = _normalize_date(m.group(2))
+    return {
+        "stockist_name": stockist,
+        "stockist_address": _clean_name(
+            re.sub(
+                r"CHOWK\s*\.\s*",
+                "CHOWK, ",
+                re.sub(r"BE\s+NIPATTI", "BENIPATTI", ", ".join(address_lines), flags=re.I),
+                flags=re.I,
+            )
+        )
+        or None,
+        "company_name": company,
+        "period_from": period_from,
+        "period_to": period_to,
+    }
+
+
+def _particular_packing_header_text(file_bytes: bytes) -> str:
+    try:
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageOps
+    except ImportError:
+        return ""
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    width, height = image.size
+    crop = image.crop((int(width * 0.12), int(height * 0.02), int(width * 0.88), int(height * 0.36)))
+    crop = ImageEnhance.Contrast(ImageOps.autocontrast(crop)).enhance(1.3)
+    if crop.width > 1400:
+        crop = crop.resize((1400, int(crop.height * 1400 / crop.width)))
+    try:
+        return pytesseract.image_to_string(crop, config="--psm 6") or ""
+    except Exception:
+        return ""
+
+
+def _particular_packing_row_bands(image) -> List[Tuple[int, int]]:
+    """Product-row y spans in the Particular column. Header and Qnt footer are left out."""
+    width, height = image.size
+    gray = image.convert("L")
+    pixels = gray.load()
+    x0, x1 = int(width * 0.15), int(width * 0.24)
+    y0, y1 = int(height * 0.22), int(height * 0.68)
+
+    def ink(x: int, y: int) -> bool:
+        value = pixels[x, y]
+        return 80 < value < 160 and pixels[min(width - 1, x + 8), y] - value > 18
+
+    ys = [
+        y
+        for y in range(y0, y1)
+        if sum(1 for x in range(x0, x1, 2) if ink(x, y)) > 4
+    ]
+    if not ys:
+        return []
+    bands: List[Tuple[int, int]] = []
+    start = prev = ys[0]
+    for y in ys[1:]:
+        if y - prev > 14:
+            if prev - start >= 4:
+                bands.append((start, prev))
+            start = y
+        prev = y
+    if prev - start >= 4:
+        bands.append((start, prev))
+    if len(bands) > 2 and bands[1][0] - bands[0][1] > 50:
+        bands = bands[1:]
+    if len(bands) > 3:
+        gaps = [bands[i + 1][0] - bands[i][1] for i in range(len(bands) - 1)]
+        typical = sorted(gaps)[len(gaps) // 2]
+        if gaps[-1] > typical + 18:
+            bands = bands[:-1]
+    return bands
+
+
+_PARTICULAR_PACKING_X = (
+    0.118,
+    0.263,
+    0.325,
+    0.383,
+    0.435,
+    0.484,
+    0.548,
+    0.594,
+    0.643,
+    0.692,
+    0.763,
+)
+
+
+def _particular_packing_ruled_halves(
+    image, bands: List[Tuple[int, int]]
+) -> Tuple[bytes, bytes, bytes, bytes]:
+    """Opening, purchase, sales, and closing crops. Narrow qty columns are not paired with the whole page."""
+    from PIL import Image, ImageDraw, ImageEnhance, ImageOps
+
+    width, height = image.size
+    edges = [int(width * frac) for frac in _PARTICULAR_PACKING_X]
+    top = max(0, bands[0][0] - 28)
+    bottom = min(height, bands[-1][1] + 22)
+    crop = ImageOps.autocontrast(image.crop((edges[0] - 24, top, edges[-1] + 12, bottom)))
+    crop = ImageEnhance.Contrast(crop).enhance(1.35)
+    scale = 2.0
+    crop = crop.resize(
+        (int(crop.width * scale), int(crop.height * scale)),
+        Image.Resampling.LANCZOS,
+    )
+    draw = ImageDraw.Draw(crop)
+    origin = edges[0] - 24
+    for edge in edges:
+        x = int((edge - origin) * scale)
+        draw.line([(x, 0), (x, crop.height)], fill=(255, 0, 0), width=2)
+
+    def slice_edges(start: int, end: int) -> bytes:
+        x0 = max(0, int((edges[start] - origin) * scale) - 8)
+        x1 = min(crop.width, int((edges[end] - origin) * scale) + 8)
+        piece = crop.crop((x0, 0, x1, crop.height))
+        gutter = 46
+        canvas = Image.new("RGB", (piece.width + gutter, piece.height), "white")
+        canvas.paste(piece, (gutter, 0))
+        numbered = ImageDraw.Draw(canvas)
+        for index, (y0, y1) in enumerate(bands, start=1):
+            y = int((((y0 + y1) / 2) - top) * scale)
+            numbered.text((6, max(0, y - 10)), str(index), fill=(0, 0, 0))
+        return _pil_jpeg_bytes(canvas)
+
+    return (
+        slice_edges(0, 4),
+        slice_edges(4, 6),
+        slice_edges(6, 8),
+        slice_edges(8, 10),
+    )
+
+
+def _particular_packing_vision_rows(jpeg_bytes: bytes, prompt: str) -> List[Dict[str, Any]]:
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg_bytes).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    response = generate_content_via_vertex(
+        model=os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip(),
+        payload=payload,
+        timeout=120,
+    )
+    text = _gemini_response_text(response)
+    parsed = _extract_json_object(text)
+    rows: List[Any] = []
+    if isinstance(parsed, dict):
+        rows = parsed.get("rows") or parsed.get("line_items") or []
+    else:
+        cleaned = (text or "").strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+        try:
+            loaded = json.loads(cleaned)
+        except json.JSONDecodeError:
+            loaded = None
+        if isinstance(loaded, list):
+            rows = loaded
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def _particular_packing_number(value: Any) -> float:
+    if value in (None, ""):
+        return 0.0
+    return _to_float(value)
+
+
+def _extract_particular_packing_stock_report(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Optional[Dict[str, Any]]:
+    """STOCK REPORT with Particular, Packing, and Op/Pur/Sl/Cl qty+value.
+
+    The firm above the title is the stockist. The For line is the company.
+    Blank purchase cells stay 0. Other statement photos are not read here.
+    """
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    header_text = _particular_packing_header_text(file_bytes)
+    if not _particular_packing_stock_report_text(header_text):
+        return None
+    header = _particular_packing_header_fields(header_text)
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    bands = _particular_packing_row_bands(image)
+    if len(bands) < 8:
+        return None
+    opening_jpeg, purchase_jpeg, sales_jpeg, closing_jpeg = _particular_packing_ruled_halves(
+        image, bands
+    )
+    row_count = len(bands)
+    opening_rows = _particular_packing_vision_rows(
+        opening_jpeg,
+        f"This image has exactly {row_count} rows. The last row is Company Total. "
+        "Red lines divide four columns: product name, packing, opening quantity, opening value. "
+        "Copy the opening numbers that are printed. The first opening quantity is greater than zero. "
+        "The white left margin shows the row index. "
+        f"Return a JSON array of exactly {row_count} objects with "
+        "row, product_name, packing, opening_qty, opening_value.",
+    )
+    purchase_rows = _particular_packing_vision_rows(
+        purchase_jpeg,
+        f"The white left margin numbers the rows 1 to {row_count}. "
+        "Two columns follow: purchase quantity, then purchase value. "
+        "A blank cell is 0. Keep each number on its own row index. "
+        f"Return a JSON array of exactly {row_count} objects with row, receipts_qty, receipts_value.",
+    )
+    sales_rows = _particular_packing_vision_rows(
+        sales_jpeg,
+        f"The white left margin numbers the rows 1 to {row_count}. "
+        "Two columns follow: sales quantity, then sales value. "
+        "A blank cell is 0. Copy a small decimal quantity. Keep each number on its row index. "
+        f"Return a JSON array of exactly {row_count} objects with row, sales_qty, sales_value.",
+    )
+    closing_rows = _particular_packing_vision_rows(
+        closing_jpeg,
+        f"The white left margin numbers the rows 1 to {row_count}. "
+        "Two columns follow: closing quantity, then closing value. "
+        "Copy a small decimal quantity. Keep each number on its row index. "
+        f"Return a JSON array of exactly {row_count} objects with row, closing_qty, closing_value.",
+    )
+
+    def _rows_by_index(rows: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+        mapped: Dict[int, Dict[str, Any]] = {}
+        for position, row in enumerate(rows, start=1):
+            raw_index = row.get("row")
+            index = int(_particular_packing_number(raw_index)) if raw_index not in (None, "") else position
+            if index < 1:
+                index = position
+            mapped[index] = row
+        return mapped
+
+    names_by_row = _rows_by_index(opening_rows)
+    purchase_by_row = _rows_by_index(purchase_rows)
+    sales_by_row = _rows_by_index(sales_rows)
+    closing_by_row = _rows_by_index(closing_rows)
+    if len(names_by_row) < 8:
+        return None
+    items: List[Dict[str, Any]] = []
+    total_row: Optional[Dict[str, float]] = None
+    for index in range(1, row_count + 1):
+        name_row = names_by_row.get(index) or {}
+        name = _clean_name(str(name_row.get("product_name") or ""))
+        packing = _clean_name(str(name_row.get("packing") or "")) or None
+        numbers = {
+            "opening_qty": _particular_packing_number(name_row.get("opening_qty")),
+            "opening_value": _particular_packing_number(name_row.get("opening_value")),
+            "receipts_qty": _particular_packing_number(
+                (purchase_by_row.get(index) or {}).get("receipts_qty")
+            ),
+            "receipts_value": _particular_packing_number(
+                (purchase_by_row.get(index) or {}).get("receipts_value")
+            ),
+            "sales_qty": _particular_packing_number(
+                (sales_by_row.get(index) or {}).get("sales_qty")
+            ),
+            "sales_value": _particular_packing_number(
+                (sales_by_row.get(index) or {}).get("sales_value")
+            ),
+            "closing_qty": _particular_packing_number(
+                (closing_by_row.get(index) or {}).get("closing_qty")
+            ),
+            "closing_value": _particular_packing_number(
+                (closing_by_row.get(index) or {}).get("closing_value")
+            ),
+        }
+        if index == row_count or re.search(r"company\s*total|^total\b|qnt\s*-", name, re.I):
+            total_row = numbers
+            continue
+        if not name or re.search(r"particular|packing|op\.?\s*qnt", name, re.I):
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item.update(numbers)
+        item["extra"] = {
+            "opening_value": numbers["opening_value"],
+            "receipts_value": numbers["receipts_value"],
+            "layout": "particular_packing_op_pur_sl_cl",
+        }
+        items.append(item)
+    openings = sum(1 for item in items if item["opening_value"] > 0)
+    sales_filled = sum(
+        1 for item in items if item["sales_qty"] > 0 or item["sales_value"] > 0
+    )
+    if len(items) < 8 or openings < 5 or sales_filled < 5:
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result["line_items"] = items
+    result["stockist_name"] = header.get("stockist_name")
+    result["stockist_address"] = header.get("stockist_address")
+    result["company_name"] = header.get("company_name")
+    result["period_from"] = header.get("period_from")
+    result["period_to"] = header.get("period_to")
+    result["report_title"] = "Stock Report"
+    result["totals"]["extra"]["extraction_method"] = "particular_packing_stock_report"
+    result["totals"]["extra"]["layout"] = "particular_packing_op_pur_sl_cl"
+    if total_row:
+        line_sales = round(sum(item["sales_value"] for item in items), 2)
+        printed_sales = total_row["sales_value"]
+        # Purchase value on this sheet is larger than sales. Do not store it as sales.
+        if (
+            total_row["receipts_value"]
+            and abs(printed_sales - total_row["receipts_value"]) < 1.0
+            and line_sales > 0
+        ):
+            printed_sales = line_sales
+        result["totals"]["sales_value"] = printed_sales
+        result["totals"]["closing_value"] = total_row["closing_value"]
+        result["totals"]["extra"]["opening_value"] = total_row["opening_value"]
+        result["totals"]["extra"]["receipts_value"] = total_row["receipts_value"]
+        result["totals"]["extra"]["purchase_value"] = total_row["receipts_value"]
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision method=particular_packing_stock_report",
+        filename,
+    )
+    return result
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -25112,6 +26151,22 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         sales_free = None
     if sales_free and sales_free.get("line_items"):
         return sales_free
+    try:
+        mexp_photo = _extract_ssa_mexp_photo(file_bytes, filename, ext)
+    except Exception as exc:
+        logger.warning("SSA M.EXP photo skipped: %s", exc)
+        mexp_photo = None
+    if mexp_photo and mexp_photo.get("line_items"):
+        return mexp_photo
+    try:
+        packing_report = _extract_particular_packing_stock_report(
+            file_bytes, filename, ext
+        )
+    except Exception as exc:
+        logger.warning("Particular packing stock report skipped: %s", exc)
+        packing_report = None
+    if packing_report and packing_report.get("line_items"):
+        return packing_report
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
@@ -25219,6 +26274,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 if _looks_like_unfilled_sap_order_form(result) or _unfilled_sap_order_photo(
                     result, file_bytes
                 ):
+                    zandra_order = _extract_zandra_two_column_order_photo(
+                        file_bytes, filename, ext
+                    )
+                    if zandra_order and zandra_order.get("line_items"):
+                        return zandra_order
                     sap_form = _extract_sap_order_form_vision(
                         file_bytes, filename, ext
                     )
