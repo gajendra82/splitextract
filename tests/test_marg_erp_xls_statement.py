@@ -148,6 +148,45 @@ class TestMargErpHeaderDetect(unittest.TestCase):
         self.assertEqual(result["totals"]["extra"]["last_month_sale_value"], 26947.66)
 
 
+SARKAR = Path(
+    "/var/www/html/splitextract/0000737099_2026_08_ZA_25_379_07092026150548 (1).XLS"
+)
+
+
+@unittest.skipUnless(SARKAR.is_file(), "missing Sarkar Agency workbook")
+class TestOoxmlNamedAsXls(unittest.TestCase):
+    """An .XLS name whose bytes are xlsx must not be sent to xlrd."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.result = extract_sales_statement(SARKAR.read_bytes(), SARKAR.name)
+
+    def test_sarkar_opening_and_closing_stay_in_their_columns(self):
+        drops = next(
+            item
+            for item in self.result["line_items"]
+            if "BONNISON DROP" in item["product_name"].upper()
+        )
+        self.assertEqual(drops["opening_qty"], 200.0)
+        self.assertAlmostEqual(drops["opening_value"], 12576.1, places=2)
+        self.assertEqual(drops["receipts_qty"], 0.0)
+        self.assertEqual(drops["sales_qty"], 149.0)
+        self.assertAlmostEqual(drops["sales_value"], 9369.19, places=2)
+        self.assertEqual(drops["closing_qty"], 51.0)
+        self.assertAlmostEqual(drops["closing_value"], 3206.91, places=2)
+        self.assertEqual(self.result["stockist_name"], "SARKAR AGENCY")
+        self.assertEqual(self.result["period_from"], "2026-08-01")
+        self.assertEqual(self.result["period_to"], "2026-08-29")
+        self.assertEqual(
+            self.result["stockist_address"],
+            "ARAMBAGH, BATTALA, HOOGHLY PIN NO. : 712601 MOB.NO-8250529765",
+        )
+        self.assertEqual(
+            (self.result.get("totals") or {}).get("extra", {}).get("extraction_method"),
+            "marg_erp_xls_receive_issue_value",
+        )
+
+
 @unittest.skipUnless(SAMPLE.exists(), "sample Marg ERP xls not on this machine")
 class TestMargErpSampleFile(unittest.TestCase):
     @classmethod
