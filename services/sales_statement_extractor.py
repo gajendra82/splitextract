@@ -11922,7 +11922,9 @@ def _parse_order_form_stock_statement_doc(doc, filename: str) -> Optional[Dict[s
     return _parse_order_form_stock_statement(text, filename, "pdf")
 
 
-_SSA_ORI_TOKEN_RE = re.compile(r"^(?:-|\d+(?:\.\d+)?)$")
+# Lone "-" is a blank/zero cell. Signed qty/value tokens must also match
+# (e.g. receipt -11 / -3967.48) or the whole product row is skipped.
+_SSA_ORI_TOKEN_RE = re.compile(r"^(?:-|-?\d+(?:\.\d+)?)$")
 _SSA_ORI_PACK_RE = re.compile(
     r"^(?:\d+\s*\*\s*\d+|\d+X\d+|\d+(?:\.\d+)?(?:ML|GM|GMS|TAB|CC|S)?)$",
     re.I,
