@@ -11806,6 +11806,318 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
     return result
 
 
+def _is_product_wise_stock_statement_format(text: str) -> bool:
+    """Bindal/Himalaya-style 'Product wise stock statement' with Jul/Jun liquidation cols."""
+    if not text:
+        return False
+    has_title = bool(re.search(r"Product\s+wise\s+stock\s+statement", text, re.I))
+    if not has_title:
+        return False
+    has_liq = bool(re.search(r"Liqudation|Liquidation", text, re.I))
+    has_jul_jun = bool(re.search(r"\bJul\b", text) and re.search(r"\bJun\b", text))
+    has_groups = bool(
+        re.search(r"\bReceipt\b", text, re.I) and re.search(r"\bIssues\b", text, re.I)
+    )
+    # Jul/Jun + Liqudation distinguishes Bindal/ZANDRA from ASHOK qty-only layouts
+    return has_groups and has_liq and has_jul_jun
+
+
+def _pwss_qty_band(x1: float) -> str:
+    """Map a right-aligned number's right edge to Product-wise stock statement column."""
+    # Column right-edges observed on Bindal/Himalaya ZANDRA PDFs (page width ~595):
+    # Opening~176, Receipt Qty~198, Free~220, Jul~241, Jun~263, Issues Qty~286,
+    # Closing~386, Sale~539
+    if x1 <= 185:
+        return "opening_qty"
+    if x1 <= 202:
+        return "receipts_qty"
+    if x1 <= 226:
+        return "receipts_free"
+    if x1 <= 248:
+        return "jul_qty"
+    if x1 <= 268:
+        return "jun_qty"
+    if x1 <= 288:
+        return "sales_qty"
+    if x1 <= 328:
+        return "issues_free_repl"
+    if x1 <= 352:
+        return "goods_issue"
+    if x1 <= 400:
+        return "closing_qty"
+    if x1 <= 420:
+        return "sh_exp"
+    if x1 <= 460:
+        return "liquidation_days"
+    if x1 <= 498:
+        return "stocks_from"
+    return "sales_value"
+
+
+_PWSS_PACK_RE = re.compile(
+    r"^\d+\s*[Xx├ù]\s*\d+",
+    re.I,
+)
+
+
+def _pwss_is_skip_row(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return True
+    if re.search(
+        r"Product\s+wise\s+stock|Product\s+Name|Page\s*No|"
+        r"Total\s+sales\s+in\s+this\s+period|Total\s+closing\s+stock|"
+        r"^\*{0,2}Liqudation\s+is\s+based|^\s*Receipt\s+Issues|"
+        r"^\s*Packing\s+Opening|Sale\s+amount",
+        t,
+        re.I,
+    ):
+        return True
+    return False
+
+
+def _pwss_is_company_section(name: str, packing: Optional[str], has_qty: bool) -> bool:
+    """Manufacturer/division divider rows (e.g. THE HIMALAYA DRUG(ZANDRA))."""
+    if packing or has_qty:
+        return False
+    n = (name or "").strip()
+    if not n:
+        return False
+    # Prefer clear manufacturer/division markers ΓÇö do NOT match stockist agency names
+    if re.search(r"DRUG\s*\(|\bZANDRA\b|HIMALAYA|LABORATOR", n, re.I):
+        return True
+    if "(" in n and n == n.upper() and len(n) > 8 and not re.search(
+        r"PHARMACEUTICALS?\s*,|BAMRA|AGENC|MEDICOS|DISTRIB", n, re.I
+    ):
+        return True
+    return False
+
+
+def _parse_product_wise_stock_statement_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Position-based parser for Product wise stock statement PDFs.
+
+    Jul/Jun columns are prior-month sales used for liquidation (NOT period receipts).
+    Period movement: Opening + Receipt Qty - Issues Qty = Closing.
+    """
+    result = empty_result(filename, "pdf")
+    items: List[Dict[str, Any]] = []
+    combined_parts: List[str] = []
+
+    for page_index, page in enumerate(doc):
+        page_text = (page.get_text("text") or "").strip()
+        if page_text:
+            combined_parts.append(page_text)
+
+        words = page.get_text("words") or []
+        # words: x0, y0, x1, y1, word, block_no, line_no, word_no
+        # Cluster by y so slightly-offset Days/date tokens stay on the product row
+        sorted_words = sorted(words, key=lambda t: (float(t[1]), float(t[0])))
+        clustered: List[List[Any]] = []
+        for w in sorted_words:
+            y0 = float(w[1])
+            if clustered and abs(y0 - float(clustered[-1][0][1])) <= 4.0:
+                clustered[-1].append(w)
+            else:
+                clustered.append([w])
+
+        for row_words in clustered:
+            row_words = sorted(row_words, key=lambda t: t[0])
+            row_text = " ".join(t[4] for t in row_words)
+            if _pwss_is_skip_row(row_text):
+                # Footer money may sit on the same clustered row as the label
+                m_sales = re.search(
+                    r"Total\s+sales\s+in\s+this\s+period\s*:?\s*([\d,]+\.?\d*)",
+                    row_text,
+                    re.I,
+                )
+                if m_sales:
+                    result["totals"]["sales_value"] = _to_float(m_sales.group(1))
+                m_close = re.search(
+                    r"Total\s+closing\s+stock.*?([\d,]+\.?\d*)\s*$",
+                    row_text,
+                    re.I,
+                )
+                if m_close and re.search(r"closing\s+stock", row_text, re.I):
+                    result["totals"]["closing_value"] = _to_float(m_close.group(1))
+                continue
+
+            name_parts: List[str] = []
+            packing: Optional[str] = None
+            bands: Dict[str, List[str]] = {}
+            date_tok: Optional[str] = None
+
+            for w in row_words:
+                x0, x1, tok = float(w[0]), float(w[2]), w[4]
+                tok_s = str(tok).strip()
+                if not tok_s:
+                    continue
+
+                # Packing column (~113-145)
+                if 108 <= x0 < 146 and _PWSS_PACK_RE.match(tok_s.replace(" ", "")):
+                    packing = tok_s
+                    continue
+
+                # Product name (left of packing)
+                if x0 < 108:
+                    name_parts.append(tok_s)
+                    continue
+
+                # Dates / Days tokens in liquidation / stocks-from area
+                if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", tok_s):
+                    date_tok = tok_s
+                    continue
+                if re.fullmatch(r"Days?", tok_s, re.I):
+                    continue
+
+                # Numeric / money columns (right-aligned ΓåÆ use x1)
+                if re.fullmatch(r"-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?", tok_s):
+                    band = _pwss_qty_band(x1)
+                    bands.setdefault(band, []).append(tok_s)
+                    continue
+
+                # Ignore stray header fragments that land on data y by OCR noise
+                if re.fullmatch(r"(?:Qty|Free|Jul|Jun|Repl\.?|Issue|Closing|from)", tok_s, re.I):
+                    continue
+
+            product_name = _clean_name(" ".join(name_parts))
+            has_qty = any(
+                bands.get(k)
+                for k in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "sales_value",
+                    "jul_qty",
+                    "jun_qty",
+                )
+            )
+
+            if _pwss_is_company_section(product_name, packing, has_qty):
+                if not result.get("company_name"):
+                    result["company_name"] = product_name
+                continue
+
+            if not product_name or not packing:
+                continue
+
+            def _band_float(key: str) -> float:
+                vals = bands.get(key) or []
+                return _to_float(vals[-1]) if vals else 0.0
+
+            item = empty_line_item()
+            item["product_name"] = product_name
+            item["packing"] = packing
+            item["opening_qty"] = _band_float("opening_qty")
+            item["receipts_qty"] = _band_float("receipts_qty")
+            item["sales_qty"] = _band_float("sales_qty")
+            item["closing_qty"] = _band_float("closing_qty")
+            item["sales_value"] = _band_float("sales_value")
+            item["closing_value"] = 0.0
+
+            # Prior-month cols + free/repl are NOT period receipts/sales
+            extra = item["extra"]
+            if bands.get("jul_qty"):
+                extra["jul_qty"] = _band_float("jul_qty")
+            if bands.get("jun_qty"):
+                extra["jun_qty"] = _band_float("jun_qty")
+            if bands.get("receipts_free"):
+                extra["receipts_free"] = _band_float("receipts_free")
+            if bands.get("issues_free_repl"):
+                extra["issues_free_repl"] = _band_float("issues_free_repl")
+            if bands.get("goods_issue"):
+                extra["goods_issue"] = _band_float("goods_issue")
+            if bands.get("sh_exp"):
+                extra["sh_exp"] = _band_float("sh_exp")
+            if bands.get("liquidation_days"):
+                extra["liquidation_days"] = _band_float("liquidation_days")
+            if date_tok:
+                extra["stocks_from"] = date_tok
+                nd = _normalize_date(date_tok)
+                if nd:
+                    extra["stocks_from_iso"] = nd
+
+            items.append(item)
+
+    if not items:
+        return None
+
+    combined = "\n\n".join(combined_parts)
+    # Header metadata ΓÇö skip floating header fragments like lone "Liqudation"
+    for ln in combined.splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if re.search(r"Product\s+wise\s+stock\s+statement", s, re.I):
+            result["report_title"] = _clean_name(s)
+            m = re.search(
+                r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                s,
+                re.I,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+            continue
+        if (
+            not result.get("stockist_name")
+            and re.search(r"PHARMACEUTICAL|AGENC|MEDICOS|DISTRIB|ENTERPRISES", s, re.I)
+            and not re.search(r"Product\s+wise|Liqudation|Receipt|Issues|Packing", s, re.I)
+        ):
+            result["stockist_name"] = _clean_name(s)
+            continue
+        if not result.get("company_name") and re.search(
+            r"DRUG\s*\(|\bZANDRA\b|HIMALAYA", s, re.I
+        ):
+            result["company_name"] = _clean_name(s)
+
+    # Footer totals: amounts often appear on lines after the labels in text order
+    if result["totals"].get("sales_value") is None or result["totals"].get(
+        "closing_value"
+    ) is None:
+        lines = [ln.strip() for ln in combined.splitlines() if ln.strip()]
+        for i, s in enumerate(lines):
+            if result["totals"].get("sales_value") is None and re.search(
+                r"Total\s+sales\s+in\s+this\s+period", s, re.I
+            ):
+                m = re.search(r"([\d,]+\.\d{2})\s*$", s)
+                if m:
+                    result["totals"]["sales_value"] = _to_float(m.group(1))
+                else:
+                    for nxt in lines[i + 1 : i + 4]:
+                        m2 = re.search(r"^[\s]*([\d,]+\.\d{2})\s*$", nxt)
+                        if m2:
+                            result["totals"]["sales_value"] = _to_float(m2.group(1))
+                            break
+            if result["totals"].get("closing_value") is None and re.search(
+                r"Total\s+closing\s+stock", s, re.I
+            ):
+                m = re.search(r"([\d,]+\.\d{2})\s*$", s)
+                if m:
+                    result["totals"]["closing_value"] = _to_float(m.group(1))
+                else:
+                    # Prefer the second money line when both totals are listed then amounts
+                    money_lines = []
+                    for nxt in lines[i + 1 : i + 5]:
+                        m2 = re.search(r"^[\s]*([\d,]+\.\d{2})\s*$", nxt)
+                        if m2:
+                            money_lines.append(_to_float(m2.group(1)))
+                    if len(money_lines) >= 2:
+                        if result["totals"].get("sales_value") is None:
+                            result["totals"]["sales_value"] = money_lines[0]
+                        result["totals"]["closing_value"] = money_lines[1]
+                    elif len(money_lines) == 1:
+                        result["totals"]["closing_value"] = money_lines[0]
+
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "product_wise_stock_statement_pdf"
+    result["totals"]["extra"]["statement_count"] = 1
+    return result
+
+
 def _is_product_wise_stock_statement_text(text: str) -> bool:
     """ASHOK-style Product wise stock statement (Opening/Receipt/Issues/Closing)."""
     if not text:
@@ -18209,6 +18521,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if sunderlal_openstk and sunderlal_openstk.get("line_items"):
             sunderlal_openstk["totals"]["extra"]["statement_count"] = 1
             return sunderlal_openstk
+
+        # Bindal/ZANDRA Product wise stock statement (Jul/Jun liquidation cols)
+        peek = "\n".join((page.get_text("text") or "") for page in list(doc)[:2])
+        if _is_product_wise_stock_statement_format(peek):
+            bindal_pws = _parse_product_wise_stock_statement_pdf(doc, filename)
+            if bindal_pws and bindal_pws.get("line_items"):
+                return bindal_pws
 
         product_wise = _parse_product_wise_stock_statement(doc, filename)
         if product_wise and product_wise.get("line_items"):
