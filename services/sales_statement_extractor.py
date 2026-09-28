@@ -6651,12 +6651,47 @@ def _ocr_image_to_text(file_bytes: bytes, *, psm: int = 6, enhance: bool = False
     image = Image.open(io.BytesIO(file_bytes))
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
+    original_width, original_height = image.size
+    processed = image
+    # OCR-only bound for pathological megapixel photos. Vision keeps original bytes.
+    try:
+        from services.sales_extraction_runtime import SALES_OCR_MAX_IMAGE_SIDE
+
+        max_side = int(SALES_OCR_MAX_IMAGE_SIDE)
+    except Exception:
+        max_side = 10000
+    longest = max(original_width, original_height)
+    if longest > max_side:
+        scale = float(max_side) / float(longest)
+        new_size = (
+            max(1, int(original_width * scale)),
+            max(1, int(original_height * scale)),
+        )
+        processed = image.resize(new_size, Image.Resampling.LANCZOS)
+        logger.info(
+            "sales_image_ocr_bound original_width=%s original_height=%s "
+            "processed_width=%s processed_height=%s max_side=%s",
+            original_width,
+            original_height,
+            processed.size[0],
+            processed.size[1],
+            max_side,
+        )
+    else:
+        logger.info(
+            "sales_image_dims original_width=%s original_height=%s "
+            "processed_width=%s processed_height=%s",
+            original_width,
+            original_height,
+            processed.size[0],
+            processed.size[1],
+        )
     if enhance:
-        image = ImageOps.autocontrast(image.convert("L"))
-        image = ImageEnhance.Sharpness(image).enhance(1.5)
+        processed = ImageOps.autocontrast(processed.convert("L"))
+        processed = ImageEnhance.Sharpness(processed).enhance(1.5)
     # psm 6 (uniform block) reads dense OpBal/Issue qty tables more reliably than default
     # psm 4 (single column) is better for Group Wise Sales sparse grids
-    return pytesseract.image_to_string(image, config=f"--psm {psm}") or ""
+    return pytesseract.image_to_string(processed, config=f"--psm {psm}") or ""
 
 
 def _is_group_wise_sales_opstock_format(text: str) -> bool:
@@ -9341,7 +9376,7 @@ def _extract_marg_closing_mexp_photo(
     """Read Marg OPENING/RECEIPT/ISSUE/CLOSING M.EXP photos. Other images return None."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     preview = _ocr_marg_closing_mexp_preview(file_bytes)
     if not _is_marg_closing_mexp_photo_text(preview):
@@ -12231,7 +12266,7 @@ def _extract_zl_opening_bal_sheet_vision(
     """Re-read a ZL Opening_bal_qty screenshot with a column-locked prompt."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
@@ -12356,7 +12391,7 @@ def _extract_zl_opening_bal_sheet_strips(
     """Read a truncated Sheet1 screenshot in row bands. Full-image ZL reads stay unchanged."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     strips = _zl_opening_bal_sheet_strips(file_bytes)
     if len(strips) <= 1 and strips[:1] == [file_bytes]:
@@ -12547,7 +12582,7 @@ def _extract_zandra_stock_sale_vision(
     """Read one ZANDRA Stock and Sale Statement page with a column-locked prompt."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
@@ -12897,7 +12932,7 @@ def _extract_product_wise_stock_sale_vision(
     """Read PRODUCT WISE STOCK & SALE with locked OP STK / SALE QTY columns."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     crops = _product_wise_table_crops(file_bytes)
@@ -22035,6 +22070,9 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
         page_infos: List[Dict[str, Any]] = []
         for page_index, page in enumerate(doc):
+            from services.sales_extraction_runtime import check_sales_deadline
+
+            check_sales_deadline("pdf_processing")
             if page_index >= max_pages:
                 break
             embedded = (page.get_text("text") or "").strip()
@@ -23598,7 +23636,7 @@ def _reextract_product_stock_report_image(
     model: str,
 ) -> Dict[str, Any]:
     """Second, format-specific vision pass when Cls Amt was dropped. Does not change other formats."""
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     source_format = (ext or ".png").lstrip(".") or "png"
     payload = {
@@ -23690,7 +23728,7 @@ def _psr_correct_qty_from_image(
     model: str,
 ) -> Dict[str, Any]:
     """PSR-only reread when Sale/Opening digits fail identity or look truncated."""
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     source_format = (ext or ".png").lstrip(".") or "png"
     payload = {
@@ -23958,7 +23996,7 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
 
     # 2) Gemini text structuring
     try:
-        from services.vertex_gemini_client import generate_content_via_vertex
+        from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
         model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
         payload = {
@@ -24251,7 +24289,7 @@ def _fill_summary_rtl_amounts_from_image(
     """Second read of OP AMT and SALE AMT only, for this report layout."""
     if not _summary_rtl_amount_gaps(result):
         return result
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     names = [
         str(item.get("product_name") or "")
@@ -24814,7 +24852,7 @@ def _extract_rate_qty_value_vision(
     """
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     preview = _ocr_rate_qty_value_preview(file_bytes)
     if not (
@@ -25012,7 +25050,7 @@ def _extract_ssa_qty_value_vision(
     """Read STOCK & SALES ANALYSIS QTY/VALUE printouts. Other layouts return None."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
@@ -25175,7 +25213,7 @@ def _extract_ssa_opening_receipt_issue_dump_image(
         return None
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     prompt = _SSA_QTY_VALUE_VISION_PROMPT + """
 
@@ -26809,7 +26847,7 @@ def _extract_opening_purchase_sale_balance_photo(
     """Read the qty-only OPENING / PURCHASE / SALE / BALANCE photo."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     header = _opening_purchase_sale_balance_header_text(file_bytes)
     if not _is_opening_purchase_sale_balance_qty_text(header):
@@ -26873,7 +26911,7 @@ def _extract_swil_receipt_value_vision(
     """Read Sales & Stock Receipt/Pur Value. Other layouts return None."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     upright = _upright_swil_receipt_image(file_bytes)
     mime = "image/png" if upright is not file_bytes else _image_mime(ext)
@@ -27369,7 +27407,7 @@ def _read_order_form_qty_cells(file_bytes: bytes, model: str):
     """Read handwritten Qty by ruled-row position, using the existing vision model."""
     from PIL import Image, ImageEnhance, ImageOps
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     image = _order_form_upright_image(image)
@@ -27701,7 +27739,7 @@ def _sap_order_form_vision_rows(
     import os
 
     from PIL import Image, ImageOps
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
@@ -27894,7 +27932,7 @@ def _zandra_order_form_rows(file_bytes: bytes, box: tuple, prompt: str) -> List[
     import os
 
     from PIL import Image, ImageEnhance, ImageOps
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
@@ -27943,7 +27981,7 @@ def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[st
     import os
 
     from PIL import Image, ImageOps
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
@@ -28132,7 +28170,7 @@ def _zandra_order_form_handwritten_header(
     import os
 
     from PIL import Image, ImageOps
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
@@ -28443,7 +28481,7 @@ def _extract_medica_stock_statement_vision(
 ) -> Optional[Dict[str, Any]]:
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     merged: List[Dict[str, Any]] = []
@@ -28651,7 +28689,7 @@ def _extract_main_stock_sales_vision(
     import os
     import time
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     merged: List[Dict[str, Any]] = []
@@ -29403,7 +29441,7 @@ def _extract_prompt_datewise_photo(
     """Reread a Datewise photo whose OpStk column was dropped. PDF parsing is unchanged."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     jpeg = _upright_datewise_jpeg(file_bytes)
     if not jpeg:
@@ -29555,7 +29593,7 @@ def _extract_two_column_closing_stock_photo(
     """Reread a two-column closing-stock photo. Other image formats are unchanged."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     jpeg = _portrait_closing_stock_jpeg(file_bytes)
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
@@ -29818,7 +29856,7 @@ def _extract_opening_purchased_sold_vision(
     """Re-read Opening / Purchased / Sold / Closing pairs. Other images are not sent here."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     merged: Dict[str, Dict[str, Any]] = {}
@@ -30121,7 +30159,8 @@ def _ssa_mexp_photo_bands(image) -> List[bytes]:
 def _ssa_mexp_photo_read_band(
     jpeg_bytes: bytes, filename: str, model: str
 ) -> Optional[Dict[str, Any]]:
-    from services.vertex_gemini_client import GeminiProviderError, generate_content_via_vertex
+    from services.vertex_gemini_client import GeminiProviderError
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     payload = {
         "contents": [
@@ -30431,7 +30470,7 @@ def _particular_packing_ruled_halves(
 def _particular_packing_vision_rows(jpeg_bytes: bytes, prompt: str) -> List[Dict[str, Any]]:
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     payload = {
         "contents": [
@@ -31056,7 +31095,7 @@ def _extract_stock_valuation_photo(
     """Read STOCK VALUATION Stock/Rate/Value photos. Other images return None."""
     import os
 
-    from services.vertex_gemini_client import generate_content_via_vertex
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     preview = _ocr_stock_valuation_preview(file_bytes)
     if not _is_stock_valuation_header_text(preview):
@@ -31165,116 +31204,240 @@ def _extract_stock_valuation_photo(
     return result
 
 
+def _image_known_ocr_native_format(sample: str) -> bool:
+    """True when sample OCR matches a format that must keep the OCR probe chain."""
+    if not (sample or "").strip():
+        return False
+    return bool(
+        _is_group_wise_sales_opstock_format(sample)
+        or _is_swil_qty_value_pair_text(sample)
+        or _is_ssa_opening_receipt_issue_dump_text(sample)
+        or _is_ssa_opening_receipt_issue_dump_text_fuzzy(sample)
+        or _looks_like_product_wise_stock_sale_text(sample)
+        or _is_a2z_opening_mexp_text(sample)
+        or _is_ssa_mexp_stock_sales_text(sample)
+        or _is_rate_qty_value_header_text(sample)
+        or _is_rate_qty_value_header_text_fuzzy(sample)
+        or _is_portrait_opening_balance_text(sample)
+        or _particular_packing_stock_report_text(sample)
+        or _is_ssa_sales_free_image_text(sample)
+        or _is_ssa_sales_free_text(sample)
+        or _zandra_two_column_order_text(sample)
+    )
+
+
+def _maybe_early_vision_for_image(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Tuple[Optional[Dict[str, Any]], bool]:
+    """Sample OCR once; skip expensive image OCR probes when quality is clearly poor.
+
+    Returns (early_result_or_None, skip_ocr_probes).
+    Known OCR-native formats always keep the existing probe chain.
+    """
+    try:
+        from services.sales_extraction_runtime import check_sales_deadline
+
+        check_sales_deadline("ocr")
+    except Exception:
+        pass
+
+    try:
+        sample = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s early image OCR sample failed: %s",
+            filename,
+            exc,
+        )
+        sample = ""
+
+    if _image_known_ocr_native_format(sample):
+        logger.info(
+            "[SalesStatement] file=%s decision=KEEP_OCR_PARSER reason=KNOWN_IMAGE_FORMAT",
+            filename,
+        )
+        return None, False
+
+    from services.extraction_quality import assess_source_text_quality
+
+    quality = assess_source_text_quality(sample)
+    logger.info(
+        "[SalesStatement] file=%s OCR quality=%s decision=%s reason=%s",
+        filename,
+        quality.get("score"),
+        "GEMINI_VISION_FALLBACK"
+        if quality.get("should_fallback")
+        else "KEEP_OCR_PATH",
+        ",".join(quality.get("reasons") or []) or "none",
+    )
+    if not quality.get("should_fallback"):
+        return None, False
+
+    # Poor OCR → skip the long format-probe cascade; try paid Vision early.
+    try:
+        from services.gemini_extraction_fallback import try_gemini_vision_extract
+
+        early = try_gemini_vision_extract(file_bytes, filename, ext)
+    except Exception as exc:
+        logger.warning(
+            "Early Gemini Vision escape failed for image %s: %s", filename, exc
+        )
+        early = None
+    if early and early.get("line_items"):
+        extra = early.setdefault("totals", {}).setdefault("extra", {})
+        extra["early_vision_reason"] = ",".join(quality.get("reasons") or []) or (
+            "low_ocr_quality_score"
+        )
+        return early, True
+    return None, True
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
     import time
 
-    from services.vertex_gemini_client import (
-        GeminiProviderError,
-        generate_content_via_vertex,
+    from services.vertex_gemini_client import GeminiProviderError
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
+    from services.sales_extraction_runtime import (
+        SalesExtractionDeadlineExceeded,
+        SalesOcrBudgetExceeded,
+        check_sales_deadline,
+        gemini_call_slot,
+        sales_deadline_remaining_seconds,
+        sales_gemini_timeout_seconds,
+        sales_ocr_budget_exhausted,
+        sales_sleep_respecting_deadline,
     )
 
     result = empty_result(filename, ext.lstrip("."))
-    rtl = _summary_rtl_from_ocr_bytes(
-        file_bytes, filename, (ext or ".png").lstrip(".") or "png"
+
+    early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
+        file_bytes, filename, ext
     )
-    if rtl and rtl.get("line_items"):
-        return rtl
-    # These probes need a local Tesseract binary. A missing install must not
-    # stop Gemini Vision, which is the path used when Tesseract is absent.
-    try:
-        a2z = _parse_a2z_opening_mexp_image(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("A2Z image OCR skipped: %s", exc)
-        a2z = None
-    if a2z and a2z.get("line_items"):
-        return a2z
-    try:
-        sales_free = _parse_ssa_sales_free_image(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Sales-free image OCR skipped: %s", exc)
-        sales_free = None
-    if sales_free and sales_free.get("line_items"):
-        return sales_free
-    try:
-        mexp_photo = _extract_ssa_mexp_photo(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("SSA M.EXP photo skipped: %s", exc)
-        mexp_photo = None
-    if mexp_photo and mexp_photo.get("line_items"):
-        return mexp_photo
-    try:
-        packing_report = _extract_particular_packing_stock_report(
-            file_bytes, filename, ext
-        )
-    except Exception as exc:
-        logger.warning("Particular packing stock report skipped: %s", exc)
-        packing_report = None
-    if packing_report and packing_report.get("line_items"):
-        return packing_report
-    try:
-        zandra_order = _extract_zandra_two_column_order_photo(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Zandra order form photo skipped: %s", exc)
-        zandra_order = None
-    if zandra_order and zandra_order.get("line_items"):
-        return zandra_order
-    try:
-        qty_balance = _extract_opening_purchase_sale_balance_photo(
-            file_bytes, filename, ext
-        )
-    except Exception as exc:
-        logger.warning("Opening/purchase/sale/balance photo skipped: %s", exc)
-        qty_balance = None
-    if qty_balance is not None:
-        return qty_balance
-    try:
-        rate_qty = _parse_rate_qty_value_image(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Rate qty/value photo skipped: %s", exc)
-        rate_qty = None
-    if rate_qty and rate_qty.get("line_items"):
-        return rate_qty
-    try:
-        rate_qty_vision = _extract_rate_qty_value_vision(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Rate qty/value vision skipped: %s", exc)
-        rate_qty_vision = None
-    if rate_qty_vision and rate_qty_vision.get("line_items"):
-        return rate_qty_vision
-    try:
-        marg_shot = _extract_marg_sale_purchase_screenshot(
-            file_bytes, filename, ext
-        )
-    except Exception as exc:
-        logger.warning("Marg sale/purchase screenshot skipped: %s", exc)
-        marg_shot = None
-    if marg_shot and marg_shot.get("line_items"):
-        return marg_shot
-    try:
-        ssa_dump = _extract_ssa_opening_receipt_issue_dump_image(
-            file_bytes, filename, ext
-        )
-    except Exception as exc:
-        logger.warning("SSA opening/receipt/issue dump photo skipped: %s", exc)
-        ssa_dump = None
-    if ssa_dump and ssa_dump.get("line_items"):
-        return ssa_dump
-    try:
-        marg_mexp = _extract_marg_closing_mexp_photo(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Marg CLOSING M.EXP photo skipped: %s", exc)
-        marg_mexp = None
-    if marg_mexp and marg_mexp.get("line_items"):
-        return marg_mexp
-    try:
-        valuation = _extract_stock_valuation_photo(file_bytes, filename, ext)
-    except Exception as exc:
-        logger.warning("Stock valuation photo skipped: %s", exc)
-        valuation = None
-    if valuation and valuation.get("line_items"):
-        return valuation
+    if early_vision and early_vision.get("line_items"):
+        return early_vision
+
+    if not skip_ocr_probes:
+        # These probes need a local Tesseract binary. A missing install must not
+        # stop Gemini Vision, which is the path used when Tesseract is absent.
+        def _probe_or_none(label: str, fn):
+            try:
+                check_sales_deadline("ocr")
+                if sales_ocr_budget_exhausted():
+                    raise SalesOcrBudgetExceeded("unknown", 0, 0)
+                return fn()
+            except (SalesExtractionDeadlineExceeded, SalesOcrBudgetExceeded):
+                raise
+            except Exception as exc:
+                logger.warning("%s skipped: %s", label, exc)
+                return None
+
+        try:
+            rtl = _probe_or_none(
+                "Summary RTL OCR",
+                lambda: _summary_rtl_from_ocr_bytes(
+                    file_bytes, filename, (ext or ".png").lstrip(".") or "png"
+                ),
+            )
+        except (SalesExtractionDeadlineExceeded, SalesOcrBudgetExceeded) as exc:
+            logger.warning("Image OCR probes stopped early: %s", exc)
+            rtl = None
+            skip_ocr_probes = True
+        if rtl and rtl.get("line_items"):
+            return rtl
+
+        if not skip_ocr_probes:
+            try:
+                a2z = _probe_or_none(
+                    "A2Z image OCR",
+                    lambda: _parse_a2z_opening_mexp_image(file_bytes, filename, ext),
+                )
+                if a2z and a2z.get("line_items"):
+                    return a2z
+                sales_free = _probe_or_none(
+                    "Sales-free image OCR",
+                    lambda: _parse_ssa_sales_free_image(file_bytes, filename, ext),
+                )
+                if sales_free and sales_free.get("line_items"):
+                    return sales_free
+                mexp_photo = _probe_or_none(
+                    "SSA M.EXP photo",
+                    lambda: _extract_ssa_mexp_photo(file_bytes, filename, ext),
+                )
+                if mexp_photo and mexp_photo.get("line_items"):
+                    return mexp_photo
+                packing_report = _probe_or_none(
+                    "Particular packing stock report",
+                    lambda: _extract_particular_packing_stock_report(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if packing_report and packing_report.get("line_items"):
+                    return packing_report
+                zandra_order = _probe_or_none(
+                    "Zandra order form photo",
+                    lambda: _extract_zandra_two_column_order_photo(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if zandra_order and zandra_order.get("line_items"):
+                    return zandra_order
+                qty_balance = _probe_or_none(
+                    "Opening/purchase/sale/balance photo",
+                    lambda: _extract_opening_purchase_sale_balance_photo(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if qty_balance is not None:
+                    return qty_balance
+                rate_qty = _probe_or_none(
+                    "Rate qty/value photo",
+                    lambda: _parse_rate_qty_value_image(file_bytes, filename, ext),
+                )
+                if rate_qty and rate_qty.get("line_items"):
+                    return rate_qty
+                rate_qty_vision = _probe_or_none(
+                    "Rate qty/value vision",
+                    lambda: _extract_rate_qty_value_vision(file_bytes, filename, ext),
+                )
+                if rate_qty_vision and rate_qty_vision.get("line_items"):
+                    return rate_qty_vision
+                marg_shot = _probe_or_none(
+                    "Marg sale/purchase screenshot",
+                    lambda: _extract_marg_sale_purchase_screenshot(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if marg_shot and marg_shot.get("line_items"):
+                    return marg_shot
+                ssa_dump = _probe_or_none(
+                    "SSA opening/receipt/issue dump photo",
+                    lambda: _extract_ssa_opening_receipt_issue_dump_image(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if ssa_dump and ssa_dump.get("line_items"):
+                    return ssa_dump
+                marg_mexp = _probe_or_none(
+                    "Marg CLOSING M.EXP photo",
+                    lambda: _extract_marg_closing_mexp_photo(file_bytes, filename, ext),
+                )
+                if marg_mexp and marg_mexp.get("line_items"):
+                    return marg_mexp
+                valuation = _probe_or_none(
+                    "Stock valuation photo",
+                    lambda: _extract_stock_valuation_photo(file_bytes, filename, ext),
+                )
+                if valuation and valuation.get("line_items"):
+                    return valuation
+            except (SalesExtractionDeadlineExceeded, SalesOcrBudgetExceeded) as exc:
+                logger.warning(
+                    "Image OCR probe cascade stopped for %s: %s", filename, exc
+                )
+
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
@@ -31293,6 +31456,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     }
 
     # Retry Gemini Vision briefly on 429/503, then fall back to OCR.
+    # Retries are bounded by the remaining extraction deadline.
     logger.info(
         "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=image",
         filename,
@@ -31300,9 +31464,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     last_err: Optional[Exception] = None
     for attempt in range(3):
         try:
-            response = generate_content_via_vertex(
-                model=model, payload=vision_payload, timeout=120
-            )
+            check_sales_deadline("gemini_request")
+            rem = sales_deadline_remaining_seconds()
+            if rem is not None and rem < 8:
+                logger.warning(
+                    "Skipping Gemini vision attempt for %s; remaining_deadline=%.1fs",
+                    filename,
+                    rem,
+                )
+                break
+            timeout = sales_gemini_timeout_seconds(120)
+            with gemini_call_slot("gemini_vision_image"):
+                response = generate_content_via_vertex(
+                    model=model, payload=vision_payload, timeout=timeout
+                )
             text = _gemini_response_text(response)
             parsed = _extract_json_object(text)
             if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
@@ -31503,9 +31678,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 if zl_sheet and zl_sheet.get("line_items"):
                     return zl_sheet
             last_err = ValueError(f"non-JSON vision response: {(text or '')[:200]}")
+        except SalesExtractionDeadlineExceeded:
+            raise
         except GeminiProviderError as exc:
             last_err = exc
-            time.sleep(min(2 ** attempt, 8))
+            try:
+                sales_sleep_respecting_deadline(min(2 ** attempt, 8), "gemini_retry")
+            except SalesExtractionDeadlineExceeded:
+                break
         except Exception as exc:
             last_err = exc
             logger.warning("Gemini vision failed for %s: %s", filename, exc)
@@ -31518,7 +31698,10 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     )
 
     try:
+        check_sales_deadline("ocr")
         ocr_text = _ocr_image_to_text(file_bytes)
+    except SalesExtractionDeadlineExceeded:
+        raise
     except Exception as exc:
         logger.error("Tesseract OCR failed for %s: %s", filename, exc)
         result["totals"]["extra"]["error"] = f"vision_failed: {last_err}; ocr_failed: {exc}"
@@ -31554,9 +31737,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
     }
     try:
-        response = generate_content_via_vertex(
-            model=model, payload=text_payload, timeout=120
-        )
+        check_sales_deadline("gemini_request")
+        timeout = sales_gemini_timeout_seconds(120)
+        with gemini_call_slot("gemini_text_image_fallback"):
+            response = generate_content_via_vertex(
+                model=model, payload=text_payload, timeout=timeout
+            )
         parsed = _extract_json_object(_gemini_response_text(response))
         if parsed and parsed.get("line_items"):
             result = _apply_parsed_sales_json(result, parsed)
@@ -31571,6 +31757,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             return _maybe_repair_product_stock_report(
                 result, ocr_text, filename, ext.lstrip(".") or "png"
             )
+    except SalesExtractionDeadlineExceeded:
+        raise
     except Exception as exc:
         logger.warning("Gemini text structuring after OCR failed: %s", exc)
 
