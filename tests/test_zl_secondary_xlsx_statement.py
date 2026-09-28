@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -153,6 +154,80 @@ class TestZlSecondaryParse(unittest.TestCase):
         # Must not use Customer_name as product
         self.assertNotEqual(zero_row["product_name"], "AMBICA AGENCIES")
 
+    def test_closing_value_is_closing_qty_times_secondary_rate(self):
+        path = _write_zl_xlsx(
+            [
+                [
+                    "Customer_name",
+                    "Material_code",
+                    "Material_name",
+                    "Mrp",
+                    "Secondaryrate",
+                    "Opening_bal_qty",
+                    "Primary_qty",
+                    "Closing_bal_qty",
+                    "Year",
+                    "Month",
+                    "Division",
+                    "Customer_code",
+                ],
+                [
+                    "National Pharma",
+                    "7000107",
+                    "CONFIDO TABS (FC) 60 s (AQ)",
+                    "255",
+                    172.23,
+                    "132",
+                    "0.00",
+                    "126",
+                    "2026",
+                    "8",
+                    "ZL",
+                    "0000735025",
+                ],
+                [
+                    "National Pharma",
+                    "7000260",
+                    "LIV.52 SYRUP 200ml",
+                    "234",
+                    158.05,
+                    "1",
+                    "175.00",
+                    "124",
+                    "2026",
+                    "8",
+                    "ZL",
+                    "0000735025",
+                ],
+            ]
+        )
+        try:
+            result = extract_sales_statement(Path(path).read_bytes(), "national.xlsx")
+        finally:
+            Path(path).unlink(missing_ok=True)
+        self.assertEqual(
+            result["totals"]["extra"].get("extraction_method"), "zl_secondary_xlsx"
+        )
+        self.assertIsNone(result["totals"]["sales_value"])
+        confido = result["line_items"][0]
+        self.assertEqual(confido["opening_qty"], 132.0)
+        self.assertEqual(confido["receipts_qty"], 0.0)
+        self.assertEqual(confido["closing_qty"], 126.0)
+        self.assertIsNone(confido["sales_qty"])
+        self.assertEqual(confido["closing_value"], round(126 * 172.23, 2))
+        self.assertEqual(confido["extra"]["unit_rate"], 172.23)
+        self.assertEqual(confido["extra"]["expected_closing"], 126.0)
+        self.assertTrue(confido["extra"]["stock_identity_ok"])
+        liv = result["line_items"][1]
+        self.assertEqual(liv["receipts_qty"], 175.0)
+        self.assertEqual(liv["closing_qty"], 124.0)
+        self.assertEqual(liv["closing_value"], round(124 * 158.05, 2))
+        self.assertEqual(
+            result["totals"]["closing_value"],
+            round(126 * 172.23 + 124 * 158.05, 2),
+        )
+        self.assertTrue(result["totals"]["extra"]["stock_validation"]["is_valid"])
+
 
 @unittest.skipUnless(SAMPLE.exists(), "ZL sample xlsx not on this machine")
 class TestZlSecondarySampleFile(unittest.TestCase):
@@ -177,6 +252,38 @@ class TestZlSecondarySampleFile(unittest.TestCase):
         self.assertIsNone(aact["sales_qty"])
         self.assertIsNone(aact["sales_value"])
         self.assertIsNone(aact["closing_value"])
+
+
+_NATIONAL = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August"
+    r"\0000735025_2026_08_ZL_07_8219_01092026150555.xlsx"
+)
+
+
+@unittest.skipUnless(os.path.exists(_NATIONAL), "source workbook is not on this machine")
+class TestNationalPharmaZlSecondary(unittest.TestCase):
+    def test_source_closing_value_uses_secondary_rate(self):
+        result = extract_sales_statement(_NATIONAL.read_bytes(), _NATIONAL.name)
+        self.assertEqual(result["stockist_name"], "National Pharma")
+        self.assertEqual(
+            result["totals"]["extra"].get("extraction_method"), "zl_secondary_xlsx"
+        )
+        self.assertEqual(len(result["line_items"]), 77)
+        self.assertTrue(result["totals"]["extra"]["stock_validation"]["is_valid"])
+        confido = next(
+            item for item in result["line_items"] if item["product_code"] == "7000107"
+        )
+        self.assertEqual(confido["opening_qty"], 132.0)
+        self.assertEqual(confido["closing_qty"], 126.0)
+        self.assertIsNone(confido["sales_qty"])
+        self.assertEqual(confido["closing_value"], round(126 * 172.23, 2))
+        liv = next(
+            item for item in result["line_items"] if item["product_code"] == "7000260"
+        )
+        self.assertEqual(liv["opening_qty"], 1.0)
+        self.assertEqual(liv["receipts_qty"], 175.0)
+        self.assertEqual(liv["closing_qty"], 124.0)
+        self.assertEqual(liv["closing_value"], round(124 * 158.05, 2))
 
 
 if __name__ == "__main__":

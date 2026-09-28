@@ -497,6 +497,20 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos: Gemini shifts
+    # neighboring rows. Keep the format-specific OCR/column reader.
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if (
+        str(extra.get("extraction_method") or "") == "main_stock_sales_statement"
+        or str(extra.get("layout") or "") == "opening_receive_issue_closing"
+    ):
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=main_stock_column_reader",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # TXT/HTML have no visual page — do not invent Vision input.
     if (ext or "").lower() in {".txt", ".htm", ".html"}:
         _stamp(result, quality, "unavailable_text_only")
@@ -548,6 +562,17 @@ def maybe_apply_gemini_fallback(
     # Accept Gemini when it produced real product rows even if weak-method scoring
     # flags low_ocr_quality_score on the Gemini method name itself.
     gemini_items = gemini_result.get("line_items") or []
+    # Row-shift signature: many closings with blank openings — never accept.
+    shifted = 0
+    for item in gemini_items:
+        if not isinstance(item, dict):
+            continue
+        if (
+            float(item.get("closing_qty") or 0) > 0
+            and float(item.get("opening_qty") or 0) == 0
+            and float(item.get("sales_qty") or 0) == 0
+        ):
+            shifted += 1
     gemini_ok = bool(gemini_items) and not (
         set(gemini_quality.get("reasons") or [])
         & {
@@ -555,8 +580,11 @@ def maybe_apply_gemini_fallback(
             "high_ocr_noise",
             "header_as_product_rows",
             "missing_product_names",
+            "stock_identity_failure",
         }
     )
+    if shifted >= max(5, len(gemini_items) // 4):
+        gemini_ok = False
     if not gemini_ok:
         if _result_is_weak(result, quality):
             return _controlled_failure(filename, ext, gemini_quality, "validation_failed")

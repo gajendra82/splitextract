@@ -888,8 +888,32 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
     provider_attempt = 0
 
     while True:
+        from services.sales_extraction_runtime import (
+            SalesExtractionDeadlineExceeded,
+            check_sales_deadline,
+            sales_deadline_active,
+            sales_deadline_remaining_seconds,
+            sales_gemini_timeout_seconds,
+            mark_sales_stage,
+        )
+
+        if sales_deadline_active():
+            check_sales_deadline(f"gemini_{request_type}")
+            sales_rem = sales_deadline_remaining_seconds() or 0.0
+            if sales_rem <= 0:
+                raise SalesExtractionDeadlineExceeded(
+                    "unknown", f"gemini_{request_type}", 0
+                )
+
         elapsed = time.time() - start_time
         remaining_wait = int(max(1, MAX_WAIT_TIME - elapsed))
+        if sales_deadline_active():
+            sales_rem = sales_deadline_remaining_seconds() or 0.0
+            remaining_wait = int(max(0, min(remaining_wait, sales_rem)))
+            if remaining_wait <= 0:
+                raise SalesExtractionDeadlineExceeded(
+                    "unknown", f"gemini_{request_type}", 0
+                )
         if remaining_wait <= 0:
             logger.error("⏱️ Max wait reached for Gemini request")
             return None
@@ -903,14 +927,19 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
             # Cap simultaneous provider HTTP calls; RPM/RPD still owned here.
             from services.sales_extraction_runtime import gemini_call_slot
 
+            eff_timeout = sales_gemini_timeout_seconds(timeout)
             with gemini_call_slot(f"gemini_{request_type}"):
                 response = generate_content_via_vertex(
                     model=model,
                     payload=payload,
-                    timeout=timeout,
+                    timeout=eff_timeout,
                 )
             update_request_progress(f"gemini_{request_type}_response_received")
             return response
+
+        except SalesExtractionDeadlineExceeded:
+            release_gemini_inflight_counter()
+            raise
 
         except GeminiProviderError as e:
             provider_attempt += 1
@@ -926,6 +955,14 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                 float(GEMINI_PROVIDER_BACKOFF_MAX_SECONDS), float(base))
             sleep_time = sleep_time + random.uniform(0.0, sleep_time * 0.25)
             remaining = MAX_WAIT_TIME - (time.time() - start_time)
+            if sales_deadline_active():
+                sales_rem = sales_deadline_remaining_seconds() or 0.0
+                remaining = min(remaining, sales_rem)
+                if remaining <= 0:
+                    mark_sales_stage("gemini_retry")
+                    raise SalesExtractionDeadlineExceeded(
+                        "unknown", "gemini_retry", 0
+                    )
             sleep_time = max(0.5, min(sleep_time, remaining))
 
             logger.warning(
@@ -934,6 +971,7 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                 f"(attempt={provider_attempt}, sleep={sleep_time:.1f}s, "
                 f"provider={GEMINI_PROVIDER_NAME}, model={model})"
             )
+            mark_sales_stage("gemini_retry")
             _log_quota_wait(
                 model_config, "provider", sleep_time, time.time() - start_time)
             time.sleep(sleep_time)
@@ -2922,6 +2960,7 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
             "sunderlal_openstk_sale",
             "pack_opening_receipt_issue_mexp",
             "opening_receipt_issue_closing",
+            "opening_receive_issue_closing",
             "group_wise_received_issue_value",
         ):
             kept_items.append(item)
@@ -27107,6 +27146,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "pack_opening_receipt_issue_mexp"
     if extra.get("layout") == "opening_receipt_issue_closing":
         additional["layout"] = "opening_receipt_issue_closing"
+    if extra.get("layout") == "opening_receive_issue_closing":
+        additional["layout"] = "opening_receive_issue_closing"
     if extra.get("layout") == "group_wise_received_issue_value":
         additional["layout"] = "group_wise_received_issue_value"
     if extra.get("layout") == "product_wise_stock_statement":
@@ -29870,7 +29911,16 @@ async def extract_sales_statement_status(request_id: str):
     progress = get_sales_progress(request_id)
     if not progress:
         raise HTTPException(status_code=404, detail="Unknown request_id")
-    return progress
+    return {
+        "status": progress.get("status") or "processing",
+        "stage": progress.get("stage"),
+        "label": progress.get("label"),
+        "request_id": progress.get("request_id"),
+        "filename": progress.get("filename"),
+        "file_type": progress.get("file_type"),
+        "stage_duration_seconds": progress.get("stage_duration_seconds"),
+        "final_status": progress.get("final_status"),
+    }
 
 
 @app.post("/extract-sales-statement")
@@ -29893,13 +29943,18 @@ async def extract_sales_statement_endpoint(
     POD hospital-sales workbooks still return the /split-and-extract wrapper.
     """
     from services.sales_extraction_runtime import (
+        SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
         SalesExtractionBusy,
+        SalesExtractionDeadlineExceeded,
         acquire_sales_extraction_slot,
         begin_sales_progress,
         finish_sales_progress,
         log_sales_extraction_event,
         release_sales_extraction_slot,
+        request_cancel_sales_extraction,
         resolve_request_id,
+        run_sales_extract_with_deadline,
+        terminate_sales_tesseract_children,
         update_sales_progress,
     )
 
@@ -29967,12 +30022,24 @@ async def extract_sales_statement_endpoint(
     extraction_duration_seconds = None
     slot_acquired = False
     final_status = "failed"
+    deadline_seconds = float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS)
 
     if not batch_id:
         batch_id = str(uuid.uuid4())
     begin_sales_progress(
         request_id, filename, stage="queued", batch_id=batch_id
     )
+
+    def _extraction_failed_detail(message: str, reasons: Optional[list] = None, **extra):
+        detail = {
+            "error": "extraction_failed",
+            "message": message,
+            "reasons": reasons or [],
+            "source_file": filename,
+            "request_id": request_id,
+        }
+        detail.update(extra)
+        return detail
 
     try:
         file_bytes = await file.read()
@@ -30001,9 +30068,49 @@ async def extract_sales_statement_endpoint(
         extraction_started = time.time()
         update_sales_progress(request_id, "parsing")
         # Keep sync extract_sales_statement; offload so the event loop stays free.
-        sales_result = await asyncio.to_thread(
-            extract_sales_statement, file_bytes, filename
-        )
+        # wait_for is a backstop: cooperative deadline inside the worker stops
+        # OCR/Gemini sooner. Cancelling the await does NOT kill the thread, so
+        # we set a cancel flag and terminate tesseract children on expiry.
+        try:
+            sales_result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    run_sales_extract_with_deadline,
+                    extract_sales_statement,
+                    file_bytes,
+                    filename,
+                    request_id,
+                    deadline_seconds,
+                ),
+                timeout=deadline_seconds + 15.0,
+            )
+        except asyncio.TimeoutError as exc:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            raise HTTPException(
+                status_code=422,
+                detail=_extraction_failed_detail(
+                    (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(deadline_seconds)}s."
+                    ),
+                    reasons=["extraction_deadline_exceeded"],
+                    stage="failed",
+                ),
+            ) from exc
+        except SalesExtractionDeadlineExceeded as exc:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            raise HTTPException(
+                status_code=422,
+                detail=_extraction_failed_detail(
+                    (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(exc.limit_seconds or deadline_seconds)}s."
+                    ),
+                    reasons=["extraction_deadline_exceeded"],
+                    stage=exc.stage,
+                ),
+            ) from exc
         extraction_duration_seconds = time.time() - extraction_started
 
         extra = ((sales_result.get("totals") or {}).get("extra") or {})
@@ -30091,7 +30198,6 @@ async def extract_sales_statement_endpoint(
             total_duration_seconds=total_duration_seconds,
             final_status=final_status,
         )
-
 
 if __name__ == "__main__":
     import argparse
