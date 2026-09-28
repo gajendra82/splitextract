@@ -675,6 +675,37 @@ TOTAL 286585 24676 253001 74263
         self.assertEqual(result["totals"]["opening_qty"], 286585.0)
         self.assertEqual(result["totals"]["closing_qty"], 74263.0)
 
+    def test_fifth_number_after_closing_does_not_hide_opening(self):
+        text = """PARAS MEDICOS
+STOCK & SALES ANALYSIS  (HIMALAYA ZANDRA) 01-08-2026 - 31-08-2026
+ITEM DESCRIPTION                 OPENING   RECEIPT     ISSUE   CLOSING
+ARJUNA TABLETS         1*60           32         -         -        32    62
+GERIFORTE TABLETS      1*60            -        50        11        39    16
+PLATENZA TABLETS       1*20S         255         -       139       116    81
+HIORA K TOOTH PASTE    100GM           -       150        29       121    45
+STYPLON TABLETS        1*30           23         -        23         -    12
+TOTAL                           422906    500699    370377    557168   402K
+"""
+        result = _parse_ps_pharma_statement(text, "paras.pdf")
+        by_name = {item["product_name"]: item for item in result["line_items"]}
+        arjuna = by_name["ARJUNA TABLETS"]
+        self.assertEqual(arjuna["packing"], "1*60")
+        self.assertEqual(arjuna["opening_qty"], 32.0)
+        self.assertEqual(arjuna["receipts_qty"], 0.0)
+        self.assertEqual(arjuna["sales_qty"], 0.0)
+        self.assertEqual(arjuna["closing_qty"], 32.0)
+        geriforte = by_name["GERIFORTE TABLETS"]
+        self.assertEqual(geriforte["opening_qty"], 0.0)
+        self.assertEqual(geriforte["receipts_qty"], 50.0)
+        self.assertEqual(geriforte["closing_qty"], 39.0)
+        platenza = by_name["PLATENZA TABLETS"]
+        self.assertEqual(platenza["packing"], "1*20S")
+        self.assertEqual(platenza["opening_qty"], 255.0)
+        self.assertEqual(by_name["HIORA K TOOTH PASTE"]["packing"], "100GM")
+        self.assertEqual(by_name["HIORA K TOOTH PASTE"]["opening_qty"], 0.0)
+        self.assertEqual(by_name["STYPLON TABLETS"]["closing_qty"], 0.0)
+        self.assertEqual(by_name["STYPLON TABLETS"]["opening_qty"], 23.0)
+
 
 class TestRateQtyValueColumns(unittest.TestCase):
     def test_blank_receipt_and_issue_stay_in_their_columns(self):

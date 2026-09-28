@@ -252,6 +252,68 @@ class TestA2zPhotoColumnBoxes(unittest.TestCase):
         self.assertEqual(closing, 5)
         self.assertEqual(issue, 0)
 
+    def test_letterhead_above_header_is_not_a_product(self):
+        words = [
+            _box(40, 40, "Phone", 70),
+            _box(200, 40, "7033132929", 120),
+            _box(37, 100, "ITEM", 70),
+            _box(127, 100, "DESCRIPTION", 200),
+            _box(643, 100, "OPENING", 129),
+            _box(829, 100, "RECEIPT", 129),
+            _box(1055, 100, "ISSUE", 86),
+            _box(1198, 100, "CLOSING", 128),
+            _box(80, 160, "ARJUNA", 90),
+            _box(180, 160, "TABLET", 80),
+            _box(487, 160, "1*60", 40),
+            _box(700, 160, "70", 20),
+            _box(900, 160, "-", 12),
+            _box(1100, 160, "10", 20),
+            _box(1260, 160, "60", 20),
+        ]
+        items = _a2z_items_from_ocr_words(words, None)
+        self.assertEqual([item["product_name"] for item in items], ["ARJUNA TABLET"])
+        self.assertEqual(items[0]["opening_qty"], 70)
+        self.assertEqual(items[0]["sales_qty"], 10)
+        self.assertEqual(items[0]["closing_qty"], 60)
+        self.assertNotIn("source_product_name", items[0].get("extra") or {})
+        self.assertNotIn("source_packing", items[0].get("extra") or {})
+
+    def test_punctuation_stuck_to_qty_stays_on_that_column(self):
+        words = [
+            _box(37, 100, "ITEM", 70),
+            _box(127, 100, "DESCRIPTION", 200),
+            _box(643, 100, "OPENING", 129),
+            _box(829, 100, "RECEIPT", 129),
+            _box(1055, 100, "ISSUE", 86),
+            _box(1198, 100, "CLOSING", 128),
+            _box(80, 160, "LIV", 40),
+            _box(130, 160, "52", 30),
+            _box(170, 160, "DS", 30),
+            _box(210, 160, "TAB", 40),
+            _box(487, 160, "1*60", 40),
+            _box(700, 160, "548", 30),
+            _box(900, 160, "-", 12),
+            _box(1080, 160, "249,", 36),
+            _box(1240, 160, "299)", 40),
+            _box(80, 200, "SPEMAN", 80),
+            _box(170, 200, "TAB", 40),
+            _box(487, 200, "1*60", 40),
+            _box(700, 200, "40", 20),
+            _box(900, 200, "-", 12),
+            _box(1100, 200, "“", 12),
+            _box(1260, 200, "40)", 28),
+        ]
+        items = _a2z_items_from_ocr_words(words, None)
+        liv = next(row for row in items if "LIV" in row["product_name"])
+        speman = next(row for row in items if "SPEMAN" in row["product_name"])
+        self.assertEqual(liv["opening_qty"], 548)
+        self.assertEqual(liv["receipts_qty"], 0)
+        self.assertEqual(liv["sales_qty"], 249)
+        self.assertEqual(liv["closing_qty"], 299)
+        self.assertEqual(speman["opening_qty"], 40)
+        self.assertEqual(speman["sales_qty"], 0)
+        self.assertEqual(speman["closing_qty"], 40)
+
 
 if __name__ == "__main__":
     unittest.main()
