@@ -2704,6 +2704,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
                 "stock_register_footer",
                 "marg_sale_purchase_value",
                 "lstsl_open_recd_footer",
+                "free_return_total_value",
             }
         )
     )
@@ -2725,7 +2726,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
         and float(totals.get("closing_value") or 0) > sum_closing_qty * 1000
         and float(totals.get("closing_value") or 0) > 100000
         and str(totals.get("extra", {}).get("total_row_source") or "")
-        != "lstsl_open_recd_footer"
+        not in {"lstsl_open_recd_footer", "free_return_total_value"}
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
         totals["extra"]["rejected_closing_value"] = totals.get("closing_value")
@@ -3258,108 +3259,6 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
-    # ITEM/PACK/OPENING/PURCHASE/FREE/P.RETURN/FREE/SALE/FREE/S.RETURN/FREE/
-    # OTHERS/CLOSING. Zero rows stay. No SUBTOTAL column on this layout.
-    if totals["extra"].get("extraction_method") == "item_pack_free_preturn_sreturn":
-        mismatch = 0
-        parse_fail = 0
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            row_extra = item.setdefault("extra", {})
-            if not isinstance(row_extra, dict):
-                row_extra = {}
-                item["extra"] = row_extra
-            parse_errors = row_extra.get("qty_parse_errors") or {}
-            if parse_errors:
-                parse_fail += 1
-                row_extra["stock_identity_ok"] = False
-                row_extra["validation"] = {
-                    "is_valid": False,
-                    "reason": "Quantity cell could not be parsed",
-                }
-                continue
-
-            def _src_free(field: str, *fallbacks: str) -> float:
-                if field in item and item.get(field) not in (None, ""):
-                    return _to_float(item.get(field))
-                for name in fallbacks:
-                    if name in row_extra and row_extra.get(name) not in (None, ""):
-                        return _to_float(row_extra.get(name))
-                    if name in item and item.get(name) not in (None, ""):
-                        return _to_float(item.get(name))
-                return 0.0
-
-            opening = _src_free("opening_qty")
-            purchase = _src_free("purchase_qty", "receipts_qty")
-            purchase_return = _src_free("purchase_return_qty")
-            sale = _src_free("sales_qty")
-            sales_return = _src_free("sales_return_qty")
-            others = _src_free("others_out_qty", "others_qty")
-            closing = _src_free("closing_qty")
-            calculated_closing = round(
-                opening + purchase + sales_return - purchase_return - sale - others,
-                2,
-            )
-            row_extra["expected_closing"] = calculated_closing
-            ok = abs(calculated_closing - closing) <= 0.05
-            row_extra["stock_identity_ok"] = ok
-            row_extra["qty_reconcile_ok"] = ok
-            if ok:
-                row_extra["validation"] = {"is_valid": True}
-                row_extra.pop("qty_reconcile_flags", None)
-            else:
-                mismatch += 1
-                row_extra["qty_reconcile_flags"] = ["closing"]
-                row_extra["validation"] = {
-                    "is_valid": False,
-                    "reason": "Source values do not reconcile",
-                }
-        opening_sum = sum(
-            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
-        )
-        receipt_sum = sum(
-            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
-        )
-        sales_sum = sum(
-            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
-        )
-        closing_sum = sum(
-            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
-        )
-        totals["extra"]["opening_qty"] = opening_sum
-        totals["extra"]["receipts_qty"] = receipt_sum
-        totals["extra"]["sales_qty"] = sales_sum
-        totals["extra"]["closing_qty"] = closing_sum
-        totals["extra"]["stock_identity_kind"] = "item_pack_free_preturn_sreturn"
-        totals["extra"]["stock_identity_formula"] = (
-            "closing=opening+purchase+sales_return-purchase_return-sale-others"
-        )
-        totals["extra"]["stock_identity_fail_count"] = mismatch + parse_fail
-        totals["extra"]["qty_mismatch_rows"] = mismatch
-        totals["extra"]["qty_parse_error_rows"] = parse_fail
-        totals["extra"]["stock_validation"] = {
-            "extracted_opening": opening_sum,
-            "extracted_purchase": receipt_sum,
-            "extracted_sales_qty": sales_sum,
-            "extracted_closing": closing_sum,
-            "calculated_closing": round(
-                sum(
-                    _to_float((i.get("extra") or {}).get("expected_closing"))
-                    for i in items
-                    if isinstance(i, dict)
-                ),
-                2,
-            ),
-            "qty_mismatch_rows": mismatch,
-            "qty_parse_error_rows": parse_fail,
-            "is_valid": mismatch == 0 and parse_fail == 0,
-            "reason": None
-            if mismatch == 0 and parse_fail == 0
-            else "Source values do not reconcile",
-        }
-        return result
-
     # ProductName / Pack / Op.stk / Pur / sales / Free / Repl / TotalStock.
     # TotalStock is closing. Free and Repl are not receipts, and a blank Pur
     # must not be filled from Age or from opening + purchase - sales.
@@ -3766,6 +3665,86 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": receipt_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": mismatch == 0,
+        }
+        return result
+
+    # ITEM / PACK / OPENING / PURCHASE / FREE / P.RETURN / FREE / SALE / FREE /
+    # S.RETURN / FREE / OTHERS / CLOSING. Printed closing includes every free
+    # and return column, so opening + purchase - sale must not replace it.
+    if totals["extra"].get("extraction_method") == "item_pack_free_return":
+        mismatch = 0
+
+        def _move(item: Dict[str, Any], field: str, *extra_names: str) -> float:
+            if item.get(field) not in (None, ""):
+                return _to_float(item.get(field))
+            row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            for name in (field, *extra_names):
+                if row_extra.get(name) not in (None, ""):
+                    return _to_float(row_extra.get(name))
+            return 0.0
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            if row_extra.get("qty_parse_errors"):
+                mismatch += 1
+                row_extra["stock_identity_ok"] = False
+                continue
+            expected = round(
+                _move(item, "opening_qty")
+                + _move(item, "purchase_qty", "receipts_qty")
+                + _move(item, "purchase_free_qty")
+                - _move(item, "purchase_return_qty")
+                - _move(item, "purchase_return_free_qty")
+                - _move(item, "sales_qty")
+                - _move(item, "sale_free_qty")
+                + _move(item, "sales_return_qty")
+                + _move(item, "sales_return_free_qty")
+                + _move(item, "others_qty"),
+                2,
+            )
+            closing = _move(item, "closing_qty")
+            row_extra["expected_closing"] = expected
+            ok = abs(expected - closing) <= 0.05
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        purchase_sum = sum(
+            _to_float(i.get("purchase_qty") if i.get("purchase_qty") not in (None, "") else i.get("receipts_qty"))
+            for i in items
+            if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = purchase_sum
+        totals["extra"]["purchase_qty"] = purchase_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "item_pack_free_return"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+purchase+purchase_free-purchase_return"
+            "-purchase_return_free-sale-sale_free+sales_return"
+            "+sales_return_free+others"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": purchase_sum,
             "extracted_sales_qty": sales_sum,
             "extracted_closing": closing_sum,
             "is_valid": mismatch == 0,
@@ -10722,9 +10701,8 @@ def _xls_fill_item_pack_sreturn_rows(
     return result
 
 
-# ROSHNI / Busy-style STOCK & SALES with FREE after each movement column.
-# Distinct from item_pack_sreturn_others (no SUBTOTAL; FREE columns present).
-_ITEM_PACK_FREE_PRETURN_HEADER = (
+
+_ITEM_PACK_FREE_RETURN_HEADER = (
     "item",
     "pack",
     "opening",
@@ -10739,7 +10717,7 @@ _ITEM_PACK_FREE_PRETURN_HEADER = (
     "others",
     "closing",
 )
-_ITEM_PACK_FREE_PRETURN_FIELDS = (
+_ITEM_PACK_FREE_RETURN_FIELDS = (
     "item",
     "pack",
     "opening",
@@ -10754,41 +10732,41 @@ _ITEM_PACK_FREE_PRETURN_FIELDS = (
     "others",
     "closing",
 )
-_ITEM_PACK_FREE_PRETURN_QTY_FIELDS = (
-    "opening_qty",
-    "purchase_qty",
-    "purchase_free_qty",
-    "purchase_return_qty",
-    "purchase_return_free_qty",
-    "sales_qty",
-    "free_qty",
-    "sales_return_qty",
-    "sales_return_free_qty",
-    "others_out_qty",
-    "closing_qty",
+_ITEM_PACK_FREE_RETURN_QTY = (
+    ("opening_qty", "opening"),
+    ("purchase_qty", "purchase"),
+    ("purchase_free_qty", "purchase_free"),
+    ("purchase_return_qty", "purchase_return"),
+    ("purchase_return_free_qty", "purchase_return_free"),
+    ("sales_qty", "sale"),
+    ("sale_free_qty", "sale_free"),
+    ("sales_return_qty", "sales_return"),
+    ("sales_return_free_qty", "sales_return_free"),
+    ("others_qty", "others"),
+    ("closing_qty", "closing"),
 )
 
 
-def _xls_item_pack_free_preturn_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
-    """Column indexes for ITEM/PACK/.../FREE/P.RETURN/FREE/SALE/FREE/S.RETURN/FREE/OTHERS/CLOSING.
+def _xls_item_pack_free_return_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
+    """Column indexes for ITEM/PACK/OPENING/PURCHASE/FREE/P.RETURN/FREE/SALE/FREE/S.RETURN/FREE/OTHERS/CLOSING.
 
-    The existing S.RETURN/OTHERS/SUBTOTAL layout returns None here.
+    The four FREE headers are kept by position. Any other header returns None.
     """
     labels = [
         (idx, _xls_header_compact(cell))
         for idx, cell in enumerate(row or [])
         if _xls_header_compact(cell)
     ]
-    if len(labels) < len(_ITEM_PACK_FREE_PRETURN_HEADER):
+    if len(labels) < len(_ITEM_PACK_FREE_RETURN_HEADER):
         return None
-    head = [label for _idx, label in labels[: len(_ITEM_PACK_FREE_PRETURN_HEADER)]]
-    if head != list(_ITEM_PACK_FREE_PRETURN_HEADER):
+    head = [label for _idx, label in labels[: len(_ITEM_PACK_FREE_RETURN_HEADER)]]
+    if head != list(_ITEM_PACK_FREE_RETURN_HEADER):
         return None
     indexes = {
         field: labels[pos][0]
-        for pos, field in enumerate(_ITEM_PACK_FREE_PRETURN_FIELDS)
+        for pos, field in enumerate(_ITEM_PACK_FREE_RETURN_FIELDS)
     }
-    for idx, label in labels[len(_ITEM_PACK_FREE_PRETURN_HEADER) :]:
+    for idx, label in labels[len(_ITEM_PACK_FREE_RETURN_HEADER) :]:
         if label == "itemcode" and "itemcode" not in indexes:
             indexes["itemcode"] = idx
         elif label == "branchtotal" and "branchtotal" not in indexes:
@@ -10796,15 +10774,15 @@ def _xls_item_pack_free_preturn_indexes(row: List[Any]) -> Optional[Dict[str, in
     return indexes
 
 
-def _xls_fill_item_pack_free_preturn_rows(
+def _xls_fill_item_pack_free_return_rows(
     result: Dict[str, Any],
     rows: List[List[Any]],
     header_idx: int,
     sheet_name: str,
     header_score: int,
 ) -> Dict[str, Any]:
-    """Keep every product row (including all-dash zeros) for FREE-column STOCK & SALES."""
-    indexes = _xls_item_pack_free_preturn_indexes(rows[header_idx])
+    """Keep every product row. Map each FREE and return column on its own."""
+    indexes = _xls_item_pack_free_return_indexes(rows[header_idx])
     if not indexes:
         return result
 
@@ -10815,8 +10793,16 @@ def _xls_fill_item_pack_free_preturn_rows(
         company = re.search(r"Company\s*:\s*(.+)", joined, re.I)
         if company and not result.get("company_name"):
             result["company_name"] = _clean_name(company.group(1))
-        if re.search(r"STOCK\s*&\s*SALES", joined, re.I) and not result.get("report_title"):
-            result["report_title"] = "STOCK & SALES"
+        if (
+            not result.get("stockist_address")
+            and re.search(r"PLOT|FLOOR|INDUSTRIAL|AREA|\b\d{6}\b", joined, re.I)
+            and not re.search(r"Company\s*:|From\s*:|STOCK", joined, re.I)
+        ):
+            result["stockist_address"] = _clean_name(joined)
+        if re.fullmatch(r"STOCK\s*&\s*SALES", joined.strip(), re.I) and not result.get(
+            "report_title"
+        ):
+            result["report_title"] = _clean_name(joined)
 
     def cell(row: List[Any], key: str) -> Any:
         idx = indexes.get(key)
@@ -10826,21 +10812,7 @@ def _xls_fill_item_pack_free_preturn_rows(
 
     items: List[Dict[str, Any]] = []
     zero_rows = 0
-    mismatch_rows = 0
     parse_error_rows = 0
-    sources = (
-        ("opening_qty", "opening"),
-        ("purchase_qty", "purchase"),
-        ("purchase_free_qty", "purchase_free"),
-        ("purchase_return_qty", "purchase_return"),
-        ("purchase_return_free_qty", "purchase_return_free"),
-        ("sales_qty", "sale"),
-        ("free_qty", "sale_free"),
-        ("sales_return_qty", "sales_return"),
-        ("sales_return_free_qty", "sales_return_free"),
-        ("others_out_qty", "others"),
-        ("closing_qty", "closing"),
-    )
     for row in rows[header_idx + 1 :]:
         if not isinstance(row, list):
             continue
@@ -10857,6 +10829,28 @@ def _xls_fill_item_pack_free_preturn_rows(
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
             continue
+        if re.fullmatch(r"total\s+value", product_name, re.I):
+            money = {}
+            for field, key in _ITEM_PACK_FREE_RETURN_QTY:
+                number, error = _xls_sreturn_qty_cell(cell(row, key))
+                if error or number is None:
+                    continue
+                money[field] = round(number, 2)
+            if "sales_qty" in money:
+                result["totals"]["sales_value"] = money["sales_qty"]
+            if "closing_qty" in money:
+                result["totals"]["closing_value"] = money["closing_qty"]
+            extra_totals = result.setdefault("totals", {}).setdefault("extra", {})
+            if "opening_qty" in money:
+                extra_totals["opening_value"] = money["opening_qty"]
+            if "purchase_qty" in money:
+                extra_totals["purchase_value"] = money["purchase_qty"]
+            if "sales_return_qty" in money:
+                extra_totals["sales_return_value"] = money["sales_return_qty"]
+            if "purchase_return_qty" in money:
+                extra_totals["purchase_return_value"] = money["purchase_return_qty"]
+            extra_totals["total_row_source"] = "free_return_total_value"
+            continue
         if re.match(
             r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
             product_name,
@@ -10868,82 +10862,50 @@ def _xls_fill_item_pack_free_preturn_rows(
         packing = _clean_name(str(raw_pack)) if raw_pack not in (None, "") else None
         parsed: Dict[str, Optional[float]] = {}
         errors: Dict[str, str] = {}
-        for field, key in sources:
+        for field, key in _ITEM_PACK_FREE_RETURN_QTY:
             number, error = _xls_sreturn_qty_cell(cell(row, key))
             parsed[field] = number
             if error:
                 errors[field] = error
+        if errors:
+            parse_error_rows += 1
+        elif all(parsed[field] == 0.0 for field, _key in _ITEM_PACK_FREE_RETURN_QTY):
+            zero_rows += 1
 
         item = empty_line_item()
         item["product_name"] = product_name
         item["packing"] = packing or None
         item["product_code"] = _xls_cell_code(cell(row, "itemcode"))
         item["opening_qty"] = parsed["opening_qty"]
-        item["receipts_qty"] = parsed["purchase_qty"]
         item["purchase_qty"] = parsed["purchase_qty"]
-        item["purchase_return_qty"] = parsed["purchase_return_qty"]
+        item["receipts_qty"] = parsed["purchase_qty"]
         item["sales_qty"] = parsed["sales_qty"]
-        item["free_qty"] = parsed["free_qty"]
-        item["sales_return_qty"] = parsed["sales_return_qty"]
-        item["others_out_qty"] = parsed["others_out_qty"]
         item["closing_qty"] = parsed["closing_qty"]
+        item["sales_return_qty"] = parsed["sales_return_qty"]
+        item["purchase_return_qty"] = parsed["purchase_return_qty"]
+        item["others_qty"] = parsed["others_qty"]
+        item["purchase_free_qty"] = parsed["purchase_free_qty"]
+        item["purchase_return_free_qty"] = parsed["purchase_return_free_qty"]
+        item["sale_free_qty"] = parsed["sale_free_qty"]
+        item["sales_return_free_qty"] = parsed["sales_return_free_qty"]
         item["source_product_name"] = product_name
         item["source_packing"] = packing or None
-
-        flags: List[str] = []
-        numbers = [parsed[field] for field in _ITEM_PACK_FREE_PRETURN_QTY_FIELDS]
-        if errors:
-            parse_error_rows += 1
-        elif all(number is not None for number in numbers):
-            opening = parsed["opening_qty"] or 0.0
-            purchase = parsed["purchase_qty"] or 0.0
-            purchase_return = parsed["purchase_return_qty"] or 0.0
-            sale = parsed["sales_qty"] or 0.0
-            sales_return = parsed["sales_return_qty"] or 0.0
-            others = parsed["others_out_qty"] or 0.0
-            closing = parsed["closing_qty"] or 0.0
-            expected_closing = (
-                opening + purchase + sales_return - purchase_return - sale - others
-            )
-            if abs(expected_closing - closing) > 0.05:
-                flags.append("closing")
-        if flags:
-            mismatch_rows += 1
-        if (
-            not errors
-            and all(parsed[field] == 0.0 for field in _ITEM_PACK_FREE_PRETURN_QTY_FIELDS)
-        ):
-            zero_rows += 1
-
-        extra = {
-            "layout": "item_pack_free_preturn_sreturn",
+        row_extra = {
+            "layout": "item_pack_free_return",
             "source_product_name": product_name,
             "source_packing": packing or None,
             "purchase_qty": parsed["purchase_qty"],
             "purchase_free_qty": parsed["purchase_free_qty"],
             "purchase_return_qty": parsed["purchase_return_qty"],
             "purchase_return_free_qty": parsed["purchase_return_free_qty"],
-            "free_qty": parsed["free_qty"],
+            "sale_free_qty": parsed["sale_free_qty"],
             "sales_return_qty": parsed["sales_return_qty"],
             "sales_return_free_qty": parsed["sales_return_free_qty"],
-            "others_out_qty": parsed["others_out_qty"],
-            "qty_reconcile_ok": not errors and not flags,
+            "others_qty": parsed["others_qty"],
         }
         if errors:
-            extra["qty_parse_errors"] = errors
-        if flags:
-            extra["qty_reconcile_flags"] = flags
-            if not errors and all(number is not None for number in numbers):
-                extra["expected_closing"] = round(
-                    (parsed["opening_qty"] or 0.0)
-                    + (parsed["purchase_qty"] or 0.0)
-                    + (parsed["sales_return_qty"] or 0.0)
-                    - (parsed["purchase_return_qty"] or 0.0)
-                    - (parsed["sales_qty"] or 0.0)
-                    - (parsed["others_out_qty"] or 0.0),
-                    2,
-                )
-        item["extra"] = extra
+            row_extra["qty_parse_errors"] = errors
+        item["extra"] = row_extra
         items.append(item)
 
     result["line_items"] = items
@@ -10953,17 +10915,14 @@ def _xls_fill_item_pack_free_preturn_rows(
     extra["header_detection_confidence"] = (
         round(min(1.0, header_score / 12.0), 2) if header_idx is not None else 0.0
     )
-    extra["extraction_method"] = "item_pack_free_preturn_sreturn"
-    extra["layout"] = "item_pack_free_preturn_sreturn"
+    extra["extraction_method"] = "item_pack_free_return"
+    extra["layout"] = "item_pack_free_return"
     extra["rows_detected"] = len(items)
     extra["zero_qty_rows"] = zero_rows
-    extra["qty_mismatch_rows"] = mismatch_rows
     extra["qty_parse_error_rows"] = parse_error_rows
     if "item" in indexes:
         extra["product_column"] = _xls_col_letter(indexes["item"])
-        extra["product_column_header"] = str(
-            rows[header_idx][indexes["item"]] or ""
-        ).strip()
+        extra["product_column_header"] = str(rows[header_idx][indexes["item"]] or "").strip()
     return result
 
 
@@ -11118,12 +11077,13 @@ def _xls_fill_from_rows(
                 result["stockist_name"] = _clean_name(name)
                 break
 
-    if _xls_item_pack_sreturn_indexes(rows[header_idx]):
-        return _xls_fill_item_pack_sreturn_rows(
+
+    if _xls_item_pack_free_return_indexes(rows[header_idx]):
+        return _xls_fill_item_pack_free_return_rows(
             result, rows, header_idx, sheet_name, header_score
         )
-    if _xls_item_pack_free_preturn_indexes(rows[header_idx]):
-        return _xls_fill_item_pack_free_preturn_rows(
+    if _xls_item_pack_sreturn_indexes(rows[header_idx]):
+        return _xls_fill_item_pack_sreturn_rows(
             result, rows, header_idx, sheet_name, header_score
         )
     if _xls_zenith_opstk_indexes(rows[header_idx]):
@@ -20622,6 +20582,296 @@ _MONTHLY_SS_ROLES = (
 )
 
 
+# Right edges of the numeric columns on the Western "Monthly Sales And Stock"
+# landscape form (visual coordinates after page rotation). Sale Qty stays on
+# 493; last-month and Monthly SS Report layouts are not this form.
+_MONTHLY_SALES_STOCK_RIGHTS = (
+    ("pur_rate", 191.0),
+    ("ptr", 225.0),
+    ("opening", 261.0),
+    ("opening_value", 308.0),
+    ("pur_qty", 334.0),
+    ("pur_fqty", 359.0),
+    ("pur_value", 403.0),
+    ("pur_r_qty", 432.0),
+    ("pur_ret_fqty", 466.0),
+    ("sale_qty", 493.0),
+    ("sale_fqty", 521.0),
+    ("sale_value", 562.0),
+    ("sale_ret_qty", 598.0),
+    ("sale_ret_fqty", 633.0),
+    ("sale_ret_val", 679.0),
+    ("other_qty", 705.0),
+    ("closing", 738.0),
+    ("closing_amt", 785.0),
+    ("stock_amt", 835.0),
+    ("rpl_qty", 882.0),
+)
+_MONTHLY_SALES_STOCK_NUM = re.compile(r"-?\d+(?:\.\d+)?")
+_MONTHLY_SALES_STOCK_DATE = re.compile(r"\d{1,2}-[A-Za-z]{3}-\d{4}")
+
+
+def _is_monthly_sales_and_stock_text(text: str) -> bool:
+    """Western landscape Monthly Sales And Stock, not Monthly SS Report."""
+    if not text or not re.search(r"Monthly\s+Sales\s+And\s+Stock", text, re.I):
+        return False
+    if re.search(r"Monthly\s+SS\s+Report", text, re.I):
+        return False
+    return bool(re.search(r"\bPTR\b", text) and re.search(r"\bP\s*Rate\b", text, re.I))
+
+
+def _monthly_sales_stock_words(page) -> List[Dict[str, Any]]:
+    import fitz
+
+    matrix = page.rotation_matrix
+    words: List[Dict[str, Any]] = []
+    for x0, y0, x1, y1, token, *_rest in page.get_text("words") or []:
+        token = str(token or "").strip()
+        if not token:
+            continue
+        rect = fitz.Rect(x0, y0, x1, y1) * matrix
+        words.append(
+            {
+                "x0": rect.x0,
+                "x1": rect.x1,
+                "y": (rect.y0 + rect.y1) / 2.0,
+                "cx": (rect.x0 + rect.x1) / 2.0,
+                "text": token,
+            }
+        )
+    words.sort(key=lambda word: (word["y"], word["x0"]))
+    return words
+
+
+def _monthly_sales_stock_rows(words: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+    rows: List[List[Dict[str, Any]]] = []
+    for word in words:
+        if not rows or word["y"] - rows[-1][0]["y"] > 6:
+            rows.append([word])
+        else:
+            rows[-1].append(word)
+    return rows
+
+
+def _monthly_sales_stock_column(x1: float) -> Optional[str]:
+    best_role = None
+    best_dist = 12.0
+    for role, edge in _MONTHLY_SALES_STOCK_RIGHTS:
+        dist = abs(x1 - edge)
+        if dist < best_dist:
+            best_role = role
+            best_dist = dist
+    return best_role
+
+
+def _monthly_sales_stock_cells(row: List[Dict[str, Any]]) -> Dict[str, float]:
+    cells: Dict[str, float] = {}
+    best_dist: Dict[str, float] = {}
+    for word in row:
+        plain = word["text"].replace(",", "")
+        if not _MONTHLY_SALES_STOCK_NUM.fullmatch(plain):
+            continue
+        role = _monthly_sales_stock_column(word["x1"])
+        if not role:
+            continue
+        edge = next(edge for name, edge in _MONTHLY_SALES_STOCK_RIGHTS if name == role)
+        dist = abs(word["x1"] - edge)
+        if role not in best_dist or dist < best_dist[role]:
+            cells[role] = float(plain)
+            best_dist[role] = dist
+    return cells
+
+
+def _parse_monthly_sales_and_stock(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Western Healthcare Monthly Sales And Stock by printed column edge.
+
+    Returns None for every other statement, including Monthly SS Report.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_monthly_sales_and_stock_text(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Monthly Sales And Stock"
+    items: List[Dict[str, Any]] = []
+    grand: Dict[str, float] = {}
+    division_total: Dict[str, float] = {}
+
+    for page in doc:
+        words = _monthly_sales_stock_words(page)
+        if not result.get("stockist_name"):
+            for row in _monthly_sales_stock_rows(words):
+                text = " ".join(word["text"] for word in sorted(row, key=lambda w: w["x0"]))
+                if row[0]["y"] > 80:
+                    break
+                if re.search(r"\b(PVT|LTD|LIMITED)\b", text, re.I) and not result.get("stockist_name"):
+                    result["stockist_name"] = _clean_name(text)
+                    continue
+                if result.get("stockist_name") and not re.search(
+                    r"^(Contact|Mobile|Email)\b|Monthly\s+Sales", text, re.I
+                ):
+                    prev = result.get("stockist_address") or ""
+                    result["stockist_address"] = _clean_name(f"{prev} {text}".strip())
+        for row in _monthly_sales_stock_rows(words):
+            ordered = sorted(row, key=lambda word: word["x0"])
+            text = " ".join(word["text"] for word in ordered)
+            if re.search(r"\bCompany\b", text, re.I) and not result.get("company_name"):
+                company_words = []
+                seen_company = False
+                for word in ordered:
+                    if not seen_company and re.fullmatch(r"Company", word["text"], re.I):
+                        seen_company = True
+                        continue
+                    if not seen_company:
+                        continue
+                    if re.fullmatch(r"Vendor|:", word["text"], re.I):
+                        if word["text"] == ":":
+                            continue
+                        break
+                    company_words.append(word["text"])
+                if company_words:
+                    result["company_name"] = _clean_name(" ".join(company_words))
+            if re.search(r"\bDivision\b", text, re.I) and "division" not in result["totals"]["extra"]:
+                div_words = []
+                seen_div = False
+                for word in ordered:
+                    if re.fullmatch(r"Division", word["text"], re.I):
+                        seen_div = True
+                        continue
+                    if not seen_div or re.fullmatch(r"Name|:", word["text"], re.I):
+                        continue
+                    div_words.append(word["text"])
+                if div_words:
+                    result["totals"]["extra"]["division"] = _clean_name(" ".join(div_words))
+            if result.get("period_from") is None and re.search(r"\bFrom\b", text, re.I):
+                for word in ordered:
+                    if _MONTHLY_SALES_STOCK_DATE.fullmatch(word["text"]) and word["cx"] < 280:
+                        result["period_from"] = _normalize_date(word["text"])
+            if result.get("period_to") is None and re.search(r"\bTo\b", text, re.I):
+                for word in ordered:
+                    if _MONTHLY_SALES_STOCK_DATE.fullmatch(word["text"]) and word["cx"] > 300:
+                        result["period_to"] = _normalize_date(word["text"])
+
+        ptr = next((word for word in words if word["text"] == "PTR"), None)
+        if ptr is None:
+            continue
+        for row in _monthly_sales_stock_rows(words):
+            if row[0]["y"] <= ptr["y"] + 12:
+                continue
+            ordered = sorted(row, key=lambda word: word["x0"])
+            head = " ".join(
+                word["text"] for word in ordered if word["cx"] < 110
+            )
+            cells = _monthly_sales_stock_cells(row)
+            if re.search(r"grand\s+total", head, re.I):
+                grand = cells
+                continue
+            if re.search(r"total\s+of", head, re.I):
+                division_total = cells
+                continue
+            sr = next(
+                (
+                    word["text"]
+                    for word in ordered
+                    if word["cx"] < 28 and re.fullmatch(r"\d{1,4}", word["text"])
+                ),
+                None,
+            )
+            name = _clean_name(
+                " ".join(
+                    word["text"]
+                    for word in ordered
+                    if word["cx"] < 120
+                    and not (word["cx"] < 28 and re.fullmatch(r"\d{1,4}", word["text"]))
+                )
+            )
+            pack = _clean_name(
+                " ".join(
+                    word["text"] for word in ordered if 120 <= word["cx"] < 170
+                )
+            )
+            if sr is None:
+                if (
+                    items
+                    and name
+                    and not cells
+                    and re.search(r"[A-Za-z]", name)
+                    and not re.search(r"\b(DIVISION|TOTAL|PAGE|HIMALAYA)\b", name, re.I)
+                ):
+                    items[-1]["product_name"] = _clean_name(
+                        f"{items[-1]['product_name']} {name}"
+                    )
+                continue
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack or None
+            item["opening_qty"] = cells.get("opening", 0.0)
+            item["opening_value"] = cells.get("opening_value", 0.0)
+            item["receipts_qty"] = cells.get("pur_qty", 0.0)
+            item["receipts_value"] = cells.get("pur_value", 0.0)
+            item["sales_qty"] = cells.get("sale_qty", 0.0)
+            item["sales_value"] = cells.get("sale_value", 0.0)
+            item["closing_qty"] = cells.get("closing", 0.0)
+            item["closing_value"] = cells.get("closing_amt", 0.0)
+            extra = item["extra"]
+            extra["layout"] = "monthly_sales_and_stock"
+            extra["sl_no"] = int(sr)
+            for role, field in (
+                ("pur_rate", "pur_rate"),
+                ("ptr", "ptr"),
+                ("pur_fqty", "purchase_free_qty"),
+                ("pur_r_qty", "purchase_return_qty"),
+                ("pur_ret_fqty", "purchase_return_free_qty"),
+                ("sale_fqty", "sales_free"),
+                ("sale_ret_qty", "sale_return_qty"),
+                ("sale_ret_fqty", "sale_return_free_qty"),
+                ("sale_ret_val", "sale_return_value"),
+                ("other_qty", "other_qty"),
+                ("rpl_qty", "repl_qty"),
+                ("stock_amt", "stock_amt"),
+                ("opening_value", "opening_value"),
+                ("pur_value", "purchase_value"),
+            ):
+                if role in cells:
+                    extra[field] = cells[role]
+            if "pur_value" in cells:
+                extra["receipts_value"] = cells["pur_value"]
+            items.append(item)
+
+    if len(items) < 3:
+        return None
+    printed = grand or division_total
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "monthly_sales_and_stock"
+    extra["layout"] = "monthly_sales_and_stock"
+    extra["rows_detected"] = len(items)
+    if printed:
+        extra["total_row_source"] = (
+            "monthly_sales_and_stock_grand_total" if grand else "monthly_sales_and_stock_total"
+        )
+        result["totals"]["sales_value"] = printed.get("sale_value")
+        result["totals"]["closing_value"] = printed.get("closing_amt")
+        result["totals"]["opening_qty"] = printed.get("opening")
+        result["totals"]["receipts_qty"] = printed.get("pur_qty")
+        result["totals"]["sales_qty"] = printed.get("sale_qty")
+        result["totals"]["closing_qty"] = printed.get("closing")
+        for role, field in (
+            ("opening_value", "opening_value"),
+            ("pur_value", "purchase_value"),
+            ("stock_amt", "stock_amt"),
+            ("sale_ret_qty", "sale_return_qty"),
+            ("sale_ret_val", "sale_return_value"),
+            ("sale_fqty", "sales_free_qty"),
+            ("pur_fqty", "purchase_free_qty"),
+        ):
+            if role in printed:
+                extra[field] = printed[role]
+    return result
+
+
 def _is_monthly_ss_report_text(text: str) -> bool:
     """Srinivasa-style Monthly SS Report: Opening / Pur. Qty / Sale Qty / Closing."""
     if not text or not re.search(r"Monthly\s+SS\s+Report", text, re.I):
@@ -21531,6 +21781,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if himalaya_dump and himalaya_dump.get("line_items"):
             himalaya_dump["totals"]["extra"]["statement_count"] = 1
             return himalaya_dump
+
+        monthly_sales_stock = _parse_monthly_sales_and_stock(doc, filename)
+        if monthly_sales_stock and monthly_sales_stock.get("line_items"):
+            monthly_sales_stock["totals"]["extra"]["statement_count"] = 1
+            return monthly_sales_stock
 
         monthly_ss = _parse_monthly_ss_report(doc, filename)
         if monthly_ss and monthly_ss.get("line_items"):

@@ -27011,6 +27011,10 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "purchase_return_qty",
         "others_out_qty",
         "free_qty",
+        "purchase_free_qty",
+        "purchase_return_free_qty",
+        "sale_free_qty",
+        "sales_return_free_qty",
         "replacement_qty",
         "source_product_name",
         "source_packing",
@@ -27045,6 +27049,10 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
             "purchase_return_qty",
             "others_out_qty",
             "free_qty",
+            "purchase_free_qty",
+            "purchase_return_free_qty",
+            "sale_free_qty",
+            "sales_return_free_qty",
             "replacement_qty",
             "dump_qty",
             "dump_stock",
@@ -27089,6 +27097,8 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         additional["layout"] = "qty_value_dump"
     if extra.get("layout") == "item_pack_sreturn_others":
         additional["layout"] = "item_pack_sreturn_others"
+    if extra.get("layout") == "item_pack_free_return":
+        additional["layout"] = "item_pack_free_return"
     if extra.get("layout") == "zenith_opstk_totalstock":
         additional["layout"] = "zenith_opstk_totalstock"
     if extra.get("layout") == "sunderlal_openstk_sale":

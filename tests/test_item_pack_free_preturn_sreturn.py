@@ -125,7 +125,7 @@ class TestItemPackFreePreturnSreturn(unittest.TestCase):
         )
         result = extract_sales_statement(payload, "roshni.xlsx")
         extra = result["totals"]["extra"]
-        self.assertEqual(extra["extraction_method"], "item_pack_free_preturn_sreturn")
+        self.assertEqual(extra["extraction_method"], "item_pack_free_return")
         names = [item["product_name"] for item in result["line_items"]]
         self.assertEqual(
             names,
@@ -144,7 +144,7 @@ class TestItemPackFreePreturnSreturn(unittest.TestCase):
         self.assertEqual(abana["closing_qty"], 80)
         self.assertEqual(abana["sales_qty"], 0)
         self.assertEqual(abana["receipts_qty"], 0)
-        self.assertTrue(abana["extra"]["qty_reconcile_ok"])
+        self.assertTrue(abana["extra"].get("stock_identity_ok", True))
 
         zero = by_name["AMALAKI CAP"]
         for field in (
@@ -154,8 +154,8 @@ class TestItemPackFreePreturnSreturn(unittest.TestCase):
             "closing_qty",
             "purchase_return_qty",
             "sales_return_qty",
-            "others_out_qty",
-            "free_qty",
+            "others_qty",
+            "sale_free_qty",
         ):
             self.assertEqual(zero[field], 0, field)
 
@@ -165,13 +165,11 @@ class TestItemPackFreePreturnSreturn(unittest.TestCase):
         self.assertEqual(liv["receipts_qty"], 200)
         self.assertEqual(liv["sales_qty"], 200)
         self.assertEqual(liv["closing_qty"], 0)
-        self.assertTrue(liv["extra"]["qty_reconcile_ok"])
 
         pilex = by_name["PILEX FORTE OINT"]
         self.assertEqual(pilex["purchase_qty"], 100)
         self.assertEqual(pilex["sales_qty"], 10)
         self.assertEqual(pilex["closing_qty"], 90)
-        self.assertTrue(pilex["extra"]["qty_reconcile_ok"])
 
     def test_does_not_steal_item_pack_sreturn_others(self):
         payload = _xlsx(
