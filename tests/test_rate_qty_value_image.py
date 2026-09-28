@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
 from services.sales_statement_extractor import (
     _is_rate_qty_value_header_text,
+    _is_rate_qty_value_header_text_fuzzy,
     _parse_rate_qty_value_image,
 )
 
 
 PHOTO = Path("/var/www/html/splitextract/0000734021_2026_08_ZL_04_342_03092026164551.jpg")
+VAISHNO = Path(
+    "/var/www/html/splitextract/0000707312_2026_08_ZL_35_260_02092026170425.jpg"
+)
 
 
 class TestRateQtyValueHeader(unittest.TestCase):
@@ -28,6 +33,18 @@ class TestRateQtyValueHeader(unittest.TestCase):
         )
         self.assertFalse(
             _is_rate_qty_value_header_text("Zandra\nORDER FORM\nFrom:")
+        )
+
+    def test_fuzzy_accepts_ocr_rate_without_qty_token(self):
+        self.assertTrue(
+            _is_rate_qty_value_header_text_fuzzy(
+                "STOCK & SALES ANALYSIS\nITEM DESCRIPTION Rate OPENING RECEIPT VALUE"
+            )
+        )
+        self.assertFalse(
+            _is_rate_qty_value_header_text_fuzzy(
+                "STOCK & SALES ANALYSIS\nOPENING RECEIPT ISSUE CLOSING\nQTY VALUE"
+            )
         )
 
 
@@ -57,6 +74,67 @@ class TestDawagharQtyValuePhoto(unittest.TestCase):
         self.assertIn("DAWAGHAR", self.result["stockist_name"])
         names = " ".join(item["product_name"].upper() for item in self.result["line_items"])
         self.assertNotIn("STOCK & SALES", names)
+
+
+@unittest.skipUnless(VAISHNO.is_file(), "missing Vaishno RATE photo")
+class TestVaishnoRateQtyValueVision(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from services.sales_statement_extractor import extract_sales_statement
+
+        cls.result = extract_sales_statement(VAISHNO.read_bytes(), VAISHNO.name)
+        cls.extra = (cls.result.get("totals") or {}).get("extra") or {}
+        cls.by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in cls.result.get("line_items") or []
+        }
+
+    def test_uses_rate_aware_path_not_generic_gemini(self):
+        method = str(self.extra.get("extraction_method") or "")
+        self.assertTrue(
+            method in {"rate_qty_value_vision", "rate_qty_value_columns"},
+            method,
+        )
+        self.assertFalse(self.result.get("multi_statement"))
+        names = " | ".join(self.by_name)
+        self.assertNotIn("HIMALAYA [ZEAL]", names)
+        stockist = str(self.result.get("stockist_name") or "")
+        self.assertNotRegex(stockist, r"HIMALAYA", re.I)
+        self.assertNotRegex(stockist, r"KICHHA|VIKAS", re.I)
+        if stockist:
+            self.assertRegex(stockist, r"MEDICO|MEDICAL|AGENC|PHARMA|STORE", re.I)
+
+    def test_aactaril_and_abana_columns(self):
+        aact = next(
+            item
+            for key, item in self.by_name.items()
+            if key.startswith("AACTARIL")
+        )
+        self.assertEqual(aact["opening_qty"], 118.0)
+        self.assertEqual(aact["receipts_qty"], 0.0)
+        self.assertEqual(aact["sales_qty"], 27.0)
+        self.assertEqual(aact["closing_qty"], 91.0)
+        self.assertAlmostEqual(aact["sales_value"], 2217.66, places=2)
+        self.assertAlmostEqual(aact["closing_value"], 6715.44, places=2)
+        self.assertNotEqual(aact["closing_qty"], aact["sales_qty"])
+
+        abana = next(
+            item for key, item in self.by_name.items() if key.startswith("ABANA")
+        )
+        self.assertEqual(abana["opening_qty"], 23.0)
+        self.assertEqual(abana["receipts_qty"], 100.0)
+        self.assertEqual(abana["sales_qty"], 35.0)
+        self.assertEqual(abana["closing_qty"], 88.0)
+        self.assertAlmostEqual(
+            float(
+                abana.get("receipts_value")
+                or (abana.get("extra") or {}).get("receipts_value")
+                or 0
+            ),
+            14117.0,
+            places=2,
+        )
+        self.assertNotEqual(abana["receipts_qty"], 14117.0)
 
 
 if __name__ == "__main__":

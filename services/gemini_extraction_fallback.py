@@ -1,6 +1,7 @@
 """One paid Gemini Vision pass when the existing extract fails the quality gate.
 
 Does not replace format parsers. Does not calculate missing source values.
+Reuses the same quota client as /split-and-extract.
 """
 
 from __future__ import annotations
@@ -9,18 +10,28 @@ import base64
 import io
 import logging
 import os
-from typing import Any, Dict, List, Optional
+import re
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
-from services.extraction_quality import evaluate_extraction_quality
+from services.extraction_quality import (
+    assess_source_text_quality,
+    evaluate_extraction_quality,
+    quality_threshold,
+)
 
 logger = logging.getLogger(__name__)
 
 _FALLBACK_PROMPT = """
-You are extracting a Secondary Sales / Stock Statement.
-The attachment is the original document, not an OCR transcript.
+You are extracting a Secondary Sales / Stock Statement (NOT an invoice).
+The attachment is the original document page image(s), not an OCR transcript.
 Read it visually. Extract only values printed in the document.
-Do not invent missing values. Do not calculate a missing quantity or amount
-from other columns. If closing value is not printed, return null.
+
+Do not invent missing values.
+Do not calculate a missing quantity or amount from other columns.
+Do not compute closing_value as closing_qty × (sales_value / sales_qty).
+If a closing value is printed, copy that printed closing value exactly.
+If closing value is not printed, return null.
 If sales value is not printed, return null.
 Preserve product names, packing, and product codes as printed.
 Do not expand a short printed name into a catalogue name.
@@ -28,7 +39,9 @@ Do not use the filename as the statement period.
 A date printed beside the stockist name is a run date unless the document
 also prints a From and To period. Use the From and To period when it is printed.
 Read every supplied page. Do not stop after the first page.
-Do not treat a total, subtotal, or page footer as a product.
+Do not treat a total, subtotal, address, GSTIN, or page footer as a product.
+Do not treat STOCK REPORT / COMPANY NAME banner lines as products.
+
 Return JSON only:
 {
   "stockist_name": string|null,
@@ -47,7 +60,8 @@ Return JSON only:
       "sales_qty": number|null,
       "sales_value": number|null,
       "closing_qty": number|null,
-      "closing_value": number|null
+      "closing_value": number|null,
+      "extra": {}
     }
   ],
   "totals": {
@@ -74,22 +88,31 @@ def _max_pages() -> int:
         return 4
 
 
+def _max_attempts() -> int:
+    try:
+        return max(1, min(3, int(os.getenv("GEMINI_EXTRACTION_FALLBACK_MAX_ATTEMPTS", "1"))))
+    except ValueError:
+        return 1
+
+
 def _stamp(result: Dict[str, Any], quality: Dict[str, Any], status: str) -> None:
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_quality"] = {
         "quality": quality.get("quality"),
         "score": quality.get("score"),
         "reasons": list(quality.get("reasons") or []),
+        "threshold": quality_threshold(),
     }
     extra["gemini_fallback"] = status
 
 
-def _log_gate(quality: Dict[str, Any], used_gemini: bool) -> None:
+def _log_gate(quality: Dict[str, Any], used_gemini: bool, filename: str = "") -> None:
     logger.info(
-        "SECONDARY_SALES_EXTRACTION parser=%s quality_score=%s fallback=%s reason=%s gemini=%s",
+        "[SalesStatement] file=%s parser=%s OCR_quality=%s decision=%s reason=%s gemini=%s",
+        filename or "-",
         quality.get("parser") or "generic",
         quality.get("score"),
-        str(bool(quality.get("should_fallback"))).lower(),
+        "GEMINI_VISION_FALLBACK" if quality.get("should_fallback") else "KEEP_PARSER",
         ",".join(quality.get("reasons") or []) or "none",
         str(used_gemini).lower(),
     )
@@ -97,6 +120,7 @@ def _log_gate(quality: Dict[str, Any], used_gemini: bool) -> None:
 
 def _source_metadata(file_bytes: bytes, ext: str) -> Dict[str, Any]:
     pages = 0
+    embedded_chars = 0
     if ext == ".pdf":
         try:
             import fitz
@@ -104,11 +128,20 @@ def _source_metadata(file_bytes: bytes, ext: str) -> Dict[str, Any]:
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             try:
                 pages = doc.page_count
+                for page in doc:
+                    embedded_chars += len(re.sub(r"\s+", "", page.get_text("text") or ""))
             finally:
                 doc.close()
         except Exception:
             pages = 0
-    return {"page_count": pages, "size": len(file_bytes or b"")}
+    image_only = ext == ".pdf" and pages > 0 and embedded_chars < 40
+    return {
+        "page_count": pages,
+        "size": len(file_bytes or b""),
+        "embedded_chars": embedded_chars,
+        "image_only_pdf": image_only,
+        "source_has_visible_data": bool(file_bytes) and len(file_bytes) > 1500,
+    }
 
 
 def _image_part(image_bytes: bytes, mime_type: str = "image/png") -> Dict[str, Any]:
@@ -152,6 +185,11 @@ def _pdf_images(file_bytes: bytes) -> List[bytes]:
     return images
 
 
+def _pdf_is_image_only(file_bytes: bytes) -> bool:
+    meta = _source_metadata(file_bytes, ".pdf")
+    return bool(meta.get("image_only_pdf"))
+
+
 def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
     rows: List[List[str]] = []
     try:
@@ -161,10 +199,14 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
             wb = load_workbook(io.BytesIO(file_bytes), data_only=True, read_only=True)
             try:
                 ws = wb.worksheets[0]
-                for index, row in enumerate(ws.iter_rows(max_row=60, max_col=10, values_only=True)):
+                for index, row in enumerate(
+                    ws.iter_rows(max_row=60, max_col=10, values_only=True)
+                ):
                     if index >= 60:
                         break
-                    rows.append(["" if cell is None else str(cell)[:40] for cell in row])
+                    rows.append(
+                        ["" if cell is None else str(cell)[:40] for cell in row]
+                    )
             finally:
                 wb.close()
         else:
@@ -174,30 +216,63 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
             sheet = book.sheet_by_index(0)
             for r in range(min(sheet.nrows, 60)):
                 rows.append(
-                    [str(sheet.cell_value(r, c))[:40] for c in range(min(sheet.ncols, 10))]
+                    [
+                        str(sheet.cell_value(r, c))[:40]
+                        for c in range(min(sheet.ncols, 10))
+                    ]
                 )
     except Exception as exc:
         logger.info("Gemini fallback could not render spreadsheet: %s", exc)
         return None
-    lines = [" | ".join(cell for cell in row) for row in rows if any(cell.strip() for cell in row)]
+    lines = [
+        " | ".join(cell for cell in row) for row in rows if any(cell.strip() for cell in row)
+    ]
     if not lines:
         return None
     return _text_image("\n".join(lines))
 
 
-def _word_image(file_bytes: bytes) -> Optional[bytes]:
+def _word_parts(file_bytes: bytes) -> List[Dict[str, Any]]:
+    """Word text/tables as an image, plus embedded pictures when present."""
+    parts: List[Dict[str, Any]] = []
     try:
         from docx import Document
+        from docx.oxml.ns import qn
 
         doc = Document(io.BytesIO(file_bytes))
     except Exception as exc:
         logger.info("Gemini fallback could not read word file: %s", exc)
-        return None
+        return []
+
     lines = [p.text for p in doc.paragraphs if p.text and p.text.strip()]
     for table in doc.tables[:8]:
         for row in table.rows[:40]:
             lines.append(" | ".join(cell.text.strip() for cell in row.cells))
-    return _text_image("\n".join(lines))
+    if lines:
+        parts.append(_image_part(_text_image("\n".join(lines)), "image/jpeg"))
+
+    # Embedded images — scanned statements inside .docx
+    try:
+        count = 0
+        for rel in doc.part.rels.values():
+            if "image" not in str(getattr(rel, "reltype", "")).lower():
+                continue
+            blob = rel.target_part.blob
+            if not blob or len(blob) < 80:
+                continue
+            mime = "image/png"
+            name = str(getattr(rel.target_part, "partname", "") or "").lower()
+            if name.endswith((".jpg", ".jpeg")):
+                mime = "image/jpeg"
+            elif name.endswith(".webp"):
+                mime = "image/webp"
+            parts.append(_image_part(blob, mime))
+            count += 1
+            if count >= _max_pages():
+                break
+    except Exception as exc:
+        logger.info("Gemini fallback could not read word images: %s", exc)
+    return parts
 
 
 def _document_parts(file_bytes: bytes, ext: str) -> List[Dict[str, Any]]:
@@ -224,11 +299,10 @@ def _document_parts(file_bytes: bytes, ext: str) -> List[Dict[str, Any]]:
         image = _sheet_image(file_bytes, ext)
         return [_image_part(image, "image/jpeg")] if image else []
     if ext in {".doc", ".docx"}:
-        image = _word_image(file_bytes)
-        return [_image_part(image, "image/jpeg")] if image else []
+        return _word_parts(file_bytes)
     if ext in {".txt", ".htm", ".html"}:
-        text = file_bytes.decode("utf-8", errors="replace")[:80000]
-        return [{"text": text}]
+        # Text-only: Vision needs pixels. Skip Vision; keep parser result.
+        return []
     return []
 
 
@@ -248,7 +322,9 @@ def _call_gemini(
     from app import call_gemini_with_quota, get_current_model_config
 
     parts = [{"text": _FALLBACK_PROMPT}]
-    parts.extend(document_parts if document_parts is not None else _document_parts(file_bytes, ext))
+    parts.extend(
+        document_parts if document_parts is not None else _document_parts(file_bytes, ext)
+    )
     if len(parts) < 2:
         return None
     model_config = get_current_model_config()
@@ -313,10 +389,96 @@ def _controlled_failure(
     failed["totals"]["extra"]["extraction_method"] = "gemini_extraction_fallback"
     _stamp(failed, quality, reason)
     logger.info(
-        "SECONDARY_SALES_GEMINI_FALLBACK status=failed reason=%s",
+        "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=%s",
+        filename,
         reason,
     )
     return failed
+
+
+def _result_is_weak(result: Dict[str, Any], quality: Dict[str, Any]) -> bool:
+    """True when returning the parser result would look like a false success."""
+    if quality.get("should_fallback"):
+        reasons = set(quality.get("reasons") or [])
+        if reasons & {
+            "empty_line_items",
+            "header_as_product_rows",
+            "high_ocr_noise",
+            "all_zero_suspicious",
+            "missing_product_names",
+        }:
+            return True
+    items = []
+    if isinstance(result, dict):
+        items = [
+            i
+            for i in (result.get("line_items") or [])
+            if isinstance(i, dict)
+        ]
+        if result.get("multi_statement") and result.get("statements"):
+            items = []
+            for stmt in result["statements"]:
+                if isinstance(stmt, dict):
+                    items.extend(
+                        i
+                        for i in (stmt.get("line_items") or [])
+                        if isinstance(i, dict)
+                    )
+    return not items
+
+
+def try_gemini_vision_extract(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Optional[Dict[str, Any]]:
+    """Direct Vision extract used as an early escape for unreadable image PDFs.
+
+    Returns a validated statement or None (caller continues existing parsers).
+    """
+    if not _enabled():
+        return None
+    document_parts = _document_parts(file_bytes, ext)
+    if not document_parts:
+        return None
+    started = time.time()
+    parsed = None
+    try:
+        for _ in range(_max_attempts()):
+            parsed = _call_gemini(file_bytes, ext, document_parts)
+            if parsed and parsed.get("line_items"):
+                break
+    except Exception as exc:
+        logger.warning(
+            "[SalesStatement] file=%s early Vision unavailable: %s", filename, exc
+        )
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    gemini_result = _finish_gemini_result(parsed, filename, ext)
+    gemini_quality = evaluate_extraction_quality(
+        gemini_result, _source_metadata(file_bytes, ext)
+    )
+    # Gemini method is weak — re-score ignoring method protection by checking items.
+    if not gemini_result.get("line_items"):
+        return None
+    if gemini_quality.get("reasons") and set(gemini_quality["reasons"]) & {
+        "empty_line_items",
+        "high_ocr_noise",
+        "header_as_product_rows",
+        "missing_product_names",
+    }:
+        return None
+    _stamp(gemini_result, gemini_quality, "early_success")
+    logger.info(
+        "[SalesStatement] file=%s decision=GEMINI_VISION_FALLBACK reason=EARLY_IMAGE_ONLY "
+        "pages=%s gemini_duration=%.1fs line_items=%s validation=PASS",
+        filename,
+        _source_metadata(file_bytes, ext).get("page_count"),
+        time.time() - started,
+        len(gemini_result.get("line_items") or []),
+    )
+    return gemini_result
 
 
 def maybe_apply_gemini_fallback(
@@ -328,47 +490,87 @@ def maybe_apply_gemini_fallback(
     """Keep a good existing extract. One Gemini read only when quality fails."""
     if not _enabled():
         return result
-    quality = evaluate_extraction_quality(result, _source_metadata(file_bytes, ext))
-    _log_gate(quality, used_gemini=bool(quality.get("should_fallback")))
+    meta = _source_metadata(file_bytes, ext)
+    quality = evaluate_extraction_quality(result, meta)
+    _log_gate(quality, used_gemini=bool(quality.get("should_fallback")), filename=filename)
     if not quality.get("should_fallback"):
         _stamp(result, quality, "not_called")
         return result
+
+    # TXT/HTML have no visual page — do not invent Vision input.
+    if (ext or "").lower() in {".txt", ".htm", ".html"}:
+        _stamp(result, quality, "unavailable_text_only")
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=text_only",
+            filename,
+        )
+        return result
+
     document_parts = _document_parts(file_bytes, ext)
     if not document_parts:
         _stamp(result, quality, "unavailable")
-        logger.info("SECONDARY_SALES_GEMINI_FALLBACK status=failed reason=unavailable")
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=unavailable",
+            filename,
+        )
+        if _result_is_weak(result, quality):
+            return _controlled_failure(filename, ext, quality, "unavailable")
         return result
 
-    # One fallback read. Client retries are not added here.
-    attempts = 1
-    try:
-        attempts = min(1, max(1, int(os.getenv("GEMINI_EXTRACTION_FALLBACK_MAX_ATTEMPTS", "1"))))
-    except ValueError:
-        attempts = 1
+    started = time.time()
     parsed = None
     try:
-        for _ in range(attempts):
+        for _ in range(_max_attempts()):
             parsed = _call_gemini(file_bytes, ext, document_parts)
             if parsed and parsed.get("line_items"):
                 break
     except Exception as exc:
-        logger.info("SECONDARY_SALES_GEMINI_FALLBACK status=failed reason=unavailable")
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=unavailable",
+            filename,
+        )
         logger.warning("Gemini extraction fallback unavailable: %s", exc)
         _stamp(result, quality, "unavailable")
+        if _result_is_weak(result, quality):
+            return _controlled_failure(filename, ext, quality, "unavailable")
         return result
+
     if not parsed or not parsed.get("line_items"):
-        return _controlled_failure(filename, ext, quality, "validation_failed")
+        if _result_is_weak(result, quality):
+            return _controlled_failure(filename, ext, quality, "validation_failed")
+        _stamp(result, quality, "validation_failed")
+        return result
 
     gemini_result = _finish_gemini_result(parsed, filename, ext)
     gemini_quality = evaluate_extraction_quality(
-        gemini_result, _source_metadata(file_bytes, ext)
+        gemini_result, meta
     )
-    if gemini_quality.get("should_fallback"):
-        return _controlled_failure(filename, ext, gemini_quality, "validation_failed")
+    # Accept Gemini when it produced real product rows even if weak-method scoring
+    # flags low_ocr_quality_score on the Gemini method name itself.
+    gemini_items = gemini_result.get("line_items") or []
+    gemini_ok = bool(gemini_items) and not (
+        set(gemini_quality.get("reasons") or [])
+        & {
+            "empty_line_items",
+            "high_ocr_noise",
+            "header_as_product_rows",
+            "missing_product_names",
+        }
+    )
+    if not gemini_ok:
+        if _result_is_weak(result, quality):
+            return _controlled_failure(filename, ext, gemini_quality, "validation_failed")
+        _stamp(result, quality, "validation_failed")
+        return result
+
     _stamp(gemini_result, gemini_quality, "success")
     logger.info(
-        "SECONDARY_SALES_GEMINI_FALLBACK status=success line_items=%s quality_score=%s",
-        len(gemini_result.get("line_items") or []),
-        gemini_quality.get("score"),
+        "[SalesStatement] file=%s decision=GEMINI_VISION_FALLBACK reason=%s "
+        "pages=%s gemini_duration=%.1fs line_items=%s validation=PASS model=paid",
+        filename,
+        ",".join(quality.get("reasons") or []) or "LOW_OCR_QUALITY",
+        meta.get("page_count"),
+        time.time() - started,
+        len(gemini_items),
     )
     return gemini_result

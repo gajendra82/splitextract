@@ -3,8 +3,17 @@
 import unittest
 from unittest import mock
 
-from services.extraction_quality import evaluate_extraction_quality
-from services.gemini_extraction_fallback import _call_gemini, maybe_apply_gemini_fallback
+from services.extraction_quality import (
+    assess_extraction_quality,
+    assess_source_text_quality,
+    evaluate_extraction_quality,
+    quality_threshold,
+)
+from services.gemini_extraction_fallback import (
+    _call_gemini,
+    maybe_apply_gemini_fallback,
+    try_gemini_vision_extract,
+)
 
 
 def _item(name="ABANA TAB", opening=10, receipts=0, sales=2, closing=8, sales_value=0):
@@ -112,6 +121,45 @@ class QualityGateTests(unittest.TestCase):
         self.assertIn("invalid_period", quality["reasons"])
 
 
+class SourceTextQualityTests(unittest.TestCase):
+    def test_empty_ocr_requests_fallback(self):
+        quality = assess_source_text_quality("")
+        self.assertTrue(quality["should_fallback"])
+        self.assertIn("empty_ocr_text", quality["reasons"])
+        self.assertEqual(quality["score"], 0)
+
+    def test_garbage_ocr_requests_fallback(self):
+        garbage = "@@@ ### $$$ %%%\n" * 20 + "!!!! **** ~~~~\n" * 10
+        quality = assess_source_text_quality(garbage)
+        self.assertTrue(quality["should_fallback"])
+        self.assertTrue(
+            set(quality["reasons"])
+            & {"high_ocr_noise", "missing_stock_headers", "low_ocr_quality_score"}
+        )
+
+    def test_good_headers_are_trusted(self):
+        text = (
+            "Sales & Stock Statement\n"
+            "PRODUCT NAME PACKING OPENING RECEIPT SALES CLOSING QTY VALUE\n"
+            "ABANA TAB 60'S 10 0 2 8\n"
+            "ARJUNA TAB 60'S 5 1 1 5\n"
+            "BONNISAN DROPS 30ML 94 0 26 68\n"
+        )
+        quality = assess_source_text_quality(text)
+        self.assertFalse(quality["should_fallback"])
+        self.assertGreaterEqual(quality["score"], quality_threshold())
+
+    def test_assess_extraction_quality_alias(self):
+        result = {
+            "line_items": [_item()],
+            "totals": {"extra": {"extraction_method": "marg_qty_value_dump_xls"}},
+        }
+        self.assertEqual(
+            assess_extraction_quality(result),
+            evaluate_extraction_quality(result),
+        )
+
+
 class FallbackDispatchTests(unittest.TestCase):
     def test_good_result_does_not_call_gemini(self):
         result = {
@@ -211,6 +259,124 @@ class FallbackDispatchTests(unittest.TestCase):
             "gemini-2.5-flash-lite",
         )
         self.assertEqual(parsed, {"line_items": []})
+
+    def test_txt_does_not_call_vision(self):
+        result = {
+            "line_items": [],
+            "totals": {"sales_value": None, "closing_value": None, "extra": {}},
+        }
+        with mock.patch(
+            "services.gemini_extraction_fallback._call_gemini"
+        ) as caller:
+            kept = maybe_apply_gemini_fallback(result, b"plain", "a.txt", ".txt")
+        caller.assert_not_called()
+        self.assertEqual(kept["totals"]["extra"]["gemini_fallback"], "unavailable_text_only")
+
+    def test_early_vision_extract_validates_items(self):
+        parsed = {
+            "stockist_name": "TEST",
+            "line_items": [
+                {
+                    "product_name": "ARJUNA TAB",
+                    "opening_qty": 1,
+                    "receipts_qty": 0,
+                    "sales_qty": 1,
+                    "closing_qty": 0,
+                    "sales_value": 100,
+                    "closing_value": 0,
+                }
+            ],
+        }
+        with mock.patch(
+            "services.gemini_extraction_fallback._document_parts",
+            return_value=[{"inline_data": {"mime_type": "image/png", "data": "x"}}],
+        ), mock.patch(
+            "services.gemini_extraction_fallback._call_gemini", return_value=parsed
+        ):
+            result = try_gemini_vision_extract(b"pdf", "scan.pdf", ".pdf")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["line_items"][0]["product_name"], "ARJUNA TAB")
+        self.assertEqual(result["totals"]["extra"]["gemini_fallback"], "early_success")
+
+
+class EarlyImageOnlyPdfGateTests(unittest.TestCase):
+    def test_text_pdf_skips_early_vision(self):
+        from services.sales_statement_extractor import (
+            _maybe_early_vision_for_image_only_pdf,
+        )
+
+        page = mock.Mock()
+        page.get_text.return_value = "PRODUCT NAME " * 20 + "OPENING RECEIPT SALES CLOSING"
+        doc = {0: page}
+        doc_obj = mock.MagicMock()
+        doc_obj.page_count = 1
+        doc_obj.__getitem__.side_effect = doc.__getitem__
+        with mock.patch(
+            "services.gemini_extraction_fallback.try_gemini_vision_extract"
+        ) as vision:
+            out = _maybe_early_vision_for_image_only_pdf(
+                doc_obj, b"%PDF", "texty.pdf", zoom=2.0
+            )
+        self.assertIsNone(out)
+        vision.assert_not_called()
+
+    def test_poor_ocr_image_pdf_calls_vision(self):
+        from services.sales_statement_extractor import (
+            _maybe_early_vision_for_image_only_pdf,
+        )
+
+        page = mock.Mock()
+        page.get_text.return_value = ""
+        doc_obj = mock.MagicMock()
+        doc_obj.page_count = 1
+        doc_obj.__getitem__.return_value = page
+        vision_result = {
+            "line_items": [_item()],
+            "totals": {"extra": {}},
+        }
+        with mock.patch(
+            "services.sales_statement_extractor._ocr_pdf_page_text",
+            return_value=("@@@ ### !!!", b"img"),
+        ), mock.patch(
+            "services.gemini_extraction_fallback.try_gemini_vision_extract",
+            return_value=vision_result,
+        ) as vision:
+            out = _maybe_early_vision_for_image_only_pdf(
+                doc_obj, b"%PDF", "scan.pdf", zoom=2.0
+            )
+        vision.assert_called_once()
+        self.assertEqual(out["line_items"][0]["product_name"], "ABANA TAB")
+        self.assertIn("early_vision_reason", out["totals"]["extra"])
+
+    def test_known_group_wise_ocr_keeps_parser_path(self):
+        from services.sales_statement_extractor import (
+            _maybe_early_vision_for_image_only_pdf,
+        )
+
+        page = mock.Mock()
+        page.get_text.return_value = ""
+        doc_obj = mock.MagicMock()
+        doc_obj.page_count = 1
+        doc_obj.__getitem__.return_value = page
+        group_wise_ocr = (
+            "Group Wise Sales\n"
+            "PRODUCT Op.Stock Receipt Sales Cl.Stock\n"
+            "ABANA TAB 10 0 2 8\n"
+        )
+        with mock.patch(
+            "services.sales_statement_extractor._ocr_pdf_page_text",
+            return_value=(group_wise_ocr, b"img"),
+        ), mock.patch(
+            "services.sales_statement_extractor._is_group_wise_sales_opstock_format",
+            return_value=True,
+        ), mock.patch(
+            "services.gemini_extraction_fallback.try_gemini_vision_extract"
+        ) as vision:
+            out = _maybe_early_vision_for_image_only_pdf(
+                doc_obj, b"%PDF", "group.pdf", zoom=2.0
+            )
+        self.assertIsNone(out)
+        vision.assert_not_called()
 
 
 if __name__ == "__main__":

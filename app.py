@@ -900,11 +900,15 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
 
         update_request_progress(f"gemini_{request_type}_request")
         try:
-            response = generate_content_via_vertex(
-                model=model,
-                payload=payload,
-                timeout=timeout,
-            )
+            # Cap simultaneous provider HTTP calls; RPM/RPD still owned here.
+            from services.sales_extraction_runtime import gemini_call_slot
+
+            with gemini_call_slot(f"gemini_{request_type}"):
+                response = generate_content_via_vertex(
+                    model=model,
+                    payload=payload,
+                    timeout=timeout,
+                )
             update_request_progress(f"gemini_{request_type}_response_received")
             return response
 
@@ -29848,8 +29852,20 @@ async def ready():
     return get_ready_snapshot(runtime)
 
 
+@app.get("/extract-sales-statement/status/{request_id}")
+async def extract_sales_statement_status(request_id: str):
+    """Observability-only progress lookup; does not replace synchronous POST."""
+    from services.sales_extraction_runtime import get_sales_progress
+
+    progress = get_sales_progress(request_id)
+    if not progress:
+        raise HTTPException(status_code=404, detail="Unknown request_id")
+    return progress
+
+
 @app.post("/extract-sales-statement")
 async def extract_sales_statement_endpoint(
+    request: Request,
     file: UploadFile = File(...),
     batch_id: Optional[str] = Form(None),
     use_blob_storage: bool = Form(False),
@@ -29866,6 +29882,17 @@ async def extract_sales_statement_endpoint(
 
     POD hospital-sales workbooks still return the /split-and-extract wrapper.
     """
+    from services.sales_extraction_runtime import (
+        SalesExtractionBusy,
+        acquire_sales_extraction_slot,
+        begin_sales_progress,
+        finish_sales_progress,
+        log_sales_extraction_event,
+        release_sales_extraction_slot,
+        resolve_request_id,
+        update_sales_progress,
+    )
+
     filename = file.filename or "upload"
     # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
     # when extension is missing or mismatched (e.g. .TXT, octet-stream upload).
@@ -29922,15 +29949,84 @@ async def extract_sales_statement_endpoint(
                     f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
                 ),
             )
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    file_type = ext.lstrip(".") if ext else (content_type or None)
+    total_started = time.time()
+    queue_wait_seconds = 0.0
+    extraction_duration_seconds = None
+    slot_acquired = False
+    final_status = "failed"
+
+    if not batch_id:
+        batch_id = str(uuid.uuid4())
+    begin_sales_progress(
+        request_id, filename, stage="queued", batch_id=batch_id
+    )
+
     try:
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
+
+        try:
+            queue_wait_seconds = await acquire_sales_extraction_slot()
+            slot_acquired = True
+        except SalesExtractionBusy as busy:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"Server busy. Queue wait exceeded {busy.timeout}s. "
+                    "Please retry."
+                ),
+            ) from busy
+
+        update_sales_progress(
+            request_id,
+            "preparing",
+            queue_wait_seconds=queue_wait_seconds,
+            file_type=file_type,
+        )
         start_time = datetime.now()
-        if not batch_id:
-            batch_id = str(uuid.uuid4())
-        sales_result = extract_sales_statement(file_bytes, filename)
+        extraction_started = time.time()
+        update_sales_progress(request_id, "parsing")
+        # Keep sync extract_sales_statement; offload so the event loop stays free.
+        sales_result = await asyncio.to_thread(
+            extract_sales_statement, file_bytes, filename
+        )
+        extraction_duration_seconds = time.time() - extraction_started
+
         extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        quality = extra.get("extraction_quality") or {}
+        update_sales_progress(
+            request_id,
+            "validating",
+            file_type=file_type,
+            page_count=extra.get("page_count"),
+            extraction_method=extra.get("extraction_method"),
+            ocr_quality=(
+                quality.get("score") if isinstance(quality, dict) else None
+            ),
+            vision_fallback=bool(extra.get("gemini_fallback")),
+            extraction_duration_seconds=extraction_duration_seconds,
+        )
+        # Never return a false-success zero statement when the quality gate
+        # and Gemini Vision both failed to produce trustworthy products.
+        if extra.get("extraction_failed"):
+            reasons = []
+            if isinstance(quality, dict):
+                reasons = list(quality.get("reasons") or [])
+            detail = {
+                "error": "extraction_failed",
+                "message": (
+                    "Could not reliably extract stock statement products. "
+                    "OCR/parser and Gemini Vision fallback both failed validation."
+                ),
+                "reasons": reasons,
+                "gemini_fallback": extra.get("gemini_fallback"),
+                "source_file": filename,
+            }
+            raise HTTPException(status_code=422, detail=detail)
         # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
         # reprocess requires the original statement contract (line_items,
         # stockist_name, period_from, statements).
@@ -29946,15 +30042,45 @@ async def extract_sales_statement_endpoint(
                 target_invoices_blob_folder=target_invoices_blob_folder,
                 start_time=start_time,
             )
+            final_status = "completed"
             return JSONResponse(content=response)
+        final_status = "completed"
         return JSONResponse(content=sales_result)
-    except HTTPException:
+    except HTTPException as http_exc:
+        if http_exc.status_code == 422:
+            final_status = "extraction_failed"
+        elif http_exc.status_code == 429:
+            final_status = "queue_timeout"
+        else:
+            final_status = "failed"
         raise
     except ValueError as e:
+        final_status = "failed"
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        final_status = "failed"
         logger.exception("Sales statement extraction failed for %s", filename)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if slot_acquired:
+            release_sales_extraction_slot()
+        total_duration_seconds = time.time() - total_started
+        finish_sales_progress(
+            request_id,
+            final_status,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            file_type=file_type,
+        )
+        log_sales_extraction_event(
+            request_id,
+            filename=filename,
+            file_type=file_type,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            total_duration_seconds=total_duration_seconds,
+            final_status=final_status,
+        )
 
 
 if __name__ == "__main__":
