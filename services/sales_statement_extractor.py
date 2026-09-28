@@ -2064,6 +2064,216 @@ def _parse_opbal_receipt_issue_statement(
     return result
 
 
+# ---------------------------------------------------------------------------
+# SwilERP 7-column Sales & Stock Statement (Op.Bal / Receipt / Retrn / Total /
+# Issue / Retrn / Closing). Values are printed stacked one-per-line and the
+# statement is split into per-company sections. The two Retrn columns make this
+# distinct from the 5-column Biswas/Mahajan stacked layout handled above; the
+# 5-column parser would otherwise lock onto the wrong columns and zero out every
+# quantity, so this dedicated parser must run first.
+# ---------------------------------------------------------------------------
+
+_SWIL_SS_RETRN_PACK = re.compile(
+    r"^\(?[A-Za-z]?\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|KIT|'?S)\.?\)?$", re.I
+)
+_SWIL_SS_RETRN_NAME_PACK = re.compile(
+    r"^(.*?)\s*(\(?\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|KIT|'?S)\.?\)?)$", re.I
+)
+_SWIL_SS_RETRN_INT = re.compile(r"^-?\d[\d,]*$")
+
+
+def _is_swilerp_retrn_sales_stock_text(text: str) -> bool:
+    """SwilERP 7-column Sales & Stock Statement with two Retrn columns.
+
+    Header: PRODUCT NAME PACKING Op.Bal Receipt Retrn Total Issue Retrn Closing.
+    The double Retrn column distinguishes it from the 5-column stacked layout
+    (Op.Bal/Receipt/Total/Issue/Closing) handled by
+    _parse_opbal_receipt_issue_statement, which stays unchanged.
+    """
+    if not text:
+        return False
+    header = "\n".join(ln for ln in text.splitlines()[:60] if ln.strip())
+    if not re.search(r"Sales\s*&\s*Stock\s*Statement", header, re.I):
+        return False
+    if not re.search(r"Op\.?\s*Bal", header, re.I):
+        return False
+    if not (
+        re.search(r"\bReceipt\b", header, re.I)
+        and re.search(r"\bTotal\b", header, re.I)
+        and re.search(r"\bIssue\b", header, re.I)
+        and re.search(r"\bClosing\b", header, re.I)
+    ):
+        return False
+    # Two Retrn columns are unique to this 7-column variant.
+    return len(re.findall(r"\bRetrn\b", header, re.I)) >= 2
+
+
+def _parse_swilerp_retrn_sales_stock_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse the SwilERP 7-column stacked Sales & Stock Statement PDF."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    blob = "\n".join(page_texts)
+    if not _is_swilerp_retrn_sales_stock_text(blob):
+        return None
+
+    stockist = None
+    address = None
+    for ln in (page_texts[0].splitlines() if page_texts else [])[:6]:
+        s = ln.strip()
+        if not s:
+            continue
+        if re.search(r"Page\s*No|Sales\s*&\s*Stock|PRODUCT\s*NAME", s, re.I):
+            break
+        if stockist is None:
+            stockist = _clean_name(s)
+        elif address is None:
+            address = _clean_name(s)
+
+    period_from = period_to = None
+    report_title = None
+    m_title = re.search(r"(Sales\s*&\s*Stock\s*Statement[^\n]*)", blob, re.I)
+    if m_title:
+        report_title = _clean_name(m_title.group(1))
+    m_period = re.search(
+        r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*Upto\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if m_period:
+        period_from = _normalize_date(m_period.group(1))
+        period_to = _normalize_date(m_period.group(2))
+
+    skip = re.compile(
+        r"^PRODUCT\s*NAME|^PACKING\b|Op\.?\s*Bal|^Receipt\b|^Retrn\b|"
+        r"^Total\b|^Issue\b|^Closing\b|^Balance\b|^Qty\.?\b|"
+        r"Page\s*No|Sales\s*&\s*Stock|Powered\s*By|^\*{2,}|Continued|"
+        r"^GRAND\s*TOTAL|^TOTAL\b",
+        re.I,
+    )
+    company_re = re.compile(r"^(Himalaya\b[^\n]*)$", re.I)
+    date_re = re.compile(r"^[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}$")
+    stock_skip = None
+    guard = [re.escape(x) for x in (stockist, address) if x]
+    if guard:
+        stock_skip = re.compile("|".join(guard), re.I)
+
+    sections: List[Dict[str, Any]] = []
+    current: Optional[Dict[str, Any]] = None
+
+    def _ensure(company: Optional[str]) -> Dict[str, Any]:
+        nonlocal current
+        if current is not None and current.get("company_name") == company:
+            return current
+        current = {"company_name": company, "items": []}
+        sections.append(current)
+        return current
+
+    lines = [ln.strip() for ln in blob.splitlines() if ln.strip()]
+    i = 0
+    n = len(lines)
+    while i < n:
+        ln = lines[i]
+        comp = company_re.match(ln)
+        if comp and "(" in ln:
+            _ensure(_clean_name(comp.group(1)))
+            i += 1
+            continue
+        if (
+            skip.search(ln)
+            or date_re.match(ln)
+            or _SWIL_SS_RETRN_INT.match(ln)
+            or (stock_skip and stock_skip.search(ln))
+        ):
+            i += 1
+            continue
+
+        name = None
+        packing = None
+        m_np = _SWIL_SS_RETRN_NAME_PACK.match(ln)
+        if m_np and re.search(r"[A-Za-z]", m_np.group(1)):
+            name = _clean_name(m_np.group(1))
+            packing = re.sub(r"\s+", "", m_np.group(2))
+        else:
+            name = _clean_name(ln)
+            if i + 1 < n and _SWIL_SS_RETRN_PACK.match(lines[i + 1]):
+                packing = re.sub(r"\s+", "", lines[i + 1])
+                i += 1
+
+        if not name or len(re.sub(r"[^A-Za-z]", "", name)) < 2:
+            i += 1
+            continue
+
+        vals: List[float] = []
+        j = i + 1
+        while j < n and _SWIL_SS_RETRN_INT.match(lines[j]) and len(vals) < 7:
+            vals.append(_to_float(lines[j].replace(",", "")))
+            j += 1
+        if len(vals) < 7:
+            i += 1
+            continue
+
+        sec = _ensure(None if current is None else current.get("company_name"))
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = vals[0]
+        item["receipts_qty"] = vals[1]
+        item["sales_qty"] = vals[4]  # Issue Qty
+        item["closing_qty"] = vals[6]  # Closing / Balance Qty
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["layout"] = "swilerp_retrn_sales_stock"
+            extra["total_stock_qty"] = vals[3]
+            extra["purchase_return_qty"] = vals[2]
+            extra["sales_return_qty"] = vals[5]
+            if sec.get("company_name"):
+                extra["company_name"] = sec.get("company_name")
+        sec["items"].append(item)
+        i = j
+
+    sections = [sec for sec in sections if sec.get("items")]
+    if not sections:
+        return None
+
+    def _finish(sec: Dict[str, Any]) -> Dict[str, Any]:
+        result = empty_result(filename, "pdf")
+        result["stockist_name"] = stockist
+        result["stockist_address"] = address
+        result["company_name"] = sec.get("company_name")
+        result["period_from"] = period_from
+        result["period_to"] = period_to
+        result["report_title"] = report_title
+        result["line_items"] = sec["items"]
+        result["totals"]["extra"]["extraction_method"] = "swilerp_retrn_sales_stock"
+        return result
+
+    if len(sections) == 1:
+        single = _finish(sections[0])
+        single["totals"]["extra"]["statement_count"] = 1
+        return single
+
+    statements = [_finish(sec) for sec in sections]
+    return {
+        "source_file": filename,
+        "source_format": "pdf",
+        "multi_statement": True,
+        "statement_count": len(statements),
+        "statements": statements,
+        "totals": {
+            "sales_value": None,
+            "closing_value": None,
+            "extra": {
+                "extraction_method": "swilerp_retrn_sales_stock",
+                "statement_count": len(statements),
+            },
+        },
+    }
+
+
 def _parse_statement_total_row(text: str) -> Optional[Dict[str, Any]]:
     """Parse bottom TOTAL qty row (e.g. P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING)."""
     if not text:
@@ -20294,6 +20504,19 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         image_only_ssa = _parse_image_only_ssa_qty_value_pdf(doc, filename)
         if image_only_ssa and image_only_ssa.get("line_items"):
             return image_only_ssa
+
+        # SwilERP 7-column Sales & Stock Statement (Op.Bal/Receipt/Retrn/Total/
+        # Issue/Retrn/Closing). Must run before the 5-column opbal parser below,
+        # which otherwise locks onto the wrong columns and zeroes every quantity.
+        swilerp_retrn = _parse_swilerp_retrn_sales_stock_pdf(doc, filename)
+        if swilerp_retrn and (
+            swilerp_retrn.get("line_items")
+            or (
+                swilerp_retrn.get("multi_statement")
+                and swilerp_retrn.get("statements")
+            )
+        ):
+            return swilerp_retrn
 
         # Biswas-style Op.Bal Sales & Stock where PDF text stacks
         # Product/Packing/qty on separate lines. Only claim stacked layouts so
