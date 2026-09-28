@@ -1672,16 +1672,41 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
 
 
 def _is_opbal_issue_closing_format(text: str) -> bool:
-    """Mahajan-style: PRODUCT/PACKING OpBal Receipt Total Issue Closing."""
+    """Mahajan/SwilERP-style: PRODUCT/PACKING OpBal Receipt Total Issue Closing."""
     if not text:
         return False
-    header = "\n".join(ln for ln in text.splitlines()[:50] if ln.strip())
-    has_op = bool(re.search(r"Op\.?\s*Bal", header, re.I))
+    header = "\n".join(ln for ln in text.splitlines()[:80] if ln.strip())
+    # OCR often mangles Op.Bal. → Opal. / OpBal. / Op Ba1
+    has_op = bool(
+        re.search(r"Op\.?\s*Bal|Opal\.?|Op\s*Ba[l1]|OpBal", header, re.I)
+    )
     has_receipt = bool(re.search(r"\bReceipt\b", header, re.I))
     has_issue = bool(re.search(r"\bIssue\b", header, re.I))
     has_closing = bool(re.search(r"\bClosing\b", header, re.I))
-    return has_op and has_receipt and has_issue and has_closing
+    if has_op and has_receipt and has_issue and has_closing:
+        return True
+    # SwilERP Sales & Stock Statement: Dump / Remain Day even when Op.Bal OCR fails
+    return bool(
+        re.search(r"Sales\s*&\s*Stock\s*Statement", header, re.I)
+        and has_receipt
+        and has_issue
+        and has_closing
+        and re.search(r"\bDump\b", header, re.I)
+    )
 
+def _is_swilerp_sales_stock_statement(text: str) -> bool:
+    """SwilERP printed Sales & Stock Statement (Op.Bal/Receipt/Total/Issue/Closing/Dump)."""
+    if not text:
+        return False
+    blob = text[:4000]
+    return bool(
+        re.search(r"Sales\s*&\s*Stock\s*Statement", blob, re.I)
+        and re.search(r"\bDump\b", blob, re.I)
+        and (
+            re.search(r"Op\.?\s*Bal|Opal\.?|OpBal|Remain\s*Day", blob, re.I)
+            or re.search(r"Powered\s+By\s+SwilERP", blob, re.I)
+        )
+    )
 
 def _opbal_layout(text: str) -> str:
     """Return qty column layout for OpBal statements.
@@ -1733,27 +1758,21 @@ def _looks_like_packing_token(tok: str) -> bool:
     t = str(tok or "").strip().rstrip(".,-_")
     if not t:
         return False
-    # Allow optional space before unit (PDF text: "200 ML", "50 GM")
     if re.fullmatch(
-        r"\d+(?:\.\d+)?\s*(?:TAB|TABS|ML|MG|GM|G|CAP|SYP|INJ|DS|S)", t, re.I
+        r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|PH)", t, re.I
     ):
         return True
-    # Biswas / Srinandan packs: 60'S, 100 'S, 30;S, 10 S;
-    if re.fullmatch(r"\d+(?:\.\d+)?\s*['’]?S[;']?", t, re.I):
-        return True
-    if re.fullmatch(r"\d+(?:\.\d+)?\s*;\s*S", t, re.I):
-        return True
-    if re.fullmatch(r"\d+\s+S[;']?", t, re.I):
+    # SwilERP: "50 S", "60'S", "30ML", "50 GR", "100GR", "(C200 GR"
+    if re.fullmatch(r"\(?[A-Z]?\d+(?:\.\d+)?\s*(?:S|'S|ML|GR|GM|PH)\)?", t, re.I):
         return True
     if re.fullmatch(r"\d+\*\d+", t):
         return True
     # OCR packing like 10TAB_ / 5M. / 1OTAB (O for 0)
-    if re.fullmatch(r"\d+(?:\.\d+)?(?:TAB|ML|MG|CAP|S)[A-Za-z._]*", t, re.I):
+    if re.fullmatch(r"\d+(?:\.\d+)?(?:TAB|ML|MG|CAP|S|GR)[A-Za-z._]*", t, re.I):
         return True
     if re.fullmatch(r"\d+[Oo]TAB[A-Za-z._]*", t, re.I):
         return True
     return False
-
 
 def _is_stacked_opbal_qty_line(tok: str) -> bool:
     """True when a PDF text line is a lone OpBal qty (not a product/pack)."""
@@ -1866,8 +1885,8 @@ def _parse_opbal_receipt_issue_row(
     if not ln or re.match(r"^\s*TOTAL\b", ln, re.I):
         return None
     if re.search(
-        r"PRODUCT\s*NAME|PACKING|Op\.?\s*Bal|Page\s*No|Continued|Sales\s*&\s*Stock|"
-        r"GRAND\s*TOTAL",
+        r"PRODUCT\s*NAME|PACKING|Op\.?\s*Bal|Opal\.?|OpBal|Page\s*No|Continued|Sales\s*&\s*Stock|"
+        r"GRAND\s*TOTAL|Remain\s*Day|^\s*Sr\.?\s*$",
         ln,
         re.I,
     ):
@@ -1891,10 +1910,21 @@ def _parse_opbal_receipt_issue_row(
         return None
 
     left = tokens[: i + 1]
+    # Drop leading Sr.No. (SwilERP prints 1..N before product name)
+    if left and re.fullmatch(r"\d{1,3}\.?", left[0] or ""):
+        left = left[1:]
+
     packing = None
     if left and _looks_like_packing_token(left[-1]):
         packing = left[-1].rstrip(".,-_")
         left = left[:-1]
+    elif (
+        len(left) >= 2
+        and re.fullmatch(r"\(?[A-Z]?\d+(?:\.\d+)?", left[-2] or "", re.I)
+        and re.fullmatch(r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|PH)\)?", left[-1] or "", re.I)
+    ):
+        packing = f"{left[-2]} {left[-1]}".strip()
+        left = left[:-2]
     elif (
         len(left) >= 2
         and re.fullmatch(r"\d+(?:\.\d+)?", left[-2] or "")
@@ -1912,12 +1942,16 @@ def _parse_opbal_receipt_issue_row(
     if re.fullmatch(r"AUROBINDO.*|VERITAZ.*|Qy\.?", product_name, re.I):
         return None
 
-    # Prefer full 7-col layout, then 6, then 5. Repair truncated Total before accepting.
+    # Prefer full 7-col layout, then 6, then 5. With Remain Day an 8th trailing
+    # qty is common — drop it first so Closing/Dump stay aligned.
     use = None
+    qty_pool = list(qtys[:-1]) if len(qtys) >= 8 else list(qtys)
     for n in (7, 6, 5):
-        if n > len(qtys):
+        if n > len(qty_pool):
             continue
-        candidate = _repair_opbal_qty_tuple(list(qtys[-n:] if len(qtys) > n else qtys))
+        candidate = _repair_opbal_qty_tuple(
+            list(qty_pool[-n:] if len(qty_pool) > n else qty_pool)
+        )
         bal_diff = abs((candidate[0] + candidate[1]) - candidate[2])
         if bal_diff <= max(5.0, 0.25 * max(abs(candidate[2]), abs(candidate[0] + candidate[1]), 1.0)):
             use = candidate
@@ -1948,8 +1982,10 @@ def _parse_opbal_receipt_issue_row(
             item["extra"]["dump_qty"] = use[5]
         if len(use) >= 7:
             item["extra"]["near_expiry_qty"] = use[6]
+        # 8th qty (Remain Day Stock) when present on SwilERP rows
+        if len(qtys) >= 8:
+            item["extra"]["remain_day_stock"] = qtys[-1]
     return item
-
 
 def _parse_opbal_receipt_issue_statement(
     text: str, filename: str, source_format: str = "pdf"
@@ -29273,6 +29309,250 @@ def _extract_stock_valuation_photo(
     return result
 
 
+_SWILERP_SALES_STOCK_VISION_PROMPT = """
+You extract a SwilERP "Sales & Stock Statement" image (Op.Bal / Receipt / Total / Issue / Closing / Dump).
+
+Return ONLY valid JSON (no markdown) with this exact shape:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": string|null,
+  "line_items": [
+    {
+      "product_code": string|null,
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": 0,
+      "closing_qty": number,
+      "closing_value": 0,
+      "extra": {"dump_qty": number, "near_expiry_qty": number, "remain_day_stock": number}
+    }
+  ],
+  "totals": {"sales_value": null, "closing_value": null, "extra": {}}
+}
+
+CRITICAL column mapping (left → right after PACKING):
+1) Op.Bal. Qty. -> opening_qty
+2) Receipt Qty. -> receipts_qty
+3) Total Qty. -> extra.total_stock_qty ONLY (never sales_qty)
+4) Issue Qty. -> sales_qty  (this is sales/issues for the period)
+5) Closing Balance -> closing_qty
+6) Dump Stock -> extra.dump_qty (NOT closing_qty)
+7) Near Expiry -> extra.near_expiry_qty
+8) Remain Day Stock -> extra.remain_day_stock
+
+Rules:
+- Qty-only statement: sales_value=0 and closing_value=0 on every line; totals money null.
+- Identity: opening_qty + receipts_qty - sales_qty = closing_qty (allow Issue=-1 returns).
+- Do NOT skip non-zero rows. Do NOT shift qtys onto the next product.
+- Keep packing with its row (50 GR vs 100GR are different rows).
+- Include every Sr.No. product row on THIS page image only.
+- stockist_name = shop/agency header; company_name = THE HIMALAYA DRUG(ZANDRA) style division.
+""".strip()
+
+
+def _split_stacked_statement_image_pages(file_bytes: bytes) -> List[bytes]:
+    """Split a tall multi-page statement scan into approx equal vertical pages."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return [file_bytes]
+
+    image = Image.open(io.BytesIO(file_bytes))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    width, height = image.size
+    # Single page / landscape: do not split
+    if height < int(width * 1.55):
+        buf = io.BytesIO()
+        image.save(buf, format="JPEG", quality=95)
+        return [buf.getvalue()]
+
+    # Prefer 2 pages for typical phone captures of page1+page2 stacked
+    page_count = 2 if height < int(width * 2.6) else 3
+    page_h = height // page_count
+    pages: List[bytes] = []
+    for idx in range(page_count):
+        top = idx * page_h
+        bottom = height if idx == page_count - 1 else (idx + 1) * page_h
+        crop = image.crop((0, top, width, bottom))
+        buf = io.BytesIO()
+        crop.save(buf, format="JPEG", quality=95)
+        pages.append(buf.getvalue())
+    return pages
+
+def _gemini_vision_statement_page(
+    file_bytes: bytes,
+    *,
+    mime: str,
+    model: str,
+    prompt: str,
+) -> Optional[Dict[str, Any]]:
+    """One Gemini vision call for a statement page image; returns parsed JSON or None."""
+    import time
+
+    from services.vertex_gemini_client import (
+        GeminiProviderError,
+        generate_content_via_vertex,
+    )
+
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    vision_payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=vision_payload, timeout=120
+            )
+            text = _gemini_response_text(response)
+            parsed = _extract_json_object(text)
+            if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
+                return parsed
+            last_err = ValueError(f"non-JSON vision response: {(text or '')[:200]}")
+        except GeminiProviderError as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+        except Exception as exc:
+            last_err = exc
+            logger.warning("SwilERP page vision failed: %s", exc)
+            break
+    if last_err:
+        logger.warning("SwilERP page vision exhausted: %s", last_err)
+    return None
+
+def _repair_swilerp_vision_item(item: Dict[str, Any]) -> None:
+    """Fix common SwilERP vision swaps: Issue↔Closing and lost minus on returns."""
+    if not isinstance(item, dict):
+        return
+    op = _to_float(item.get("opening_qty"))
+    rec = _to_float(item.get("receipts_qty"))
+    sl = _to_float(item.get("sales_qty"))
+    cl = _to_float(item.get("closing_qty"))
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    dump = extra.get("dump_qty")
+    remain = extra.get("remain_day_stock")
+    dump_f = _to_float(dump) if dump is not None else None
+    remain_f = _to_float(remain) if remain is not None else None
+
+    # Lost sign on Issue when Closing rose above Opening (return / credit note)
+    if dump_f is not None and abs(dump_f - cl) <= 0.01 and cl > op + rec + 0.01:
+        expected = op + rec - cl
+        if expected < 0 and sl >= 0:
+            item["sales_qty"] = expected
+            return
+
+    # Issue/Closing swapped but both still satisfy Op+Rec = Issue+Closing
+    if abs(op + rec - sl - cl) > 0.01 or sl < 0 or cl < 0:
+        return
+    if abs((op + rec) - (sl + cl)) > 0.01:
+        return
+
+    # Prefer Closing near Dump Stock when Dump is populated
+    if dump_f is not None and dump_f > 0:
+        if abs(cl - dump_f) > abs(sl - dump_f) and abs(sl - dump_f) <= max(
+            1.0, 0.05 * dump_f
+        ):
+            item["sales_qty"], item["closing_qty"] = cl, sl
+            return
+
+    # When Dump is empty and Remain Day is tiny, Closing is usually the small qty
+    if dump_f == 0.0 and remain_f is not None and 0 < remain_f <= 10:
+        if cl > sl and abs(sl - remain_f) <= max(2.0, remain_f):
+            item["sales_qty"], item["closing_qty"] = cl, sl
+
+def _parse_swilerp_sales_stock_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Format-specific: SwilERP Sales & Stock Statement via page-split vision + OpBal OCR."""
+    import os
+
+    page_bytes_list = _split_stacked_statement_image_pages(file_bytes)
+    mime = _image_mime(ext)
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+
+    # 1) Page-split Gemini vision with SwilERP-specific column prompt (preferred).
+    # Dense two-page phone captures scramble when sent as one image.
+    merged = empty_result(filename, ext.lstrip("."))
+    merged_items: List[Dict[str, Any]] = []
+    for pb in page_bytes_list:
+        parsed = _gemini_vision_statement_page(
+            pb,
+            mime=mime,
+            model=model,
+            prompt=_SWILERP_SALES_STOCK_VISION_PROMPT,
+        )
+        if not parsed:
+            continue
+        page_result = empty_result(filename, ext.lstrip("."))
+        page_result = _apply_parsed_sales_json(page_result, parsed)
+        for key in (
+            "stockist_name",
+            "stockist_address",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if page_result.get(key) and not merged.get(key):
+                merged[key] = page_result[key]
+        merged_items.extend(page_result.get("line_items") or [])
+
+    if merged_items:
+        for it in merged_items:
+            it["sales_value"] = 0.0
+            it["closing_value"] = 0.0
+            _repair_swilerp_vision_item(it)
+        merged["line_items"] = merged_items
+        merged["totals"]["sales_value"] = None
+        merged["totals"]["closing_value"] = None
+        merged["totals"]["extra"]["extraction_method"] = "swilerp_page_split_vision"
+        merged["totals"]["extra"]["split_pages"] = len(page_bytes_list)
+        try:
+            ocr_bits = [_ocr_image_to_text(pb) for pb in page_bytes_list]
+            merged = _apply_total_row_to_result(merged, "\n".join(ocr_bits))
+        except Exception:
+            pass
+        return merged
+
+    # 2) OCR OpBal fallback when vision is unavailable
+    try:
+        ocr_parts = [_ocr_image_to_text(pb) for pb in page_bytes_list]
+        combined_ocr = "\n".join(ocr_parts)
+    except Exception as exc:
+        logger.warning("SwilERP OCR fallback failed for %s: %s", filename, exc)
+        return None
+
+    if not (
+        _is_swilerp_sales_stock_statement(combined_ocr)
+        or _is_opbal_issue_closing_format(combined_ocr)
+    ):
+        return None
+
+    opbal = _parse_opbal_receipt_issue_statement(
+        combined_ocr, filename, (ext or ".jpg").lstrip(".") or "jpg"
+    )
+    if not opbal or not opbal.get("line_items"):
+        return None
+    opbal["totals"]["extra"]["extraction_method"] = "swilerp_opbal_ocr_pages"
+    return opbal
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -29284,6 +29564,23 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     )
 
     result = empty_result(filename, ext.lstrip("."))
+
+    # Format-specific: SwilERP Sales & Stock Statement (stacked pages + OpBal columns)
+    try:
+        peek_ocr = _ocr_image_to_text(file_bytes)
+    except Exception:
+        peek_ocr = ""
+    if peek_ocr and (
+        _is_swilerp_sales_stock_statement(peek_ocr)
+        or (
+            _is_opbal_issue_closing_format(peek_ocr)
+            and re.search(r"Sales\s*&\s*Stock\s*Statement", peek_ocr, re.I)
+        )
+    ):
+        swil = _parse_swilerp_sales_stock_image(file_bytes, filename, ext)
+        if swil and swil.get("line_items"):
+            return swil
+
     rtl = _summary_rtl_from_ocr_bytes(
         file_bytes, filename, (ext or ".png").lstrip(".") or "png"
     )
