@@ -212,6 +212,14 @@ def _identity_applies(items: List[Dict[str, Any]], extra: Dict[str, Any]) -> boo
     kind = str(extra.get("stock_identity_kind") or "")
     if kind not in {"", "opening_receipts_sales_closing"}:
         return False
+    # Validator already counted failures for this formula — always score them.
+    # Misaligned extracts often zero every opening_qty, which would otherwise
+    # hide stock_identity_failure and report quality=good.
+    try:
+        if int(extra.get("stock_identity_fail_count") or 0) > 0:
+            return True
+    except (TypeError, ValueError):
+        pass
     usable = 0
     for item in items:
         opening = _number(item.get("opening_qty")) or 0.0
@@ -408,6 +416,27 @@ def evaluate_extraction_quality(
         and valid_names >= min_rows
         and not hard_fail
     )
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    fail_count = extra.get("stock_identity_fail_count")
+    layout = str(extra.get("layout") or "")
+    # Opening/Receive/Issue/Closing photos must not pass as good while rows fail.
+    identity_gate = identity_limit
+    if (
+        method == "main_stock_sales_statement"
+        or layout == "opening_receive_issue_closing"
+    ):
+        identity_gate = 0.0
+    if (
+        protected
+        and items
+        and _identity_applies(items, extra)
+        and fail_count is not None
+    ):
+        fail_pct = 100.0 * float(fail_count) / len(items)
+        if fail_pct > identity_gate:
+            protected = False
+            reasons.append("stock_identity_failure")
+            hard_fail = True
     if protected:
         return {
             "quality": "good",
@@ -433,12 +462,11 @@ def evaluate_extraction_quality(
         if _period_is_inverted(result):
             reasons.append("invalid_period")
 
-        extra = ((result.get("totals") or {}).get("extra") or {})
-        fail_count = extra.get("stock_identity_fail_count")
         if _identity_applies(items, extra) and fail_count is not None:
             fail_pct = 100.0 * float(fail_count) / len(items)
-            if fail_pct > identity_limit:
-                reasons.append("stock_identity_failure")
+            if fail_pct > identity_gate:
+                if "stock_identity_failure" not in reasons:
+                    reasons.append("stock_identity_failure")
 
     # Optional source-text assessment from metadata.
     source_text = meta.get("ocr_text") or meta.get("source_text")
