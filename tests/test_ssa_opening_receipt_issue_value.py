@@ -68,6 +68,29 @@ class TestSsaOriDetection(unittest.TestCase):
         self.assertNotIn("Phone", parsed["stockist_name"])
         self.assertIn("SARUPATHAR", str(parsed.get("stockist_address") or ""))
 
+    def test_stockist_without_medical_pharma_keyword(self):
+        from services.sales_statement_extractor import (
+            _parse_ssa_opening_receipt_issue_value,
+        )
+
+        text = (
+            "R P AND SON'S.\n"
+            "KHIRIYA GHAT\n"
+            "BETTIAH\n"
+            "PIN CODE 845438\n"
+            "STOCK & SALES ANALYSIS  (HIMALAYA WELLNESS COMPANY (ZEAL)) "
+            "01-08-2026 - 31-08-2026\n"
+            "ITEM DESCRIPTION  OPENING  RECEIPT  ISSUE  CLOSING  DUMP\n"
+            "QTY. VALUE QTY. VALUE QTY. VALUE QTY. VALUE QTY.\n"
+            "AACTARIL SOAP 75 GM 75 GM 51 3743.69 0 0.00 20 1673.54 31 2275.57 31\n"
+            "TOTAL 100 1000.00 0 0.00 20 200.00 80 800.00 80\n"
+        )
+        parsed = _parse_ssa_opening_receipt_issue_value(text, "rp.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["stockist_name"], "R P AND SON'S.")
+        self.assertEqual(parsed["period_from"], "2026-08-01")
+        self.assertEqual(parsed["period_to"], "2026-08-31")
+
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Prakash SSA fixture")
 class TestSsaOriFixture(unittest.TestCase):
