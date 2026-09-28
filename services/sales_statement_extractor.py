@@ -4005,7 +4005,16 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
 
     # Customer / Material / Opening_bal_qty / Primary_qty / Closing_bal_qty.
     # There is no sales column. Opening + primary must not replace closing.
-    if totals["extra"].get("extraction_method") == "zl_secondary_xlsx":
+    zl_opening_methods = {
+        "zl_secondary_xlsx",
+        "zl_opening_bal_pdf",
+        "zl_opening_bal_sheet_vision",
+        "zl_opening_bal_scan_vision",
+    }
+    if (
+        totals["extra"].get("extraction_method") in zl_opening_methods
+        or totals["extra"].get("layout") == "zl_opening_primary_closing"
+    ):
         opening_sum = sum(
             _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
         )
@@ -4024,7 +4033,12 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["closing_qty"] = closing_sum
         totals["extra"]["closing_value"] = closing_value_sum
         totals["closing_value"] = closing_value_sum or None
-        totals["extra"]["stock_identity_kind"] = "zl_secondary_xlsx"
+        method_name = str(totals["extra"].get("extraction_method") or "zl_opening_primary_closing")
+        totals["extra"]["stock_identity_kind"] = (
+            "zl_secondary_xlsx"
+            if method_name == "zl_secondary_xlsx"
+            else "zl_opening_primary_closing"
+        )
         totals["extra"]["stock_identity_formula"] = (
             "opening=Opening_bal_qty; receipts=Primary_qty; "
             "closing=Closing_bal_qty; no sales column"
@@ -12344,6 +12358,105 @@ def _is_zl_opening_bal_pdf_text(text: str) -> bool:
     )
 
 
+def _is_zl_opening_bal_scan_text(text: str) -> bool:
+    """OCR-tolerant gate for scanned ZL Opening_bal dumps (TapScanner photos).
+
+    Headers may appear as Opening_bal / Closing_bal_aty / Secondaryr. Distinct
+    from the exact text-PDF gate and from Sheet1 spreadsheet screenshots.
+    """
+    if not text:
+        return False
+    return bool(
+        re.search(r"Material[_\s]?name", text, re.I)
+        and re.search(r"Opening[_\s]?bal", text, re.I)
+        and re.search(r"Primary[_\s]?qty", text, re.I)
+        and re.search(r"Closing[_\s]?bal", text, re.I)
+        and re.search(r"Secondaryr|Secondary[_\s]?rate|\bMrp\b", text, re.I)
+    )
+
+
+def _zl_opening_bal_scan_page_image_bytes(doc: Any) -> Optional[bytes]:
+    """Prefer the largest embedded page image; fall back to a bounded render."""
+    import fitz
+
+    best: Optional[bytes] = None
+    best_area = 0
+    try:
+        for page in doc:
+            for img in page.get_images(full=True) or []:
+                xref = img[0]
+                try:
+                    pix = fitz.Pixmap(doc, xref)
+                except Exception:
+                    continue
+                if pix.n >= 4:
+                    pix = fitz.Pixmap(fitz.csRGB, pix)
+                area = int(pix.width) * int(pix.height)
+                if area <= best_area:
+                    continue
+                best_area = area
+                best = pix.tobytes("png")
+    except Exception:
+        best = None
+    if best and best_area >= 200_000:
+        return best
+    try:
+        page = doc[0]
+        # Page media box can be huge; keep longest side ~2200px for Vision.
+        rect = page.rect
+        longest = max(float(rect.width), float(rect.height), 1.0)
+        zoom = min(2.0, 2200.0 / longest)
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+        return pix.tobytes("png")
+    except Exception:
+        return best
+
+
+_ZL_OPENING_BAL_SCAN_PROMPT_EXTRA = """
+Also used for scanned printouts / TapScanner photos of the same grid.
+If the top shows "STOCKIST - Name" (or STOCKIST Name), set stockist_name to that Name.
+Header labels may appear as Opening_bal, Closing_bal_qty, Closing_bal_aty, Secondaryr.
+There is still NO sales quantity column — sales_qty stays 0.
+Read only filled product rows. Ignore empty grid rows and the signature/stamp area.
+""".strip()
+
+
+def _extract_zl_opening_bal_scan_pdf(
+    doc: Any,
+    filename: str,
+) -> Optional[Dict[str, Any]]:
+    """Vision extract for image-only scanned ZL Opening_bal stock dumps."""
+    image_bytes = _zl_opening_bal_scan_page_image_bytes(doc)
+    if not image_bytes:
+        return None
+    result = _extract_zl_opening_bal_sheet_vision(
+        image_bytes,
+        filename,
+        ".png",
+        prompt_extra=_ZL_OPENING_BAL_SCAN_PROMPT_EXTRA,
+        extraction_method="zl_opening_bal_scan_vision",
+    )
+    if not result or not result.get("line_items"):
+        return None
+    # Filename pattern …_YYYY_MM_… when the scan has no printed period.
+    if not result.get("period_from"):
+        match = re.search(r"_(\d{4})_(\d{2})_", filename or "")
+        if match:
+            year, month = match.group(1), match.group(2)
+            result["period_from"] = f"{year}-{month}-01"
+            # Last day of month is fine as inclusive period_to for monthly dumps.
+            import calendar
+
+            last = calendar.monthrange(int(year), int(month))[1]
+            result["period_to"] = f"{year}-{month}-{last:02d}"
+    result["source_format"] = "pdf"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "zl_opening_bal_scan_vision"
+    result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
+    result["totals"]["extra"]["stock_identity_kind"] = "zl_opening_primary_closing"
+    return result
+
+
 def _parse_zl_opening_bal_pdf_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Parse ZL Opening_bal_qty PDF text; first header line is the stockist.
 
@@ -12472,6 +12585,7 @@ def _looks_like_zl_opening_bal_sheet(result: Optional[Dict[str, Any]]) -> bool:
     if extra.get("extraction_method") in {
         "zl_opening_bal_sheet_vision",
         "zl_opening_bal_pdf",
+        "zl_opening_bal_scan_vision",
     }:
         return True
     title = str(result.get("report_title") or "").strip()
@@ -12537,7 +12651,11 @@ Return ONLY JSON:
 """.strip()
 
 
-def _finalize_zl_opening_bal_sheet(result: Dict[str, Any]) -> Dict[str, Any]:
+def _finalize_zl_opening_bal_sheet(
+    result: Dict[str, Any],
+    *,
+    extraction_method: str = "zl_opening_bal_sheet_vision",
+) -> Dict[str, Any]:
     """Match the Excel ZL layout: rate and MRP live in extra, sales qty stays 0."""
     items: List[Dict[str, Any]] = []
     for item in result.get("line_items") or []:
@@ -12565,7 +12683,7 @@ def _finalize_zl_opening_bal_sheet(result: Dict[str, Any]) -> Dict[str, Any]:
     result["line_items"] = items
     result["report_title"] = result.get("report_title") or "Sheet1"
     result.setdefault("totals", {}).setdefault("extra", {})
-    result["totals"]["extra"]["extraction_method"] = "zl_opening_bal_sheet_vision"
+    result["totals"]["extra"]["extraction_method"] = extraction_method
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
     return result
 
@@ -12574,6 +12692,9 @@ def _extract_zl_opening_bal_sheet_vision(
     file_bytes: bytes,
     filename: str,
     ext: str = ".png",
+    *,
+    prompt_extra: Optional[str] = None,
+    extraction_method: str = "zl_opening_bal_sheet_vision",
 ) -> Optional[Dict[str, Any]]:
     """Re-read a ZL Opening_bal_qty screenshot with a column-locked prompt."""
     import os
@@ -12583,12 +12704,15 @@ def _extract_zl_opening_bal_sheet_vision(
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    prompt = _ZL_OPENING_BAL_SHEET_PROMPT
+    if prompt_extra:
+        prompt = f"{prompt}\n\n{prompt_extra.strip()}"
     payload = {
         "contents": [
             {
                 "role": "user",
                 "parts": [
-                    {"text": _ZL_OPENING_BAL_SHEET_PROMPT},
+                    {"text": prompt},
                     {"inline_data": {"mime_type": mime, "data": b64}},
                 ],
             }
@@ -12616,7 +12740,9 @@ def _extract_zl_opening_bal_sheet_vision(
         return None
     result = empty_result(filename, ext.lstrip(".") or "png")
     result = _apply_parsed_sales_json(result, parsed)
-    return _finalize_zl_opening_bal_sheet(result)
+    return _finalize_zl_opening_bal_sheet(
+        result, extraction_method=extraction_method
+    )
 
 
 def _zl_opening_bal_sheet_strips(file_bytes: bytes) -> List[bytes]:
@@ -14398,6 +14524,294 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
         return None
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "prompt_datewise_layout"
+    result["totals"]["extra"]["qty_only"] = False
+    return result
+
+
+def _is_ostock_purqty_datewise_statement(text: str) -> bool:
+    """Jalaram-style Stock Statement (Date Wise): ProductName/OStock/PurQty/SaleQty/CQty.
+
+    Distinct from classic PROMPT OpStk/ClStk datewise layouts.
+    """
+    if not text:
+        return False
+    if not re.search(r"Stock\s+Statement\s*\(\s*Date\s*Wise\s*\)", text, re.I):
+        return False
+    if not re.search(r"ProductName", text, re.I):
+        return False
+    if not re.search(r"\bOStock\b", text):
+        return False
+    if not re.search(r"\bPurQty\b", text):
+        return False
+    if not re.search(r"\bSaleQty\b", text):
+        return False
+    if not re.search(r"\bCQty\b", text):
+        return False
+    # Classic PROMPT OpStk/ClStk datewise stays on its own parser.
+    if re.search(r"\bOpStk\b", text) and re.search(r"\bClStk\b", text):
+        return False
+    return True
+
+
+def _ostock_purqty_header_edges(
+    words: List,
+) -> Optional[Dict[str, Tuple[float, float]]]:
+    """Midpoints between ProductName/Pack/OStock/PurQty/SaleQty/CQty/CAmt headers."""
+    found: Dict[str, float] = {}
+    for w in words or []:
+        token = str(w[4]).strip()
+        xc = (float(w[0]) + float(w[2])) / 2.0
+        if token == "ProductName":
+            found["product"] = xc
+        elif token == "Pack":
+            found["pack"] = xc
+        elif token == "OStock":
+            found["opening_qty"] = xc
+        elif token == "PurQty":
+            found["receipts_qty"] = xc
+        elif token == "SaleQty":
+            found["sales_qty"] = xc
+        elif token == "CQty":
+            found["closing_qty"] = xc
+        elif token == "CAmt":
+            found["closing_value"] = xc
+    needed = (
+        "product",
+        "pack",
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "closing_value",
+    )
+    if any(k not in found for k in needed):
+        return None
+    ordered = [
+        # Serial numbers sit near x≈50; keep this band tight so short names
+        # like "LIV" / "V GEL" stay in the product column.
+        ("sr", min(52.0, found["product"] - 30.0)),
+        ("product", found["product"]),
+        ("pack", found["pack"]),
+        ("opening_qty", found["opening_qty"]),
+        ("receipts_qty", found["receipts_qty"]),
+        ("sales_qty", found["sales_qty"]),
+        ("closing_qty", found["closing_qty"]),
+        ("closing_value", found["closing_value"]),
+    ]
+    edges: Dict[str, Tuple[float, float]] = {}
+    for index, (name, xc) in enumerate(ordered):
+        lo = 0.0 if index == 0 else (ordered[index - 1][1] + xc) / 2.0
+        hi = 9999.0 if index == len(ordered) - 1 else (xc + ordered[index + 1][1]) / 2.0
+        edges[name] = (lo, hi)
+    return edges
+
+
+def _ostock_purqty_bucket(x: float, edges: Dict[str, Tuple[float, float]]) -> Optional[str]:
+    for name, (lo, hi) in edges.items():
+        if lo <= x < hi:
+            return name
+    return None
+
+
+def _parse_ostock_purqty_datewise_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse ProductName/OStock/PurQty/SaleQty/CQty/CAmt Stock Statement (Date Wise)."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_ostock_purqty_datewise_statement(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock Statement (Date Wise)"
+    items: List[Dict[str, Any]] = []
+    edges: Optional[Dict[str, Tuple[float, float]]] = None
+    header_y: Optional[float] = None
+
+    for page_index, (page, text) in enumerate(zip(doc, page_texts)):
+        words = page.get_text("words") or []
+        words = sorted(words, key=lambda w: (round(float(w[1]), 1), float(w[0])))
+        page_edges = _ostock_purqty_header_edges(words)
+        if page_edges:
+            edges = page_edges
+            for w in words:
+                if str(w[4]).strip() == "ProductName":
+                    header_y = float(w[1])
+                    break
+
+        # Stockist / period / company from header band (page 1, above table).
+        if page_index == 0 and not result.get("stockist_name"):
+            top_lines: List[Tuple[float, str]] = []
+            for w in words:
+                y = float(w[1])
+                if header_y is not None and y >= header_y - 2:
+                    break
+                if top_lines and abs(y - top_lines[-1][0]) <= 3.0:
+                    top_lines[-1] = (
+                        top_lines[-1][0],
+                        (top_lines[-1][1] + " " + str(w[4])).strip(),
+                    )
+                else:
+                    top_lines.append((y, str(w[4])))
+            for _y, line in top_lines:
+                if re.search(r"Stock\s+Statement|Phone\s*No|From\b|\bTo\b", line, re.I):
+                    dates = re.findall(r"\d{1,2}/\d{1,2}/\d{4}", line)
+                    if dates and result.get("period_from") is None:
+                        result["period_from"] = _normalize_date(dates[0])
+                    if len(dates) > 1 and result.get("period_to") is None:
+                        result["period_to"] = _normalize_date(dates[1])
+                    continue
+                if re.search(
+                    r"HIMALAYA\s+WELLNESS|HIMALAYA\s+ZANDRA|\bDIV\.?\b", line, re.I
+                ):
+                    if not result.get("company_name"):
+                        result["company_name"] = _clean_name(line)
+                    continue
+                if (
+                    not result.get("stockist_name")
+                    and re.search(r"[A-Za-z]{3,}", line)
+                    and not re.search(r"^\d", line)
+                    and not re.search(r"FLOOR|MARKET|ROAD|JAMNAGAR|Phone", line, re.I)
+                ):
+                    result["stockist_name"] = _clean_name(line)
+
+        if not edges:
+            continue
+
+        # Company banner sits between the column header and the first Sr.No. row.
+        if not result.get("company_name") and header_y is not None:
+            line_tokens: List[Tuple[float, float, str]] = []
+            for w in words:
+                y = float(w[1])
+                if y <= header_y + 2:
+                    continue
+                token = str(w[4]).strip()
+                # First serial number marks the start of product rows.
+                if re.fullmatch(r"\d{1,3}", token) and float(w[0]) < 80:
+                    break
+                if float(w[0]) >= 280:
+                    continue
+                if re.search(r"[A-Za-z]", token):
+                    line_tokens.append((y, float(w[0]), token))
+            if line_tokens:
+                y0 = line_tokens[0][0]
+                company = " ".join(
+                    tok for y, _x, tok in line_tokens if abs(y - y0) <= 3.0
+                ).strip()
+                if re.search(r"HIMALAYA|WELLNESS|COMPANY", company, re.I):
+                    result["company_name"] = _clean_name(company)
+
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            y = float(w[1])
+            if header_y is not None and y <= header_y + 2:
+                continue
+            token = str(w[4]).strip()
+            if not token:
+                continue
+            xc = (float(w[0]) + float(w[2])) / 2.0
+            bucket = _ostock_purqty_bucket(xc, edges)
+            if not bucket:
+                continue
+            if rows and abs(y - rows[-1]["y"]) <= 3.5:
+                row = rows[-1]
+            else:
+                row = {
+                    "y": y,
+                    "cells": {
+                        "sr": [],
+                        "product": [],
+                        "pack": [],
+                        "opening_qty": [],
+                        "receipts_qty": [],
+                        "sales_qty": [],
+                        "closing_qty": [],
+                        "closing_value": [],
+                    },
+                }
+                rows.append(row)
+            row["cells"][bucket].append(token)
+
+        for row in rows:
+            cells = row["cells"]
+            # First pure serial stays in sr; any other left-band tokens are name parts
+            # (short brands like "LIV" / "V" can land near the serial column).
+            serial = None
+            name_bits: List[str] = []
+            for tok in cells["sr"]:
+                if serial is None and re.fullmatch(r"\d{1,3}", str(tok).strip()):
+                    serial = str(tok).strip()
+                else:
+                    name_bits.append(str(tok))
+            name_bits.extend(str(t) for t in cells["product"])
+            if serial is None:
+                continue
+            pack_tokens = [str(t) for t in cells["pack"]]
+            # Pack column sometimes swallows trailing name words (SOLUTION / WASH /
+            # GRANULES). Keep those on the product name; packing stays size-like.
+            real_pack: List[str] = []
+            for tok in pack_tokens:
+                if re.search(
+                    r"\d|(?:ML|MG|GM|GMS?|'?S|'?C|TAB|CAPS?)\b",
+                    tok,
+                    re.I,
+                ) or re.fullmatch(r"\d+\s*[A-Za-z.]*", tok):
+                    real_pack.append(tok)
+                else:
+                    name_bits.append(tok)
+            product = _clean_name(" ".join(name_bits))
+            if not product:
+                continue
+            if re.search(
+                r"^(Total|Amount|HIMALAYA|ProductName|COMPANY|WELLNESS)\b",
+                product,
+                re.I,
+            ):
+                continue
+            pack = " ".join(real_pack).strip() or None
+            if pack:
+                size_like = [
+                    t
+                    for t in real_pack
+                    if re.search(
+                        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GMS?|G|'?S|C)\b", t, re.I
+                    )
+                    or re.fullmatch(r"\d+\s*ML\.?", t, re.I)
+                    or re.search(r"\d", t)
+                    or re.fullmatch(r"(?:ML|MG|GM|GMS?|G|TAB|CAPS?)\.?", t, re.I)
+                ]
+                if size_like:
+                    pack = " ".join(size_like)
+            item = empty_line_item()
+            item["product_name"] = product
+            item["packing"] = pack
+            item["opening_qty"] = _to_float(
+                (cells["opening_qty"][-1] if cells["opening_qty"] else 0)
+            )
+            item["receipts_qty"] = _to_float(
+                (cells["receipts_qty"][-1] if cells["receipts_qty"] else 0)
+            )
+            item["sales_qty"] = _to_float(
+                (cells["sales_qty"][-1] if cells["sales_qty"] else 0)
+            )
+            item["closing_qty"] = _to_float(
+                (cells["closing_qty"][-1] if cells["closing_qty"] else 0)
+            )
+            item["closing_value"] = _to_float(
+                (cells["closing_value"][-1] if cells["closing_value"] else 0)
+            )
+            item["sales_value"] = 0.0
+            item["extra"] = {"layout": "ostock_purqty_datewise", "sr_no": int(serial)}
+            items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    result["totals"]["closing_value"] = round(
+        sum(_to_float(i.get("closing_value")) for i in items), 2
+    )
+    result["totals"]["sales_value"] = None
+    result["totals"]["extra"]["extraction_method"] = "ostock_purqty_datewise_layout"
+    result["totals"]["extra"]["layout"] = "ostock_purqty_datewise"
     result["totals"]["extra"]["qty_only"] = False
     return result
 
@@ -22028,6 +22442,22 @@ def _maybe_early_vision_for_image_only_pdf(
         )
         return None
 
+    # Scanned ZL Opening_bal dumps: OCR scores high on header noise but misreads
+    # qty columns. Route to the existing column-locked ZL vision path and skip
+    # the slow 300 DPI OCR loop. Other image-only PDFs are unchanged.
+    if _is_zl_opening_bal_scan_text(sample):
+        logger.info(
+            "[SalesStatement] file=%s decision=ZL_OPENING_BAL_SCAN_VISION "
+            "reason=MATERIAL_OPENING_PRIMARY_CLOSING pages=%s",
+            filename,
+            page_count,
+        )
+        scan = _extract_zl_opening_bal_scan_pdf(doc, filename)
+        if scan and scan.get("line_items"):
+            extra = scan.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "zl_opening_bal_scan"
+            return scan
+
     from services.extraction_quality import assess_source_text_quality
 
     quality = assess_source_text_quality(sample)
@@ -22588,6 +23018,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             prompt_stmt["totals"]["extra"]["statement_count"] = 1
             return prompt_stmt
 
+        ostock_purqty = _parse_ostock_purqty_datewise_statement(doc, filename)
+        if ostock_purqty and ostock_purqty.get("line_items"):
+            ostock_purqty["totals"]["extra"]["statement_count"] = 1
+            return ostock_purqty
+
         product_wise = _parse_product_wise_stock_statement(doc, filename)
         if product_wise and product_wise.get("line_items"):
             product_wise["totals"]["extra"]["statement_count"] = 1
@@ -22870,7 +23305,16 @@ def _stock_identity_kind(result: Dict[str, Any]) -> str:
         return STOCK_IDENTITY_SALERET
     if explicit == "sample" or explicit == STOCK_IDENTITY_SAMPLE:
         return STOCK_IDENTITY_SAMPLE
+    if explicit in {"zl_opening_primary_closing", "zl_secondary_xlsx"}:
+        return str(explicit)
     method = str(extra_t.get("extraction_method") or "")
+    if method in {
+        "zl_opening_bal_pdf",
+        "zl_opening_bal_sheet_vision",
+        "zl_opening_bal_scan_vision",
+        "zl_secondary_xlsx",
+    } or extra_t.get("layout") == "zl_opening_primary_closing":
+        return "zl_opening_primary_closing"
     if "opbal" in method or "ps_pharma" in method:
         return STOCK_IDENTITY_OPBAL
     has_sr = False

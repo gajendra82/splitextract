@@ -314,6 +314,12 @@ class GeminiSemaphoreTests(unittest.TestCase):
         with runtime._gemini_call_lock:
             runtime._gemini_call_active = 0
             runtime._gemini_call_waiting = 0
+        runtime.reset_gemini_provider_cooldown_state_for_tests()
+        runtime.clear_sales_deadline()
+
+    def tearDown(self):
+        runtime.reset_gemini_provider_cooldown_state_for_tests()
+        runtime.clear_sales_deadline()
 
     def test_gemini_call_slot_caps_at_two(self):
         self.assertEqual(runtime.MAX_CONCURRENT_GEMINI_REQUESTS, 2)
@@ -426,6 +432,8 @@ class GeminiSemaphoreTests(unittest.TestCase):
             app_module, "MAX_WAIT_TIME", 30
         ), patch.object(
             app_module, "GEMINI_PROVIDER_BACKOFF_MAX_SECONDS", 1
+        ), patch.object(
+            runtime, "_compute_429_cooldown_seconds", return_value=0.01
         ), patch("time.sleep", MagicMock()):
             result = app_module.call_gemini_with_quota(
                 "model", {"contents": []}, timeout=5, request_type="vision"

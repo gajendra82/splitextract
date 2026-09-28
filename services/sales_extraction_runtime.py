@@ -9,13 +9,14 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import random
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,19 @@ SALES_OCR_MAX_CALLS_PER_REQUEST = _env_positive_int(
 )
 SALES_OCR_CACHE_MAX_ENTRIES = _env_positive_int("SALES_OCR_CACHE_MAX_ENTRIES", 64)
 # OCR-only side bound for pathological megapixel phone photos (Vision keeps original).
-SALES_OCR_MAX_IMAGE_SIDE = _env_positive_int("SALES_OCR_MAX_IMAGE_SIDE", 10000)
+SALES_OCR_MAX_IMAGE_SIDE = _env_positive_int("SALES_OCR_MAX_IMAGE_SIDE", 4000)
+
+# Vertex provider-side 429 RESOURCE_EXHAUSTED circuit breaker (process-local).
+# Independent of local RPM/RPD counters — Vertex can 429 while RPM is low.
+GEMINI_PROVIDER_429_COOLDOWN_SECONDS = _env_positive_int(
+    "GEMINI_PROVIDER_429_COOLDOWN_SECONDS", 30
+)
+GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS = _env_positive_int(
+    "GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS", 120
+)
+GEMINI_PROVIDER_429_MAX_RETRIES = _env_positive_int(
+    "GEMINI_PROVIDER_429_MAX_RETRIES", 3
+)
 
 _sales_extraction_async_sem = asyncio.Semaphore(MAX_CONCURRENT_EXTRACTIONS)
 _sales_extraction_waiters_lock = threading.Lock()
@@ -71,6 +84,20 @@ _gemini_call_lock = threading.Lock()
 _gemini_call_active = 0
 _gemini_call_waiting = 0
 _gemini_slot_depth = threading.local()
+
+# Process-wide Vertex 429 cooldown (shared across concurrent sales/invoice calls).
+_provider_cooldown_lock = threading.Lock()
+_provider_cooldown_until_mono = 0.0
+_provider_429_streak = 0
+_provider_cooldown_active = False
+_gemini_provider_metrics: Dict[str, int] = {
+    "gemini_429_count": 0,
+    "gemini_503_count": 0,
+    "gemini_timeout_count": 0,
+    "gemini_success_count": 0,
+    "gemini_provider_cooldown_count": 0,
+    "gemini_retry_count": 0,
+}
 
 _progress_lock = threading.Lock()
 _sales_request_progress: Dict[str, Dict[str, Any]] = {}
@@ -347,17 +374,27 @@ def finish_sales_progress(
     final_status: str,
     **fields: Any,
 ) -> None:
-    stage = "completed" if final_status == "completed" else "failed"
+    # Map terminal outcomes for status polling.
+    # Do NOT clear cancel flags here: disconnect/cancel may mark progress
+    # terminal while the worker thread is still winding down and must keep
+    # seeing the cancel Event until clear_sales_deadline() runs.
+    if final_status == "completed":
+        stage = "completed"
+        status = "completed"
+    elif final_status == "cancelled":
+        stage = "failed"
+        status = "cancelled"
+    else:
+        stage = "failed"
+        status = "failed"
     update_sales_progress(
         request_id,
         stage,
         final_status=final_status,
-        status="completed" if final_status == "completed" else "failed",
+        status=status,
         label=stage_label(stage),
         **fields,
     )
-    with _cancel_lock:
-        _cancel_flags.pop(request_id, None)
     try:
         from app import clear_request_progress
 
@@ -377,6 +414,8 @@ def get_sales_progress(request_id: str) -> Optional[Dict[str, Any]]:
     out["label"] = stage_label(out.get("stage"))
     if out.get("final_status") == "completed":
         out["status"] = "completed"
+    elif out.get("final_status") == "cancelled":
+        out["status"] = "cancelled"
     elif out.get("final_status"):
         out["status"] = "failed"
     elif out.get("stage") == "queued":
@@ -384,6 +423,443 @@ def get_sales_progress(request_id: str) -> Optional[Dict[str, Any]]:
     else:
         out["status"] = out.get("status") or "processing"
     return out
+
+
+def sales_job_is_active(request_id: str) -> bool:
+    """True when a request is queued or still extracting (not terminal)."""
+    progress = get_sales_progress(request_id)
+    if not progress:
+        return False
+    if progress.get("final_status"):
+        return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Process-local background submission (no Redis/Celery).
+# Fixed worker count == MAX_CONCURRENT_EXTRACTIONS; extra jobs wait in queue.
+# Workers share acquire_sales_extraction_slot with the sync HTTP endpoint.
+# In-memory only: jobs are lost if the process restarts.
+# ---------------------------------------------------------------------------
+
+_bg_queue: Optional[asyncio.Queue] = None
+_bg_workers: List[asyncio.Task] = []
+_bg_start_lock: Optional[asyncio.Lock] = None
+_bg_loop_id: Optional[int] = None
+_bg_scheduled_lock = threading.Lock()
+_bg_scheduled_ids: set = set()
+
+
+def _bg_mark_scheduled(request_id: str) -> bool:
+    """Return True if newly scheduled; False if already scheduled/active."""
+    with _bg_scheduled_lock:
+        if request_id in _bg_scheduled_ids:
+            return False
+        if sales_job_is_active(request_id):
+            # Progress exists from a prior submit; treat as already running.
+            _bg_scheduled_ids.add(request_id)
+            return False
+        _bg_scheduled_ids.add(request_id)
+        return True
+
+
+def _bg_unmark_scheduled(request_id: str) -> None:
+    with _bg_scheduled_lock:
+        _bg_scheduled_ids.discard(request_id)
+
+
+def reset_sales_background_runtime_for_tests() -> None:
+    """Drop process-local queue/workers (tests only)."""
+    global _bg_queue, _bg_workers, _bg_start_lock, _bg_loop_id
+    for task in list(_bg_workers):
+        try:
+            task.cancel()
+        except Exception:
+            pass
+    _bg_workers = []
+    _bg_queue = None
+    _bg_start_lock = None
+    _bg_loop_id = None
+    with _bg_scheduled_lock:
+        _bg_scheduled_ids.clear()
+
+
+async def ensure_sales_background_workers() -> None:
+    """Start a fixed pool of background workers once per process/event-loop."""
+    global _bg_queue, _bg_start_lock, _bg_loop_id, _bg_workers
+    loop = asyncio.get_running_loop()
+    loop_id = id(loop)
+    if _bg_start_lock is None or _bg_loop_id != loop_id:
+        # New event loop (e.g. TestClient restart): recreate lock/queue/workers.
+        _bg_start_lock = asyncio.Lock()
+        _bg_loop_id = loop_id
+        for task in list(_bg_workers):
+            try:
+                task.cancel()
+            except Exception:
+                pass
+        _bg_workers = []
+        _bg_queue = None
+
+    async with _bg_start_lock:
+        alive = [t for t in _bg_workers if not t.done()]
+        if _bg_queue is not None and len(alive) >= MAX_CONCURRENT_EXTRACTIONS:
+            _bg_workers = alive
+            return
+        _bg_workers = alive
+        if _bg_queue is None:
+            _bg_queue = asyncio.Queue()
+        needed = MAX_CONCURRENT_EXTRACTIONS - len(_bg_workers)
+        for index in range(needed):
+            task = asyncio.create_task(
+                _sales_background_worker(len(_bg_workers) + index),
+                name=f"sales-bg-worker-{len(_bg_workers) + index}",
+            )
+            _bg_workers.append(task)
+        logger.info(
+            "sales_background_workers_started count=%s limit=%s",
+            len(_bg_workers),
+            MAX_CONCURRENT_EXTRACTIONS,
+        )
+
+
+async def enqueue_sales_background_job(job: Dict[str, Any]) -> None:
+    await ensure_sales_background_workers()
+    assert _bg_queue is not None
+    await _bg_queue.put(job)
+
+
+async def _sales_background_worker(worker_index: int) -> None:
+    assert _bg_queue is not None
+    while True:
+        job = await _bg_queue.get()
+        try:
+            await _run_sales_background_job(job, worker_index=worker_index)
+        except Exception:
+            logger.exception(
+                "sales_background_worker_crash worker=%s request_id=%s",
+                worker_index,
+                (job or {}).get("request_id"),
+            )
+        finally:
+            _bg_queue.task_done()
+
+
+async def _run_sales_background_job(
+    job: Dict[str, Any],
+    *,
+    worker_index: int = 0,
+) -> None:
+    """Run one extraction job using the shared extraction slot + existing extractor."""
+    # Same extract_sales_statement binding the sync endpoint uses (app module).
+    try:
+        from app import extract_sales_statement
+    except Exception:  # pragma: no cover - fallback if app not loaded
+        from services.sales_statement_extractor import extract_sales_statement
+
+    request_id = str(job.get("request_id") or "")
+    filename = str(job.get("filename") or "upload")
+    file_bytes = job.get("file_bytes") or b""
+    file_type = job.get("file_type")
+    batch_id = job.get("batch_id")
+    deadline_seconds = float(
+        job.get("deadline_seconds") or SALES_EXTRACTION_MAX_EXECUTION_SECONDS
+    )
+    total_started = time.time()
+    queue_wait_seconds = 0.0
+    extraction_duration_seconds = None
+    slot_acquired = False
+    final_status = "failed"
+
+    logger.info(
+        "sales_background_started request_id=%s worker=%s filename=%s file_type=%s",
+        request_id,
+        worker_index,
+        filename,
+        file_type,
+    )
+    try:
+        try:
+            queue_wait_seconds = await acquire_sales_extraction_slot()
+            slot_acquired = True
+        except SalesExtractionBusy as busy:
+            final_status = "queue_timeout"
+            update_sales_progress(
+                request_id,
+                "failed",
+                error={
+                    "error": "queue_timeout",
+                    "message": (
+                        f"Server busy. Queue wait exceeded {busy.timeout}s."
+                    ),
+                },
+            )
+            logger.warning(
+                "sales_background_failed request_id=%s reason=queue_timeout",
+                request_id,
+            )
+            return
+
+        update_sales_progress(
+            request_id,
+            "preparing",
+            queue_wait_seconds=queue_wait_seconds,
+            file_type=file_type,
+            batch_id=batch_id,
+        )
+        extraction_started = time.time()
+        update_sales_progress(request_id, "parsing")
+        try:
+            sales_result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    run_sales_extract_with_deadline,
+                    extract_sales_statement,
+                    file_bytes,
+                    filename,
+                    request_id,
+                    deadline_seconds,
+                ),
+                timeout=deadline_seconds + 15.0,
+            )
+        except asyncio.TimeoutError:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            final_status = "extraction_failed"
+            update_sales_progress(
+                request_id,
+                "failed",
+                error={
+                    "error": "extraction_failed",
+                    "message": (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(deadline_seconds)}s."
+                    ),
+                    "reasons": ["extraction_deadline_exceeded"],
+                },
+            )
+            raise
+        except SalesExtractionDeadlineExceeded as exc:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            final_status = "extraction_failed"
+            update_sales_progress(
+                request_id,
+                "failed",
+                error={
+                    "error": "extraction_failed",
+                    "message": (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(exc.limit_seconds or deadline_seconds)}s."
+                    ),
+                    "reasons": ["extraction_deadline_exceeded"],
+                    "stage": exc.stage,
+                },
+            )
+            raise
+
+        extraction_duration_seconds = time.time() - extraction_started
+        extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        quality = extra.get("extraction_quality") or {}
+        update_sales_progress(
+            request_id,
+            "validating",
+            file_type=file_type,
+            page_count=extra.get("page_count"),
+            extraction_method=extra.get("extraction_method"),
+            ocr_quality=(
+                quality.get("score") if isinstance(quality, dict) else None
+            ),
+            vision_fallback=bool(extra.get("gemini_fallback")),
+            extraction_duration_seconds=extraction_duration_seconds,
+        )
+        if extra.get("extraction_failed"):
+            reasons = []
+            if isinstance(quality, dict):
+                reasons = list(quality.get("reasons") or [])
+            final_status = "extraction_failed"
+            update_sales_progress(
+                request_id,
+                "failed",
+                error={
+                    "error": "extraction_failed",
+                    "message": (
+                        "Could not reliably extract stock statement products. "
+                        "OCR/parser and Gemini Vision fallback both failed validation."
+                    ),
+                    "reasons": reasons,
+                    "gemini_fallback": extra.get("gemini_fallback"),
+                    "source_file": filename,
+                },
+            )
+            raise RuntimeError("extraction_failed")
+
+        # Optional POD wrapper — same rule as the sync endpoint.
+        response_payload: Any = sales_result
+        if extra.get("extraction_method") == "pod_hospital_wise_sales_xlsx":
+            try:
+                from app import build_split_extract_response_from_sales_statement
+
+                response_payload = build_split_extract_response_from_sales_statement(
+                    sales_result=sales_result,
+                    source_filename=filename,
+                    batch_id=batch_id,
+                    split_id=job.get("split_id"),
+                    file_name=job.get("file_name") or filename,
+                    use_blob_storage=bool(job.get("use_blob_storage")),
+                    container_name=job.get("blob_container"),
+                    target_invoices_blob_folder=job.get(
+                        "target_invoices_blob_folder"
+                    ),
+                    start_time=datetime_now_fallback(),
+                )
+            except Exception:
+                logger.exception(
+                    "sales_background_pod_wrapper_failed request_id=%s", request_id
+                )
+                response_payload = sales_result
+
+        final_status = "completed"
+        update_sales_progress(request_id, "completed", result=response_payload)
+        logger.info(
+            "sales_background_completed request_id=%s worker=%s "
+            "extraction_duration=%.3f",
+            request_id,
+            worker_index,
+            float(extraction_duration_seconds or 0.0),
+        )
+    except Exception as exc:
+        progress = get_sales_progress(request_id) or {}
+        if not progress.get("error"):
+            update_sales_progress(
+                request_id,
+                "failed",
+                error={
+                    "error": "extraction_failed",
+                    "message": str(exc)[:500],
+                },
+            )
+        if final_status == "failed" and not isinstance(
+            exc, (SalesExtractionDeadlineExceeded, asyncio.TimeoutError)
+        ):
+            final_status = "failed"
+        logger.warning(
+            "sales_background_failed request_id=%s worker=%s final_status=%s "
+            "error=%s",
+            request_id,
+            worker_index,
+            final_status,
+            type(exc).__name__,
+        )
+    finally:
+        if slot_acquired:
+            release_sales_extraction_slot()
+        total_duration_seconds = time.time() - total_started
+        finish_sales_progress(
+            request_id,
+            final_status,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            file_type=file_type,
+        )
+        log_sales_extraction_event(
+            request_id,
+            filename=filename,
+            file_type=file_type if isinstance(file_type, str) else None,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            total_duration_seconds=total_duration_seconds,
+            final_status=final_status,
+        )
+        _bg_unmark_scheduled(request_id)
+
+
+def datetime_now_fallback():
+    from datetime import datetime
+
+    return datetime.now()
+
+
+def store_sales_progress_result(request_id: str, result: Any) -> None:
+    update_sales_progress(request_id, "completed", result=result)
+
+
+async def submit_sales_extraction_background(
+    *,
+    request_id: str,
+    filename: str,
+    file_bytes: bytes,
+    file_type: Optional[str] = None,
+    batch_id: Optional[str] = None,
+    deadline_seconds: Optional[float] = None,
+    split_id: Optional[str] = None,
+    file_name: Optional[str] = None,
+    use_blob_storage: bool = False,
+    blob_container: Optional[str] = None,
+    target_invoices_blob_folder: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Schedule extraction for already-buffered bytes; return accept metadata.
+
+    Does not run OCR/Gemini inline. Process-local queue only — lost on restart.
+    """
+    with _bg_scheduled_lock:
+        already = request_id in _bg_scheduled_ids
+        active = sales_job_is_active(request_id)
+        if already or active:
+            progress = get_sales_progress(request_id) or {}
+            logger.info(
+                "sales_submit_idempotent request_id=%s stage=%s status=%s",
+                request_id,
+                progress.get("stage"),
+                progress.get("status"),
+            )
+            return {
+                "accepted": True,
+                "already_queued": True,
+                "request_id": request_id,
+                "status": progress.get("status") or "queued",
+                "stage": progress.get("stage") or "queued",
+            }
+        _bg_scheduled_ids.add(request_id)
+
+    begin_sales_progress(
+        request_id, filename, stage="queued", batch_id=batch_id
+    )
+    update_sales_progress(request_id, "queued", file_type=file_type)
+
+    job = {
+        "request_id": request_id,
+        "filename": filename,
+        "file_bytes": file_bytes,
+        "file_type": file_type,
+        "batch_id": batch_id,
+        "deadline_seconds": float(
+            deadline_seconds or SALES_EXTRACTION_MAX_EXECUTION_SECONDS
+        ),
+        "split_id": split_id,
+        "file_name": file_name,
+        "use_blob_storage": use_blob_storage,
+        "blob_container": blob_container,
+        "target_invoices_blob_folder": target_invoices_blob_folder,
+    }
+    try:
+        await enqueue_sales_background_job(job)
+    except Exception:
+        _bg_unmark_scheduled(request_id)
+        raise
+    logger.info(
+        "sales_submit_accepted request_id=%s filename=%s file_type=%s bytes=%s",
+        request_id,
+        filename,
+        file_type,
+        len(file_bytes or b""),
+    )
+    return {
+        "accepted": True,
+        "already_queued": False,
+        "request_id": request_id,
+        "status": "queued",
+        "stage": "queued",
+    }
 
 
 def start_sales_deadline(
@@ -480,6 +956,9 @@ def clear_sales_deadline() -> None:
             stats.get("vision_seconds"),
             stats.get("total_seconds"),
         )
+    if rid:
+        with _cancel_lock:
+            _cancel_flags.pop(rid, None)
     for attr in (
         "ctx",
         "request_id",
@@ -829,6 +1308,189 @@ def release_sales_extraction_slot() -> None:
     )
 
 
+def gemini_active_slots() -> int:
+    with _gemini_call_lock:
+        return int(_gemini_call_active)
+
+
+def get_gemini_provider_metrics() -> Dict[str, int]:
+    with _provider_cooldown_lock:
+        return dict(_gemini_provider_metrics)
+
+
+def get_gemini_provider_cooldown_remaining() -> float:
+    with _provider_cooldown_lock:
+        return max(0.0, float(_provider_cooldown_until_mono) - time.monotonic())
+
+
+def _bump_gemini_metric(name: str, amount: int = 1) -> None:
+    with _provider_cooldown_lock:
+        _gemini_provider_metrics[name] = int(
+            _gemini_provider_metrics.get(name, 0) or 0
+        ) + int(amount)
+
+
+def _compute_429_cooldown_seconds(streak: int) -> float:
+    """Exponential backoff with jitter; capped by GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS.
+
+    Tuned so streak 1 ≈ 10–15s, streak 2 ≈ 20–30s, streak 3+ ≈ 45–60s+ when
+    GEMINI_PROVIDER_429_COOLDOWN_SECONDS=30.
+    """
+    base = float(GEMINI_PROVIDER_429_COOLDOWN_SECONDS)
+    cap = float(GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS)
+    streak_i = max(1, int(streak or 1))
+    delay = base * (0.4 * (2 ** (streak_i - 1)))
+    delay = min(delay, cap)
+    jitter = random.uniform(0.85, 1.15)
+    return max(1.0, min(cap, delay * jitter))
+
+
+def note_gemini_provider_429(
+    *,
+    model: str = "",
+    label: str = "gemini",
+    attempt: int = 1,
+) -> float:
+    """Record a Vertex 429 and extend the process-wide cooldown. Returns cooldown seconds."""
+    global _provider_cooldown_until_mono, _provider_429_streak, _provider_cooldown_active
+    request_id = getattr(_deadline_local, "request_id", None) or "unknown"
+    with _provider_cooldown_lock:
+        _provider_429_streak = int(_provider_429_streak or 0) + 1
+        streak = _provider_429_streak
+        cooldown = _compute_429_cooldown_seconds(streak)
+        new_until = time.monotonic() + cooldown
+        if new_until > _provider_cooldown_until_mono:
+            _provider_cooldown_until_mono = new_until
+        started = not _provider_cooldown_active
+        _provider_cooldown_active = True
+        _gemini_provider_metrics["gemini_429_count"] = int(
+            _gemini_provider_metrics.get("gemini_429_count", 0) or 0
+        ) + 1
+        _gemini_provider_metrics["gemini_provider_cooldown_count"] = int(
+            _gemini_provider_metrics.get("gemini_provider_cooldown_count", 0) or 0
+        ) + 1
+        rem = max(0.0, _provider_cooldown_until_mono - time.monotonic())
+    deadline_rem = sales_deadline_remaining_seconds()
+    logger.warning(
+        "gemini_provider_429 request_id=%s gemini_label=%s model=%s attempt=%s "
+        "provider_status=429 active_gemini_slots=%s gemini_limit=%s "
+        "provider_cooldown_remaining=%.1f remaining_deadline=%s streak=%s",
+        request_id,
+        label,
+        model,
+        attempt,
+        gemini_active_slots(),
+        MAX_CONCURRENT_GEMINI_REQUESTS,
+        rem,
+        None if deadline_rem is None else round(deadline_rem, 1),
+        streak,
+    )
+    if started:
+        logger.warning(
+            "gemini_provider_cooldown_started request_id=%s cooldown=%.1f "
+            "remaining_deadline=%s",
+            request_id,
+            rem,
+            None if deadline_rem is None else round(deadline_rem, 1),
+        )
+    return rem
+
+
+def note_gemini_provider_success() -> None:
+    global _provider_429_streak
+    with _provider_cooldown_lock:
+        _provider_429_streak = 0
+        _gemini_provider_metrics["gemini_success_count"] = int(
+            _gemini_provider_metrics.get("gemini_success_count", 0) or 0
+        ) + 1
+
+
+def note_gemini_provider_transient(code: str) -> None:
+    if code == "503":
+        _bump_gemini_metric("gemini_503_count")
+    elif code == "timeout":
+        _bump_gemini_metric("gemini_timeout_count")
+
+
+def reset_gemini_provider_cooldown_state_for_tests() -> None:
+    """Test helper — clears process-wide cooldown and metrics."""
+    global _provider_cooldown_until_mono, _provider_429_streak, _provider_cooldown_active
+    with _provider_cooldown_lock:
+        _provider_cooldown_until_mono = 0.0
+        _provider_429_streak = 0
+        _provider_cooldown_active = False
+        for key in list(_gemini_provider_metrics.keys()):
+            _gemini_provider_metrics[key] = 0
+
+
+def wait_gemini_provider_cooldown(
+    *,
+    label: str = "gemini",
+    model: str = "",
+) -> None:
+    """Block until shared provider cooldown ends. Does NOT hold the Gemini semaphore."""
+    global _provider_cooldown_active, _provider_cooldown_until_mono
+    request_id = getattr(_deadline_local, "request_id", None) or "unknown"
+    waited = False
+    while True:
+        if sales_deadline_active():
+            check_sales_deadline("gemini_retry")
+            deadline_rem = sales_deadline_remaining_seconds() or 0.0
+            rem = get_gemini_provider_cooldown_remaining()
+            # Cannot wait out provider cooldown within the remaining extraction budget.
+            if rem > 0.0 and deadline_rem < max(3.0, min(rem, 3.0)):
+                raise SalesExtractionDeadlineExceeded(
+                    request_id,
+                    "gemini_retry",
+                    float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+                )
+        rem = get_gemini_provider_cooldown_remaining()
+        if rem <= 0:
+            if waited:
+                with _provider_cooldown_lock:
+                    _provider_cooldown_active = False
+                deadline_rem = sales_deadline_remaining_seconds()
+                logger.info(
+                    "gemini_provider_cooldown_finished request_id=%s gemini_label=%s "
+                    "model=%s remaining_deadline=%s",
+                    request_id,
+                    label,
+                    model,
+                    None if deadline_rem is None else round(deadline_rem, 1),
+                )
+            return
+        waited = True
+        deadline_rem = sales_deadline_remaining_seconds()
+        logger.info(
+            "gemini_provider_waiting_cooldown request_id=%s gemini_label=%s model=%s "
+            "provider_cooldown_remaining=%.1f active_gemini_slots=%s gemini_limit=%s "
+            "remaining_deadline=%s",
+            request_id,
+            label,
+            model,
+            rem,
+            gemini_active_slots(),
+            MAX_CONCURRENT_GEMINI_REQUESTS,
+            None if deadline_rem is None else round(deadline_rem, 1),
+        )
+        chunk = min(rem, 5.0)
+        before = time.monotonic()
+        if sales_deadline_active():
+            # Raises SalesExtractionDeadlineExceeded if cooldown exceeds remaining budget.
+            sales_sleep_respecting_deadline(chunk, "gemini_retry")
+        else:
+            time.sleep(max(0.05, chunk))
+        # If sleep was mocked or returned early, still consume cooldown budget so
+        # waiters cannot spin forever while holding no progress.
+        elapsed = time.monotonic() - before
+        if elapsed < (chunk * 0.5):
+            with _provider_cooldown_lock:
+                _provider_cooldown_until_mono = min(
+                    _provider_cooldown_until_mono,
+                    time.monotonic() + max(0.0, rem - chunk),
+                )
+
+
 @contextmanager
 def gemini_call_slot(label: str = "gemini_call"):
     """Acquire Gemini concurrency slot (re-entrant for nested sales wrappers)."""
@@ -906,21 +1568,131 @@ def sales_generate_content_via_vertex(
     """All sales-statement Gemini HTTP calls must go through the Gemini slot.
 
     Preserves Vertex client error semantics (GeminiProviderError) while enforcing
-    MAX_CONCURRENT_GEMINI_REQUESTS and the request deadline.
+    MAX_CONCURRENT_GEMINI_REQUESTS, the request deadline, and a process-wide
+    Vertex 429 cooldown. The Gemini semaphore is never held during cooldown sleep.
     """
-    check_sales_deadline("gemini_request")
-    rem = sales_deadline_remaining_seconds()
-    if rem is not None and rem < 3.0:
-        raise SalesExtractionDeadlineExceeded(
-            getattr(_deadline_local, "request_id", "unknown"),
-            "gemini_request",
-            float(getattr(_deadline_local, "limit_seconds", 0) or 0),
-        )
-    eff_timeout = sales_gemini_timeout_seconds(int(timeout or 120))
-    from services.vertex_gemini_client import generate_content_via_vertex as _raw
+    from services.vertex_gemini_client import (
+        GeminiProviderError,
+        generate_content_via_vertex as _raw,
+    )
 
-    with gemini_call_slot(label):
-        return _raw(model=model, payload=payload, timeout=eff_timeout)
+    request_id = getattr(_deadline_local, "request_id", None) or "unknown"
+    attempt_429 = 0
+    attempt_transient = 0
+    max_retries = int(GEMINI_PROVIDER_429_MAX_RETRIES)
+
+    while True:
+        check_sales_deadline("gemini_request")
+        rem = sales_deadline_remaining_seconds()
+        if rem is not None and rem < 3.0:
+            raise SalesExtractionDeadlineExceeded(
+                request_id,
+                "gemini_request",
+                float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+            )
+
+        # Shared cooldown wait — outside the semaphore so slots stay free.
+        wait_gemini_provider_cooldown(label=label, model=model)
+
+        rem = sales_deadline_remaining_seconds()
+        if rem is not None and rem < 3.0:
+            raise SalesExtractionDeadlineExceeded(
+                request_id,
+                "gemini_request",
+                float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+            )
+
+        eff_timeout = sales_gemini_timeout_seconds(int(timeout or 120))
+        deadline_rem = sales_deadline_remaining_seconds()
+        logger.info(
+            "gemini_request_attempt request_id=%s gemini_label=%s model=%s "
+            "attempt=%s provider_status=calling active_gemini_slots=%s "
+            "gemini_limit=%s provider_cooldown_remaining=%.1f remaining_deadline=%s",
+            request_id,
+            label,
+            model,
+            attempt_429 + attempt_transient + 1,
+            gemini_active_slots(),
+            MAX_CONCURRENT_GEMINI_REQUESTS,
+            get_gemini_provider_cooldown_remaining(),
+            None if deadline_rem is None else round(deadline_rem, 1),
+        )
+        try:
+            with gemini_call_slot(label):
+                response = _raw(model=model, payload=payload, timeout=eff_timeout)
+            note_gemini_provider_success()
+            return response
+        except GeminiProviderError as exc:
+            code = int(getattr(exc, "code", 0) or 0)
+            if code == 429:
+                attempt_429 += 1
+                _bump_gemini_metric("gemini_retry_count")
+                note_gemini_provider_429(
+                    model=model, label=label, attempt=attempt_429
+                )
+                if attempt_429 >= max_retries:
+                    logger.warning(
+                        "gemini_provider_retry_exhausted request_id=%s "
+                        "gemini_label=%s model=%s attempt=%s provider_status=429 "
+                        "max_retries=%s remaining_deadline=%s",
+                        request_id,
+                        label,
+                        model,
+                        attempt_429,
+                        max_retries,
+                        None
+                        if sales_deadline_remaining_seconds() is None
+                        else round(sales_deadline_remaining_seconds() or 0.0, 1),
+                    )
+                    raise
+                continue
+            if code == 503:
+                attempt_transient += 1
+                note_gemini_provider_transient("503")
+                _bump_gemini_metric("gemini_retry_count")
+                if attempt_transient >= max_retries:
+                    raise
+                backoff = min(
+                    float(GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS),
+                    (2 ** min(attempt_transient, 5))
+                    + random.uniform(0.0, 1.0),
+                )
+                sales_sleep_respecting_deadline(backoff, "gemini_retry")
+                continue
+            raise
+        except TimeoutError:
+            attempt_transient += 1
+            note_gemini_provider_transient("timeout")
+            _bump_gemini_metric("gemini_retry_count")
+            if attempt_transient >= max_retries:
+                raise
+            backoff = min(
+                float(GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS),
+                (2 ** min(attempt_transient, 5)) + random.uniform(0.0, 1.0),
+            )
+            sales_sleep_respecting_deadline(backoff, "gemini_retry")
+            continue
+        except Exception as exc:
+            code = getattr(exc, "code", None)
+            try:
+                code_i = int(code) if code is not None else None
+            except (TypeError, ValueError):
+                code_i = None
+            if code_i in (400, 401, 403):
+                raise
+            if code_i is not None and 500 <= code_i <= 599:
+                attempt_transient += 1
+                _bump_gemini_metric("gemini_retry_count")
+                if attempt_transient >= max_retries:
+                    raise
+                backoff = min(
+                    float(GEMINI_PROVIDER_429_MAX_COOLDOWN_SECONDS),
+                    (2 ** min(attempt_transient, 5))
+                    + random.uniform(0.0, 1.0),
+                )
+                sales_sleep_respecting_deadline(backoff, "gemini_retry")
+                continue
+            raise
 
 
 @contextmanager

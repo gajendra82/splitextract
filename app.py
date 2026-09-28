@@ -886,15 +886,21 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
     """Call Vertex AI Gemini with optional local quota + wait/retry on provider 429/503."""
     start_time = time.time()
     provider_attempt = 0
+    provider_429_count = 0
 
     while True:
         from services.sales_extraction_runtime import (
+            GEMINI_PROVIDER_429_MAX_RETRIES,
             SalesExtractionDeadlineExceeded,
             check_sales_deadline,
+            get_gemini_provider_cooldown_remaining,
+            note_gemini_provider_429,
+            note_gemini_provider_success,
             sales_deadline_active,
             sales_deadline_remaining_seconds,
             sales_gemini_timeout_seconds,
             mark_sales_stage,
+            wait_gemini_provider_cooldown,
         )
 
         if sales_deadline_active():
@@ -918,6 +924,11 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
             logger.error("⏱️ Max wait reached for Gemini request")
             return None
 
+        # Shared Vertex 429 cooldown — wait outside the Gemini semaphore.
+        wait_gemini_provider_cooldown(
+            label=f"gemini_{request_type}", model=model
+        )
+
         model_config = acquire_model_slot_with_wait(remaining_wait)
         if not model_config:
             return None
@@ -935,6 +946,7 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                     timeout=eff_timeout,
                 )
             update_request_progress(f"gemini_{request_type}_response_received")
+            note_gemini_provider_success()
             return response
 
         except SalesExtractionDeadlineExceeded:
@@ -949,7 +961,28 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                 logger.error("⏱️ Gemini provider throttling wait timeout")
                 return None
 
-            # Exponential backoff with jitter for real provider 429/503 only.
+            if int(getattr(e, "code", 0) or 0) == 429:
+                provider_429_count += 1
+                note_gemini_provider_429(
+                    model=model,
+                    label=f"gemini_{request_type}",
+                    attempt=provider_429_count,
+                )
+                if provider_429_count >= int(GEMINI_PROVIDER_429_MAX_RETRIES):
+                    logger.error(
+                        "gemini_provider_retry_exhausted request_type=%s "
+                        "model=%s attempt=%s max_retries=%s",
+                        request_type,
+                        model,
+                        provider_429_count,
+                        GEMINI_PROVIDER_429_MAX_RETRIES,
+                    )
+                    return None
+                # Next loop iteration waits on shared cooldown (no semaphore held).
+                mark_sales_stage("gemini_retry")
+                continue
+
+            # Exponential backoff with jitter for real provider 503 (and other codes).
             base = 2 ** min(provider_attempt, 6)  # 2,4,8,...,64
             sleep_time = min(
                 float(GEMINI_PROVIDER_BACKOFF_MAX_SECONDS), float(base))
@@ -963,7 +996,8 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                     raise SalesExtractionDeadlineExceeded(
                         "unknown", "gemini_retry", 0
                     )
-            sleep_time = max(0.5, min(sleep_time, remaining))
+            cooldown_rem = get_gemini_provider_cooldown_remaining()
+            sleep_time = max(0.5, min(max(sleep_time, cooldown_rem), remaining))
 
             logger.warning(
                 f"⚠️ Gemini {request_type} hit provider limit ({e.code}). "
@@ -29905,13 +29939,13 @@ async def ready():
 
 @app.get("/extract-sales-statement/status/{request_id}")
 async def extract_sales_statement_status(request_id: str):
-    """Observability-only progress lookup; does not replace synchronous POST."""
+    """Observability progress lookup for sync and async (/submit) extractions."""
     from services.sales_extraction_runtime import get_sales_progress
 
     progress = get_sales_progress(request_id)
     if not progress:
         raise HTTPException(status_code=404, detail="Unknown request_id")
-    return {
+    payload = {
         "status": progress.get("status") or "processing",
         "stage": progress.get("stage"),
         "label": progress.get("label"),
@@ -29920,7 +29954,157 @@ async def extract_sales_statement_status(request_id: str):
         "file_type": progress.get("file_type"),
         "stage_duration_seconds": progress.get("stage_duration_seconds"),
         "final_status": progress.get("final_status"),
+        "queue_wait_seconds": progress.get("queue_wait_seconds"),
+        "extraction_duration_seconds": progress.get(
+            "extraction_duration_seconds"
+        ),
     }
+    if progress.get("error") is not None:
+        payload["error"] = progress.get("error")
+    if progress.get("result") is not None:
+        payload["result"] = progress.get("result")
+    return payload
+
+
+@app.post("/extract-sales-statement/cancel/{request_id}")
+async def extract_sales_statement_cancel(request_id: str):
+    """Cooperatively cancel an in-flight sales extraction (stops new OCR/Gemini)."""
+    from services.sales_extraction_runtime import (
+        finish_sales_progress,
+        get_sales_progress,
+        request_cancel_sales_extraction,
+        terminate_sales_tesseract_children,
+    )
+
+    progress = get_sales_progress(request_id)
+    if not progress:
+        raise HTTPException(status_code=404, detail="Unknown request_id")
+    request_cancel_sales_extraction(request_id)
+    terminate_sales_tesseract_children()
+    if not progress.get("final_status"):
+        finish_sales_progress(request_id, "cancelled")
+    return {
+        "status": "cancelled",
+        "request_id": request_id,
+        "message": "Cancellation requested; in-flight OCR/Gemini will stop cooperatively.",
+    }
+
+
+@app.post("/extract-sales-statement/submit", status_code=202)
+async def extract_sales_statement_submit(
+    request: Request,
+    file: UploadFile = File(...),
+    batch_id: Optional[str] = Form(None),
+    use_blob_storage: bool = Form(False),
+    blob_container: Optional[str] = Form(None),
+    target_invoices_blob_folder: Optional[str] = Form(None),
+    split_id: Optional[str] = Form(None),
+    file_name: Optional[str] = Form(None),
+):
+    """Accept a sales-statement extraction and process it in the background.
+
+    Returns HTTP 202 immediately after validating the upload and buffering
+    file bytes. Poll GET /extract-sales-statement/status/{request_id}.
+
+    Process-local queue only (no Redis/Celery). In-flight jobs are lost if
+    the Python process restarts.
+    """
+    from services.sales_extraction_runtime import (
+        resolve_request_id,
+        submit_sales_extraction_background,
+    )
+
+    filename = file.filename or "upload"
+    content_type = (file.content_type or "").lower()
+    if "." not in filename:
+        if content_type.startswith("text/"):
+            filename = f"{filename}.txt"
+        elif content_type == "application/pdf":
+            filename = f"{filename}.pdf"
+        elif content_type in {"image/jpeg", "image/jpg"}:
+            filename = f"{filename}.jpg"
+        elif content_type == "image/png":
+            filename = f"{filename}.png"
+        elif content_type == "image/bmp":
+            filename = f"{filename}.bmp"
+        elif content_type in {"image/tiff", "image/tif"}:
+            filename = f"{filename}.tiff"
+        elif content_type == "image/webp":
+            filename = f"{filename}.webp"
+        elif content_type in {
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }:
+            filename = (
+                f"{filename}.docx"
+                if "openxmlformats" in content_type
+                else f"{filename}.doc"
+            )
+
+    ext = ("." + filename.rsplit(".", 1)
+           [-1].lower()) if "." in filename else ""
+    word_mime = content_type in {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",
+    }
+    if ext and ext not in SALES_STATEMENT_EXTENSIONS:
+        if not (
+            content_type.startswith("text/")
+            or content_type.startswith("image/")
+            or content_type == "application/pdf"
+            or word_mime
+            or content_type in {
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported format '{ext}'. "
+                    f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
+                ),
+            )
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    file_type = ext.lstrip(".") if ext else (content_type or None)
+    if not batch_id:
+        batch_id = str(uuid.uuid4())
+
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    accept = await submit_sales_extraction_background(
+        request_id=request_id,
+        filename=filename,
+        file_bytes=file_bytes,
+        file_type=file_type,
+        batch_id=batch_id,
+        split_id=split_id,
+        file_name=file_name or filename,
+        use_blob_storage=use_blob_storage,
+        blob_container=blob_container,
+        target_invoices_blob_folder=target_invoices_blob_folder,
+    )
+    status_url = f"/extract-sales-statement/status/{request_id}"
+    return JSONResponse(
+        status_code=202,
+        content={
+            "accepted": True,
+            "request_id": request_id,
+            "status": accept.get("status") or "queued",
+            "stage": accept.get("stage") or "queued",
+            "status_url": status_url,
+            "already_queued": bool(accept.get("already_queued")),
+            "message": (
+                "Extraction already in progress for this request_id."
+                if accept.get("already_queued")
+                else "Extraction accepted and processing in background."
+            ),
+        },
+    )
 
 
 @app.post("/extract-sales-statement")
@@ -30071,6 +30255,30 @@ async def extract_sales_statement_endpoint(
         # wait_for is a backstop: cooperative deadline inside the worker stops
         # OCR/Gemini sooner. Cancelling the await does NOT kill the thread, so
         # we set a cancel flag and terminate tesseract children on expiry.
+        # If Laravel/HTTP client disconnects (timeout), stop work and mark failed
+        # so progress polling does not spin forever.
+        client_disconnected = False
+
+        async def _cancel_on_disconnect() -> None:
+            nonlocal client_disconnected
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        client_disconnected = True
+                        logger.warning(
+                            "sales_client_disconnected request_id=%s filename=%s",
+                            request_id,
+                            filename,
+                        )
+                        request_cancel_sales_extraction(request_id)
+                        terminate_sales_tesseract_children()
+                        finish_sales_progress(request_id, "client_disconnected")
+                        return
+                    await asyncio.sleep(0.5)
+            except asyncio.CancelledError:
+                return
+
+        disconnect_watch = asyncio.create_task(_cancel_on_disconnect())
         try:
             sales_result = await asyncio.wait_for(
                 asyncio.to_thread(
@@ -30100,6 +30308,16 @@ async def extract_sales_statement_endpoint(
         except SalesExtractionDeadlineExceeded as exc:
             request_cancel_sales_extraction(request_id)
             terminate_sales_tesseract_children()
+            if client_disconnected:
+                final_status = "client_disconnected"
+                raise HTTPException(
+                    status_code=499,
+                    detail=_extraction_failed_detail(
+                        "Client disconnected during extraction.",
+                        reasons=["client_disconnected"],
+                        stage=exc.stage,
+                    ),
+                ) from exc
             raise HTTPException(
                 status_code=422,
                 detail=_extraction_failed_detail(
@@ -30111,6 +30329,17 @@ async def extract_sales_statement_endpoint(
                     stage=exc.stage,
                 ),
             ) from exc
+        except asyncio.CancelledError:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            final_status = "cancelled"
+            raise
+        finally:
+            disconnect_watch.cancel()
+            try:
+                await asyncio.wait_for(disconnect_watch, timeout=1.0)
+            except Exception:
+                pass
         extraction_duration_seconds = time.time() - extraction_started
 
         extra = ((sales_result.get("totals") or {}).get("extra") or {})
