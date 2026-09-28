@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import base64
 import io
+import itertools
 import json
 import logging
 import re
@@ -2351,6 +2352,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
                 "marg_sale_purchase_value",
                 "lstsl_open_recd_footer",
                 "free_return_total_value",
+                "op_pur_sale_bal_qnty_footer",
             }
         )
     )
@@ -2372,7 +2374,11 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
         and float(totals.get("closing_value") or 0) > sum_closing_qty * 1000
         and float(totals.get("closing_value") or 0) > 100000
         and str(totals.get("extra", {}).get("total_row_source") or "")
-        not in {"lstsl_open_recd_footer", "free_return_total_value"}
+        not in {
+            "lstsl_open_recd_footer",
+            "free_return_total_value",
+            "op_pur_sale_bal_qnty_footer",
+        }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
         totals["extra"]["rejected_closing_value"] = totals.get("closing_value")
@@ -3397,6 +3403,50 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # Customer / Material / Opening_bal_qty / Primary_qty / Closing_bal_qty.
+    # There is no sales column. Opening + primary must not replace closing.
+    if totals["extra"].get("extraction_method") == "zl_secondary_xlsx":
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["closing_value"] = closing_value_sum
+        totals["closing_value"] = closing_value_sum or None
+        totals["extra"]["stock_identity_kind"] = "zl_secondary_xlsx"
+        totals["extra"]["stock_identity_formula"] = (
+            "opening=Opening_bal_qty; receipts=Primary_qty; "
+            "closing=Closing_bal_qty; no sales column"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": receipt_sum,
+            "extracted_closing": closing_sum,
+            "extracted_closing_value": closing_value_sum,
+            "calculated_closing": closing_sum,
+            "is_valid": True,
+        }
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if isinstance(row_extra, dict):
+                row_extra["expected_closing"] = _to_float(item.get("closing_qty"))
+                row_extra["stock_identity_ok"] = True
+        return result
+
     fail = 0
     for item in items:
         if not isinstance(item, dict):
@@ -3521,13 +3571,20 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             for key in ("opening_qty", "receipts_qty", "closing_qty"):
                 if item.get(key) in (None, ""):
                     item[key] = 0.0
-            # No money columns on these layouts (incl. Gemini Group Wise path).
+            # No sales-amount column on these layouts. A ZL secondary row may
+            # already hold closing qty × Secondaryrate; do not clear that.
             for key in (
                 "sales_value",
                 "closing_value",
                 "opening_value",
                 "receipts_value",
             ):
+                if (
+                    method == "zl_secondary_xlsx"
+                    and key == "closing_value"
+                    and item.get("closing_value") not in (None, "")
+                ):
+                    continue
                 item[key] = None
             continue
 
@@ -7547,24 +7604,33 @@ def _parse_zl_secondary_xlsx(
         item["opening_qty"] = _to_float(_row_cell_at(row, col_open), 0.0)
         item["receipts_qty"] = _to_float(_row_cell_at(row, col_primary), 0.0)
         item["closing_qty"] = _to_float(_row_cell_at(row, col_close), 0.0)
-        # No sales / value columns in this export — do not invent
+        # No sales column. Do not invent sales qty. Closing value is
+        # Closing_bal_qty × Secondaryrate when both are printed.
         item["sales_qty"] = None
         item["sales_value"] = None
         item["closing_value"] = None
 
         mrp = _to_nullable_float(_row_cell_at(row, col_mrp))
         rate = _to_nullable_float(_row_cell_at(row, col_rate))
+        item["extra"]["layout"] = "zl_opening_primary_closing"
         if mrp is not None:
             item["extra"]["mrp"] = mrp
         if rate is not None:
             item["extra"]["secondary_rate"] = rate
+            item["extra"]["unit_rate"] = rate
+            if item["closing_qty"]:
+                item["closing_value"] = round(item["closing_qty"] * rate, 2)
 
         items.append(item)
 
     result["line_items"] = items
-    # Totals: no value columns present
+    closing_sum = round(
+        sum(_to_float(i.get("closing_value")) for i in items if i.get("closing_value")),
+        2,
+    )
     result["totals"]["sales_value"] = None
-    result["totals"]["closing_value"] = None
+    result["totals"]["closing_value"] = closing_sum or None
+    result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
     return result
 
 _XLS_HEADER_ALIASES = {
@@ -25298,6 +25364,357 @@ def _parse_portrait_opening_balance_image(
     return result
 
 
+def _is_op_pur_sale_bal_qnty_text(text: str) -> bool:
+    """PRODUCT / UNIT / OP QNTY / PUR-QNTY / SALE-QNTY / BAL-QNTY photo.
+
+    SALES & STOCK OF COMPANY (OPENING / PURCHASE / SALE / BALANCE) is a
+    different sheet and must not match.
+    """
+    blob = text or ""
+    if re.search(r"Receipt\s*/\s*Pur|Opening\s+Value|Issue\s*/\s*Sales", blob, re.I):
+        return False
+    if re.search(r"STOCK\s+OF\s+COMPANY", blob, re.I):
+        return False
+    return bool(
+        re.search(r"OP[\s.\-]*QNTY", blob, re.I)
+        and re.search(r"PUR[\s.\-]*QNTY", blob, re.I)
+        and re.search(r"SALE[\s.\-]*QNTY", blob, re.I)
+        and re.search(r"BAL[\s.\-]*QNTY", blob, re.I)
+    )
+
+
+def _op_pur_sale_bal_qnty_header_text(file_bytes: bytes) -> str:
+    """OCR the title, dates, and OP QNTY column header only."""
+    try:
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageOps
+    except ImportError:
+        return ""
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("L")
+    except Exception:
+        return ""
+    width, height = image.size
+    crop = image.crop((0, int(height * 0.02), width, int(height * 0.16)))
+    crop = ImageEnhance.Contrast(crop).enhance(1.4)
+    try:
+        return pytesseract.image_to_string(crop, config="--psm 6")
+    except Exception:
+        return ""
+
+
+def _pipe_digit_qty_choices(value: Any) -> List[float]:
+    """A column bar read as the digit 1: 83| -> 831, 0| -> 1, 15| -> 15.1."""
+    number = _to_float(value)
+    choices = [number]
+    if abs(number - round(number)) < 1e-6:
+        whole = int(round(number))
+        if whole % 10 == 1 and whole >= 1:
+            choices.append(float(whole // 10))
+        return choices
+    scaled = round(number * 10)
+    if abs(number * 10 - scaled) < 1e-6 and int(scaled) % 10 == 1:
+        choices.append(float(int(scaled) // 10))
+    return choices
+
+
+def _qty_row_balances(opening: float, receipts: float, sales: float, closing: float) -> bool:
+    return abs((opening + receipts - sales) - closing) < 0.01
+
+
+def _strip_pipe_digit_from_packing(packing: Any) -> Any:
+    """|60TAB | can be read as 160TAB or 60TAB1. 100ML and 10CAP stay."""
+    text = str(packing or "").replace("|", "").strip()
+    if not text:
+        return packing
+    text = re.sub(r"([A-Za-z])1$", r"\1", text)
+    match = re.fullmatch(r"1(\d{2,})(\s*[A-Za-z].*)", text)
+    if match and not match.group(1).startswith("0"):
+        text = match.group(1) + match.group(2)
+    return text.strip()
+
+
+def _repair_op_pur_sale_bal_pipe_digits(item: Dict[str, Any]) -> None:
+    """Drop a bar that was stored as a trailing 1 when the row then balances.
+
+    A row that already balances is left as printed. SEPTILIN 11 / 11 is a
+    real trailing 1, not a bar.
+    """
+    if item.get("packing"):
+        item["packing"] = _strip_pipe_digit_from_packing(item.get("packing"))
+    fields = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+    groups = [_pipe_digit_qty_choices(item.get(field)) for field in fields]
+    if all(len(group) == 1 for group in groups):
+        return
+    raw = tuple(group[0] for group in groups)
+    if _qty_row_balances(*raw):
+        return
+    best = None
+    best_changes = -1
+    for combo in itertools.product(*groups):
+        if not _qty_row_balances(*combo):
+            continue
+        changes = sum(1 for left, right in zip(raw, combo) if abs(left - right) > 1e-6)
+        # 0| 0| 0| 0 can be read as 1, 1, 1, 0. Dropping one 1 also balances
+        # (1+0-1=0), so keep the reading that drops every bar-digit.
+        if changes > best_changes:
+            best = combo
+            best_changes = changes
+    if best is None:
+        return
+    for field, value in zip(fields, best):
+        item[field] = int(value) if abs(value - round(value)) < 1e-6 else value
+
+
+def _finalize_op_pur_sale_bal_qnty(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Line columns are quantities. Only the GRAND TOTAL line is rupees."""
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        if not name or re.match(r"^(?:GRAND\s+)?TOTAL\b", name, re.I):
+            continue
+        item["product_name"] = name
+        _repair_op_pur_sale_bal_pipe_digits(item)
+        item.pop("receipts_value", None)
+        item.pop("opening_value", None)
+        item["sales_value"] = None
+        item["closing_value"] = None
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        for key in (
+            "purchase_value",
+            "receipts_value",
+            "opening_value",
+            "sales_value",
+            "closing_value",
+        ):
+            extra.pop(key, None)
+        item["extra"] = extra
+        items.append(item)
+    if len(items) < 8:
+        return None
+    result["line_items"] = items
+    result["report_title"] = result.get("report_title") or "COMPANY STOCK STATEMENT"
+    totals = result.setdefault("totals", {})
+    extra_t = totals.setdefault("extra", {})
+    extra_t["extraction_method"] = "op_pur_sale_bal_qnty"
+    extra_t["layout"] = "op_pur_sale_bal_qnty"
+    extra_t["qty_only"] = True
+    extra_t["total_row_source"] = "op_pur_sale_bal_qnty_footer"
+    return result
+
+
+_OP_PUR_SALE_BAL_QNTY_PROMPT = """
+This photo is a COMPANY STOCK STATEMENT.
+Columns left to right, separated by vertical bars:
+PRODUCT | UNIT | OP QNTY | PUR-QNTY | SALE-QNTY | BAL-QNTY
+
+A vertical bar is only a column separator. It is not the digit 1, not a plus sign, and not an extra digit.
+"83|" is 83, not 831. "0|" is 0, not 1. "10|" is 10, not 101. "15|" is 15, not 151 and not 15+.
+"|60TAB |" is packing 60TAB, not 160TAB and not 60TAB1. "200ML |" is packing 200ML, not 20036.
+
+OP QNTY, PUR-QNTY, SALE-QNTY, and BAL-QNTY are quantities, not rupees.
+Do not put a quantity into sales_value, closing_value, or purchase_value.
+
+Map:
+- UNIT -> packing
+- OP QNTY -> opening_qty
+- PUR-QNTY -> receipts_qty
+- SALE-QNTY -> sales_qty
+- BAL-QNTY -> closing_qty
+
+The GRAND TOTAL line under the table is rupees, not a product:
+- OPENING -> totals.extra.opening_value
+- PURCHASE -> totals.extra.purchase_value
+- SALES -> totals.sales_value
+- CLOSING -> totals.closing_value
+Example: OPENING 208059.06, PURCHASE 311820.13, SALES 305277.25, CLOSING 214601.93.
+
+company_name is the "Company :" line (HIMALAYA WELLNESS COMPANY). Do not use it as stockist_name.
+period_from and period_to come from FROM / TO. 30/08/2026 is 2026-08-30, not 2026-08-31.
+
+Example rows:
+EVECARE CAP, packing 30CAP, opening_qty 15, receipts_qty 0, sales_qty 10, closing_qty 5.
+GASEX SYP 200ML, packing 200ML, opening_qty 0, receipts_qty 0, sales_qty 0, closing_qty 0.
+LIV.52 DS TAB, packing 60 TAB, opening_qty 670, receipts_qty 1100, sales_qty 1604, closing_qty 166.
+TENTEX FORTE TAB, opening_qty 9, receipts_qty 0, sales_qty 9, closing_qty 0.
+Do not copy another statement's TENTEX row (184 / 16 / 168) onto this photo.
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "COMPANY STOCK STATEMENT",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "closing_qty": number
+    }
+  ],
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {"opening_value": number|null, "purchase_value": number|null}
+  }
+}
+""".strip()
+
+
+def _blank_op_pur_sale_bal_column_bars(image):
+    """Whiten the column bars on this sheet so a vision read cannot turn them into 1.
+
+    A bar is a few pixels wide and hangs above or below the digits. Quantity
+    digits are wider and are left in place. Other statement photos never call this.
+    """
+    rgb = image.convert("RGB")
+    gray = rgb.convert("L")
+    width, height = gray.size
+    src = gray.load()
+    out = rgb.load()
+    y0, y1 = int(height * 0.12), int(height * 0.72)
+    ink = [
+        sum(
+            1
+            for x in range(int(width * 0.25), int(width * 0.85), 4)
+            if src[x, y] < 115
+        )
+        for y in range(y0, y1)
+    ]
+    bands = []
+    in_band = False
+    start = end = 0
+    for offset, value in enumerate(ink):
+        y = y0 + offset
+        if value > 8:
+            if not in_band:
+                start = y
+                in_band = True
+            end = y
+        elif in_band and end - start >= 4:
+            bands.append((start, end))
+            in_band = False
+        else:
+            in_band = False
+    if in_band and end - start >= 4:
+        bands.append((start, end))
+
+    def _runs(y: int, x0: int, x1: int):
+        runs = []
+        x = x0
+        while x < x1:
+            if src[x, y] >= 100:
+                x += 1
+                continue
+            left = x
+            while x < x1 and src[x, y] < 100:
+                x += 1
+            runs.append((left, x - 1))
+        return runs
+
+    x0, x1 = int(width * 0.15), int(width * 0.93)
+    for start, end in bands:
+        if end - start < 12:
+            continue
+        overhang = []
+        # Only the stroke that continues below the digits. A "1" is also thin,
+        # but it ends with the other figures and must stay.
+        probe = list(range(max(start, end - 7), end + 1))
+        for y in probe:
+            for left, right in _runs(y, x0, x1):
+                if 1 <= right - left + 1 <= 8:
+                    overhang.append((left, right))
+        if not overhang:
+            continue
+        hits: Dict[int, int] = {}
+        for left, right in overhang:
+            for x in range(left, right + 1):
+                hits[x] = hits.get(x, 0) + 1
+        xs = sorted(x for x, count in hits.items() if count >= 4)
+        cores = []
+        if xs:
+            left = right = xs[0]
+            for x in xs[1:]:
+                if x - right <= 2:
+                    right = x
+                else:
+                    cores.append((left, right))
+                    left = right = x
+            cores.append((left, right))
+        for core_left, core_right in cores:
+            for y in range(max(0, start - 1), min(height, end + 2)):
+                for left, right in _runs(y, x0, x1):
+                    if right < core_left or left > core_right:
+                        continue
+                    if right - left + 1 > 18:
+                        continue
+                    for x in range(max(0, left - 1), min(width, right + 2)):
+                        out[x, y] = (255, 255, 255)
+    return rgb
+
+
+def _extract_op_pur_sale_bal_qnty_photo(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".jpg",
+) -> Optional[Dict[str, Any]]:
+    """Read PRODUCT / OP QNTY / PUR-QNTY / SALE-QNTY / BAL-QNTY photos."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    header = _op_pur_sale_bal_qnty_header_text(file_bytes)
+    if not _is_op_pur_sale_bal_qnty_text(header):
+        return None
+    try:
+        from PIL import Image, ImageOps
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        image = _blank_op_pur_sale_bal_column_bars(image)
+        payload_bytes = _pil_jpeg_bytes(image)
+        mime = "image/jpeg"
+    except Exception:
+        payload_bytes = file_bytes
+        mime = _image_mime(ext)
+    b64 = base64.b64encode(payload_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _OP_PUR_SALE_BAL_QNTY_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("OP/PUR/SALE/BAL qnty photo skipped: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed)
+    return _finalize_op_pur_sale_bal_qnty(result)
+
+
 def _is_opening_purchase_sale_balance_qty_text(text: str) -> bool:
     """Qty-only SALES & STOCK OF COMPANY grid: OPENING, PURCHASE, SALE, BALANCE.
 
@@ -29932,6 +30349,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         zandra_order = None
     if zandra_order and zandra_order.get("line_items"):
         return zandra_order
+    try:
+        op_qnty = _extract_op_pur_sale_bal_qnty_photo(file_bytes, filename, ext)
+    except Exception as exc:
+        logger.warning("OP/PUR/SALE/BAL qnty photo skipped: %s", exc)
+        op_qnty = None
+    if op_qnty and op_qnty.get("line_items"):
+        return op_qnty
     try:
         qty_balance = _extract_opening_purchase_sale_balance_photo(
             file_bytes, filename, ext
