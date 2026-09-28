@@ -18324,6 +18324,296 @@ _MONTHLY_SS_ROLES = (
 )
 
 
+# Right edges of the numeric columns on the Western "Monthly Sales And Stock"
+# landscape form (visual coordinates after page rotation). Sale Qty stays on
+# 493; last-month and Monthly SS Report layouts are not this form.
+_MONTHLY_SALES_STOCK_RIGHTS = (
+    ("pur_rate", 191.0),
+    ("ptr", 225.0),
+    ("opening", 261.0),
+    ("opening_value", 308.0),
+    ("pur_qty", 334.0),
+    ("pur_fqty", 359.0),
+    ("pur_value", 403.0),
+    ("pur_r_qty", 432.0),
+    ("pur_ret_fqty", 466.0),
+    ("sale_qty", 493.0),
+    ("sale_fqty", 521.0),
+    ("sale_value", 562.0),
+    ("sale_ret_qty", 598.0),
+    ("sale_ret_fqty", 633.0),
+    ("sale_ret_val", 679.0),
+    ("other_qty", 705.0),
+    ("closing", 738.0),
+    ("closing_amt", 785.0),
+    ("stock_amt", 835.0),
+    ("rpl_qty", 882.0),
+)
+_MONTHLY_SALES_STOCK_NUM = re.compile(r"-?\d+(?:\.\d+)?")
+_MONTHLY_SALES_STOCK_DATE = re.compile(r"\d{1,2}-[A-Za-z]{3}-\d{4}")
+
+
+def _is_monthly_sales_and_stock_text(text: str) -> bool:
+    """Western landscape Monthly Sales And Stock, not Monthly SS Report."""
+    if not text or not re.search(r"Monthly\s+Sales\s+And\s+Stock", text, re.I):
+        return False
+    if re.search(r"Monthly\s+SS\s+Report", text, re.I):
+        return False
+    return bool(re.search(r"\bPTR\b", text) and re.search(r"\bP\s*Rate\b", text, re.I))
+
+
+def _monthly_sales_stock_words(page) -> List[Dict[str, Any]]:
+    import fitz
+
+    matrix = page.rotation_matrix
+    words: List[Dict[str, Any]] = []
+    for x0, y0, x1, y1, token, *_rest in page.get_text("words") or []:
+        token = str(token or "").strip()
+        if not token:
+            continue
+        rect = fitz.Rect(x0, y0, x1, y1) * matrix
+        words.append(
+            {
+                "x0": rect.x0,
+                "x1": rect.x1,
+                "y": (rect.y0 + rect.y1) / 2.0,
+                "cx": (rect.x0 + rect.x1) / 2.0,
+                "text": token,
+            }
+        )
+    words.sort(key=lambda word: (word["y"], word["x0"]))
+    return words
+
+
+def _monthly_sales_stock_rows(words: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+    rows: List[List[Dict[str, Any]]] = []
+    for word in words:
+        if not rows or word["y"] - rows[-1][0]["y"] > 6:
+            rows.append([word])
+        else:
+            rows[-1].append(word)
+    return rows
+
+
+def _monthly_sales_stock_column(x1: float) -> Optional[str]:
+    best_role = None
+    best_dist = 12.0
+    for role, edge in _MONTHLY_SALES_STOCK_RIGHTS:
+        dist = abs(x1 - edge)
+        if dist < best_dist:
+            best_role = role
+            best_dist = dist
+    return best_role
+
+
+def _monthly_sales_stock_cells(row: List[Dict[str, Any]]) -> Dict[str, float]:
+    cells: Dict[str, float] = {}
+    best_dist: Dict[str, float] = {}
+    for word in row:
+        plain = word["text"].replace(",", "")
+        if not _MONTHLY_SALES_STOCK_NUM.fullmatch(plain):
+            continue
+        role = _monthly_sales_stock_column(word["x1"])
+        if not role:
+            continue
+        edge = next(edge for name, edge in _MONTHLY_SALES_STOCK_RIGHTS if name == role)
+        dist = abs(word["x1"] - edge)
+        if role not in best_dist or dist < best_dist[role]:
+            cells[role] = float(plain)
+            best_dist[role] = dist
+    return cells
+
+
+def _parse_monthly_sales_and_stock(doc, filename: str) -> Optional[Dict[str, Any]]:
+    """Parse Western Healthcare Monthly Sales And Stock by printed column edge.
+
+    Returns None for every other statement, including Monthly SS Report.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_monthly_sales_and_stock_text(text) for text in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Monthly Sales And Stock"
+    items: List[Dict[str, Any]] = []
+    grand: Dict[str, float] = {}
+    division_total: Dict[str, float] = {}
+
+    for page in doc:
+        words = _monthly_sales_stock_words(page)
+        if not result.get("stockist_name"):
+            for row in _monthly_sales_stock_rows(words):
+                text = " ".join(word["text"] for word in sorted(row, key=lambda w: w["x0"]))
+                if row[0]["y"] > 80:
+                    break
+                if re.search(r"\b(PVT|LTD|LIMITED)\b", text, re.I) and not result.get("stockist_name"):
+                    result["stockist_name"] = _clean_name(text)
+                    continue
+                if result.get("stockist_name") and not re.search(
+                    r"^(Contact|Mobile|Email)\b|Monthly\s+Sales", text, re.I
+                ):
+                    prev = result.get("stockist_address") or ""
+                    result["stockist_address"] = _clean_name(f"{prev} {text}".strip())
+        for row in _monthly_sales_stock_rows(words):
+            ordered = sorted(row, key=lambda word: word["x0"])
+            text = " ".join(word["text"] for word in ordered)
+            if re.search(r"\bCompany\b", text, re.I) and not result.get("company_name"):
+                company_words = []
+                seen_company = False
+                for word in ordered:
+                    if not seen_company and re.fullmatch(r"Company", word["text"], re.I):
+                        seen_company = True
+                        continue
+                    if not seen_company:
+                        continue
+                    if re.fullmatch(r"Vendor|:", word["text"], re.I):
+                        if word["text"] == ":":
+                            continue
+                        break
+                    company_words.append(word["text"])
+                if company_words:
+                    result["company_name"] = _clean_name(" ".join(company_words))
+            if re.search(r"\bDivision\b", text, re.I) and "division" not in result["totals"]["extra"]:
+                div_words = []
+                seen_div = False
+                for word in ordered:
+                    if re.fullmatch(r"Division", word["text"], re.I):
+                        seen_div = True
+                        continue
+                    if not seen_div or re.fullmatch(r"Name|:", word["text"], re.I):
+                        continue
+                    div_words.append(word["text"])
+                if div_words:
+                    result["totals"]["extra"]["division"] = _clean_name(" ".join(div_words))
+            if result.get("period_from") is None and re.search(r"\bFrom\b", text, re.I):
+                for word in ordered:
+                    if _MONTHLY_SALES_STOCK_DATE.fullmatch(word["text"]) and word["cx"] < 280:
+                        result["period_from"] = _normalize_date(word["text"])
+            if result.get("period_to") is None and re.search(r"\bTo\b", text, re.I):
+                for word in ordered:
+                    if _MONTHLY_SALES_STOCK_DATE.fullmatch(word["text"]) and word["cx"] > 300:
+                        result["period_to"] = _normalize_date(word["text"])
+
+        ptr = next((word for word in words if word["text"] == "PTR"), None)
+        if ptr is None:
+            continue
+        for row in _monthly_sales_stock_rows(words):
+            if row[0]["y"] <= ptr["y"] + 12:
+                continue
+            ordered = sorted(row, key=lambda word: word["x0"])
+            head = " ".join(
+                word["text"] for word in ordered if word["cx"] < 110
+            )
+            cells = _monthly_sales_stock_cells(row)
+            if re.search(r"grand\s+total", head, re.I):
+                grand = cells
+                continue
+            if re.search(r"total\s+of", head, re.I):
+                division_total = cells
+                continue
+            sr = next(
+                (
+                    word["text"]
+                    for word in ordered
+                    if word["cx"] < 28 and re.fullmatch(r"\d{1,4}", word["text"])
+                ),
+                None,
+            )
+            name = _clean_name(
+                " ".join(
+                    word["text"]
+                    for word in ordered
+                    if word["cx"] < 120
+                    and not (word["cx"] < 28 and re.fullmatch(r"\d{1,4}", word["text"]))
+                )
+            )
+            pack = _clean_name(
+                " ".join(
+                    word["text"] for word in ordered if 120 <= word["cx"] < 170
+                )
+            )
+            if sr is None:
+                if (
+                    items
+                    and name
+                    and not cells
+                    and re.search(r"[A-Za-z]", name)
+                    and not re.search(r"\b(DIVISION|TOTAL|PAGE|HIMALAYA)\b", name, re.I)
+                ):
+                    items[-1]["product_name"] = _clean_name(
+                        f"{items[-1]['product_name']} {name}"
+                    )
+                continue
+            if not name or not re.search(r"[A-Za-z]", name):
+                continue
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack or None
+            item["opening_qty"] = cells.get("opening", 0.0)
+            item["opening_value"] = cells.get("opening_value", 0.0)
+            item["receipts_qty"] = cells.get("pur_qty", 0.0)
+            item["receipts_value"] = cells.get("pur_value", 0.0)
+            item["sales_qty"] = cells.get("sale_qty", 0.0)
+            item["sales_value"] = cells.get("sale_value", 0.0)
+            item["closing_qty"] = cells.get("closing", 0.0)
+            item["closing_value"] = cells.get("closing_amt", 0.0)
+            extra = item["extra"]
+            extra["layout"] = "monthly_sales_and_stock"
+            extra["sl_no"] = int(sr)
+            for role, field in (
+                ("pur_rate", "pur_rate"),
+                ("ptr", "ptr"),
+                ("pur_fqty", "purchase_free_qty"),
+                ("pur_r_qty", "purchase_return_qty"),
+                ("pur_ret_fqty", "purchase_return_free_qty"),
+                ("sale_fqty", "sales_free"),
+                ("sale_ret_qty", "sale_return_qty"),
+                ("sale_ret_fqty", "sale_return_free_qty"),
+                ("sale_ret_val", "sale_return_value"),
+                ("other_qty", "other_qty"),
+                ("rpl_qty", "repl_qty"),
+                ("stock_amt", "stock_amt"),
+                ("opening_value", "opening_value"),
+                ("pur_value", "purchase_value"),
+            ):
+                if role in cells:
+                    extra[field] = cells[role]
+            if "pur_value" in cells:
+                extra["receipts_value"] = cells["pur_value"]
+            items.append(item)
+
+    if len(items) < 3:
+        return None
+    printed = grand or division_total
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "monthly_sales_and_stock"
+    extra["layout"] = "monthly_sales_and_stock"
+    extra["rows_detected"] = len(items)
+    if printed:
+        extra["total_row_source"] = (
+            "monthly_sales_and_stock_grand_total" if grand else "monthly_sales_and_stock_total"
+        )
+        result["totals"]["sales_value"] = printed.get("sale_value")
+        result["totals"]["closing_value"] = printed.get("closing_amt")
+        result["totals"]["opening_qty"] = printed.get("opening")
+        result["totals"]["receipts_qty"] = printed.get("pur_qty")
+        result["totals"]["sales_qty"] = printed.get("sale_qty")
+        result["totals"]["closing_qty"] = printed.get("closing")
+        for role, field in (
+            ("opening_value", "opening_value"),
+            ("pur_value", "purchase_value"),
+            ("stock_amt", "stock_amt"),
+            ("sale_ret_qty", "sale_return_qty"),
+            ("sale_ret_val", "sale_return_value"),
+            ("sale_fqty", "sales_free_qty"),
+            ("pur_fqty", "purchase_free_qty"),
+        ):
+            if role in printed:
+                extra[field] = printed[role]
+    return result
+
+
 def _is_monthly_ss_report_text(text: str) -> bool:
     """Srinivasa-style Monthly SS Report: Opening / Pur. Qty / Sale Qty / Closing."""
     if not text or not re.search(r"Monthly\s+SS\s+Report", text, re.I):
@@ -18861,6 +19151,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if himalaya_dump and himalaya_dump.get("line_items"):
             himalaya_dump["totals"]["extra"]["statement_count"] = 1
             return himalaya_dump
+
+        monthly_sales_stock = _parse_monthly_sales_and_stock(doc, filename)
+        if monthly_sales_stock and monthly_sales_stock.get("line_items"):
+            monthly_sales_stock["totals"]["extra"]["statement_count"] = 1
+            return monthly_sales_stock
 
         monthly_ss = _parse_monthly_ss_report(doc, filename)
         if monthly_ss and monthly_ss.get("line_items"):
