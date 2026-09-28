@@ -1773,7 +1773,8 @@ def _is_stacked_opbal_qty_line(tok: str) -> bool:
 def _is_swil_stacked_opbal_expiry_near_format(text: str) -> bool:
     """SwilERP Sales & Stock with Op.Bal + Expiry/Breakage + Near Expiry (7 qtys).
 
-    Distinct from 5-column Biswas and 9-column Rcpt Oth sheets.
+    Distinct from 5-column Biswas, 9-column Rcpt Oth, and Dump/Near sheets that
+    only print "Near Expiry" as a sub-label (those must not claim this path).
     """
     if not text:
         return False
@@ -1784,9 +1785,17 @@ def _is_swil_stacked_opbal_expiry_near_format(text: str) -> bool:
         return False
     if re.search(r"Rcpt\s*Oth|Receipt\s*Oth", header, re.I):
         return False
-    has_expiry = bool(re.search(r"\bExpiry\b|\bBreakage\b", header, re.I))
-    has_near = bool(re.search(r"\bNear\b", header, re.I))
-    return has_expiry and has_near
+    # Closing Dump Near is a different layout (Apex / Dump Stock).
+    if re.search(r"Closing.{0,40}\bDump\b", header, re.I | re.S):
+        return False
+    # Expiry/Breakage column must sit between Issue and Closing.
+    if not re.search(
+        r"Issue.{0,120}(?:Expiry|Breakage).{0,120}Closing",
+        header,
+        re.I | re.S,
+    ):
+        return False
+    return bool(re.search(r"\bNear\b", header, re.I))
 
 
 def _looks_like_swil_pack_token(tok: str) -> bool:
@@ -1940,6 +1949,299 @@ def _parse_swil_stacked_opbal_expiry_near_statement(
     result["totals"]["sales_value"] = None
     result["totals"]["closing_value"] = None
     result = _apply_total_row_to_result(result, text)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# SwilERP Tax Rate + Packing + Dump/Near (Apex Agencies etc.)
+# Single-line rows: Name | TaxRate | Packing | Op.Bal | Receipt | Total |
+# Issue | Closing | Dump | Near | MSR. Must not use the Expiry/Breakage
+# stacked parser (that path turns Packing into product_name).
+# ---------------------------------------------------------------------------
+
+def _is_swil_tax_pack_dump_near_text(text: str) -> bool:
+    """SwilERP Sales & Stock with Tax Rate, Packing, and Closing/Dump/Near."""
+    if not text:
+        return False
+    header = "\n".join(ln for ln in text.splitlines()[:60] if ln.strip())
+    if not re.search(r"Sales\s*&\s*Stock", header, re.I):
+        return False
+    if not re.search(r"Op\.?\s*Bal", header, re.I):
+        return False
+    if not (
+        re.search(r"\bReceipt\b", header, re.I)
+        and re.search(r"\bIssue\b", header, re.I)
+        and re.search(r"\bClosing\b", header, re.I)
+    ):
+        return False
+    if not re.search(r"Closing.{0,40}\bDump\b", header, re.I | re.S):
+        return False
+    if not re.search(r"\bNear\b", header, re.I):
+        return False
+    # Tax Rate / Shelf Tax distinguishes this from plain Dump OpBal sheets.
+    return bool(
+        re.search(r"Tax\s*Rate|Shelf\s*Tax|\bPACKING\b", header, re.I)
+    )
+
+
+def _swil_tax_pack_dump_near_centers(words: List) -> Optional[Dict[str, float]]:
+    found: Dict[str, float] = {}
+    for w in words or []:
+        token = str(w[4]).strip()
+        xc = (float(w[0]) + float(w[2])) / 2.0
+        key = None
+        if re.fullmatch(r"PACKING", token, re.I):
+            key = "pack"
+        elif re.fullmatch(r"Tax|Rate", token, re.I):
+            key = "tax_rate"
+        elif re.fullmatch(r"Op\.?Bal\.?", token, re.I):
+            key = "opening_qty"
+        elif re.fullmatch(r"Receipt", token, re.I):
+            key = "receipts_qty"
+        elif re.fullmatch(r"Total", token, re.I):
+            key = "total_stock"
+        elif re.fullmatch(r"Issue", token, re.I):
+            key = "sales_qty"
+        elif re.fullmatch(r"Closing", token, re.I):
+            key = "closing_qty"
+        elif re.fullmatch(r"Dump", token, re.I):
+            key = "dump_qty"
+        elif re.fullmatch(r"Near", token, re.I):
+            key = "near_expiry_qty"
+        elif re.fullmatch(r"MSR", token, re.I):
+            key = "msr_price"
+        if key:
+            # Rate (2nd header row) overwrites Tax for a better column center.
+            if key not in found or key == "tax_rate":
+                found[key] = xc
+    needed = {"pack", "opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+    if not needed.issubset(found):
+        return None
+    return found
+
+
+def _swil_tax_pack_dump_near_buckets(
+    centers: Dict[str, float],
+) -> List[Tuple[str, float, float]]:
+    pack_x = centers["pack"]
+    tax_x = centers.get("tax_rate")
+    # Name ends before Tax Rate (or before Packing if Tax missing).
+    if tax_x is not None and tax_x < pack_x:
+        name_hi = (tax_x + pack_x) / 2.0 - 8.0
+        name_hi = min(name_hi, tax_x - 5.0)
+    else:
+        name_hi = pack_x - 28.0
+    name_hi = max(40.0, name_hi)
+    buckets: List[Tuple[str, float, float]] = [("name", 0.0, name_hi)]
+    if tax_x is not None and tax_x < pack_x:
+        tax_hi = (tax_x + pack_x) / 2.0
+        buckets.append(("tax_rate", name_hi, tax_hi))
+        pack_lo = tax_hi
+    else:
+        pack_lo = name_hi
+    qty_keys = [
+        "opening_qty",
+        "receipts_qty",
+        "total_stock",
+        "sales_qty",
+        "closing_qty",
+        "dump_qty",
+        "near_expiry_qty",
+        "msr_price",
+    ]
+    ordered = [(k, centers[k]) for k in qty_keys if k in centers]
+    first_qty_x = ordered[0][1] if ordered else pack_x + 40.0
+    buckets.append(("pack", pack_lo, (pack_x + first_qty_x) / 2.0))
+    for idx, (name, center) in enumerate(ordered):
+        lo = buckets[-1][2]
+        if idx + 1 < len(ordered):
+            hi = (center + ordered[idx + 1][1]) / 2.0
+        else:
+            hi = center + 40.0
+        if hi <= lo:
+            hi = lo + 8.0
+        buckets.append((name, lo, hi))
+    return buckets
+
+
+def _parse_swil_tax_pack_dump_near_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse Apex-style SwilERP Tax/Packing/Dump/Near Sales & Stock PDFs."""
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    blob = "\n".join(page_texts)
+    if not _is_swil_tax_pack_dump_near_text(blob):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Sales & Stock Statement"
+    for ln in (page_texts[0].splitlines() if page_texts else [])[:8]:
+        s = ln.strip()
+        if not s:
+            continue
+        if re.search(r"Page\s*No|Sales\s*&\s*Stock|PRODUCT\s*NAME", s, re.I):
+            break
+        if not result.get("stockist_name"):
+            result["stockist_name"] = _clean_name(s)
+        elif not result.get("stockist_address"):
+            result["stockist_address"] = _clean_name(s)
+
+    m_title = re.search(r"(Sales\s*&\s*Stock\s*Statement[^\n]*)", blob, re.I)
+    if m_title:
+        result["report_title"] = _clean_name(m_title.group(1))
+    m_period = re.search(
+        r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*Upto\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if m_period:
+        result["period_from"] = _normalize_date(m_period.group(1))
+        result["period_to"] = _normalize_date(m_period.group(2))
+    for ln in blob.splitlines()[:40]:
+        if re.search(r"HIMALAYA", ln, re.I):
+            result["company_name"] = _clean_name(ln)
+            break
+
+    items: List[Dict[str, Any]] = []
+    buckets: Optional[List[Tuple[str, float, float]]] = None
+    for page in doc:
+        words = sorted(
+            page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0])
+        )
+        centers = _swil_tax_pack_dump_near_centers(words)
+        if centers:
+            buckets = _swil_tax_pack_dump_near_buckets(centers)
+        if not buckets:
+            continue
+
+        header_y = None
+        for w in words:
+            if re.fullmatch(r"Op\.?Bal\.?", str(w[4]), re.I):
+                header_y = float(w[1])
+                break
+
+        rows: List[Dict[str, Any]] = []
+        for w in words:
+            x0, y0, x1, _y1, token = w[0], w[1], w[2], w[3], str(w[4])
+            if header_y is not None and y0 <= header_y + 10:
+                continue
+            if not token.strip():
+                continue
+            if re.match(
+                r"^(?:Page|TOTAL|GRAND|Powered|PRODUCT|PACKING|Continued)",
+                token,
+                re.I,
+            ):
+                continue
+            xc = (x0 + x1) / 2.0
+            # Right-aligned qtys: probe with right edge.
+            probe = float(x1) if re.fullmatch(r"-?[\d,]+(?:\.\d+)?", token) else xc
+            bucket = None
+            for name, lo, hi in buckets:
+                edge = probe if name != "name" else xc
+                if lo <= edge < hi:
+                    bucket = name
+                    break
+            if not bucket:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= 4.0:
+                row = rows[-1]
+            else:
+                row = {"y": y0, "cells": {name: [] for name, _lo, _hi in buckets}}
+                rows.append(row)
+            row["cells"][bucket].append(token)
+            if bucket == "name":
+                row["y"] = y0
+
+        for row in rows:
+            cells = row["cells"]
+            name = _clean_name(" ".join(cells.get("name") or []))
+            if not name or len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+                continue
+            if re.match(
+                r"^(?:TOTAL|GRAND|HIMALAYA|PRODUCT|PACKING|Page|By\b|Powered|"
+                r"SwilERP|Continued)\b",
+                name,
+                re.I,
+            ):
+                continue
+            if re.search(r"SwilERP|for\s+Retail", name, re.I):
+                continue
+            # Refuse packing-only "names" (the bug this parser replaces).
+            if _looks_like_swil_pack_token(name) and not re.search(
+                r"[A-Za-z]{3,}",
+                re.sub(
+                    r"\d+\s*(?:ML|MG|GM|TAB|CAP|S)\b",
+                    "",
+                    name,
+                    flags=re.I,
+                ),
+            ):
+                continue
+            pack = _clean_name(" ".join(cells.get("pack") or [])) or None
+            if pack:
+                pack = re.sub(r"\s+", "", pack)
+                if pack.startswith("&") or re.fullmatch(r"[&/]+", pack or ""):
+                    continue
+            # Drop stray tax-rate digits that leaked into the name band.
+            name = re.sub(r"\s+\d+(?:\.\d+)?\s*$", "", name).strip()
+            if not name or len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+                continue
+
+            def _num(field: str) -> float:
+                vals = []
+                for tok in cells.get(field) or []:
+                    parsed = _ocr_qty_token(str(tok).replace(",", ""))
+                    if parsed is not None:
+                        vals.append(parsed)
+                return vals[-1] if vals else 0.0
+
+            # Name-only wrap lines (no qty): merge into previous product.
+            has_qty = any(
+                _num(f) or (cells.get(f) or [])
+                for f in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "pack",
+                )
+            )
+            if not has_qty and items:
+                prev = items[-1]
+                prev["product_name"] = _clean_name(
+                    f"{prev.get('product_name') or ''} {name}"
+                )
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = pack
+            item["opening_qty"] = _num("opening_qty")
+            item["receipts_qty"] = _num("receipts_qty")
+            item["sales_qty"] = _num("sales_qty")
+            item["closing_qty"] = _num("closing_qty")
+            item["sales_value"] = 0.0
+            item["closing_value"] = 0.0
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["layout"] = "swil_tax_pack_dump_near"
+                if cells.get("total_stock"):
+                    extra["total_stock_qty"] = _num("total_stock")
+                if cells.get("dump_qty"):
+                    extra["dump_qty"] = _num("dump_qty")
+                if cells.get("near_expiry_qty"):
+                    extra["near_expiry_qty"] = _num("near_expiry_qty")
+            items.append(item)
+
+    if len(items) < 3:
+        return None
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "swil_tax_pack_dump_near"
+    result["totals"]["extra"]["statement_count"] = 1
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = None
     return result
 
 
@@ -14301,9 +14603,15 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
     return result
 
 
-def _is_product_wise_stock_statement_text(text: str) -> bool:
-    """ASHOK-style Product wise stock statement (Opening/Receipt/Issues/Closing)."""
+def _is_product_wise_qty_only_stock_statement_text(text: str) -> bool:
+    """ASHOK-style Product wise stock statement (Opening/Receipt/Issues/Closing).
+
+    Qty-only variant without Sales amount. Distinct from the Box/Sales-amount
+    layout handled by _parse_product_wise_stock_statement.
+    """
     if not text:
+        return False
+    if re.search(r"Sales\s+amount", text, re.I):
         return False
     return bool(
         re.search(r"Product\s+wise\s+stock\s+statement", text, re.I)
@@ -14366,10 +14674,16 @@ def _product_wise_buckets_from_centers(
     return buckets
 
 
-def _parse_product_wise_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
-    """Parse Product wise stock statement from word positions (qty-only)."""
+def _parse_product_wise_qty_only_stock_statement(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse ASHOK-style Product wise stock statement (qty-only, no Sales amount).
+
+    Does not claim the Box/Sales-amount layout used by Asha/Bindal-style reports;
+    that path stays in _parse_product_wise_stock_statement.
+    """
     page_texts = [(page.get_text("text") or "") for page in doc]
-    if not any(_is_product_wise_stock_statement_text(t) for t in page_texts):
+    if not any(_is_product_wise_qty_only_stock_statement_text(t) for t in page_texts):
         return None
 
     result = empty_result(filename, "pdf")
@@ -21943,6 +22257,21 @@ def _maybe_early_vision_for_image_only_pdf(
     if not quality.get("should_fallback"):
         return None
 
+    # Prefer dedicated Swil Receipt/Pur vision over generic Gemini when the
+    # image-only sample OCR cannot prove the layout (monitor photos).
+    try:
+        swil_photo = _parse_image_only_swil_receipt_pur_pdf(doc, filename)
+        if swil_photo and swil_photo.get("line_items"):
+            extra = swil_photo.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "swil_receipt_pur_image_only"
+            return swil_photo
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s swil receipt image-only probe failed: %s",
+            filename,
+            exc,
+        )
+
     try:
         from services.gemini_extraction_fallback import try_gemini_vision_extract
 
@@ -21986,6 +22315,12 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if image_only_ssa and image_only_ssa.get("line_items"):
             return image_only_ssa
 
+        # Image-only Sales & Stock Receipt/Pur photos (monitor screenshots).
+        # OCR is unreadable; must run before early generic Gemini escape.
+        image_only_swil = _parse_image_only_swil_receipt_pur_pdf(doc, filename)
+        if image_only_swil and image_only_swil.get("line_items"):
+            return image_only_swil
+
         # SwilERP 7-column Sales & Stock Statement (Op.Bal/Receipt/Retrn/Total/
         # Issue/Retrn/Closing). Must run before the 5-column opbal parser below,
         # which otherwise locks onto the wrong columns and zeroes every quantity.
@@ -22010,6 +22345,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if swil_rcpt_oth and swil_rcpt_oth.get("line_items"):
             swil_rcpt_oth["totals"]["extra"]["statement_count"] = 1
             return swil_rcpt_oth
+
+        # SwilERP Tax Rate + Packing + Closing/Dump/Near (Apex Agencies etc.).
+        # Must run before Expiry/Breakage and generic OpBal stacked parsers —
+        # those otherwise treat Packing tokens as product names.
+        swil_tax_pack = _parse_swil_tax_pack_dump_near_pdf(doc, filename)
+        if swil_tax_pack and swil_tax_pack.get("line_items"):
+            return swil_tax_pack
 
         # SwilERP Op.Bal + Expiry/Breakage + Near (7 qty cols, stacked PDF text).
         swil_expiry = _parse_swil_stacked_opbal_expiry_near_statement(
@@ -22101,6 +22443,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             product_wise["totals"]["extra"]["statement_count"] = 1
             return product_wise
 
+        product_wise_qty = _parse_product_wise_qty_only_stock_statement(doc, filename)
+        if product_wise_qty and product_wise_qty.get("line_items"):
+            product_wise_qty["totals"]["extra"]["statement_count"] = 1
+            return product_wise_qty
+
         pack_mexp_text = "\n".join((page.get_text("text") or "") for page in doc)
         pack_doc = _parse_pack_mexp_qty_doc(doc, filename)
         pack_text = _parse_pack_mexp_qty_statement(pack_mexp_text, filename, "pdf")
@@ -22170,6 +22517,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if product_wise and product_wise.get("line_items"):
             product_wise["totals"]["extra"]["statement_count"] = 1
             return product_wise
+
+        product_wise_qty = _parse_product_wise_qty_only_stock_statement(doc, filename)
+        if product_wise_qty and product_wise_qty.get("line_items"):
+            product_wise_qty["totals"]["extra"]["statement_count"] = 1
+            return product_wise_qty
 
         ezeal = _parse_ezeal_inward_outward_statement(doc, filename)
         if ezeal and ezeal.get("line_items"):
@@ -25799,10 +26151,25 @@ Rules:
   receipts_value missing when Receipt/Pur Value is printed (including 0.00).
 - Opening Value is extra.opening_value / opening_value. Do not invent amounts.
 - Issue/Sales Value is sales_value. Closing Value is closing_value.
+- Headers may read Op. qty. / Opening bal Value / Receipt qty. / Receipt/Pur Value /
+  Total qty. / Issue qty. / Issue/Sales Value / Closing qty. / Closing bala value.
+  Total qty is NEVER sales_qty. sales_qty is only Issue / Issue/Sales qty.
 - Skip header, HIMALAYA banner, GRAND TOTAL as a product.
-- Period: From DD/MM/YYYY Upto DD/MM/YYYY.
+- Period: From DD/MM/YYYY Upto DD/MM/YYYY (use the statement year, not OCR noise).
 - company_name = HIMALAYA WELLNESS COMPANY / manufacturer, not the stockist.
+- stockist_name is the distributor/shop (window title / top party name), not the
+  street address line and not the Himalaya company banner.
+- Continuation pages (Page No.2+) may omit the company header and start mid-table.
+  Still extract EVERY product row on the page until TOTAL / end of report.
 """.strip()
+
+
+_SWIL_RECEIPT_VALUE_CONTINUATION_PROMPT = (
+    _SWIL_RECEIPT_VALUE_VISION_PROMPT
+    + "\n\nThis image is a CONTINUATION page of the same Sales & Stock Statement. "
+    "Extract all product rows visible on this page even if PRODUCT NAME / "
+    "PACKING headers are missing or cropped."
+)
 
 
 def _line_receipts_value(item: Dict[str, Any]) -> float:
@@ -27124,26 +27491,268 @@ def _extract_opening_purchase_sale_balance_photo(
     return finished
 
 
+def _swil_receipt_pur_image_only_ok(result: Optional[Dict[str, Any]]) -> bool:
+    """Vision result looks like Receipt/Pur qty+value Sales & Stock (not generic)."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    if _swil_receipt_value_count(result) < 2:
+        return False
+    # Reject period-year OCR collapses (e.g. 2001) common on generic Gemini.
+    for key in ("period_from", "period_to"):
+        raw = str(result.get(key) or "")
+        m = re.match(r"^(\d{4})-", raw)
+        if m and not (2018 <= int(m.group(1)) <= 2035):
+            return False
+    money_rows = 0
+    for item in items:
+        if _to_float(item.get("closing_value")) > 0 or _to_float(
+            item.get("sales_value")
+        ) > 0:
+            money_rows += 1
+    return money_rows >= 2
+
+
+def _fix_swil_receipt_photo_party_fields(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Screen photos often put the address into stockist_name."""
+    name = _clean_name(str(result.get("stockist_name") or ""))
+    addr = _clean_name(str(result.get("stockist_address") or ""))
+    company = _clean_name(str(result.get("company_name") or ""))
+    if name and re.search(
+        r"\b(?:PARA|ROAD|STREET|NAGAR|COLONY|DIST|ISLAMPUR|W/?NO)\b|,",
+        name,
+        re.I,
+    ):
+        if not addr:
+            result["stockist_address"] = name
+        result["stockist_name"] = None
+        name = ""
+    if company and re.search(r"HIMALAYA", company, re.I):
+        result["company_name"] = company
+    elif not company and name and re.search(r"HIMALAYA\s+WELLNESS", name, re.I):
+        result["company_name"] = name
+        result["stockist_name"] = None
+    if not result.get("report_title"):
+        result["report_title"] = "Sales & Stock Statement"
+    return result
+
+
+def _repair_swil_receipt_total_as_sales_qty(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Fix monitor-photo rows where Total qty was mapped into sales_qty.
+
+    When opening is 0 and sales_qty equals receipts_qty but closing is lower,
+    Issue was almost certainly blank and Total was read as Issue.
+    """
+    repaired: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        if opening == 0 and receipts > 0 and abs(sales - receipts) < 0.05:
+            # Total qty was copied into Issue/Sales.
+            if closing + 0.05 < receipts:
+                item = dict(item)
+                item["sales_qty"] = round(receipts - closing, 2)
+            elif abs(closing - receipts) < 0.05:
+                item = dict(item)
+                item["sales_qty"] = 0.0
+            else:
+                repaired.append(item)
+                continue
+            if abs(_to_float(item.get("sales_value"))) < 0.05:
+                item["sales_value"] = 0.0
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            extra = dict(extra)
+            extra["total_as_sales_repaired"] = True
+            item["extra"] = extra
+            repaired.append(item)
+            continue
+        repaired.append(item)
+    return repaired
+
+
+def _parse_image_only_swil_receipt_pur_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Image-only Sales & Stock Receipt/Pur photos (monitor screenshots).
+
+    OCR on these photos is unreadable, so the early generic Gemini escape
+    otherwise returns zeroed receipts/opening. Reuse the dedicated Swil
+    Receipt/Pur vision reader instead.
+    """
+    import fitz
+
+    page_count = doc.page_count
+    if page_count < 1 or page_count > 12:
+        return None
+    embedded_chars = 0
+    for page_index in range(page_count):
+        embedded_chars += len(
+            re.sub(r"\s+", "", doc[page_index].get_text("text") or "")
+        )
+    if embedded_chars >= 40:
+        return None
+
+    def _render(page_index: int) -> bytes:
+        pix = doc[page_index].get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+        return pix.tobytes("png")
+
+    # Probe page 1 with Swil vision; only claim when Receipt/Pur values land.
+    probe = _extract_swil_receipt_value_vision(
+        _render(0),
+        f"{filename}#page1",
+        ".png",
+        require_receipt_values=True,
+        continuation=False,
+        skip_rotate=False,
+    )
+    if not _swil_receipt_pur_image_only_ok(probe):
+        return None
+
+    page_results: List[Optional[Dict[str, Any]]] = [probe]
+    for page_index in range(1, min(page_count, 12)):
+        page_name = f"{filename}#page{page_index + 1}"
+        page_result = None
+        try:
+            page_result = _extract_swil_receipt_value_vision(
+                _render(page_index),
+                page_name,
+                ".png",
+                # Continuation pages must not be dropped when Receipt/Pur
+                # values OCR poorly — keep qty rows from page 2+.
+                require_receipt_values=False,
+                continuation=True,
+                skip_rotate=True,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Swil Receipt/Pur image-only page %s failed for %s: %s",
+                page_index + 1,
+                filename,
+                exc,
+            )
+            page_result = None
+        page_results.append(page_result)
+
+    # One more pass for pages that failed (common under 429 rate limits).
+    for page_index, page_result in enumerate(page_results):
+        if page_result and page_result.get("line_items"):
+            continue
+        if page_index == 0:
+            continue
+        time.sleep(3)
+        page_name = f"{filename}#page{page_index + 1}"
+        retry = _extract_swil_receipt_value_vision(
+            _render(page_index),
+            page_name,
+            ".png",
+            require_receipt_values=False,
+            continuation=True,
+            skip_rotate=True,
+        )
+        if retry and retry.get("line_items"):
+            page_results[page_index] = retry
+            logger.info(
+                "Swil Receipt/Pur image-only recovered page %s for %s (%s rows)",
+                page_index + 1,
+                filename,
+                len(retry.get("line_items") or []),
+            )
+
+    merged = empty_result(filename, "pdf")
+    merged_items: List[Dict[str, Any]] = []
+    pages_ok = 0
+    for page_result in page_results:
+        if not page_result or not page_result.get("line_items"):
+            continue
+        pages_ok += 1
+        for key in (
+            "stockist_name",
+            "stockist_address",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if page_result.get(key) and not merged.get(key):
+                merged[key] = page_result[key]
+        merged_items.extend(page_result.get("line_items") or [])
+        totals = page_result.get("totals") or {}
+        if totals.get("sales_value") is not None:
+            merged["totals"]["sales_value"] = totals.get("sales_value")
+        if totals.get("closing_value") is not None:
+            merged["totals"]["closing_value"] = totals.get("closing_value")
+        if totals.get("receipts_value") is not None:
+            merged["totals"]["receipts_value"] = totals.get("receipts_value")
+            merged["totals"]["extra"]["receipts_value"] = totals.get(
+                "receipts_value"
+            )
+
+    merged["line_items"] = _repair_swil_receipt_total_as_sales_qty(
+        _dedupe_swil_receipt_overlap_items(
+            _drop_trailing_statement_total_item(merged_items)
+        )
+    )
+    if len(merged.get("line_items") or []) < 3:
+        return None
+    if not _swil_receipt_pur_image_only_ok(merged):
+        return None
+    merged = _fix_swil_receipt_photo_party_fields(merged)
+    merged["totals"]["extra"]["extraction_method"] = "swil_receipt_pur_value_vision"
+    merged["totals"]["extra"]["layout"] = "swil_receipt_pur_value"
+    merged["totals"]["extra"]["statement_count"] = 1
+    merged["totals"]["extra"]["image_only_swil_receipt"] = True
+    merged["totals"]["extra"]["pages_parsed"] = pages_ok
+    merged["totals"]["extra"]["pages_total"] = page_count
+    if pages_ok < page_count:
+        logger.warning(
+            "Swil Receipt/Pur image-only incomplete for %s: parsed %s/%s pages",
+            filename,
+            pages_ok,
+            page_count,
+        )
+    return merged
+
+
 def _extract_swil_receipt_value_vision(
     file_bytes: bytes,
     filename: str,
     ext: str = ".png",
+    require_receipt_values: bool = True,
+    continuation: bool = False,
+    skip_rotate: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Read Sales & Stock Receipt/Pur Value. Other layouts return None."""
     import os
 
     from services.vertex_gemini_client import generate_content_via_vertex
 
-    upright = _upright_swil_receipt_image(file_bytes)
-    mime = "image/png" if upright is not file_bytes else _image_mime(ext)
+    upright = (
+        file_bytes if skip_rotate else _upright_swil_receipt_image(file_bytes)
+    )
+    mime = "image/png" if (skip_rotate or upright is not file_bytes) else _image_mime(ext)
+    if skip_rotate:
+        mime = "image/png"
     b64 = base64.b64encode(upright).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    prompt = (
+        _SWIL_RECEIPT_VALUE_CONTINUATION_PROMPT
+        if continuation
+        else _SWIL_RECEIPT_VALUE_VISION_PROMPT
+    )
     payload = {
         "contents": [
             {
                 "role": "user",
                 "parts": [
-                    {"text": _SWIL_RECEIPT_VALUE_VISION_PROMPT},
+                    {"text": prompt},
                     {"inline_data": {"mime_type": mime, "data": b64}},
                 ],
             }
@@ -27152,7 +27761,9 @@ def _extract_swil_receipt_value_vision(
     }
     parsed = None
     last_err: Optional[Exception] = None
-    for attempt in range(3):
+    # Image-only multi-page photos often hit 429; give every page more chances.
+    attempts = 5 if (continuation or not require_receipt_values) else 4
+    for attempt in range(attempts):
         try:
             response = generate_content_via_vertex(
                 model=model, payload=payload, timeout=120
@@ -27162,7 +27773,12 @@ def _extract_swil_receipt_value_vision(
                 break
         except Exception as exc:
             last_err = exc
-            time.sleep(min(2 ** attempt, 8))
+            # Back off harder on rate limits so page 2 is not silently dropped.
+            delay = min(2 ** attempt, 8)
+            err_s = str(exc).upper()
+            if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s:
+                delay = min(8 * (attempt + 1), 40)
+            time.sleep(delay)
     if last_err and not (parsed and parsed.get("line_items")):
         logger.warning("Swil Receipt/Pur vision failed for %s: %s", filename, last_err)
         return None
@@ -27170,7 +27786,9 @@ def _extract_swil_receipt_value_vision(
         return None
     result = empty_result(filename, ext.lstrip(".") or "png")
     result = _apply_swil_receipt_value_fields(result, parsed)
-    if _swil_receipt_value_count(result) == 0:
+    if require_receipt_values and _swil_receipt_value_count(result) == 0:
+        return None
+    if not require_receipt_values and len(result.get("line_items") or []) < 2:
         return None
     return result
 
