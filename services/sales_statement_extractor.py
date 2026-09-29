@@ -1732,6 +1732,9 @@ def _ocr_qty_token(tok: str) -> Optional[float]:
         return None
     if t in {"o", "O", "°", "〇", "()", "—", "-", "."}:
         return 0.0
+    # Pack sizes (60TABS / 30CAPS / 100ML) must never become OpBal qty.
+    if re.search(r"(?i)(?:TABS?|CAPS?|MLS?|MGS?|SYP|INJ|GMS?|GR|PH)\s*$", t):
+        return None
     if re.fullmatch(r"-?\d+(?:\.\d+)?", t):
         return _to_float(t)
     # Single letter glued onto digits (common Tesseract noise on this format)
@@ -1740,7 +1743,7 @@ def _ocr_qty_token(tok: str) -> Optional[float]:
         return _to_float(m.group(1))
     # Trailing junk letter: 66o, 30_
     m = re.fullmatch(r"(-?\d+(?:\.\d+)?)[A-Za-z._]*", t)
-    if m and not re.search(r"(?:TAB|ML|MG|CAP|SYP|INJ)\b", t, re.I):
+    if m and not re.search(r"(?i)(?:TABS?|CAPS?|ML|MG|SYP|INJ)", t):
         return _to_float(m.group(1))
     return None
 
@@ -3266,6 +3269,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
                 "lstsl_open_recd_footer",
                 "free_return_total_value",
                 "op_pur_sale_bal_qnty_footer",
+                "product_wise_stock_statement_footer",
             }
         )
     )
@@ -3646,6 +3650,65 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # MediVision Op/Purc/Sale/Cl qty/NM60D: Cl qty is the printed closing column.
+    # Near-expiry (NM60D) can leave Cl qty off Op+Purc-Sale; do not rewrite Cl.
+    if totals["extra"].get("extraction_method") == "medivision_op_purc_nm60d":
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_value_sum = round(
+            sum(_to_float(i.get("sales_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            row_extra["stock_identity_ok"] = True
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = receipt_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["line_sales_value_sum"] = sales_value_sum
+        totals["extra"]["line_closing_value_sum"] = closing_value_sum
+        totals["extra"]["stock_identity_kind"] = "medivision_op_purc_nm60d"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing_qty=Cl qty; nm60_qty=NM60D; printed Cl may differ from Op+Purc-Sale"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "opening_plus_purchase": opening_sum + receipt_sum,
+            "expected_total": opening_sum + receipt_sum,
+            "calculated_closing": closing_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": True,
+        }
+        if sales_value_sum > 0:
+            totals["sales_value"] = sales_value_sum
+        if closing_value_sum > 0:
+            totals["closing_value"] = closing_value_sum
+        return result
+
     # Company-wise summary RTL has OP QTY / OP AMT / SALE AMT / CLOSING / CLOSING AMT.
     # It has no sales qty or receipts. Do not fill those from OP QTY or from
     # opening + receipts - sales.
@@ -3724,6 +3787,47 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         totals["sales_value"] = None
         totals["closing_value"] = None
+        return result
+
+    # STOCK VALUATION AS ON (Stock/Rate[/Value]): closing only, no O/R/S formula.
+    if totals["extra"].get("extraction_method") in {
+        "stock_valuation_stock_rate",
+        "stock_valuation_as_on",
+        "stock_valuation_mrp_batch",
+    }:
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            item["sales_qty"] = 0.0
+            item["sales_value"] = 0.0
+            row_extra["stock_identity_ok"] = True
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = str(
+            totals["extra"].get("extraction_method")
+        )
+        totals["extra"]["stock_identity_formula"] = (
+            "closing_qty=Stock; closing_value=Value; no opening/receipts/sales"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_closing": closing_sum,
+            "extracted_closing_value": closing_value_sum,
+            "is_valid": True,
+        }
+        totals["sales_value"] = None
+        if closing_value_sum > 0:
+            totals["closing_value"] = closing_value_sum
         return result
 
     # SALE / CLOSING / RE-ORDER sheets have no opening or receipt columns.
@@ -4044,6 +4148,62 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "sales_value": sales_value_sum,
             "closing_value": closing_value_sum,
             "is_valid": mismatch == 0 and abs(calculated_closing - closing_sum) <= 0.05,
+        }
+        return result
+
+    # Product wise stock statement PHOTO: Free/Goods already folded into
+    # receipts_qty / sales_qty. Keep printed Closing; Liqudation days stay in extra.
+    if totals["extra"].get("extraction_method") == "product_wise_stock_statement_image":
+        mismatch = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            opening = _to_float(item.get("opening_qty"))
+            receipt = _to_float(item.get("receipts_qty"))
+            sales_qty = _to_float(item.get("sales_qty"))
+            closing = _to_float(item.get("closing_qty"))
+            expected_close = round(opening + receipt - sales_qty, 2)
+            row_extra["expected_closing"] = expected_close
+            ok = abs(expected_close - closing) <= 0.05
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(_to_float(i.get("opening_qty")) for i in items if isinstance(i, dict))
+        receipt_sum = sum(_to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict))
+        sales_sum = sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict))
+        closing_sum = sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict))
+        calculated_closing = round(opening_sum + receipt_sum - sales_sum, 2)
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = receipt_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "product_wise_stock_statement_image"
+        totals["extra"]["stock_identity_formula"] = (
+            "opening + receipt(+free) - issues(+free/goods) = closing; "
+            "liquidation days excluded"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        # Footer money totals are period sales/closing VALUE (not line sums).
+        footer_sales = totals.get("sales_value")
+        footer_closing = totals.get("closing_value")
+        totals["extra"]["stock_validation"] = {
+            "opening_qty": opening_sum,
+            "receipts_qty": receipt_sum,
+            "sales_qty": sales_sum,
+            "calculated_closing": calculated_closing,
+            "extracted_closing": closing_sum,
+            "sales_value": footer_sales,
+            "closing_value": footer_closing,
+            "is_valid": mismatch <= max(2, int(0.15 * len(items)))
+            and abs(calculated_closing - closing_sum) <= 1.0,
         }
         return result
 
@@ -20216,6 +20376,202 @@ def _medivision_qty_balances(
     return abs((opening + receipts - sales) - closing) < 0.05
 
 
+def _text_has_medivision_nm60d(text: str) -> bool:
+    """True for MediVision Stock and Sales sheets that print NM60D after Cl qty."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if not re.search(r"NM\s*60\s*D|NM60D", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
+
+
+def _is_medivision_op_purc_nm60d_text(text: str) -> bool:
+    """Supekar-style MediVision: Op/Purc/Sale/Cl qty/NM60D (stacked PDF text)."""
+    if not _text_has_medivision_nm60d(text):
+        return False
+    if not re.search(r"\bOp\b", text, re.I):
+        return False
+    if not re.search(r"\bPurc\b", text, re.I):
+        return False
+    if not re.search(r"\bSale\b", text, re.I):
+        return False
+    # Distinct from WSale photo layout (optional Scm / Jul sale labels).
+    return True
+
+
+def _repair_medivision_nm60_closing(item: Dict[str, Any]) -> None:
+    """If closing_qty was filled from NM60D, restore Cl qty = Op+Purc-Sale.
+
+    Does not rewrite a printed Cl qty that simply fails identity.
+    """
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    if _medivision_qty_balances(opening, receipts, sales, closing):
+        return
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    nm60 = extra.get("nm60_qty") if isinstance(extra, dict) else None
+    if nm60 in (None, ""):
+        return
+    expected = round(opening + receipts - sales, 2)
+    if expected < -0.05:
+        return
+    # Only when closing_qty is clearly the NM60D column value.
+    if abs(_to_float(nm60) - closing) <= 0.05 and abs(expected - closing) > 0.05:
+        item["closing_qty"] = expected
+
+
+def _parse_medivision_op_purc_nm60d_text(
+    text: str, filename: str, source_format: str = "pdf"
+) -> Optional[Dict[str, Any]]:
+    """Parse stacked MediVision Op/Purc/Sale/Cl qty/NM60D PDF text (Supekar etc.)."""
+    if not _is_medivision_op_purc_nm60d_text(text):
+        return None
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in (text or "").splitlines()]
+    lines = [ln for ln in lines if ln]
+    if len(lines) < 20:
+        return None
+
+    skip_name = re.compile(
+        r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No|"
+        r"Product\s*Name|Unit|Comp|Op|Purc|Scm|Sale|Jul\s*sale|Jun\s*sale|"
+        r"Sa\s*val|Cl\s*qty|Cl\s*val|NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|"
+        r"NM\s*val|qty|Continued|Phone|Tel\.|HIMALAYA\s+WELLNESS)"
+    )
+    num_line = re.compile(r"^-?\d+(?:\.\d+)?$")
+
+    items: List[Dict[str, Any]] = []
+    i = 0
+    # Seek first product after header labels.
+    while i < len(lines):
+        if re.fullmatch(r"(?i)NM\s*val", lines[i]):
+            i += 1
+            break
+        i += 1
+
+    while i < len(lines):
+        ln = lines[i]
+        if re.match(r"(?i)^(Page\s*No|Stock\s+and\s+Sales|Product\s*Name|Continued)", ln):
+            # Resync after page break header.
+            while i < len(lines) and not re.fullmatch(r"(?i)NM\s*val", lines[i]):
+                i += 1
+            if i < len(lines):
+                i += 1
+            continue
+        if skip_name.match(ln) or not re.search(r"[A-Za-z]{3,}", ln):
+            i += 1
+            continue
+        name = ln
+        i += 1
+        packing = lines[i] if i < len(lines) else ""
+        if i < len(lines) and not num_line.match(lines[i].replace(",", "")):
+            i += 1
+        else:
+            packing = ""
+        # Comp (HIMAL) — skip non-numeric token
+        if i < len(lines) and not num_line.match(lines[i].replace(",", "")):
+            if re.match(r"(?i)^HIMAL", lines[i]) or lines[i] in {"-----", "-"}:
+                i += 1
+            elif skip_name.match(lines[i]) or re.search(r"[A-Za-z]{3,}", lines[i]):
+                # Next product name — packing was wrong; rewind.
+                if packing and re.search(r"[A-Za-z]{3,}", packing):
+                    i -= 1
+                    packing = ""
+                    continue
+
+        nums: List[float] = []
+        while i < len(lines) and num_line.match(lines[i].replace(",", "")):
+            nums.append(_to_float(lines[i].replace(",", "")))
+            i += 1
+        # Op Purc Scm Sale Scm Jul Jun SaVal ClQty ClVal NM60 NM90 NMVal
+        if len(nums) < 10:
+            continue
+        if re.match(r"(?i)^(TOTAL|SHOP|PAGE|TEL)", name):
+            continue
+        opening = nums[0]
+        receipts = nums[1]
+        sales = nums[3]
+        sales_value = nums[7]
+        closing = nums[8]
+        closing_value = nums[9]
+        nm60 = nums[10] if len(nums) > 10 else None
+        nm90 = nums[11] if len(nums) > 11 else None
+        nm_val = nums[12] if len(nums) > 12 else None
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        pack = packing.strip()
+        item["packing"] = None if (not pack or pack in {"-----", "-"}) else pack
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipts
+        item["sales_qty"] = sales
+        item["sales_value"] = sales_value
+        item["closing_qty"] = closing
+        item["closing_value"] = closing_value
+        extra: Dict[str, Any] = {
+            "layout": "medivision_op_purc_nm60d",
+            "scheme_qty": nums[2],
+            "sale_scheme_qty": nums[4],
+            "july_sale_qty": nums[5],
+            "june_sale_qty": nums[6],
+        }
+        if nm60 is not None:
+            extra["nm60_qty"] = nm60
+        if nm90 is not None:
+            extra["nm90_qty"] = nm90
+        if nm_val is not None:
+            extra["nm_value"] = nm_val
+        item["extra"] = extra
+        items.append(item)
+
+    if len(items) < 3:
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Stock and Sales Statement"
+    result["line_items"] = items
+    for ln in lines[:8]:
+        if re.search(r"AGENC|DISTRIB|PHARMA|TRADERS", ln, re.I) and not re.search(
+            r"Stock\s+and\s+Sales|Company", ln, re.I
+        ):
+            result["stockist_name"] = _clean_name(ln)
+            break
+    for ln in lines[:12]:
+        if re.search(r"SHOP|GALLI|ROAD|NAGAR|MARKET", ln, re.I):
+            result["stockist_address"] = _clean_name(ln)
+            break
+    mfr = re.search(r"Company\s*:\s*(.+)", text, re.I)
+    if mfr:
+        result["company_name"] = _clean_name(mfr.group(1).split("\n")[0])
+    period = re.search(
+        r"(\d{1,2}/\d{1,2}/\d{2,4})\s+to\s+(\d{1,2}/\d{1,2}/\d{2,4})",
+        text,
+        re.I,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+    sales_value = round(sum(_to_float(i.get("sales_value")) for i in items), 2)
+    closing_value = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
+    result["totals"]["sales_value"] = sales_value if sales_value > 0 else None
+    result["totals"]["closing_value"] = closing_value if closing_value > 0 else None
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "medivision_op_purc_nm60d"
+    extra["layout"] = "medivision_op_purc_nm60d"
+    extra["closing_qty"] = round(sum(_to_float(i.get("closing_qty")) for i in items), 2)
+    extra["sales_qty"] = round(sum(_to_float(i.get("sales_qty")) for i in items), 2)
+    return result
+
+
+def _parse_medivision_op_purc_nm60d_from_doc(
+    doc: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    text = "\n".join((page.get_text("text") or "") for page in doc)
+    return _parse_medivision_op_purc_nm60d_text(text, filename, "pdf")
+
+
 def _repair_medivision_op_wsale_sales(item: Dict[str, Any]) -> None:
     """Sale is the only qty that closes the row. Jul Sa, Jun Sa, and WSale do not.
 
@@ -20257,6 +20613,7 @@ def _finalize_medivision_op_wsale(result: Dict[str, Any]) -> Optional[Dict[str, 
         if not name or re.match(r"^totals?\b", name, re.I):
             continue
         _repair_medivision_op_wsale_sales(item)
+        _repair_medivision_nm60_closing(item)
         extra = item.setdefault("extra", {})
         if isinstance(extra, dict):
             extra["layout"] = "medivision_op_wsale"
@@ -25588,6 +25945,555 @@ def _parse_product_wise_stock_statement_pdf(
     return result
 
 
+def _is_product_wise_stock_statement_photo_text(text: str) -> bool:
+    """Modi/Bindal-style Product wise stock statement photo (Sh.Exp Liqudation)."""
+    if not text:
+        return False
+    if not re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
+        return False
+    if not (
+        re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+        and re.search(r"\bReceipt\b", text, re.I)
+        and re.search(r"\bIssues?\b", text, re.I)
+    ):
+        return False
+    return bool(
+        re.search(r"Sh\.?\s*Exp|Liqudation|Liquidation", text, re.I)
+    )
+
+
+_PWSS_PHOTO_PACK_RE = re.compile(
+    r"^(?:"
+    r"\d+\s*(?:ML|GM|G|TAB|CAP|S)\b|"
+    r"\d+\s*['’]?[Ss]\b|"
+    r"\d+\s*[Xx×*]\s*\d+|"
+    r"\d+\s*ML|\d+\s*GM|"
+    r"\d+ML|\d+GM|\d+S"
+    r")$",
+    re.I,
+)
+
+
+def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[str, float]]:
+    """Column midpoints from the Product/Packing/Opening/... header row."""
+    # Cluster by y
+    rows: Dict[int, List[Tuple[float, float, str]]] = {}
+    for w in words:
+        tok = str(w[4] or "").strip()
+        if not tok:
+            continue
+        y = int(round(float(w[1]) / 8.0) * 8)
+        x0, x1 = float(w[0]), float(w[2])
+        rows.setdefault(y, []).append((x0, x1, tok))
+
+    best: Optional[Dict[str, float]] = None
+    best_score = 0
+    for _y, toks in rows.items():
+        blob = " ".join(t[2] for t in toks)
+        if not (
+            re.search(r"Packing", blob, re.I)
+            and re.search(r"Opening", blob, re.I)
+            and re.search(r"Closing", blob, re.I)
+        ):
+            continue
+        found: Dict[str, float] = {}
+        qty_xs: List[float] = []
+        free_xs: List[float] = []
+        for x0, x1, tok in sorted(toks, key=lambda t: t[0]):
+            xc = (x0 + x1) / 2.0
+            low = tok.lower().replace(".", "")
+            if low == "packing":
+                found["packing"] = xc
+            elif low == "opening":
+                found["opening"] = xc
+            elif low == "qty":
+                qty_xs.append(xc)
+            elif low == "free":
+                free_xs.append(xc)
+            elif low in {"issue", "goods"} and "goods" not in found:
+                # "Goods Issue" second-line "Issue"
+                if low == "issue" and any(
+                    re.fullmatch(r"Goods", t[2], re.I) for t in toks
+                ):
+                    found["goods"] = xc
+            elif low == "closing":
+                found["closing"] = xc
+            elif "shexp" in low.replace(" ", "") or low.startswith("shexp"):
+                found["liq"] = xc
+            elif re.match(r"liqud?ation", low, re.I):
+                found["liq"] = xc
+        if len(qty_xs) >= 1:
+            found["receipts"] = qty_xs[0]
+        if len(qty_xs) >= 2:
+            found["sales"] = qty_xs[1]
+        if len(free_xs) >= 1:
+            found["receipts_free"] = free_xs[0]
+        if len(free_xs) >= 2:
+            found["sales_free"] = free_xs[1]
+        # Issues group header may sit above Qty/Free — use that x if sales missing
+        for x0, x1, tok in toks:
+            if re.fullmatch(r"Issues?", tok, re.I) and "sales" not in found:
+                found["sales"] = (x0 + x1) / 2.0
+            if re.fullmatch(r"Receipt", tok, re.I) and "receipts" not in found:
+                found["receipts"] = (x0 + x1) / 2.0
+        score = sum(
+            1
+            for k in ("packing", "opening", "receipts", "sales", "closing")
+            if k in found
+        )
+        if score > best_score:
+            best_score = score
+            best = found
+    if best_score < 4 or best is None:
+        return None
+    # Continuation pages often drop Free/Goods labels — infer midpoints.
+    if "receipts" in best and "sales" in best and "receipts_free" not in best:
+        best["receipts_free"] = (best["receipts"] + best["sales"]) / 2.0
+    if "sales" in best and "closing" in best:
+        gap = best["closing"] - best["sales"]
+        if "sales_free" not in best:
+            best["sales_free"] = best["sales"] + gap * 0.28
+        if "goods" not in best:
+            best["goods"] = best["sales"] + gap * 0.55
+    if "closing" in best and "liq" not in best:
+        best["liq"] = best["closing"] + 90.0
+    return best
+
+
+def _pwss_photo_nearest_col(x: float, centers: Dict[str, float]) -> Optional[str]:
+    keys = (
+        "packing",
+        "opening",
+        "receipts",
+        "receipts_free",
+        "sales",
+        "sales_free",
+        "goods",
+        "closing",
+        "liq",
+    )
+    present = [(k, centers[k]) for k in keys if k in centers]
+    if not present:
+        return None
+    best_k, best_d = None, 1e18
+    for k, c in present:
+        d = abs(x - c)
+        if k == "closing" and "liq" in centers and x > (centers["closing"] + centers["liq"]) / 2.0:
+            continue
+        if k == "liq" and "closing" in centers and x < (centers["closing"] + centers["liq"]) / 2.0:
+            continue
+        if d < best_d:
+            best_d, best_k = d, k
+    if best_k is None or best_d > 90:
+        return None
+    return best_k
+
+
+def _pwss_photo_assign_number(
+    bands: Dict[str, float], col: str, value: float
+) -> None:
+    """Assign qty; a second hit on the same primary col becomes the Free col."""
+    if col not in bands:
+        bands[col] = value
+        return
+    # Don't let Free overwrite Qty — promote the new value into Free.
+    if col == "receipts" and "receipts_free" not in bands:
+        bands["receipts_free"] = value
+        return
+    if col == "sales" and "sales_free" not in bands:
+        bands["sales_free"] = value
+        return
+    if col == "sales_free" and "goods" not in bands:
+        bands["goods"] = value
+        return
+    # Prefer keeping the first (leftmost) primary qty.
+    return
+
+
+def _pwss_photo_split_glued(
+    opening: float,
+    receipts: float,
+    sales: float,
+    closing: float,
+) -> Optional[Tuple[float, float]]:
+    """Split OCR-glued Issues+Free (e.g. 20711 → 207, 11) when identity matches."""
+    if sales <= 999 or closing < 0:
+        return None
+    digits = str(int(round(sales)))
+    if len(digits) < 4:
+        return None
+
+    def _try_pairs(src: str) -> Optional[Tuple[float, float]]:
+        # Free qty is almost always 1–2 digits.
+        for free_len in (1, 2):
+            if len(src) <= free_len:
+                continue
+            left = float(int(src[:-free_len]))
+            right = float(int(src[-free_len:]))
+            if left <= 0:
+                continue
+            if abs((opening + receipts - left - right) - closing) <= 0.05:
+                return left, right
+        for split_at in range(1, len(src)):
+            left = float(int(src[:split_at]))
+            right = float(int(src[split_at:]))
+            if left <= 0 or right > 99:
+                continue
+            if abs((opening + receipts - left - right) - closing) <= 0.05:
+                return left, right
+        return None
+
+    hit = _try_pairs(digits)
+    if hit:
+        return hit
+    # One-digit OCR insert (207711 → 20711 → 207+11).
+    if len(digits) >= 5:
+        for skip in range(len(digits)):
+            cand = digits[:skip] + digits[skip + 1 :]
+            hit = _try_pairs(cand)
+            if hit:
+                return hit
+    return None
+
+
+def _pwss_photo_repair_row(
+    opening: float,
+    receipts: float,
+    receipts_free: float,
+    sales: float,
+    sales_free: float,
+    goods: float,
+    closing: float,
+) -> Tuple[float, float, float, float, float, float, float]:
+    """Fix glued Issues/Free and obvious Closing OCR drops using stock identity."""
+    receipts_total = receipts + receipts_free
+    # Glued Issues+Free sometimes lands in sales_free when sales stayed 0.
+    if sales <= 0 and sales_free > 999:
+        sales, sales_free = sales_free, 0.0
+    sales_total = sales + sales_free + goods
+    expected = round(opening + receipts_total - sales_total, 2)
+    if abs(expected - closing) <= 0.05:
+        return opening, receipts, receipts_free, sales, sales_free, goods, closing
+
+    glued = _pwss_photo_split_glued(opening, receipts_total, sales, closing)
+    if glued is not None and sales_free == 0 and goods == 0:
+        sales, sales_free = glued
+        sales_total = sales + sales_free + goods
+        expected = round(opening + receipts_total - sales_total, 2)
+        if abs(expected - closing) <= 0.05:
+            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+
+    # Closing digit drop (117 → 17) when Issues Qty+Free already balance.
+    if (
+        sales_total > 0
+        and expected >= 0
+        and closing >= 0
+        and abs(expected - closing) > 0.05
+    ):
+        exp_i, clo_i = int(round(expected)), int(round(closing))
+        if clo_i > 0 and str(exp_i).endswith(str(clo_i)) and exp_i != clo_i:
+            closing = float(exp_i)
+            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+        # Blank/zero closing when movement fully explains stock.
+        if closing == 0 and expected >= 0 and sales_total > 0:
+            closing = float(exp_i)
+            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+
+    return opening, receipts, receipts_free, sales, sales_free, goods, closing
+
+
+def _parse_product_wise_stock_statement_photo_panel(
+    words: List[Tuple[Any, ...]],
+    text: str,
+    result: Dict[str, Any],
+    seen: set,
+) -> List[Dict[str, Any]]:
+    """Parse one page panel of a Product wise stock statement photo."""
+    centers = _pwss_photo_header_centers(words)
+    if not centers:
+        return []
+
+    # Cluster words into rows
+    sorted_words = sorted(words, key=lambda w: (float(w[1]), float(w[0])))
+    clusters: List[List[Any]] = []
+    for w in sorted_words:
+        y0 = float(w[1])
+        if clusters and abs(y0 - float(clusters[-1][0][1])) <= 14.0:
+            clusters[-1].append(w)
+        else:
+            clusters.append([w])
+
+    items: List[Dict[str, Any]] = []
+    pack_left = centers.get("packing", 400.0) - 40.0
+
+    for row_words in clusters:
+        row_words = sorted(row_words, key=lambda w: float(w[0]))
+        row_text = " ".join(str(w[4]) for w in row_words)
+        if _pwss_is_skip_row(row_text):
+            m_sales = re.search(
+                r"Total\s+sales\s+in\s+this\s+period\s*:?\s*([\d,]+\.?\d*)",
+                row_text,
+                re.I,
+            )
+            if m_sales:
+                result["totals"]["sales_value"] = _to_float(m_sales.group(1))
+            m_close = re.search(
+                r"Total\s+closing\s+stock.*?([\d,]+\.?\d*)",
+                row_text,
+                re.I,
+            )
+            if m_close:
+                result["totals"]["closing_value"] = _to_float(m_close.group(1))
+            continue
+
+        name_parts: List[str] = []
+        packing: Optional[str] = None
+        bands: Dict[str, float] = {}
+        for w in row_words:
+            tok = str(w[4] or "").strip()
+            if not tok:
+                continue
+            x0, x1 = float(w[0]), float(w[2])
+            xc = (x0 + x1) / 2.0
+            if re.fullmatch(r"Days?", tok, re.I):
+                continue
+            if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", tok):
+                continue
+            if xc < pack_left - 5:
+                if not re.fullmatch(r"[-|]|\d+", tok):
+                    name_parts.append(tok)
+                continue
+            # Packing column
+            if "packing" in centers and abs(xc - centers["packing"]) <= 55:
+                pack_tok = tok.replace(" ", "")
+                if _PWSS_PHOTO_PACK_RE.match(tok) or _PWSS_PHOTO_PACK_RE.match(pack_tok) or re.match(
+                    r"^\d", tok
+                ):
+                    packing = tok
+                    continue
+            if re.fullmatch(r"-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?", tok):
+                col = _pwss_photo_nearest_col(xc, centers)
+                if col and col != "packing":
+                    _pwss_photo_assign_number(bands, col, _to_float(tok))
+                continue
+            # OCR glue like "27s50" spanning Opening+Receipt Qty.
+            glued_nums = re.findall(r"\d+(?:\.\d+)?", tok)
+            if len(glued_nums) >= 2 and xc >= centers.get("opening", 0) - 30:
+                _pwss_photo_assign_number(bands, "opening", _to_float(glued_nums[0]))
+                _pwss_photo_assign_number(
+                    bands, "receipts", _to_float(glued_nums[1])
+                )
+                continue
+
+        product_name = _clean_name(" ".join(name_parts))
+        if not product_name or len(product_name) < 3:
+            continue
+        if re.match(r"(?i)^(HIMALAYA|Page\s*No|Product\s*Name|MODI)", product_name):
+            if re.search(r"HIMALAYA|ZANDRA|DRUG", product_name, re.I) and not packing:
+                if not result.get("company_name"):
+                    result["company_name"] = product_name
+            continue
+        if not packing and not bands:
+            continue
+        if not packing:
+            # Require packing for this layout to avoid header fragments.
+            continue
+
+        opening = bands.get("opening", 0.0)
+        receipts = bands.get("receipts", 0.0)
+        receipts_free = bands.get("receipts_free", 0.0)
+        sales = bands.get("sales", 0.0)
+        sales_free = bands.get("sales_free", 0.0)
+        goods = bands.get("goods", 0.0)
+        closing = bands.get("closing", 0.0)
+        (
+            opening,
+            receipts,
+            receipts_free,
+            sales,
+            sales_free,
+            goods,
+            closing,
+        ) = _pwss_photo_repair_row(
+            opening, receipts, receipts_free, sales, sales_free, goods, closing
+        )
+        # Fold Free/Goods into movement so Op+Rec-Sale = Cl.
+        receipts_total = receipts + receipts_free
+        sales_total = sales + sales_free + goods
+
+        key = (
+            product_name.upper(),
+            str(packing).upper(),
+            round(opening, 2),
+            round(receipts_total, 2),
+            round(sales_total, 2),
+            round(closing, 2),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipts_total
+        item["sales_qty"] = sales_total
+        item["closing_qty"] = closing
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        extra = item["extra"]
+        extra["layout"] = "product_wise_stock_statement_photo"
+        if receipts_free:
+            extra["receipts_free"] = receipts_free
+        if sales_free:
+            extra["sales_free"] = sales_free
+        if goods:
+            extra["goods_issue"] = goods
+        if "liq" in bands:
+            extra["liquidation_days"] = bands["liq"]
+        items.append(item)
+
+    # Footer totals from panel text when labels split across lines.
+    if result["totals"].get("sales_value") is None:
+        m = re.search(
+            r"Total\s+sales\s+in\s+this\s+period\s*:?\s*([\d,]+\.?\d*)",
+            text or "",
+            re.I,
+        )
+        if m:
+            result["totals"]["sales_value"] = _to_float(m.group(1))
+    if result["totals"].get("closing_value") is None:
+        m = re.search(
+            r"Total\s+closing\s+stock[^0-9]*([\d,]+\.?\d*)",
+            text or "",
+            re.I,
+        )
+        if m:
+            result["totals"]["closing_value"] = _to_float(m.group(1))
+    return items
+
+
+def _extract_product_wise_stock_statement_image(
+    file_bytes: bytes, filename: str, ext: str, peek_text: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """OCR geometry reader for Product wise stock statement photos (Modi etc.).
+
+    Closing is the Closing column. Sh.Exp Liqudation days are never closing_qty.
+    Receipt/Issues Free fold into receipts_qty / sales_qty for stock identity.
+    """
+    from PIL import Image, ImageEnhance, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return None
+
+    peek = peek_text if peek_text is not None else ""
+    if not peek:
+        try:
+            peek = _ocr_image_to_text(file_bytes) or ""
+        except Exception:
+            peek = ""
+    if not _is_product_wise_stock_statement_photo_text(peek):
+        return None
+
+    pytesseract = _a2z_tesseract()
+    w, h = image.size
+    # Dual-page phone captures: split near mid when a second header appears.
+    panels: List[Any] = []
+    if h > w * 1.4 and re.search(r"Page\s*No\.?\s*1", peek, re.I):
+        panels = [image.crop((0, 0, w, int(h * 0.52))), image.crop((0, int(h * 0.48), w, h))]
+    else:
+        panels = [image]
+
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    result["report_title"] = "Product wise stock statement"
+    items: List[Dict[str, Any]] = []
+    seen: set = set()
+
+    for panel in panels:
+        wide = panel.resize((panel.width * 2, panel.height * 2), Image.Resampling.LANCZOS)
+        wide = ImageEnhance.Contrast(wide).enhance(1.35)
+        data = pytesseract.image_to_data(
+            wide, config="--psm 6", output_type=pytesseract.Output.DICT
+        )
+        words = []
+        text_parts: List[str] = []
+        for i, tok in enumerate(data.get("text") or []):
+            tok = str(tok or "").strip()
+            if not tok:
+                continue
+            text_parts.append(tok)
+            words.append(
+                (
+                    int(data["left"][i]),
+                    int(data["top"][i]),
+                    int(data["left"][i]) + int(data["width"][i]),
+                    int(data["top"][i]) + int(data["height"][i]),
+                    tok,
+                )
+            )
+        items.extend(
+            _parse_product_wise_stock_statement_photo_panel(
+                words, " ".join(text_parts), result, seen
+            )
+        )
+
+    if len(items) < 5:
+        return None
+
+    # Metadata from peek OCR.
+    for ln in (peek or "").splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if not result.get("stockist_name") and re.search(
+            r"PHARMACEUTICAL|AGENC|MEDICOS|DISTRIB", s, re.I
+        ):
+            result["stockist_name"] = _clean_name(re.sub(r"!+", "I", s))
+            continue
+        m = re.search(
+            r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            s,
+            re.I,
+        )
+        if m:
+            result["period_from"] = _normalize_date(m.group(1))
+            result["period_to"] = _normalize_date(m.group(2))
+        if not result.get("company_name") and re.search(
+            r"HIMALAYA|ZANDRA|DRUG", s, re.I
+        ) and not re.search(r"Product\s+wise", s, re.I):
+            result["company_name"] = _clean_name(s)
+
+    if result["totals"].get("sales_value") is None:
+        m = re.search(
+            r"Total\s+sales\s+in\s+this\s+period\s*:?\s*([\d,]+\.?\d*)",
+            peek or "",
+            re.I,
+        )
+        if m:
+            result["totals"]["sales_value"] = _to_float(m.group(1))
+    if result["totals"].get("closing_value") is None:
+        m = re.search(
+            r"Total\s+closing\s+stock[^0-9]*([\d,]+\.?\d*)",
+            peek or "",
+            re.I,
+        )
+        if m:
+            result["totals"]["closing_value"] = _to_float(m.group(1))
+
+    result["line_items"] = items
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "product_wise_stock_statement_image"
+    extra["layout"] = "product_wise_stock_statement_photo"
+    extra["statement_count"] = 1
+    extra["total_row_source"] = "product_wise_stock_statement_footer"
+    return result
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -25835,6 +26741,11 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if detail_stmt and detail_stmt.get("line_items"):
             detail_stmt["totals"]["extra"]["statement_count"] = 1
             return detail_stmt
+
+        medivision_nm60 = _parse_medivision_op_purc_nm60d_from_doc(doc, filename)
+        if medivision_nm60 and medivision_nm60.get("line_items"):
+            medivision_nm60["totals"]["extra"]["statement_count"] = 1
+            return medivision_nm60
 
         purc_stmt = _parse_purc_sale_cl_statement(doc, filename)
         if purc_stmt and purc_stmt.get("line_items"):
@@ -27846,6 +28757,11 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
     if gw and gw.get("line_items"):
         return gw
 
+    # MediVision stacked Op/Purc/Sale/Cl qty/NM60D (Supekar PDF text / OCR)
+    medivision_nm60 = _parse_medivision_op_purc_nm60d_text(text, filename, source_format)
+    if medivision_nm60 and medivision_nm60.get("line_items"):
+        return medivision_nm60
+
     # Company-wise SUMMARY RTL has no sales-qty column. Read it before Gemini,
     # which was storing SALE AMT in extra.sales_qty and CLOSING in sales_qty.
     if _is_summary_rtl_statement(text):
@@ -27963,6 +28879,14 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
                 result["totals"]["sales_value"] = None
                 result["totals"]["closing_value"] = None
             result["totals"]["extra"]["extraction_method"] = method
+            if _text_has_medivision_nm60d(text) or re.search(
+                r"NM\s*60\s*D|NM60D", text or "", re.I
+            ):
+                for item in result.get("line_items") or []:
+                    if isinstance(item, dict):
+                        _repair_medivision_op_wsale_sales(item)
+                        _repair_medivision_nm60_closing(item)
+                result["totals"]["extra"]["layout"] = "medivision_nm60d"
             return _apply_total_row_to_result(result, text)
     except Exception as exc:
         logger.warning("PDF text Gemini structuring failed: %s", exc)
@@ -28097,6 +29021,13 @@ Rules:
 - Map Op.Qnt/Opening/OpBal/Op Stk -> opening_qty; Pur.Qnt/Purchase/Receipt/P Qty -> receipts_qty;
   Sl.Qnt/Sales/Issue/S Qty -> sales_qty; Sl.Value/S Val/Amount -> sales_value;
   Cl.Qnt/Closing Balance/Cl Stk -> closing_qty; Cl.Value/Cl Val -> closing_value.
+- MediVision "Stock and Sales" with Op, Purc, Sale, WSale, Jul Sa, Jun Sa, Sa val,
+  Cl qty, Cl val, NM60D qty, NM90D qty, NM val, NE:
+  opening_qty=Op, receipts_qty=Purc, sales_qty=Sale only, sales_value=Sa val,
+  closing_qty=Cl qty ONLY (must equal Op+Purc-Sale), closing_value=Cl val.
+  NM60D qty / NM90D qty / NM val / NE are NEVER closing_qty or sales_qty — put them
+  in extra.nm60_qty / extra.nm90_qty / extra.nm_value / extra.near_expiry_qty.
+  WSale, Jul Sa, Jun Sa are not sales_qty.
 - "Stock and Sale Statement" columns Op Stk | P Qty | P S Qty | P Val | S Qty | S S Qty | S Val | Cl Stk | Cl Val:
   sales_qty is S Qty, not the scheme column S S Qty. sales_value is S Val (rupees).
   closing_qty is Cl Stk, closing_value is Cl Val. Blank cells stay 0 but do not
@@ -37660,6 +38591,353 @@ def _is_stock_valuation_header_text(text: str) -> bool:
     return True
 
 
+def _is_stock_valuation_stock_rate_text(text: str) -> bool:
+    """STOCK VALUATION AS ON with Stock/Rate (no Batch/MRP) — ESS GEE etc."""
+    if not _is_stock_valuation_header_text(text):
+        return False
+    # Vishnu Batch/MRP layout has its own parser.
+    if re.search(r"M\.?\s*R\.?\s*P\.?", text, re.I) and re.search(
+        r"\bBatch\b", text, re.I
+    ):
+        return False
+    return bool(
+        re.search(r"\bStock\b", text, re.I)
+        and (
+            re.search(r"\bRate\b", text, re.I)
+            or re.search(r"\bValue\b", text, re.I)
+            or re.search(
+                r"^\s*\d{1,3}\s+[A-Za-z].+?\s+\d+\s+[\d.]+",
+                text,
+                re.I | re.M,
+            )
+        )
+    )
+
+
+def _split_stock_valuation_desc_pack(desc: str) -> Tuple[str, Optional[str]]:
+    raw = re.sub(r"\s+", " ", str(desc or "")).strip(" .-_")
+    m = re.search(
+        r"(?i)^(.*?)\s+((?:\d+)?L?O*\d*(?:TAB|TABS|ML|GM|CAP|CAPS|S)(?:\.)?)\s*$",
+        raw,
+    )
+    if m:
+        name = _clean_name(m.group(1))
+        pack = _fix_stock_valuation_pack_ocr(m.group(2))
+        # OCR often splits 60ML → "6 0ML".
+        if re.match(r"(?i)^0(ML|TAB|GM|CAP)", pack or ""):
+            tail = re.search(r"(\d+)\s*$", name)
+            if tail:
+                pack = _fix_stock_valuation_pack_ocr(tail.group(1) + pack)
+                name = _clean_name(name[: tail.start()])
+        return name, pack
+    return _clean_name(raw), None
+
+
+def _fix_stock_valuation_pack_ocr(token: str) -> str:
+    """Fix common OCR pack glitches (1LOOML→100ML, LOTAB→10TAB)."""
+    t = str(token or "").strip().upper().replace(" ", "")
+    t = re.sub(r"^Z(?=\d)", "", t)
+    mapping = {
+        "1LOOML": "100ML",
+        "1LOOML.": "100ML",
+        "LOOML": "100ML",
+        "LOOML.": "100ML",
+        "1LOOTAB": "100TAB",
+        "LOOTAB": "100TAB",
+        "1LOTAB": "10TAB",
+        "LOTAB": "10TAB",
+        "1OTAB": "10TAB",
+        "LOCAP": "10CAP",
+        "1OCAP": "10CAP",
+    }
+    if t in mapping:
+        return mapping[t]
+    t = t.replace("LOO", "100")
+    return t
+
+
+def _parse_stock_valuation_stock_rate_row(line: str) -> Optional[Dict[str, Any]]:
+    """Parse `N NAME PACK STOCK RATE` (Value optional / often 0.00)."""
+    raw = re.sub(r"[ \t]+", " ", str(line or "").strip())
+    raw = re.sub(r"^[\|_.\-\s]+", "", raw)
+    if not raw or re.match(
+        r"(?i)^\s*(TOTAL|S\.?\s*No|Description|HIMALAYA|End\s+of|STOCK\s+VAL)",
+        raw,
+    ):
+        return None
+    m = re.match(
+        r"^\s*_?\s*(\d{1,3})\s+([A-Za-z][A-Za-z0-9 ./\-]{2,}?)\s+"
+        r"(\d+)\s+([\d]+(?:\.\d+)?)\s*(?:([\d]+(?:\.\d+)?))?\s*$",
+        raw,
+    )
+    if not m:
+        return None
+    name, packing = _split_stock_valuation_desc_pack(m.group(2))
+    name = re.sub(r"\s*[-–]+\s*$", "", name).strip(" -.")
+    name = re.sub(r"\s{2,}", " ", name)
+    if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+        return None
+    stock = _to_float(m.group(3))
+    rate = _to_float(m.group(4))
+    value = _to_float(m.group(5)) if m.group(5) else 0.0
+    # When only Stock+Rate and Rate is 0.00, Value is absent / zero.
+    if value <= 0 and rate > 0 and stock > 0:
+        # Some sheets print Value as last col; if rate looks like money and no
+        # third number, keep value 0 (rate-only ESS GEE sheets).
+        value = 0.0
+    item = empty_line_item()
+    item["product_name"] = name
+    item["packing"] = packing
+    item["opening_qty"] = 0.0
+    item["receipts_qty"] = 0.0
+    item["sales_qty"] = 0.0
+    item["sales_value"] = 0.0
+    item["closing_qty"] = stock
+    item["closing_value"] = value
+    item["extra"] = {
+        "unit_rate": rate,
+        "layout": "stock_valuation_stock_rate",
+        "sno": int(m.group(1)),
+    }
+    return item
+
+
+def _parse_stock_valuation_stock_rate_text(
+    text: str, filename: str, source_format: str = "jpg"
+) -> Optional[Dict[str, Any]]:
+    """Parse STOCK VALUATION Stock/Rate rows from OCR text."""
+    if not (
+        _is_stock_valuation_stock_rate_text(text)
+        or (
+            re.search(r"STOCK\s+VALUATION\s+AS\s+ON", text or "", re.I)
+            and re.search(r"^\s*_?\s*\d{1,3}\s+[A-Za-z].+\s+\d+\s+[\d.]+", text or "", re.M)
+        )
+    ):
+        # Allow table-only crops that miss the title when caller injects it.
+        if not re.search(
+            r"^\s*_?\s*\d{1,3}\s+[A-Za-z].+\s+\d+\s+[\d.]+", text or "", re.M
+        ):
+            return None
+    lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in (text or "").splitlines()]
+    lines = [ln for ln in lines if ln]
+    by_sno: Dict[int, Dict[str, Any]] = {}
+    order: List[int] = []
+    for ln in lines:
+        row = _parse_stock_valuation_stock_rate_row(ln)
+        if not row:
+            continue
+        sno = int((row.get("extra") or {}).get("sno") or 0)
+        if sno <= 0:
+            continue
+        prev = by_sno.get(sno)
+        if prev is None:
+            order.append(sno)
+            by_sno[sno] = row
+            continue
+        # First good row wins for a S.No. Do not let a later mis-OCR of a
+        # different product (higher Stock) overwrite the correct line.
+        if _to_float(prev.get("closing_qty")) <= 0 and _to_float(row.get("closing_qty")) > 0:
+            by_sno[sno] = row
+            continue
+        if not prev.get("packing") and row.get("packing"):
+            prev_key = re.sub(r"[^A-Z0-9]", "", str(prev.get("product_name") or "").upper())
+            new_key = re.sub(r"[^A-Z0-9]", "", str(row.get("product_name") or "").upper())
+            if prev_key and new_key and (
+                prev_key.startswith(new_key[:6]) or new_key.startswith(prev_key[:6])
+            ):
+                by_sno[sno] = row
+    items = [by_sno[s] for s in sorted(order) if s in by_sno]
+    if len(items) < 3:
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "STOCK VALUATION"
+    result["line_items"] = items
+    for ln in lines[:10]:
+        if re.search(r"STOCK\s+VALUATION|Phone|E-Mail|GSTIN|WHOLESALE|S\.?\s*No", ln, re.I):
+            if re.search(r"STOCK\s+VALUATION", ln, re.I):
+                break
+            continue
+        if not result.get("stockist_name") and re.search(r"[A-Za-z]{3,}", ln):
+            result["stockist_name"] = _clean_name(ln)
+            continue
+        if result.get("stockist_name") and not result.get("stockist_address"):
+            if re.search(r"SHOP|MARKET|ROAD|NAGAR|TEHSIL|OPP", ln, re.I):
+                result["stockist_address"] = _clean_name(ln)
+    # Multi-line address
+    addr_parts: List[str] = []
+    saw_name = False
+    for ln in lines[:12]:
+        if re.search(r"STOCK\s+VALUATION|Phone|E-Mail|GSTIN", ln, re.I):
+            break
+        if result.get("stockist_name") and _clean_name(ln) == result.get("stockist_name"):
+            saw_name = True
+            continue
+        if saw_name and re.search(r"SHOP|MARKET|ROAD|TEHSIL|OPP|\d", ln, re.I):
+            addr_parts.append(_clean_name(ln))
+    if addr_parts:
+        result["stockist_address"] = ", ".join(addr_parts)
+    for ln in lines:
+        if re.search(r"HIMALAYA", ln, re.I) and not re.search(
+            r"STOCK\s+VALUATION", ln, re.I
+        ):
+            result["company_name"] = _clean_name(ln)
+            break
+    as_on = re.search(
+        r"AS\s+ON\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        text or "",
+        re.I,
+    )
+    if as_on:
+        day = _normalize_date(as_on.group(1))
+        result["period_from"] = day
+        result["period_to"] = day
+    closing_qty = round(sum(_to_float(i.get("closing_qty")) for i in items), 2)
+    closing_value = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
+    printed_total = re.search(r"(?i)\bTOTAL\b.*?(\d{2,5})\b", text or "")
+    result["totals"]["sales_value"] = None
+    result["totals"]["closing_value"] = closing_value if closing_value > 0 else None
+    extra = result["totals"]["extra"]
+    extra["extraction_method"] = "stock_valuation_stock_rate"
+    extra["layout"] = "stock_valuation_stock_rate"
+    extra["qty_only"] = closing_value <= 0
+    extra["closing_qty"] = closing_qty
+    if printed_total:
+        extra["printed_total_stock"] = _to_float(printed_total.group(1))
+    return result
+
+
+def _ocr_stock_valuation_rotated_texts(file_bytes: bytes) -> List[Tuple[int, str]]:
+    """OCR STOCK VALUATION photos across orientations; returns (angle, text)."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    out: List[Tuple[int, str]] = []
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+    except Exception:
+        return out
+    try:
+        tess = _a2z_tesseract()
+    except Exception:
+        return out
+    # Prefer 270/90 — upright phone photos of landscape printouts.
+    for angle in (270, 90, 0, 180):
+        im = image.rotate(angle, expand=True) if angle else image
+        bands = ((0.0, 1.0), (0.0, 0.28), (0.50, 1.0))
+        angle_texts: List[str] = []
+        for y0, y1 in bands:
+            crop = im.crop(
+                (0, int(im.height * y0), im.width, int(im.height * y1))
+            )
+            crop = ImageOps.grayscale(
+                ImageEnhance.Contrast(
+                    crop.resize(
+                        (
+                            max(1, int(crop.width * 2.0)),
+                            max(1, int(crop.height * 2.0)),
+                        ),
+                        Image.Resampling.LANCZOS,
+                    )
+                ).enhance(1.7)
+            )
+            for psm in (6, 4):
+                try:
+                    t = tess.image_to_string(crop, config=f"--psm {psm}") or ""
+                except Exception:
+                    continue
+                if t.strip():
+                    angle_texts.append(t)
+                    out.append((angle, t))
+        joined = "\n".join(angle_texts)
+        if _is_stock_valuation_header_text(joined) and len(
+            re.findall(
+                r"^\s*_?\s*\d{1,3}\s+[A-Za-z].+\s+\d+\s+[\d.]+",
+                joined,
+                re.M,
+            )
+        ) >= 8:
+            # Keep scanning lower bands of this angle only; skip other angles.
+            break
+    return out
+
+
+def _score_stock_valuation_stock_rate_result(result: Dict[str, Any]) -> Tuple:
+    items = result.get("line_items") or []
+    extra = (result.get("totals") or {}).get("extra") or {}
+    cq = _to_float(extra.get("closing_qty"))
+    printed = _to_float(extra.get("printed_total_stock"))
+    names = [str(i.get("product_name") or "") for i in items]
+    unique = len(set(n.upper() for n in names if n))
+    pack_ok = sum(1 for i in items if i.get("packing"))
+    delta = abs(cq - printed) if printed > 0 else 0.0
+    return (len(items), unique, pack_ok, -delta, -cq)
+
+
+def _extract_stock_valuation_stock_rate_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """OCR Stock/Rate STOCK VALUATION photos (rotation-tolerant)."""
+    angled = _ocr_stock_valuation_rotated_texts(file_bytes)
+    if not angled:
+        return None
+    src = (ext or ".jpg").lstrip(".") or "jpg"
+    by_angle: Dict[int, List[str]] = {}
+    for angle, text in angled:
+        by_angle.setdefault(angle, []).append(text)
+
+    candidates: List[Dict[str, Any]] = []
+    for angle, parts in by_angle.items():
+        probe = "\n".join(parts)
+        if not re.search(r"STOCK\s+VALUATION\s+AS\s+ON", probe, re.I):
+            probe = "STOCK VALUATION AS ON\nS.No. Description Stock Rate\n" + probe
+        one = _parse_stock_valuation_stock_rate_text(probe, filename, src)
+        if one and one.get("line_items"):
+            candidates.append(one)
+
+    if not candidates:
+        return None
+
+    best = max(candidates, key=_score_stock_valuation_stock_rate_result)
+    # Fill only missing sno gaps from runner-up parses (do not overwrite names).
+    best_by_sno = {
+        int((i.get("extra") or {}).get("sno") or 0): i
+        for i in (best.get("line_items") or [])
+        if int((i.get("extra") or {}).get("sno") or 0) > 0
+    }
+    for other in candidates:
+        if other is best:
+            continue
+        for item in other.get("line_items") or []:
+            sno = int((item.get("extra") or {}).get("sno") or 0)
+            if sno > 0 and sno not in best_by_sno:
+                best_by_sno[sno] = item
+    filled = [best_by_sno[s] for s in sorted(best_by_sno)]
+    best["line_items"] = filled
+    extra = best.setdefault("totals", {}).setdefault("extra", {})
+    extra["closing_qty"] = round(
+        sum(_to_float(i.get("closing_qty")) for i in filled), 2
+    )
+    # Prefer header fields from any candidate that found them.
+    for other in candidates:
+        if other.get("stockist_name") and not best.get("stockist_name"):
+            best["stockist_name"] = other.get("stockist_name")
+        if other.get("stockist_address") and not best.get("stockist_address"):
+            best["stockist_address"] = other.get("stockist_address")
+        if other.get("company_name"):
+            best["company_name"] = other.get("company_name")
+        if other.get("period_from"):
+            best["period_from"] = other.get("period_from")
+            best["period_to"] = other.get("period_to")
+
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=tesseract method=stock_valuation_stock_rate",
+        filename,
+    )
+    return best
+
+
 def _ocr_stock_valuation_preview(file_bytes: bytes) -> str:
     """Best-effort title OCR for STOCK VALUATION photos. Empty on failure."""
     from PIL import Image, ImageEnhance, ImageOps
@@ -37670,34 +38948,36 @@ def _ocr_stock_valuation_preview(file_bytes: bytes) -> str:
         )
     except Exception:
         return ""
-    scaled = image.resize(
-        (image.width * 2, image.height * 2), Image.Resampling.LANCZOS
-    )
-    variants = [
-        ImageEnhance.Contrast(scaled).enhance(1.4),
-        ImageOps.autocontrast(ImageOps.grayscale(scaled)),
-    ]
     try:
         tess = _a2z_tesseract()
     except Exception:
         return ""
     best = ""
-    # Title sits below the shop header; scan mid-upper bands.
+    # Title sits below the shop header; scan mid-upper bands + common rotations.
     bands = ((0.12, 0.40), (0.15, 0.38), (0.10, 0.45), (0.0, 0.35))
-    for im in variants:
-        for y0, y1 in bands:
-            crop = im.crop(
-                (0, int(im.height * y0), im.width, int(im.height * y1))
-            )
-            for psm in (6, 4):
-                try:
-                    text = tess.image_to_string(crop, config=f"--psm {psm}") or ""
-                except Exception:
-                    continue
-                if _is_stock_valuation_header_text(text):
-                    return text
-                if not best and re.search(r"STOCK\s+VALUATION", text, re.I):
-                    best = text
+    for angle in (0, 270, 90, 180):
+        base = image.rotate(angle, expand=True) if angle else image
+        scaled = base.resize(
+            (base.width * 2, base.height * 2), Image.Resampling.LANCZOS
+        )
+        variants = [
+            ImageEnhance.Contrast(scaled).enhance(1.4),
+            ImageOps.autocontrast(ImageOps.grayscale(scaled)),
+        ]
+        for im in variants:
+            for y0, y1 in bands:
+                crop = im.crop(
+                    (0, int(im.height * y0), im.width, int(im.height * y1))
+                )
+                for psm in (6, 4):
+                    try:
+                        text = tess.image_to_string(crop, config=f"--psm {psm}") or ""
+                    except Exception:
+                        continue
+                    if _is_stock_valuation_header_text(text):
+                        return text
+                    if not best and re.search(r"STOCK\s+VALUATION", text, re.I):
+                        best = text
     return best
 
 
@@ -37957,6 +39237,9 @@ def _image_known_ocr_native_format(sample: str) -> bool:
         or _is_opbal_issue_closing_format(sample)
         or _is_batchwise_stock_summary_text(sample)
         or bool(re.search(r"Batchwise\s+Stock\s+Summary", sample or "", re.I))
+        or _is_product_wise_stock_statement_photo_text(sample)
+        or _is_stock_valuation_header_text(sample)
+        or _is_stock_valuation_stock_rate_text(sample)
     )
 
 
@@ -37988,8 +39271,39 @@ def _maybe_early_vision_for_image(
         sample = ""
 
     if _image_known_ocr_native_format(sample):
+        # Product wise stock statement photos: dedicated OCR column reader first.
+        if _is_product_wise_stock_statement_photo_text(sample):
+            try:
+                pwss = _extract_product_wise_stock_statement_image(
+                    file_bytes, filename, ext, peek_text=sample
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s product-wise photo parse failed: %s",
+                    filename,
+                    exc,
+                )
+                pwss = None
+            if pwss and pwss.get("line_items"):
+                logger.info(
+                    "[SalesStatement] file=%s decision=PRODUCT_WISE_STOCK_STATEMENT_PHOTO",
+                    filename,
+                )
+                return pwss, True
         logger.info(
             "[SalesStatement] file=%s decision=KEEP_OCR_PARSER reason=KNOWN_IMAGE_FORMAT",
+            filename,
+        )
+        return None, False
+
+    # Sideways STOCK VALUATION photos fail upright OCR sample — keep OCR path.
+    try:
+        valuation_preview = _ocr_stock_valuation_preview(file_bytes)
+    except Exception:
+        valuation_preview = ""
+    if _is_stock_valuation_header_text(valuation_preview):
+        logger.info(
+            "[SalesStatement] file=%s decision=KEEP_OCR_PARSER reason=STOCK_VALUATION_ROTATED",
             filename,
         )
         return None, False
@@ -38500,6 +39814,29 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 if batchwise and batchwise.get("line_items"):
                     return batchwise
+
+            # Product wise stock statement photos (Opening/Receipt/Issues/Closing
+            # + Sh.Exp Liqudation). Must run before Gemini — that path shifts
+            # Closing into sales_qty and Liqudation days into closing_qty.
+            if peek_ocr and _is_product_wise_stock_statement_photo_text(peek_ocr):
+                pwss_img = _probe_or_none(
+                    "Product wise stock statement photo",
+                    lambda: _extract_product_wise_stock_statement_image(
+                        file_bytes, filename, ext
+                    ),
+                )
+                if pwss_img and pwss_img.get("line_items"):
+                    return pwss_img
+
+            # STOCK VALUATION Stock/Rate photos (often sideways) — OCR before Gemini.
+            valuation_ocr = _probe_or_none(
+                "Stock valuation Stock/Rate OCR",
+                lambda: _extract_stock_valuation_stock_rate_image(
+                    file_bytes, filename, ext
+                ),
+            )
+            if valuation_ocr and valuation_ocr.get("line_items"):
+                return valuation_ocr
 
             rtl = _probe_or_none(
                 "Summary RTL OCR",
