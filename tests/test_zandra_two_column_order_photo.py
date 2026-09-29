@@ -8,6 +8,8 @@ from pathlib import Path
 
 from services.sales_statement_extractor import (
     _zeal_order_form_text,
+    _zeal_order_value_column_has_ink,
+    _zeal_printed_order_form_anchor,
     _zandra_order_form_from_label,
     _zandra_order_side_items,
     _zandra_put_lasuna_qty_on_its_row,
@@ -21,6 +23,18 @@ SINGH = Path("0000735936_2026_08_ZA_24_256_02092026173543.jpg")
 OLDER_SAP = Path("0000732417_2026_08_ZA_07_322_06092026011854.jpeg")
 LUCKY_STORE = Path("0000736020_2026_08_ZA_24_259_03092026065900.jpg")
 SACHDEVA = Path("0000730316_2026_08_ZA_07_319_06092026005507.jpeg")
+ZEAL_VALUE_FORM = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August\0000734308_2026_08_ZL_04_341_05092026151343.jpg"
+)
+PHARMA_HUB = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August\0000734262_2026_08_ZL_13_281_01092026171025.jpg"
+)
+MEDIVISION = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August\0000734246_2026_08_ZL_13_269_03092026163919.jpg"
+)
+MAX_PLUS = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August\0000734235_2026_08_ZL_30_750_07092026113332.jpg"
+)
 
 
 class TestZandraTwoColumnOrderText(unittest.TestCase):
@@ -66,6 +80,33 @@ class TestZandraTwoColumnOrderText(unittest.TestCase):
         stripped = _zandra_order_side_items(rows, keep_handwritten_qty=False)[0]
         self.assertEqual(kept["sales_qty"], 1700)
         self.assertEqual(stripped["sales_qty"], 170)
+
+    def test_value_column_amount_stays_out_of_qty(self):
+        rows = [
+            {
+                "product_name": "Liv.52 HB Capsules",
+                "packing": "10s",
+                "qty": None,
+                "value": 119,
+            }
+        ]
+        kept = _zandra_order_side_items(rows, keep_value=True)[0]
+        self.assertEqual(kept["sales_qty"], 0)
+        self.assertEqual(kept["sales_value"], 119)
+        ignored = _zandra_order_side_items(rows)[0]
+        self.assertEqual(ignored["sales_qty"], 0)
+        self.assertEqual(ignored["sales_value"], 0)
+
+    def test_sideways_zeal_value_form_is_not_a_stock_sheet(self):
+        if not ZEAL_VALUE_FORM.is_file():
+            self.skipTest("missing Zeal value order form")
+        page = ZEAL_VALUE_FORM.read_bytes()
+        self.assertIsNotNone(_zeal_printed_order_form_anchor(page))
+        self.assertTrue(_zeal_order_value_column_has_ink(page))
+        for other in (PHARMA_HUB, MEDIVISION, MAX_PLUS):
+            if not other.is_file():
+                continue
+            self.assertIsNone(_zeal_printed_order_form_anchor(other.read_bytes()))
 
     def test_dense_handwritten_qty_is_not_treated_as_pack_echo(self):
         """Real Qty values that are not Pack sizes must not look like pack echoes."""
