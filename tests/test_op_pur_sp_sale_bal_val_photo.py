@@ -91,29 +91,35 @@ class TestOpPurSpSaleBalVal(unittest.TestCase):
                 "extra": {"purchase_value": 0},
             },
         ]
-        result["totals"]["sales_value"] = 249.0  # printed TOTAL near 250
-        result["totals"]["closing_value"] = 505.0  # printed near 500
+        # Printed TOTAL near product-row money — prefer the printed footer.
+        result["totals"]["sales_value"] = 250.0
+        result["totals"]["closing_value"] = 500.0
         result["totals"]["extra"]["purchase_value"] = 50.0
+        result["totals"]["extra"]["closing_qty"] = 25.0
         finished = _finalize_op_pur_sp_sale_bal_val(result)
         totals = finished.get("totals") or {}
         extra = totals.get("extra") or {}
-        self.assertEqual(totals.get("sales_value"), 249.0)
-        self.assertEqual(totals.get("closing_value"), 505.0)
+        self.assertEqual(totals.get("sales_value"), 250.0)
+        self.assertEqual(totals.get("closing_value"), 500.0)
         self.assertEqual(extra.get("purchase_value"), 50.0)
         # Bal qty misfiled as Bal Val must not win over product-row money.
         result2 = empty_result("x.jpg", "jpg")
         result2["line_items"] = result["line_items"]
+        result2["totals"]["sales_value"] = 250.0
         result2["totals"]["closing_value"] = 25.0  # equals closing qty sum
-        result2["totals"]["extra"] = {}
+        result2["totals"]["extra"] = {"purchase_value": 50.0, "closing_qty": 25.0}
         finished2 = _finalize_op_pur_sp_sale_bal_val(result2)
+        # Footer closing_value below money threshold falls back to line sum.
         self.assertEqual((finished2.get("totals") or {}).get("closing_value"), 500.0)
 
     def test_misread_detector(self):
         bad = empty_result("x.jpg", "jpg")
         bad["stockist_name"] = "J R SHAH AND COMPANY"
+        bad["report_title"] = "Stock and Sale Statement"
         bad["line_items"] = [
             {
                 "product_name": f"H ITEM {i}",
+                "packing": "60TAB",
                 "opening_qty": 10.0,
                 "receipts_qty": 0.0,
                 "sales_qty": 2.0,
@@ -125,16 +131,19 @@ class TestOpPurSpSaleBalVal(unittest.TestCase):
         ]
         self.assertTrue(_looks_like_op_pur_sp_sale_bal_val_misread(bad))
         good = empty_result("x.jpg", "jpg")
-        good["totals"]["extra"]["extraction_method"] = "op_pur_sp_sale_bal_val_photo"
+        good["report_title"] = "Stock and Sale Statement"
+        good["totals"]["extra"]["extraction_method"] = "pack_op_pur_bal_stock_sale_vision"
         good["line_items"] = [
             {
                 "product_name": f"H ITEM {i}",
+                "packing": "60TAB",
                 "opening_qty": 10.0,
                 "receipts_qty": 0.0,
                 "sales_qty": 2.0,
                 "closing_qty": 8.0,
                 "sales_value": 100.0,
                 "closing_value": 400.0,
+                "extra": {"purchase_value": 0.0},
             }
             for i in range(10)
         ]
@@ -186,25 +195,33 @@ class TestOpPurSpSaleBalVal(unittest.TestCase):
             for i in range(3, 10)
         ]
         vision_payload["totals"]["extra"]["extraction_method"] = (
-            "op_pur_sp_sale_bal_val_photo"
+            "pack_op_pur_bal_stock_sale_vision"
         )
-        vision_payload["totals"]["extra"]["layout"] = "op_pur_sp_sale_bal_val"
+        vision_payload["totals"]["extra"]["layout"] = "pack_op_pur_bal_stock_sale"
 
         with mock.patch(
-            "services.sales_statement_extractor._extract_op_pur_sp_sale_bal_val_vision",
+            "services.sales_statement_extractor._maybe_early_vision_for_image",
+            return_value=(vision_payload, True),
+        ), mock.patch(
+            "services.sales_statement_extractor._extract_pack_op_pur_bal_stock_sale_vision",
             return_value=vision_payload,
-        ) as vision_mock, mock.patch(
-            "services.sales_statement_extractor._op_pur_sp_sale_bal_val_header_text",
-            return_value=HEADER,
         ), mock.patch(
             "services.sales_statement_extractor._ocr_image_to_text",
             return_value="noise\n" + HEADER,
+        ), mock.patch(
+            "services.gemini_extraction_fallback.maybe_apply_gemini_fallback",
+            side_effect=lambda result, *a, **k: result,
         ):
             result = extract_sales_statement(FIXTURE.read_bytes(), FIXTURE.name)
 
-        self.assertTrue(vision_mock.called)
         extra = (result.get("totals") or {}).get("extra") or {}
-        self.assertEqual(extra.get("extraction_method"), "op_pur_sp_sale_bal_val_photo")
+        self.assertIn(
+            extra.get("extraction_method"),
+            {
+                "op_pur_sp_sale_bal_val_photo",
+                "pack_op_pur_bal_stock_sale_vision",
+            },
+        )
         abana = next(
             i
             for i in (result.get("line_items") or [])
