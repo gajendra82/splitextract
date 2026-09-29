@@ -31275,9 +31275,133 @@ _ZEAL_ORDER_SIDE_PROMPT = (
     '"packing":string|null,"qty":number|null}]}.'
 )
 
+_ZEAL_ORDER_VALUE_SIDE_PROMPT = (
+    "This crop is one side of a Zeal ORDER FORM. "
+    "Columns left to right: SAP Code, Product, Pack, Qty, Value. "
+    "The handwriting on this sheet is in the Value Rs cell, not in Qty. "
+    "qty is the handwritten number in that row's Qty cell. A blank Qty cell is null. "
+    "value is the handwritten number in that row's Value Rs cell. A blank Value cell is null. "
+    "The Pack column is not the Qty and is not the Value. Do not copy 60s, 200 ml, or 30s into qty or value. "
+    "Do not copy a Value number into qty. Do not copy a Qty number into value. "
+    "A separate stroke after a number is not an extra zero. "
+    "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "A line or hook under a number is not an extra digit. "
+    "Do not copy a number onto another row. "
+    "Do not add a row for the blank lines under the last printed product. "
+    "Skip the header and Total. "
+    'Return ONLY JSON {"rows":[{"code":string|null,"product_name":string,'
+    '"packing":string|null,"qty":number|null,"value":number|null}]}.'
+)
+
+
+def _zeal_printed_order_form_anchor(file_bytes: bytes) -> Optional[float]:
+    """Title position of a sideways two-table Zeal ORDER FORM.
+
+    Stock statements photographed on the same phone do not share this center
+    rule and row pitch. Screenshots are not stored sideways and stay out.
+    """
+    if not _jpeg_needs_quarter_turn(file_bytes):
+        return None
+    try:
+        from PIL import Image, ImageOps
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("L")
+    except Exception:
+        return None
+    width, height = image.size
+    if width < 1400 or height <= width:
+        return None
+    px = image.load()
+    y_a, y_b = int(height * 0.38), int(height * 0.72)
+    best = 0.0
+    for x in range(int(width * 0.49), int(width * 0.55), 2):
+        darker = n = 0
+        for y in range(y_a, y_b, 3):
+            left = px[max(0, x - 10), y]
+            right = px[min(width - 1, x + 10), y]
+            n += 1
+            if (left + right) / 2 - px[x, y] > 16:
+                darker += 1
+        if n:
+            best = max(best, darker / n)
+    if best < 0.19:
+        return None
+    x0, x1 = int(width * 0.08), int(width * 0.42)
+    scores = []
+    for y in range(max(3, int(height * 0.05)), int(height * 0.95)):
+        darker = n = 0
+        for x in range(x0, x1, 6):
+            up = px[x, y - 3]
+            down = px[x, min(height - 1, y + 3)]
+            n += 1
+            if (up + down) / 2 - px[x, y] > 12:
+                darker += 1
+        scores.append((y, darker / n if n else 0.0))
+    peaks: List[List[float]] = []
+    for index, (y, score) in enumerate(scores):
+        if score < 0.18:
+            continue
+        if (index == 0 or score >= scores[index - 1][1]) and (
+            index == len(scores) - 1 or score >= scores[index + 1][1]
+        ):
+            if not peaks or y - peaks[-1][0] > 12:
+                peaks.append([y, score])
+            elif score > peaks[-1][1]:
+                peaks[-1] = [y, score]
+    if len(peaks) < 12:
+        return None
+    gaps = [peaks[i + 1][0] - peaks[i][0] for i in range(len(peaks) - 1)]
+    median = sorted(gaps)[len(gaps) // 2]
+    if not (0.012 * height <= median <= 0.028 * height):
+        return None
+    title = [y for y, _score in peaks if y < height * 0.22]
+    if not title:
+        return None
+    return max(0.08, min(0.19, title[0] / float(height)))
+
+
+def _zeal_order_value_column_has_ink(file_bytes: bytes) -> bool:
+    """True when the handwriting is in Value Rs and Qty is empty.
+
+    Zeal forms that write the number in Qty do not match.
+    """
+    try:
+        from PIL import Image, ImageOps
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("L")
+    except Exception:
+        return False
+    width, height = image.size
+    if width < 1400 or height < 1400:
+        return False
+    px = image.load()
+
+    def ink(x0f: float, x1f: float) -> int:
+        x0, x1 = int(width * x0f), int(width * x1f)
+        y0, y1 = int(height * 0.32), int(height * 0.90)
+        count = 0
+        rule_limit = max(40, int(width * 0.016))
+        for y in range(y0, y1, 2):
+            wide = 0
+            for x in range(int(width * 0.08), int(width * 0.48), 4):
+                if px[x, y] < 120:
+                    wide += 1
+            if wide > rule_limit:
+                continue
+            for x in range(x0, x1, 2):
+                if px[x, y] < 110:
+                    count += 1
+        return count
+
+    qty_ink = ink(0.34, 0.40)
+    value_ink = ink(0.40, 0.48)
+    return value_ink > 800 and value_ink > qty_ink * 1.8
+
 
 def _zandra_order_side_items(
-    rows: List[Dict[str, Any]], keep_handwritten_qty: bool = False
+    rows: List[Dict[str, Any]],
+    keep_handwritten_qty: bool = False,
+    keep_value: bool = False,
 ) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     for raw in rows:
@@ -31306,7 +31430,11 @@ def _zandra_order_side_items(
         ):
             qty_val = qty_val / 10.0
         item["sales_qty"] = qty_val
-        item["sales_value"] = 0.0
+        written_value = raw.get("value")
+        if keep_value and written_value not in (None, ""):
+            item["sales_value"] = _to_float(written_value)
+        else:
+            item["sales_value"] = 0.0
         item["extra"] = {"layout": "zandra_two_column_order_form"}
         items.append(item)
     return items
@@ -31333,6 +31461,7 @@ def _zandra_order_form_items(
     anchor: float,
     keep_handwritten_qty: bool = False,
     prompt: str = _ZANDRA_ORDER_SIDE_PROMPT,
+    keep_value: bool = False,
 ) -> List[Dict[str, Any]]:
     """Read one side in two bands so a long column is not cut off or zero-padded."""
     items: List[Dict[str, Any]] = []
@@ -31354,6 +31483,7 @@ def _zandra_order_form_items(
                 file_bytes, (left, top, right, bottom), prompt
             ),
             keep_handwritten_qty=keep_handwritten_qty,
+            keep_value=keep_value,
         )
         # A band that fills almost every Qty cell with Pack sizes is reading
         # the Pack column. Real handwritten order forms often fill >6 Qty cells;
@@ -31370,6 +31500,16 @@ def _zandra_order_form_items(
         if reading_pack:
             for item in band:
                 item["sales_qty"] = 0.0
+        if keep_value:
+            valued = [item for item in band if _to_float(item.get("sales_value")) > 0]
+            value_echoes = 0
+            for item in valued:
+                pack_nums = re.findall(r"\d+", str(item.get("packing") or ""))
+                if str(int(_to_float(item.get("sales_value")))) in pack_nums:
+                    value_echoes += 1
+            if len(valued) > 6 and value_echoes >= max(4, int(len(valued) * 0.6)):
+                for item in band:
+                    item["sales_value"] = 0.0
         for item in band:
             pack = re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper())
             name = re.sub(r"[^A-Z0-9]", "", item["product_name"].upper())
@@ -31445,7 +31585,24 @@ def _extract_zandra_two_column_order_photo(
     The older SAP photo that keeps only the right-hand Qty column does not
     match this detector and is left unchanged.
     """
-    found = _zandra_order_form_anchor(file_bytes)
+    # This phone photo stores the page sideways and writes the amount in
+    # Value Rs. Read that before the OCR anchor, which is absent without
+    # Tesseract. Other order forms still use the OCR anchor.
+    pixel_anchor = _zeal_printed_order_form_anchor(file_bytes)
+    value_ink = bool(
+        pixel_anchor is not None and _zeal_order_value_column_has_ink(file_bytes)
+    )
+    found = None
+    if value_ink:
+        found = (pixel_anchor, False, True)
+    else:
+        try:
+            found = _zandra_order_form_anchor(file_bytes)
+        except Exception as exc:
+            logger.info("Order form OCR anchor skipped: %s", exc)
+            found = None
+        if found is None and pixel_anchor is not None:
+            found = (pixel_anchor, False, True)
     if found is None:
         return None
     anchor, keep_handwritten_qty, zeal_form = found
@@ -31454,15 +31611,31 @@ def _extract_zandra_two_column_order_photo(
     # existing prompt.
     if not zeal_form and re.search(r"(?:^|_)ZL(?:_|\.)", filename, re.I):
         zeal_form = True
-    side_prompt = _ZEAL_ORDER_SIDE_PROMPT if zeal_form else _ZANDRA_ORDER_SIDE_PROMPT
+    keep_value = value_ink and zeal_form
+    if keep_value:
+        side_prompt = _ZEAL_ORDER_VALUE_SIDE_PROMPT
+    else:
+        side_prompt = _ZEAL_ORDER_SIDE_PROMPT if zeal_form else _ZANDRA_ORDER_SIDE_PROMPT
     logger.info(
         "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=zandra_two_column_order_form",
         filename,
     )
     items = _zandra_order_form_items(
-        file_bytes, 0.01, 0.50, anchor, keep_handwritten_qty, side_prompt
+        file_bytes,
+        0.01,
+        0.50,
+        anchor,
+        keep_handwritten_qty,
+        side_prompt,
+        keep_value=keep_value,
     ) + _zandra_order_form_items(
-        file_bytes, 0.49, 0.99, anchor, keep_handwritten_qty, side_prompt
+        file_bytes,
+        0.49,
+        0.99,
+        anchor,
+        keep_handwritten_qty,
+        side_prompt,
+        keep_value=keep_value,
     )
     if len(items) < 12:
         return None
@@ -31496,7 +31669,12 @@ def _extract_zandra_two_column_order_photo(
             result["period_from"] = period_from
             result["period_to"] = period_to
         result["company_name"] = "Zandra"
-    result["totals"]["sales_value"] = 0.0
+    if keep_value:
+        result["totals"]["sales_value"] = round(
+            sum(_to_float(item.get("sales_value")) for item in items), 2
+        )
+    else:
+        result["totals"]["sales_value"] = 0.0
     result["totals"]["extra"] = {
         "extraction_method": "zandra_two_column_order_form",
         "layout": "zandra_two_column_order_form",
@@ -36723,6 +36901,19 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     )
 
     result = empty_result(filename, ext.lstrip("."))
+
+    # Sideways Zeal ORDER FORM. The stock-statement reader does not apply,
+    # and the OCR probe is skipped when Tesseract is not installed.
+    if _zeal_printed_order_form_anchor(file_bytes) is not None:
+        try:
+            zeal_order = _extract_zandra_two_column_order_photo(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.warning("Zeal order form photo skipped: %s", exc)
+            zeal_order = None
+        if zeal_order and zeal_order.get("line_items"):
+            return zeal_order
 
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext
