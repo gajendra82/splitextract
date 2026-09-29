@@ -36,7 +36,8 @@ class QualityGateTests(unittest.TestCase):
             "totals": {
                 "extra": {
                     "extraction_method": "marg_qty_value_dump_xls",
-                    "stock_identity_fail_count": 6,
+                    # Identity already validated for this named parser.
+                    "stock_identity_fail_count": 0,
                     "stock_identity_kind": "opening_receipts_sales_closing",
                 }
             },
