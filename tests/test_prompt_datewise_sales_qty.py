@@ -54,6 +54,31 @@ class TestPromptDatewiseSalesQty(unittest.TestCase):
         self.assertEqual(_prompt_datewise_bucket(312.6, buckets), "receipts_qty")
         self.assertEqual(_prompt_datewise_bucket(352.6, buckets), "sales_qty")
         self.assertEqual(_prompt_datewise_bucket(380.6, buckets), "closing_qty")
+        # Compressed layout: no Sales Amount between Sales Qty and ClStk.
+        names = [n for n, _lo, _hi in buckets]
+        self.assertNotIn("sales_value", names)
+        self.assertEqual(_prompt_datewise_bucket(418.1, buckets), "closing_value")
+
+    def test_standard_wide_gap_keeps_sales_value(self):
+        """Standard OpStk (left) keeps Sales Amount between Sales Qty and ClStk."""
+        words = [
+            (195.6, 91.3, 216.2, 100, "Pack"),
+            (197.2, 91.3, 224.0, 100, "OpStk"),
+            (250.7, 91.3, 266.0, 100, "Pur"),
+            (301.4, 91.3, 330.0, 100, "Sales"),
+            (386.5, 91.3, 410.3, 100, "ClStk"),
+            (208.7, 103.3, 224.0, 110, "Qty"),
+            (250.7, 103.3, 266.0, 110, "Qty"),
+            (292.7, 103.3, 308.0, 110, "Qty"),
+            (376.7, 103.3, 392.4, 110, "Qty"),
+            (403.2, 103.3, 437.0, 110, "Amount"),
+        ]
+        buckets = _prompt_datewise_buckets_for_words(words)
+        names = [n for n, _lo, _hi in buckets]
+        self.assertIn("sales_value", names)
+        self.assertEqual(_prompt_datewise_bucket(338.1, buckets), "sales_value")
+        self.assertEqual(_prompt_datewise_bucket(388.6, buckets), "closing_qty")
+        self.assertEqual(_prompt_datewise_bucket(422.1, buckets), "closing_value")
 
 
 if __name__ == "__main__":
