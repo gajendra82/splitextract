@@ -792,11 +792,21 @@ def _parse_pack_mexp_qty_statement(
             if period:
                 result["period_from"] = _normalize_date(period.group(1))
                 result["period_to"] = _normalize_date(period.group(2))
+            company = re.search(r"\(([^)]+)\)", stripped)
+            if company and not result.get("company_name"):
+                result["company_name"] = _clean_name(company.group(1))
             continue
         if not result.get("stockist_name") and re.search(
-            r"MEDICAL|STORE|AGENC|MEDICO|PHARMA|DISTRIBUT", stripped, re.I
+            r"MEDICAL|STORE|AGENC|MEDICO|PHARMA|DISTRIBUT|"
+            r"DRUG\s*HOUSE|DRUGSTORE|CHEMIST",
+            stripped,
+            re.I,
         ):
-            if not re.search(r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION", stripped, re.I):
+            if not re.search(
+                r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION|Phone\s*:|E-Mail|GSTIN",
+                stripped,
+                re.I,
+            ):
                 result["stockist_name"] = _clean_name(stripped)
             continue
         if re.search(
@@ -3210,7 +3220,10 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
     totals["extra"]["line_closing_value_sum"] = sum_closing_value
 
     # Prefer footer TOTAL-row qty when present (P.S.PHARMACEUTICALS etc.)
-    has_footer_qty = totals.get("extra", {}).get("total_row_source") == "footer_total"
+    # printed_total_preferred: keep format-finalize qty when already set.
+    total_row_source = str(totals.get("extra", {}).get("total_row_source") or "")
+    has_footer_qty = total_row_source == "footer_total"
+    printed_preferred = total_row_source == "printed_total_preferred"
     if has_footer_qty:
         if totals.get("sales_qty") is not None:
             totals["extra"]["sales_qty"] = totals.get("sales_qty")
@@ -3220,6 +3233,13 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
             totals["extra"]["closing_qty"] = totals.get("closing_qty")
         else:
             totals["extra"]["closing_qty"] = sum_closing_qty
+    elif printed_preferred:
+        if totals.get("extra", {}).get("sales_qty") is None:
+            totals["extra"]["sales_qty"] = sum_sales_qty
+        if totals.get("extra", {}).get("closing_qty") is None:
+            totals["extra"]["closing_qty"] = sum_closing_qty
+        if totals.get("closing_qty") is None:
+            totals["closing_qty"] = totals["extra"].get("closing_qty")
     else:
         totals["extra"]["sales_qty"] = sum_sales_qty
         totals["extra"]["closing_qty"] = sum_closing_qty
@@ -12643,7 +12663,8 @@ def _ssa_skip_product(name: str) -> bool:
         r"stock\s*&\s*sales|stock\s+and\s+sales|himalaya\s+wellness|"
         r"item\s*description|opening\s*stock|closing\s*stock|total\s*stock|"
         r"total\s*quantity|value\s+in\s+rs|continued|page\s*\d|grand\s*total|"
-        r"^total\b|column\s*no|formula",
+        r"^total\b|column\s*no|formula|^quantity\b|distributors?\b|"
+        r"\bpharmaceutical\s+distributors?\b",
         text,
         re.I,
     ):
@@ -12667,30 +12688,70 @@ def _parse_stock_sales_analysis_words(
 
     Keeps TOTAL STOCK distinct from CLOSING STOCK and does not borrow a blank
     cell from the next product row. Other statement layouts return None.
+
+    Continuation pages often reprint the column header mid-page or in the
+    footer. Only a header near the top of a page starts the data band;
+    later reprints are skipped as non-product rows while products above
+    them are kept. Pages with no top header inherit column anchors from
+    the previous page.
     """
     items: List[Dict[str, Any]] = []
     blob_parts: List[str] = []
     matched = False
+    last_anchors: Optional[List[Tuple[str, float]]] = None
+    pages_detected = 0
+    pages_with_rows = 0
+    rows_by_page: List[int] = []
     for page in pages:
+        pages_detected += 1
         words = page.get("words") or []
         if not words:
+            rows_by_page.append(0)
             continue
         blob_parts.append(" ".join(str(w[4]) for w in words if len(w) > 4))
         rows = _ssa_cluster_rows(words)
-        anchors = _ssa_header_anchors(rows)
+        header_rows = [row for row in rows if _ssa_is_header_row(row)]
+        page_top = min((row["cy"] for row in rows), default=0.0)
+        page_bottom = max((row["cy"] for row in rows), default=0.0)
+        page_span = max(page_bottom - page_top, 1.0)
+        # Header near the top establishes columns. Mid/footer reprints do not.
+        top_zone = page_top + page_span * 0.28
+        top_headers = [row for row in header_rows if row["cy"] <= top_zone]
+        anchors: Optional[List[Tuple[str, float]]] = None
+        header_bottom = -1.0
+        if top_headers:
+            anchors = _ssa_header_anchors(top_headers)
+            if anchors is None:
+                # Fall back to full-page header scan used historically.
+                anchors = _ssa_header_anchors(rows)
+            if anchors is not None:
+                header_bottom = max(row["cy"] for row in top_headers)
+                last_anchors = anchors
+        elif last_anchors is not None:
+            # Continuation page: products continue under the prior column map.
+            anchors = last_anchors
+            header_bottom = -1.0
+        else:
+            anchors = _ssa_header_anchors(rows)
+            if anchors is not None:
+                # Single-page / unusual layouts: keep prior max-header behavior
+                # only when no prior page established anchors.
+                header_bottom = max(
+                    (row["cy"] for row in header_rows), default=-1.0
+                )
+                last_anchors = anchors
         if not anchors:
+            rows_by_page.append(0)
             continue
         matched = True
-        header_bottom = max(
-            (row["cy"] for row in rows if _ssa_is_header_row(row)), default=0.0
-        )
         pending = ""
         pending_y = None
         line_h = 12.0
         if rows:
             line_h = max(8.0, min(20.0, abs(rows[1]["cy"] - rows[0]["cy"]) if len(rows) > 1 else 12.0))
+        page_item_count = 0
         for row in rows:
-            if row["cy"] <= header_bottom + 1.0:
+            if header_bottom >= 0 and row["cy"] <= header_bottom + 1.0:
                 continue
             if _ssa_is_header_row(row) or _ssa_is_column_index_row(row):
                 pending = ""
@@ -12751,6 +12812,10 @@ def _parse_stock_sales_analysis_words(
                     extra[dest] = None
             item["extra"] = extra
             items.append(item)
+            page_item_count += 1
+        rows_by_page.append(page_item_count)
+        if page_item_count:
+            pages_with_rows += 1
     if not matched or not items:
         return None
     blob = " ".join(blob_parts)
@@ -12761,8 +12826,59 @@ def _parse_stock_sales_analysis_words(
     company = re.search(r"HIMALAYA\s+WELLNESS", blob, re.I)
     if company:
         result["company_name"] = "HIMALAYA WELLNESS"
+    # Prefer a clean party line from page text (word blobs lose newlines).
+    for page in pages:
+        page_text = page.get("text") or ""
+        if not page_text:
+            continue
+        for line in page_text.splitlines():
+            cleaned = _clean_name(line)
+            if not cleaned or len(cleaned) > 80:
+                continue
+            if re.search(
+                r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION|Phone\s*:|E-Mail|GSTIN|"
+                r"Page\s+No|HIMALAYA\s+WELLNESS",
+                cleaned,
+                re.I,
+            ):
+                continue
+            if re.search(
+                r"MEDICAL|STORE|AGENC|MEDICO|PHARMA|DISTRIBUT|DRUG\s*HOUSE",
+                cleaned,
+                re.I,
+            ):
+                result["stockist_name"] = cleaned
+                break
+        if result.get("stockist_name"):
+            break
+    period = re.search(
+        r"STOCK\s*&\s*SALES\s*ANALYSIS[^\n]{0,80}?"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–to]+\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "stock_sales_analysis_geometry"
+    result["totals"]["extra"]["pages_detected"] = pages_detected
+    result["totals"]["extra"]["pages_processed"] = sum(
+        1 for page in pages if page.get("words")
+    )
+    result["totals"]["extra"]["pages_with_rows"] = pages_with_rows
+    result["totals"]["extra"]["rows_by_page"] = rows_by_page
+    result["totals"]["extra"]["total_rows_after_merge"] = len(items)
+    logger.info(
+        "SSA_GEOMETRY_MULTI_PAGE file=%s pages_detected=%s pages_with_rows=%s "
+        "rows_by_page=%s total_rows=%s",
+        filename,
+        pages_detected,
+        pages_with_rows,
+        rows_by_page,
+        len(items),
+    )
     return result
 
 
@@ -12881,6 +12997,9 @@ def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     blob = text or ""
     # Medica Ultimate prints OPSTK and IN/OT. That is not the Zandra Op Stk grid.
     if re.search(r"\bOPSTK\b", blob) and re.search(r"\bIN/OT\b", blob):
+        return False
+    # J R SHAH Op/Pur/Pur Val/Sale Val/Bal Val is a different Stock and Sale sheet.
+    if _is_op_pur_sp_sale_bal_val_text(blob):
         return False
     if re.search(r"Stock\s+and\s+Sale\s+Statement|Op\s*Stk|Cl\s*Stk", blob, re.I):
         return True
@@ -13607,8 +13726,530 @@ def _extract_zandra_stock_sale_vision(
     return _finalize_zandra_stock_sale(result)
 
 
-_PRODUCT_WISE_STOCK_SALE_RE = re.compile(
-    r"PRODUCT\s+WISE\s+STOCK\s*(?:&|AND)\s*(?:SALE|BALE)",
+def _is_op_pur_sp_sale_bal_val_text(text: str) -> bool:
+    """J R SHAH-style Stock and Sale Statement: Op/Pur/SP/Pur Val/Sale/.../Bal Val.
+
+    Distinct from ZANDRA Item Cd / Op Stk grids and from STOCK & SALES ANALYSIS.
+    OCR often drops the leading 'S' ('tock and Sale Statement').
+    """
+    blob = text or ""
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", blob, re.I):
+        return False
+    if re.search(r"Item\s*Cd|Op\s*Stk|Cl\s*Stk", blob, re.I):
+        return False
+    title = re.search(
+        r"(?:[SG])?tock\s+and\s+Sale\s+Statement|Stock\s+and\s+Sale\s+Statement",
+        blob,
+        re.I,
+    )
+    if not title:
+        return False
+    has_pur_val = bool(re.search(r"Pur\s*Va|Pun\s*Va", blob, re.I))
+    has_sale_val = bool(re.search(r"Sale\s*Va", blob, re.I))
+    has_bal_or_sp = bool(re.search(r"Bal\.?\s*Va|Sp\s*Qty", blob, re.I))
+    has_pack_op = bool(
+        re.search(r"\bpack\b", blob, re.I) and re.search(r"\bOp\.?\b|\bPur\b", blob, re.I)
+    )
+    return bool((has_pur_val and has_sale_val and has_bal_or_sp) or (has_pack_op and has_sale_val))
+
+
+def _op_pur_sp_sale_bal_val_header_text(file_bytes: bytes) -> str:
+    """OCR title + column header band (full-page OCR is often unusable on this photo)."""
+    try:
+        import pytesseract
+        from PIL import Image, ImageEnhance, ImageOps
+    except ImportError:
+        return ""
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("L")
+    except Exception:
+        return ""
+    width, height = image.size
+    # Bound large phone photos before OCR.
+    max_side = 2000
+    if max(width, height) > max_side:
+        scale = max_side / float(max(width, height))
+        image = image.resize((max(1, int(width * scale)), max(1, int(height * scale))))
+        width, height = image.size
+    parts: List[str] = []
+    for top, bottom in ((0.0, 0.22), (0.10, 0.28)):
+        crop = image.crop(
+            (0, int(height * top), width, int(height * bottom))
+        )
+        crop = ImageEnhance.Contrast(crop).enhance(1.5)
+        try:
+            parts.append(pytesseract.image_to_string(crop, config="--psm 6"))
+        except Exception:
+            continue
+    return "\n".join(parts)
+
+
+_OP_PUR_SP_SALE_BAL_VAL_PROMPT = """
+This image is a "Stock and Sale Statement" table (often J R SHAH AND COMPANY /
+THE HIMALAYA DRUG (ZEAL)). It is NOT ZANDRA Item Cd / Op Stk and NOT STOCK & SALES ANALYSIS.
+
+Columns LEFT TO RIGHT (blank = 0). Do NOT shift numbers left into blank cells.
+
+1 Item Name -> product_name (keep leading H if printed)
+2 pack -> packing
+3 Op -> opening_qty
+4 Pur -> receipts_qty
+5 SP -> extra.purchase_scheme_qty
+6 Pur Val -> extra.purchase_value  (money)
+7 Sale -> sales_qty
+8 SS -> extra.sales_scheme_qty
+9 Sp Qty -> extra.sample_qty
+10 Sale Val -> sales_value  (money)
+11 Bal. -> closing_qty
+12 Bal Val -> closing_value  (money)
+
+Rules:
+- stockist_name is the party at the top (e.g. J R SHAH AND COMPANY), never HIMALAYA.
+- company_name is the division banner (e.g. THE HIMALAYA DRUG (ZEAL)).
+- Period "From 28-Jul-26 to 28-Aug-26" means year 2026 (period_from/period_to).
+- Sale Val and Bal Val are money. Op/Pur/Sale/Bal are quantities.
+- Read EVERY product row visible in this image strip. Do not zero out rows that
+  have printed digits. Trailing periods on qty (53.) are still that quantity.
+- If a TOTAL / Total row is visible, put its Pur Val / Sale Val / Bal / Bal Val
+  into totals (do not invent). Skip TOTAL as a line_item.
+- Skip phone chrome. Copy printed cells only.
+
+Examples:
+- H AACTARIL SOAP 75GM: pack=75GM opening=53 receipts=0 sales=22 closing=31
+  sales_value=1919 closing_value=2167 purchase_value=0
+- H ABANA 60TABLETS: pack=60TAB opening=15 receipts=100 sales=27 closing=88
+  sales_value=4311 closing_value=12423 purchase_value=14117
+- H AMALAKI TAB: pack=60TAB opening=89 receipts=0 sales=9 closing=80
+  sales_value=1919 closing_value=14419
+- Printed TOTAL example: purchase_value=125277 sales_value=209502
+  closing_qty=2035 closing_value=278899
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock and Sale Statement",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {
+        "purchase_scheme_qty": number,
+        "purchase_value": number,
+        "sales_scheme_qty": number,
+        "sample_qty": number
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "closing_qty": number|null,
+    "extra": {"purchase_value": number|null}
+  }
+}
+""".strip()
+
+
+def _op_pur_sp_sale_bal_val_strips(file_bytes: bytes) -> List[bytes]:
+    """Header band + two overlapping body strips so lower rows keep values."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return [file_bytes]
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return [file_bytes]
+    width, height = image.size
+    # Bound very large phone photos.
+    max_side = 2200
+    if max(width, height) > max_side:
+        scale = max_side / float(max(width, height))
+        image = image.resize((max(1, int(width * scale)), max(1, int(height * scale))))
+        width, height = image.size
+    header_h = max(90, int(height * 0.16))
+    header = image.crop((0, 0, width, header_h))
+    strips: List[bytes] = []
+    # Three bands with overlap cover the long product list.
+    bands = (
+        (max(0, header_h - 30), int(height * 0.48)),
+        (int(height * 0.38), int(height * 0.72)),
+        (int(height * 0.62), height),
+    )
+    for top, bottom in bands:
+        top = max(0, min(top, height - 40))
+        bottom = max(top + 80, min(bottom, height))
+        band = image.crop((0, top, width, bottom))
+        canvas = Image.new("RGB", (width, header.height + band.height), "white")
+        canvas.paste(header, (0, 0))
+        canvas.paste(band, (0, header.height))
+        buf = io.BytesIO()
+        canvas.save(buf, format="JPEG", quality=88)
+        strips.append(buf.getvalue())
+    return strips or [file_bytes]
+
+
+def _op_pur_sp_sale_bal_val_row_key(item: Dict[str, Any]) -> str:
+    name = re.sub(
+        r"[^A-Z0-9]",
+        "",
+        str(item.get("product_name") or "").upper(),
+    )
+    pack = re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper())
+    return f"{name}|{pack}" if name else ""
+
+
+def _op_pur_sp_sale_bal_val_row_score(item: Dict[str, Any]) -> float:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    return (
+        _to_float(item.get("opening_qty"))
+        + _to_float(item.get("receipts_qty"))
+        + _to_float(item.get("sales_qty"))
+        + _to_float(item.get("closing_qty"))
+        + _to_float(item.get("sales_value"))
+        + _to_float(item.get("closing_value"))
+        + _to_float(extra.get("purchase_value"))
+    )
+
+
+def _merge_op_pur_sp_sale_bal_val_row(
+    merged: List[Dict[str, Any]],
+    seen: Dict[str, float],
+    raw: Dict[str, Any],
+) -> None:
+    key = _op_pur_sp_sale_bal_val_row_key(raw)
+    if not key:
+        return
+    score = _op_pur_sp_sale_bal_val_row_score(raw)
+    if key in seen:
+        if score <= seen[key]:
+            return
+        seen[key] = score
+        for idx, old in enumerate(merged):
+            if _op_pur_sp_sale_bal_val_row_key(old) == key:
+                merged[idx] = raw
+                return
+        merged.append(raw)
+        return
+    seen[key] = score
+    merged.append(raw)
+
+
+def _finalize_op_pur_sp_sale_bal_val(result: Dict[str, Any]) -> Dict[str, Any]:
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        if not name or _is_non_product_line_name(name):
+            continue
+        if re.search(
+            r"^TOTAL\b|^GRAND\s*TOTAL|HIMALAYA\s+DRUG|^Item\s*Name\b",
+            name,
+            re.I,
+        ):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        # Expose Pur Val on receipts_value for consumers that sum purchase money there.
+        pur_val = _to_float(extra.get("purchase_value"))
+        if pur_val and item.get("receipts_value") in (None, "", 0, 0.0):
+            item["receipts_value"] = pur_val
+        extra["layout"] = "op_pur_sp_sale_bal_val"
+        item["extra"] = extra
+        item["product_name"] = name
+        # This layout has no Opening Value column — do not leave fabricated money.
+        item["opening_value"] = None
+        items.append(item)
+    result["line_items"] = _drop_trailing_statement_total_item(items)
+    result["report_title"] = result.get("report_title") or "Stock and Sale Statement"
+    # Two-digit year on "Jul-26" must stay in the 2020s for this statement family.
+    for key in ("period_from", "period_to"):
+        raw = result.get(key)
+        if isinstance(raw, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", raw):
+            year = int(raw[:4])
+            if year < 2024:
+                try:
+                    fixed = f"2026-{raw[5:]}"
+                    datetime.strptime(fixed, "%Y-%m-%d")
+                    result[key] = fixed
+                except ValueError:
+                    pass
+
+    purchase_sum = round(
+        sum(
+            _to_float((i.get("extra") or {}).get("purchase_value"))
+            if isinstance(i.get("extra"), dict)
+            else 0.0
+            for i in result["line_items"]
+        ),
+        2,
+    )
+    sales_sum = round(sum(_to_float(i.get("sales_value")) for i in result["line_items"]), 2)
+    closing_sum = round(
+        sum(_to_float(i.get("closing_value")) for i in result["line_items"]), 2
+    )
+    opening_qty = round(sum(_to_float(i.get("opening_qty")) for i in result["line_items"]), 2)
+    receipts_qty = round(sum(_to_float(i.get("receipts_qty")) for i in result["line_items"]), 2)
+    sales_qty = round(sum(_to_float(i.get("sales_qty")) for i in result["line_items"]), 2)
+    closing_qty = round(sum(_to_float(i.get("closing_qty")) for i in result["line_items"]), 2)
+
+    def _pick_printed_or_sum(
+        printed: Any,
+        line_sum: float,
+        *,
+        qty_lookalike: Optional[float] = None,
+    ) -> Optional[float]:
+        """Prefer the printed TOTAL row when it agrees with product-row money."""
+        printed_v = _to_float(printed)
+        # Vision sometimes puts Bal qty into closing_value — reject that.
+        if (
+            qty_lookalike is not None
+            and printed_v > 0
+            and abs(printed_v - float(qty_lookalike)) < 0.51
+        ):
+            printed_v = 0.0
+        if printed_v <= 0:
+            return line_sum if line_sum > 0 else None
+        if line_sum <= 0:
+            return printed_v
+        if abs(printed_v - line_sum) / max(printed_v, line_sum) <= 0.15:
+            return printed_v
+        return line_sum
+
+    totals = result.setdefault("totals", {})
+    extra_t = totals.setdefault("extra", {}) if isinstance(totals, dict) else {}
+    printed_sales = _to_float(totals.get("sales_value"))
+    printed_closing = _to_float(totals.get("closing_value"))
+    printed_purchase = _to_float(extra_t.get("purchase_value"))
+    printed_closing_qty = _to_float(totals.get("closing_qty"))
+    totals["sales_value"] = _pick_printed_or_sum(printed_sales, sales_sum)
+    totals["closing_value"] = _pick_printed_or_sum(
+        printed_closing, closing_sum, qty_lookalike=closing_qty
+    )
+    extra_t["purchase_value"] = _pick_printed_or_sum(printed_purchase, purchase_sum)
+    # This layout has no Opening Value column.
+    totals["opening_value"] = None
+    extra_t["opening_value"] = None
+    if (
+        printed_closing_qty > 0
+        and abs(printed_closing_qty - closing_qty) / max(printed_closing_qty, closing_qty, 1)
+        <= 0.15
+    ):
+        totals["closing_qty"] = printed_closing_qty
+        extra_t["closing_qty"] = printed_closing_qty
+    else:
+        totals["closing_qty"] = closing_qty
+        extra_t["closing_qty"] = closing_qty
+    extra_t["opening_qty"] = opening_qty
+    extra_t["receipts_qty"] = receipts_qty
+    extra_t["sales_qty"] = sales_qty
+    extra_t["line_purchase_value_sum"] = purchase_sum
+    extra_t["line_sales_value_sum"] = sales_sum
+    extra_t["line_closing_value_sum"] = closing_sum
+    extra_t["extraction_method"] = "op_pur_sp_sale_bal_val_photo"
+    extra_t["layout"] = "op_pur_sp_sale_bal_val"
+    extra_t["fallback_used"] = False
+    used_printed = (
+        (totals.get("sales_value") == printed_sales and printed_sales > 0)
+        or (extra_t.get("purchase_value") == printed_purchase and printed_purchase > 0)
+        or (totals.get("closing_value") == printed_closing and printed_closing > 0)
+    )
+    extra_t["total_row_source"] = (
+        "printed_total_preferred" if used_printed else "product_row_sum"
+    )
+    return result
+
+
+def _looks_like_op_pur_sp_sale_bal_val_misread(result: Optional[Dict[str, Any]]) -> bool:
+    """Generic vision kept names but dropped Sale Val / Bal Val or Pur qty."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra.get("extraction_method") or "")
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    sales_pos = sum(1 for i in items if _to_float(i.get("sales_qty")) > 0)
+    value_pos = sum(
+        1
+        for i in items
+        if _to_float(i.get("sales_value")) > 0 or _to_float(i.get("closing_value")) > 0
+    )
+    receipt_pos = sum(1 for i in items if _to_float(i.get("receipts_qty")) > 0)
+    # Dedicated reader that still lost money on active rows needs a strip re-read.
+    if method.startswith("op_pur_sp_sale_bal_val"):
+        active = sum(
+            1
+            for i in items
+            if _to_float(i.get("opening_qty")) > 0 or _to_float(i.get("closing_qty")) > 0
+        )
+        if active >= 8 and value_pos <= max(2, active // 5):
+            return True
+        return False
+    stockist = str(result.get("stockist_name") or "")
+    title = str(result.get("report_title") or "")
+    hint = bool(
+        re.search(r"SHAH|Stock\s+and\s+Sale", stockist + " " + title, re.I)
+        or re.search(r"HIMALAYA\s+DRUG", str(result.get("company_name") or ""), re.I)
+    )
+    if not hint:
+        named = sum(
+            1
+            for i in items
+            if re.match(r"^H\s*[A-Z]", str(i.get("product_name") or ""), re.I)
+        )
+        if named < max(5, len(items) // 3):
+            return False
+    if sales_pos >= 3 and value_pos <= 1:
+        return True
+    if sales_pos >= 3 and receipt_pos == 0:
+        return True
+    return False
+
+
+def _extract_op_pur_sp_sale_bal_val_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".jpg",
+    *,
+    ocr_hint: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Vision reader for Op/Pur/SP/Pur Val/Sale/SS/Sp Qty/Sale Val/Bal/Bal Val photos."""
+    import os
+    import time as _time
+
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    merged: List[Dict[str, Any]] = []
+    seen: Dict[str, float] = {}
+    parsed_meta: Dict[str, Any] = {}
+    for strip_index, strip in enumerate(_op_pur_sp_sale_bal_val_strips(file_bytes)):
+        if strip_index:
+            _time.sleep(0.35)
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": _OP_PUR_SP_SALE_BAL_VAL_PROMPT},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(strip).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed = None
+        for attempt in range(2):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                logger.warning("Op/Pur/Sale/Bal Val vision failed: %s", exc)
+                _time.sleep(min(2 ** attempt, 6))
+        if not parsed:
+            continue
+        for key in (
+            "stockist_name",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if parsed.get(key) and not parsed_meta.get(key):
+                parsed_meta[key] = parsed[key]
+        totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+        if totals:
+            prev = parsed_meta.get("totals") if isinstance(parsed_meta.get("totals"), dict) else {}
+            # Keep the richer printed TOTAL (higher money wins).
+            merged_totals = dict(prev)
+            for key in ("sales_value", "closing_value", "closing_qty"):
+                if _to_float(totals.get(key)) >= _to_float(merged_totals.get(key)):
+                    if totals.get(key) is not None:
+                        merged_totals[key] = totals.get(key)
+            prev_extra = merged_totals.get("extra") if isinstance(merged_totals.get("extra"), dict) else {}
+            tot_extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+            if _to_float(tot_extra.get("purchase_value")) >= _to_float(
+                prev_extra.get("purchase_value")
+            ):
+                prev_extra = dict(prev_extra)
+                if tot_extra.get("purchase_value") is not None:
+                    prev_extra["purchase_value"] = tot_extra.get("purchase_value")
+            merged_totals["extra"] = prev_extra
+            parsed_meta["totals"] = merged_totals
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            name = _clean_name(str(raw.get("product_name") or ""))
+            if not name:
+                continue
+            raw["product_name"] = name
+            _merge_op_pur_sp_sale_bal_val_row(merged, seen, raw)
+    if len(merged) < 5:
+        return None
+    parsed_meta["report_title"] = parsed_meta.get("report_title") or "Stock and Sale Statement"
+    parsed_meta["line_items"] = merged
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed_meta)
+    hint = ocr_hint or ""
+    if not result.get("stockist_name") and hint:
+        for line in hint.splitlines():
+            cleaned = _clean_name(line)
+            if re.search(r"SHAH|COMPANY|DISTRIBUT|AGENC", cleaned, re.I) and not re.search(
+                r"Stock\s+and\s+Sale|HIMALAYA|Item\s*Name", cleaned, re.I
+            ):
+                result["stockist_name"] = cleaned
+                break
+    if not result.get("company_name") and re.search(r"HIMALAYA\s+DRUG", hint, re.I):
+        m = re.search(r"THE\s+HIMALAYA\s+DRUG[^\n]{0,40}", hint, re.I)
+        result["company_name"] = _clean_name(
+            m.group(0) if m else "THE HIMALAYA DRUG (ZEAL)"
+        )
+    if (not result.get("period_from") or not result.get("period_to")) and hint:
+        period = re.search(
+            r"From\s+(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s+to\s+"
+            r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+            hint,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+    result = _finalize_op_pur_sp_sale_bal_val(result)
+    if len(result.get("line_items") or []) < 5:
+        return None
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision method=op_pur_sp_sale_bal_val_photo items=%s sales_value=%s closing_value=%s purchase_value=%s",
+        filename,
+        len(result.get("line_items") or []),
+        (result.get("totals") or {}).get("sales_value"),
+        (result.get("totals") or {}).get("closing_value"),
+        ((result.get("totals") or {}).get("extra") or {}).get("purchase_value"),
+    )
+    return result
+
+
+_PRODUCT_WISE_STOCK_SALE_RE = re.compile(    r"PRODUCT\s+WISE\s+STOCK\s*(?:&|AND)\s*(?:SALE|BALE)",
     re.I,
 )
 
@@ -19527,15 +20168,24 @@ def _pharma_hub_jun_jul_needs_reread(result: Dict[str, Any]) -> bool:
     """True when Jun or Jul was stored as the August sales quantity."""
     if not isinstance(result, dict):
         return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra.get("extraction_method") or "")
+    layout = str(extra.get("layout") or "")
+    # J R SHAH Op/Pur/Sale/Bal Val photos are not Pharma Hub Jun/Jul sheets.
+    if method.startswith("op_pur_sp_sale_bal_val") or layout == "op_pur_sp_sale_bal_val":
+        return False
     title = str(result.get("report_title") or "")
     if re.search(
-        r"Date\s*wise|Order\s*Form|ANALYSIS|Sales\s*&\s*Stock|Stock\s+and\s+Sales",
+        r"Date\s*wise|Order\s*Form|ANALYSIS|Sales\s*&\s*Stock|"
+        r"Stock\s+and\s+Sales?|Op\s*/\s*Pur|Pur\s*Val|Bal\s*Val",
         title,
         re.I,
     ):
         return False
     company = str(result.get("company_name") or "")
     stockist = str(result.get("stockist_name") or "")
+    if re.search(r"\bJ\.?\s*R\.?\s*SHAH\b", stockist, re.I):
+        return False
     if not (
         re.search(r"Stock\s+Stat(?:e)?ment", title, re.I)
         or re.search(r"HIMALAYA", company, re.I)
@@ -34419,13 +35069,53 @@ def _parse_a2z_opening_mexp_image(
     result = empty_result(filename, ext.lstrip(".") or "jpg")
     if re.search(r"A2(?:Z|7Z)\s+PHARMA", preview, re.I):
         result["stockist_name"] = "A2Z PHARMA"
+    if not result.get("stockist_name"):
+        # Same party cues as the text pack/M.EXP parser (e.g. RUDRAPUR DRUG HOUSE).
+        for line in preview.splitlines():
+            cleaned = _clean_name(line)
+            if not cleaned or len(cleaned) < 4:
+                continue
+            if re.search(
+                r"STOCK\s*&\s*SALES|ITEM\s+DESCRIPTION|Phone\s*:|E-Mail|GSTIN|"
+                r"Page\s+No|HIMALAYA\s+WELLNESS|^HIMALAYA\b",
+                cleaned,
+                re.I,
+            ):
+                continue
+            if re.search(
+                r"MEDICAL|STORE|AGENC|MEDICO|PHARMA|DISTRIBUT|"
+                r"DRUG\s*HOUSE|DRUGSTORE|CHEMIST",
+                cleaned,
+                re.I,
+            ):
+                result["stockist_name"] = cleaned
+                break
     if re.search(r"HIMALAYA\s+WELLNESS\s+COMPANY", preview, re.I):
         result["company_name"] = "HIMALAYA WELLNESS COMPANY"
+    if not result.get("company_name"):
+        company = re.search(
+            r"STOCK\s*&\s*SALES\s*ANALYSIS[^\n]{0,40}\(([^)]+)\)",
+            preview,
+            re.I,
+        )
+        if company:
+            result["company_name"] = _clean_name(company.group(1))
+    # Prefer dates on the analysis title line (avoid stray OCR dates).
+    title_period = re.search(
+        r"STOCK\s*&\s*SALES\s*ANALYSIS[^\n]{0,80}?"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–to]+\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        preview,
+        re.I,
+    )
+    if title_period:
+        result["period_from"] = _normalize_date(title_period.group(1))
+        result["period_to"] = _normalize_date(title_period.group(2))
     period = re.search(
         r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}).{0,12}(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
         preview,
     )
-    if period:
+    if period and (not result.get("period_from") or not result.get("period_to")):
         result["period_from"] = _normalize_date(period.group(1))
         result["period_to"] = _normalize_date(period.group(2))
     if not result.get("period_from") or not result.get("period_to"):
@@ -37043,6 +37733,34 @@ def _maybe_early_vision_for_image(
             extra["early_vision_reason"] = "code_item_stock_statement_photo"
             return code_item, True
 
+    # J R SHAH Op/Pur/Pur Val/Sale Val/Bal Val — dedicated Vision before generic.
+    header_hint = ""
+    try:
+        header_hint = _op_pur_sp_sale_bal_val_header_text(file_bytes)
+    except Exception:
+        header_hint = ""
+    if _is_op_pur_sp_sale_bal_val_text(sample) or _is_op_pur_sp_sale_bal_val_text(
+        header_hint
+    ):
+        try:
+            jr_shah = _extract_op_pur_sp_sale_bal_val_vision(
+                file_bytes,
+                filename,
+                ext,
+                ocr_hint=header_hint or sample,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Op/Pur/Sale/Bal Val early vision failed for %s: %s",
+                filename,
+                exc,
+            )
+            jr_shah = None
+        if jr_shah and jr_shah.get("line_items"):
+            extra = jr_shah.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "op_pur_sp_sale_bal_val_photo"
+            return jr_shah, True
+
     # Poor OCR → skip the long format-probe cascade; try paid Vision early.
     try:
         from services.gemini_extraction_fallback import try_gemini_vision_extract
@@ -37067,6 +37785,19 @@ def _maybe_early_vision_for_image(
                 code_item = None
             if code_item and code_item.get("line_items"):
                 return code_item, True
+        if _looks_like_op_pur_sp_sale_bal_val_misread(early):
+            try:
+                jr_shah = _extract_op_pur_sp_sale_bal_val_vision(
+                    file_bytes, filename, ext, ocr_hint=sample
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Op/Pur/Sale/Bal Val repair after early vision failed: %s",
+                    exc,
+                )
+                jr_shah = None
+            if jr_shah and jr_shah.get("line_items"):
+                return jr_shah, True
         extra = early.setdefault("totals", {}).setdefault("extra", {})
         extra["early_vision_reason"] = ",".join(quality.get("reasons") or []) or (
             "low_ocr_quality_score"
@@ -37370,12 +38101,23 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             return None
 
     early_items = (early_vision or {}).get("line_items") if isinstance(early_vision, dict) else None
+    early_extra = (
+        ((early_vision or {}).get("totals") or {}).get("extra") or {}
+        if isinstance(early_vision, dict)
+        else {}
+    )
+    early_is_op_pur = str(early_extra.get("extraction_method") or "").startswith(
+        "op_pur_sp_sale_bal_val"
+    ) or str(early_extra.get("layout") or "") == "op_pur_sp_sale_bal_val"
     if (
-        _pharma_hub_jun_jul_needs_reread(early_vision)
-        or _pharma_hub_party(early_vision)
-        or (
-            (not early_items or len(early_items) < 5)
-            and _jpeg_needs_quarter_turn(file_bytes)
+        not early_is_op_pur
+        and (
+            _pharma_hub_jun_jul_needs_reread(early_vision)
+            or _pharma_hub_party(early_vision)
+            or (
+                (not early_items or len(early_items) < 5)
+                and _jpeg_needs_quarter_turn(file_bytes)
+            )
         )
     ):
         hub = _try_pharma_hub_photo()
@@ -37518,6 +38260,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 if qty_balance is not None:
                     return qty_balance
+                jr_shah = _probe_or_none(
+                    "Op/Pur/SP/Sale/Bal Val photo",
+                    lambda: _extract_op_pur_sp_sale_bal_val_vision(
+                        file_bytes, filename, ext
+                    )
+                    if _is_op_pur_sp_sale_bal_val_text(
+                        _op_pur_sp_sale_bal_val_header_text(file_bytes)
+                    )
+                    else None,
+                )
+                if jr_shah and jr_shah.get("line_items"):
+                    return jr_shah
                 rate_qty = _probe_or_none(
                     "Rate qty/value photo",
                     lambda: _parse_rate_qty_value_image(file_bytes, filename, ext),
@@ -37739,6 +38493,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zandra and zandra.get("line_items"):
                         return zandra
+                if _looks_like_op_pur_sp_sale_bal_val_misread(result):
+                    try:
+                        jr_shah = _extract_op_pur_sp_sale_bal_val_vision(
+                            file_bytes, filename, ext
+                        )
+                    except Exception as exc:
+                        logger.warning("Op/Pur/Sale/Bal Val reread skipped: %s", exc)
+                        jr_shah = None
+                    if jr_shah and jr_shah.get("line_items"):
+                        return jr_shah
                 if _looks_like_unfilled_sap_order_form(result) or _unfilled_sap_order_photo(
                     result, file_bytes
                 ):

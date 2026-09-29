@@ -523,6 +523,18 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # J R SHAH Op/Pur/Pur Val/Sale Val/Bal Val photo — keep dedicated Vision reader.
+    if str(extra.get("extraction_method") or "") in {
+        "op_pur_sp_sale_bal_val_photo",
+        "op_pur_sp_sale_bal_val",
+    } or str(extra.get("layout") or "") == "op_pur_sp_sale_bal_val":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=op_pur_sp_sale_bal_val",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # TXT/HTML have no visual page — do not invent Vision input.
     if (ext or "").lower() in {".txt", ".htm", ".html"}:
         _stamp(result, quality, "unavailable_text_only")
