@@ -12490,7 +12490,9 @@ _STATEMENT_TITLE_HINT = re.compile(
     re.I,
 )
 _CONTINUATION_HINT = re.compile(
-    r"^\s*(?:--\s*)?Continued\s+Page|^\s*Page\s*No\.?\s*[2-9]\b",
+    r"(?:^|\n)\s*(?:--\s*)?(?:Continued(?:\s+Page)?|Contd\.?|Cont\.?)\b|"
+    r"(?:^|\n)\s*Page\s*No\.?\s*[:.]?\s*[2-9]\d*\b|"
+    r"(?:^|\n)\s*Page\s*[:.]?\s*[2-9]\d*\s*(?:of|/)",
     re.I,
 )
 _MANUFACTURER_HINT = re.compile(
@@ -12508,6 +12510,44 @@ def _normalize_stockist_key(name: str) -> str:
     # Drop trailing year/noise like "26-27"
     text = re.sub(r"\b\d{2}-\d{2}\b", "", text).strip()
     return text
+
+
+def _stockist_keys_compatible(left: str, right: str) -> bool:
+    """True when two stockist labels are the same party despite OCR noise."""
+    a = _normalize_stockist_key(left)
+    b = _normalize_stockist_key(right)
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    if len(a) >= 8 and len(b) >= 8 and (a in b or b in a):
+        return True
+    ta, tb = set(a.split()), set(b.split())
+    if not ta or not tb:
+        return False
+    # Drop ultra-common tokens so "MEDICAL STORES" alone does not match everything.
+    stop = {"AND", "THE", "OF", "CO", "COMPANY", "PVT", "LTD", "LIMITED"}
+    ta -= stop
+    tb -= stop
+    if not ta or not tb:
+        return a == b
+    inter = ta & tb
+    if not inter:
+        return False
+    return len(inter) / float(min(len(ta), len(tb))) >= 0.6
+
+
+def _page_text_looks_like_continuation(text: str) -> bool:
+    """True when page chrome says this is page 2+ of the same statement."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if not lines:
+        return False
+    head = "\n".join(lines[:12])
+    if _CONTINUATION_HINT.search(head):
+        return True
+    if re.search(r"Continued\s+Page|Cont(?:inue)?d\.?\s+Page", head, re.I):
+        return True
+    return False
 
 
 def _looks_like_stockist_header(line: str) -> bool:
@@ -12570,16 +12610,10 @@ def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     if not lines:
         return None
 
-    # Continuations of previous stockist's statement
-    head = "\n".join(lines[:6])
-    if _CONTINUATION_HINT.search(lines[0]) and not _looks_like_stockist_header(lines[0]):
+    # Continuations of previous stockist's statement — do not open a new group
+    # just because page 2+ reprints the shop name in the header chrome.
+    if _page_text_looks_like_continuation(text):
         return None
-    if re.search(r"Continued\s+Page", head, re.I) and not _looks_like_stockist_header(
-        lines[0]
-    ):
-        # Still allow if first line is clearly a new stockist
-        if not _looks_like_stockist_header(lines[0]):
-            return None
 
     # Prefer first stockist-like line near top
     for ln in lines[:8]:
@@ -12608,28 +12642,68 @@ def _ocr_pdf_page_text(page, zoom: float = 2.0) -> Tuple[str, bytes]:
 
 def _group_pdf_pages_by_stockist(
     page_infos: List[Dict[str, Any]],
+    *,
+    image_only: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Group page infos into stockist statement segments.
 
     page_infos items: {page_index, text, image_bytes, stockist}
+
+    For image-only photo PDFs, page 2+ often reprints the shop header. Those
+    pages stay in the current group unless a clearly different stockist appears
+    together with a new statement title.
     """
     groups: List[Dict[str, Any]] = []
     for info in page_infos:
         stockist = info.get("stockist")
+        text = info.get("text") or ""
+
+        if groups and _page_text_looks_like_continuation(text):
+            groups[-1]["pages"].append(info)
+            continue
+
         if stockist:
             key = _normalize_stockist_key(stockist)
-            # New group unless same stockist continues
-            if groups and _normalize_stockist_key(groups[-1]["stockist_name"]) == key:
+            prev_name = groups[-1]["stockist_name"] if groups else ""
+            prev_is_placeholder = bool(
+                groups and re.match(r"^Statement_\d+$", str(prev_name or ""))
+            )
+
+            # Upgrade an orphan placeholder once a real stockist is found.
+            if prev_is_placeholder:
+                groups[-1]["stockist_name"] = stockist
+                groups[-1]["stockist_key"] = key
                 groups[-1]["pages"].append(info)
-            else:
-                groups.append(
-                    {
-                        "stockist_name": stockist,
-                        "stockist_key": key,
-                        "pages": [info],
-                    }
+                continue
+
+            # Same stockist continues (exact or OCR-fuzzy).
+            if groups and _stockist_keys_compatible(prev_name, stockist):
+                groups[-1]["pages"].append(info)
+                continue
+
+            # Photo / image-only PDFs: header reprint without a clear new
+            # stockist+title block is continuation of the same statement.
+            if image_only and groups:
+                has_title = bool(_STATEMENT_TITLE_HINT.search(text))
+                prev_key = _normalize_stockist_key(prev_name)
+                prev_still_on_page = bool(
+                    prev_key
+                    and len(prev_key) >= 6
+                    and prev_key in _normalize_stockist_key(text)
                 )
+                strong_new = bool(_STOCKIST_NAME_HINT.search(stockist))
+                if (not has_title) or prev_still_on_page or (not strong_new):
+                    groups[-1]["pages"].append(info)
+                    continue
+
+            groups.append(
+                {
+                    "stockist_name": stockist,
+                    "stockist_key": key,
+                    "pages": [info],
+                }
+            )
         else:
             if groups:
                 groups[-1]["pages"].append(info)
@@ -26931,9 +27005,12 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 }
             )
 
-        groups = _group_pdf_pages_by_stockist(page_infos)
-        # Deduplicate adjacent identical keys already handled; merge non-adjacent
-        # same stockist only if user wants — keep separate segments in page order.
+        groups = _group_pdf_pages_by_stockist(
+            page_infos,
+            image_only=_pdf_pages_are_image_only(page_infos),
+        )
+        # Adjacent same-stockist pages (including OCR-fuzzy / image-only header
+        # reprints) are merged above. Non-adjacent distinct stockists stay split.
 
         if not groups:
             return empty_result(filename, "pdf")
