@@ -30672,6 +30672,17 @@ Return ONLY JSON:
 }
 """.strip()
 
+_MAIN_STOCK_SHEETS_PROMPT_ADDENDUM = """
+This capture is a Google Sheets / Excel mobile screenshot (not a paper Marg print).
+Ignore UI chrome: filename bar, "Not saved yet", column letters A-J, sheet tab, + button.
+stockist_name is the distributor company printed in the sheet body (e.g. JAY DISTRIBUTORS), never the filename.
+company_name and period come from the title line like
+"HDC HIMALAYA(ZANDRA) STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026".
+PRODUCT DESCRIPTION may be clipped on the LEFT — when the fragment is clearly a Himalaya
+product, reconstruct the full name (BONNISAN, BRESOL, GERIFORTE, LIV.52 DS, SEPTILIN, MENTAT, CYSTONE, etc.).
+If unsure, keep the visible fragment. Keep every qty/value on its own product row.
+""".strip()
+
 
 def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
     """Marg-style PRODUCT DESCRIPTION / OPENING STOCK / RECEIVE / ISSUE / CLOSING.
@@ -31735,6 +31746,8 @@ def _extract_main_stock_sales_vision(
     filename: str,
     ext: str,
     fallback: Dict[str, Any],
+    *,
+    sheets_screenshot: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Read this statement in row bands so ISSUE and RECEIVE values stay on the row."""
     import os
@@ -31747,6 +31760,9 @@ def _extract_main_stock_sales_vision(
     seen: Dict[str, float] = {}
     parsed_meta: Dict[str, Any] = {}
     strips = _main_stock_sales_strips(file_bytes)
+    prompt = _MAIN_STOCK_SALES_PROMPT
+    if sheets_screenshot:
+        prompt = f"{_MAIN_STOCK_SALES_PROMPT}\n\n{_MAIN_STOCK_SHEETS_PROMPT_ADDENDUM}"
     for strip_index, strip in enumerate(strips):
         if strip_index:
             time.sleep(0.35)
@@ -31755,7 +31771,7 @@ def _extract_main_stock_sales_vision(
                 {
                     "role": "user",
                     "parts": [
-                        {"text": _MAIN_STOCK_SALES_PROMPT},
+                        {"text": prompt},
                         {
                             "inline_data": {
                                 "mime_type": "image/jpeg",
@@ -31841,18 +31857,230 @@ def _extract_main_stock_sales_vision(
     return result
 
 
+def _is_excel_sheets_stock_sales_screenshot(text: str) -> bool:
+    """Google Sheets / Excel mobile screenshot of STOCK & SALES STATEMENT.
+
+    Printed Marg photos do not carry this UI chrome. Product names are often
+    clipped on the left, so OCR must not beat Vision for this capture type.
+    """
+    if not (text or "").strip():
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text, re.I):
+        return False
+    chrome = 0
+    # Strong UI / filename signals — required for this capture class.
+    if re.search(r"Not\s+saved\s+yet", text, re.I):
+        chrome += 2
+    if re.search(r"HDC_HIMAL", text, re.I):
+        chrome += 2
+    if re.search(r"Stock\s*&\s*Sales\s+Statement\s*v\s*\+?", text, re.I):
+        chrome += 2
+    # Spreadsheet column letters across the top (A … J).
+    if re.search(
+        r"(?:^|\n)\s*[A-Ja-j](?:\s+[A-Ja-j]){5,}",
+        text,
+    ):
+        chrome += 1
+    if re.search(r"\bE-?Mail\s*:", text, re.I) and re.search(
+        r"\bD\.?L\.?\s*No", text, re.I
+    ):
+        chrome += 1
+    # Need at least one strong UI signal (score contribution ≥ 2).
+    strong = bool(
+        re.search(r"Not\s+saved\s+yet|HDC_HIMAL|Stock\s*&\s*Sales\s+Statement\s*v", text, re.I)
+    )
+    return strong and chrome >= 3
+
+
+def _main_stock_ocr_contaminated_by_ui(
+    result: Optional[Dict[str, Any]], header_text: str = ""
+) -> bool:
+    """True when OCR picked Sheets chrome / row numbers as stockist or products."""
+    if not isinstance(result, dict):
+        return False
+    stockist = str(result.get("stockist_name") or "")
+    if re.search(
+        r"HDC_HIMAL|Not\s+saved|^\s*x\s|g\s*o\s*&|\.xlsx?|\.png",
+        stockist,
+        re.I,
+    ):
+        return True
+    if header_text and _is_excel_sheets_stock_sales_screenshot(header_text):
+        items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+        if len(items) < 8:
+            return False
+        truncated = 0
+        for item in items:
+            name = str(item.get("product_name") or "").strip()
+            if re.match(r"^\d{1,3}\s+[A-Za-z(]", name):
+                truncated += 1
+            elif re.match(
+                r"^(?:NA|ISAN|JISAN|NISAN|NISPAZ|ONE|ATE|FORT|LA|JL|2\s*DS|2DS|"
+                r"SOL|IMI|ARE|BOL|OL|DF|ASG|ENZA|DLAX|TAT|AT)\b",
+                name,
+                re.I,
+            ):
+                truncated += 1
+        return truncated >= max(5, len(items) // 4)
+    return False
+
+
+# Left-clipped Himalaya PRODUCT DESCRIPTION fragments seen on Sheets screenshots.
+# Only high-confidence suffix→name repairs; uncertain fragments stay as OCR/Vision text.
+_HIMALAYA_CLIPPED_PRODUCT_REPAIRS: Tuple[Tuple[re.Pattern, str], ...] = (
+    (re.compile(r"^NISAN\s+DROPS\b", re.I), "BONNISAN DROPS"),
+    (re.compile(r"^NISAN\s+SYP\b", re.I), "BONNISAN SYP"),
+    (re.compile(r"^ISAN\s+DROPS\b", re.I), "BONNISAN DROPS"),
+    (re.compile(r"^ISAN\s+SYP\b", re.I), "BONNISAN SYP"),
+    (re.compile(r"^JISAN\s+SYP\b", re.I), "BONNISAN SYP"),
+    (re.compile(r"^NISPAZ\s+DROP\b", re.I), "BONNISPAZ DROP"),
+    (re.compile(r"^ISPAZ\s+DROP\b", re.I), "BONNISPAZ DROP"),
+    (re.compile(r"^ONE\s+FORTE\s+TAB\b", re.I), "GERIFORTE TAB"),
+    (re.compile(r"^ONE\s+SF\s+SYP\b", re.I), "GERIFORTE SF SYP"),
+    (re.compile(r"^ONE\s+SYP\b", re.I), "GERIFORTE SYP"),
+    (re.compile(r"^ONE\s+TAB\b", re.I), "GERIFORTE TAB"),
+    (re.compile(r"^FORT\s+SYP\b", re.I), "GERIFORTE SYP"),
+    (re.compile(r"^FORT\s+TAB\b", re.I), "GERIFORTE TAB"),
+    (re.compile(r"^ATE\s+WASH\b", re.I), "NEEM FACE WASH"),
+    (re.compile(r"^2\s*DS\s+SUGAR\s+FREE\b", re.I), "LIV.52 DS SUGAR FREE"),
+    (re.compile(r"^2\s*DS\s+TAB\b", re.I), "LIV.52 DS TAB"),
+    (re.compile(r"^2\s*DS\b", re.I), "LIV.52 DS"),
+    (re.compile(r"^2\s+DROP\b", re.I), "LIV.52 DROP"),
+    (re.compile(r"^DLAX\s+", re.I), "LUCOLAX "),
+    (re.compile(r"^LASIA\s+TAB\b", re.I), "RUMALAYA TAB"),
+    (re.compile(r"^CTOSURE\s+GRANULES\b", re.I), "LACTOSURE GRANULES"),
+    (re.compile(r"^PAIN\s+GEL\b", re.I), "RUMALAYA PAIN GEL"),
+    (re.compile(r"^NA\s+TAB\s+60CAP\b", re.I), "CYSTONE TAB 60CAP"),
+    (re.compile(r"^ARE\s+FORTE\b", re.I), "SEPTILIN FORTE"),
+    (re.compile(r"^ARE\s+CAP\b", re.I), "SEPTILIN CAP"),
+    (re.compile(r"^ARE\s+(?=\d)", re.I), "SEPTILIN "),
+    (re.compile(r"^JL\s+SYP\b", re.I), "MENTAT SYP"),
+    (re.compile(r"^JL\s+TAB\b", re.I), "MENTAT TAB"),
+    (re.compile(r"^BOL\s+NS\b", re.I), "BRESOL NS"),
+    (re.compile(r"^BOL\s+TAB\b", re.I), "BRESOL TAB"),
+    (re.compile(r"^JOL\s+NS\b", re.I), "BRESOL NS"),
+    (re.compile(r"^JOL\s+SYP\b", re.I), "BRESOL SYP"),
+    (re.compile(r"^JOL\s+SYRUP\b", re.I), "BRESOL SYRUP"),
+    (re.compile(r"^JOL\s+TAB\b", re.I), "BRESOL TAB"),
+    (re.compile(r"^OL\s+SYP\b", re.I), "BRESOL SYP"),
+    (re.compile(r"^OL\s+SYRUP\b", re.I), "BRESOL SYRUP"),
+    (re.compile(r"^OL\s+TAB\b", re.I), "BRESOL TAB"),
+    (re.compile(r"^SOL\s+NS\b", re.I), "BRESOL NS"),
+    (re.compile(r"^DSON\s+\d", re.I), "CONFIDO "),
+    (re.compile(r"^TAT\s+DS\s+SYP\b", re.I), "MENTAT DS SYP"),
+    (re.compile(r"^TAT\s+SYP\b", re.I), "MENTAT SYP"),
+    (re.compile(r"^AT\s+TAB\b", re.I), "MENTAT TAB"),
+    (re.compile(r"^AT\s+DS\s+SYP\b", re.I), "MENTAT DS SYP"),
+    (re.compile(r"^RNAVA\s+CAP\b", re.I), "ARJUNA CAP"),
+)
+
+
+def _main_stock_looks_himalaya_context(result: Dict[str, Any], text: str = "") -> bool:
+    blob = " ".join(
+        [
+            str(result.get("company_name") or ""),
+            str(result.get("report_title") or ""),
+            text or "",
+        ]
+    )
+    return bool(re.search(r"HIMALAYA|HDC\s*HIMAL|ZANDRA", blob, re.I))
+
+
+def _main_stock_repair_clipped_himalaya_names(
+    result: Dict[str, Any], text: str = ""
+) -> None:
+    """Repair left-clipped PRODUCT DESCRIPTION fragments for Himalaya Sheets shots."""
+    if not _main_stock_looks_himalaya_context(result, text):
+        return
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if not name:
+            continue
+        for pattern, replacement in _HIMALAYA_CLIPPED_PRODUCT_REPAIRS:
+            if pattern.search(name):
+                # Keep the packing / size suffix after the matched head.
+                item["product_name"] = _clean_name(pattern.sub(replacement, name, count=1))
+                extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                extra["clipped_name_repaired"] = True
+                item["extra"] = extra
+                break
+
+
+def _main_stock_enrich_spreadsheet_meta(
+    result: Dict[str, Any], text: str
+) -> None:
+    """Fill stockist / company / period from Sheets body text (not UI chrome)."""
+    if not text:
+        return
+    if not result.get("stockist_name") or _main_stock_ocr_contaminated_by_ui(
+        {"stockist_name": result.get("stockist_name")}, text
+    ):
+        for line in text.splitlines():
+            cleaned = _clean_name(line)
+            if not cleaned:
+                continue
+            # Strip Excel row numbers prefixed on the party line ("1 JAY …").
+            cleaned = re.sub(r"^\d{1,3}\s+", "", cleaned).strip()
+            if not cleaned:
+                continue
+            if re.search(
+                r"HDC_HIMAL|Not\s+saved|STOCK\s*&\s*SALES|Phone|E-?Mail|D\.?L\.?\s*No|"
+                r"PRODUCT|OPENIN|RECEIVE|ISSUE|CLOSI|NEHRU|TEMPLE|APT",
+                cleaned,
+                re.I,
+            ):
+                continue
+            if re.search(r"DISTRIBUTORS?|AGENC(?:Y|IES)|ENTERPRISES|PHARMA\b", cleaned, re.I):
+                result["stockist_name"] = cleaned.rstrip(".")
+                break
+            if (
+                len(cleaned) >= 8
+                and re.search(r"[A-Za-z]{4,}", cleaned)
+                and not re.search(r"\d{3,}", cleaned)
+                and cleaned.upper() == cleaned.replace(".", "")
+            ):
+                # ALL-CAPS party line above the address block.
+                result["stockist_name"] = cleaned.rstrip(".")
+                break
+    period = re.search(
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–to]+\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        text,
+        re.I,
+    )
+    if period:
+        if not result.get("period_from"):
+            result["period_from"] = _normalize_date(period.group(1))
+        if not result.get("period_to"):
+            result["period_to"] = _normalize_date(period.group(2))
+    if not result.get("company_name") or re.search(
+        r"STATEMENT|HDC_HIMAL", str(result.get("company_name") or ""), re.I
+    ):
+        company = re.search(
+            r"(HDC\s+HIMALAYA(?:\s*\([^)]+\))?|HIMALAYA(?:\s*\([^)]+\))?)",
+            text,
+            re.I,
+        )
+        if company:
+            result["company_name"] = _clean_name(company.group(1))
+
+
 def _extract_opening_receive_issue_closing_photo(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
     """Photo/print of PRODUCT DESCRIPTION + OPENING/RECEIVE/ISSUE/CLOSING STOCK.
 
     Prefers OCR line bands (keeps columns on the product row). Vision strips
-    remain a fallback. Other formats are unchanged.
+    remain a fallback. Google Sheets / Excel mobile screenshots force Vision
+    because PRODUCT DESCRIPTION is often left-clipped and UI chrome contaminates OCR.
+    Other formats are unchanged.
     """
     try:
         from PIL import Image, ImageOps
     except ImportError:
         preview = file_bytes
+        full_text = ""
     else:
         image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
         width, height = image.size
@@ -31861,11 +32089,25 @@ def _extract_opening_receive_issue_closing_photo(
         buf = io.BytesIO()
         crop.save(buf, format="JPEG", quality=85)
         preview = buf.getvalue()
+        full_text = ""
     try:
         text = _ocr_image_to_text(preview, psm=6)
     except Exception as exc:
         logger.info("Opening/receive/issue photo header OCR skipped: %s", exc)
         text = ""
+    spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(text)
+    if not spreadsheet_shot:
+        # UI chrome often sits above the 38% crop cutoff — one cheap full pass.
+        try:
+            full_text = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
+        except Exception:
+            full_text = text
+        spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(full_text)
+        if spreadsheet_shot and full_text:
+            text = full_text
+    elif not full_text:
+        full_text = text
+
     if not _is_opening_receive_issue_closing_stock_text(text):
         # Gray/blue header strips alone are not enough; require statement title.
         if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text or "", re.I):
@@ -31873,23 +32115,61 @@ def _extract_opening_receive_issue_closing_photo(
         strips = _main_stock_sales_strips(file_bytes)
         if len(strips) < 2:
             return None
+
     ocr_result = None
-    try:
-        ocr_result = _extract_opening_receive_issue_closing_ocr(
-            file_bytes, filename, ext
-        )
-    except Exception as exc:
-        logger.warning("Opening/receive/issue OCR parse skipped: %s", exc)
-    if ocr_result and len(ocr_result.get("line_items") or []) >= 8:
-        return ocr_result
+    # Spreadsheet screenshots: skip expensive OCR bands — Vision owns the grid.
+    if not spreadsheet_shot:
+        try:
+            ocr_result = _extract_opening_receive_issue_closing_ocr(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.warning("Opening/receive/issue OCR parse skipped: %s", exc)
+        if (
+            ocr_result
+            and len(ocr_result.get("line_items") or []) >= 8
+            and not _main_stock_ocr_contaminated_by_ui(ocr_result, text)
+        ):
+            return ocr_result
+
     fallback = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
     if ocr_result and ocr_result.get("line_items"):
         fallback = ocr_result
-    vision = _extract_main_stock_sales_vision(file_bytes, filename, ext, fallback)
-    if vision and len(vision.get("line_items") or []) >= len(
-        (ocr_result or {}).get("line_items") or []
-    ):
-        return vision
+    # Seed meta from Sheets body text so Vision can inherit stockist/period.
+    if spreadsheet_shot:
+        _main_stock_enrich_spreadsheet_meta(fallback, full_text or text)
+    vision = _extract_main_stock_sales_vision(
+        file_bytes,
+        filename,
+        ext,
+        fallback,
+        sheets_screenshot=spreadsheet_shot,
+    )
+    if vision and vision.get("line_items"):
+        if spreadsheet_shot:
+            _main_stock_enrich_spreadsheet_meta(vision, full_text or text)
+            _main_stock_repair_clipped_himalaya_names(vision, full_text or text)
+            vision.setdefault("totals", {}).setdefault("extra", {})
+            vision["totals"]["extra"]["extraction_method"] = (
+                "main_stock_sales_statement_sheets"
+            )
+            vision["totals"]["extra"]["layout"] = "opening_receive_issue_closing"
+            vision["totals"]["extra"]["capture"] = "excel_sheets_screenshot"
+            logger.info(
+                "Opening/receive/issue Sheets screenshot used Vision for %s items=%s",
+                filename,
+                len(vision.get("line_items") or []),
+            )
+            return vision
+        if len(vision.get("line_items") or []) >= len(
+            (ocr_result or {}).get("line_items") or []
+        ):
+            return vision
+    if spreadsheet_shot and ocr_result and ocr_result.get("line_items"):
+        # Last resort: OCR numbers may still be usable after name repair.
+        _main_stock_enrich_spreadsheet_meta(ocr_result, full_text or text)
+        _main_stock_repair_clipped_himalaya_names(ocr_result, full_text or text)
+        return ocr_result
     return ocr_result or vision
 
 
