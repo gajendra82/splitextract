@@ -33220,13 +33220,17 @@ def _overlay_closer_sap_qty(
         return
 
 
+# Phone OCR often reads ORDER as JRDER / 0RDER / IRDER.
+_ORDER_FORM_TITLE_RE = re.compile(r"[O0JIl]RDER\s*FOR", re.I)
+
+
 def _zandra_two_column_order_text(text: str) -> bool:
     """Printed Zandra ORDER FORM with two product tables. Other sheets do not match."""
     if not text:
         return False
     return bool(
         re.search(r"\bZANDRA\b", text, re.I)
-        and re.search(r"ORDER\s*FOR", text, re.I)
+        and _ORDER_FORM_TITLE_RE.search(text)
     )
 
 
@@ -33243,7 +33247,7 @@ def _zeal_order_form_text(text: str) -> bool:
         return False
     return bool(
         re.search(r"\bZEAL\b", text, re.I)
-        and re.search(r"ORDER\s*FOR", text, re.I)
+        and _ORDER_FORM_TITLE_RE.search(text)
     )
 
 
@@ -33255,7 +33259,7 @@ def _zandra_order_form_logo_missed_text(text: str) -> bool:
     """
     if not text or _zandra_two_column_order_text(text):
         return False
-    if not re.search(r"ORDER\s*FOR", text, re.I):
+    if not _ORDER_FORM_TITLE_RE.search(text):
         return False
     return bool(re.search(r"\bFrom\b|ST\s*/\s*CST|Order\s*No", text, re.I))
 
@@ -33324,7 +33328,9 @@ def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]
             continue
         # ORDER FORM photos keep the existing Qty rules. This path is only
         # the form whose title did not OCR and whose From box did.
-        keep_handwritten_qty = bool(from_label and not logo_read)
+        # Logo-missed ORDER FORM (OCR JRDER FORM + From) also keeps handwriting.
+        logo_missed = _zandra_order_form_logo_missed_text(preview)
+        keep_handwritten_qty = bool(from_label and not logo_read) or bool(logo_missed)
         scale = crop.height / float(probe.height)
         data = pytesseract.image_to_data(
             probe, config="--psm 6", output_type=pytesseract.Output.DICT
@@ -33332,9 +33338,9 @@ def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]
         title_y = None
         for index, token in enumerate(data.get("text") or []):
             word = str(token or "").strip()
-            if re.search(r"ORDER|^ZAND", word, re.I):
+            if _ORDER_FORM_TITLE_RE.search(word) or re.search(r"^ZAND", word, re.I):
                 title_y = origin + int(int(data["top"][index]) * scale)
-                if re.search(r"ORDER", word, re.I):
+                if _ORDER_FORM_TITLE_RE.search(word):
                     break
         if title_y is None:
             title_y = origin + int(crop.height * 0.35)
@@ -33932,7 +33938,73 @@ def _extract_zandra_two_column_order_photo(
         "extraction_method": "zandra_two_column_order_form",
         "layout": "zandra_two_column_order_form",
     }
+    _order_form_stock_statement_qty_to_closing(
+        result, file_bytes, anchor, keep_handwritten_qty=keep_handwritten_qty
+    )
     return result
+
+
+def _order_form_stock_statement_qty_to_closing(
+    result: Dict[str, Any],
+    file_bytes: bytes,
+    anchor: float,
+    keep_handwritten_qty: bool = False,
+) -> None:
+    """When the form is titled Stock Statement, Qty is closing stock, not sales.
+
+    Blank Qty cells stay 0. Other ORDER FORM photos keep sales_qty unchanged.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    titled = False
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        width, height = image.size
+        top = max(0, int(height * max(0.0, anchor - 0.02)))
+        bottom = min(height, int(height * min(0.35, anchor + 0.20)))
+        crop = image.crop((0, top, width, bottom))
+        if crop.width > 1800:
+            crop.thumbnail((1800, 1800))
+        text = _ocr_image_to_text(_pil_jpeg_bytes(crop), psm=6)
+        # Handwriting often OCRs poorly: "Stock Statement", "St he ... Stat", etc.
+        titled = bool(
+            re.search(
+                r"STOCK\s*STATE|Stock\s*Stat|\bSt(?:ock)?\b.{0,24}\bStat|"
+                r"STECEER|ST\s*ATEMENT",
+                text,
+                re.I,
+            )
+        )
+    except Exception:
+        text = ""
+    # Month-end closing stock forms write "Stock Statement" and a single Date,
+    # with no To period range. Keep normal order forms on sales_qty.
+    if not titled and keep_handwritten_qty and not result.get("period_from"):
+        titled = bool(result.get("stockist_name"))
+    if not titled:
+        return
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        qty = _to_float(item.get("sales_qty"))
+        item["closing_qty"] = qty
+        item["sales_qty"] = 0.0
+        item["opening_qty"] = _to_float(item.get("opening_qty"))
+        item["receipts_qty"] = _to_float(item.get("receipts_qty"))
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra["layout"] = "zandra_order_form_closing_stock"
+        item["extra"] = extra
+    result["report_title"] = "STOCK STATEMENT"
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["layout"] = "zandra_order_form_closing_stock"
+    result["totals"]["extra"]["extraction_method"] = "zandra_two_column_order_form"
+    result["totals"]["extra"]["closing_qty"] = round(
+        sum(_to_float(i.get("closing_qty")) for i in (result.get("line_items") or [])),
+        2,
+    )
+    result["totals"]["extra"]["sales_qty"] = 0.0
 
 
 def _extract_sap_order_form_vision(
@@ -34054,12 +34126,24 @@ def _apply_order_form_handwritten_qty(result: Dict[str, Any], file_bytes: bytes,
 
 
 def _looks_like_medica_stock_statement(result: Optional[Dict[str, Any]]) -> bool:
-    """Phone photo of a Medica STOCK STATEMENT (OPSTK / SALE VAL / N/O/STOCK / STK VAL)."""
+    """Phone photo of a Medica STOCK STATEMENT (OPSTK / SALE VAL / N/O/STOCK / STK VAL).
+
+    A Zandra ORDER FORM with handwritten "Stock Statement" also uses that title.
+    Callers must skip this path when the photo is an SAP/Zandra order form.
+    """
     if not isinstance(result, dict):
         return False
     extra = ((result.get("totals") or {}).get("extra") or {})
     if extra.get("extraction_method") == "medica_stock_statement_vision":
         return True
+    if extra.get("layout") in {
+        "zandra_two_column_order_form",
+        "zandra_order_form_closing_stock",
+        "sap_order_form",
+        "order_form",
+        "sap_order_form_closing_stock",
+    }:
+        return False
     title = re.sub(r"\s+", " ", str(result.get("report_title") or "")).strip()
     if not re.fullmatch(r"STOCK STATEMENT", title, re.I):
         return False
@@ -34067,6 +34151,16 @@ def _looks_like_medica_stock_statement(result: Optional[Dict[str, Any]]) -> bool
     if len(items) < 5:
         return False
     return sum(1 for i in items if i.get("packing")) >= 3
+
+
+def _order_form_photo_blocks_medica(result: Dict[str, Any], file_bytes: bytes) -> bool:
+    """True when STOCK STATEMENT title belongs to a Zandra/SAP ORDER FORM photo."""
+    if _zandra_order_form_anchor(file_bytes) is not None:
+        return True
+    try:
+        return _unfilled_sap_order_photo(result, file_bytes)
+    except Exception:
+        return False
 
 
 _MEDICA_STOCK_STATEMENT_PROMPT = """
@@ -39633,6 +39727,19 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         if zeal_order and zeal_order.get("line_items"):
             return zeal_order
 
+    # Upright Zandra ORDER FORM (including OCR "JRDER FORM"). Must run before
+    # generic vision titles the sheet STOCK STATEMENT and Medica steals it.
+    if _zandra_order_form_anchor(file_bytes) is not None:
+        try:
+            zandra_order = _extract_zandra_two_column_order_photo(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.warning("Zandra order form photo skipped: %s", exc)
+            zandra_order = None
+        if zandra_order and zandra_order.get("line_items"):
+            return zandra_order
+
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext
     )
@@ -40039,7 +40146,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zl_sheet and zl_sheet.get("line_items"):
                         return zl_sheet
-                if _looks_like_medica_stock_statement(result):
+                if _looks_like_medica_stock_statement(result) and not _order_form_photo_blocks_medica(
+                    result, file_bytes
+                ):
                     medica = _extract_medica_stock_statement_vision(
                         file_bytes, filename, ext
                     )
