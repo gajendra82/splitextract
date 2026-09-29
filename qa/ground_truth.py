@@ -489,6 +489,7 @@ def _peel_packing(tokens: List[str]) -> Tuple[str, Optional[str]]:
 
 _JUNK_NAME = re.compile(
     r"^(?:page\b|continued\b|grand\s+total\b|sub\s*total\b|total\b|"
+    r"amount\b|bills?\b|"
     r"phone\b|gstin\b|e-?mail\b|group\s+wise\b|product\s+name\b|"
     r"stock\s*&?\s*sales\b|sales\s*&\s*stock\b)",
     re.I,

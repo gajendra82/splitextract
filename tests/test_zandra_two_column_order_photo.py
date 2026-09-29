@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from services.sales_statement_extractor import (
+    _zeal_order_form_text,
     _zandra_order_form_from_label,
     _zandra_order_side_items,
     _zandra_put_lasuna_qty_on_its_row,
@@ -32,6 +33,19 @@ class TestZandraTwoColumnOrderText(unittest.TestCase):
         )
         self.assertFalse(_zandra_two_column_order_text("ORDER FORM\nSAP Code"))
         self.assertFalse(_zandra_two_column_order_text("Zandra\nStock and Sale Statement"))
+
+    def test_zeal_order_form_is_not_a_stock_sheet(self):
+        self.assertTrue(
+            _zeal_order_form_text("Zeal\nORDER FORM\nFrom:\nSAP Code\nQty.")
+        )
+        self.assertFalse(_zeal_order_form_text("Zandra\nORDER FORM\nFrom:"))
+        self.assertFalse(
+            _zeal_order_form_text("HIMALAYA ZEAL STOCK & SALES STATEMENT\nFrom: 01-Aug-26")
+        )
+        self.assertFalse(
+            _zeal_order_form_text("ZEAL\nORDER FORM\nSTOCK & SALES\nFrom:")
+        )
+        self.assertFalse(_zeal_order_form_text("ORDER FORM\nFrom:"))
 
     def test_from_box_matches_when_the_title_does_not_ocr(self):
         self.assertTrue(
