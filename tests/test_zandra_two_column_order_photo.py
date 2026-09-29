@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 
 from services.sales_statement_extractor import (
+    _extract_zandra_two_column_order_photo,
+    _sideways_full_width_stock_grid,
     _zeal_order_form_text,
     _zeal_order_value_column_has_ink,
     _zeal_printed_order_form_anchor,
@@ -25,6 +27,9 @@ LUCKY_STORE = Path("0000736020_2026_08_ZA_24_259_03092026065900.jpg")
 SACHDEVA = Path("0000730316_2026_08_ZA_07_319_06092026005507.jpeg")
 ZEAL_VALUE_FORM = Path(
     r"C:\Users\adity\Downloads\ZL_2026_August\0000734308_2026_08_ZL_04_341_05092026151343.jpg"
+)
+YAMUNA_SSA = Path(
+    r"C:\Users\adity\Downloads\ZL_2026_August\0000734363_2026_08_ZL_12_329_05092026120240.jpg"
 )
 PHARMA_HUB = Path(
     r"C:\Users\adity\Downloads\ZL_2026_August\0000734262_2026_08_ZL_13_281_01092026171025.jpg"
@@ -107,6 +112,18 @@ class TestZandraTwoColumnOrderText(unittest.TestCase):
             if not other.is_file():
                 continue
             self.assertIsNone(_zeal_printed_order_form_anchor(other.read_bytes()))
+
+    @unittest.skipUnless(YAMUNA_SSA.is_file(), "missing Yamuna stock photo")
+    def test_wide_stock_grid_is_not_an_order_form(self):
+        page = YAMUNA_SSA.read_bytes()
+        self.assertTrue(_sideways_full_width_stock_grid(page))
+        self.assertIsNone(
+            _extract_zandra_two_column_order_photo(page, YAMUNA_SSA.name, ".jpg")
+        )
+        if ZEAL_VALUE_FORM.is_file():
+            zeal = ZEAL_VALUE_FORM.read_bytes()
+            self.assertFalse(_sideways_full_width_stock_grid(zeal))
+            self.assertIsNotNone(_zeal_printed_order_form_anchor(zeal))
 
     def test_dense_handwritten_qty_is_not_treated_as_pack_echo(self):
         """Real Qty values that are not Pack sizes must not look like pack echoes."""

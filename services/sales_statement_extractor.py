@@ -34052,6 +34052,45 @@ def _zandra_order_form_handwritten_header(
     return parsed
 
 
+def _sideways_full_width_stock_grid(file_bytes: bytes) -> bool:
+    """Sideways photo of one wide qty/value grid, not a two-table order form.
+
+    The order form's printed rules stay in the left table and the center gutter.
+    This grid also has a rule in the closing/dump columns on the right.
+    """
+    if not _jpeg_needs_quarter_turn(file_bytes):
+        return False
+    try:
+        from PIL import Image, ImageOps
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("L")
+    except Exception:
+        return False
+    width, height = image.size
+    if width < 1400 or height <= width:
+        return False
+    px = image.load()
+    y0, y1 = int(height * 0.38), int(height * 0.72)
+    left = right = False
+    for x in range(int(width * 0.05), int(width * 0.96), 3):
+        darker = seen = 0
+        for y in range(y0, y1, 3):
+            left_px = px[max(0, x - 10), y]
+            right_px = px[min(width - 1, x + 10), y]
+            seen += 1
+            if (left_px + right_px) / 2 - px[x, y] > 12:
+                darker += 1
+        if seen and darker / seen >= 0.18:
+            frac = x / float(width)
+            if frac < 0.22:
+                left = True
+            if frac > 0.78:
+                right = True
+        if left and right:
+            return True
+    return False
+
+
 def _extract_zandra_two_column_order_photo(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -34060,6 +34099,9 @@ def _extract_zandra_two_column_order_photo(
     The older SAP photo that keeps only the right-hand Qty column does not
     match this detector and is left unchanged.
     """
+    # A sideways stock-and-sales grid shares the center rule. It is not an order form.
+    if _sideways_full_width_stock_grid(file_bytes):
+        return None
     # This phone photo stores the page sideways and writes the amount in
     # Value Rs. Read that before the OCR anchor, which is absent without
     # Tesseract. Other order forms still use the OCR anchor.
@@ -40132,6 +40174,324 @@ def _extract_qty_only_issue_ssa_photo(
     return result
 
 
+_PHONE_RATE_SSA_PROMPT = """
+This image is a phone screenshot of one STOCK & SALES ANALYSIS PDF page.
+Ignore the status bar, the PDF file name, share icons, and black bars.
+
+Columns left to right:
+ITEM DESCRIPTION, packing, RATE, OPENING QTY, OPENING VALUE,
+RECEIPT QTY, RECEIPT VALUE, ISSUE QTY, ISSUE VALUE,
+CLOSING QTY, CLOSING VALUE, DUMP QTY.
+
+RATE is the unit price. Put it only in extra.unit_rate.
+Never put RATE into opening_qty, receipts_qty, sales_qty, closing_qty, or any value.
+OPENING QTY -> opening_qty. OPENING VALUE -> opening_value.
+RECEIPT QTY -> receipts_qty. RECEIPT VALUE -> receipts_value.
+ISSUE QTY -> sales_qty. ISSUE VALUE -> sales_value.
+CLOSING QTY -> closing_qty. CLOSING VALUE -> closing_value.
+DUMP QTY -> extra.dump_qty.
+A dash or a blank cell is 0. Do not move the next number into a blank cell.
+Each product is one horizontal line. Do not move a number onto the row above or below.
+If there is no RATE column, return {"line_items": []}.
+
+Skip a banner that is only the company name.
+Skip TOTAL and Page No.
+Skip PURCHASE DETAIL and every invoice, date, and amount under it.
+stockist_name is the shop printed above the title, not the company in parentheses.
+company_name is the name in parentheses on the STOCK & SALES ANALYSIS line.
+period_from and period_to are the dates on that line.
+totals.sales_value is the ISSUE VALUE on the last TOTAL row.
+totals.closing_value is the CLOSING VALUE on that same TOTAL row.
+
+Return ONLY JSON:
+{"stockist_name": string|null, "company_name": string|null, "period_from": "YYYY-MM-DD"|null, "period_to": "YYYY-MM-DD"|null, "report_title": "STOCK & SALES ANALYSIS", "line_items": [{"product_name": string, "packing": string|null, "opening_qty": number, "opening_value": number, "receipts_qty": number, "receipts_value": number, "sales_qty": number, "sales_value": number, "closing_qty": number, "closing_value": number, "extra": {"unit_rate": number, "dump_qty": number}}], "totals": {"sales_value": number|null, "closing_value": number|null}}
+""".strip()
+
+
+def _phone_pdf_viewer_statement_jpeg(file_bytes: bytes) -> Optional[bytes]:
+    """Crop a letterboxed phone PDF screenshot. Paper photos return None."""
+    from PIL import Image
+
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        return None
+    width, height = image.size
+    if width < 700 or height < width * 1.9:
+        return None
+    px = image.load()
+
+    def _black_row(y: int) -> bool:
+        dark = 0
+        seen = 0
+        for x in range(0, width, 3):
+            seen += 1
+            if max(px[x, y]) < 30:
+                dark += 1
+        return seen > 0 and dark / seen >= 0.90
+
+    flags = [_black_row(y) for y in range(height)]
+    runs: List[Tuple[int, int]] = []
+    start = None
+    for y, flag in enumerate(flags):
+        if flag and start is None:
+            start = y
+        elif not flag and start is not None:
+            runs.append((start, y))
+            start = None
+    if start is not None:
+        runs.append((start, height))
+    top = next(
+        (run for run in runs if run[1] - run[0] >= 70 and run[0] < height * 0.12),
+        None,
+    )
+    bottom = next(
+        (run for run in reversed(runs) if run[1] - run[0] >= 24 and run[1] > height * 0.90),
+        None,
+    )
+    if top is None or bottom is None or bottom[0] - top[1] < int(height * 0.45):
+        return None
+    crop = image.crop((0, top[1], width, bottom[0]))
+    local = [flags[top[1] + y] for y in range(crop.height)]
+    band_start = None
+    for y, flag in enumerate(local + [False]):
+        if flag and band_start is None:
+            band_start = y
+        elif not flag and band_start is not None:
+            if 8 <= y - band_start <= 80:
+                for row in range(band_start, y):
+                    for x in range(width):
+                        crop.putpixel((x, row), (255, 255, 255))
+            band_start = None
+    buf = io.BytesIO()
+    crop.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _phone_rate_ssa_rows_usable(items: List[Dict[str, Any]]) -> bool:
+    """True when RATE stayed out of qty and most rows still balance."""
+    if len(items) < 8:
+        return False
+    rated = 0
+    rate_in_qty = 0
+    balanced = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        rate = _to_float(extra.get("unit_rate"))
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        dump = _to_float(extra.get("dump_qty"))
+        if rate > 1:
+            rated += 1
+            if abs(opening - rate) <= 0.05:
+                rate_in_qty += 1
+        if abs(opening + receipts - sales - closing) <= 1.0 or abs(
+            opening + receipts - sales - dump - closing
+        ) <= 1.0:
+            balanced += 1
+    return rated >= 5 and rate_in_qty <= rated * 0.4 and balanced >= max(6, int(len(items) * 0.5))
+
+
+def _extract_phone_rate_ssa_screenshot(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Reread a letterboxed RATE stock-and-sales screenshot. Other photos return None."""
+    import os
+
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
+
+    jpeg = _phone_pdf_viewer_statement_jpeg(file_bytes)
+    if not jpeg:
+        return None
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _PHONE_RATE_SSA_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(model=model, payload=payload, timeout=120)
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("Phone RATE SSA screenshot skipped: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    cleaned = []
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or re.search(
+            r"^TOTAL\b|PURCHASE\s*DETAIL|SUPPLIER\s*NAME|^HIMALAYA\s+WELLNESS\b|"
+            r"^PAGE\b|ITEM\s*DESCRIPTION|STOCK\s*&\s*SALES",
+            name,
+            re.I,
+        ):
+            continue
+        raw["product_name"] = name
+        cleaned.append(raw)
+    if len(cleaned) < 8:
+        return None
+    parsed["line_items"] = cleaned
+    parsed["report_title"] = "STOCK & SALES ANALYSIS"
+    result = empty_result(filename, (ext or ".png").lstrip("."))
+    result = _apply_ssa_qty_value_fields(result, parsed)
+    for item, raw in zip(result.get("line_items") or [], cleaned):
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        rate = raw.get("unit_rate")
+        if rate is None and isinstance(raw.get("extra"), dict):
+            rate = raw["extra"].get("unit_rate")
+        if rate is not None:
+            extra["unit_rate"] = _to_float(rate)
+        if raw.get("dump_qty") is not None and "dump_qty" not in extra:
+            extra["dump_qty"] = _to_float(raw.get("dump_qty"))
+        extra["layout"] = "phone_rate_ssa_screenshot"
+    if not _phone_rate_ssa_rows_usable(result.get("line_items") or []):
+        return None
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "phone_rate_ssa_screenshot"
+    extra_t["layout"] = "phone_rate_ssa_screenshot"
+    return result
+
+
+_SIDEWAYS_RATE_SSA_PROMPT = """
+This photo is already upright. It is one STOCK & SALES ANALYSIS page.
+Columns left to right:
+ITEM DESCRIPTION, packing, RATE, OPENING QTY, OPENING VALUE,
+RECEIPT QTY, RECEIPT VALUE, ISSUE QTY, ISSUE VALUE,
+CLOSING QTY, CLOSING VALUE, DUMP QTY.
+
+RATE is the unit price. Put it only in extra.unit_rate.
+Never put RATE into opening_qty, receipts_qty, sales_qty, closing_qty, or any value.
+OPENING QTY -> opening_qty. OPENING VALUE -> opening_value.
+RECEIPT QTY -> receipts_qty. RECEIPT VALUE -> receipts_value.
+ISSUE QTY -> sales_qty. ISSUE VALUE -> sales_value.
+CLOSING QTY -> closing_qty. CLOSING VALUE -> closing_value.
+DUMP QTY -> extra.dump_qty. Do not subtract dump from closing.
+A dash or a blank cell is 0. Keep a printed minus sign.
+Do not move the next number into a blank cell.
+Each product is one horizontal line. Do not move a number onto the row above or below.
+If there is no RATE column, return {"line_items": []}.
+
+Skip the ZEAL THE HIMALIYA banner. Skip TOTAL.
+stockist_name is the shop printed at the top, not ZEAL.
+company_name is the ZEAL line under the shop.
+period_from and period_to are the dates on the STOCK & SALES ANALYSIS line.
+totals.sales_value is the ISSUE VALUE on the TOTAL row.
+totals.closing_value is the CLOSING VALUE on that same row.
+
+Return ONLY JSON:
+{"stockist_name": string|null, "company_name": string|null, "period_from": "YYYY-MM-DD"|null, "period_to": "YYYY-MM-DD"|null, "report_title": "STOCK & SALES ANALYSIS", "line_items": [{"product_name": string, "packing": string|null, "opening_qty": number, "opening_value": number, "receipts_qty": number, "receipts_value": number, "sales_qty": number, "sales_value": number, "closing_qty": number, "closing_value": number, "extra": {"unit_rate": number, "dump_qty": number}}], "totals": {"sales_value": number|null, "closing_value": number|null}}
+""".strip()
+
+
+def _extract_sideways_rate_ssa_photo(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Upright reread of this wide RATE grid. Order forms and other photos return None."""
+    import os
+
+    from PIL import Image, ImageOps
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
+
+    if not _sideways_full_width_stock_grid(file_bytes):
+        return None
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        jpeg = _pil_jpeg_bytes(image)
+    except Exception as exc:
+        logger.warning("Sideways RATE SSA upright page skipped: %s", exc)
+        return None
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _SIDEWAYS_RATE_SSA_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(jpeg).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(model=model, payload=payload, timeout=120)
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("Sideways RATE SSA photo skipped: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    cleaned = []
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or re.search(
+            r"^TOTAL\b|^ZEAL\s+THE\b|ITEM\s*DESCRIPTION|STOCK\s*&\s*SALES",
+            name,
+            re.I,
+        ):
+            continue
+        raw["product_name"] = name
+        cleaned.append(raw)
+    if len(cleaned) < 8:
+        return None
+    parsed["line_items"] = cleaned
+    parsed["report_title"] = "STOCK & SALES ANALYSIS"
+    result = empty_result(filename, (ext or ".jpg").lstrip("."))
+    result = _apply_ssa_qty_value_fields(result, parsed)
+    for item, raw in zip(result.get("line_items") or [], cleaned):
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        rate = raw.get("unit_rate")
+        if rate is None and isinstance(raw.get("extra"), dict):
+            rate = raw["extra"].get("unit_rate")
+        if rate is not None:
+            extra["unit_rate"] = _to_float(rate)
+        extra["layout"] = "sideways_rate_ssa_photo"
+    if not _phone_rate_ssa_rows_usable(result.get("line_items") or []):
+        return None
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "sideways_rate_ssa_photo"
+    extra_t["layout"] = "sideways_rate_ssa_photo"
+    return result
+
+
 def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Extract sales statement from image via Gemini Vision, with OCR fallback."""
     import os
@@ -40152,6 +40512,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
     result = empty_result(filename, ext.lstrip("."))
 
+    # Sideways wide RATE grid. The order-form reader sees the same center rule.
+    if _sideways_full_width_stock_grid(file_bytes):
+        try:
+            sideways_rate = _extract_sideways_rate_ssa_photo(file_bytes, filename, ext)
+        except Exception as exc:
+            logger.warning("Sideways RATE SSA photo skipped: %s", exc)
+            sideways_rate = None
+        if sideways_rate and sideways_rate.get("line_items"):
+            return sideways_rate
+
     # Sideways Zeal ORDER FORM. The stock-statement reader does not apply,
     # and the OCR probe is skipped when Tesseract is not installed.
     if _zeal_printed_order_form_anchor(file_bytes) is not None:
@@ -40168,6 +40538,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext
     )
+    try:
+        phone_rate = _extract_phone_rate_ssa_screenshot(file_bytes, filename, ext)
+    except Exception as exc:
+        logger.warning("Phone RATE SSA screenshot skipped: %s", exc)
+        phone_rate = None
+    if phone_rate and phone_rate.get("line_items"):
+        return phone_rate
     hub_tried = False
 
     def _try_pharma_hub_photo():
