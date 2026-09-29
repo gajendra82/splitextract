@@ -2194,6 +2194,8 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
             "swil_landscape_qty_value",
             "purc_sale_cl_layout",
             "profitmaker_ostk_docx",
+            # PROMPT Datewise can print negative Op/Cl stock and closing amount.
+            "prompt_datewise_layout",
         }
     )
 
@@ -3140,6 +3142,10 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
         _extra_number(i, "receipts_value", "purchase_value") is not None
         for i in line_items
     )
+    has_printed_sales_value = any(
+        _extra_number(i, "sales_value") is not None for i in line_items
+    )
+    no_sales_value_col = bool(extra.get("no_sales_value"))
     for item in line_items:
         if method == "summary_rtl_op_amt":
             continue
@@ -3190,7 +3196,13 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
         for key in ("sales_value", "closing_value"):
             if item.get(key) in (None, ""):
                 # Qty-only layouts (product-wise / E-ZEAL PTR) keep money null.
-                if preserve_null_pair_values and extra.get("qty_only"):
+                # Compressed Datewise has no Sales Amount column — keep null.
+                if key == "sales_value" and (
+                    no_sales_value_col
+                    or (preserve_null_pair_values and not has_printed_sales_value)
+                ):
+                    item[key] = None
+                elif preserve_null_pair_values and extra.get("qty_only"):
                     item[key] = None
                 else:
                     item[key] = 0.0
@@ -11603,13 +11615,24 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
     sales_amt_cands = [a for a in amount_xs if sales_x + 8 < a < close_x - 5]
     if free_x is not None:
         sales_amt_cands = [a for a in sales_amt_cands if a > free_x]
-    if sales_amt_cands:
-        sales_val_x = min(sales_amt_cands)
-    elif free_x is not None and sales_x < free_x < close_x:
-        # Free sits between Sales Qty and ClStk; money starts after Free.
-        sales_val_x = max(sales_x + 20.0, min(free_x + 18.0, close_x - 12.0))
+    # Compressed right-shifted OpStk prints (Op/Pur/Sales/Cl only) squeeze Sales
+    # Qty against ClStk Qty with no Sales Amount. Wider Sales→ClStk gaps keep the
+    # Sales Amount band even when the Amount header is only under ClStk.
+    has_sales_value = (
+        bool(sales_amt_cands)
+        or (free_x is not None and sales_x < free_x < close_x)
+        or (close_x - sales_x) >= 55.0
+    )
+    if has_sales_value:
+        if sales_amt_cands:
+            sales_val_x = min(sales_amt_cands)
+        elif free_x is not None and sales_x < free_x < close_x:
+            # Free sits between Sales Qty and ClStk; money starts after Free.
+            sales_val_x = max(sales_x + 20.0, min(free_x + 18.0, close_x - 12.0))
+        else:
+            sales_val_x = (sales_x + close_x) / 2.0
     else:
-        sales_val_x = (sales_x + close_x) / 2.0
+        sales_val_x = None
 
     close_amt_cands = [a for a in amount_xs if a >= close_x - 2]
     close_val_x = min(close_amt_cands) if close_amt_cands else close_x + 35.0
@@ -11618,10 +11641,15 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
         ("opening_qty", op_x),
         ("receipts_qty", pur_x),
         ("sales_qty", sales_x),
-        ("sales_value", sales_val_x),
-        ("closing_qty", close_x),
-        ("closing_value", close_val_x),
     ]
+    if sales_val_x is not None:
+        anchors.append(("sales_value", sales_val_x))
+    anchors.extend(
+        [
+            ("closing_qty", close_x),
+            ("closing_value", close_val_x),
+        ]
+    )
     # Keep sr/name/pack relative to Pack / OpStk so product text stays left.
     pack_hi = ((pack_x + op_x) / 2.0) if pack_x is not None else max(145.0, op_x - 35.0)
     pack_lo = 145.0 if pack_x is None else max(100.0, min(pack_x - 20.0, pack_hi - 20.0))
@@ -11643,7 +11671,12 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
             hi = (center + next_c) / 2.0
         else:
             hi = center + 45.0
-        if name == "sales_qty" and free_x is not None and sales_x < free_x < sales_val_x:
+        if (
+            name == "sales_qty"
+            and free_x is not None
+            and sales_val_x is not None
+            and sales_x < free_x < sales_val_x
+        ):
             hi = min(hi, free_x - 2.0)
         if hi <= lo:
             hi = lo + 8.0
@@ -11680,6 +11713,23 @@ def _prompt_cell_number(tokens: List[str]) -> Optional[float]:
     return found
 
 
+def _prompt_datewise_clean_product_name(name: str) -> str:
+    """Drop trailing pack glued into Product Name (e.g. KAPIKACHHU 60TAB)."""
+    tokens = (name or "").split()
+    while tokens:
+        last = tokens[-1]
+        if re.fullmatch(
+            r"\d+(?:\.\d+)?(?:ML|MG|GM|GR|TAB|TABS|CAP|CAPS)",
+            last,
+            re.I,
+        ):
+            tokens.pop()
+            continue
+        break
+    cleaned = " ".join(tokens).strip()
+    return cleaned or name
+
+
 def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Parse PROMPT Stock Statement (Datewise) from word positions.
 
@@ -11693,11 +11743,16 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
     result["report_title"] = "Stock Statement (Datewise)"
     items: List[Dict[str, Any]] = []
     company_name = None
+    # True when any page's header/anchors include a Sales Amount column.
+    saw_sales_value_col = False
 
     for page, text in zip(doc, page_texts):
         words = page.get_text("words") or []
         words = sorted(words, key=lambda w: (round(w[1], 1), w[0]))
         buckets = _prompt_datewise_buckets_for_words(words)
+        page_has_sales_value = any(name == "sales_value" for name, _lo, _hi in buckets)
+        if page_has_sales_value:
+            saw_sales_value_col = True
         rows: List[Dict[str, Any]] = []
         for w in words:
             x0, y0, _x1, _y1, token = w[0], w[1], w[2], w[3], w[4]
@@ -11776,15 +11831,23 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
             if name and not re.match(r"^(Total|Bills)\b", name, re.I):
                 item = empty_line_item()
                 item["product_code"] = sr_txt
-                item["product_name"] = name
+                item["product_name"] = _prompt_datewise_clean_product_name(name)
                 pack = " ".join(cells["pack"]).strip()
                 item["packing"] = pack or None
                 item["opening_qty"] = _prompt_cell_number(cells["opening_qty"]) or 0.0
                 item["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"]) or 0.0
                 item["sales_qty"] = _prompt_cell_number(cells["sales_qty"]) or 0.0
-                item["sales_value"] = _prompt_cell_number(cells["sales_value"]) or 0.0
-                item["closing_qty"] = _prompt_cell_number(cells["closing_qty"]) or 0.0
-                item["closing_value"] = _prompt_cell_number(cells["closing_value"]) or 0.0
+                sales_val = _prompt_cell_number(cells["sales_value"])
+                if page_has_sales_value:
+                    # Printed Sales Amount column (blank cell = 0).
+                    item["sales_value"] = 0.0 if sales_val is None else sales_val
+                else:
+                    # Compressed Datewise: no Sales Amount — keep null, not 0.
+                    item["sales_value"] = None
+                close_qty = _prompt_cell_number(cells["closing_qty"])
+                item["closing_qty"] = 0.0 if close_qty is None else close_qty
+                close_val = _prompt_cell_number(cells["closing_value"])
+                item["closing_value"] = 0.0 if close_val is None else close_val
                 # This layout has no opening/receipt money columns.
                 item["opening_value"] = None
                 item["receipts_value"] = None
@@ -11800,9 +11863,15 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
         result["company_name"] = company_name
     if not items:
         return None
+    # If no page exposed a Sales Amount band, force null (do not invent 0).
+    if not saw_sales_value_col:
+        for item in items:
+            item["sales_value"] = None
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "prompt_datewise_layout"
     result["totals"]["extra"]["qty_only"] = False
+    if not saw_sales_value_col:
+        result["totals"]["extra"]["no_sales_value"] = True
     return result
 
 
