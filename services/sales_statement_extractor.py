@@ -16961,6 +16961,411 @@ def _parse_code_item_stock_statement(doc, filename: str) -> Optional[Dict[str, A
     return result
 
 
+def _is_code_item_stock_statement_photo_text(text: str) -> bool:
+    """Phone/WhatsApp photo of Ganesh-style Code/Item Stock Statement.
+
+    OCR often misses the dense header row; title + Zeal brand is enough.
+    Printed PDFs still use _is_code_item_stock_statement_text / PDF parser.
+    """
+    if not (text or "").strip():
+        return False
+    if _is_code_item_stock_statement_text(text):
+        return True
+    if not re.search(r"Stock\s+Stat(?:e)?ment", text, re.I):
+        return False
+    # Distinctive export title line: "Stock Statment : HIMALAYA DRUGS (ZEAL)"
+    # Phone OCR often clips the closing paren / "AL".
+    if re.search(r"HIMALAYA\s+(?:DRUGS\s*)?\(?\s*ZEA?L?", text, re.I):
+        return True
+    # Party + classic money headers when OCR catches only part of the grid.
+    return bool(
+        re.search(r"Stock-Value|Sales-Value", text, re.I)
+        and re.search(r"\bOpening\b", text, re.I)
+        and re.search(r"\bSales\b", text, re.I)
+        and re.search(r"\bClosing\b", text, re.I)
+    )
+
+
+_CODE_ITEM_PHOTO_PROMPT = """
+This image is a phone photo of a Stock Statement export (often titled
+"Stock Statment : HIMALAYA DRUGS (ZEAL)" or "HIMALAYA ZEAL").
+It is NOT a STOCK & SALES ANALYSIS and NOT a Medica OPSTK sheet.
+
+Columns left to right:
+Code | Item Description | Packing | Opening | Purchase | Sales | Closing | Stock-Value | Sales-Value
+
+Map exactly:
+- Code -> product_code
+- Item Description -> product_name (strip leading * and trailing **)
+- Packing -> packing
+- Opening -> opening_qty
+- Purchase -> receipts_qty
+- Sales -> sales_qty
+- Closing -> closing_qty
+- Stock-Value -> closing_value
+- Sales-Value -> sales_value
+
+Rules:
+- stockist_name is the party at the top-left (e.g. THE PHARMA HUB / GANESH AGENCY), never HIMALAYA.
+- company_name is the text after "Stock Statment :" (e.g. HIMALAYA DRUGS (ZEAL)).
+- If the sheet shows "Aug. 2026" (or similar month), set period_from to the first day and period_to to the last day of that month.
+- Keep every number on the SAME product row. Blank cells are 0.
+- Opening is the FIRST quantity after Packing. Purchase is the NEXT quantity
+  (often blank/0). Never put the Opening figure into Purchase when Opening is blank.
+- Sales is quantity sold; Sales-Value is money. Closing is ending stock qty;
+  Stock-Value is money. Do not swap qty and value columns.
+- Identity: opening_qty + receipts_qty - sales_qty ≈ closing_qty.
+- Ignore Jun/Jul month columns if present — they are historical, not Opening/Purchase/Sales/Closing.
+- Emit line_items in TOP-TO-BOTTOM visual order exactly as printed (do not sort by code/name).
+- Product codes may be 3–6 digits (e.g. 1397, 17720, 23299). Read every row, including sparse ones.
+- Skip TOTALS, Page N Of N, phone status bars, and WhatsApp chrome.
+
+Examples (one physical row each):
+- 17720 AACTARIL SOAP packing 75GM opening 2 purchase 0 sales 2 closing 0 closing_value 0 sales_value 175.24
+- 1397 ABANA TAB packing 60's opening 55 purchase 0 sales 12 closing 43 closing_value 6709.29 sales_value 2011.44
+- 1836 CLARINA CREAM packing 30GM opening 40 purchase 0 sales 9 closing 31 closing_value 4221.08 sales_value 1316.52
+- 1854 LIV 52 SYP(SMALL) packing 100ML opening 52 purchase 0 sales 49 closing 3 closing_value 297.83 sales_value 5226.34
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock Statement",
+  "line_items": [
+    {
+      "product_code": string,
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {}
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null}
+}
+""".strip()
+
+
+def _code_item_photo_strips(file_bytes: bytes) -> List[bytes]:
+    """Full-frame only for Code/Item phone photos.
+
+    Multi-band strips caused Gemini 429 storms (10+ calls / job) and browser
+    'Failed to fetch' timeouts on sync reprocess. One full-frame read preserves
+    top-to-bottom order and is enough for typical WhatsApp screenshots.
+    """
+    return [file_bytes]
+
+
+def _code_item_photo_row_key(item: Dict[str, Any]) -> str:
+    code = re.sub(r"\D", "", str(item.get("product_code") or ""))
+    if code and re.fullmatch(r"\d{3,6}", code):
+        return code
+    return re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper())
+
+
+def _merge_code_item_photo_row(
+    merged: List[Dict[str, Any]],
+    seen: Dict[str, float],
+    raw: Dict[str, Any],
+) -> None:
+    """Keep first-seen visual order; upgrade qty/value in place when a better read arrives."""
+    key = _code_item_photo_row_key(raw)
+    if not key:
+        return
+    score = (
+        _to_float(raw.get("opening_qty"))
+        + _to_float(raw.get("receipts_qty"))
+        + _to_float(raw.get("sales_qty"))
+        + _to_float(raw.get("closing_qty"))
+        + _to_float(raw.get("sales_value"))
+        + _to_float(raw.get("closing_value"))
+    )
+    if key in seen:
+        if score <= seen[key]:
+            return
+        seen[key] = score
+        for idx, old in enumerate(merged):
+            if _code_item_photo_row_key(old) == key:
+                merged[idx] = raw
+                return
+        merged.append(raw)
+        return
+    seen[key] = score
+    merged.append(raw)
+
+
+def _code_item_enrich_meta_from_ocr(result: Dict[str, Any], text: str) -> None:
+    """Fill stockist/company/period from OCR when Vision omits header fields."""
+    if not text:
+        return
+    if not result.get("stockist_name") or re.search(
+        r"HIMALAYA|ZEAL|Stock\s+Stat", str(result.get("stockist_name") or ""), re.I
+    ):
+        for line in text.splitlines():
+            cleaned = _clean_name(line)
+            if not cleaned:
+                continue
+            if re.search(
+                r"Stock\s+Stat|Page\s+\d|HIMALAYA|Code\s+Item|TOTALS|WhatsApp",
+                cleaned,
+                re.I,
+            ):
+                continue
+            if len(cleaned) >= 6 and re.search(r"[A-Za-z]{3,}", cleaned):
+                result["stockist_name"] = cleaned
+                break
+    title = re.search(
+        r"Stock\s+Stat(?:e)?ment\s*:\s*([^\n]+)",
+        text,
+        re.I,
+    )
+    if title and (
+        not result.get("company_name")
+        or re.search(r"PHARMA\s+HUB|AGENC", str(result.get("company_name") or ""), re.I)
+    ):
+        company = _clean_name(title.group(1))
+        company = re.sub(r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$", "", company)
+        if company:
+            result["company_name"] = company
+    month = re.search(
+        r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b",
+        text,
+        re.I,
+    )
+    if month and (not result.get("period_from") or not result.get("period_to")):
+        from_day, to_day = _month_period(month.group(1), int(month.group(2)))
+        if from_day and not result.get("period_from"):
+            result["period_from"] = from_day
+        if to_day and not result.get("period_to"):
+            result["period_to"] = to_day
+    if not result.get("period_to"):
+        as_on = re.search(
+            r"Stock\s+Stat(?:e)?ment[\s\S]{0,120}?(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if as_on:
+            result["period_to"] = _normalize_date(as_on.group(1))
+
+
+def _repair_code_item_photo_qty_columns(result: Dict[str, Any]) -> None:
+    """Fix common Vision column slips on Code/Item Opening/Purchase/Sales photos."""
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        closing_value = _to_float(item.get("closing_value"))
+        # Opening blank + Purchase holds the true opening (identity holds after swap).
+        if (
+            opening == 0
+            and receipts > 0
+            and abs(receipts - sales - closing) <= 0.05
+        ):
+            item["opening_qty"] = receipts
+            item["receipts_qty"] = 0.0
+            continue
+        # Opening blank, Purchase holds stock, Closing blank but Stock-Value present
+        # → treat as no-movement opening parked under Purchase.
+        if (
+            opening == 0
+            and receipts > 0
+            and sales == 0
+            and closing == 0
+            and closing_value > 0
+        ):
+            item["opening_qty"] = receipts
+            item["closing_qty"] = receipts
+            item["receipts_qty"] = 0.0
+            continue
+        # Static stock: only Closing filled.
+        if opening == 0 and receipts == 0 and sales == 0 and closing > 0:
+            item["opening_qty"] = closing
+            continue
+        # Sales blank but Opening/Closing present with no Purchase.
+        if (
+            receipts == 0
+            and sales == 0
+            and opening > 0
+            and closing >= 0
+            and opening >= closing
+        ):
+            item["sales_qty"] = round(opening - closing, 2)
+            continue
+        # Opening/Purchase swapped: identity fails as-is but holds when Purchase
+        # alone explains Sales+Closing (Opening was a false positive).
+        if (
+            opening > 0
+            and receipts > 0
+            and abs(opening + receipts - sales - closing) > 0.05
+            and abs(receipts - sales - closing) <= 0.05
+            and abs(opening - sales) > 0.05
+        ):
+            item["opening_qty"] = receipts
+            item["receipts_qty"] = opening
+
+
+def _extract_code_item_stock_statement_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    *,
+    ocr_hint: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Vision reader for phone photos of Code/Item Opening/Purchase/Sales exports."""
+    import os
+    import time
+
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    merged: List[Dict[str, Any]] = []
+    seen: Dict[str, float] = {}
+    parsed_meta: Dict[str, Any] = {}
+    for strip_index, strip in enumerate(_code_item_photo_strips(file_bytes)):
+        if strip_index:
+            time.sleep(0.25)
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": _CODE_ITEM_PHOTO_PROMPT},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(strip).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed = None
+        for attempt in range(2):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed = _extract_json_object(_gemini_response_text(response))
+                if parsed and parsed.get("line_items"):
+                    break
+            except Exception as exc:
+                logger.warning("Code/item stock photo vision failed: %s", exc)
+                time.sleep(min(2 ** attempt, 4))
+        if not parsed:
+            continue
+        for key in (
+            "stockist_name",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if parsed.get(key) and not parsed_meta.get(key):
+                parsed_meta[key] = parsed[key]
+        totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+        if totals and not parsed_meta.get("totals"):
+            parsed_meta["totals"] = totals
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            code = re.sub(r"\D", "", str(raw.get("product_code") or ""))
+            name = _clean_name(str(raw.get("product_name") or ""))
+            name = re.sub(r"^\*+\s*", "", name)
+            name = re.sub(r"\*+\s*$", "", name).strip()
+            if not name or re.search(r"^TOTALS?\b|^Page\b", name, re.I):
+                continue
+            if code and not re.fullmatch(r"\d{3,6}", code):
+                code = ""
+            if not code and not name:
+                continue
+            raw["product_code"] = code or None
+            raw["product_name"] = name
+            _merge_code_item_photo_row(merged, seen, raw)
+    if len(merged) < 5:
+        return None
+    parsed_meta["report_title"] = parsed_meta.get("report_title") or "Stock Statement"
+    parsed_meta["line_items"] = merged
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed_meta)
+    _code_item_enrich_meta_from_ocr(result, ocr_hint)
+    # Swap if Vision put brand in stockist and party in company.
+    stockist = str(result.get("stockist_name") or "")
+    company = str(result.get("company_name") or "")
+    if re.search(r"HIMALAYA|ZEAL", stockist, re.I) and re.search(
+        r"PHARMA|AGENC|DISTRIB|HUB", company, re.I
+    ):
+        result["stockist_name"], result["company_name"] = company, stockist
+    _repair_code_item_photo_qty_columns(result)
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra["layout"] = "code_item_stock_statement"
+        item["extra"] = extra
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "code_item_stock_statement_photo"
+    result["totals"]["extra"]["layout"] = "code_item_stock_statement"
+    result["totals"]["extra"]["fallback_used"] = False
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision method=code_item_stock_statement_photo items=%s",
+        filename,
+        len(result.get("line_items") or []),
+    )
+    return result
+
+
+def _looks_like_code_item_photo_misread(result: Optional[Dict[str, Any]]) -> bool:
+    """Generic vision kept codes/names but dropped Sales onto zeros (identity fail)."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra.get("extraction_method") or "")
+    if method.startswith("code_item_stock_statement"):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    coded = sum(
+        1
+        for i in items
+        if re.fullmatch(r"\d{3,6}", str(i.get("product_code") or ""))
+    )
+    if coded < max(5, len(items) // 3):
+        return False
+    packed = sum(1 for i in items if i.get("packing"))
+    if packed < 3:
+        return False
+    sales_pos = sum(1 for i in items if _to_float(i.get("sales_qty")) > 0)
+    value_pos = sum(
+        1
+        for i in items
+        if _to_float(i.get("sales_value")) > 0 or _to_float(i.get("closing_value")) > 0
+    )
+    # Misread signature: money/closing present but Sales qty almost empty.
+    if sales_pos <= max(1, len(items) // 10) and value_pos >= 3:
+        return True
+    stockist = str(result.get("stockist_name") or "")
+    company = str(result.get("company_name") or "")
+    if re.search(r"HIMALAYA.*ZEAL|ZEAL", stockist, re.I) and re.search(
+        r"PHARMA|HUB|AGENC", company, re.I
+    ):
+        return True
+    return False
+
+
 _SALEABLE_ROW_RE = re.compile(
     r"^(?P<name>.+?)\s*\|\s*\|?\s*"
     r"(?P<opn>[\d.,]+|[—–\-]+)\s*\|\s*"
@@ -36127,6 +36532,24 @@ def _maybe_early_vision_for_image(
     if not quality.get("should_fallback"):
         return None, False
 
+    # Code/Item Opening/Purchase/Sales phone photo — dedicated Vision before generic.
+    if _is_code_item_stock_statement_photo_text(sample):
+        try:
+            code_item = _extract_code_item_stock_statement_vision(
+                file_bytes, filename, ext, ocr_hint=sample
+            )
+        except Exception as exc:
+            logger.warning(
+                "Code/item stock photo early vision failed for %s: %s",
+                filename,
+                exc,
+            )
+            code_item = None
+        if code_item and code_item.get("line_items"):
+            extra = code_item.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "code_item_stock_statement_photo"
+            return code_item, True
+
     # Poor OCR → skip the long format-probe cascade; try paid Vision early.
     try:
         from services.gemini_extraction_fallback import try_gemini_vision_extract
@@ -36138,6 +36561,19 @@ def _maybe_early_vision_for_image(
         )
         early = None
     if early and early.get("line_items"):
+        if _looks_like_code_item_photo_misread(early):
+            try:
+                code_item = _extract_code_item_stock_statement_vision(
+                    file_bytes, filename, ext, ocr_hint=sample
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Code/item stock photo repair after early vision failed: %s",
+                    exc,
+                )
+                code_item = None
+            if code_item and code_item.get("line_items"):
+                return code_item, True
         extra = early.setdefault("totals", {}).setdefault("extra", {})
         extra["early_vision_reason"] = ",".join(quality.get("reasons") or []) or (
             "low_ocr_quality_score"
@@ -36645,6 +37081,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     return result
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _looks_like_code_item_photo_misread(result):
+                    try:
+                        code_item = _extract_code_item_stock_statement_vision(
+                            file_bytes, filename, ext
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Code/item stock photo vision repair skipped: %s", exc
+                        )
+                        code_item = None
+                    if code_item and code_item.get("line_items"):
+                        return code_item
                 if _medivision_op_wsale_needs_reread(result):
                     try:
                         medivision = _extract_medivision_op_wsale_photo(
