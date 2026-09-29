@@ -7114,6 +7114,194 @@ def _parse_sale_closing_analysis_docx(
     return _parse_sale_closing_analysis_lines(lines, filename)
 
 
+def _is_sale_closing_only_header(text: str) -> bool:
+    """SALE qty/value and CLOSING qty/value only. Opening/receipt/issue sheets do not match."""
+    if not text:
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return False
+    if not re.search(r"ITEM\s+DESCRIPTION", text, re.I):
+        return False
+    if not re.search(r"<\s*=+\s*SALE\s*=+\s*>", text, re.I):
+        return False
+    if not re.search(r"<\s*=+\s*CLOSING\s*=+\s*>", text, re.I):
+        return False
+    if re.search(r"\bDUMP\b|\bO\.Stk\b|OPENING\s+RECEIPT\s+ISSUE", text, re.I):
+        return False
+    return True
+
+
+_SALE_CLOSING_PACK_ROW = re.compile(
+    r"^(?P<left>.+?)\s+(?P<pack>\d+\s*(?:'S|GM|ML|MG|KG|TAB|CAP|SYP|G|T|C))\s+"
+    r"(?P<sq>-?\d+(?:\.\d+)?)\s+(?P<sv>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<cq>-?\d+(?:\.\d+)?)\s+(?P<cv>-?\d+(?:\.\d+)?)\s*$",
+    re.I,
+)
+
+
+def _parse_sale_closing_pack_lines(
+    lines: List[str], filename: str
+) -> Optional[Dict[str, Any]]:
+    """Photo rows: name, pack (75G / 60T / 100ML), then sale qty/value and closing qty/value.
+
+    The Word reader that requires the word Pcs is left unchanged.
+    """
+    blob = "\n".join(lines)
+    if not _is_sale_closing_only_header(blob):
+        return None
+    result = empty_result(filename, "jpg")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "sale_closing_pack_photo"
+    extra["layout"] = "sale_qty_value_closing_qty_value"
+    items: List[Dict[str, Any]] = []
+    for raw in lines:
+        line = _clean_name(raw)
+        if not line or re.fullmatch(r"-+", line):
+            continue
+        if re.search(
+            r"Phone|E-?Mail|GST\s*NO|S\.T\.No|Store\s*:|End of report|"
+            r"ITEM\s+DESCRIPTION|<\s*=+\s*SALE|<\s*=+\s*CLOSING|QTY\.\s+VALUE",
+            line,
+            re.I,
+        ):
+            continue
+        titled = re.search(
+            r"STOCK\s*&\s*SALES\s*ANALYSIS\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*-\s*"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            line,
+            re.I,
+        )
+        if titled:
+            result["period_from"] = _normalize_date(titled.group(1))
+            result["period_to"] = _normalize_date(titled.group(2))
+            continue
+        if re.search(r"\bHIMALAYA\b", line, re.I) and not re.search(r"\d{3,}", line):
+            result["company_name"] = line
+            continue
+        total = re.match(
+            r"^TOTAL\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+"
+            r"(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$",
+            line,
+            re.I,
+        )
+        if total:
+            result["totals"]["sales_value"] = _to_float(total.group(2))
+            result["totals"]["closing_value"] = _to_float(total.group(4))
+            extra["sales_qty"] = _to_float(total.group(1))
+            extra["closing_qty"] = _to_float(total.group(3))
+            extra["total_row_source"] = "sale_closing_pack_total"
+            continue
+        row = _SALE_CLOSING_PACK_ROW.match(line)
+        if not row:
+            if result.get("stockist_name") is None and re.search(r"[A-Za-z]", line):
+                result["stockist_name"] = line
+            elif (
+                result.get("stockist_name")
+                and result.get("stockist_address") is None
+                and line != result.get("stockist_name")
+            ):
+                result["stockist_address"] = line
+            continue
+        name = _clean_name(row.group("left"))
+        if not name or re.match(r"^TOTAL\b", name, re.I):
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = row.group("pack").replace(" ", "")
+        item["sales_qty"] = _to_float(row.group("sq"))
+        item["sales_value"] = _to_float(row.group("sv"))
+        item["closing_qty"] = _to_float(row.group("cq"))
+        item["closing_value"] = _to_float(row.group("cv"))
+        item["receipts_qty"] = 0.0
+        item_extra = item.setdefault("extra", {})
+        item_extra["layout"] = "sale_qty_value_closing_qty_value"
+        if result.get("company_name"):
+            item_extra["company_name"] = result["company_name"]
+        items.append(item)
+    if len(items) < 3:
+        return None
+    result["line_items"] = items
+    extra["rows_detected"] = len(items)
+    return result
+
+
+def _vision_filed_sale_qty_as_receipt(result: Dict[str, Any]) -> bool:
+    """True when this SALE/CLOSING photo put SALE QTY in receipts_qty.
+
+    Other stock sheets keep a real receipt column, an opening qty, or a
+    sales qty that was already read. Those do not match.
+    """
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    company = str(result.get("company_name") or "")
+    if re.search(r"Stock\s+and\s+Sales", title, re.I) and not re.search(
+        r"ANALYSIS", title, re.I
+    ):
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I) and not re.search(
+        r"HIMALAYA\s+ZEAL", company, re.I
+    ):
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 5:
+        return False
+    if any(abs(_to_float(item.get("opening_qty"))) > 0.001 for item in items):
+        return False
+    short_packs = 0
+    misfiled = 0
+    sales_filled = 0
+    for item in items:
+        blob = f"{item.get('product_name') or ''} {item.get('packing') or ''}".upper()
+        if re.search(r"\b\d+\s*(?:G|T|C|'S)\b", blob):
+            short_packs += 1
+        sales = _to_float(item.get("sales_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        if sales > 0 and receipts == 0:
+            sales_filled += 1
+        if sales == 0 and receipts > 0:
+            misfiled += 1
+        elif sales > 0 and abs(sales - receipts) < 0.01:
+            misfiled += 1
+    if sales_filled >= 3:
+        return False
+    return short_packs >= 3 and misfiled >= 2
+
+
+def _refile_sale_qty_held_as_receipt(result: Dict[str, Any]) -> Dict[str, Any]:
+    """SALE QTY was stored as receipts_qty. This sheet has no receipt column."""
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        sales = _to_float(item.get("sales_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        if sales == 0 and receipts != 0:
+            item["sales_qty"] = receipts
+            item["receipts_qty"] = 0.0
+        elif receipts != 0 and abs(sales - receipts) < 0.01:
+            item["receipts_qty"] = 0.0
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if _to_float(item.get("sales_value")) == 0 and _to_float(extra.get("receipts_value")) != 0:
+            item["sales_value"] = _to_float(extra.get("receipts_value"))
+            extra.pop("receipts_value", None)
+            item["extra"] = extra
+    totals = result.setdefault("totals", {})
+    extra_t = totals.setdefault("extra", {})
+    if _to_float(extra_t.get("sales_qty")) == 0 and _to_float(extra_t.get("receipts_qty")) != 0:
+        extra_t["sales_qty"] = _to_float(extra_t.get("receipts_qty"))
+    if "receipts_qty" in extra_t:
+        extra_t["receipts_qty"] = 0
+    if _to_float(totals.get("sales_qty")) == 0 and _to_float(totals.get("receipts_qty")) != 0:
+        totals["sales_qty"] = _to_float(totals.get("receipts_qty"))
+    if "receipts_qty" in totals:
+        totals["receipts_qty"] = 0
+    extra_t["extraction_method"] = "sale_closing_pack_photo"
+    extra_t["layout"] = "sale_qty_value_closing_qty_value"
+    return result
+
+
 def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     from docx import Document
 
@@ -18471,6 +18659,246 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     return result
 
 
+def _is_medivision_op_wsale_header(text: str) -> bool:
+    """MediVision photo: Op, Purc, Sale, WSale, Jul Sa, Jun Sa, Sa val, Cl qty.
+
+    The older Purc / Purc val / Sale / Sa val sheet does not print WSale.
+    """
+    if not text:
+        return False
+    if re.search(r"Stock\s+and\s+Sales\s+(?:Analysis|Detail)", text, re.I):
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if not re.search(r"\bPurc\b", text, re.I):
+        return False
+    if not re.search(r"\bW\s*Sale\b", text, re.I):
+        return False
+    if not re.search(r"\bOp\b", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
+
+
+def _medivision_qty_balances(
+    opening: float, receipts: float, sales: float, closing: float
+) -> bool:
+    return abs((opening + receipts - sales) - closing) < 0.05
+
+
+def _repair_medivision_op_wsale_sales(item: Dict[str, Any]) -> None:
+    """Sale is the only qty that closes the row. Jul Sa, Jun Sa, and WSale do not.
+
+    Used only after this photo's own reader has stored those side columns.
+    """
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    if _medivision_qty_balances(opening, receipts, sales, closing):
+        return
+    side: List[float] = []
+    for key in ("wholesale_qty", "july_sale_qty", "june_sale_qty"):
+        if key in extra and extra.get(key) not in (None, ""):
+            side.append(_to_float(extra.get(key)))
+    if any(abs(value - sales) < 0.01 for value in side) and _medivision_qty_balances(
+        opening, receipts, 0.0, closing
+    ):
+        item["sales_qty"] = 0.0
+        return
+    balancers: List[float] = []
+    for value in side:
+        if not _medivision_qty_balances(opening, receipts, value, closing):
+            continue
+        if any(abs(value - kept) < 0.01 for kept in balancers):
+            continue
+        balancers.append(value)
+    if len(balancers) == 1:
+        item["sales_qty"] = balancers[0]
+
+
+def _finalize_medivision_op_wsale(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        if not name or re.match(r"^totals?\b", name, re.I):
+            continue
+        _repair_medivision_op_wsale_sales(item)
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["layout"] = "medivision_op_wsale"
+        items.append(item)
+    if len(items) < 5:
+        return None
+    result["line_items"] = items
+    if not result.get("report_title"):
+        result["report_title"] = "Stock and Sales"
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "medivision_op_wsale_photo"
+    extra_t["layout"] = "medivision_op_wsale"
+    return result
+
+
+def _medivision_op_wsale_needs_reread(result: Dict[str, Any]) -> bool:
+    """True when a Stock and Sales photo left Jul/Jun/WSale in sales_qty."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if re.search(r"ANALYSIS|DETAIL|VALUATION|ORDER\s*FORM", title, re.I):
+        return False
+    company = str(result.get("company_name") or "")
+    if not (
+        re.search(r"Stock\s+and\s+Sales", title, re.I)
+        or re.search(r"HIMALAYA[\s\-]*ZEAL", company, re.I)
+    ):
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 8:
+        return False
+    bad = 0
+    for item in items:
+        if not _medivision_qty_balances(
+            _to_float(item.get("opening_qty")),
+            _to_float(item.get("receipts_qty")),
+            _to_float(item.get("sales_qty")),
+            _to_float(item.get("closing_qty")),
+        ):
+            bad += 1
+    return bad >= 3
+
+
+_MEDIVISION_OP_WSALE_PROMPT = """
+This image is a MediVision Platinum "Stock and Sales" printout.
+Columns left to right are:
+Product name, Unit, Op, Purc, Sale, WSale, Jul Sa, Jun Sa, Sa val, Cl qty, Cl val, NM60D qty, NM90D qty, NM val, NE.
+
+Ignore the phone status bar and browser chrome.
+stockist_name is the agency name (for example PARAKH AGENCY), not the Company line.
+company_name is the Company: line (for example HIMALAYA-ZEAL).
+period_from and period_to come from the "dd-mm-yy to dd-mm-yy" line. Year 26 means 2026.
+
+A blank cell is 0. Do not shift a later number left into an empty cell.
+
+opening_qty = Op
+receipts_qty = Purc
+sales_qty = Sale only
+sales_value = Sa val
+closing_qty = Cl qty
+closing_value = Cl val
+
+WSale, Jul Sa, and Jun Sa are not sales_qty.
+Jul Sa is the previous July quantity. Jun Sa is the previous June quantity.
+NM60D qty, NM90D qty, NM val, and NE are not closing_qty and not sales_qty.
+Closing qty is Op + Purc - Sale. Do not subtract WSale, Jul Sa, or Jun Sa.
+
+Put the side columns in extra:
+wholesale_qty = WSale
+july_sale_qty = Jul Sa
+june_sale_qty = Jun Sa
+nm60_qty = NM60D qty
+nm90_qty = NM90D qty
+nm_value = NM val
+near_expiry_qty = NE
+
+Examples:
+AACTARIL SOAP 75GM, unit 75GM: Op 7, Purc 0, Sale 0, Jun Sa 20, Cl qty 7, Cl val 486.00.
+sales_qty is 0, not 20.
+ABANA TAB 60'S: Op 28, Sale 15, Jul Sa 8, Jun Sa 5, Sa val 2514.00, Cl qty 13, Cl val 1932.00.
+sales_qty is 15, not 8 or 5.
+LIV.52 SYP 100ML: Op 6, Purc 70, Sale 75, WSale 171, Jul Sa 41, Sa val 7999.00, Cl qty 1, Cl val 95.00.
+sales_qty is 75, not 171 or 41.
+
+If this image does not have Op, Purc, Sale, WSale, Jul Sa, and Jun Sa columns, return {"line_items": []}.
+Skip the Totals row. Do not invent products.
+
+Return ONLY valid JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock and Sales",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {
+        "wholesale_qty": number,
+        "july_sale_qty": number,
+        "june_sale_qty": number,
+        "nm60_qty": number,
+        "nm90_qty": number,
+        "nm_value": number,
+        "near_expiry_qty": number
+      }
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null, "extra": {}}
+}
+""".strip()
+
+
+def _extract_medivision_op_wsale_photo(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    force: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """Read the MediVision Op / Purc / Sale / WSale photo. Other images return None."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    if not force:
+        try:
+            preview = _ocr_image_to_text(file_bytes)
+        except Exception:
+            preview = ""
+        if not _is_medivision_op_wsale_header(preview):
+            return None
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _MEDIVISION_OP_WSALE_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("MediVision Op/WSale photo skipped: %s", exc)
+            time.sleep(min(2 ** attempt, 4))
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed)
+    return _finalize_medivision_op_wsale(result)
+
+
 _DETAIL_OPVAL_LABELS = {
     "sl.no": "sr",
     "slno": "sr",
@@ -25537,6 +25965,8 @@ Rules:
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026). Never invent years like 2001 or 2030.
 - Map Pur.Qnt / Purchase / Receipts / P Qty -> receipts_qty
 - Map Sl.Qnt / Sales qty / Issue / S Qty -> sales_qty; Sl.Value / S Val -> sales_value
+- When the only groups are <===SALE===> and <==CLOSING==> (QTY. and VALUE under each) and there is no OPENING, RECEIPT, or ISSUE column: sales_qty is SALE QTY, sales_value is SALE VALUE, closing_qty is CLOSING QTY, closing_value is CLOSING VALUE. receipts_qty stays 0. Do not put SALE QTY in receipts_qty. "Store : Purchase" is not a receipt column. Example: LIV 52 SYP 100ML sales_qty=21, sales_value=2134, closing_qty=49, closing_value=4865.
+- MediVision "Stock and Sales" with columns Op, Purc, Sale, WSale, Jul Sa, Jun Sa, Sa val, Cl qty, Cl val: opening_qty=Op, receipts_qty=Purc, sales_qty=Sale only, sales_value=Sa val, closing_qty=Cl qty, closing_value=Cl val. Do not put WSale, Jul Sa, Jun Sa, NM60D qty, or NM90D qty into sales_qty. A blank Sale cell is sales_qty 0 even when Jun Sa has a number.
 - Map Cl.Qnt / Closing / Cl Stk -> closing_qty; Cl.Value / Cl Val -> closing_value
 - Map Op.Qnt / Opening / OpBal / Op Stk -> opening_qty
 - Map Op.Amt / OP AMT / Opening Amount -> extra.opening_value (not sales_value)
@@ -29882,6 +30312,23 @@ def _zandra_two_column_order_text(text: str) -> bool:
     )
 
 
+def _zeal_order_form_text(text: str) -> bool:
+    """Zeal ORDER FORM. Stock-and-sale sheets that mention Zeal do not match."""
+    if not text or _zandra_two_column_order_text(text):
+        return False
+    if re.search(
+        r"ITEM\s+DESCRIPTION|Op\s*Stk|\bOPENING\b|STOCK\s*&\s*SALES|Cl\s*Stk|"
+        r"Stock\s+and\s+Sale|QTY\.?\s+VALUE",
+        text,
+        re.I,
+    ):
+        return False
+    return bool(
+        re.search(r"\bZEAL\b", text, re.I)
+        and re.search(r"ORDER\s*FOR", text, re.I)
+    )
+
+
 def _zandra_order_form_logo_missed_text(text: str) -> bool:
     """ORDER FORM whose wordmark did not OCR as Zandra.
 
@@ -29949,10 +30396,12 @@ def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]
             continue
         logo_read = _zandra_two_column_order_text(preview)
         from_label = _zandra_order_form_from_label(preview)
+        zeal_form = _zeal_order_form_text(preview)
         if (
             not logo_read
             and not _zandra_order_form_logo_missed_text(preview)
             and not from_label
+            and not zeal_form
         ):
             continue
         # ORDER FORM photos keep the existing Qty rules. This path is only
@@ -29971,7 +30420,11 @@ def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]
                     break
         if title_y is None:
             title_y = origin + int(crop.height * 0.35)
-        return max(0.0, min(0.8, title_y / float(height))), keep_handwritten_qty
+        return (
+            max(0.0, min(0.8, title_y / float(height))),
+            keep_handwritten_qty,
+            zeal_form,
+        )
     return None
 
 
@@ -30035,7 +30488,9 @@ def _zandra_order_form_rows(file_bytes: bytes, box: tuple, prompt: str) -> List[
     return []
 
 
-def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[str]:
+def _zandra_order_form_stockist(
+    file_bytes: bytes, anchor: float, party_lines: bool = False
+):
     import io
     import os
 
@@ -30047,23 +30502,32 @@ def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[st
     # A title near the top leaves the handwritten From line a little lower.
     if anchor < 0.20:
         top = max(0.0, anchor + 0.02)
-        bottom = min(0.95, anchor + 0.14)
+        bottom = min(0.95, anchor + (0.18 if party_lines else 0.14))
     else:
         top = max(0.0, anchor + 0.045)
-        bottom = min(0.95, anchor + 0.10)
+        bottom = min(0.95, anchor + (0.16 if party_lines else 0.10))
     crop = image.crop(
         (int(width * 0.04), int(height * top), int(width * 0.55), int(height * bottom))
     )
     if crop.width < 1400:
         crop = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS)
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
-    prompt = (
-        "This crop is the From line of an order form. "
-        "stockist_name is the handwritten party name. "
-        "A circle around the first word is not an extra letter. "
-        "Do not include the word From. "
-        'Return ONLY JSON {"stockist_name": string|null}.'
-    )
+    if party_lines:
+        prompt = (
+            "This crop is the From box of a Zeal order form. "
+            "stockist_name is the handwritten party on the first line. "
+            "stockist_address is the handwritten place on the next line. "
+            "Do not include the word From. "
+            'Return ONLY JSON {"stockist_name": string|null, "stockist_address": string|null}.'
+        )
+    else:
+        prompt = (
+            "This crop is the From line of an order form. "
+            "stockist_name is the handwritten party name. "
+            "A circle around the first word is not an extra letter. "
+            "Do not include the word From. "
+            'Return ONLY JSON {"stockist_name": string|null}.'
+        )
     payload = {
         "contents": [
             {
@@ -30086,7 +30550,7 @@ def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[st
         parsed = _extract_json_object(_gemini_response_text(response)) or {}
     except Exception as exc:
         logger.warning("Zandra order form stockist read failed: %s", exc)
-        return None
+        return (None, None) if party_lines else None
     name = _clean_name(str(parsed.get("stockist_name") or ""))
     name = re.sub(r"\s+\d+\s*$", "", name).strip(" .")
     name = " ".join(part[:1].upper() + part[1:] for part in name.split())
@@ -30097,9 +30561,17 @@ def _zandra_order_form_stockist(file_bytes: bytes, anchor: float) -> Optional[st
     name = re.sub(r"\s+", " ", name).strip(" .")
     if name.startswith("Dr "):
         name = "Dr." + name[2:]
-    if not name or re.search(r"^FROM$|ORDER\s*FORM|ZANDRA", name, re.I):
-        return None
-    return name
+    blocked = r"^FROM$|ORDER\s*FORM|ZANDRA"
+    if party_lines:
+        blocked += r"|\bZEAL\b"
+    if not name or re.search(blocked, name, re.I):
+        name = None
+    if not party_lines:
+        return name
+    address = _clean_name(str(parsed.get("stockist_address") or ""))
+    if address and re.search(r"ORDER\s*FORM|ZANDRA|\bZEAL\b|^FROM$", address, re.I):
+        address = ""
+    return name, address or None
 
 
 _ZANDRA_ORDER_SIDE_PROMPT = (
@@ -30109,6 +30581,28 @@ _ZANDRA_ORDER_SIDE_PROMPT = (
     "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
     "A separate stroke after a number is not an extra zero. "
     "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "Do not copy a number onto another row. "
+    "Do not add a row for the blank lines under the last printed product, "
+    "even when a number is written there. Skip the header and Total. "
+    'Return ONLY JSON {"rows":[{"code":string|null,"product_name":string,'
+    '"packing":string|null,"qty":number|null}]}.'
+)
+
+_ZEAL_ORDER_SIDE_PROMPT = (
+    "This crop is one side of a Zeal ORDER FORM. "
+    "Columns left to right: SAP Code, Product, Pack, Qty, Value. "
+    "qty is the handwritten number in that row's Qty cell. A blank Qty cell is null. "
+    "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
+    "A separate stroke after a number is not an extra zero. "
+    "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "Ink hanging down from the row above is not a digit of this row. "
+    "67 written under another number is 67, not 967. "
+    "76 written under another number is 76, not 876. "
+    "A line or hook under a number is not an extra digit. "
+    "112 with a line under it is 112, not 1120. "
+    "129 with a hook is 129, not 1299. "
+    "212 is 212. 92 is 92. 877 is three digits, 877. "
+    "Do not copy an example onto a blank Qty cell. "
     "Do not copy a number onto another row. "
     "Do not add a row for the blank lines under the last printed product, "
     "even when a number is written there. Skip the header and Total. "
@@ -30173,6 +30667,7 @@ def _zandra_order_form_items(
     right: float,
     anchor: float,
     keep_handwritten_qty: bool = False,
+    prompt: str = _ZANDRA_ORDER_SIDE_PROMPT,
 ) -> List[Dict[str, Any]]:
     """Read one side in two bands so a long column is not cut off or zero-padded."""
     items: List[Dict[str, Any]] = []
@@ -30191,7 +30686,7 @@ def _zandra_order_form_items(
         bottom = max(top + 0.05, min(0.98, bottom))
         band = _zandra_order_side_items(
             _zandra_order_form_rows(
-                file_bytes, (left, top, right, bottom), _ZANDRA_ORDER_SIDE_PROMPT
+                file_bytes, (left, top, right, bottom), prompt
             ),
             keep_handwritten_qty=keep_handwritten_qty,
         )
@@ -30288,15 +30783,21 @@ def _extract_zandra_two_column_order_photo(
     found = _zandra_order_form_anchor(file_bytes)
     if found is None:
         return None
-    anchor, keep_handwritten_qty = found
+    anchor, keep_handwritten_qty, zeal_form = found
+    # Zeal prints the same two tables. A ZL file whose logo did not OCR as
+    # Zeal still uses the handwriting rules. Zandra filenames stay on the
+    # existing prompt.
+    if not zeal_form and re.search(r"(?:^|_)ZL(?:_|\.)", filename, re.I):
+        zeal_form = True
+    side_prompt = _ZEAL_ORDER_SIDE_PROMPT if zeal_form else _ZANDRA_ORDER_SIDE_PROMPT
     logger.info(
         "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=zandra_two_column_order_form",
         filename,
     )
     items = _zandra_order_form_items(
-        file_bytes, 0.01, 0.50, anchor, keep_handwritten_qty
+        file_bytes, 0.01, 0.50, anchor, keep_handwritten_qty, side_prompt
     ) + _zandra_order_form_items(
-        file_bytes, 0.49, 0.99, anchor, keep_handwritten_qty
+        file_bytes, 0.49, 0.99, anchor, keep_handwritten_qty, side_prompt
     )
     if len(items) < 12:
         return None
@@ -30307,7 +30808,14 @@ def _extract_zandra_two_column_order_photo(
     result["line_items"] = items
     result["period_from"] = None
     result["period_to"] = None
-    if not keep_handwritten_qty:
+    if not keep_handwritten_qty and zeal_form:
+        party_name, party_address = _zandra_order_form_stockist(
+            file_bytes, anchor, party_lines=True
+        )
+        result["stockist_name"] = party_name
+        if party_address:
+            result["stockist_address"] = party_address
+    elif not keep_handwritten_qty:
         result["stockist_name"] = _zandra_order_form_stockist(file_bytes, anchor)
     if keep_handwritten_qty:
         header = _zandra_order_form_handwritten_header(file_bytes, anchor)
@@ -35168,6 +35676,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     return result
                 result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                if _medivision_op_wsale_needs_reread(result):
+                    try:
+                        medivision = _extract_medivision_op_wsale_photo(
+                            file_bytes, filename, ext, force=True
+                        )
+                    except Exception as exc:
+                        logger.warning("MediVision Op/WSale reread skipped: %s", exc)
+                        medivision = None
+                    if medivision and medivision.get("line_items"):
+                        return medivision
+                if sale_closing_only or _vision_filed_sale_qty_as_receipt(result):
+                    return _refile_sale_qty_held_as_receipt(result)
                 if _ssa_dump_opening_qty_missing(result):
                     result["line_items"] = _ssa_dump_repair_items(
                         result.get("line_items") or []
