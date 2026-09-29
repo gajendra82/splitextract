@@ -23858,6 +23858,23 @@ def _maybe_early_vision_for_image_only_pdf(
     # Prefer dedicated Swil Receipt/Pur vision over generic Gemini when the
     # image-only sample OCR cannot prove the layout (monitor photos).
     try:
+        stock_sale_photo = _parse_image_only_stock_sale_opstk_order_pdf(
+            doc, filename
+        )
+        if stock_sale_photo and stock_sale_photo.get("line_items"):
+            extra = stock_sale_photo.setdefault("totals", {}).setdefault(
+                "extra", {}
+            )
+            extra["early_vision_reason"] = "stock_sale_opstk_order_image_only"
+            return stock_sale_photo
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s stock&sale opstk image-only probe failed: %s",
+            filename,
+            exc,
+        )
+
+    try:
         swil_photo = _parse_image_only_swil_receipt_pur_pdf(doc, filename)
         if swil_photo and swil_photo.get("line_items"):
             extra = swil_photo.setdefault("totals", {}).setdefault("extra", {})
@@ -24233,6 +24250,15 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         image_only_ssa = _parse_image_only_ssa_qty_value_pdf(doc, filename)
         if image_only_ssa and image_only_ssa.get("line_items"):
             return image_only_ssa
+
+        # Image-only landscape Stock & Sale (OpStk/P.Qty/S.Qty/ClStk/Order)
+        # photos. Must run before the Receipt/Pur reader, which mis-maps these
+        # columns onto its own Sales & Stock schema.
+        image_only_stock_sale = _parse_image_only_stock_sale_opstk_order_pdf(
+            doc, filename
+        )
+        if image_only_stock_sale and image_only_stock_sale.get("line_items"):
+            return image_only_stock_sale
 
         # Image-only Sales & Stock Receipt/Pur photos (monitor screenshots).
         # OCR is unreadable; must run before early generic Gemini escape.
@@ -29804,6 +29830,334 @@ def _extract_opening_purchase_sale_balance_photo(
         missed["totals"]["extra"]["extraction_method"] = "opening_purchase_sale_balance_qty"
         return missed
     return finished
+
+
+# ---------------------------------------------------------------------------
+# Landscape "Stock & Sale Statement" photos (E Laxmi Distributors etc.)
+# Columns: PRODUCT | Jun26 | Jul26 | OpStk | P.Qty | P.Val | S.Qty | S.Val |
+#          CrQty | DbQty | ClStk | ClVal | Order
+# Distinct from the SwilERP "Sales & Stock Statement" Receipt/Pur layout, so it
+# needs its own vision reader; the Receipt/Pur reader mis-maps these columns.
+# ---------------------------------------------------------------------------
+
+_STOCK_SALE_OPSTK_ORDER_VISION_PROMPT = """
+You read a photographed "Stock & Sale Statement" (dealer wise) report.
+
+The table columns, left to right, are exactly:
+PRODUCT NAME | <month1 qty> | <month2 qty> | OpStk | P.Qty | P.Val |
+S.Qty | S.Val | CrQty | DbQty | ClStk | ClVal | Order
+
+Read strictly column by column, aligning each cell to its header. The photo may
+be slightly skewed; keep every value on the same visual row as its product.
+
+ROW ALIGNMENT IS CRITICAL. Each product's numbers sit on the SAME horizontal
+line as that product's name. Do not borrow the numbers from the line above or
+below. The very first line may show a company banner ("HIMALAYA DRUG COMPANY")
+next to the first product's figures — the figures on that line belong to the
+FIRST real product, not to a product named lower down. Never shift a whole
+column of numbers up or down by one row.
+
+Column meaning and mapping:
+- PRODUCT NAME -> product_name (read the full name; the left edge may be cropped,
+  transcribe exactly what is visible, do not guess extra letters).
+- There are EXACTLY TWO previous-month quantity columns immediately after the
+  product name (headers look like "Jun 26" and "Jul 26"). SKIP BOTH of them.
+  OpStk is the THIRD numeric column, never the first or second.
+- OpStk -> opening_qty
+- P.Qty -> receipts_qty      (purchase quantity)
+- P.Val -> receipts_value    (purchase value in Rs.)
+- S.Qty -> sales_qty
+- S.Val -> sales_value       (sales value in Rs.)
+- CrQty, DbQty -> ignore (put in extra only)
+- ClStk -> closing_qty
+- ClVal -> closing_value     (closing value in Rs.)
+- Order -> ignore
+- If a numeric cell is blank, use 0 (never null).
+
+Return ONLY valid JSON:
+{
+  "layout_ok": true,
+  "detected_headers": [ "the column header texts you actually see" ],
+  "report_title": string|null,
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "line_items": [
+    {
+      "product_name": string,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "receipts_value": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {"cr_qty": number, "db_qty": number}
+    }
+  ],
+  "totals": {"sales_value": number|null, "closing_value": number|null,
+             "receipts_value": number|null, "extra": {}}
+}
+
+CRITICAL rules:
+- Set "layout_ok" to false and return an empty line_items list if this sheet is
+  NOT this OpStk / P.Qty / S.Qty / ClStk / ClVal / Order layout (for example a
+  "Sales & Stock Statement" with Receipt/Pur or PACKING columns is NOT this one).
+- A row whose only text is a company banner such as "HIMALAYA DRUG COMPANY" is
+  NOT a product. Skip it. Do not emit TOTAL / GRAND TOTAL rows as products.
+- Keep every real product row, top to bottom, in order.
+- Never put OpStk+P.Qty (a Total column) into sales_qty. sales_qty is ONLY S.Qty.
+- Period looks like "From 01-Aug-26 to 31-Aug-26"; use the statement year.
+- company_name is the manufacturer (HIMALAYA ...); stockist_name is the dealer
+  named at the very top (e.g. "E LAXMI DISTRIBUTORS").
+""".strip()
+
+
+def _stock_sale_opstk_headers_ok(parsed: Dict[str, Any]) -> bool:
+    """Detected headers confirm OpStk/ClStk/Order, not Receipt/Pur or PACKING."""
+    headers = parsed.get("detected_headers")
+    if not isinstance(headers, list) or not headers:
+        return False
+    blob = " ".join(str(h) for h in headers).upper()
+    blob_sq = re.sub(r"[^A-Z]", "", blob)
+    has_opstk = "OPSTK" in blob_sq
+    has_clstk = "CLSTK" in blob_sq
+    has_order = "ORDER" in blob_sq
+    # Format A discriminators must be absent.
+    if "PACKING" in blob_sq or "RECEIPTPUR" in blob_sq or "ISSUESALES" in blob_sq:
+        return False
+    return has_opstk and (has_clstk or has_order)
+
+
+def _stock_sale_opstk_order_result_ok(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Applied result really is the OpStk/P.Qty/S.Qty/ClStk/Order layout.
+
+    Gates on layout (via detected headers, checked upstream) plus structural
+    signals. Strict per-row stock identity is NOT required, because these
+    skewed monitor photos frequently drift a cell without being the wrong
+    layout — the alternative (Receipt/Pur reader) mis-maps them far worse.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    for key in ("period_from", "period_to"):
+        raw = str(result.get(key) or "")
+        m = re.match(r"^(\d{4})-", raw)
+        if m and not (2018 <= int(m.group(1)) <= 2035):
+            return False
+    money_rows = 0
+    for item in items:
+        if _to_float(item.get("closing_value")) > 0 or _to_float(
+            item.get("sales_value")
+        ) > 0:
+            money_rows += 1
+    return money_rows >= 3
+
+
+def _extract_stock_sale_opstk_order_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".png",
+) -> Optional[Dict[str, Any]]:
+    """Read a landscape Stock & Sale (OpStk/P.Qty/S.Qty/ClStk/Order) photo."""
+    import os
+
+    from services.vertex_gemini_client import generate_content_via_vertex
+
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _STOCK_SALE_OPSTK_ORDER_VISION_PROMPT},
+                    {"inline_data": {"mime_type": "image/png", "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(5):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed is not None:
+                break
+        except Exception as exc:
+            last_err = exc
+            delay = min(2 ** attempt, 8)
+            err_s = str(exc).upper()
+            if "429" in err_s or "RESOURCE_EXHAUSTED" in err_s:
+                delay = min(8 * (attempt + 1), 40)
+            time.sleep(delay)
+    if last_err and parsed is None:
+        logger.warning(
+            "Stock & Sale OpStk vision failed for %s: %s", filename, last_err
+        )
+        return None
+    if not parsed:
+        return None
+    if parsed.get("layout_ok") is False:
+        return None
+    if not parsed.get("line_items"):
+        return None
+    # Header-based guard so this reader never claims the Receipt/Pur or
+    # PACKING "Sales & Stock Statement" layouts (Format A must fall through).
+    if not _stock_sale_opstk_headers_ok(parsed):
+        return None
+
+    result = empty_result(filename, ext.lstrip(".") or "png")
+    result = _apply_parsed_sales_json(result, parsed)
+    applied: List[Dict[str, Any]] = []
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if not name or _is_non_product_line_name(name):
+            continue
+        if re.match(
+            r"^(?:HIMALAYA\s+DRUG\s+COM|TOTAL|GRAND\s+TOTAL)\b", name, re.I
+        ):
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["opening_qty"] = _to_float(raw.get("opening_qty"))
+        item["receipts_qty"] = _to_float(raw.get("receipts_qty"))
+        item["sales_qty"] = _to_float(raw.get("sales_qty"))
+        item["closing_qty"] = _to_float(raw.get("closing_qty"))
+        item["sales_value"] = _to_float(raw.get("sales_value"))
+        item["closing_value"] = _to_float(raw.get("closing_value"))
+        rec_val = _to_float(raw.get("receipts_value"))
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["layout"] = "stock_sale_opstk_order"
+            extra["receipts_value"] = rec_val
+            extra["purchase_value"] = rec_val
+            raw_extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+            if raw_extra.get("cr_qty") is not None:
+                extra["cr_qty"] = _to_float(raw_extra.get("cr_qty"))
+            if raw_extra.get("db_qty") is not None:
+                extra["db_qty"] = _to_float(raw_extra.get("db_qty"))
+        item["receipts_value"] = rec_val
+        applied.append(item)
+    result["line_items"] = _drop_trailing_statement_total_item(applied)
+    if not _stock_sale_opstk_order_result_ok(result):
+        return None
+    totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+    if totals.get("sales_value") is not None:
+        result["totals"]["sales_value"] = _to_float(totals.get("sales_value"))
+    if totals.get("closing_value") is not None:
+        result["totals"]["closing_value"] = _to_float(totals.get("closing_value"))
+    extra_t = result["totals"].setdefault("extra", {})
+    if totals.get("receipts_value") is not None:
+        rec_total = _to_float(totals.get("receipts_value"))
+        result["totals"]["receipts_value"] = rec_total
+        extra_t["receipts_value"] = rec_total
+    extra_t["extraction_method"] = "stock_sale_opstk_order_vision"
+    extra_t["layout"] = "stock_sale_opstk_order"
+    if not result.get("report_title"):
+        result["report_title"] = "Stock & Sale Statement"
+    return result
+
+
+def _parse_image_only_stock_sale_opstk_order_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Image-only landscape Stock & Sale (OpStk/P.Qty/S.Qty/ClStk/Order) photos.
+
+    Runs before the SwilERP Receipt/Pur image-only reader so this distinct
+    layout is not mis-mapped. Returns None for any other layout.
+    """
+    import fitz
+
+    page_count = doc.page_count
+    if page_count < 1 or page_count > 12:
+        return None
+    embedded_chars = 0
+    for page_index in range(page_count):
+        embedded_chars += len(
+            re.sub(r"\s+", "", doc[page_index].get_text("text") or "")
+        )
+    if embedded_chars >= 40:
+        return None
+
+    def _render(page_index: int) -> bytes:
+        pix = doc[page_index].get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+        return pix.tobytes("png")
+
+    probe = _extract_stock_sale_opstk_order_vision(
+        _render(0), f"{filename}#page1", ".png"
+    )
+    if not _stock_sale_opstk_order_result_ok(probe):
+        return None
+
+    merged = empty_result(filename, "pdf")
+    merged_items: List[Dict[str, Any]] = []
+    page_results: List[Optional[Dict[str, Any]]] = [probe]
+    for page_index in range(1, min(page_count, 12)):
+        page_name = f"{filename}#page{page_index + 1}"
+        try:
+            page_result = _extract_stock_sale_opstk_order_vision(
+                _render(page_index), page_name, ".png"
+            )
+        except Exception as exc:
+            logger.warning(
+                "Stock & Sale OpStk image-only page %s failed for %s: %s",
+                page_index + 1,
+                filename,
+                exc,
+            )
+            page_result = None
+        page_results.append(page_result)
+
+    pages_ok = 0
+    for page_result in page_results:
+        if not page_result or not page_result.get("line_items"):
+            continue
+        pages_ok += 1
+        for key in (
+            "stockist_name",
+            "stockist_address",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if page_result.get(key) and not merged.get(key):
+                merged[key] = page_result[key]
+        merged_items.extend(page_result.get("line_items") or [])
+        totals = page_result.get("totals") or {}
+        if totals.get("sales_value") is not None:
+            merged["totals"]["sales_value"] = totals.get("sales_value")
+        if totals.get("closing_value") is not None:
+            merged["totals"]["closing_value"] = totals.get("closing_value")
+        if totals.get("receipts_value") is not None:
+            merged["totals"]["receipts_value"] = totals.get("receipts_value")
+            merged["totals"]["extra"]["receipts_value"] = totals.get(
+                "receipts_value"
+            )
+
+    merged["line_items"] = _drop_trailing_statement_total_item(merged_items)
+    if len(merged.get("line_items") or []) < 5:
+        return None
+    merged["totals"]["extra"]["extraction_method"] = "stock_sale_opstk_order_vision"
+    merged["totals"]["extra"]["layout"] = "stock_sale_opstk_order"
+    merged["totals"]["extra"]["statement_count"] = 1
+    merged["totals"]["extra"]["image_only_stock_sale_opstk"] = True
+    merged["totals"]["extra"]["pages_parsed"] = pages_ok
+    merged["totals"]["extra"]["pages_total"] = page_count
+    return merged
 
 
 def _swil_receipt_pur_image_only_ok(result: Optional[Dict[str, Any]]) -> bool:
