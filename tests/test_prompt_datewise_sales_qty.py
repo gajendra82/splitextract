@@ -59,6 +59,30 @@ class TestPromptDatewiseSalesQty(unittest.TestCase):
         self.assertNotIn("sales_value", names)
         self.assertEqual(_prompt_datewise_bucket(418.1, buckets), "closing_value")
 
+    def test_free_column_gets_sales_scheme_bucket(self):
+        """Gayatri-style Datewise: Free between Sales Qty and Amount."""
+        words = [
+            (159.8, 108.9, 178.8, 118, "Pack"),
+            (205.0, 108.9, 230.0, 118, "OpStk"),
+            (245.6, 108.9, 260.1, 118, "Pur"),
+            (304.1, 108.9, 323.6, 118, "Sales"),
+            (396.9, 108.9, 418.9, 118, "ClStk"),
+            (215.5, 123.3, 230.0, 132, "Qty"),
+            (245.6, 123.3, 260.1, 132, "Qty"),
+            (275.5, 123.3, 290.0, 132, "Qty"),
+            (302.4, 123.3, 319.9, 132, "Free"),
+            (328.6, 122.7, 363.6, 132, "Amount"),
+            (386.0, 123.3, 400.5, 132, "Qty"),
+            (416.6, 123.3, 448.1, 132, "Amount"),
+        ]
+        buckets = _prompt_datewise_buckets_for_words(words)
+        names = [n for n, _lo, _hi in buckets]
+        self.assertIn("sales_scheme_qty", names)
+        self.assertEqual(_prompt_datewise_bucket(277.9, buckets), "sales_qty")
+        self.assertEqual(_prompt_datewise_bucket(316.1, buckets), "sales_scheme_qty")
+        self.assertEqual(_prompt_datewise_bucket(343.7, buckets), "sales_value")
+        self.assertEqual(_prompt_datewise_bucket(388.5, buckets), "closing_qty")
+
     def test_standard_wide_gap_keeps_sales_value(self):
         """Standard OpStk (left) keeps Sales Amount between Sales Qty and ClStk."""
         words = [
@@ -76,6 +100,7 @@ class TestPromptDatewiseSalesQty(unittest.TestCase):
         buckets = _prompt_datewise_buckets_for_words(words)
         names = [n for n, _lo, _hi in buckets]
         self.assertIn("sales_value", names)
+        self.assertNotIn("sales_scheme_qty", names)
         self.assertEqual(_prompt_datewise_bucket(338.1, buckets), "sales_value")
         self.assertEqual(_prompt_datewise_bucket(388.6, buckets), "closing_qty")
         self.assertEqual(_prompt_datewise_bucket(422.1, buckets), "closing_value")

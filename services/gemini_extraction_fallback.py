@@ -511,6 +511,43 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # Code/Item Opening/Purchase/Sales phone photo — keep dedicated Vision reader.
+    if str(extra.get("extraction_method") or "") in {
+        "code_item_stock_statement_photo",
+        "code_item_stock_statement",
+    } or str(extra.get("layout") or "") == "code_item_stock_statement":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=code_item_stock_statement",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
+    # Native MediVision Op/Purc/NM60D parser: keep printed Cl qty (do not Vision-replace).
+    if (
+        str(extra.get("extraction_method") or "") == "medivision_op_purc_nm60d"
+        or str(extra.get("layout") or "") == "medivision_op_purc_nm60d"
+    ):
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=medivision_op_purc_nm60d",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
+    # Product wise stock statement photo: Closing vs Liqudation days already fixed.
+    if (
+        str(extra.get("extraction_method") or "")
+        == "product_wise_stock_statement_image"
+        or str(extra.get("layout") or "") == "product_wise_stock_statement_photo"
+    ):
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=product_wise_stock_statement_image",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # TXT/HTML have no visual page — do not invent Vision input.
     if (ext or "").lower() in {".txt", ".htm", ".html"}:
         _stamp(result, quality, "unavailable_text_only")
