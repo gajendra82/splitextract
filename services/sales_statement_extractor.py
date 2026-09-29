@@ -3601,6 +3601,15 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_identity_formula"] = (
             "closing=opening+receipts-sales"
         )
+    # When Free / S S Qty is present, identity subtracts sales_scheme_qty.
+    if any(
+        isinstance(i, dict)
+        and float((i.get("extra") or {}).get("sales_scheme_qty") or 0) > 0
+        for i in items
+    ):
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+receipts-sales-sales_scheme"
+        )
 
     # Medica prints IN/OT between SALE VAL and STOCK. Closing is the STOCK
     # column. Opening+Receipts-Sales is 13 short of STOCK on this file and
@@ -4427,9 +4436,14 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     opening_sum = sum(_to_float(i.get("opening_qty")) for i in items if isinstance(i, dict))
     receipt_sum = sum(_to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict))
     sales_sum = sum(_to_float(i.get("sales_qty")) for i in items if isinstance(i, dict))
+    scheme_sum = sum(
+        _to_float((i.get("extra") or {}).get("sales_scheme_qty") or (i.get("extra") or {}).get("sales_scheme"))
+        for i in items
+        if isinstance(i, dict)
+    )
     closing_sum = sum(_to_float(i.get("closing_qty")) for i in items if isinstance(i, dict))
     expected_total = opening_sum + receipt_sum
-    calculated_closing = expected_total - sales_sum
+    calculated_closing = expected_total - sales_sum - scheme_sum
     totals["extra"]["stock_validation"] = {
         "opening_plus_purchase": expected_total,
         "expected_total": expected_total,
@@ -15785,7 +15799,12 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
             elif name == "sales_qty":
                 adjusted.append((name, split, sales_hi))
             elif name == "sales_value":
-                adjusted.append((name, sales_hi, hi))
+                if free_x is not None and sales_qty_x < free_x < hi:
+                    free_hi = min(hi, (free_x + (free_x + 20.0)) / 2.0 + 8.0)
+                    adjusted.append(("sales_scheme_qty", sales_hi, max(sales_hi + 8.0, free_x + 16.0)))
+                    adjusted.append((name, max(sales_hi + 8.0, free_x + 16.0), hi))
+                else:
+                    adjusted.append((name, sales_hi, hi))
             else:
                 adjusted.append((name, lo, hi))
         return tuple(adjusted)
@@ -15841,6 +15860,14 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
         ("receipts_qty", pur_x),
         ("sales_qty", sales_x),
     ]
+    # Printed Free sits between Sales Qty and Sales Amount — map to scheme qty.
+    if (
+        free_x is not None
+        and sales_x < free_x
+        and (sales_val_x is None or free_x < sales_val_x)
+        and free_x < close_x
+    ):
+        anchors.append(("sales_scheme_qty", free_x + 8.0))
     if sales_val_x is not None:
         anchors.append(("sales_value", sales_val_x))
     anchors.extend(
@@ -15877,6 +15904,13 @@ def _prompt_datewise_buckets_for_words(words: List) -> Tuple:
             and sales_x < free_x < sales_val_x
         ):
             hi = min(hi, free_x - 2.0)
+        if (
+            name == "sales_scheme_qty"
+            and sales_val_x is not None
+            and free_x is not None
+        ):
+            hi = min(hi, sales_val_x - 2.0)
+            lo = max(lo, free_x - 2.0)
         if hi <= lo:
             hi = lo + 8.0
         numeric.append((name, lo, hi))
@@ -15950,6 +15984,7 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
         words = sorted(words, key=lambda w: (round(w[1], 1), w[0]))
         buckets = _prompt_datewise_buckets_for_words(words)
         page_has_sales_value = any(name == "sales_value" for name, _lo, _hi in buckets)
+        page_has_free = any(name == "sales_scheme_qty" for name, _lo, _hi in buckets)
         if page_has_sales_value:
             saw_sales_value_col = True
         rows: List[Dict[str, Any]] = []
@@ -15964,11 +15999,11 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
                 row = {
                     "y": y0,
                     "tokens": [],
-                    "cells": {name: [] for name, _lo, _hi in _PROMPT_DATEWISE_BUCKETS},
+                    "cells": {name: [] for name, _lo, _hi in buckets},
                 }
                 rows.append(row)
             row["tokens"].append((x0, str(token)))
-            row["cells"][bucket].append(str(token))
+            row["cells"].setdefault(bucket, []).append(str(token))
 
         header_y = None
         for row in rows:
@@ -16003,27 +16038,44 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
             if header_y is not None and row["y"] <= header_y + 8:
                 continue
             cells = row["cells"]
-            sr_txt = "".join(cells["sr"]).strip()
-            name = _clean_name(" ".join(cells["name"]))
-            label = _clean_name(" ".join(cells["sr"] + cells["name"]))
-            if re.match(r"^Total\s*:?\s*$", label, re.I):
-                result["totals"]["sales_value"] = _prompt_cell_number(cells["sales_value"])
-                result["totals"]["closing_value"] = _prompt_cell_number(cells["closing_value"])
+            sr_txt = "".join(cells.get("sr") or []).strip()
+            name = _clean_name(" ".join(cells.get("name") or []))
+            label = _clean_name(
+                " ".join(
+                    (cells.get("sr") or [])
+                    + (cells.get("name") or [])
+                    + (cells.get("pack") or [])
+                )
+            )
+            if re.search(r"\bTotal\b", label, re.I) and not re.fullmatch(
+                r"\d{1,4}", sr_txt
+            ):
+                result["totals"]["sales_value"] = _prompt_cell_number(
+                    cells.get("sales_value") or []
+                )
+                result["totals"]["closing_value"] = _prompt_cell_number(
+                    cells.get("closing_value") or []
+                )
                 extra = result["totals"]["extra"]
-                extra["opening_qty"] = _prompt_cell_number(cells["opening_qty"])
-                extra["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"])
-                extra["sales_qty"] = _prompt_cell_number(cells["sales_qty"])
-                extra["closing_qty"] = _prompt_cell_number(cells["closing_qty"])
+                extra["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or [])
+                extra["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or [])
+                extra["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or [])
+                extra["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or [])
+                free_tot = _prompt_cell_number(cells.get("sales_scheme_qty") or [])
+                if free_tot is not None:
+                    extra["sales_scheme_qty"] = free_tot
                 extra["total_row_source"] = "prompt_datewise_footer"
                 continue
             if not re.fullmatch(r"\d{1,4}", sr_txt):
-                banner = _clean_name(" ".join(cells["sr"] + cells["name"]))
+                banner = _clean_name(
+                    " ".join((cells.get("sr") or []) + (cells.get("name") or []))
+                )
                 if (
                     company_name is None
                     and not items
                     and banner
                     and not re.match(r"^(Total|Bills|Product|Pack)\b", banner, re.I)
-                    and not _prompt_cell_number(cells["opening_qty"])
+                    and not _prompt_cell_number(cells.get("opening_qty") or [])
                 ):
                     company_name = banner
                 continue
@@ -16031,29 +16083,35 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
                 item = empty_line_item()
                 item["product_code"] = sr_txt
                 item["product_name"] = _prompt_datewise_clean_product_name(name)
-                pack = " ".join(cells["pack"]).strip()
+                pack = " ".join(cells.get("pack") or []).strip()
                 item["packing"] = pack or None
-                item["opening_qty"] = _prompt_cell_number(cells["opening_qty"]) or 0.0
-                item["receipts_qty"] = _prompt_cell_number(cells["receipts_qty"]) or 0.0
-                item["sales_qty"] = _prompt_cell_number(cells["sales_qty"]) or 0.0
-                sales_val = _prompt_cell_number(cells["sales_value"])
+                item["opening_qty"] = _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+                item["receipts_qty"] = (
+                    _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
+                )
+                item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
+                sales_val = _prompt_cell_number(cells.get("sales_value") or [])
                 if page_has_sales_value:
                     # Printed Sales Amount column (blank cell = 0).
                     item["sales_value"] = 0.0 if sales_val is None else sales_val
                 else:
                     # Compressed Datewise: no Sales Amount — keep null, not 0.
                     item["sales_value"] = None
-                close_qty = _prompt_cell_number(cells["closing_qty"])
+                close_qty = _prompt_cell_number(cells.get("closing_qty") or [])
                 item["closing_qty"] = 0.0 if close_qty is None else close_qty
-                close_val = _prompt_cell_number(cells["closing_value"])
+                close_val = _prompt_cell_number(cells.get("closing_value") or [])
                 item["closing_value"] = 0.0 if close_val is None else close_val
                 # This layout has no opening/receipt money columns.
                 item["opening_value"] = None
                 item["receipts_value"] = None
                 extra = item["extra"]
                 extra["layout"] = "prompt_datewise"
+                if page_has_free:
+                    free_qty = _prompt_cell_number(cells.get("sales_scheme_qty") or [])
+                    # Printed Free column (blank = 0). Identity: Cl = Op+Pur-Sale-Free.
+                    extra["sales_scheme_qty"] = 0.0 if free_qty is None else free_qty
                 for key in ("a3mn", "ee", "age", "exp"):
-                    val = " ".join(cells[key]).strip()
+                    val = " ".join(cells.get(key) or []).strip()
                     if val and val not in {"-", "—"}:
                         extra[key] = val
                 items.append(item)
@@ -16071,6 +16129,15 @@ def _parse_prompt_datewise_stock_statement(doc, filename: str) -> Optional[Dict[
     result["totals"]["extra"]["qty_only"] = False
     if not saw_sales_value_col:
         result["totals"]["extra"]["no_sales_value"] = True
+    # Prefer printed Total Amounts; otherwise sum line money when the Amount col exists.
+    if result["totals"].get("sales_value") in (None, ""):
+        line_sales = sum(float(i.get("sales_value") or 0) for i in items)
+        if saw_sales_value_col and line_sales > 0:
+            result["totals"]["sales_value"] = line_sales
+    if result["totals"].get("closing_value") in (None, ""):
+        line_close = sum(float(i.get("closing_value") or 0) for i in items)
+        if line_close > 0:
+            result["totals"]["closing_value"] = line_close
     return result
 
 
