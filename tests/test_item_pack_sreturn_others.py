@@ -49,6 +49,7 @@ class TestItemPackSreturnOthers(unittest.TestCase):
                     "SUB TOTAL", "SALE", "P.RETURN", "OTHERS", "CLOSING", "ITEMCODE",
                 ],
                 ["Division : 00"],
+                ["Company : HIMALAYA DRUG CO.(ZANDR)"],
                 ["ARJUNA TAB", "60TAB", 40, "-", "-", "-", 40, 10, "-", "-", 30, 12878],
                 ["BONNISAN DROPS", "30ML", "-", "-", "-", "-", "-", "-", "-", "-", "-", 12879],
                 ["LIV 52 DS TAB", "60 TAB", 2, 1046, "-", "-", 1048, 994, "-", 46, 8, 12786],
@@ -76,6 +77,10 @@ class TestItemPackSreturnOthers(unittest.TestCase):
             ],
         )
         self.assertNotIn("Total Value (00)", names)
+        self.assertTrue(
+            all(not str(name).lower().startswith("company :") for name in names)
+        )
+        self.assertEqual(result.get("company_name"), "HIMALYA")
         rows = _by_name_pack(result)
 
         arjuna = rows[("ARJUNA TAB", "60TAB")]

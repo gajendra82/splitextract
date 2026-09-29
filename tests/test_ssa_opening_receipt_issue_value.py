@@ -45,6 +45,52 @@ class TestSsaOriDetection(unittest.TestCase):
         self.assertFalse(_is_saleable_stock_report_text(HEADER))
         self.assertFalse(_is_order_form_stock_statement_text(HEADER))
 
+    def test_stockist_is_shop_name_not_phone_email_line(self):
+        from services.sales_statement_extractor import (
+            _parse_ssa_opening_receipt_issue_value,
+        )
+
+        text = (
+            "M\\s INDIAN DRUGS & SURGICALS\n"
+            "SARUPATHAR TOWN, PIN- 785601 DIST- GOLAGHAT (ASSAM)\n"
+            "Phone : 7002629113 E-Mail : dasmedical989@gmail.com\n"
+            "GSTIN : 18BADPD9210M1ZO\n"
+            "STOCK & SALES ANALYSIS  (HIMALAYA ZANDRA) 01-08-2026 - 03-09-2026\n"
+            "ITEM DESCRIPTION  OPENING  RECEIPT  ISSUE  CLOSING  DUMP\n"
+            "QTY. VALUE QTY. VALUE QTY. VALUE QTY. VALUE QTY.\n"
+            "BONNISAN 30ML DROP 30ML 34 1968.60 - 0.00 - 0.00 34 1968.60 34\n"
+            "BONNISON 100ML SYP 100ML 92 4991.56 112 6731.20 122 7666.77 82 4449.00 82\n"
+            "TOTAL 1319 166385.92 990 141336.34 1010 156029.52 1299 158923.33 0\n"
+        )
+        parsed = _parse_ssa_opening_receipt_issue_value(text, "das.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["stockist_name"], "M/S INDIAN DRUGS & SURGICALS")
+        self.assertNotIn("Phone", parsed["stockist_name"])
+        self.assertIn("SARUPATHAR", str(parsed.get("stockist_address") or ""))
+
+    def test_stockist_without_medical_pharma_keyword(self):
+        from services.sales_statement_extractor import (
+            _parse_ssa_opening_receipt_issue_value,
+        )
+
+        text = (
+            "R P AND SON'S.\n"
+            "KHIRIYA GHAT\n"
+            "BETTIAH\n"
+            "PIN CODE 845438\n"
+            "STOCK & SALES ANALYSIS  (HIMALAYA WELLNESS COMPANY (ZEAL)) "
+            "01-08-2026 - 31-08-2026\n"
+            "ITEM DESCRIPTION  OPENING  RECEIPT  ISSUE  CLOSING  DUMP\n"
+            "QTY. VALUE QTY. VALUE QTY. VALUE QTY. VALUE QTY.\n"
+            "AACTARIL SOAP 75 GM 75 GM 51 3743.69 0 0.00 20 1673.54 31 2275.57 31\n"
+            "TOTAL 100 1000.00 0 0.00 20 200.00 80 800.00 80\n"
+        )
+        parsed = _parse_ssa_opening_receipt_issue_value(text, "rp.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["stockist_name"], "R P AND SON'S.")
+        self.assertEqual(parsed["period_from"], "2026-08-01")
+        self.assertEqual(parsed["period_to"], "2026-08-31")
+
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Prakash SSA fixture")
 class TestSsaOriFixture(unittest.TestCase):
