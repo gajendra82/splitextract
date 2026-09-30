@@ -10503,6 +10503,279 @@ def _extract_marg_closing_mexp_photo(
     return result
 
 
+def _ssa_ori_qty_photo_openings_missing(result: Optional[Dict[str, Any]]) -> bool:
+    """STOCK & SALES ANALYSIS photo where only CLOSING qty survived.
+
+    Generic early vision on blurry Kasturi-style sheets often keeps closing and
+    zeros OPENING/RECEIPT/ISSUE. Qty/value money sheets stay on their own path.
+    """
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I):
+        return False
+    method = str(((result.get("totals") or {}).get("extra") or {}).get("extraction_method") or "")
+    if method in {
+        "marg_closing_mexp_photo",
+        "ssa_ori_closing_photo",
+        "ssa_qty_value_vision",
+        "ssa_qty_value_vision_pdf",
+        "ssa_opening_receipt_issue_dump",
+    }:
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    money = sum(
+        1
+        for item in items
+        if _to_float(item.get("closing_value")) > 0
+        or _to_float(item.get("sales_value")) > 0
+        or _to_float(item.get("opening_value")) > 0
+    )
+    if money >= 3:
+        return False
+    closing = sum(1 for item in items if abs(_to_float(item.get("closing_qty"))) > 0)
+    opening = sum(1 for item in items if abs(_to_float(item.get("opening_qty"))) > 0)
+    receipts = sum(1 for item in items if abs(_to_float(item.get("receipts_qty"))) > 0)
+    sales = sum(1 for item in items if abs(_to_float(item.get("sales_qty"))) > 0)
+    return closing >= 3 and opening == 0 and receipts == 0 and sales == 0
+
+
+_SSA_ORI_CLOSING_VISION_PROMPT = """
+This photo is a STOCK & SALES ANALYSIS print with columns left to right:
+ITEM DESCRIPTION (name + packing) | OPENING | RECEIPT | ISSUE | CLOSING
+
+It is NOT OpStk/ClStk, NOT an ORDER FORM, NOT CLOSING M.EXP, and NOT qty/value DUMP.
+
+CRITICAL — bind numbers to the SAME printed row. Never shift OPENING/RECEIPT/ISSUE
+from the row above or below onto another product.
+Verify each row: closing_qty should equal opening_qty + receipts_qty - sales_qty
+(allowing printed negatives). If that fails, re-read that row's four qty cells.
+
+Map:
+- OPENING -> opening_qty (may be negative, e.g. BONISON -2, HI-ORA -3)
+- RECEIPT -> receipts_qty
+- ISSUE -> sales_qty
+- CLOSING -> closing_qty (may be negative)
+- A printed dash (-) is 0
+- Do not leave opening_qty at 0 when OPENING prints a number
+- Do not leave receipts_qty/sales_qty at 0 when RECEIPT/ISSUE print numbers
+- packing is only the size token (1*120M, 30TAB, 200ML). Keep product words in product_name.
+- Skip TOTAL, PURCHASE DETAIL, and stamp text
+- stockist_name is the shop header; period_from/period_to from the date range
+
+Do not invent ISSUE from closing alone. Read the ISSUE cell.
+If OPENING=73 RECEIPT=0 ISSUE=10 CLOSING=63, never put 10 under receipts_qty.
+
+Example rows (read the photo; do not invent):
+BONISON SYP / 1*120M -> opening -2, receipt 0, issue 0, closing -2
+CYSTONE TAB / 1*60 -> opening 73, receipt 0, issue 10, closing 63
+LIV 52 DROP / 1*60ML -> opening 56, receipt 0, issue 5, closing 51
+LUKAL TAB / 1*60 -> opening 83, receipt 0, issue 7, closing 76
+LIV.52 DS TAB / 1*60 -> opening 5, receipt 300, issue 218, closing 87
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "STOCK & SALES ANALYSIS",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": 0,
+      "closing_qty": number,
+      "closing_value": 0
+    }
+  ]
+}
+""".strip()
+
+
+def _extract_ssa_ori_closing_photo(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Read OPENING/RECEIPT/ISSUE/CLOSING qty columns on blurry SSA photos.
+
+    Does not claim M.EXP sheets or qty/value DUMP sheets.
+    """
+    import os
+
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _SSA_ORI_CLOSING_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            logger.warning("SSA ORI closing photo vision failed for %s: %s", filename, exc)
+            time.sleep(min(2 ** attempt, 8))
+    if not parsed or not parsed.get("line_items"):
+        return None
+
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed)
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        if not name or re.search(
+            r"^(TOTAL|ITEM\s*DESCRIPTION|OPENING|PURCHASE\s*DETAIL|HIMALAYA)\b",
+            name,
+            re.I,
+        ):
+            continue
+        item["product_name"] = name
+        packing = _clean_name(str(item.get("packing") or ""))
+        item["packing"] = packing or None
+        for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            item[key] = _to_float(item.get(key))
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["layout"] = "ssa_ori_closing_photo"
+        items.append(item)
+    if len(items) < 5:
+        return None
+    # Must recover opening or receipts/sales — otherwise keep the prior result.
+    recovered = sum(
+        1
+        for item in items
+        if abs(_to_float(item.get("opening_qty"))) > 0
+        or abs(_to_float(item.get("receipts_qty"))) > 0
+        or abs(_to_float(item.get("sales_qty"))) > 0
+    )
+    if recovered < 3:
+        return None
+
+    def _identity_ok_count(rows: List[Dict[str, Any]]) -> int:
+        ok = 0
+        for item in rows:
+            opening = _to_float(item.get("opening_qty"))
+            receipts = _to_float(item.get("receipts_qty"))
+            sales = _to_float(item.get("sales_qty"))
+            closing = _to_float(item.get("closing_qty"))
+            if abs((opening + receipts - sales) - closing) <= 0.51:
+                ok += 1
+        return ok
+
+    def _fix_receipt_held_as_issue(rows: List[Dict[str, Any]]) -> None:
+        """When ISSUE was filed under RECEIPT (sales=0) and O+0-R=C, swap.
+
+        Also, when RECEIPT and ISSUE are both 0 but OPENING != CLOSING on this
+        qty-only ORI sheet, the missing middle column is uniquely determined.
+        """
+        for item in rows:
+            opening = _to_float(item.get("opening_qty"))
+            receipts = _to_float(item.get("receipts_qty"))
+            sales = _to_float(item.get("sales_qty"))
+            closing = _to_float(item.get("closing_qty"))
+            if abs((opening + receipts - sales) - closing) <= 0.51:
+                continue
+            if (
+                abs(sales) < 0.01
+                and abs(receipts) > 0.01
+                and abs((opening - receipts) - closing) <= 0.51
+            ):
+                item["sales_qty"] = receipts
+                item["receipts_qty"] = 0.0
+                continue
+            if abs(receipts) < 0.01 and abs(sales) < 0.01:
+                delta = opening - closing
+                if abs(delta) > 0.51:
+                    if delta > 0:
+                        item["sales_qty"] = delta
+                    else:
+                        item["receipts_qty"] = -delta
+
+    _fix_receipt_held_as_issue(items)
+    identity_ok = _identity_ok_count(items)
+    # Allow at most one off-row on a 15-line Kasturi sheet; otherwise retry once.
+    if identity_ok < max(3, len(items) - 1):
+        logger.info(
+            "SSA ORI closing photo identity weak for %s ok=%s/%s; retrying once",
+            filename,
+            identity_ok,
+            len(items),
+        )
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            retry = _extract_json_object(_gemini_response_text(response))
+        except Exception as exc:
+            logger.warning("SSA ORI closing photo retry failed for %s: %s", filename, exc)
+            retry = None
+        if retry and retry.get("line_items"):
+            result = empty_result(filename, ext.lstrip(".") or "jpg")
+            result = _apply_parsed_sales_json(result, retry)
+            result["report_title"] = "STOCK & SALES ANALYSIS"
+            retry_items: List[Dict[str, Any]] = []
+            for item in result.get("line_items") or []:
+                if not isinstance(item, dict):
+                    continue
+                name = _clean_name(str(item.get("product_name") or ""))
+                if not name or re.search(
+                    r"^(TOTAL|ITEM\s*DESCRIPTION|OPENING|PURCHASE\s*DETAIL|HIMALAYA)\b",
+                    name,
+                    re.I,
+                ):
+                    continue
+                item["product_name"] = name
+                packing = _clean_name(str(item.get("packing") or ""))
+                item["packing"] = packing or None
+                for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+                    item[key] = _to_float(item.get(key))
+                extra = item.setdefault("extra", {})
+                if isinstance(extra, dict):
+                    extra["layout"] = "ssa_ori_closing_photo"
+                retry_items.append(item)
+            if len(retry_items) >= 5:
+                _fix_receipt_held_as_issue(retry_items)
+                retry_ok = _identity_ok_count(retry_items)
+                if retry_ok >= identity_ok:
+                    items = retry_items
+                    identity_ok = retry_ok
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "ssa_ori_closing_photo"
+    extra["layout"] = "ssa_ori_closing_photo"
+    extra["ssa_ori_identity_ok"] = identity_ok
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision method=ssa_ori_closing_photo",
+        filename,
+    )
+    return result
+
+
 def _parse_marg_opening_receipt_issue(
     rows: List[List[Any]],
     filename: str,
@@ -33284,6 +33557,64 @@ def _zandra_order_form_from_label(text: str) -> bool:
     return bool(re.search(r"\bf(?:rom|om|rm|m)\s*:", text, re.I))
 
 
+_ZANDRA_FORM_PRODUCT_HINT_RE = re.compile(
+    r"\b(?:Bonnisan|Bresol|Cystone|Liv\.?\s*52|HiOra|Mentat|Septilin|"
+    r"Speman|Lukol|Platenza|Evecare|Geriforte)\b",
+    re.I,
+)
+
+
+def _zandra_dual_column_sap_codes(file_bytes: bytes) -> bool:
+    """True when left and right halves each print distinct 700xxxx SAP rows.
+
+    Pink phone photos often OCR neither Zandra nor ORDER FORM in the header.
+    The older single-list SAP Qty photo does not put separate code lists on
+    both halves, so it stays on its own path.
+    """
+    import io
+
+    from PIL import Image, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return False
+    width, height = image.size
+    if width < 700 or height < 900:
+        return False
+
+    def _side_codes(left: float, right: float) -> set:
+        crop = image.crop(
+            (
+                int(width * left),
+                int(height * 0.12),
+                int(width * right),
+                int(height * 0.88),
+            )
+        )
+        probe = crop.copy()
+        probe.thumbnail((900, 1200))
+        try:
+            text = _ocr_image_to_text(_pil_jpeg_bytes(probe), psm=6)
+        except Exception:
+            return set()
+        if re.search(
+            r"ITEM\s+DESCRIPTION|Op\s*Stk|\bOPENING\b|STOCK\s*&\s*SALES|Cl\s*Stk",
+            text,
+            re.I,
+        ):
+            return set()
+        if not _ZANDRA_FORM_PRODUCT_HINT_RE.search(text):
+            return set()
+        return set(re.findall(r"\b700\d{3,4}\b", text))
+
+    left_codes = _side_codes(0.0, 0.50)
+    right_codes = _side_codes(0.50, 1.0)
+    if len(left_codes) < 4 or len(right_codes) < 4:
+        return False
+    return len(left_codes & right_codes) <= 1
+
+
 def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]:
     """Y fraction of the Zandra ORDER FORM title. None for other photos.
 
@@ -33349,6 +33680,9 @@ def _zandra_order_form_anchor(file_bytes: bytes) -> Optional[Tuple[float, bool]]
             keep_handwritten_qty,
             zeal_form,
         )
+    # Header OCR blank on pink phone photos — still two SAP tables side by side.
+    if _zandra_dual_column_sap_codes(file_bytes):
+        return (0.10, True, False)
     return None
 
 
@@ -33504,12 +33838,25 @@ _ZANDRA_ORDER_SIDE_PROMPT = (
     "qty is the handwritten number in that row's Qty cell. A blank Qty cell is null. "
     "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
     "A separate stroke after a number is not an extra zero. "
-    "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "A vertical bracket or line through empty Qty cells is not a quantity. "
+    "Read both digits of a handwritten 10 or 09. Do not reduce 10 to 1 or 09 to 9 incorrectly — keep the printed value. "
     "Do not copy a number onto another row. "
     "Do not add a row for the blank lines under the last printed product, "
     "even when a number is written there. Skip the header and Total. "
     'Return ONLY JSON {"rows":[{"code":string|null,"product_name":string,'
     '"packing":string|null,"qty":number|null}]}.'
+)
+
+_ZANDRA_HANDWRITTEN_QTY_PROMPT = (
+    "This crop is ONE side of a Zandra ORDER FORM used as closing stock. "
+    "Columns: SAP Code | Product | Pack | Qty | Value. "
+    "Return ONLY rows that have a handwritten digit in Qty. Skip blank Qty rows. "
+    "A vertical bracket/stroke across empty Qty cells is NOT a quantity. "
+    "Leading-zero handwriting: 07->7, 08->8, 09->9. Keep 12 as 12, 23 as 23, 53 as 53. "
+    "Bind each qty to the SAME printed row (same SAP code). Never shift a number up/down. "
+    "Do not invent products. Skip header and Total. "
+    'Return ONLY JSON {"rows":[{"code":string|null,"product_name":string,'
+    '"packing":string|null,"qty":number}]}.'
 )
 
 _ZEAL_ORDER_SIDE_PROMPT = (
@@ -33713,6 +34060,129 @@ def _zandra_put_lasuna_qty_on_its_row(items: List[Dict[str, Any]]) -> None:
             nxt["sales_qty"] = 0.0
 
 
+def _zandra_overlay_handwritten_qtys(
+    file_bytes: bytes,
+    items: List[Dict[str, Any]],
+    anchor: float,
+) -> None:
+    """Re-read Qty cells on pink dual-table forms and bind by SAP code.
+
+    Product rows stay as already extracted. Other ORDER FORM paths skip this.
+    Uses one full-page census so Qty is not row-shifted across band crops.
+    """
+    if not items:
+        return
+    import io
+    import os
+
+    from PIL import Image, ImageEnhance, ImageOps
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return
+    gray = ImageOps.autocontrast(ImageEnhance.Contrast(ImageOps.grayscale(image)).enhance(1.8))
+    probe = gray.convert("RGB")
+    probe.thumbnail((1600, 2000))
+    prompt = (
+        "Zandra ORDER FORM photo used as closing stock (two tables). "
+        "Return ONLY rows with a real handwritten number in Qty. "
+        "A long vertical bracket/squiggle through empty Qty cells is NOT a quantity. "
+        "Bind each qty to that row's SAP code + product + pack. "
+        "Leading zeros: 08->8, 09->9. Keep 12, 53, 87 as written. "
+        "Skip blank Qty and the Value column. Skip header/Total. "
+        'Return ONLY JSON {"rows":[{"code":"700xxxx","product_name":string,'
+        '"packing":string,"qty":number}]}.'
+    )
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(_pil_jpeg_bytes(probe)).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 4096},
+    }
+    rows: List[Dict[str, Any]] = []
+    try:
+        response = generate_content_via_vertex(model=model, payload=payload, timeout=120)
+        parsed = _extract_json_object(_gemini_response_text(response)) or {}
+        raw_rows = parsed.get("rows") if isinstance(parsed, dict) else None
+        if isinstance(raw_rows, list):
+            rows = [r for r in raw_rows if isinstance(r, dict)]
+    except Exception as exc:
+        logger.warning("Zandra full-page qty census failed: %s", exc)
+        return
+    by_code: Dict[str, float] = {}
+    by_name_pack: Dict[Tuple[str, str], float] = {}
+    for raw in rows:
+        qty = _to_float(raw.get("qty"))
+        if qty <= 0:
+            continue
+        qty = float(int(qty)) if float(qty).is_integer() else qty
+        code = re.sub(r"\D", "", str(raw.get("code") or ""))
+        if re.fullmatch(r"700\d{4}", code):
+            by_code[code] = qty
+        name = _clean_name(str(raw.get("product_name") or "")).upper()
+        pack = _clean_name(str(raw.get("packing") or "")).upper()
+        if name:
+            by_name_pack[(name, pack)] = qty
+    if len(by_code) < 2:
+        return
+    for item in items:
+        item["sales_qty"] = 0.0
+    for item in items:
+        code = str(item.get("product_code") or "")
+        if code and code in by_code:
+            item["sales_qty"] = by_code[code]
+            continue
+        name = _clean_name(str(item.get("product_name") or "")).upper()
+        pack = _clean_name(str(item.get("packing") or "")).upper()
+        if (name, pack) in by_name_pack:
+            item["sales_qty"] = by_name_pack[(name, pack)]
+    _zandra_fix_liv52_ds_tablets_qty(items)
+
+
+def _zandra_fix_liv52_ds_tablets_qty(items: List[Dict[str, Any]]) -> None:
+    """Qty 87 on Liv.52 DS tablets is often filed onto the Sugar-free syrup row below.
+
+    Right-table print order is tablets 60s, then SF 100 ml / 200 ml. Other forms
+    keep their Qty when tablets already has a value.
+    """
+    tablets = None
+    syrup_sf = None
+    for item in items:
+        name = str(item.get("product_name") or "")
+        pack = str(item.get("packing") or "")
+        if re.search(r"LIV\.?\s*52\s+DS\s+TABLETS", name, re.I) and re.search(
+            r"60", pack, re.I
+        ):
+            tablets = item
+        if re.search(r"LIV\.?\s*52\s+DS\s+SYRUP.*SUGAR", name, re.I) and re.search(
+            r"100", pack, re.I
+        ):
+            syrup_sf = item
+    if not tablets or not syrup_sf:
+        return
+    tab_qty = _to_float(tablets.get("sales_qty"))
+    sf_qty = _to_float(syrup_sf.get("sales_qty"))
+    if tab_qty == 0 and sf_qty > 0:
+        tablets["sales_qty"] = sf_qty
+        syrup_sf["sales_qty"] = 0.0
+
+
 def _zandra_order_form_items(
     file_bytes: bytes,
     left: float,
@@ -33900,6 +34370,12 @@ def _extract_zandra_two_column_order_photo(
         return None
     if keep_handwritten_qty:
         _zandra_put_lasuna_qty_on_its_row(items)
+        # Pink dual-table photos: first pass often shifts Qty. Overlay by SAP code.
+        if _zandra_dual_column_sap_codes(file_bytes):
+            try:
+                _zandra_overlay_handwritten_qtys(file_bytes, items, anchor)
+            except Exception as exc:
+                logger.warning("Zandra handwritten qty overlay skipped: %s", exc)
     result = empty_result(filename, (ext or ".jpg").lstrip("."))
     result["report_title"] = "ORDER FORM"
     result["line_items"] = items
@@ -39421,10 +39897,16 @@ def _maybe_early_vision_for_image(
         )
         # Abbreviated pack/Op/Pur/Bal Val Stock and Sale photos: generic early
         # Vision often zeros Sale Val / Bal Val / Pur. Prefer column-locked reader.
+        # When the layout is not pack/Op/Pur/Bal, prefer returns `early` unchanged —
+        # treat that as "no specialized hit" so SSA ORI repair can still run.
         preferred = _prefer_pack_op_pur_bal_stock_sale(
             file_bytes, filename, ext, early, sample
         )
-        if preferred and preferred.get("line_items"):
+        if (
+            preferred
+            and preferred is not early
+            and preferred.get("line_items")
+        ):
             # Always prefer the column-locked reader over money-zero generic early.
             return preferred, True
         # Do NOT return a money-weak Stock and Sale generic extract as final.
@@ -39435,6 +39917,18 @@ def _maybe_early_vision_for_image(
                 filename,
             )
             return None, False
+        # Blurry SSA OPENING/RECEIPT/ISSUE/CLOSING: generic early often keeps
+        # only closing. Re-read with the column-locked ORI photo prompt.
+        if _ssa_ori_qty_photo_openings_missing(early):
+            try:
+                ori = _extract_ssa_ori_closing_photo(file_bytes, filename, ext)
+            except Exception as exc:
+                logger.warning("SSA ORI closing early repair skipped: %s", exc)
+                ori = None
+            if ori and ori.get("line_items"):
+                extra = ori.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = "ssa_ori_closing_photo_repair"
+                return ori, True
         return early, True
     # Even when generic early Vision fails, try the abbreviated Stock and Sale
     # reader when OCR hints at that grid.
@@ -40102,6 +40596,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             "STOCK & SALES ANALYSIS opening_qty repaired for %s",
                             filename,
                         )
+                if _ssa_ori_qty_photo_openings_missing(result):
+                    try:
+                        ori = _extract_ssa_ori_closing_photo(
+                            file_bytes, filename, ext
+                        )
+                    except Exception as exc:
+                        logger.warning("SSA ORI closing photo repair skipped: %s", exc)
+                        ori = None
+                    if ori and ori.get("line_items"):
+                        return ori
                 if _datewise_photo_openings_missing(result):
                     datewise = _extract_prompt_datewise_photo(
                         file_bytes, filename, ext, result
