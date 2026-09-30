@@ -523,6 +523,23 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # J R SHAH Op/Pur/Pur Val/Sale Val/Bal Val photo — keep dedicated Vision reader.
+    if str(extra.get("extraction_method") or "") in {
+        "op_pur_sp_sale_bal_val_photo",
+        "op_pur_sp_sale_bal_val",
+        "pack_op_pur_bal_stock_sale_vision",
+        "pack_op_pur_bal_stock_sale",
+    } or str(extra.get("layout") or "") in {
+        "op_pur_sp_sale_bal_val",
+        "pack_op_pur_bal_stock_sale",
+    }:
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=op_pur_sp_sale_bal_val",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # Native MediVision Op/Purc/NM60D parser: keep printed Cl qty (do not Vision-replace).
     if (
         str(extra.get("extraction_method") or "") == "medivision_op_purc_nm60d"

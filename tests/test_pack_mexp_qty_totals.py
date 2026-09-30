@@ -171,6 +171,28 @@ class TestTentexColumnPosition(unittest.TestCase):
         self.assertEqual(item.get("closing_qty"), 5)
 
 
+class TestPackMexpDrugHouseStockist(unittest.TestCase):
+    def test_rudrapur_drug_house_stockist_from_text(self):
+        from services.sales_statement_extractor import _parse_pack_mexp_qty_statement
+
+        text = """
+RUDRAPUR DRUG HOUSE
+ADARSH COLONY,OPP.GURUNANAK JUNIOR SCHOOL RUDRAPUR
+Phone : 8077698660
+GSTIN : 05ABHFR6469A1Z7
+STOCK & SALES ANALYSIS (HIMALAYA) 01/08/2026 - 29/08/2026
+ITEM DESCRIPTION OPENING RECEIPT ISSUE CLOSING M.EXP
+ABANA TAB 60's 3 100 3 100 8/27
+"""
+        result = _parse_pack_mexp_qty_statement(text, "rudrapur.jpg", "jpg")
+        self.assertIsNotNone(result)
+        self.assertEqual(result.get("stockist_name"), "RUDRAPUR DRUG HOUSE")
+        self.assertEqual(result.get("company_name"), "HIMALAYA")
+        self.assertEqual(result.get("period_from"), "2026-08-01")
+        self.assertEqual(result.get("period_to"), "2026-08-29")
+        self.assertEqual(result["line_items"][0]["product_name"], "ABANA TAB")
+
+
 class TestA2zPharmaZandiraTentex(unittest.TestCase):
     """A2Z PHARMA / ZANDIRA grid. Pack is the first number. M.EXP stays expiry."""
 
