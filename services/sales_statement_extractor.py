@@ -31250,6 +31250,8 @@ Rules:
 - Example: LIV 52 DS TAB may have negative OPENING QTY (e.g. -66) and large RECEIPT.
 - ISSUE QTY is sales_qty. ISSUE VALUE is sales_value.
 - DUMP QTY is extra.dump_qty, not closing_qty.
+- M.EXP / expiry dates (e.g. 9/28) are NOT quantities. Never put them in product_name.
+- Skip PURCHASE DETAIL invoice rows and phone status-bar text.
 - Skip HIMALAYA section banners and TOTAL / GRAND TOTAL rows as products.
 - Read EVERY product across both sections/pages when the photo shows two pages.
 - Preserve printed totals sales_value / closing_value from the final TOTAL row.
@@ -38444,8 +38446,8 @@ def _main_stock_ocr_result_usable(result: Optional[Dict[str, Any]]) -> bool:
         or abs(_to_float(i.get("sales_value"))) > 0
         or abs(_to_float((i.get("extra") or {}).get("opening_value"))) > 0
     )
-    # Generic early Vision zeros opening+sales and parks neighbor numbers in closing.
-    if open_pos < 3 or close_pos < 3:
+    # Reject forced OCR that only kept names / phone chrome (all ISSUE blank).
+    if sales_pos < 3 or open_pos < 3 or close_pos < 3:
         return False
     if sales_pos >= 3 and value_pos >= 3:
         return True
@@ -38459,6 +38461,23 @@ def _main_stock_ocr_result_usable(result: Optional[Dict[str, Any]]) -> bool:
         except (TypeError, ValueError):
             fail = 0
     return sales_pos >= 5 and fail <= max(3, len(items) // 8)
+
+
+def _sample_suggests_phone_ssa_analysis(text: str) -> bool:
+    """Phone PDF viewer / SSA ANALYSIS chrome — not Marg PRODUCT DESCRIPTION."""
+    if not (text or "").strip():
+        return False
+    if re.search(
+        r"PDF\s*Toolkit|Watermark|Compress|Share\s+Save|^\s*\d{1,2}:\d{2}\b",
+        text,
+        re.I | re.M,
+    ):
+        return True
+    if re.search(r"PURCHASE\s*DETAIL|ITEM\s*DESC|\bDUMP\b|\bM\.?\s*EXP\b", text, re.I):
+        return True
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return True
+    return False
 
 
 def _extract_opening_receive_issue_closing_photo(
@@ -38482,17 +38501,11 @@ def _extract_opening_receive_issue_closing_photo(
         except Exception as exc:
             logger.warning("Opening/receive/issue forced OCR skipped: %s", exc)
             return None
+        # Require real OPENING/ISSUE/CLOSING qty mapping — never accept name-only
+        # zero grids (phone SSA ANALYSIS misrouted here).
         if ocr_result and _main_stock_ocr_result_usable(ocr_result):
             logger.info(
                 "Opening/receive/issue forced OCR usable for %s items=%s",
-                filename,
-                len(ocr_result.get("line_items") or []),
-            )
-            return ocr_result
-        if ocr_result and len(ocr_result.get("line_items") or []) >= 20:
-            # Prefer dense OCR over empty/shifted early Vision even if a few rows fail.
-            logger.info(
-                "Opening/receive/issue forced OCR dense for %s items=%s",
                 filename,
                 len(ocr_result.get("line_items") or []),
             )
@@ -42664,6 +42677,24 @@ def _maybe_early_vision_for_image(
     if not quality.get("should_fallback"):
         return None, False
 
+    # Phone PDF / SSA ANALYSIS screenshots: OCR is often unreadable but Vision
+    # qty+value works. Do NOT force Marg OPENING/RECEIVE OCR (zeros all qtys).
+    if _sample_suggests_phone_ssa_analysis(sample or ""):
+        try:
+            ssa = _extract_ssa_qty_value_vision(file_bytes, filename, ext)
+        except Exception as exc:
+            logger.warning("Phone SSA ANALYSIS qty/value prefer skipped: %s", exc)
+            ssa = None
+        if ssa and ssa.get("line_items") and _ssa_qty_value_result_usable(ssa):
+            extra = ssa.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "phone_ssa_analysis_qty_value_prefer"
+            logger.info(
+                "[SalesStatement] file=%s decision=PHONE_SSA_QTY_VALUE items=%s",
+                filename,
+                len(ssa.get("line_items") or []),
+            )
+            return ssa, True
+
     # Photographed Marg OPENING/RECEIVE/ISSUE sheets often OCR as garbage on the
     # full page (detector miss) while band OCR still reads columns correctly.
     # Only try when the gray column-header strip pattern is present.
@@ -42679,7 +42710,7 @@ def _maybe_early_vision_for_image(
         except Exception as exc:
             logger.warning("Opening/receive/issue forced early prefer skipped: %s", exc)
             main_stock = None
-        if main_stock and main_stock.get("line_items"):
+        if main_stock and _main_stock_ocr_result_usable(main_stock):
             extra = main_stock.setdefault("totals", {}).setdefault("extra", {})
             extra["early_vision_reason"] = "opening_receive_issue_closing_force"
             logger.info(
@@ -45044,8 +45075,15 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
         except Exception:
             main_stock = None
-        if main_stock and main_stock.get("line_items"):
+        if main_stock and _main_stock_ocr_result_usable(main_stock):
             return main_stock
+        # Phone SSA ANALYSIS misread as Marg — try qty/value Vision.
+        try:
+            ssa = _extract_ssa_qty_value_vision(file_bytes, filename, ext)
+        except Exception:
+            ssa = None
+        if ssa and ssa.get("line_items") and _ssa_qty_value_result_usable(ssa):
+            return ssa
     try:
         phone_rate = _extract_phone_rate_ssa_screenshot(file_bytes, filename, ext)
     except Exception as exc:
