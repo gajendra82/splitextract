@@ -511,6 +511,25 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # Header-driven photo read. A later generic pass would shift the columns again.
+    if str(extra.get("extraction_method") or "") == "header_driven_stock_photo":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=header_driven_stock_photo",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
+    # Excel mobile Opening / Receipt Qty / Total / Sale screenshot.
+    # Generic Vision copies Total into closing and drops the Sale column.
+    if str(extra.get("extraction_method") or "") == "excel_mobile_receipt_sale_screenshot":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=excel_mobile_receipt_sale",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # Code/Item Opening/Purchase/Sales phone photo — keep dedicated Vision reader.
     if str(extra.get("extraction_method") or "") in {
         "code_item_stock_statement_photo",
