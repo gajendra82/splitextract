@@ -12,6 +12,7 @@ from services.sales_statement_extractor import (
     _is_opening_receive_issue_closing_stock_text,
     _main_stock_parse_ocr_line,
     _main_stock_product_key,
+    _main_stock_receive_value_missing,
     _main_stock_sales_strips,
     _apply_stock_identity_validation,
     extract_sales_statement,
@@ -201,6 +202,81 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
         )
         self.assertFalse(_is_opening_receive_issue_closing_stock_text(ssa))
 
+    def test_early_gemini_misread_triggers_main_stock_reread(self):
+        """Generic early Vision zeros ISSUE qty / shifts rows on this layout."""
+        bad = {
+            "report_title": "STOCK & SALES STATEMENT",
+            "line_items": [
+                {
+                    "product_name": "BONNISAN DROP 30ML",
+                    "opening_qty": 155.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 155.0,
+                },
+                {
+                    "product_name": "BONNISAN LIQ 200ML",
+                    "opening_qty": 77.0,
+                    "receipts_qty": 32.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 45.0,
+                },
+                {
+                    "product_name": "BONNISPAZ DROP 15ML",
+                    "opening_qty": 65.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 59.0,
+                },
+                {
+                    "product_name": "BRESOL NS",
+                    "opening_qty": 40.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 72.0,
+                },
+                {
+                    "product_name": "CYSTONE FORTE",
+                    "opening_qty": 130.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 123.0,
+                },
+                {
+                    "product_name": "EVECARE CAP",
+                    "opening_qty": 35.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 51.0,
+                },
+                {
+                    "product_name": "HIORA DIABETICS",
+                    "opening_qty": 0.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": 68.0,
+                },
+            ],
+            "totals": {
+                "extra": {
+                    "extraction_method": "gemini_extraction_fallback",
+                    "stock_identity_fail_count": 21,
+                }
+            },
+        }
+        self.assertTrue(_main_stock_receive_value_missing(bad))
+        good = {
+            "report_title": "STOCK & SALES STATEMENT",
+            "line_items": bad["line_items"],
+            "totals": {
+                "extra": {
+                    "extraction_method": "main_stock_sales_statement",
+                    "layout": "opening_receive_issue_closing",
+                }
+            },
+        }
+        self.assertFalse(_main_stock_receive_value_missing(good))
+
     @unittest.skipUnless(FIXTURE.exists(), "fixture image missing")
     def test_strips_cover_full_page(self):
         strips = _main_stock_sales_strips(FIXTURE.read_bytes())
@@ -299,7 +375,7 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
     def test_extract_routes_to_main_stock_parser(self):
         data = FIXTURE.read_bytes()
 
-        def _fake_photo(file_bytes, filename, ext):
+        def _fake_photo(file_bytes, filename, ext, force=False):
             return _extract_opening_receive_issue_closing_ocr(
                 file_bytes, filename, ext
             )
@@ -308,12 +384,16 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
             "services.sales_statement_extractor._extract_opening_receive_issue_closing_photo",
             side_effect=_fake_photo,
         ):
-            # Avoid Gemini fallback overwriting a good OCR extract in CI.
             with mock.patch(
-                "services.gemini_extraction_fallback.maybe_apply_gemini_fallback",
-                side_effect=lambda result, *args, **kwargs: result,
+                "services.sales_statement_extractor._maybe_early_vision_for_image",
+                return_value=(None, False),
             ):
-                result = extract_sales_statement(data, FIXTURE.name)
+                # Avoid Gemini fallback overwriting a good OCR extract in CI.
+                with mock.patch(
+                    "services.gemini_extraction_fallback.maybe_apply_gemini_fallback",
+                    side_effect=lambda result, *args, **kwargs: result,
+                ):
+                    result = extract_sales_statement(data, FIXTURE.name)
         extra = (result.get("totals") or {}).get("extra") or {}
         self.assertEqual(extra.get("extraction_method"), "main_stock_sales_statement")
         items = result.get("line_items") or []
