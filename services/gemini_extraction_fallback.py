@@ -511,6 +511,18 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # DUMP + M.EXP photo already copied OPENING/RECEIPT/ISSUE/CLOSING values.
+    # A later generic pass drops opening_value and receipts_value.
+    if str(extra.get("extraction_method") or "") == "ssa_mexp_photo" or str(
+        extra.get("layout") or ""
+    ) == "ssa_opening_receipt_issue_value_mexp":
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=ssa_mexp_photo",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # Header-driven photo read. A later generic pass would shift the columns again.
     if str(extra.get("extraction_method") or "") == "header_driven_stock_photo":
         logger.info(

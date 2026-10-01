@@ -21251,6 +21251,16 @@ Return ONLY valid JSON:
 """.strip()
 
 
+def _jpeg_is_portrait(file_bytes: bytes) -> bool:
+    try:
+        from PIL import Image
+
+        image = Image.open(io.BytesIO(file_bytes))
+        return image.height >= image.width
+    except Exception:
+        return False
+
+
 def _jpeg_needs_quarter_turn(file_bytes: bytes) -> bool:
     """True when the JPEG pixels are stored sideways of the printed page."""
     try:
@@ -38112,6 +38122,7 @@ Columns LEFT TO RIGHT. A dash or blank cell is 0. Do not move an OPENING number 
 Return ONLY valid JSON:
 {
   "stockist_name": string|null,
+  "stockist_address": string|null,
   "company_name": string|null,
   "period_from": null,
   "period_to": null,
@@ -38136,7 +38147,9 @@ Return ONLY valid JSON:
 Rules:
 - The stockist is the party printed above the title, such as M PHARMA. It is not a product.
 - company_name is the manufacturer only when that name is printed. Do not invent Himalaya.
+- stockist_address is the address printed under the party name. Copy it only when it is printed.
 - period_from and period_to stay null. M.EXP dates are expiry, not the statement period.
+- OPENING VALUE, RECEIPT VALUE (sometimes headed STOCK VALUE), ISSUE VALUE, and CLOSING VALUE are four separate money columns. Copy each printed number. Do not leave a value blank when that column shows a number, and do not put an M.EXP date into a value.
 - Skip TOTAL, Continued, Page No, and column headers.
 - Copy printed numbers. Do not calculate closing from opening and issue.
 - The band may start or end in the middle of the table. Read every full product row you can see.
@@ -38148,9 +38161,19 @@ def _ssa_mexp_photo_upright(file_bytes: bytes):
     from PIL import Image
 
     image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-    if image.width <= image.height:
-        return None
     pytesseract = _a2z_tesseract()
+    if image.width <= image.height:
+        # Phone photo already upright. Only the DUMP + M.EXP sheet continues.
+        width, height = image.size
+        crop = image.crop((0, 0, width, int(height * 0.28)))
+        crop.thumbnail((1600, 1600))
+        try:
+            preview = pytesseract.image_to_string(crop, config="--psm 6") or ""
+        except Exception:
+            return None
+        if _ssa_mexp_photo_header(preview):
+            return image
+        return None
     for angle in (270, 90):
         turned = image.rotate(angle, expand=True)
         width, height = turned.size
@@ -38314,17 +38337,98 @@ def _ssa_mexp_photo_read_band(
     return None
 
 
+def _ssa_mexp_values_dropped(result: Optional[Dict[str, Any]]) -> bool:
+    """Generic STOCK & SALES read kept qty but left opening and receipt money empty."""
+    if not isinstance(result, dict):
+        return False
+    if not re.search(r"STOCK\s*(?:&|AND)\s*SALES", str(result.get("report_title") or ""), re.I):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    missing_money = 0
+    dump_rows = 0
+    valued = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if (
+            item.get("opening_value") in (None, "")
+            and item.get("receipts_value") in (None, "")
+            and extra.get("opening_value") in (None, "")
+            and extra.get("receipts_value") in (None, "")
+        ):
+            missing_money += 1
+        if extra.get("dump_m_exp") not in (None, "") or extra.get("m_exp") not in (None, ""):
+            dump_rows += 1
+        if _to_float(item.get("sales_value")) or _to_float(item.get("closing_value")):
+            valued += 1
+    return (
+        missing_money >= max(5, int(len(items) * 0.6))
+        and dump_rows >= 3
+        and valued >= 5
+    )
+
+
+def _ssa_mexp_finish_values(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep printed opening and receipt money, and total from the product rows."""
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        for key in ("opening_value", "receipts_value"):
+            if item.get(key) not in (None, "") or row_extra.get(key) in (None, ""):
+                continue
+            item[key] = _to_float(row_extra.get(key))
+    sales_value_sum = round(
+        sum(
+            _to_float(item.get("sales_value"))
+            for item in result.get("line_items") or []
+            if isinstance(item, dict)
+        ),
+        2,
+    )
+    closing_value_sum = round(
+        sum(
+            _to_float(item.get("closing_value"))
+            for item in result.get("line_items") or []
+            if isinstance(item, dict)
+        ),
+        2,
+    )
+    result["totals"]["sales_value"] = sales_value_sum or None
+    result["totals"]["closing_value"] = closing_value_sum or None
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "ssa_mexp_photo"
+    extra_t["layout"] = "ssa_opening_receipt_issue_value_mexp"
+    extra_t["total_row_source"] = "product_row_sum"
+    return result
+
+
 def _extract_ssa_mexp_photo(
-    file_bytes: bytes, filename: str, ext: str
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    force_upright: bool = False,
+    keep_period: Optional[Tuple[Optional[str], Optional[str]]] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Read a sideways STOCK & SALES ANALYSIS photo with DUMP and M.EXP.
+    """Read a STOCK & SALES ANALYSIS photo with DUMP and M.EXP.
 
     Other images return None. The sheet is sliced so one vision response is
-    not cut off mid-JSON.
+    not cut off mid-JSON. force_upright is only for a portrait photo whose
+    generic read already dropped the value columns.
     """
     import os
 
+    from PIL import Image
+
     upright = _ssa_mexp_photo_upright(file_bytes)
+    if upright is None and force_upright:
+        # Header OCR missed this phone photo. The generic read already showed
+        # the page is readable as stored, so do not rotate it again.
+        try:
+            upright = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+        except Exception:
+            upright = None
     if upright is None:
         return None
     bands = _ssa_mexp_photo_bands(upright)
@@ -38339,6 +38443,7 @@ def _extract_ssa_mexp_photo(
     raw_items: List[Dict[str, Any]] = []
     stockist = _ssa_mexp_photo_stockist(upright)
     company = None
+    address = None
     for band in bands:
         parsed = _ssa_mexp_photo_read_band(band, filename, model)
         if not parsed:
@@ -38347,6 +38452,10 @@ def _extract_ssa_mexp_photo(
             candidate = _clean_name(str(parsed.get("stockist_name") or ""))
             if candidate and not re.search(r"HIMALAYA|STOCK\s*&", candidate, re.I):
                 stockist = candidate
+        if not address:
+            candidate = _clean_name(str(parsed.get("stockist_address") or ""))
+            if candidate and not re.search(r"STOCK\s*&|ITEM\s*DESCRIPTION", candidate, re.I):
+                address = candidate
         if not company:
             candidate = _clean_name(str(parsed.get("company_name") or ""))
             if candidate and not re.search(r"\bPHARMA\b", candidate, re.I):
@@ -38387,6 +38496,7 @@ def _extract_ssa_mexp_photo(
         result,
         {
             "stockist_name": stockist,
+            "stockist_address": address,
             "company_name": company,
             "report_title": "STOCK & SALES ANALYSIS",
             "line_items": unique,
@@ -38394,10 +38504,17 @@ def _extract_ssa_mexp_photo(
     )
     result["period_from"] = None
     result["period_to"] = None
-    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
-    extra_t["extraction_method"] = "ssa_mexp_photo"
-    extra_t["layout"] = "ssa_opening_receipt_issue_value_mexp"
-    return result
+    if keep_period:
+        kept_from, kept_to = keep_period
+        if (
+            isinstance(kept_from, str)
+            and isinstance(kept_to, str)
+            and re.match(r"^\d{4}-\d{2}-\d{2}$", kept_from)
+            and re.match(r"^\d{4}-\d{2}-\d{2}$", kept_to)
+        ):
+            result["period_from"] = kept_from
+            result["period_to"] = kept_to
+    return _ssa_mexp_finish_values(result)
 
 
 def _particular_packing_stock_report_text(text: str) -> bool:
@@ -42505,6 +42622,15 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         if zeal_order and zeal_order.get("line_items"):
             return zeal_order
 
+    if _jpeg_is_portrait(file_bytes):
+        try:
+            mexp_photo = _extract_ssa_mexp_photo(file_bytes, filename, ext)
+        except Exception as exc:
+            logger.warning("SSA M.EXP photo skipped: %s", exc)
+            mexp_photo = None
+        if mexp_photo and mexp_photo.get("line_items"):
+            return mexp_photo
+
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext
     )
@@ -42562,6 +42688,23 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             return qty_ssa
     if early_method == "excel_mobile_receipt_sale_screenshot":
         return early_vision
+    if _ssa_mexp_values_dropped(early_vision):
+        try:
+            mexp_photo = _extract_ssa_mexp_photo(
+                file_bytes,
+                filename,
+                ext,
+                force_upright=True,
+                keep_period=(
+                    (early_vision or {}).get("period_from"),
+                    (early_vision or {}).get("period_to"),
+                ),
+            )
+        except Exception as exc:
+            logger.warning("SSA M.EXP photo skipped: %s", exc)
+            mexp_photo = None
+        if mexp_photo and mexp_photo.get("line_items"):
+            return mexp_photo
     early_is_generic = early_method in {
         "",
         "gemini_vision",
@@ -42741,8 +42884,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if rtl and rtl.get("line_items"):
                 return rtl
 
-        if not skip_ocr_probes:
-            try:
+    if not skip_ocr_probes:
+        try:
                 # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos first —
                 # later probes OCR the same page repeatedly and Gemini shifts rows.
                 opening_receive = _probe_or_none(
@@ -42843,10 +42986,10 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 if valuation and valuation.get("line_items"):
                     return valuation
-            except (SalesExtractionDeadlineExceeded, SalesOcrBudgetExceeded) as exc:
-                logger.warning(
-                    "Image OCR probe cascade stopped for %s: %s", filename, exc
-                )
+        except (SalesExtractionDeadlineExceeded, SalesOcrBudgetExceeded) as exc:
+            logger.warning(
+                "Image OCR probe cascade stopped for %s: %s", filename, exc
+            )
 
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
