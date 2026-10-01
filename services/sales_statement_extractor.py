@@ -10392,7 +10392,9 @@ Map carefully:
 - Keep OPENING even when ISSUE equals OPENING and CLOSING is a dash.
   Example: BONNISPAZ DROPS 1*10ML has OPENING=2, RECEIPT=-, ISSUE=2, CLOSING=-.
   That row is opening_qty=2, sales_qty=2, closing_qty=0 — do not drop the opening 2.
-- Skip TOTAL and End of Report.
+- Skip the TOTAL line and End of Report. Keep every product row.
+- A second pack of the same product is a separate row. Do not skip it.
+- extra.total_stock is opening_qty + receipts_qty.
 - company_name is the HIMALAYA ZANDRA / division banner, not a product.
 - stockist_name is the shop header when printed.
 
@@ -10457,6 +10459,22 @@ def _ocr_marg_closing_mexp_preview(file_bytes: bytes) -> str:
     return best
 
 
+def _marg_mexp_set_total_stock(items: List[Dict[str, Any]]) -> None:
+    """Total qty on this sheet is opening plus receipt. Other columns stay as read."""
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.setdefault("extra", {})
+        if not isinstance(row_extra, dict):
+            continue
+        if row_extra.get("total_stock") not in (None, ""):
+            continue
+        row_extra["total_stock"] = round(
+            _to_float(item.get("opening_qty")) + _to_float(item.get("receipts_qty")),
+            2,
+        )
+
+
 def _repair_marg_mexp_missing_issue(items: List[Dict[str, Any]]) -> None:
     """Recover OPENING/ISSUE when vision drops one side of a balanced row.
 
@@ -10517,7 +10535,7 @@ def _extract_marg_closing_mexp_photo(
                 ],
             }
         ],
-        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 32768},
     }
     parsed = None
     for attempt in range(3):
@@ -10579,6 +10597,7 @@ def _extract_marg_closing_mexp_photo(
     if len(items) < 5:
         return None
     _repair_marg_mexp_missing_issue(items)
+    _marg_mexp_set_total_stock(items)
     result["line_items"] = items
     if not result.get("company_name") and re.search(r"ZANDRA", preview, re.I):
         result["company_name"] = "HIMALAYA ZANDRA"
@@ -44374,7 +44393,12 @@ Exp, Exp/Dmg, Expiry -> expiry_qty
 Shortage -> shortage_qty
 Closing or Closing Stock -> closing_qty
 Closing Amt or Closing Value or Stock-Value -> closing_value
+ISSUE or ISSUE QTY -> sales_qty. ISSUE VALUE -> sales_value.
 Order Qty or Open Qty -> order_qty
+
+ISSUE and CLOSING are different columns. A missing vertical line between them does not merge them.
+sales_qty is the number under ISSUE. closing_qty is the number under CLOSING.
+Do not swap those two numbers. Do not copy ISSUE into CLOSING. Do not skip CLOSING when a number is printed there.
 
 Copy each printed number into the role of its own column. A blank cell is 0.
 Do not move Purchase into Sales. Do not move Closing Amt into closing_qty.
@@ -44384,6 +44408,8 @@ Closing Stock is the closing quantity. Closing Amt is money.
 Ignore phone buttons such as Done, Free trial, Add text, and Undo.
 A division banner (HIMALAYA DIVISION or HIMALAYA DRUGS, with ZANDRA or ZEAL) is company_name, not a product.
 "Non Moving Products" is a section label, not a product. The product rows under it are real products.
+Keep every product row. A second pack of the same product is a separate row. Do not skip it.
+When a Total Qty column is printed, put it in extra.total_stock. When a Total Value column is printed, put it in extra.total_value.
 stockist_name is the agency at the top. The next lines are the address.
 Use the printed From and To dates as the period.
 
@@ -44437,6 +44463,10 @@ def _header_driven_role(label: str) -> str:
         return "other"
     if re.search(r"SALE\s*S?\s*RET|SALERET|SALESRET|SALESRETURN", token):
         return "sale_return_qty"
+    if re.search(r"ISSUE\s*(VAL|VALUE|AMT)|ISSUEVALUE", token):
+        return "sales_value"
+    if re.search(r"\bISSUE\b", token):
+        return "sales_qty"
     if re.search(r"CLOS\w*\s+(AMT|VAL|VALUE)|CLOSING\s+AMT|STOCK\s*VALUE", token):
         return "closing_value"
     if "CLOS" in token:
@@ -44535,14 +44565,64 @@ def _header_driven_items(
         else:
             item["closing_value"] = None
         extra = {"layout": "header_driven_stock_photo"}
-        if extra_raw.get("total_stock") not in (None, ""):
-            extra["total_stock"] = _excel_mobile_blank_qty(extra_raw.get("total_stock"))
+        total_qty = extra_raw.get("total_stock")
+        if total_qty in (None, ""):
+            total_qty = raw.get("total_qty")
+        if total_qty not in (None, ""):
+            extra["total_stock"] = _excel_mobile_blank_qty(total_qty)
+        elif "total_qty" in roles:
+            extra["total_stock"] = round(
+                _to_float(item.get("opening_qty")) + _to_float(item.get("receipts_qty")),
+                2,
+            )
+        if extra_raw.get("total_value") not in (None, ""):
+            extra["total_value"] = _to_float(extra_raw.get("total_value"))
+        elif raw.get("total_value") not in (None, ""):
+            extra["total_value"] = _to_float(raw.get("total_value"))
         for key in ("sale_return_qty", "expiry_qty", "shortage_qty", "order_qty"):
             if key in roles or extra_raw.get(key) not in (None, ""):
                 extra[key] = _excel_mobile_blank_qty(extra_raw.get(key))
         item["extra"] = extra
         items.append(item)
     return items
+
+
+def _header_driven_separate_issue_closing(
+    items: List[Dict[str, Any]], roles: set
+) -> None:
+    """Put ISSUE and CLOSING quantities back when a borderless sheet swaps them.
+
+    Opening + receipt - issue = closing stays true either way, so the stock
+    check cannot see the swap. Sale value and closing value use one rate, and
+    that rate only agrees when each quantity sits on its own column.
+    """
+    if "sales_value" not in roles or "closing_value" not in roles:
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        if sales <= 0 or closing <= 0 or abs(sales - closing) <= 0.05:
+            continue
+        if item.get("sales_value") in (None, "") or item.get("closing_value") in (None, ""):
+            continue
+        sales_value = _to_float(item.get("sales_value"))
+        closing_value = _to_float(item.get("closing_value"))
+        if sales_value <= 0 or closing_value <= 0:
+            continue
+        keep = abs((sales_value / sales) - (closing_value / closing))
+        swapped = abs((sales_value / closing) - (closing_value / sales))
+        rate_a = sales_value / closing
+        rate_b = closing_value / sales
+        if min(rate_a, rate_b) <= 0:
+            continue
+        if max(rate_a, rate_b) / min(rate_a, rate_b) > 1.35:
+            continue
+        if keep < 80 or swapped > 80 or swapped * 4 > keep:
+            continue
+        item["sales_qty"] = closing
+        item["closing_qty"] = sales
 
 
 def _header_driven_rows_ok(items: List[Dict[str, Any]], roles: set) -> bool:
@@ -44606,11 +44686,28 @@ def _apply_header_driven_stock_validation(result: Dict[str, Any]) -> Dict[str, A
     return result
 
 
+def _header_driven_row_key(item: Dict[str, Any]) -> str:
+    name = re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper())
+    packing = re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper())
+    return f"{name}|{packing}"
+
+
+def _header_driven_qty_signature(item: Dict[str, Any]) -> Tuple[float, float, float, float]:
+    return (
+        _to_float(item.get("opening_qty")),
+        _to_float(item.get("receipts_qty")),
+        _to_float(item.get("sales_qty")),
+        _to_float(item.get("closing_qty")),
+    )
+
+
 def _header_driven_merge_items(
     groups: List[List[Dict[str, Any]]], roles: set
 ) -> List[Dict[str, Any]]:
+    """Overlap from two bands collapses. A second pack, or a different qty row, stays."""
     merged: List[Dict[str, Any]] = []
     index_by_key: Dict[str, int] = {}
+    origin: List[int] = []
 
     def _score(item: Dict[str, Any]) -> Tuple[int, int, int]:
         expected = _header_driven_expected_closing(item, roles)
@@ -44625,19 +44722,44 @@ def _header_driven_merge_items(
             1 if _to_float(item.get("receipts_qty")) > 0 else 0,
         )
 
-    for group in groups:
+    for group_index, group in enumerate(groups):
         for item in group:
-            key = re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper())
-            if not key:
+            key = _header_driven_row_key(item)
+            if not key.strip("|"):
                 continue
             previous = index_by_key.get(key)
             if previous is None:
                 index_by_key[key] = len(merged)
+                origin.append(group_index)
                 merged.append(item)
+                continue
+            # Same photo returned two different rows. Do not drop the second.
+            if (
+                origin[previous] == group_index
+                and _header_driven_qty_signature(item)
+                != _header_driven_qty_signature(merged[previous])
+            ):
+                merged.append(item)
+                origin.append(group_index)
                 continue
             if _score(item) > _score(merged[previous]):
                 merged[previous] = item
+                origin[previous] = group_index
     return merged
+
+
+def _header_driven_is_marg_issue_grid(items: List[Dict[str, Any]], roles: set) -> bool:
+    """OPENING / RECEIPT / ISSUE / CLOSING photos with a pack like 1*100M."""
+    if "sales_value" in roles or "closing_value" in roles:
+        return False
+    if "opening_qty" not in roles or "sales_qty" not in roles or "closing_qty" not in roles:
+        return False
+    pack_rows = 0
+    for item in items:
+        blob = f"{item.get('product_name') or ''} {item.get('packing') or ''}"
+        if re.search(r"\d+\s*[*xX]\s*\d+", blob):
+            pack_rows += 1
+    return pack_rows >= 8
 
 
 def _header_driven_image_bands(file_bytes: bytes) -> List[bytes]:
@@ -44763,6 +44885,19 @@ def _extract_header_driven_stock_photo(
         parsed_bands.append(parsed or {})
         groups.append(_header_driven_items(parsed or {}, roles))
     items = _header_driven_merge_items(groups, roles)
+    _header_driven_separate_issue_closing(items, roles)
+    if _header_driven_is_marg_issue_grid(items, roles):
+        _repair_marg_mexp_missing_issue(items)
+        for item in items:
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                continue
+            if row_extra.get("total_stock") in (None, ""):
+                row_extra["total_stock"] = round(
+                    _to_float(item.get("opening_qty"))
+                    + _to_float(item.get("receipts_qty")),
+                    2,
+                )
     if not _header_driven_rows_ok(items, roles):
         return None
     parsed = parsed_bands[0] if parsed_bands else {}
@@ -44987,6 +45122,25 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             logger.warning("Header-driven stock photo skipped: %s", exc)
             driven = None
         if driven and driven.get("line_items"):
+            driven_roles = set(
+                ((driven.get("totals") or {}).get("extra") or {}).get("column_roles")
+                or []
+            )
+            if _header_driven_is_marg_issue_grid(
+                driven.get("line_items") or [], driven_roles
+            ):
+                try:
+                    marg_mexp = _extract_marg_closing_mexp_photo(
+                        file_bytes, filename, ext
+                    )
+                except Exception as exc:
+                    logger.warning("Marg CLOSING M.EXP photo skipped: %s", exc)
+                    marg_mexp = None
+                marg_items = (marg_mexp or {}).get("line_items") or []
+                if marg_items and len(marg_items) >= max(
+                    5, int(len(driven.get("line_items") or []) * 0.7)
+                ):
+                    return marg_mexp
             return driven
     if (
         not early_is_jr_shah

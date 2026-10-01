@@ -9,6 +9,7 @@ from pathlib import Path
 from services.sales_statement_extractor import (
     _is_marg_closing_mexp_photo_text,
     _looks_like_zandra_stock_sale_result,
+    _marg_mexp_set_total_stock,
     _repair_marg_mexp_missing_issue,
     empty_result,
     extract_sales_statement,
@@ -124,6 +125,21 @@ class TestMargClosingMexpPhoto(unittest.TestCase):
         self.assertEqual(paz["opening_qty"], 2.0)
         self.assertEqual(paz["sales_qty"], 2.0)
         self.assertEqual(paz["closing_qty"], 0.0)
+
+    def test_total_stock_is_opening_plus_receipt(self):
+        item = {
+            "product_name": "BONNISAN DROP",
+            "packing": "1*30ML",
+            "opening_qty": 15.0,
+            "receipts_qty": 40.0,
+            "sales_qty": 26.0,
+            "closing_qty": 29.0,
+            "extra": {"layout": "marg_closing_mexp"},
+        }
+        _marg_mexp_set_total_stock([item])
+        self.assertEqual(item["extra"]["total_stock"], 55.0)
+        self.assertEqual(item["sales_qty"], 26.0)
+        self.assertEqual(item["closing_qty"], 29.0)
 
 
 if __name__ == "__main__":
