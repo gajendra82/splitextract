@@ -9,8 +9,12 @@ from services.sales_statement_extractor import (
     _ensure_stock_qty_value_fields,
     _header_driven_expected_closing,
     _header_driven_fix_period,
-    _header_driven_is_jun_jul,
+    _header_driven_is_marg_issue_grid,
     _header_driven_items,
+    _header_driven_merge_items,
+    _header_driven_separate_issue_closing,
+    _repair_marg_mexp_missing_issue,
+    _header_driven_is_jun_jul,
     _header_driven_role,
     _header_driven_rows_ok,
     _pharma_hub_jun_jul_needs_reread,
@@ -43,6 +47,9 @@ class TestHeaderDrivenStockPhoto(unittest.TestCase):
         self.assertEqual(_header_driven_role("Closing Amt"), "closing_value")
         self.assertEqual(_header_driven_role("Closing Stock"), "closing_qty")
         self.assertEqual(_header_driven_role("Open Qty"), "order_qty")
+        self.assertEqual(_header_driven_role("ISSUE QTY"), "sales_qty")
+        self.assertEqual(_header_driven_role("ISSUE VALUE"), "sales_value")
+        self.assertEqual(_header_driven_role("CLOSING QTY"), "closing_qty")
         self.assertTrue(
             _header_driven_is_jun_jul(
                 [{"name": "Jun", "role": "other"}, {"name": "Jul", "role": "other"}]
@@ -144,6 +151,110 @@ class TestHeaderDrivenStockPhoto(unittest.TestCase):
             result["totals"]["extra"]["stock_identity_kind"],
             "header_driven_stock_columns",
         )
+
+    def test_borderless_issue_and_closing_swap_back_when_rates_agree(self):
+        swapped = {
+            "product_name": "MENTAT TAB 1*50",
+            "opening_qty": 65.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 8.0,
+            "sales_value": 9044.1,
+            "closing_qty": 57.0,
+            "closing_value": 1255.68,
+            "extra": {},
+        }
+        steady = {
+            "product_name": "EVECAR CAP 1*30",
+            "opening_qty": 27.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 21.0,
+            "sales_value": 3525.06,
+            "closing_qty": 6.0,
+            "closing_value": 1000.02,
+            "extra": {},
+        }
+        roles = {"sales_value", "closing_value", "sales_qty", "closing_qty"}
+        _header_driven_separate_issue_closing([swapped, steady], roles)
+        self.assertEqual(swapped["sales_qty"], 57.0)
+        self.assertEqual(swapped["closing_qty"], 8.0)
+        self.assertEqual(steady["sales_qty"], 21.0)
+        self.assertEqual(steady["closing_qty"], 6.0)
+        _header_driven_separate_issue_closing([swapped], {"closing_qty", "sales_qty"})
+        self.assertEqual(swapped["sales_qty"], 57.0)
+
+    def test_same_product_with_another_pack_is_kept(self):
+        first = {
+            "product_name": "BONNISAN SYP",
+            "packing": "1*100M",
+            "opening_qty": 50.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 4.0,
+            "closing_qty": 46.0,
+            "extra": {},
+        }
+        second = {
+            "product_name": "BONNISAN SYP",
+            "packing": "1*200M",
+            "opening_qty": 46.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 3.0,
+            "closing_qty": 43.0,
+            "extra": {},
+        }
+        kept = _header_driven_merge_items([[first, second]], ROLES)
+        self.assertEqual(len(kept), 2)
+        self.assertEqual(kept[1]["packing"], "1*200M")
+
+    def test_issue_closing_grid_keeps_total_qty_and_a_dropped_issue(self):
+        items = []
+        for index in range(8):
+            items.append(
+                {
+                    "product_name": f"ITEM {index}",
+                    "packing": "1*10ML",
+                    "opening_qty": 10.0,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 2.0,
+                    "closing_qty": 8.0,
+                    "extra": {},
+                }
+            )
+        items.append(
+            {
+                "product_name": "BONNISPAZ DROPS",
+                "packing": "1*10ML",
+                "opening_qty": 2.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "extra": {},
+            }
+        )
+        roles = {"opening_qty", "receipts_qty", "sales_qty", "closing_qty", "product"}
+        self.assertTrue(_header_driven_is_marg_issue_grid(items, roles))
+        _repair_marg_mexp_missing_issue(items)
+        paz = items[-1]
+        self.assertEqual(paz["sales_qty"], 2.0)
+        self.assertEqual(paz["closing_qty"], 0.0)
+        parsed = _header_driven_items(
+            {
+                "line_items": [
+                    {
+                        "product_name": "BONNISAN DROP",
+                        "packing": "1*30ML",
+                        "opening_qty": 15,
+                        "receipts_qty": 40,
+                        "sales_qty": 26,
+                        "closing_qty": 29,
+                        "total_qty": 55,
+                        "extra": {"total_value": 1200},
+                    }
+                ]
+            },
+            roles | {"total_qty"},
+        )
+        self.assertEqual(parsed[0]["extra"]["total_stock"], 55.0)
+        self.assertEqual(parsed[0]["extra"]["total_value"], 1200.0)
 
     def test_impossible_photo_year_uses_the_filename_month(self):
         result = empty_result(
