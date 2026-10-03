@@ -905,6 +905,12 @@ def start_sales_deadline(
         SALES_OCR_MAX_CALLS_PER_REQUEST,
         file_size,
     )
+    try:
+        from services.stock_ocr_policy import clear_stock_ocr_request
+
+        clear_stock_ocr_request(request_id)
+    except Exception:
+        logger.warning("stock_ocr_policy_reset_failed request_id=%s", request_id)
     return limit
 
 
@@ -959,6 +965,12 @@ def clear_sales_deadline() -> None:
     if rid:
         with _cancel_lock:
             _cancel_flags.pop(rid, None)
+        try:
+            from services.stock_ocr_policy import clear_stock_ocr_request
+
+            clear_stock_ocr_request(rid)
+        except Exception:
+            logger.warning("stock_ocr_policy_clear_failed request_id=%s", rid)
     for attr in (
         "ctx",
         "request_id",
@@ -1706,40 +1718,106 @@ def sales_tesseract_slot(task_label: str = "sales_tesseract"):
         yield
 
 
+def _ocr_region_key(args: tuple, kwargs: dict) -> str:
+    """Image/crop identity without PSM or operation, so retries share a region."""
+    region_kwargs = dict(kwargs)
+    region_kwargs["config"] = ""
+    return _ocr_cache_key(args, region_kwargs)
+
+
+def _stock_ocr_call(operation: str, input_key: str, region_key: str) -> Any:
+    from services.stock_ocr_policy import (
+        StockOcrCall,
+        current_stock_ocr_meta,
+        resolve_stock_ocr_region_key,
+    )
+
+    meta = current_stock_ocr_meta()
+    scope = meta.scope or "page"
+    page = str(meta.page or "1")
+    region = str(meta.region or ("cell" if scope == "cell" else "page"))
+    stable_region = resolve_stock_ocr_region_key(
+        scope=scope,
+        page=page,
+        region=region,
+        operation=operation,
+        pixel_key=region_key or input_key,
+    )
+    return StockOcrCall(
+        request_id=str(getattr(_deadline_local, "request_id", None) or "unknown"),
+        operation=operation,
+        input_key=input_key,
+        region_key=stable_region,
+        page=page,
+        region=region,
+        cell=str(meta.cell or "-"),
+        reason=meta.reason,
+        scope=scope,
+    )
+
+
+def _log_sales_ocr_cache_hit(label: str) -> None:
+    started = getattr(_deadline_local, "started_mono", None)
+    elapsed = round(time.monotonic() - float(started), 3) if started else None
+    logger.info(
+        "sales_ocr_cache_hit request_id=%s label=%s ocr_call_number=%s "
+        "ocr_cache_hit=1 ocr_budget_remaining=%s elapsed_seconds=%s",
+        getattr(_deadline_local, "request_id", None),
+        label,
+        sales_ocr_calls(),
+        sales_ocr_budget_remaining(),
+        elapsed,
+    )
+    ctx = getattr(_deadline_local, "ctx", None)
+    if isinstance(ctx, SalesExtractionRuntimeContext):
+        ctx.ocr_cache_hits = int(getattr(_deadline_local, "ocr_cache_hits", 0) or 0)
+
+
 class GatedPytesseract:
     def __init__(self, real: Any):
         self._real = real
 
-    def _run_gated(self, label: str, fn: Any, *, cache_key: Optional[str] = None) -> Any:
-        check_sales_deadline("ocr")
+    def _run_gated(
+        self,
+        label: str,
+        fn: Any,
+        *,
+        cache_key: Optional[str] = None,
+        region_key: Optional[str] = None,
+        operation: str = "image_to_string",
+    ) -> Any:
+        from services.stock_ocr_policy import empty_ocr_result, get_stock_ocr_policy
+
+        policy = get_stock_ocr_policy()
+        call = None
+        if cache_key:
+            call = _stock_ocr_call(operation, cache_key, region_key or cache_key)
+        try:
+            check_sales_deadline("ocr")
+        except SalesExtractionDeadlineExceeded as exc:
+            if call is not None:
+                policy.note_deadline(call, exc)
+            raise
         if sales_ocr_budget_exhausted():
             raise SalesOcrBudgetExceeded(
                 getattr(_deadline_local, "request_id", "unknown"),
                 sales_ocr_calls(),
                 int(getattr(_deadline_local, "ocr_budget", 0) or 0),
             )
-        if cache_key:
-            cached = _ocr_cache_get(cache_key)
-            if cached is not _OCR_CACHE_MISS:
-                started = getattr(_deadline_local, "started_mono", None)
-                elapsed = (
-                    round(time.monotonic() - float(started), 3) if started else None
+        if call is not None:
+            decision = policy.prepare(call)
+            if decision.action == "reuse":
+                cached = _ocr_cache_get(cache_key)
+                if cached is not _OCR_CACHE_MISS:
+                    _log_sales_ocr_cache_hit(label)
+                    return cached
+                return decision.value
+            if decision.action == "stop":
+                if decision.error is not None:
+                    raise decision.error
+                return decision.value if decision.value is not None else empty_ocr_result(
+                    operation
                 )
-                logger.info(
-                    "sales_ocr_cache_hit request_id=%s label=%s ocr_call_number=%s "
-                    "ocr_cache_hit=1 ocr_budget_remaining=%s elapsed_seconds=%s",
-                    getattr(_deadline_local, "request_id", None),
-                    label,
-                    sales_ocr_calls(),
-                    sales_ocr_budget_remaining(),
-                    elapsed,
-                )
-                ctx = getattr(_deadline_local, "ctx", None)
-                if isinstance(ctx, SalesExtractionRuntimeContext):
-                    ctx.ocr_cache_hits = int(
-                        getattr(_deadline_local, "ocr_cache_hits", 0) or 0
-                    )
-                return cached
 
         with sales_tesseract_slot(label):
             def _call() -> Any:
@@ -1782,7 +1860,7 @@ class GatedPytesseract:
                     ctx.ocr_calls = int(_deadline_local.ocr_calls)
             try:
                 result = run_bounded_sales_tesseract(_call, label)
-            finally:
+            except BaseException as exc:
                 elapsed_ms = (time.monotonic() - started) * 1000.0
                 if hasattr(_deadline_local, "ocr_duration_ms"):
                     _deadline_local.ocr_duration_ms = float(
@@ -1791,6 +1869,19 @@ class GatedPytesseract:
                     ctx = getattr(_deadline_local, "ctx", None)
                     if isinstance(ctx, SalesExtractionRuntimeContext):
                         ctx.ocr_duration_ms = float(_deadline_local.ocr_duration_ms)
+                if call is not None:
+                    policy.finish_failure(call, exc, elapsed_ms)
+                raise
+            elapsed_ms = (time.monotonic() - started) * 1000.0
+            if hasattr(_deadline_local, "ocr_duration_ms"):
+                _deadline_local.ocr_duration_ms = float(
+                    getattr(_deadline_local, "ocr_duration_ms", 0) or 0
+                ) + elapsed_ms
+                ctx = getattr(_deadline_local, "ctx", None)
+                if isinstance(ctx, SalesExtractionRuntimeContext):
+                    ctx.ocr_duration_ms = float(_deadline_local.ocr_duration_ms)
+            if call is not None:
+                policy.finish_success(call, result, elapsed_ms)
             if cache_key:
                 _ocr_cache_put(cache_key, result)
             return result
@@ -1800,10 +1891,16 @@ class GatedPytesseract:
             key = _ocr_cache_key(args, kwargs)
         except Exception:
             key = None
+        try:
+            region_key = _ocr_region_key(args, kwargs) if key else None
+        except Exception:
+            region_key = key
         return self._run_gated(
             "sales_image_to_string",
             lambda: self._real.image_to_string(*args, **kwargs),
             cache_key=key,
+            region_key=region_key,
+            operation="image_to_string",
         )
 
     def image_to_data(self, *args: Any, **kwargs: Any) -> Any:
@@ -1811,10 +1908,16 @@ class GatedPytesseract:
             key = "data:" + _ocr_cache_key(args, kwargs)
         except Exception:
             key = None
+        try:
+            region_key = _ocr_region_key(args, kwargs) if key else None
+        except Exception:
+            region_key = key
         return self._run_gated(
             "sales_image_to_data",
             lambda: self._real.image_to_data(*args, **kwargs),
             cache_key=key,
+            region_key=region_key,
+            operation="image_to_data",
         )
 
     def __getattr__(self, name: str) -> Any:

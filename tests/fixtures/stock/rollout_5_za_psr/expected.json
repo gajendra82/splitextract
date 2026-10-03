@@ -1,0 +1,629 @@
+{
+  "source": "0000735216_2026_08_ZA_06_333_04092026081522 (2) (1).png",
+  "hand_checked": true,
+  "checked_by": "cursor-agent",
+  "checked_date": "2026-10-02",
+  "notes": "Values read from the PNG image strips (not from pipeline outputs). PLATENZA TAB Total column prints 138 with Opening 139 Purchase 1 (sheet quirk). PLATENZA SYP identity soft-fails with printed ClosStock 0 and SaleRet/Exp both 2.",
+  "line_items": [
+    {
+      "product_name": "HIORA K TOOTHPASTE 100 GM",
+      "packing": null,
+      "opening_qty": 9.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 21.0,
+      "closing_qty": 38.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "HIORA K TOOTHPASTE 50 GM",
+      "packing": null,
+      "opening_qty": 80.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 75.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "HIORA SG GEL 10GM",
+      "packing": null,
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 4.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "KARELA TAB",
+      "packing": null,
+      "opening_qty": 57.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 56.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LASUNA TAB",
+      "packing": null,
+      "opening_qty": 38.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 37.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DROP 100ML",
+      "packing": null,
+      "opening_qty": 212.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 212.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DROP 60ML",
+      "packing": null,
+      "opening_qty": 106.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 12.0,
+      "closing_qty": 94.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SF SYP 100ML",
+      "packing": null,
+      "opening_qty": 184.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 176.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 1.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SF SYP 200ML",
+      "packing": null,
+      "opening_qty": 34.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 25.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SYP 100 ML",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 70.0,
+      "sales_qty": 26.0,
+      "closing_qty": 44.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DS SYP 200 ML",
+      "packing": null,
+      "opening_qty": 66.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 36.0,
+      "closing_qty": 30.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LIV.52 DS TAB",
+      "packing": null,
+      "opening_qty": 13.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 49.0,
+      "closing_qty": 64.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LUKOL SYP 200ML",
+      "packing": null,
+      "opening_qty": 68.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 59.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "LUKOL TAB",
+      "packing": null,
+      "opening_qty": 61.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 51.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "MENOSAN TAB",
+      "packing": null,
+      "opening_qty": 60.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 55.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "MENTAT DS SF SYP 100ML",
+      "packing": null,
+      "opening_qty": 52.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 52.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "MENTAT SYP 200ML",
+      "packing": null,
+      "opening_qty": 22.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 16.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "MENTAT TAB",
+      "packing": null,
+      "opening_qty": 94.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 13.0,
+      "closing_qty": 82.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "MESHASHRINGI TAB",
+      "packing": null,
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "ORO T ORAL RINSE 100ML",
+      "packing": null,
+      "opening_qty": 50.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 41.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "PLATENZA SYP 100ML",
+      "packing": null,
+      "opening_qty": 51.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 49.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 2.0,
+        "exp_damage": 2.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "PLATENZA TAB",
+      "packing": null,
+      "opening_qty": 139.0,
+      "receipts_qty": 1.0,
+      "sales_qty": 90.0,
+      "closing_qty": 49.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "PUNARNAVA TAB",
+      "packing": null,
+      "opening_qty": 7.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 4.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "REOSTO TAB",
+      "packing": null,
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 27.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYP 200ML",
+      "packing": null,
+      "opening_qty": 122.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 19.0,
+      "closing_qty": 103.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SEPTILIN TAB",
+      "packing": null,
+      "opening_qty": 75.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 66.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SERPINA TAB",
+      "packing": null,
+      "opening_qty": 11.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 8.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SHATAVARI TAB",
+      "packing": null,
+      "opening_qty": 39.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 33.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SHUDDHA GUGGULU TAB",
+      "packing": null,
+      "opening_qty": 49.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 49.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "SPEMAN TAB",
+      "packing": null,
+      "opening_qty": 0.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 9.0,
+      "closing_qty": 41.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "STYPLON TAB",
+      "packing": null,
+      "opening_qty": 25.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 25.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    }
+  ]
+}

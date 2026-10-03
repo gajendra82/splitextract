@@ -21,6 +21,7 @@ _GENERIC_METHODS = {
     "gemini_extraction_fallback",
     "txt_stock_fallback",
     "legacy_doc_text",
+    "legacy_doc_text_unverified",
     "pdf_split_page_images",
     "pdf_split_text",
     "pdf_text_heuristic",
@@ -36,6 +37,7 @@ _WEAK_OCR_METHODS = {
     "pdf_split_page_images",
     "txt_stock_fallback",
     "legacy_doc_text",
+    "legacy_doc_text_unverified",
     "gemini_vision",
     "gemini_extraction_fallback",
     "",
@@ -205,12 +207,22 @@ def _period_is_inverted(result: Dict[str, Any]) -> bool:
     return start > end
 
 
-def _identity_applies(items: List[Dict[str, Any]], extra: Dict[str, Any]) -> bool:
-    """The simple opening/receipt/sales formula only applies when those columns are used."""
-    if extra.get("stock_identity_fail_count") is None:
+def _identity_applies(
+    items: List[Dict[str, Any]],
+    extra: Dict[str, Any],
+    *,
+    veto_active: bool = False,
+) -> bool:
+    """The simple opening/receipt/sales formula only applies when those columns are used.
+
+    When Phase-1 veto is active, every stock_identity_kind is eligible. For kinds
+    that historically trusted printed closing, rows without purchase/sales are
+    treated as MISSING (not failure) — see veto_decision.
+    """
+    if extra.get("stock_identity_fail_count") is None and not veto_active:
         return False
     kind = str(extra.get("stock_identity_kind") or "")
-    if kind not in {"", "opening_receipts_sales_closing"}:
+    if not veto_active and kind not in {"", "opening_receipts_sales_closing"}:
         return False
     # Validator already counted failures for this formula — always score them when
     # the sheet actually uses opening/receipts/sales. Pure closing-only sheets
@@ -219,6 +231,10 @@ def _identity_applies(items: List[Dict[str, Any]], extra: Dict[str, Any]) -> boo
         fail_count = int(extra.get("stock_identity_fail_count") or 0)
     except (TypeError, ValueError):
         fail_count = 0
+    if veto_active:
+        # Phase 1: every stock_identity_kind is eligible; printed-closing kinds
+        # without purchase/sales are handled in veto_decision (MISSING, not fail).
+        return True
     if fail_count > 0:
         has_movement = any(
             (_number(item.get("opening_qty")) or 0.0) > 0
@@ -418,15 +434,42 @@ def evaluate_extraction_quality(
         reasons.append("all_zero_suspicious")
         hard_fail = True
 
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    fail_count = extra.get("stock_identity_fail_count")
+    layout = str(extra.get("layout") or "")
+
+    # Phase 1: row-classifier veto before protected-parser score 100.
+    veto_active = False
+    veto_info: Dict[str, Any] = {}
+    try:
+        from services.stock_row_classifier import (
+            infer_input_type,
+            veto_active_for,
+            veto_decision,
+        )
+
+        input_type = infer_input_type(
+            str(meta.get("ext") or ""),
+            meta,
+        )
+        veto_active = veto_active_for(input_type)
+        if veto_active:
+            veto_info = veto_decision(result, input_type)
+            if veto_info.get("veto"):
+                hard_fail = True
+                if "IDENTITY_VETO" not in reasons:
+                    reasons.append("IDENTITY_VETO")
+                if "stock_identity_failure" not in reasons:
+                    reasons.append("stock_identity_failure")
+    except Exception:
+        veto_active = False
+
     protected = (
         method not in _GENERIC_METHODS
         and method not in _WEAK_OCR_METHODS
         and valid_names >= min_rows
         and not hard_fail
     )
-    extra = ((result.get("totals") or {}).get("extra") or {})
-    fail_count = extra.get("stock_identity_fail_count")
-    layout = str(extra.get("layout") or "")
     # Opening/Receive/Issue/Closing photos must not pass as good while rows fail.
     identity_gate = identity_limit
     if (
@@ -434,18 +477,27 @@ def evaluate_extraction_quality(
         or layout == "opening_receive_issue_closing"
     ):
         identity_gate = 0.0
+    # Vetoed input types use classifier thresholds, not the 20% tolerance.
+    if veto_active:
+        identity_gate = -1.0  # any fail_count > 0 fails when identity applies
     if (
         protected
         and items
-        and _identity_applies(items, extra)
+        and _identity_applies(items, extra, veto_active=veto_active)
         and fail_count is not None
     ):
         fail_pct = 100.0 * float(fail_count) / len(items)
-        if fail_pct > identity_gate:
+        if veto_active:
+            if veto_info.get("veto") or fail_pct > 0:
+                protected = False
+                if "stock_identity_failure" not in reasons:
+                    reasons.append("stock_identity_failure")
+                hard_fail = True
+        elif fail_pct > identity_gate:
             protected = False
             reasons.append("stock_identity_failure")
             hard_fail = True
-    if protected:
+    if protected and not (veto_active and veto_info.get("veto")):
         return {
             "quality": "good",
             "score": 100,
@@ -470,9 +522,11 @@ def evaluate_extraction_quality(
         if _period_is_inverted(result):
             reasons.append("invalid_period")
 
-        if _identity_applies(items, extra) and fail_count is not None:
+        if _identity_applies(items, extra, veto_active=veto_active) and fail_count is not None:
             fail_pct = 100.0 * float(fail_count) / len(items)
-            if fail_pct > identity_gate:
+            if (veto_active and (veto_info.get("veto") or fail_pct > 0)) or (
+                not veto_active and fail_pct > identity_gate
+            ):
                 if "stock_identity_failure" not in reasons:
                     reasons.append("stock_identity_failure")
 
@@ -496,6 +550,8 @@ def evaluate_extraction_quality(
         score -= int(max(0.0, numeric_floor - numeric_pct))
         if "stock_identity_failure" in reasons:
             score -= 25
+        if "IDENTITY_VETO" in reasons:
+            score -= 30
         if "too_few_product_rows" in reasons or "duplicate_rows" in reasons:
             score -= 20
         if "invalid_period" in reasons:
@@ -506,9 +562,15 @@ def evaluate_extraction_quality(
             score -= 30
         score = max(0, min(100, score))
 
+    # Phase 4a: failed soffice convert → never KEEP_PARSER at score 100.
+    if method == "legacy_doc_text_unverified":
+        score = min(score, 50)
+        if "legacy_doc_text_unverified" not in reasons:
+            reasons.append("legacy_doc_text_unverified")
+
     if (
         score < threshold
-        and (weak_method or hard_fail)
+        and (weak_method or hard_fail or method == "legacy_doc_text_unverified")
         and "low_ocr_quality_score" not in reasons
     ):
         reasons.append("low_ocr_quality_score")

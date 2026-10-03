@@ -118,7 +118,15 @@ def _payload_part_to_sdk(part: Dict[str, Any]) -> types.Part:
             decoded = base64.b64decode(raw_data)
         else:
             decoded = raw_data
-        return types.Part.from_bytes(data=decoded, mime_type=mime_type)
+        media_resolution = (
+            inline.get("media_resolution")
+            or inline.get("mediaResolution")
+        )
+        return types.Part.from_bytes(
+            data=decoded,
+            mime_type=mime_type,
+            media_resolution=media_resolution,
+        )
 
     raise ValueError(f"Unsupported Gemini payload part: {part!r}")
 
@@ -134,6 +142,29 @@ def payload_to_generate_config(payload: Dict[str, Any]) -> Optional[types.Genera
     max_tokens = gen_cfg.get("maxOutputTokens", gen_cfg.get("max_output_tokens"))
     if max_tokens is not None:
         kwargs["max_output_tokens"] = max_tokens
+
+    mime = gen_cfg.get("responseMimeType") or gen_cfg.get("response_mime_type")
+    if mime:
+        kwargs["response_mime_type"] = mime
+    schema = gen_cfg.get("responseSchema") or gen_cfg.get("response_schema")
+    if schema is not None:
+        kwargs["response_schema"] = schema
+
+    thinking = gen_cfg.get("thinkingConfig") or gen_cfg.get("thinking_config")
+    if thinking is not None:
+        if isinstance(thinking, dict):
+            budget = thinking.get("thinkingBudget", thinking.get("thinking_budget", 0))
+            include = thinking.get("includeThoughts", thinking.get("include_thoughts"))
+            kwargs["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=budget,
+                include_thoughts=include,
+            )
+        else:
+            kwargs["thinking_config"] = thinking
+
+    media = gen_cfg.get("mediaResolution") or gen_cfg.get("media_resolution")
+    if media is not None:
+        kwargs["media_resolution"] = media
 
     return types.GenerateContentConfig(**kwargs) if kwargs else None
 
@@ -306,8 +337,13 @@ def payload_to_contents(payload: Dict[str, Any]):
 
 def sdk_response_to_rest_dict(response) -> Dict[str, Any]:
     text = (getattr(response, "text", None) or "").strip()
+    finish_reason = None
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        finish_reason = getattr(candidates[0], "finish_reason", None)
+        if finish_reason is not None:
+            finish_reason = str(finish_reason)
     if not text:
-        candidates = getattr(response, "candidates", None) or []
         if candidates:
             content = getattr(candidates[0], "content", None)
             parts = getattr(content, "parts", None) or []
@@ -322,7 +358,12 @@ def sdk_response_to_rest_dict(response) -> Dict[str, Any]:
         }
 
     return {
-        "candidates": [{"content": {"parts": [{"text": text}]}}],
+        "candidates": [
+            {
+                "content": {"parts": [{"text": text}]},
+                "finishReason": finish_reason,
+            }
+        ],
         "usageMetadata": usage_metadata,
     }
 

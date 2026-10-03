@@ -1,0 +1,130 @@
+{
+  "source": "0000736197_2026_08_ZL_13_281_07092026082501 (1).jpg",
+  "hand_checked": true,
+  "checked_by": "cursor-agent",
+  "checked_date": "2026-10-02",
+  "notes": "Partial: first 6 product rows hand-read from image top. More rows to fill from mid/bot crops.",
+  "line_items": [
+    {
+      "product_name": "AACTARIL SOAP",
+      "packing": "75 GM",
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "ABANA TAB",
+      "packing": "60 TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 3.0,
+      "sales_qty": 0.0,
+      "closing_qty": 3.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "ACTARIL SOAP",
+      "packing": "NA",
+      "opening_qty": 64.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 61.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "BLEMINOR ANTI BLE CRE.30M",
+      "packing": "1X30ML",
+      "opening_qty": 2.0,
+      "receipts_qty": 3.0,
+      "sales_qty": 2.0,
+      "closing_qty": 4.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "CLARINA ANTI ACNE FACE",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    },
+    {
+      "product_name": "CLARINA ANTI ACNE CREAM",
+      "packing": "30 GM",
+      "opening_qty": 50.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 46.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0,
+        "field_source": {
+          "opening_qty": "printed",
+          "purchase_qty": "printed",
+          "sales_qty": "printed",
+          "closing_qty": "printed",
+          "sales_return_qty": "printed",
+          "expiry_damage_qty": "printed"
+        }
+      }
+    }
+  ],
+  "incomplete": true
+}

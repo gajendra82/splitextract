@@ -1,0 +1,1395 @@
+{
+  "header_rows": [
+    {
+      "text": "Product Nand",
+      "col_index": 0,
+      "x_center": 0.155
+    },
+    {
+      "text": "Opening",
+      "col_index": 1,
+      "x_center": 0.395
+    },
+    {
+      "text": "Purthail",
+      "col_index": 2,
+      "x_center": 0.475
+    },
+    {
+      "text": "Total",
+      "col_index": 3,
+      "x_center": 0.555
+    },
+    {
+      "text": "Sale",
+      "col_index": 4,
+      "x_center": 0.635
+    },
+    {
+      "text": "SaleRef",
+      "col_index": 5,
+      "x_center": 0.715
+    },
+    {
+      "text": "Exp/Dmg",
+      "col_index": 6,
+      "x_center": 0.795
+    },
+    {
+      "text": "ClosStock",
+      "col_index": 7,
+      "x_center": 0.875
+    }
+  ],
+  "column_count": 8,
+  "rows": [
+    {
+      "row_index": 0,
+      "cells": [
+        "HIORA K TOOTHPASTE 100 GM",
+        "9.00",
+        "50.00",
+        "59.00",
+        "21.00",
+        "0.00",
+        "0.00",
+        "38.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 1,
+      "cells": [
+        "HIORA K TOOTHPASTE 50 GM",
+        "20.00",
+        "50.00",
+        "80.00",
+        "5.00",
+        "0.00",
+        "0.00",
+        "75.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 2,
+      "cells": [
+        "HIORA SG GEL 10GM",
+        "5.00",
+        "0.00",
+        "5.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "4.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 3,
+      "cells": [
+        "KARELA TAB",
+        "57.00",
+        "0.00",
+        "57.00",
+        "1.00",
+        "0.00",
+        "0.00",
+        "56.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 4,
+      "cells": [
+        "LASUNA TAB",
+        "38.00",
+        "0.00",
+        "38.00",
+        "1.00",
+        "0.00",
+        "0.00",
+        "37.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 5,
+      "cells": [
+        "LIV 52 DROP 100ML",
+        "212.00",
+        "0.00",
+        "212.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "212.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 6,
+      "cells": [
+        "LIV 52 DROP 60ML",
+        "106.00",
+        "0.00",
+        "106.00",
+        "12.00",
+        "0.00",
+        "0.00",
+        "94.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 7,
+      "cells": [
+        "LIV 52 DS SYP 100ML",
+        "184.00",
+        "0.00",
+        "184.00",
+        "8.00",
+        "1.00",
+        "0.00",
+        "176.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 8,
+      "cells": [
+        "LIV 52 DS SYP 200ML",
+        "34.00",
+        "0.00",
+        "34.00",
+        "19.00",
+        "0.00",
+        "0.00",
+        "25.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 9,
+      "cells": [
+        "LIV 52 SYP 100 ML",
+        "0.00",
+        "70.00",
+        "70.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "44.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 10,
+      "cells": [
+        "LIV 52 DS SYP 200 ML",
+        "66.00",
+        "0.00",
+        "66.00",
+        "36.00",
+        "0.00",
+        "0.00",
+        "30.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 11,
+      "cells": [
+        "LIV 52 DS TAB",
+        "13.00",
+        "100.00",
+        "113.00",
+        "49.00",
+        "0.00",
+        "0.00",
+        "64.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 12,
+      "cells": [
+        "LUKOL SYP 200ML",
+        "68.00",
+        "0.00",
+        "68.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "69.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 13,
+      "cells": [
+        "LUKOL TAB",
+        "61.00",
+        "0.00",
+        "61.00",
+        "10.00",
+        "0.00",
+        "0.00",
+        "51.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 14,
+      "cells": [
+        "MENOSAN TAB",
+        "50.00",
+        "0.00",
+        "50.00",
+        "5.00",
+        "0.00",
+        "0.00",
+        "45.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 15,
+      "cells": [
+        "MENTAT DS SYP 100MU",
+        "52.00",
+        "0.00",
+        "52.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "52.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 16,
+      "cells": [
+        "MENTAT SYP 200ML",
+        "22.00",
+        "0.00",
+        "22.00",
+        "6.00",
+        "0.00",
+        "0.00",
+        "16.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 17,
+      "cells": [
+        "MENTAT TAB",
+        "4.00",
+        "0.00",
+        "4.00",
+        "13.00",
+        "0.00",
+        "0.00",
+        "0.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 18,
+      "cells": [
+        "MESHASHIRINGI TAB",
+        "40.00",
+        "0.00",
+        "40.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "40.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 19,
+      "cells": [
+        "PROT ORAL RINSE 100ML",
+        "50.00",
+        "0.00",
+        "50.00",
+        "9.00",
+        "0.00",
+        "0.00",
+        "41.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 20,
+      "cells": [
+        "PLATENZA SYP 100ML",
+        "51.00",
+        "0.00",
+        "51.00",
+        "49.00",
+        "2.00",
+        "0.00",
+        "0.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 21,
+      "cells": [
+        "PLATENZA TAB",
+        "139.00",
+        "1.00",
+        "138.00",
+        "90.00",
+        "1.00",
+        "0.00",
+        "49.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 22,
+      "cells": [
+        "PUNARNAVA TAB",
+        "7.00",
+        "0.00",
+        "7.00",
+        "4.00",
+        "0.00",
+        "0.00",
+        "3.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 23,
+      "cells": [
+        "REOSTO TAB",
+        "28.00",
+        "0.00",
+        "28.00",
+        "1.00",
+        "0.00",
+        "0.00",
+        "27.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 24,
+      "cells": [
+        "SEPTILIN SYP 200ML",
+        "22.00",
+        "0.00",
+        "22.00",
+        "19.00",
+        "0.00",
+        "0.00",
+        "03.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 25,
+      "cells": [
+        "SEPTILIN TAB",
+        "75.00",
+        "0.00",
+        "75.00",
+        "9.00",
+        "0.00",
+        "0.00",
+        "66.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 26,
+      "cells": [
+        "SERPINA TAB",
+        "11.00",
+        "0.00",
+        "11.00",
+        "3.00",
+        "0.00",
+        "0.00",
+        "8.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 27,
+      "cells": [
+        "SHATAVARI TAB",
+        "9.00",
+        "0.00",
+        "9.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "03.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 28,
+      "cells": [
+        "SHUDDHA GUGULU TAB",
+        "49.00",
+        "0.00",
+        "49.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "49.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 29,
+      "cells": [
+        "SPEMAN TAB",
+        "0.00",
+        "50.00",
+        "50.00",
+        "9.00",
+        "0.00",
+        "0.00",
+        "41.00"
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 30,
+      "cells": [
+        "STYPLON TAB",
+        "25.00",
+        "0.00",
+        "25.00",
+        "0.00",
+        "0.00",
+        "0.00",
+        "25.00"
+      ],
+      "is_total_row": false
+    }
+  ],
+  "proposed_mapping": [
+    {
+      "col_index": 0,
+      "field": "product_name",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 1,
+      "field": "opening_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 2,
+      "field": "purchase_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 3,
+      "field": "total_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 4,
+      "field": "sales_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 5,
+      "field": "sales_return_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 6,
+      "field": "expiry_damage_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 7,
+      "field": "closing_qty",
+      "confidence": 1.0
+    }
+  ],
+  "unreadable_cells": [
+    {
+      "row_index": 0,
+      "col_index": 1
+    },
+    {
+      "row_index": 0,
+      "col_index": 2
+    },
+    {
+      "row_index": 0,
+      "col_index": 3
+    },
+    {
+      "row_index": 0,
+      "col_index": 4
+    },
+    {
+      "row_index": 0,
+      "col_index": 5
+    },
+    {
+      "row_index": 0,
+      "col_index": 6
+    },
+    {
+      "row_index": 0,
+      "col_index": 7
+    },
+    {
+      "row_index": 1,
+      "col_index": 1
+    },
+    {
+      "row_index": 1,
+      "col_index": 2
+    },
+    {
+      "row_index": 1,
+      "col_index": 3
+    },
+    {
+      "row_index": 1,
+      "col_index": 4
+    },
+    {
+      "row_index": 1,
+      "col_index": 5
+    },
+    {
+      "row_index": 1,
+      "col_index": 6
+    },
+    {
+      "row_index": 1,
+      "col_index": 7
+    },
+    {
+      "row_index": 2,
+      "col_index": 1
+    },
+    {
+      "row_index": 2,
+      "col_index": 2
+    },
+    {
+      "row_index": 2,
+      "col_index": 3
+    },
+    {
+      "row_index": 2,
+      "col_index": 4
+    },
+    {
+      "row_index": 2,
+      "col_index": 5
+    },
+    {
+      "row_index": 2,
+      "col_index": 6
+    },
+    {
+      "row_index": 2,
+      "col_index": 7
+    },
+    {
+      "row_index": 3,
+      "col_index": 1
+    },
+    {
+      "row_index": 3,
+      "col_index": 2
+    },
+    {
+      "row_index": 3,
+      "col_index": 3
+    },
+    {
+      "row_index": 3,
+      "col_index": 4
+    },
+    {
+      "row_index": 3,
+      "col_index": 5
+    },
+    {
+      "row_index": 3,
+      "col_index": 6
+    },
+    {
+      "row_index": 3,
+      "col_index": 7
+    },
+    {
+      "row_index": 4,
+      "col_index": 1
+    },
+    {
+      "row_index": 4,
+      "col_index": 2
+    },
+    {
+      "row_index": 4,
+      "col_index": 3
+    },
+    {
+      "row_index": 4,
+      "col_index": 4
+    },
+    {
+      "row_index": 4,
+      "col_index": 5
+    },
+    {
+      "row_index": 4,
+      "col_index": 6
+    },
+    {
+      "row_index": 4,
+      "col_index": 7
+    },
+    {
+      "row_index": 5,
+      "col_index": 1
+    },
+    {
+      "row_index": 5,
+      "col_index": 2
+    },
+    {
+      "row_index": 5,
+      "col_index": 3
+    },
+    {
+      "row_index": 5,
+      "col_index": 4
+    },
+    {
+      "row_index": 5,
+      "col_index": 5
+    },
+    {
+      "row_index": 5,
+      "col_index": 6
+    },
+    {
+      "row_index": 5,
+      "col_index": 7
+    },
+    {
+      "row_index": 6,
+      "col_index": 1
+    },
+    {
+      "row_index": 6,
+      "col_index": 2
+    },
+    {
+      "row_index": 6,
+      "col_index": 3
+    },
+    {
+      "row_index": 6,
+      "col_index": 4
+    },
+    {
+      "row_index": 6,
+      "col_index": 5
+    },
+    {
+      "row_index": 6,
+      "col_index": 6
+    },
+    {
+      "row_index": 6,
+      "col_index": 7
+    },
+    {
+      "row_index": 7,
+      "col_index": 1
+    },
+    {
+      "row_index": 7,
+      "col_index": 2
+    },
+    {
+      "row_index": 7,
+      "col_index": 3
+    },
+    {
+      "row_index": 7,
+      "col_index": 4
+    },
+    {
+      "row_index": 7,
+      "col_index": 5
+    },
+    {
+      "row_index": 7,
+      "col_index": 6
+    },
+    {
+      "row_index": 7,
+      "col_index": 7
+    },
+    {
+      "row_index": 8,
+      "col_index": 1
+    },
+    {
+      "row_index": 8,
+      "col_index": 2
+    },
+    {
+      "row_index": 8,
+      "col_index": 3
+    },
+    {
+      "row_index": 8,
+      "col_index": 4
+    },
+    {
+      "row_index": 8,
+      "col_index": 5
+    },
+    {
+      "row_index": 8,
+      "col_index": 6
+    },
+    {
+      "row_index": 8,
+      "col_index": 7
+    },
+    {
+      "row_index": 9,
+      "col_index": 1
+    },
+    {
+      "row_index": 9,
+      "col_index": 2
+    },
+    {
+      "row_index": 9,
+      "col_index": 3
+    },
+    {
+      "row_index": 9,
+      "col_index": 4
+    },
+    {
+      "row_index": 9,
+      "col_index": 5
+    },
+    {
+      "row_index": 9,
+      "col_index": 6
+    },
+    {
+      "row_index": 9,
+      "col_index": 7
+    },
+    {
+      "row_index": 10,
+      "col_index": 1
+    },
+    {
+      "row_index": 10,
+      "col_index": 2
+    },
+    {
+      "row_index": 10,
+      "col_index": 3
+    },
+    {
+      "row_index": 10,
+      "col_index": 4
+    },
+    {
+      "row_index": 10,
+      "col_index": 5
+    },
+    {
+      "row_index": 10,
+      "col_index": 6
+    },
+    {
+      "row_index": 10,
+      "col_index": 7
+    },
+    {
+      "row_index": 11,
+      "col_index": 1
+    },
+    {
+      "row_index": 11,
+      "col_index": 2
+    },
+    {
+      "row_index": 11,
+      "col_index": 3
+    },
+    {
+      "row_index": 11,
+      "col_index": 4
+    },
+    {
+      "row_index": 11,
+      "col_index": 5
+    },
+    {
+      "row_index": 11,
+      "col_index": 6
+    },
+    {
+      "row_index": 11,
+      "col_index": 7
+    },
+    {
+      "row_index": 12,
+      "col_index": 1
+    },
+    {
+      "row_index": 12,
+      "col_index": 2
+    },
+    {
+      "row_index": 12,
+      "col_index": 3
+    },
+    {
+      "row_index": 12,
+      "col_index": 4
+    },
+    {
+      "row_index": 12,
+      "col_index": 5
+    },
+    {
+      "row_index": 12,
+      "col_index": 6
+    },
+    {
+      "row_index": 12,
+      "col_index": 7
+    },
+    {
+      "row_index": 13,
+      "col_index": 1
+    },
+    {
+      "row_index": 13,
+      "col_index": 2
+    },
+    {
+      "row_index": 13,
+      "col_index": 3
+    },
+    {
+      "row_index": 13,
+      "col_index": 4
+    },
+    {
+      "row_index": 13,
+      "col_index": 5
+    },
+    {
+      "row_index": 13,
+      "col_index": 6
+    },
+    {
+      "row_index": 13,
+      "col_index": 7
+    },
+    {
+      "row_index": 14,
+      "col_index": 1
+    },
+    {
+      "row_index": 14,
+      "col_index": 2
+    },
+    {
+      "row_index": 14,
+      "col_index": 3
+    },
+    {
+      "row_index": 14,
+      "col_index": 4
+    },
+    {
+      "row_index": 14,
+      "col_index": 5
+    },
+    {
+      "row_index": 14,
+      "col_index": 6
+    },
+    {
+      "row_index": 14,
+      "col_index": 7
+    },
+    {
+      "row_index": 15,
+      "col_index": 1
+    },
+    {
+      "row_index": 15,
+      "col_index": 2
+    },
+    {
+      "row_index": 15,
+      "col_index": 3
+    },
+    {
+      "row_index": 15,
+      "col_index": 4
+    },
+    {
+      "row_index": 15,
+      "col_index": 5
+    },
+    {
+      "row_index": 15,
+      "col_index": 6
+    },
+    {
+      "row_index": 15,
+      "col_index": 7
+    },
+    {
+      "row_index": 16,
+      "col_index": 1
+    },
+    {
+      "row_index": 16,
+      "col_index": 2
+    },
+    {
+      "row_index": 16,
+      "col_index": 3
+    },
+    {
+      "row_index": 16,
+      "col_index": 4
+    },
+    {
+      "row_index": 16,
+      "col_index": 5
+    },
+    {
+      "row_index": 16,
+      "col_index": 6
+    },
+    {
+      "row_index": 16,
+      "col_index": 7
+    },
+    {
+      "row_index": 17,
+      "col_index": 1
+    },
+    {
+      "row_index": 17,
+      "col_index": 2
+    },
+    {
+      "row_index": 17,
+      "col_index": 3
+    },
+    {
+      "row_index": 17,
+      "col_index": 4
+    },
+    {
+      "row_index": 17,
+      "col_index": 5
+    },
+    {
+      "row_index": 17,
+      "col_index": 6
+    },
+    {
+      "row_index": 17,
+      "col_index": 7
+    },
+    {
+      "row_index": 18,
+      "col_index": 1
+    },
+    {
+      "row_index": 18,
+      "col_index": 2
+    },
+    {
+      "row_index": 18,
+      "col_index": 3
+    },
+    {
+      "row_index": 18,
+      "col_index": 4
+    },
+    {
+      "row_index": 18,
+      "col_index": 5
+    },
+    {
+      "row_index": 18,
+      "col_index": 6
+    },
+    {
+      "row_index": 18,
+      "col_index": 7
+    },
+    {
+      "row_index": 19,
+      "col_index": 1
+    },
+    {
+      "row_index": 19,
+      "col_index": 2
+    },
+    {
+      "row_index": 19,
+      "col_index": 3
+    },
+    {
+      "row_index": 19,
+      "col_index": 4
+    },
+    {
+      "row_index": 19,
+      "col_index": 5
+    },
+    {
+      "row_index": 19,
+      "col_index": 6
+    },
+    {
+      "row_index": 19,
+      "col_index": 7
+    },
+    {
+      "row_index": 20,
+      "col_index": 1
+    },
+    {
+      "row_index": 20,
+      "col_index": 2
+    },
+    {
+      "row_index": 20,
+      "col_index": 3
+    },
+    {
+      "row_index": 20,
+      "col_index": 4
+    },
+    {
+      "row_index": 20,
+      "col_index": 5
+    },
+    {
+      "row_index": 20,
+      "col_index": 6
+    },
+    {
+      "row_index": 20,
+      "col_index": 7
+    },
+    {
+      "row_index": 21,
+      "col_index": 1
+    },
+    {
+      "row_index": 21,
+      "col_index": 2
+    },
+    {
+      "row_index": 21,
+      "col_index": 3
+    },
+    {
+      "row_index": 21,
+      "col_index": 4
+    },
+    {
+      "row_index": 21,
+      "col_index": 5
+    },
+    {
+      "row_index": 21,
+      "col_index": 6
+    },
+    {
+      "row_index": 21,
+      "col_index": 7
+    },
+    {
+      "row_index": 22,
+      "col_index": 1
+    },
+    {
+      "row_index": 22,
+      "col_index": 2
+    },
+    {
+      "row_index": 22,
+      "col_index": 3
+    },
+    {
+      "row_index": 22,
+      "col_index": 4
+    },
+    {
+      "row_index": 22,
+      "col_index": 5
+    },
+    {
+      "row_index": 22,
+      "col_index": 6
+    },
+    {
+      "row_index": 22,
+      "col_index": 7
+    },
+    {
+      "row_index": 23,
+      "col_index": 1
+    },
+    {
+      "row_index": 23,
+      "col_index": 2
+    },
+    {
+      "row_index": 23,
+      "col_index": 3
+    },
+    {
+      "row_index": 23,
+      "col_index": 4
+    },
+    {
+      "row_index": 23,
+      "col_index": 5
+    },
+    {
+      "row_index": 23,
+      "col_index": 6
+    },
+    {
+      "row_index": 23,
+      "col_index": 7
+    },
+    {
+      "row_index": 24,
+      "col_index": 1
+    },
+    {
+      "row_index": 24,
+      "col_index": 2
+    },
+    {
+      "row_index": 24,
+      "col_index": 3
+    },
+    {
+      "row_index": 24,
+      "col_index": 4
+    },
+    {
+      "row_index": 24,
+      "col_index": 5
+    },
+    {
+      "row_index": 24,
+      "col_index": 6
+    },
+    {
+      "row_index": 24,
+      "col_index": 7
+    },
+    {
+      "row_index": 25,
+      "col_index": 1
+    },
+    {
+      "row_index": 25,
+      "col_index": 2
+    },
+    {
+      "row_index": 25,
+      "col_index": 3
+    },
+    {
+      "row_index": 25,
+      "col_index": 4
+    },
+    {
+      "row_index": 25,
+      "col_index": 5
+    },
+    {
+      "row_index": 25,
+      "col_index": 6
+    },
+    {
+      "row_index": 25,
+      "col_index": 7
+    },
+    {
+      "row_index": 26,
+      "col_index": 1
+    },
+    {
+      "row_index": 26,
+      "col_index": 2
+    },
+    {
+      "row_index": 26,
+      "col_index": 3
+    },
+    {
+      "row_index": 26,
+      "col_index": 4
+    },
+    {
+      "row_index": 26,
+      "col_index": 5
+    },
+    {
+      "row_index": 26,
+      "col_index": 6
+    },
+    {
+      "row_index": 26,
+      "col_index": 7
+    },
+    {
+      "row_index": 27,
+      "col_index": 1
+    },
+    {
+      "row_index": 27,
+      "col_index": 2
+    },
+    {
+      "row_index": 27,
+      "col_index": 3
+    },
+    {
+      "row_index": 27,
+      "col_index": 4
+    },
+    {
+      "row_index": 27,
+      "col_index": 5
+    },
+    {
+      "row_index": 27,
+      "col_index": 6
+    },
+    {
+      "row_index": 27,
+      "col_index": 7
+    },
+    {
+      "row_index": 28,
+      "col_index": 1
+    },
+    {
+      "row_index": 28,
+      "col_index": 2
+    },
+    {
+      "row_index": 28,
+      "col_index": 3
+    },
+    {
+      "row_index": 28,
+      "col_index": 4
+    },
+    {
+      "row_index": 28,
+      "col_index": 5
+    },
+    {
+      "row_index": 28,
+      "col_index": 6
+    },
+    {
+      "row_index": 28,
+      "col_index": 7
+    },
+    {
+      "row_index": 29,
+      "col_index": 1
+    },
+    {
+      "row_index": 29,
+      "col_index": 2
+    },
+    {
+      "row_index": 29,
+      "col_index": 3
+    },
+    {
+      "row_index": 29,
+      "col_index": 4
+    },
+    {
+      "row_index": 29,
+      "col_index": 5
+    },
+    {
+      "row_index": 29,
+      "col_index": 6
+    },
+    {
+      "row_index": 29,
+      "col_index": 7
+    },
+    {
+      "row_index": 30,
+      "col_index": 1
+    },
+    {
+      "row_index": 30,
+      "col_index": 2
+    },
+    {
+      "row_index": 30,
+      "col_index": 3
+    },
+    {
+      "row_index": 30,
+      "col_index": 4
+    },
+    {
+      "row_index": 30,
+      "col_index": 5
+    },
+    {
+      "row_index": 30,
+      "col_index": 6
+    },
+    {
+      "row_index": 30,
+      "col_index": 7
+    }
+  ],
+  "stockist_name": null,
+  "statement_period": null
+}

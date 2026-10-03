@@ -106,15 +106,77 @@ def _stamp(result: Dict[str, Any], quality: Dict[str, Any], status: str) -> None
     extra["gemini_fallback"] = status
 
 
-def _log_gate(quality: Dict[str, Any], used_gemini: bool, filename: str = "") -> None:
+def _current_request_id(result: Optional[Dict[str, Any]] = None) -> str:
+    if result is not None:
+        rid = str(
+            ((result.get("totals") or {}).get("extra") or {}).get("request_id") or ""
+        ).strip()
+        if rid:
+            return rid
+    try:
+        from services.sales_extraction_runtime import get_sales_runtime_context
+
+        ctx = get_sales_runtime_context()
+        rid = getattr(ctx, "request_id", None) if ctx is not None else None
+        if rid:
+            return str(rid)
+    except Exception:
+        pass
+    try:
+        from services.sales_extraction_runtime import _deadline_local
+
+        rid = getattr(_deadline_local, "request_id", None)
+        if rid:
+            return str(rid)
+    except Exception:
+        pass
+    return "-"
+
+
+def _log_fallback_decision_current(
+    filename: str,
+    reason: str,
+    decision: str,
+    parser: str = "",
+    request_id: str = "",
+    result: Optional[Dict[str, Any]] = None,
+) -> None:
+    rid = request_id or _current_request_id(result)
+    logger.info(
+        "FALLBACK_DECISION_CURRENT request_id=%s file=%s reason=%s decision=%s parser=%s",
+        rid or "-",
+        filename or "-",
+        reason or "none",
+        decision,
+        parser or "generic",
+    )
+
+
+def _log_gate(
+    quality: Dict[str, Any],
+    used_gemini: bool,
+    filename: str = "",
+    result: Optional[Dict[str, Any]] = None,
+) -> None:
+    decision = (
+        "GEMINI_VISION_FALLBACK" if quality.get("should_fallback") else "KEEP_PARSER"
+    )
+    reason = ",".join(quality.get("reasons") or []) or "none"
     logger.info(
         "[SalesStatement] file=%s parser=%s OCR_quality=%s decision=%s reason=%s gemini=%s",
         filename or "-",
         quality.get("parser") or "generic",
         quality.get("score"),
-        "GEMINI_VISION_FALLBACK" if quality.get("should_fallback") else "KEEP_PARSER",
-        ",".join(quality.get("reasons") or []) or "none",
+        decision,
+        reason,
         str(used_gemini).lower(),
+    )
+    _log_fallback_decision_current(
+        filename,
+        reason,
+        decision,
+        str(quality.get("parser") or "generic"),
+        result=result,
     )
 
 
@@ -170,18 +232,38 @@ def _text_image(text: str) -> bytes:
     return buf.getvalue()
 
 
-def _pdf_images(file_bytes: bytes) -> List[bytes]:
+def _pdf_images(file_bytes: bytes, *, max_pages: Optional[int] = None) -> List[bytes]:
+    """Render PDF pages for Vision. Corrupt/truncated PDFs return [] (flagged upstream)."""
     import fitz
 
     images: List[bytes] = []
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except Exception as exc:
+        logger.info(
+            "GEMINI_PDF_UNREADABLE status=flagged error=%s bytes=%s",
+            type(exc).__name__,
+            len(file_bytes or b""),
+        )
+        return []
+    try:
+        limit = _max_pages() if max_pages is None else max(1, int(max_pages))
         # Same page scale as the /split-and-extract vision render.
-        for page in doc[: _max_pages()]:
-            pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
-            images.append(pix.tobytes("png"))
+        for page in doc[:limit]:
+            try:
+                pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+                images.append(pix.tobytes("png"))
+            except Exception as exc:
+                logger.info(
+                    "GEMINI_PDF_PAGE_UNREADABLE page=%s error=%s",
+                    getattr(page, "number", "?"),
+                    type(exc).__name__,
+                )
     finally:
-        doc.close()
+        try:
+            doc.close()
+        except Exception:
+            pass
     return images
 
 
@@ -296,6 +378,14 @@ def _document_parts(file_bytes: bytes, ext: str) -> List[Dict[str, Any]]:
     if ext == ".pdf":
         return [_image_part(image, "image/png") for image in _pdf_images(file_bytes)]
     if ext in {".xls", ".xlsx", ".xlsm"}:
+        # Phase 3b: native resolver on → never render sheet as JPEG for Gemini.
+        try:
+            from services.stock_native_resolver import stock_native_resolver_mode
+
+            if stock_native_resolver_mode() == "on":
+                return []
+        except Exception:
+            pass
         image = _sheet_image(file_bytes, ext)
         return [_image_part(image, "image/jpeg")] if image else []
     if ext in {".doc", ".docx"}:
@@ -407,6 +497,8 @@ def _result_is_weak(result: Dict[str, Any], quality: Dict[str, Any]) -> bool:
             "all_zero_suspicious",
             "missing_product_names",
         }:
+            # IDENTITY_VETO / stock_identity_failure alone must not wipe the OCR
+            # result via _controlled_failure — keep flagged rows (and unresolved).
             return True
     items = []
     if isinstance(result, dict):
@@ -481,6 +573,125 @@ def try_gemini_vision_extract(
     return gemini_result
 
 
+def _log_identity_veto_override(
+    result: Dict[str, Any],
+    gate: str,
+    old_decision: str,
+    veto_info: Dict[str, Any],
+) -> None:
+    rid = _current_request_id(result)
+    import json as _json
+
+    logger.info(
+        "IDENTITY_VETO_OVERRIDE request_id=%s gate=%s old_decision=%s counts=%s "
+        "valid_ratio=%s",
+        rid or "-",
+        gate,
+        old_decision,
+        _json.dumps(veto_info.get("counts") or {}),
+        veto_info.get("valid_ratio"),
+    )
+
+
+def _attach_gemini_as_candidates(
+    ocr_result: Dict[str, Any], gemini_result: Dict[str, Any]
+) -> None:
+    """Attach Gemini rows onto OCR line items as candidates (never rewrite values)."""
+    gemini_items = gemini_result.get("line_items") or []
+    ocr_items = ocr_result.get("line_items") or []
+    for index, item in enumerate(ocr_items):
+        if not isinstance(item, dict):
+            continue
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            continue
+        candidates = list(extra.get("candidates") or [])
+        if index < len(gemini_items) and isinstance(gemini_items[index], dict):
+            candidates.append(
+                {
+                    "source": "gemini_extraction_fallback",
+                    "fields": {
+                        k: gemini_items[index].get(k)
+                        for k in (
+                            "opening_qty",
+                            "receipts_qty",
+                            "sales_qty",
+                            "closing_qty",
+                            "sales_value",
+                            "closing_value",
+                            "product_name",
+                        )
+                    },
+                }
+            )
+        extra["candidates"] = candidates
+
+
+def _normalize_product_key(name: Any) -> str:
+    text = str(name or "").lower()
+    return re.sub(r"[^a-z0-9]", "", text)
+
+
+def _is_total_row_name(name: Any) -> bool:
+    key = _normalize_product_key(name)
+    if not key:
+        return True
+    return key in {
+        "total",
+        "grandtotal",
+        "subtotal",
+        "page total",
+        "pagetotal",
+        "gtotal",
+    } or key.startswith("total") and len(key) <= 12
+
+
+def _gemini_row_coverage(
+    ocr_result: Dict[str, Any], gemini_result: Dict[str, Any]
+) -> float:
+    """Fraction of OCR product rows matched in Gemini (name exact, then difflib).
+
+    Gemini having *more* rows than OCR is fine (coverage can be 1.0). Only
+    under-coverage (< 0.90) blocks picking Gemini by valid_ratio alone.
+    """
+    import difflib
+
+    ocr_keys = [
+        _normalize_product_key(item.get("product_name"))
+        for item in (ocr_result.get("line_items") or [])
+        if isinstance(item, dict)
+        and not _is_total_row_name(item.get("product_name"))
+        and _normalize_product_key(item.get("product_name"))
+    ]
+    gemini_keys = [
+        _normalize_product_key(item.get("product_name"))
+        for item in (gemini_result.get("line_items") or [])
+        if isinstance(item, dict)
+        and not _is_total_row_name(item.get("product_name"))
+        and _normalize_product_key(item.get("product_name"))
+    ]
+    if not ocr_keys:
+        return 1.0
+    remaining = list(gemini_keys)
+    matched = 0
+    for ocr_key in ocr_keys:
+        if ocr_key in remaining:
+            remaining.remove(ocr_key)
+            matched += 1
+            continue
+        best_i = -1
+        best_ratio = 0.0
+        for i, g_key in enumerate(remaining):
+            ratio = difflib.SequenceMatcher(None, ocr_key, g_key).ratio()
+            if ratio > best_ratio:
+                best_ratio = ratio
+                best_i = i
+        if best_i >= 0 and best_ratio >= 0.85:
+            remaining.pop(best_i)
+            matched += 1
+    return float(matched) / float(len(ocr_keys))
+
+
 def maybe_apply_gemini_fallback(
     result: Dict[str, Any],
     file_bytes: bytes,
@@ -488,81 +699,139 @@ def maybe_apply_gemini_fallback(
     ext: str,
 ) -> Dict[str, Any]:
     """Keep a good existing extract. One Gemini read only when quality fails."""
+    from services.stock_row_classifier import (
+        bump_gemini_calls,
+        classify_result,
+        gemini_call_budget,
+        get_gemini_calls,
+        infer_input_type,
+        veto_active_for,
+        veto_decision,
+    )
+
     if not _enabled():
+        _log_fallback_decision_current(
+            filename, "DISABLED", "KEEP_PARSER", result=result
+        )
         return result
+
     meta = _source_metadata(file_bytes, ext)
+    meta = dict(meta)
+    meta["ext"] = (ext or "").lower()
+    input_type = infer_input_type(ext, meta)
+    meta["input_type"] = input_type
+    veto_on = veto_active_for(input_type)
+    veto_info = veto_decision(result, input_type) if veto_on else {
+        "veto": False,
+        "reason": "veto_inactive",
+        "counts": {},
+        "valid_ratio": 1.0,
+        "flagged_rows": [],
+    }
+    force_veto = bool(veto_on and veto_info.get("veto"))
+
+    decided = ((result.get("totals") or {}).get("extra") or {}).get(
+        "stock_image_vision_decided"
+    )
+    if decided and not force_veto:
+        _log_fallback_decision_current(
+            filename, "stock_image_vision_decided", "SKIP_FALLBACK", result=result
+        )
+        return result
+    if decided and force_veto:
+        _log_identity_veto_override(
+            result, "stock_image_vision_decided", "SKIP_FALLBACK", veto_info
+        )
+
     quality = evaluate_extraction_quality(result, meta)
-    _log_gate(quality, used_gemini=bool(quality.get("should_fallback")), filename=filename)
-    if not quality.get("should_fallback"):
+    if force_veto:
+        reasons = list(quality.get("reasons") or [])
+        if "IDENTITY_VETO" not in reasons:
+            reasons.insert(0, "IDENTITY_VETO")
+        quality = dict(quality)
+        quality["reasons"] = reasons
+        quality["should_fallback"] = True
+        quality["score"] = min(int(quality.get("score") or 0), 40)
+
+    _log_gate(
+        quality,
+        used_gemini=bool(quality.get("should_fallback")),
+        filename=filename,
+        result=result,
+    )
+    if not quality.get("should_fallback") and not force_veto:
         _stamp(result, quality, "not_called")
         return result
 
-    # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos: Gemini shifts
-    # neighboring rows. Keep the format-specific OCR/column reader.
     extra = ((result.get("totals") or {}).get("extra") or {})
-    if (
+    parser = str(extra.get("extraction_method") or quality.get("parser") or "generic")
+
+    def _allowlist_skip(gate: str, condition: bool) -> bool:
+        if not condition:
+            return False
+        if force_veto:
+            _log_identity_veto_override(result, gate, "KEEP_PARSER", veto_info)
+            return False
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=%s",
+            filename,
+            gate,
+        )
+        _log_fallback_decision_current(
+            filename, gate, "KEEP_PARSER", parser, result=result
+        )
+        _stamp(result, quality, "not_called")
+        return True
+
+    # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos.
+    if _allowlist_skip(
+        "main_stock_column_reader",
         str(extra.get("extraction_method") or "") == "main_stock_sales_statement"
-        or str(extra.get("layout") or "") == "opening_receive_issue_closing"
+        or str(extra.get("layout") or "") == "opening_receive_issue_closing",
     ):
-        logger.info(
-            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=main_stock_column_reader",
-            filename,
-        )
-        _stamp(result, quality, "not_called")
         return result
 
-    # Code/Item Opening/Purchase/Sales phone photo — keep dedicated Vision reader.
-    if str(extra.get("extraction_method") or "") in {
-        "code_item_stock_statement_photo",
+    if _allowlist_skip(
         "code_item_stock_statement",
-    } or str(extra.get("layout") or "") == "code_item_stock_statement":
-        logger.info(
-            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=code_item_stock_statement",
-            filename,
-        )
-        _stamp(result, quality, "not_called")
-        return result
-
-    # J R SHAH Op/Pur/Pur Val/Sale Val/Bal Val photo — keep dedicated Vision reader.
-    if str(extra.get("extraction_method") or "") in {
-        "op_pur_sp_sale_bal_val_photo",
-        "op_pur_sp_sale_bal_val",
-        "pack_op_pur_bal_stock_sale_vision",
-        "pack_op_pur_bal_stock_sale",
-    } or str(extra.get("layout") or "") in {
-        "op_pur_sp_sale_bal_val",
-        "pack_op_pur_bal_stock_sale",
-    }:
-        logger.info(
-            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=op_pur_sp_sale_bal_val",
-            filename,
-        )
-        _stamp(result, quality, "not_called")
-        return result
-
-    # Native MediVision Op/Purc/NM60D parser: keep printed Cl qty (do not Vision-replace).
-    if (
-        str(extra.get("extraction_method") or "") == "medivision_op_purc_nm60d"
-        or str(extra.get("layout") or "") == "medivision_op_purc_nm60d"
+        str(extra.get("extraction_method") or "")
+        in {
+            "code_item_stock_statement_photo",
+            "code_item_stock_statement",
+        }
+        or str(extra.get("layout") or "") == "code_item_stock_statement",
     ):
-        logger.info(
-            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=medivision_op_purc_nm60d",
-            filename,
-        )
-        _stamp(result, quality, "not_called")
         return result
 
-    # Product wise stock statement photo: Closing vs Liqudation days already fixed.
-    if (
+    if _allowlist_skip(
+        "op_pur_sp_sale_bal_val",
+        str(extra.get("extraction_method") or "")
+        in {
+            "op_pur_sp_sale_bal_val_photo",
+            "op_pur_sp_sale_bal_val",
+            "pack_op_pur_bal_stock_sale_vision",
+            "pack_op_pur_bal_stock_sale",
+        }
+        or str(extra.get("layout") or "")
+        in {
+            "op_pur_sp_sale_bal_val",
+            "pack_op_pur_bal_stock_sale",
+        },
+    ):
+        return result
+
+    if _allowlist_skip(
+        "medivision_op_purc_nm60d",
+        str(extra.get("extraction_method") or "") == "medivision_op_purc_nm60d"
+        or str(extra.get("layout") or "") == "medivision_op_purc_nm60d",
+    ):
+        return result
+
+    if _allowlist_skip(
+        "product_wise_stock_statement_image",
         str(extra.get("extraction_method") or "")
         == "product_wise_stock_statement_image"
-        or str(extra.get("layout") or "") == "product_wise_stock_statement_photo"
+        or str(extra.get("layout") or "") == "product_wise_stock_statement_photo",
     ):
-        logger.info(
-            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=product_wise_stock_statement_image",
-            filename,
-        )
-        _stamp(result, quality, "not_called")
         return result
 
     # TXT/HTML have no visual page — do not invent Vision input.
@@ -572,11 +841,31 @@ def maybe_apply_gemini_fallback(
             "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=text_only",
             filename,
         )
+        _log_fallback_decision_current(
+            filename, "text_only", "UNAVAILABLE", parser, result=result
+        )
+        return result
+
+    if get_gemini_calls(result) >= gemini_call_budget(result):
+        bag = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(bag, dict):
+            bag["identity_veto_unresolved"] = True
+        _stamp(result, quality, "budget_exhausted")
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=gemini_budget "
+            "calls=%s",
+            filename,
+            get_gemini_calls(result),
+        )
         return result
 
     document_parts = _document_parts(file_bytes, ext)
     if not document_parts:
         _stamp(result, quality, "unavailable")
+        if (ext or "").lower() == ".pdf":
+            bag = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(bag, dict):
+                bag["source_flag"] = "corrupt_or_unreadable_pdf"
         logger.info(
             "[SalesStatement] file=%s GEMINI_FALLBACK status=failed reason=unavailable",
             filename,
@@ -589,6 +878,7 @@ def maybe_apply_gemini_fallback(
     parsed = None
     try:
         for _ in range(_max_attempts()):
+            bump_gemini_calls(result, 1)
             parsed = _call_gemini(file_bytes, ext, document_parts)
             if parsed and parsed.get("line_items"):
                 break
@@ -599,24 +889,38 @@ def maybe_apply_gemini_fallback(
         )
         logger.warning("Gemini extraction fallback unavailable: %s", exc)
         _stamp(result, quality, "unavailable")
+        if force_veto:
+            bag = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(bag, dict):
+                bag["identity_veto_unresolved"] = True
         if _result_is_weak(result, quality):
             return _controlled_failure(filename, ext, quality, "unavailable")
         return result
 
     if not parsed or not parsed.get("line_items"):
+        if force_veto:
+            bag = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(bag, dict):
+                bag["identity_veto_unresolved"] = True
         if _result_is_weak(result, quality):
             return _controlled_failure(filename, ext, quality, "validation_failed")
         _stamp(result, quality, "validation_failed")
         return result
 
     gemini_result = _finish_gemini_result(parsed, filename, ext)
-    gemini_quality = evaluate_extraction_quality(
-        gemini_result, meta
-    )
-    # Accept Gemini when it produced real product rows even if weak-method scoring
-    # flags low_ocr_quality_score on the Gemini method name itself.
+    # Preserve call counter on the Gemini candidate.
+    gemini_extra = gemini_result.setdefault("totals", {}).setdefault("extra", {})
+    if isinstance(gemini_extra, dict):
+        gemini_extra["gemini_calls"] = get_gemini_calls(result)
+        if result.get("totals", {}).get("extra", {}).get("request_id"):
+            gemini_extra.setdefault(
+                "request_id",
+                result["totals"]["extra"]["request_id"],
+            )
+
+    gemini_meta = dict(meta)
+    gemini_quality = evaluate_extraction_quality(gemini_result, gemini_meta)
     gemini_items = gemini_result.get("line_items") or []
-    # Row-shift signature: many closings with blank openings — never accept.
     shifted = 0
     for item in gemini_items:
         if not isinstance(item, dict):
@@ -639,6 +943,76 @@ def maybe_apply_gemini_fallback(
     )
     if shifted >= max(5, len(gemini_items) // 4):
         gemini_ok = False
+
+    # Phase 1: keep whichever reading balances better under the classifier.
+    if force_veto or veto_on:
+        ocr_ratio = float(
+            (classify_result(result) or {}).get("valid_ratio")
+            or veto_info.get("valid_ratio")
+            or 0.0
+        )
+        gemini_ratio = float(
+            (classify_result(gemini_result) or {}).get("valid_ratio") or 0.0
+        )
+        rid = _current_request_id(result)
+        coverage = _gemini_row_coverage(result, gemini_result)
+        if coverage < 0.90:
+            _attach_gemini_as_candidates(result, gemini_result)
+            _stamp(result, quality, "kept_ocr_low_row_coverage")
+            bag = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(bag, dict) and force_veto:
+                bag["identity_veto_unresolved"] = True
+            logger.info(
+                "VETO_RESULT_PICK request_id=%s picked=ocr reason=LOW_ROW_COVERAGE "
+                "coverage=%s ocr_ratio=%s gemini_ratio=%s",
+                rid,
+                round(coverage, 4),
+                ocr_ratio,
+                gemini_ratio,
+            )
+            return result
+        if gemini_ratio >= ocr_ratio and gemini_items:
+            _stamp(gemini_result, gemini_quality, "success")
+            logger.info(
+                "VETO_RESULT_PICK request_id=%s picked=gemini ocr_ratio=%s "
+                "gemini_ratio=%s coverage=%s",
+                rid,
+                ocr_ratio,
+                gemini_ratio,
+                round(coverage, 4),
+            )
+            logger.info(
+                "[SalesStatement] file=%s decision=GEMINI_VISION_FALLBACK reason=%s "
+                "pages=%s gemini_duration=%.1fs line_items=%s validation=PASS model=paid",
+                filename,
+                ",".join(quality.get("reasons") or []) or "IDENTITY_VETO",
+                meta.get("page_count"),
+                time.time() - started,
+                len(gemini_items),
+            )
+            # Still failing after pick → flag unresolved (no more loops here).
+            post = veto_decision(gemini_result, input_type) if veto_on else {"veto": False}
+            if post.get("veto"):
+                gextra = gemini_result.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(gextra, dict):
+                    gextra["identity_veto_unresolved"] = True
+            return gemini_result
+
+        _attach_gemini_as_candidates(result, gemini_result)
+        _stamp(result, quality, "kept_ocr_better_ratio")
+        bag = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(bag, dict) and force_veto:
+            bag["identity_veto_unresolved"] = True
+        logger.info(
+            "VETO_RESULT_PICK request_id=%s picked=ocr ocr_ratio=%s gemini_ratio=%s "
+            "coverage=%s",
+            rid,
+            ocr_ratio,
+            gemini_ratio,
+            round(coverage, 4),
+        )
+        return result
+
     if not gemini_ok:
         if _result_is_weak(result, quality):
             return _controlled_failure(filename, ext, gemini_quality, "validation_failed")

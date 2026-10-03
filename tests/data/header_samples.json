@@ -1,0 +1,213 @@
+{
+  "psr_saleret": {
+    "source": "tests/test_product_stock_report.py:ATUL_SALERET_TEXT / _psr_colmap_from_headers",
+    "header_cells": [
+      {"text": "Product Name", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Opening", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Purchase", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Total", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Sale", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "SaleRet", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Exp/Dmg", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "Closing Stock", "x_center": null, "col_index": 7, "subheader_text": null},
+      {"text": "Cls Amt", "x_center": null, "col_index": 8, "subheader_text": null},
+      {"text": "Order Qty", "x_center": null, "col_index": 9, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "opening_qty", "purchase_qty", "total_qty", "sales_qty",
+      "sales_return_qty", "expiry_damage_qty", "closing_qty", "closing_value", "order_qty"
+    ]
+  },
+  "marg_main_stock": {
+    "source": "tests/test_jay_distributors_hdc_sheets_stock_sales.py",
+    "header_cells": [
+      {"text": "PRODUCT DESCRIPTION", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "OPENING STOCK", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "OPENING VALUE", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "RECEIVE QUANTITY", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "RECEIVE VALUE", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "ISSUE QUANTITY", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "ISSUE VALUE", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "CLOSING STOCK", "x_center": null, "col_index": 7, "subheader_text": null},
+      {"text": "CLOSING VALUE", "x_center": null, "col_index": 8, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "opening_qty", "opening_value", "purchase_qty", "purchase_value",
+      "sales_qty", "sales_value", "closing_qty", "closing_value"
+    ]
+  },
+  "opbal": {
+    "source": "tests/test_swilerp_sales_stock_statement.py / _sales_stock_label_kind",
+    "header_cells": [
+      {"text": "PRODUCT NAME", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "PACKING", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Op.Bal.", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Receipt", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Total", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Issue", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Closing", "x_center": null, "col_index": 6, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "total_qty", "sales_qty", "closing_qty"
+    ]
+  },
+  "medica_opstk": {
+    "source": "tests/test_medica_opstk_columns.py:_HEADER",
+    "header_cells": [
+      {"text": "PRODUCT DESCRIPTION", "x_center": 71.0, "col_index": 0, "subheader_text": null},
+      {"text": "PACKING", "x_center": 195.5, "col_index": 1, "subheader_text": null},
+      {"text": "OPSTK", "x_center": 235.0, "col_index": 2, "subheader_text": null},
+      {"text": "PURCH", "x_center": 270.0, "col_index": 3, "subheader_text": null},
+      {"text": "SALE", "x_center": 308.5, "col_index": 4, "subheader_text": null},
+      {"text": "SALE VAL", "x_center": 345.5, "col_index": 5, "subheader_text": null},
+      {"text": "IN/OT", "x_center": 378.5, "col_index": 6, "subheader_text": null},
+      {"text": "STOCK", "x_center": 405.0, "col_index": 7, "subheader_text": null},
+      {"text": "STK VAL", "x_center": 442.0, "col_index": 8, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty", "sales_value",
+      "ignore", "closing_qty", "closing_value"
+    ]
+  },
+  "pack_mexp": {
+    "source": "tests/test_pack_mexp_qty_totals.py / _pack_mexp_header_centers",
+    "header_cells": [
+      {"text": "ITEM DESCRIPTION", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "PACK", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "OPENING", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "RECEIPT", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "ISSUE", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "CLOSING", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "M.EXP", "x_center": null, "col_index": 6, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty", "closing_qty", "ignore"
+    ]
+  },
+  "product_wise": {
+    "source": "tests/test_asha_product_wise_box_column.py / _product_wise_header_centers",
+    "header_cells": [
+      {"text": "Product Name", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Packing", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Opening", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Receipt", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Issues", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Closing", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Sales amount", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "Closing amount", "x_center": null, "col_index": 7, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty", "closing_qty",
+      "sales_value", "closing_value"
+    ]
+  },
+  "code_item": {
+    "source": "tests/test_code_item_stock_statement.py:HEADER",
+    "header_cells": [
+      {"text": "Code", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Item Description", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Packing", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Opening", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Purchase", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Sales", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Closing", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "Stock-Value", "x_center": null, "col_index": 7, "subheader_text": null},
+      {"text": "Sales-Value", "x_center": null, "col_index": 8, "subheader_text": null}
+    ],
+    "expected": [
+      "ignore", "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty",
+      "closing_qty", "closing_value", "sales_value"
+    ]
+  },
+  "excel_xls": {
+    "source": "tests/test_marg_erp_xls_statement.py / _XLS_HEADER_ALIASES",
+    "header_cells": [
+      {"text": "Item", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Pack", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Op.", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Pur", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Sale", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Bal.", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "BVal", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "SVal", "x_center": null, "col_index": 7, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty",
+      "closing_qty", "closing_value", "sales_value"
+    ]
+  },
+  "sales_stock_txt": {
+    "source": "services/sales_statement_extractor.py:_sales_stock_column_plan",
+    "header_cells": [
+      {"text": "PRODUCT NAME", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "PACKING", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Opening", "x_center": null, "col_index": 2, "subheader_text": "Qty"},
+      {"text": "Opening", "x_center": null, "col_index": 3, "subheader_text": "Value"},
+      {"text": "Receipt", "x_center": null, "col_index": 4, "subheader_text": "Qty"},
+      {"text": "Receipt", "x_center": null, "col_index": 5, "subheader_text": "Value"},
+      {"text": "Issue", "x_center": null, "col_index": 6, "subheader_text": "Qty"},
+      {"text": "Issue", "x_center": null, "col_index": 7, "subheader_text": "Value"},
+      {"text": "Closing", "x_center": null, "col_index": 8, "subheader_text": "Qty"},
+      {"text": "Closing", "x_center": null, "col_index": 9, "subheader_text": "Value"}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "opening_value", "purchase_qty",
+      "purchase_value", "sales_qty", "sales_value", "closing_qty", "closing_value"
+    ]
+  },
+  "pack_op_pur_bal": {
+    "source": "tests/test_pack_op_pur_bal_stock_sale.py / _PACK_OP_PUR_BAL vision prompt",
+    "header_cells": [
+      {"text": "Item Name", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "pack", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Op", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Pur", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "SP", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Pur Val", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Sale", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "SS", "x_center": null, "col_index": 7, "subheader_text": null},
+      {"text": "Sale Val", "x_center": null, "col_index": 8, "subheader_text": null},
+      {"text": "Bal.", "x_center": null, "col_index": 9, "subheader_text": null},
+      {"text": "Bal Val", "x_center": null, "col_index": 10, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "free_in_qty",
+      "purchase_value", "sales_qty", "free_out_qty", "sales_value",
+      "closing_qty", "closing_value"
+    ]
+  },
+  "medivision_op_purc_cl": {
+    "source": "tests/test_medivision_op_wsale_photo.py / _purc_sale_cl_columns",
+    "header_cells": [
+      {"text": "Product", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Unit", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Purc", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Purc val", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Sale", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Sa val", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "Cl qty", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "Cl val", "x_center": null, "col_index": 7, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "purchase_qty", "purchase_value", "sales_qty",
+      "sales_value", "closing_qty", "closing_value"
+    ]
+  },
+  "pharmassist_core": {
+    "source": "services/sales_statement_extractor.py:_pharmassist_header_field",
+    "header_cells": [
+      {"text": "Item", "x_center": null, "col_index": 0, "subheader_text": null},
+      {"text": "Pack", "x_center": null, "col_index": 1, "subheader_text": null},
+      {"text": "Op.", "x_center": null, "col_index": 2, "subheader_text": null},
+      {"text": "Pur", "x_center": null, "col_index": 3, "subheader_text": null},
+      {"text": "Sale", "x_center": null, "col_index": 4, "subheader_text": null},
+      {"text": "Bal.", "x_center": null, "col_index": 5, "subheader_text": null},
+      {"text": "BVal", "x_center": null, "col_index": 6, "subheader_text": null},
+      {"text": "SVal", "x_center": null, "col_index": 7, "subheader_text": null}
+    ],
+    "expected": [
+      "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty",
+      "closing_qty", "closing_value", "sales_value"
+    ]
+  }
+}

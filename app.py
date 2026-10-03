@@ -633,6 +633,12 @@ async def _reliability_startup():
     register_tesseract_slot_probe(_tesseract_slot_probe)
     register_request_progress_sync(_sync_request_progress_from_reliability)
     start_watchdog()
+    try:
+        from services.stock_row_classifier import log_soffice_availability_once
+
+        log_soffice_availability_once()
+    except Exception as exc:
+        logger.info("SOFFICE_AVAILABLE=false reason=startup_check_failed error=%s", type(exc).__name__)
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -30225,10 +30231,43 @@ async def extract_sales_statement_endpoint(
         detail.update(extra)
         return detail
 
+    def _maybe_save_sales_upload(payload: bytes) -> None:
+        """Optional debug copy so failed reprocess can be replayed without Laravel."""
+        if not _env_bool_flag("STOCK_SAVE_UPLOADS", False):
+            return
+        try:
+            import hashlib
+            from pathlib import Path
+
+            dest_dir = Path(
+                os.getenv(
+                    "STOCK_SAVE_UPLOADS_DIR",
+                    "/var/www/html/splitextract/debug_uploads",
+                )
+            )
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            safe = re.sub(r"[^\w.\-]+", "_", filename)[:180] or "upload.bin"
+            digest = hashlib.sha256(payload).hexdigest()[:16]
+            path = dest_dir / f"{digest}_{safe}"
+            path.write_bytes(payload)
+            logger.info(
+                "STOCK_UPLOAD_SAVED request_id=%s path=%s bytes=%s",
+                request_id,
+                str(path),
+                len(payload),
+            )
+        except Exception as exc:
+            logger.warning(
+                "STOCK_UPLOAD_SAVE_FAILED request_id=%s error=%s",
+                request_id,
+                type(exc).__name__,
+            )
+
     try:
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
+        _maybe_save_sales_upload(file_bytes)
 
         try:
             queue_wait_seconds = await acquire_sales_extraction_slot()

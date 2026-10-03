@@ -10,7 +10,9 @@ import io
 import itertools
 import json
 import logging
+import os
 import re
+import threading
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -102,6 +104,44 @@ def empty_line_item() -> Dict[str, Any]:
         "closing_value": 0.0,
         "extra": {},
     }
+
+
+def _repair_assign(
+    item: Dict[str, Any],
+    fields: Dict[str, Any],
+    source: str,
+    reason: str,
+    *,
+    column_absent_fields: Tuple[str, ...] = (),
+    extra_flags: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Apply repair fields, or record candidates when STOCK_NO_REWRITE is on."""
+    from services.stock_row_classifier import apply_repairs, record_candidate
+
+    if apply_repairs():
+        for key, value in fields.items():
+            if str(key).startswith("extra."):
+                extra = item.setdefault("extra", {})
+                if isinstance(extra, dict):
+                    extra[str(key).split(".", 1)[1]] = value
+            else:
+                item[key] = value
+        if extra_flags:
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra.update(extra_flags)
+        return
+    reason_full = reason
+    if extra_flags:
+        marker = ",".join(str(k) for k in extra_flags.keys())
+        reason_full = f"{reason}|{marker}" if reason else marker
+    record_candidate(
+        item,
+        dict(fields),
+        source,
+        reason_full,
+        column_absent_fields=column_absent_fields,
+    )
 
 
 _EMPTY_NUMERIC = {
@@ -1042,10 +1082,11 @@ def _is_product_wise_stock_statement_text(text: str) -> bool:
         return False
     if re.search(r"\bDUMP\b", text, re.I) and re.search(r"QTY\.?\s+VALUE", text, re.I):
         return False
+    # OCR may glue underscores onto Issues ("__Issues"); avoid \b before I.
     has_qty = (
         re.search(r"\bOpening\b", text, re.I)
         and re.search(r"\bReceipt\b", text, re.I)
-        and re.search(r"\bIssues?\b", text, re.I)
+        and re.search(r"(?<![A-Za-z])Issues?(?![A-Za-z])", text, re.I)
         and re.search(r"\bClosing\b", text, re.I)
     )
     # Sales amount is required. Closing amount may be split across lines
@@ -2504,8 +2545,17 @@ def _collapse_stacked_opbal_product_lines(text: str) -> str:
     return "\n".join(collapsed)
 
 
-def _repair_opbal_qty_tuple(use: List[float]) -> List[float]:
-    """Rebuild Total as OpBal+Receipt when Total looks OCR-truncated."""
+def _repair_opbal_qty_tuple(
+    use: List[float],
+    *,
+    out_proposal: Optional[List[Any]] = None,
+) -> List[float]:
+    """Rebuild Total as OpBal+Receipt when Total looks OCR-truncated.
+
+    When STOCK_NO_REWRITE is on, returns the unrepaired tuple and appends a
+    RepairProposal to ``out_proposal`` (if provided) so the caller can
+    ``record_candidate`` after the line_item is built.
+    """
     if len(use) < 5:
         return use
     fixed = list(use)
@@ -2524,7 +2574,18 @@ def _repair_opbal_qty_tuple(use: List[float]) -> List[float]:
     if exp_s.endswith(tot_s) or (
         exp_s.startswith(tot_s) and (9 <= ratio <= 11 or 90 <= ratio <= 110)
     ):
-        fixed[2] = float(expected)
+        from services.stock_row_classifier import RepairProposal, apply_repairs
+
+        if apply_repairs():
+            fixed[2] = float(expected)
+        elif out_proposal is not None:
+            out_proposal.append(
+                RepairProposal(
+                    source="_repair_opbal_qty_tuple",
+                    fields={"extra.total_stock_qty": float(expected)},
+                    reason="truncated_total_from_op_rec",
+                )
+            )
     return fixed
 
 
@@ -2595,16 +2656,25 @@ def _parse_opbal_receipt_issue_row(
     # Prefer full 7-col layout, then 6, then 5. With Remain Day an 8th trailing
     # qty is common — drop it first so Closing/Dump stay aligned.
     use = None
+    use_proposals: List[Any] = []
     qty_pool = list(qtys[:-1]) if len(qtys) >= 8 else list(qtys)
     for n in (7, 6, 5):
         if n > len(qty_pool):
             continue
-        candidate = _repair_opbal_qty_tuple(
-            list(qty_pool[-n:] if len(qty_pool) > n else qty_pool)
-        )
-        bal_diff = abs((candidate[0] + candidate[1]) - candidate[2])
-        if bal_diff <= max(5.0, 0.25 * max(abs(candidate[2]), abs(candidate[0] + candidate[1]), 1.0)):
+        proposals: List[Any] = []
+        raw = list(qty_pool[-n:] if len(qty_pool) > n else qty_pool)
+        candidate = _repair_opbal_qty_tuple(raw, out_proposal=proposals)
+        # Layout selection uses the would-be-repaired total so truncated Total
+        # rows still match when STOCK_NO_REWRITE keeps the printed Total.
+        check = list(candidate)
+        if proposals:
+            prop_fields = proposals[-1].fields or {}
+            if "extra.total_stock_qty" in prop_fields:
+                check[2] = float(prop_fields["extra.total_stock_qty"])
+        bal_diff = abs((check[0] + check[1]) - check[2])
+        if bal_diff <= max(5.0, 0.25 * max(abs(check[2]), abs(check[0] + check[1]), 1.0)):
             use = candidate
+            use_proposals = proposals
             break
     if use is None:
         return None
@@ -2635,6 +2705,16 @@ def _parse_opbal_receipt_issue_row(
         # 8th qty (Remain Day Stock) when present on SwilERP rows
         if len(qtys) >= 8:
             item["extra"]["remain_day_stock"] = qtys[-1]
+    if use_proposals:
+        from services.stock_row_classifier import record_candidate
+
+        for prop in use_proposals:
+            record_candidate(
+                item,
+                dict(prop.fields or {}),
+                str(prop.source),
+                str(prop.reason or ""),
+            )
     return item
 
 def _parse_opbal_receipt_issue_statement(
@@ -3180,21 +3260,20 @@ def _looks_like_concatenated_totals(sales_value: Any, closing_value: Any) -> boo
     return False
 
 
-def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
-    """Fix bogus sales/closing money totals from OCR TOTAL merges (qty-only formats)."""
+def _sanitize_rows_and_text(result: Dict[str, Any]) -> Dict[str, Any]:
+    """(a) Row/text clean-up.
+
+    This sanitize path currently has no header/total/blank drops, name/pack
+    normalisation, or dedupe. Kept as a no-op hook so the old path calls all
+    three helpers without behaviour change.
+    """
+    return result
+
+
+def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
+    """(b) Top-level / statement totals and fields derived from line items."""
     if not isinstance(result, dict):
         return result
-    # Multi-statement wrapper
-    if result.get("multi_statement") and isinstance(result.get("statements"), list):
-        result["statements"] = [
-            _sanitize_statement_financials(stmt) for stmt in result["statements"]
-        ]
-        return result
-
-    # Product Stock Report has no sale-amount column; fill qty/value here so
-    # every parse path (including format-specific vision) is covered.
-    if _is_product_stock_report_result(result):
-        result = _psr_fill_missing_sales(result)
 
     items = result.get("line_items") or []
     if not isinstance(items, list):
@@ -3275,15 +3354,42 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     if bogus_sales:
+        new_sales = sum_sales_value if sum_sales_value > 0 else None
         totals["extra"]["rejected_sales_value"] = sales_total
+        overrides = totals["extra"].setdefault("sanitize_top_level_overrides", [])
+        if not isinstance(overrides, list):
+            overrides = []
+            totals["extra"]["sanitize_top_level_overrides"] = overrides
+        overrides.append(
+            {
+                "field": "sales_value",
+                "old": sales_total,
+                "new": new_sales,
+                "reason": "implausible_or_concatenated_sales_total",
+            }
+        )
         # Prefer real line-item money sum; else null for qty-only statements
-        totals["sales_value"] = sum_sales_value if sum_sales_value > 0 else None
+        totals["sales_value"] = new_sales
 
     if _is_implausible_money(
         totals.get("closing_value"), allow_negative=allow_negative_money
     ):
-        totals["extra"]["rejected_closing_value"] = totals.get("closing_value")
-        totals["closing_value"] = sum_closing_value if sum_closing_value > 0 else None
+        old_cv = totals.get("closing_value")
+        new_cv = sum_closing_value if sum_closing_value > 0 else None
+        totals["extra"]["rejected_closing_value"] = old_cv
+        overrides = totals["extra"].setdefault("sanitize_top_level_overrides", [])
+        if not isinstance(overrides, list):
+            overrides = []
+            totals["extra"]["sanitize_top_level_overrides"] = overrides
+        overrides.append(
+            {
+                "field": "closing_value",
+                "old": old_cv,
+                "new": new_cv,
+                "reason": "implausible_closing_total",
+            }
+        )
+        totals["closing_value"] = new_cv
     elif (
         qty_only
         and totals.get("closing_value") is not None
@@ -3298,30 +3404,171 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
-        totals["extra"]["rejected_closing_value"] = totals.get("closing_value")
-        totals["extra"]["closing_qty_from_total_row"] = totals.get("closing_value")
+        old_cv = totals.get("closing_value")
+        totals["extra"]["rejected_closing_value"] = old_cv
+        totals["extra"]["closing_qty_from_total_row"] = old_cv
+        overrides = totals["extra"].setdefault("sanitize_top_level_overrides", [])
+        if not isinstance(overrides, list):
+            overrides = []
+            totals["extra"]["sanitize_top_level_overrides"] = overrides
+        overrides.append(
+            {
+                "field": "closing_value",
+                "old": old_cv,
+                "new": None,
+                "reason": "qty_mislabel_as_closing_value",
+            }
+        )
         totals["closing_value"] = None
 
-    # Sanitize absurd per-line sales_value (rare, but same OCR merge class)
+    return _apply_period_from_fallback(result)
+
+
+def _sanitize_numeric_overrides(
+    result: Dict[str, Any],
+    *,
+    report_only: bool = False,
+    stage: str = "lines",
+) -> Dict[str, Any]:
+    """(c) Operations that change or zero a line-item qty/value.
+
+    stage:
+      - "psr": Product Stock Report fill (historical position before totals)
+      - "lines": zero implausible per-line sales_value / closing_value
+    report_only: do not mutate; append candidates describing what would change.
+    """
+    if not isinstance(result, dict):
+        return result
+
+    if stage == "psr":
+        if _is_product_stock_report_result(result) and not report_only:
+            # Product Stock Report has no sale-amount column; fill qty/value here.
+            return _psr_fill_missing_sales(result)
+        return result
+
+    items = result.get("line_items") or []
+    if not isinstance(items, list):
+        return result
+
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    allow_negative_money = (
+        str((totals.get("extra") or {}).get("extraction_method") or "")
+        in {
+            "swil_landscape_qty_value",
+            "purc_sale_cl_layout",
+            "profitmaker_ostk_docx",
+            "prompt_datewise_layout",
+        }
+    )
+
+    suppressed = 0
     for item in items:
         if not isinstance(item, dict):
             continue
+        proposed: Dict[str, Any] = {}
+        reasons: List[str] = []
         if _is_implausible_money(
             item.get("sales_value"), allow_negative=allow_negative_money
         ):
-            item.setdefault("extra", {})
-            if isinstance(item["extra"], dict):
-                item["extra"]["rejected_sales_value"] = item.get("sales_value")
-            item["sales_value"] = 0.0
+            proposed["sales_value"] = 0.0
+            reasons.append("implausible_sales_value")
+            if not report_only:
+                item.setdefault("extra", {})
+                if isinstance(item["extra"], dict):
+                    item["extra"]["rejected_sales_value"] = item.get("sales_value")
+                item["sales_value"] = 0.0
         if _is_implausible_money(
             item.get("closing_value"), allow_negative=allow_negative_money
         ):
-            item.setdefault("extra", {})
-            if isinstance(item["extra"], dict):
-                item["extra"]["rejected_closing_value"] = item.get("closing_value")
-            item["closing_value"] = 0.0
+            proposed["closing_value"] = 0.0
+            reasons.append("implausible_closing_value")
+            if not report_only:
+                item.setdefault("extra", {})
+                if isinstance(item["extra"], dict):
+                    item["extra"]["rejected_closing_value"] = item.get("closing_value")
+                item["closing_value"] = 0.0
+        if report_only and proposed:
+            extra = item.setdefault("extra", {})
+            if not isinstance(extra, dict):
+                extra = {}
+                item["extra"] = extra
+            if "rejected_sales_value" not in extra and "sales_value" in proposed:
+                extra["rejected_sales_value"] = item.get("sales_value")
+            if "rejected_closing_value" not in extra and "closing_value" in proposed:
+                extra["rejected_closing_value"] = item.get("closing_value")
+            cands = extra.setdefault("candidates", [])
+            if not isinstance(cands, list):
+                cands = []
+                extra["candidates"] = cands
+            cands.append(
+                {
+                    "source": "_sanitize_numeric_overrides",
+                    "fields": proposed,
+                    "reason": ",".join(reasons),
+                }
+            )
+            suppressed += 1
 
-    return _apply_period_from_fallback(result)
+    if report_only and suppressed:
+        request_id = "-"
+        try:
+            from services.sales_extraction_runtime import resolve_request_id
+
+            request_id = resolve_request_id()
+        except Exception:
+            request_id = "-"
+        try:
+            rid = ((result.get("totals") or {}).get("extra") or {}).get("request_id")
+            if rid:
+                request_id = str(rid)
+        except Exception:
+            pass
+        logger.info(
+            "VISION_TABLE request_id=%s sanitize_override_suppressed=%s",
+            request_id,
+            suppressed,
+        )
+    return result
+
+
+def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Fix bogus sales/closing money totals from OCR TOTAL merges (qty-only formats).
+
+    Splits into (a) rows/text, (b) compute totals, (c) numeric overrides.
+    Order matches the historical path (PSR fill → totals → line zeros) so
+    old-path output stays byte-identical.
+    """
+    if not isinstance(result, dict):
+        return result
+    # Multi-statement wrapper
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            _sanitize_statement_financials(stmt) for stmt in result["statements"]
+        ]
+        return result
+
+    result = _sanitize_rows_and_text(result)
+    # (c) PSR fill historically runs before totals so sums see filled values.
+    result = _sanitize_numeric_overrides(result, report_only=False, stage="psr")
+    result = _sanitize_compute_totals(result)
+    result = _sanitize_numeric_overrides(result, report_only=False, stage="lines")
+    return result
+
+
+def _sanitize_statement_financials_vision_safe(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Vision-table path: run (a)+(b); report (c) as candidates without rewriting."""
+    if not isinstance(result, dict):
+        return result
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            _sanitize_statement_financials_vision_safe(stmt)
+            for stmt in result["statements"]
+        ]
+        return result
+    result = _sanitize_rows_and_text(result)
+    result = _sanitize_compute_totals(result)
+    result = _sanitize_numeric_overrides(result, report_only=True, stage="lines")
+    return result
 
 
 def _sniff_extension(file_bytes: bytes, filename: str) -> str:
@@ -3575,6 +3822,22 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         ]
         return result
 
+    # Phase 1: when identity veto is active for this input, do not force fail_count=0.
+    try:
+        from services.stock_row_classifier import infer_input_type, veto_active_for
+
+        _src = str(result.get("source_file") or result.get("source_format") or "")
+        _ext = ""
+        if "." in _src:
+            _ext = "." + _src.rsplit(".", 1)[-1].lower()
+        elif result.get("source_format"):
+            _fmt = str(result.get("source_format") or "").lower()
+            _ext = _fmt if _fmt.startswith(".") else f".{_fmt}"
+        _veto_active = veto_active_for(infer_input_type(_ext or None))
+        _allow_force_zero_fail = not _veto_active
+    except Exception:
+        _allow_force_zero_fail = True
+
     if _is_monthly_ss_statement(result):
         return _apply_monthly_ss_stock_validation(result)
 
@@ -3640,7 +3903,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["sales_qty"] = sales_sum
         totals["extra"]["closing_qty"] = closing_sum
         totals["extra"]["stock_identity_formula"] = "closing_qty summed from STOCK"
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "opening_plus_purchase": opening_sum + receipt_sum,
             "expected_total": opening_sum + receipt_sum,
@@ -3695,7 +3959,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_identity_formula"] = (
             "closing_qty=Cl qty; nm60_qty=NM60D; printed Cl may differ from Op+Purc-Sale"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "opening_plus_purchase": opening_sum + receipt_sum,
             "expected_total": opening_sum + receipt_sum,
@@ -3743,7 +4008,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"].pop("sales_qty", None)
         totals["extra"].pop("receipts_qty", None)
         totals["extra"]["stock_identity_formula"] = "closing_qty summed from CLOSING"
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "opening_plus_purchase": opening_sum,
             "expected_total": opening_sum,
@@ -3779,7 +4045,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_identity_formula"] = (
             "closing_qty=Qty; mrp=MRP; no stock value column"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["qty_only"] = True
         totals["extra"]["stock_validation"] = {
             "extracted_closing": closing_sum,
@@ -3819,7 +4086,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["stock_identity_formula"] = (
             "closing_qty=Stock; closing_value=Value; no opening/receipts/sales"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_closing": closing_sum,
             "extracted_closing_value": closing_value_sum,
@@ -3846,7 +4114,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "sales=SALE; closing=CLOSING; reorder=RE-ORDER; "
             "no opening or receipt columns"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_sales_qty": sales_sum,
             "extracted_closing": closing_sum,
@@ -4001,7 +4270,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "opening=Op.stk; purchase=Pur; sales=sales; free=Free; "
             "replacement=Repl; closing=TotalStock"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": purchase_sum,
@@ -4074,7 +4344,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "opening=OPENSTK; purchase=PURSTK; sales=SALESTK; closing=CLOSESTK; "
             "values=OPENVAL/PURVAL/SALEVAL/CLSVAL"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": purchase_sum,
@@ -4561,7 +4832,8 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "opening=Opening_bal_qty; receipts=Primary_qty; "
             "closing=Closing_bal_qty; no sales column"
         )
-        totals["extra"]["stock_identity_fail_count"] = 0
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
             "extracted_opening": opening_sum,
             "extracted_purchase": receipt_sum,
@@ -4743,6 +5015,14 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             if key in parse_errors:
                 continue
             if item.get(key) in (None, ""):
+                # Handwritten Vision: unreadable cells stay null (confidence low).
+                qty_conf = (
+                    item_extra.get("qty_confidence")
+                    if isinstance(item_extra.get("qty_confidence"), dict)
+                    else {}
+                )
+                if str(qty_conf.get(key) or item.get(f"{key}_confidence") or "").lower() == "low":
+                    continue
                 item[key] = 0.0
         for key in ("sales_value", "closing_value"):
             if item.get(key) in (None, ""):
@@ -4824,6 +5104,47 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             f"Supported: {sorted(SUPPORTED_EXTENSIONS)}"
         )
 
+    # Diagnostic: runtime path selection (does not change OCR behaviour).
+    try:
+        import os as _os
+
+        _geo_env = _os.getenv("STOCK_GEOMETRY_CELL_OCR_ENABLED", "")
+        _geo_on = str(_geo_env).strip().lower() in {"1", "true", "yes", "on"}
+        _branch = (
+            "IMAGE"
+            if ext in IMAGE_EXTENSIONS
+            else (
+                "XLS"
+                if ext in {".xls", ".xlsx", ".xlsm"}
+                else (
+                    "PDF"
+                    if ext == ".pdf"
+                    else (
+                        "WORD"
+                        if ext in WORD_EXTENSIONS
+                        else ("TEXT" if ext in TEXT_EXTENSIONS else "OTHER")
+                    )
+                )
+            )
+        )
+        logger.info(
+            "[STOCK_EXTRACTION_PATH] stage=dispatch geometry_flag=%s "
+            "geometry_env=%r file=%s extension=%s branch=%s "
+            "path=%s",
+            _geo_on,
+            _geo_env,
+            name,
+            ext,
+            _branch,
+            (
+                "GEOMETRY_V3_IF_ENABLED_ELSE_VISION"
+                if ext in IMAGE_EXTENSIONS
+                else _branch
+            ),
+        )
+    except Exception:
+        pass
+
     if ext in TEXT_EXTENSIONS:
         result = _parse_txt(file_bytes, name)
     elif ext in {".htm", ".html"}:
@@ -4832,6 +5153,7 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _parse_word(file_bytes, name, ext)
     elif ext == ".pdf":
         result = _parse_pdf(file_bytes, name)
+        result = _pdf_maybe_native_resolver(result, file_bytes, name)
     elif ext in {".xls", ".xlsx", ".xlsm"}:
         result = _parse_xls(file_bytes, name, ext)
     elif ext in IMAGE_EXTENSIONS:
@@ -4839,14 +5161,210 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     else:
         raise ValueError(f"Unsupported format '{ext}'")
 
-    result = _sanitize_statement_financials(result)
+    # Carry Gemini budget from a vision-table fallback into the legacy path.
+    try:
+        from services.stock_vision_table import apply_vision_table_fallback_meta
+
+        result = apply_vision_table_fallback_meta(result)
+    except Exception:
+        pass
+
+    vision_table_final = False
+    try:
+        vision_table_final = bool(
+            ((result.get("totals") or {}).get("extra") or {}).get("vision_table_final")
+        ) or str(
+            ((result.get("totals") or {}).get("extra") or {}).get("extraction_method")
+            or ""
+        ) == "vision_table"
+    except Exception:
+        vision_table_final = False
+
+    # Vision-table: run (a)+(b); report (c) as candidates (no line qty/value rewrite).
+    if vision_table_final:
+        result = _sanitize_statement_financials_vision_safe(result)
+    else:
+        result = _sanitize_statement_financials(result)
     result = _apply_stock_identity_validation(result)
+    try:
+        from services.stock_reconciliation import apply_stock_reconciliation
+
+        _rid = "-"
+        try:
+            from services.sales_extraction_runtime import resolve_request_id
+
+            _rid = resolve_request_id()
+        except Exception:
+            _rid = "-"
+        result = apply_stock_reconciliation(result, request_id=_rid, page=1)
+    except Exception:
+        pass
     result = _ensure_stock_qty_value_fields(result)
     result = _product_wise_drop_banner_items(result)
+
+    # Shared id joins ROW_CLASSIFY_SHADOW / FALLBACK_DECISION_CURRENT / FINAL.
+    request_id = "-"
+    try:
+        from services.sales_extraction_runtime import (
+            get_sales_runtime_context,
+            resolve_request_id,
+        )
+
+        ctx = get_sales_runtime_context()
+        request_id = str(getattr(ctx, "request_id", None) or "") or resolve_request_id()
+    except Exception:
+        try:
+            from services.sales_extraction_runtime import resolve_request_id
+
+            request_id = resolve_request_id()
+        except Exception:
+            request_id = "-"
+    extra_bag = result.setdefault("totals", {}).setdefault("extra", {})
+    if isinstance(extra_bag, dict) and not extra_bag.get("request_id"):
+        extra_bag["request_id"] = request_id
+    elif isinstance(extra_bag, dict) and extra_bag.get("request_id"):
+        request_id = str(extra_bag.get("request_id") or request_id)
+
+    shadow_summary = None
+    shadow_would = None
+    shadow_reason = None
+    try:
+        from services.stock_row_classifier import (
+            classify_result_safe,
+            shadow_summary_for_storage,
+            stock_row_classifier_shadow_enabled,
+            would_fallback,
+        )
+
+        if stock_row_classifier_shadow_enabled():
+            classified = classify_result_safe(result)
+            shadow_summary = shadow_summary_for_storage(classified)
+            shadow_would, shadow_reason = would_fallback(classified)
+            extra = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["shadow_row_classification"] = shadow_summary
+            # Pre-gate shadow line (joined to FINAL via request_id).
+            parser_pre = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or ""
+            )
+            kind_pre = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "stock_identity_kind"
+                )
+                or ""
+            )
+            logger.info(
+                "ROW_CLASSIFY_SHADOW request_id=%s file=%s parser=%s kind=%s counts=%s "
+                "valid_ratio=%s would_fallback=%s reason=%s current_decision=pre_gate",
+                request_id,
+                name,
+                parser_pre or "-",
+                kind_pre or "-",
+                json.dumps(shadow_summary.get("row_status_counts") or {}),
+                shadow_summary.get("valid_ratio"),
+                str(bool(shadow_would)).lower(),
+                shadow_reason or "-",
+            )
+    except Exception as exc:
+        logger.info(
+            "ROW_CLASSIFY_SHADOW request_id=%s file=%s status=skipped error=%s",
+            request_id,
+            name,
+            type(exc).__name__,
+        )
+
+    if ext in IMAGE_EXTENSIONS and not vision_table_final:
+        from services.stock_direct_vision import is_stock_vision_locked
+        from services.stock_image_vision import apply_direct_stock_image_gemini
+
+        if not is_stock_vision_locked(result):
+            result = apply_direct_stock_image_gemini(result, file_bytes, name, ext)
     from services.gemini_extraction_fallback import maybe_apply_gemini_fallback
 
-    result = maybe_apply_gemini_fallback(result, file_bytes, name, ext)
+    decided = ((result.get("totals") or {}).get("extra") or {}).get(
+        "stock_image_vision_decided"
+    )
+    if not decided and not vision_table_final:
+        result = maybe_apply_gemini_fallback(result, file_bytes, name, ext)
+
+    if shadow_summary is not None:
+        try:
+            extra = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["shadow_row_classification"] = shadow_summary
+                if not extra.get("request_id"):
+                    extra["request_id"] = request_id
+            gemini_fallback = str(
+                ((result.get("totals") or {}).get("extra") or {}).get("gemini_fallback")
+                or "not_evaluated"
+            )
+            final_selected = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "final_selected_extraction"
+                )
+                or ""
+            )
+            current_decision = gemini_fallback if gemini_fallback != "not_evaluated" else (
+                final_selected or "not_evaluated"
+            )
+            parser = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or ""
+            )
+            kind = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "stock_identity_kind"
+                )
+                or ""
+            )
+            logger.info(
+                "ROW_CLASSIFY_FINAL request_id=%s file=%s parser=%s kind=%s counts=%s "
+                "valid_ratio=%s would_fallback=%s reason=%s current_decision=%s "
+                "gemini_fallback=%s final_selected=%s",
+                request_id,
+                name,
+                parser or "-",
+                kind or "-",
+                json.dumps(shadow_summary.get("row_status_counts") or {}),
+                shadow_summary.get("valid_ratio"),
+                str(bool(shadow_would)).lower(),
+                shadow_reason or "-",
+                current_decision,
+                gemini_fallback,
+                final_selected or "-",
+            )
+        except Exception as exc:
+            logger.info(
+                "ROW_CLASSIFY_FINAL request_id=%s file=%s status=log_failed error=%s",
+                request_id,
+                name,
+                type(exc).__name__,
+            )
+
     _log_sales_reader(name, ext, result)
+    try:
+        from services.stock_row_classifier import (
+            stock_no_rewrite_enabled,
+            take_no_rewrite_counts,
+        )
+
+        if stock_no_rewrite_enabled():
+            by_source = take_no_rewrite_counts()
+            suppressed = sum(int(v) for v in by_source.values())
+            if suppressed:
+                logger.info(
+                    "NO_REWRITE request_id=%s suppressed=%s by_source=%s",
+                    request_id,
+                    suppressed,
+                    json.dumps(by_source, sort_keys=True),
+                )
+    except Exception:
+        pass
     return _group_statements_by_stockist_month(result)
 
 
@@ -5852,12 +6370,63 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     fixed = _parse_fixed_sales_stock_statement(text, filename)
     if fixed and fixed.get("line_items"):
-        return fixed
+        plan = None
+        try:
+            # Rebuild char windows only for shadow/on (flag-off stays byte-identical).
+            from services.stock_native_resolver import stock_native_resolver_mode
+
+            if stock_native_resolver_mode() != "off":
+                raw_lines = text.splitlines()
+                header_idx = next(
+                    (
+                        i
+                        for i, ln in enumerate(raw_lines)
+                        if re.search(r"PRODUCT\s*NAME", ln, re.I)
+                        and re.search(r"\bPACKING\b", ln, re.I)
+                    ),
+                    None,
+                )
+                if header_idx is not None:
+                    header_line = raw_lines[header_idx]
+                    sub_line = ""
+                    if header_idx + 1 < len(raw_lines) and re.search(
+                        r"Qty|Value|Amt|Amount|Balance|Rate",
+                        raw_lines[header_idx + 1],
+                        re.I,
+                    ):
+                        sub_line = raw_lines[header_idx + 1]
+                    built_plan = _sales_stock_column_plan(header_line, sub_line)
+                    if built_plan:
+                        packing_at = int(built_plan["packing_at"])
+                        cols = built_plan["columns"]
+                        plan = {
+                            "product_name": {
+                                "start": 0,
+                                "end": packing_at,
+                                "label": "Product",
+                            },
+                            "packing": {
+                                "start": packing_at,
+                                "end": int(cols[0]["start"]),
+                                "label": "Packing",
+                            },
+                            **{
+                                col["role"]: {
+                                    "start": int(col["start"]),
+                                    "end": int(col["end"]),
+                                    "label": str(col.get("label") or col["role"]),
+                                }
+                                for col in cols
+                            },
+                        }
+        except Exception:
+            plan = None
+        return _txt_maybe_native_resolver(fixed, text.splitlines(), column_plan=plan)
 
     if _is_product_stock_report_text(text):
         psr = _parse_product_stock_report(text, filename, "txt")
         if psr and psr.get("line_items"):
-            return psr
+            return _txt_maybe_native_resolver(psr, text.splitlines())
 
     result = empty_result(filename, "txt")
     lines = [ln.rstrip() for ln in text.splitlines()]
@@ -5933,7 +6502,120 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             return fallback
 
     result["line_items"] = items
-    return result
+    return _txt_maybe_native_resolver(result, lines)
+
+
+def _txt_maybe_native_resolver(
+    result: Dict[str, Any], lines: List[str], column_plan: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    try:
+        from services.stock_native_resolver import (
+            run_native_pass_from_text,
+            stock_native_resolver_mode,
+        )
+
+        if stock_native_resolver_mode() == "off":
+            return result
+        request_id = "-"
+        try:
+            from services.sales_extraction_runtime import resolve_request_id
+
+            request_id = resolve_request_id()
+        except Exception:
+            request_id = "-"
+        plan = column_plan
+        if plan is None:
+            extra = (result.get("totals") or {}).get("extra") or {}
+            plan = extra.get("native_column_plan")
+        return run_native_pass_from_text(
+            result,
+            lines,
+            column_plan=plan if isinstance(plan, dict) else None,
+            input_type="text",
+            parser=str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or "txt"
+            ),
+            request_id=request_id,
+        )
+    except Exception:
+        return result
+
+
+def _pdf_maybe_native_resolver(
+    result: Dict[str, Any], file_bytes: bytes, filename: str
+) -> Dict[str, Any]:
+    """Phase 3b shadow/on for text PDFs via pdfplumber words (0 Gemini).
+
+    Image / scanned / vision paths are left unchanged.
+    """
+    try:
+        from services.stock_native_resolver import (
+            compare_and_maybe_apply,
+            stock_native_resolver_mode,
+        )
+        from services.stock_native_tables import from_pdf_words
+
+        if stock_native_resolver_mode() == "off":
+            return result
+    except Exception:
+        return result
+    extra = (result.get("totals") or {}).get("extra") or {}
+    method = str(extra.get("extraction_method") or "").lower()
+    # Do not touch image/scanned/vision PDF paths.
+    if any(
+        token in method
+        for token in (
+            "image_only",
+            "vision",
+            "gemini",
+            "photo",
+            "scanned",
+            "tesseract",
+        )
+    ):
+        return result
+    if extra.get("vision_table_final"):
+        return result
+    request_id = "-"
+    try:
+        from services.sales_extraction_runtime import resolve_request_id
+
+        request_id = resolve_request_id()
+    except Exception:
+        request_id = "-"
+    try:
+        import pdfplumber
+    except Exception:
+        return result
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            if not pdf.pages:
+                return result
+            from services.stock_native_resolver import build_items_from_pdf_page_results
+
+            built = from_pdf_words(pdf)
+            page_results = built.get("page_results") or []
+            if not page_results and not built.get("header_cells"):
+                return result
+            new_items = build_items_from_pdf_page_results(page_results)
+            if not new_items and not built.get("header_cells"):
+                return result
+            return compare_and_maybe_apply(
+                result,
+                input_type="pdf_text",
+                parser=method or "pdf",
+                header_cells=built.get("header_cells") or [],
+                token_rows=built.get("data_rows") or [],
+                request_id=request_id,
+                new_items_override=new_items if new_items else None,
+                pages_total=built.get("pages_total"),
+                pages_resolved=built.get("pages_resolved"),
+            )
+    except Exception:
+        return result
 
 
 def _parse_kaveri_line(line: str) -> Optional[Dict[str, Any]]:
@@ -6179,6 +6861,124 @@ def _parse_htm(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 # Word (.doc / .docx)
 # ---------------------------------------------------------------------------
 
+def _stock_word_linux_enabled() -> bool:
+    return os.getenv("STOCK_WORD_LINUX", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_WORD_SOFFICE_LOCK = threading.Lock()
+
+
+def _convert_doc_to_docx_bytes_linux(file_bytes: bytes) -> Optional[bytes]:
+    """Convert legacy .doc → .docx via LibreOffice soffice (Linux).
+
+    Process-wide lock; fresh UserInstallation profile per call; tmpdir cleaned.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+    import time
+
+    request_id = "-"
+    try:
+        from services.sales_extraction_runtime import resolve_request_id
+
+        request_id = resolve_request_id()
+    except Exception:
+        request_id = "-"
+
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice:
+        logger.info(
+            "WORD_CONVERT request_id=%s ok=false secs=0 err=soffice_missing",
+            request_id,
+        )
+        return None
+
+    started = time.monotonic()
+    tmpdir = None
+    with _WORD_SOFFICE_LOCK:
+        try:
+            tmpdir = tempfile.mkdtemp(prefix="stock_word_lo_")
+            in_path = os.path.join(tmpdir, "input.doc")
+            profile = os.path.join(tmpdir, "lo_profile")
+            os.makedirs(profile, exist_ok=True)
+            with open(in_path, "wb") as fh:
+                fh.write(file_bytes)
+            profile_uri = "file://" + profile
+            cmd = [
+                soffice,
+                "--headless",
+                "--norestore",
+                f"-env:UserInstallation={profile_uri}",
+                "--convert-to",
+                "docx",
+                "--outdir",
+                tmpdir,
+                in_path,
+            ]
+            subprocess.run(
+                cmd,
+                check=True,
+                timeout=60,
+                capture_output=True,
+            )
+            out_path = os.path.join(tmpdir, "input.docx")
+            if not os.path.isfile(out_path):
+                # Some LO versions rename oddly; pick any .docx in the dir.
+                candidates = [
+                    os.path.join(tmpdir, name)
+                    for name in os.listdir(tmpdir)
+                    if name.lower().endswith(".docx")
+                ]
+                out_path = candidates[0] if candidates else out_path
+            if not os.path.isfile(out_path):
+                secs = round(time.monotonic() - started, 3)
+                logger.info(
+                    "WORD_CONVERT request_id=%s ok=false secs=%s err=no_docx_output",
+                    request_id,
+                    secs,
+                )
+                return None
+            with open(out_path, "rb") as fh:
+                data = fh.read()
+            secs = round(time.monotonic() - started, 3)
+            logger.info(
+                "WORD_CONVERT request_id=%s ok=true secs=%s err=-",
+                request_id,
+                secs,
+            )
+            return data
+        except subprocess.TimeoutExpired:
+            secs = round(time.monotonic() - started, 3)
+            logger.info(
+                "WORD_CONVERT request_id=%s ok=false secs=%s err=timeout",
+                request_id,
+                secs,
+            )
+            return None
+        except Exception as exc:
+            secs = round(time.monotonic() - started, 3)
+            err = type(exc).__name__
+            logger.info(
+                "WORD_CONVERT request_id=%s ok=false secs=%s err=%s",
+                request_id,
+                secs,
+                err,
+            )
+            return None
+        finally:
+            if tmpdir:
+                try:
+                    shutil.rmtree(tmpdir, ignore_errors=True)
+                except Exception:
+                    pass
+
+
 def _parse_word(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     """Parse Word sales statements (.docx via python-docx; .doc via convert/fallback)."""
     # Misnamed or sniffed OOXML
@@ -6186,10 +6986,20 @@ def _parse_word(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         return _parse_docx(file_bytes, filename)
 
     # Legacy .doc → try convert to docx, else extract text
-    converted = _convert_doc_to_docx_bytes(file_bytes)
+    converted = None
+    if _stock_word_linux_enabled():
+        converted = _convert_doc_to_docx_bytes_linux(file_bytes)
+    if converted is None:
+        # Windows COM path (unchanged); Phase 4b removes it.
+        converted = _convert_doc_to_docx_bytes(file_bytes)
     if converted:
         result = _parse_docx(converted, filename)
         result["source_format"] = "doc"
+        extra = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra, dict) and not extra.get("extraction_method"):
+            extra["extraction_method"] = "doc_converted_docx"
+        elif isinstance(extra, dict) and extra.get("extraction_method") == "legacy_doc_text":
+            extra["extraction_method"] = "doc_converted_docx"
         return result
 
     text = _extract_legacy_doc_text(file_bytes)
@@ -6197,7 +7007,11 @@ def _parse_word(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # Reuse TXT parser heuristics on extracted Word text
         result = _parse_txt(text.encode("utf-8", errors="ignore"), filename)
         result["source_format"] = "doc"
-        result["totals"]["extra"]["extraction_method"] = "legacy_doc_text"
+        method = "legacy_doc_text"
+        if _stock_word_linux_enabled():
+            # Cap trust: never KEEP_PARSER at score 100 after a failed convert.
+            method = "legacy_doc_text_unverified"
+        result["totals"]["extra"]["extraction_method"] = method
         return result
 
     raise ValueError(
@@ -7675,7 +8489,151 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             result["totals"]["extra"]["closing_value_matches_lines"] = (
                 abs(float(printed_closing) - line_closing) < 0.05
             )
+    result = _docx_maybe_native_resolver(result, doc)
+    # Phase 4a: image-only Word when no usable table resolves.
+    if not result.get("line_items") and not _docx_table_resolves_any(doc):
+        result = _docx_try_vision_images(result, file_bytes, filename)
     return result
+
+
+def _docx_extract_media_images(file_bytes: bytes, *, limit: int = 4) -> List[bytes]:
+    """Largest embedded images from word/media (at most ``limit``)."""
+    import zipfile
+
+    blobs: List[Tuple[int, bytes]] = []
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            for name in zf.namelist():
+                lower = name.lower()
+                if not lower.startswith("word/media/"):
+                    continue
+                if not lower.endswith(
+                    (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp")
+                ):
+                    continue
+                try:
+                    data = zf.read(name)
+                except Exception:
+                    continue
+                if data and len(data) >= 80:
+                    blobs.append((len(data), data))
+    except Exception:
+        return []
+    blobs.sort(key=lambda pair: pair[0], reverse=True)
+    return [data for _size, data in blobs[:limit]]
+
+
+def _docx_try_vision_images(
+    result: Dict[str, Any], file_bytes: bytes, filename: str
+) -> Dict[str, Any]:
+    """Image-only Word: vision table when no usable table and flag allows."""
+    if not _stock_word_linux_enabled():
+        return result
+    if result.get("line_items"):
+        return result
+    try:
+        from services.stock_vision_table import (
+            run_vision_table_path,
+            vision_table_active_for,
+        )
+
+        if not vision_table_active_for("image"):
+            return result
+    except Exception:
+        return result
+    images = _docx_extract_media_images(file_bytes, limit=4)
+    if not images:
+        return result
+    request_id = "-"
+    try:
+        from services.sales_extraction_runtime import resolve_request_id
+
+        request_id = resolve_request_id()
+    except Exception:
+        request_id = "-"
+    # Budget: at most 2 Gemini calls per file (Phase 2b). Prefer largest image.
+    for image_bytes in images[:1]:
+        try:
+            outcome = run_vision_table_path(
+                image_bytes,
+                "image",
+                {
+                    "filename": filename,
+                    "ext": ".png",
+                    "request_id": request_id,
+                },
+            )
+        except Exception:
+            continue
+        if outcome.get("status") == "ok" and isinstance(outcome.get("result"), dict):
+            out = outcome["result"]
+            out["source_format"] = result.get("source_format") or "docx"
+            out.setdefault("totals", {}).setdefault("extra", {})[
+                "extraction_method"
+            ] = "docx_image_vision_table"
+            try:
+                from services.stock_reconciliation import apply_stock_reconciliation
+
+                out = apply_stock_reconciliation(
+                    out, request_id=request_id, page=1
+                )
+            except Exception:
+                pass
+            return out
+    return result
+
+
+def _docx_maybe_native_resolver(result: Dict[str, Any], doc: Any) -> Dict[str, Any]:
+    try:
+        from services.stock_native_resolver import (
+            compare_and_maybe_apply,
+            stock_native_resolver_mode,
+        )
+        from services.stock_native_tables import from_docx_table
+
+        if stock_native_resolver_mode() == "off":
+            return result
+        request_id = "-"
+        try:
+            from services.sales_extraction_runtime import resolve_request_id
+
+            request_id = resolve_request_id()
+        except Exception:
+            request_id = "-"
+        for table in getattr(doc, "tables", []) or []:
+            built = from_docx_table(table)
+            if built.get("header_cells"):
+                return compare_and_maybe_apply(
+                    result,
+                    input_type="word",
+                    parser=str(
+                        ((result.get("totals") or {}).get("extra") or {}).get(
+                            "extraction_method"
+                        )
+                        or "docx"
+                    ),
+                    header_cells=built.get("header_cells") or [],
+                    token_rows=built.get("data_rows") or [],
+                    request_id=request_id,
+                )
+    except Exception:
+        return result
+    return result
+
+
+def _docx_table_resolves_any(doc: Any) -> bool:
+    try:
+        from services.stock_native_tables import from_docx_table, resolver_ready
+
+        for table in getattr(doc, "tables", []) or []:
+            built = from_docx_table(table)
+            if built.get("header_cells") and resolver_ready(
+                built["header_cells"]
+            ).get("resolved"):
+                return True
+    except Exception:
+        return False
+    return False
 
 
 def _ocr_image_to_text(file_bytes: bytes, *, psm: int = 6, enhance: bool = False) -> str:
@@ -7684,6 +8642,8 @@ def _ocr_image_to_text(file_bytes: bytes, *, psm: int = 6, enhance: bool = False
         from PIL import Image, ImageEnhance, ImageOps
     except ImportError as exc:
         raise RuntimeError("pytesseract/Pillow required for image OCR fallback") from exc
+
+    from services.stock_ocr_policy import stock_ocr_context
 
     pytesseract = _a2z_tesseract()
     image = Image.open(io.BytesIO(file_bytes))
@@ -7729,7 +8689,9 @@ def _ocr_image_to_text(file_bytes: bytes, *, psm: int = 6, enhance: bool = False
         processed = ImageEnhance.Sharpness(processed).enhance(1.5)
     # psm 6 (uniform block) reads dense OpBal/Issue qty tables more reliably than default
     # psm 4 (single column) is better for Group Wise Sales sparse grids
-    return pytesseract.image_to_string(processed, config=f"--psm {psm}") or ""
+    # Default page region: all anonymous full-page peeks share 1 initial + 1 recovery.
+    with stock_ocr_context(region="page", page="1", scope="page"):
+        return pytesseract.image_to_string(processed, config=f"--psm {psm}") or ""
 
 
 def _is_group_wise_sales_opstock_format(text: str) -> bool:
@@ -9688,6 +10650,58 @@ def _xls_finalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _xls_maybe_native_resolver(
+    result: Dict[str, Any],
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+) -> Dict[str, Any]:
+    """Phase 3b shadow/on pass for spreadsheets (0 Gemini)."""
+    try:
+        from services.stock_native_resolver import (
+            run_native_pass_from_sheet,
+            stock_native_resolver_mode,
+        )
+
+        if stock_native_resolver_mode() == "off":
+            return result
+    except Exception:
+        return result
+    request_id = "-"
+    try:
+        from services.sales_extraction_runtime import resolve_request_id
+
+        request_id = resolve_request_id()
+    except Exception:
+        request_id = "-"
+    # Use the first sheet's rows for the resolver rebuild.
+    try:
+        for _sheet_name, rows, _formats, hidden in _xls_iter_sheets(file_bytes, ext):
+            if hidden:
+                continue
+            if not rows:
+                continue
+            return run_native_pass_from_sheet(
+                result,
+                rows,
+                input_type="spreadsheet",
+                parser=str(
+                    ((result.get("totals") or {}).get("extra") or {}).get(
+                        "extraction_method"
+                    )
+                    or "xls"
+                ),
+                request_id=request_id,
+            )
+    except Exception as exc:
+        logger.info(
+            "NATIVE_RESOLVER_SHADOW request_id=%s status=skipped error=%s",
+            request_id,
+            type(exc).__name__,
+        )
+    return result
+
+
 def _split_marg_closing_mexp(value: Any) -> Tuple[float, Optional[str]]:
     """Split a combined closing cell such as '55  6/27' into qty and expiry."""
     if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -10403,7 +11417,12 @@ def _repair_marg_mexp_missing_issue(items: List[Dict[str, Any]]) -> None:
             and sales > 0
             and closing == 0
         ):
-            item["opening_qty"] = sales
+            _repair_assign(
+                item,
+                {"opening_qty": sales},
+                "_repair_marg_mexp_missing_issue",
+                "opening_from_issue",
+            )
             continue
         if sales != 0:
             continue
@@ -10414,7 +11433,12 @@ def _repair_marg_mexp_missing_issue(items: List[Dict[str, Any]]) -> None:
             continue
         # Only repair when identity clearly fails with sales=0.
         if abs((opening + receipt - sales) - closing) > 0.55:
-            item["sales_qty"] = round(expected, 2)
+            _repair_assign(
+                item,
+                {"sales_qty": round(expected, 2)},
+                "_repair_marg_mexp_missing_issue",
+                "fill_missing_issue",
+            )
 
 
 def _extract_marg_closing_mexp_photo(
@@ -11290,6 +12314,86 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if isinstance(item, dict) and item.get("product_name")
         }
 
+    # Phase 3b on-mode: do not merge by product-name superset. Concatenate only
+    # when stockist + period match; otherwise keep separate statements.
+    try:
+        from services.stock_native_resolver import stock_native_resolver_mode
+
+        _nr_mode = stock_native_resolver_mode()
+    except Exception:
+        _nr_mode = "off"
+
+    if _nr_mode == "on" and len(parts) > 1:
+        groups: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+        order: List[Tuple[str, str]] = []
+        for part in parts:
+            key = (
+                str(part.get("stockist_name") or "").strip().lower(),
+                str(part.get("period_from") or "")[:10],
+            )
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append(part)
+        if len(order) > 1:
+            # Different stockists/periods → multi-statement.
+            statements = []
+            for key in order:
+                bucket = groups[key]
+                head = bucket[0]
+                items: List[Dict[str, Any]] = []
+                for part in bucket:
+                    items.extend(
+                        i for i in (part.get("line_items") or []) if isinstance(i, dict)
+                    )
+                head = dict(head)
+                head["line_items"] = items
+                statements.append(_xls_finalize_result(head))
+            return {
+                "multi_statement": True,
+                "statements": statements,
+                "source_file": filename,
+                "source_format": ext.lstrip("."),
+            }
+        # Same stockist+period: concatenate rows, never overwrite.
+        result = parts[0]
+        merged_items: List[Dict[str, Any]] = []
+        seen_names: Dict[str, int] = {}
+        duplicate_flags: List[Dict[str, Any]] = []
+        for part in parts:
+            sheet = ((part.get("totals") or {}).get("extra") or {}).get("sheet")
+            for item in part.get("line_items") or []:
+                if not isinstance(item, dict):
+                    continue
+                name_key = re.sub(
+                    r"[^a-z0-9]", "", str(item.get("product_name") or "").lower()
+                )
+                if name_key and name_key in seen_names:
+                    duplicate_flags.append(
+                        {
+                            "product_name": item.get("product_name"),
+                            "flag": "DUPLICATE_PRODUCT_ACROSS_SHEETS",
+                            "sheet": sheet,
+                            "prior_index": seen_names[name_key],
+                        }
+                    )
+                    extra_i = item.setdefault("extra", {})
+                    if isinstance(extra_i, dict):
+                        extra_i["DUPLICATE_PRODUCT_ACROSS_SHEETS"] = True
+                        flags = extra_i.setdefault("flags", [])
+                        if isinstance(flags, list) and "DUPLICATE_PRODUCT_ACROSS_SHEETS" not in flags:
+                            flags.append("DUPLICATE_PRODUCT_ACROSS_SHEETS")
+                elif name_key:
+                    seen_names[name_key] = len(merged_items)
+                merged_items.append(item)
+        result["line_items"] = merged_items
+        if duplicate_flags:
+            rextra = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(rextra, dict):
+                rextra["DUPLICATE_PRODUCT_ACROSS_SHEETS"] = duplicate_flags
+        result = _xls_finalize_result(result)
+        return _xls_maybe_native_resolver(result, file_bytes, filename, ext)
+
     parts = sorted(parts, key=lambda part: len(part.get("line_items") or []), reverse=True)
     detailed: List[Dict[str, Any]] = []
     for part in parts:
@@ -11335,7 +12439,8 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             ((p.get("totals") or {}).get("extra") or {}).get("sheet")
             for p in parts
         ]
-    return _xls_finalize_result(result)
+    result = _xls_finalize_result(result)
+    return _xls_maybe_native_resolver(result, file_bytes, filename, ext)
 
 
 _ITEM_PACK_SRETURN_HEADER = (
@@ -14261,9 +15366,22 @@ def _repair_pack_op_pur_bal_ss_filed_as_sp(result: Dict[str, Any]) -> Dict[str, 
         if abs((opening + receipts - sales - sp) - closing) > 0.01:
             continue
         # SP was actually SS.
-        extra["sales_scheme_qty"] = sp
-        extra["purchase_scheme_qty"] = 0.0
-        extra["ss_moved_from_sp"] = True
+        from services.stock_row_classifier import apply_repairs, record_candidate
+
+        if apply_repairs():
+            extra["sales_scheme_qty"] = sp
+            extra["purchase_scheme_qty"] = 0.0
+            extra["ss_moved_from_sp"] = True
+        else:
+            record_candidate(
+                item,
+                {
+                    "extra.sales_scheme_qty": sp,
+                    "extra.purchase_scheme_qty": 0.0,
+                },
+                "_repair_pack_op_pur_bal_ss_filed_as_sp",
+                "ss_moved_from_sp",
+            )
     return result
 
 
@@ -14294,10 +15412,14 @@ def _repair_pack_op_pur_bal_dropped_receipts(result: Dict[str, Any]) -> Dict[str
         # Avoid huge OCR-garbage fills.
         if implied > max(5000.0, abs(closing) * 20 + 100):
             continue
-        item["receipts_qty"] = float(int(round(implied)))
-        extra = item.setdefault("extra", {})
-        if isinstance(extra, dict):
-            extra["receipts_qty_repaired"] = True
+        item_fields = {"receipts_qty": float(int(round(implied)))}
+        _repair_assign(
+            item,
+            item_fields,
+            "_repair_pack_op_pur_bal_dropped_receipts",
+            "receipts_qty_repaired",
+            extra_flags={"receipts_qty_repaired": True},
+        )
     return result
 
 
@@ -14328,19 +15450,40 @@ def _repair_pack_op_pur_bal_money_as_qty(result: Dict[str, Any]) -> Dict[str, An
             continue
         # Pur Val already captured separately — drop the qty echo.
         if purchase_value > 0 and abs(purchase_value - receipts) < 0.01:
-            item["receipts_qty"] = 0.0
+            fields = {"receipts_qty": 0.0}
             if abs(closing - receipts) < 0.01:
-                item["closing_qty"] = 0.0
-            extra["money_as_qty_cleared"] = True
+                fields["closing_qty"] = 0.0
+            _repair_assign(
+                item,
+                fields,
+                "_repair_pack_op_pur_bal_money_as_qty",
+                "money_as_qty_cleared",
+                extra_flags={"money_as_qty_cleared": True},
+            )
             continue
         if purchase_value in (0, 0.0):
-            extra["purchase_value"] = receipts
-            item["receipts_qty"] = 0.0
+            fields = {"receipts_qty": 0.0}
             if closing_value in (0, 0.0) and abs(closing - receipts) < 0.01:
-                item["closing_qty"] = 0.0
+                fields["closing_qty"] = 0.0
             elif abs(closing - receipts) < 0.01:
-                item["closing_qty"] = 0.0
-            extra["money_as_qty_repaired"] = True
+                fields["closing_qty"] = 0.0
+            from services.stock_row_classifier import apply_repairs, record_candidate
+
+            if apply_repairs():
+                extra["purchase_value"] = receipts
+                item["receipts_qty"] = 0.0
+                if "closing_qty" in fields:
+                    item["closing_qty"] = fields["closing_qty"]
+                extra["money_as_qty_repaired"] = True
+            else:
+                proposed = dict(fields)
+                proposed["extra.purchase_value"] = receipts
+                record_candidate(
+                    item,
+                    proposed,
+                    "_repair_pack_op_pur_bal_money_as_qty",
+                    "money_as_qty_repaired",
+                )
     return result
 
 
@@ -14388,15 +15531,25 @@ def _repair_pack_op_pur_bal_footer_leaked_into_rows(
             or (footer_cv >= 1000 and abs(cv - footer_cv) < 0.51 and cq < 500)
             or (footer_pv >= 1000 and abs(cv - footer_pv) < 0.51 and cq < 500)
         ):
-            item["closing_value"] = 0.0
-            row_extra["footer_bal_val_cleared"] = True
+            _repair_assign(
+                item,
+                {"closing_value": 0.0},
+                "_repair_pack_op_pur_bal_footer_leaked_into_rows",
+                "footer_bal_val_cleared",
+                extra_flags={"footer_bal_val_cleared": True},
+            )
         if (
             footer_sv >= 50000
             and abs(sv - footer_sv) < 0.51
             and sq < 500
         ):
-            item["sales_value"] = 0.0
-            row_extra["footer_sale_val_cleared"] = True
+            _repair_assign(
+                item,
+                {"sales_value": 0.0},
+                "_repair_pack_op_pur_bal_footer_leaked_into_rows",
+                "footer_sale_val_cleared",
+                extra_flags={"footer_sale_val_cleared": True},
+            )
 
     # If vision omitted footer Bal Val but leaked it onto rows, restore footer.
     if leaked_from_rows:
@@ -14497,8 +15650,8 @@ def _reconcile_pack_op_pur_bal_totals(result: Dict[str, Any]) -> Dict[str, Any]:
 def _pack_op_pur_bal_header_hint(file_bytes: bytes) -> str:
     """OCR the title band; try upright and 180° (desk photos are often flipped)."""
     try:
-        import pytesseract
         from PIL import Image, ImageEnhance, ImageOps
+        from services.stock_ocr_policy import stock_ocr_context
     except ImportError:
         return ""
     try:
@@ -14509,11 +15662,31 @@ def _pack_op_pur_bal_header_hint(file_bytes: bytes) -> str:
     crop = image.crop((0, 0, width, max(40, int(height * 0.18))))
     crop = ImageEnhance.Contrast(crop).enhance(1.5)
     texts: List[str] = []
-    for im in (crop, crop.rotate(180, expand=True)):
+    try:
+        tess = _a2z_tesseract()
+    except Exception:
+        return ""
+    # One named region: upright initial, 180° only as header recovery.
+    with stock_ocr_context(region="pack_op_pur_header", page="1"):
         try:
-            texts.append(pytesseract.image_to_string(im, config="--psm 6") or "")
+            texts.append(tess.image_to_string(crop, config="--psm 6") or "")
         except Exception:
-            continue
+            pass
+    if not any(_looks_like_pack_op_pur_bal_stock_sale_text(t) for t in texts):
+        with stock_ocr_context(
+            region="pack_op_pur_header",
+            page="1",
+            reason="header_detection_failed",
+        ):
+            try:
+                texts.append(
+                    tess.image_to_string(
+                        crop.rotate(180, expand=True), config="--psm 6"
+                    )
+                    or ""
+                )
+            except Exception:
+                pass
     return "\n".join(texts)
 
 
@@ -18537,8 +19710,12 @@ def _repair_code_item_photo_qty_columns(result: Dict[str, Any]) -> None:
             and receipts > 0
             and abs(receipts - sales - closing) <= 0.05
         ):
-            item["opening_qty"] = receipts
-            item["receipts_qty"] = 0.0
+            _repair_assign(
+                item,
+                {"opening_qty": receipts, "receipts_qty": 0.0},
+                "_repair_code_item_photo_qty_columns",
+                "opening_from_purchase_swap",
+            )
             continue
         # Opening blank, Purchase holds stock, Closing blank but Stock-Value present
         # → treat as no-movement opening parked under Purchase.
@@ -18549,13 +19726,25 @@ def _repair_code_item_photo_qty_columns(result: Dict[str, Any]) -> None:
             and closing == 0
             and closing_value > 0
         ):
-            item["opening_qty"] = receipts
-            item["closing_qty"] = receipts
-            item["receipts_qty"] = 0.0
+            _repair_assign(
+                item,
+                {
+                    "opening_qty": receipts,
+                    "closing_qty": receipts,
+                    "receipts_qty": 0.0,
+                },
+                "_repair_code_item_photo_qty_columns",
+                "static_stock_from_purchase",
+            )
             continue
         # Static stock: only Closing filled.
         if opening == 0 and receipts == 0 and sales == 0 and closing > 0:
-            item["opening_qty"] = closing
+            _repair_assign(
+                item,
+                {"opening_qty": closing},
+                "_repair_code_item_photo_qty_columns",
+                "static_stock_opening_from_closing",
+            )
             continue
         # Sales blank but Opening/Closing present with no Purchase.
         if (
@@ -18565,7 +19754,12 @@ def _repair_code_item_photo_qty_columns(result: Dict[str, Any]) -> None:
             and closing >= 0
             and opening >= closing
         ):
-            item["sales_qty"] = round(opening - closing, 2)
+            _repair_assign(
+                item,
+                {"sales_qty": round(opening - closing, 2)},
+                "_repair_code_item_photo_qty_columns",
+                "sales_from_opening_closing",
+            )
             continue
         # Opening/Purchase swapped: identity fails as-is but holds when Purchase
         # alone explains Sales+Closing (Opening was a false positive).
@@ -18576,8 +19770,12 @@ def _repair_code_item_photo_qty_columns(result: Dict[str, Any]) -> None:
             and abs(receipts - sales - closing) <= 0.05
             and abs(opening - sales) > 0.05
         ):
-            item["opening_qty"] = receipts
-            item["receipts_qty"] = opening
+            _repair_assign(
+                item,
+                {"opening_qty": receipts, "receipts_qty": opening},
+                "_repair_code_item_photo_qty_columns",
+                "opening_purchase_swap",
+            )
 
 
 def _extract_code_item_stock_statement_vision(
@@ -20644,7 +21842,12 @@ def _repair_medivision_nm60_closing(item: Dict[str, Any]) -> None:
         return
     # Only when closing_qty is clearly the NM60D column value.
     if abs(_to_float(nm60) - closing) <= 0.05 and abs(expected - closing) > 0.05:
-        item["closing_qty"] = expected
+        _repair_assign(
+            item,
+            {"closing_qty": expected},
+            "_repair_medivision_nm60_closing",
+            "closing_from_identity_not_nm60",
+        )
 
 
 def _parse_medivision_op_purc_nm60d_text(
@@ -20814,7 +22017,12 @@ def _repair_medivision_op_wsale_sales(item: Dict[str, Any]) -> None:
     if any(abs(value - sales) < 0.01 for value in side) and _medivision_qty_balances(
         opening, receipts, 0.0, closing
     ):
-        item["sales_qty"] = 0.0
+        _repair_assign(
+            item,
+            {"sales_qty": 0.0},
+            "_repair_medivision_op_wsale_sales",
+            "clear_side_column_as_sales",
+        )
         return
     balancers: List[float] = []
     for value in side:
@@ -20824,7 +22032,12 @@ def _repair_medivision_op_wsale_sales(item: Dict[str, Any]) -> None:
             continue
         balancers.append(value)
     if len(balancers) == 1:
-        item["sales_qty"] = balancers[0]
+        _repair_assign(
+            item,
+            {"sales_qty": balancers[0]},
+            "_repair_medivision_op_wsale_sales",
+            "sales_from_side_column",
+        )
 
 
 def _finalize_medivision_op_wsale(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -21050,7 +22263,12 @@ def _repair_pharma_hub_jun_jul_sales(item: Dict[str, Any]) -> None:
     if any(abs(value - sales) < 0.01 for value in side) and _medivision_qty_balances(
         opening, receipts, 0.0, closing
     ):
-        item["sales_qty"] = 0.0
+        _repair_assign(
+            item,
+            {"sales_qty": 0.0},
+            "_repair_pharma_hub_jun_jul_sales",
+            "clear_jun_jul_as_sales",
+        )
         return
     balancers: List[float] = []
     for value in side:
@@ -21060,7 +22278,12 @@ def _repair_pharma_hub_jun_jul_sales(item: Dict[str, Any]) -> None:
             continue
         balancers.append(value)
     if len(balancers) == 1 and any(abs(sales - value) < 0.01 for value in side):
-        item["sales_qty"] = balancers[0]
+        _repair_assign(
+            item,
+            {"sales_qty": balancers[0]},
+            "_repair_pharma_hub_jun_jul_sales",
+            "sales_from_side_column",
+        )
 
 
 def _finalize_pharma_hub_jun_jul(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -26191,7 +27414,8 @@ def _is_product_wise_stock_statement_photo_text(text: str) -> bool:
         re.search(r"\bOpening\b", text, re.I)
         and re.search(r"\bClosing\b", text, re.I)
         and re.search(r"\bReceipt\b", text, re.I)
-        and re.search(r"\bIssues?\b", text, re.I)
+        # OCR noise: "__Issues" has no word-boundary before I.
+        and re.search(r"(?<![A-Za-z])Issues?(?![A-Za-z])", text, re.I)
     ):
         return False
     return bool(
@@ -26213,19 +27437,28 @@ _PWSS_PHOTO_PACK_RE = re.compile(
 
 def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[str, float]]:
     """Column midpoints from the Product/Packing/Opening/... header row."""
-    # Cluster by y
+    # Cluster by y. Use a wider bucket so Packing/Opening/Closing on one
+    # visual header line stay together when OCR baselines drift slightly.
     rows: Dict[int, List[Tuple[float, float, str]]] = {}
     for w in words:
         tok = str(w[4] or "").strip()
         if not tok:
             continue
-        y = int(round(float(w[1]) / 8.0) * 8)
+        y = int(round(float(w[1]) / 24.0) * 24)
         x0, x1 = float(w[0]), float(w[2])
         rows.setdefault(y, []).append((x0, x1, tok))
 
+    # Also try merging each band with the next (Packing vs Opening OCR drift).
+    y_keys = sorted(rows)
+    merged: Dict[int, List[Tuple[float, float, str]]] = {}
+    for idx, y in enumerate(y_keys):
+        merged[y] = list(rows[y])
+        if idx + 1 < len(y_keys) and y_keys[idx + 1] - y <= 32:
+            merged[y].extend(rows[y_keys[idx + 1]])
+
     best: Optional[Dict[str, float]] = None
     best_score = 0
-    for _y, toks in rows.items():
+    for _y, toks in list(rows.items()) + list(merged.items()):
         blob = " ".join(t[2] for t in toks)
         if not (
             re.search(r"Packing", blob, re.I)
@@ -26238,7 +27471,8 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
         free_xs: List[float] = []
         for x0, x1, tok in sorted(toks, key=lambda t: t[0]):
             xc = (x0 + x1) / 2.0
-            low = tok.lower().replace(".", "")
+            # OCR often glues underscores/dashes: "_Receipt__", "—_Closing".
+            low = re.sub(r"[^a-z0-9]", "", tok.lower())
             if low == "packing":
                 found["packing"] = xc
             elif low == "opening":
@@ -26253,12 +27487,26 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
                     re.fullmatch(r"Goods", t[2], re.I) for t in toks
                 ):
                     found["goods"] = xc
-            elif low == "closing":
+            elif low == "closing" and "closing" not in found:
+                # Prefer the leftmost Closing (qty), not Closing Amount.
                 found["closing"] = xc
-            elif "shexp" in low.replace(" ", "") or low.startswith("shexp"):
+            elif low == "liquidation" or re.match(r"liqud?ation", low, re.I):
                 found["liq"] = xc
-            elif re.match(r"liqud?ation", low, re.I):
+            elif ("shexp" in low or low.startswith("shexp")) and "liq" not in found:
                 found["liq"] = xc
+            elif low == "receipt":
+                found["receipts"] = xc
+            elif low in {"issue", "issues"} and "sales" not in found:
+                # Single "Issues" qty column (no Qty/Free sub-headers).
+                found["sales"] = xc
+            elif low == "sales":
+                found["sales_amount"] = xc
+            elif low == "amount":
+                # Left Amount pairs with Sales; rightmost with Closing Amount.
+                if "sales_amount" in found:
+                    found["closing_amount"] = xc
+                else:
+                    found["sales_amount"] = xc
         if len(qty_xs) >= 1:
             found["receipts"] = qty_xs[0]
         if len(qty_xs) >= 2:
@@ -26267,11 +27515,13 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
             found["receipts_free"] = free_xs[0]
         if len(free_xs) >= 2:
             found["sales_free"] = free_xs[1]
+        found["_had_qty_or_free"] = bool(qty_xs or free_xs)
         # Issues group header may sit above Qty/Free — use that x if sales missing
         for x0, x1, tok in toks:
-            if re.fullmatch(r"Issues?", tok, re.I) and "sales" not in found:
+            clean = re.sub(r"[^a-z0-9]", "", str(tok).lower())
+            if clean in {"issue", "issues"} and "sales" not in found:
                 found["sales"] = (x0 + x1) / 2.0
-            if re.fullmatch(r"Receipt", tok, re.I) and "receipts" not in found:
+            if clean == "receipt" and "receipts" not in found:
                 found["receipts"] = (x0 + x1) / 2.0
         score = sum(
             1
@@ -26284,9 +27534,16 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
     if best_score < 4 or best is None:
         return None
     # Continuation pages often drop Free/Goods labels — infer midpoints.
-    if "receipts" in best and "sales" in best and "receipts_free" not in best:
+    # Skip for single-column Receipt/Issues sheets (no Qty/Free sub-headers).
+    had_qty_or_free = bool(best.pop("_had_qty_or_free", False))
+    if (
+        had_qty_or_free
+        and "receipts" in best
+        and "sales" in best
+        and "receipts_free" not in best
+    ):
         best["receipts_free"] = (best["receipts"] + best["sales"]) / 2.0
-    if "sales" in best and "closing" in best:
+    if had_qty_or_free and "sales" in best and "closing" in best:
         gap = best["closing"] - best["sales"]
         if "sales_free" not in best:
             best["sales_free"] = best["sales"] + gap * 0.28
@@ -26308,20 +27565,32 @@ def _pwss_photo_nearest_col(x: float, centers: Dict[str, float]) -> Optional[str
         "goods",
         "closing",
         "liq",
+        "sales_amount",
+        "closing_amount",
     )
     present = [(k, centers[k]) for k in keys if k in centers]
     if not present:
         return None
     best_k, best_d = None, 1e18
+    # Closing qty is often right-aligned under the Closing header, drifting
+    # toward Sh.Exp/Liquidation — bias the Closing match center rightward.
+    closing_bias = 0.0
+    if "closing" in centers and "liq" in centers:
+        closing_bias = min(55.0, max(0.0, (centers["liq"] - centers["closing"]) * 0.35))
     for k, c in present:
-        d = abs(x - c)
-        if k == "closing" and "liq" in centers and x > (centers["closing"] + centers["liq"]) / 2.0:
+        eff = c + closing_bias if k == "closing" else c
+        d = abs(x - eff)
+        if k == "closing" and "liq" in centers and x > (
+            centers["closing"] + closing_bias + centers["liq"]
+        ) / 2.0:
             continue
-        if k == "liq" and "closing" in centers and x < (centers["closing"] + centers["liq"]) / 2.0:
+        if k == "liq" and "closing" in centers and x < (
+            centers["closing"] + closing_bias + centers["liq"]
+        ) / 2.0:
             continue
         if d < best_d:
             best_d, best_k = d, k
-    if best_k is None or best_d > 90:
+    if best_k is None or best_d > 100:
         return None
     return best_k
 
@@ -26401,42 +27670,159 @@ def _pwss_photo_repair_row(
     sales_free: float,
     goods: float,
     closing: float,
+    *,
+    out_proposal: Optional[List[Any]] = None,
 ) -> Tuple[float, float, float, float, float, float, float]:
-    """Fix glued Issues/Free and obvious Closing OCR drops using stock identity."""
-    receipts_total = receipts + receipts_free
-    # Glued Issues+Free sometimes lands in sales_free when sales stayed 0.
-    if sales <= 0 and sales_free > 999:
-        sales, sales_free = sales_free, 0.0
-    sales_total = sales + sales_free + goods
-    expected = round(opening + receipts_total - sales_total, 2)
-    if abs(expected - closing) <= 0.05:
-        return opening, receipts, receipts_free, sales, sales_free, goods, closing
+    """Fix glued Issues/Free and obvious Closing OCR drops using stock identity.
 
-    glued = _pwss_photo_split_glued(opening, receipts_total, sales, closing)
-    if glued is not None and sales_free == 0 and goods == 0:
-        sales, sales_free = glued
-        sales_total = sales + sales_free + goods
+    When STOCK_NO_REWRITE is on, returns the original floats and appends a
+    RepairProposal to ``out_proposal`` when a repair would have applied.
+    """
+    from services.stock_row_classifier import RepairProposal, apply_repairs
+
+    original = (opening, receipts, receipts_free, sales, sales_free, goods, closing)
+    work_sales, work_sales_free = sales, sales_free
+    work_closing = closing
+    receipts_total = receipts + receipts_free
+    reason = ""
+    # Glued Issues+Free sometimes lands in sales_free when sales stayed 0.
+    if work_sales <= 0 and work_sales_free > 999:
+        work_sales, work_sales_free = work_sales_free, 0.0
+        reason = "unglue_sales_free"
+    sales_total = work_sales + work_sales_free + goods
+    expected = round(opening + receipts_total - sales_total, 2)
+    if abs(expected - work_closing) <= 0.05:
+        repaired = (
+            opening,
+            receipts,
+            receipts_free,
+            work_sales,
+            work_sales_free,
+            goods,
+            work_closing,
+        )
+        if apply_repairs():
+            return repaired
+        if repaired != original and out_proposal is not None:
+            out_proposal.append(
+                RepairProposal(
+                    source="_pwss_photo_repair_row",
+                    fields={
+                        "opening_qty": opening,
+                        "receipts_qty": receipts + receipts_free,
+                        "sales_qty": work_sales + work_sales_free + goods,
+                        "closing_qty": work_closing,
+                        "extra.receipts_free": receipts_free,
+                        "extra.sales_free": work_sales_free,
+                        "extra.goods": goods,
+                    },
+                    reason=reason or "identity_ok_after_unglue",
+                )
+            )
+        return original
+
+    glued = _pwss_photo_split_glued(opening, receipts_total, work_sales, work_closing)
+    if glued is not None and work_sales_free == 0 and goods == 0:
+        work_sales, work_sales_free = glued
+        reason = "split_glued_issues_free"
+        sales_total = work_sales + work_sales_free + goods
         expected = round(opening + receipts_total - sales_total, 2)
-        if abs(expected - closing) <= 0.05:
-            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+        if abs(expected - work_closing) <= 0.05:
+            repaired = (
+                opening,
+                receipts,
+                receipts_free,
+                work_sales,
+                work_sales_free,
+                goods,
+                work_closing,
+            )
+            if apply_repairs():
+                return repaired
+            if out_proposal is not None:
+                out_proposal.append(
+                    RepairProposal(
+                        source="_pwss_photo_repair_row",
+                        fields={
+                            "opening_qty": opening,
+                            "receipts_qty": receipts + receipts_free,
+                            "sales_qty": work_sales + work_sales_free + goods,
+                            "closing_qty": work_closing,
+                            "extra.sales_free": work_sales_free,
+                        },
+                        reason=reason,
+                    )
+                )
+            return original
 
     # Closing digit drop (117 → 17) when Issues Qty+Free already balance.
     if (
         sales_total > 0
         and expected >= 0
-        and closing >= 0
-        and abs(expected - closing) > 0.05
+        and work_closing >= 0
+        and abs(expected - work_closing) > 0.05
     ):
-        exp_i, clo_i = int(round(expected)), int(round(closing))
+        exp_i, clo_i = int(round(expected)), int(round(work_closing))
         if clo_i > 0 and str(exp_i).endswith(str(clo_i)) and exp_i != clo_i:
-            closing = float(exp_i)
-            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+            work_closing = float(exp_i)
+            reason = "closing_digit_drop"
+            repaired = (
+                opening,
+                receipts,
+                receipts_free,
+                work_sales,
+                work_sales_free,
+                goods,
+                work_closing,
+            )
+            if apply_repairs():
+                return repaired
+            if out_proposal is not None:
+                out_proposal.append(
+                    RepairProposal(
+                        source="_pwss_photo_repair_row",
+                        fields={"closing_qty": work_closing},
+                        reason=reason,
+                    )
+                )
+            return original
         # Blank/zero closing when movement fully explains stock.
-        if closing == 0 and expected >= 0 and sales_total > 0:
-            closing = float(exp_i)
-            return opening, receipts, receipts_free, sales, sales_free, goods, closing
+        if work_closing == 0 and expected >= 0 and sales_total > 0:
+            work_closing = float(exp_i)
+            reason = "closing_from_identity"
+            repaired = (
+                opening,
+                receipts,
+                receipts_free,
+                work_sales,
+                work_sales_free,
+                goods,
+                work_closing,
+            )
+            if apply_repairs():
+                return repaired
+            if out_proposal is not None:
+                out_proposal.append(
+                    RepairProposal(
+                        source="_pwss_photo_repair_row",
+                        fields={"closing_qty": work_closing},
+                        reason=reason,
+                    )
+                )
+            return original
 
-    return opening, receipts, receipts_free, sales, sales_free, goods, closing
+    final = (
+        opening,
+        receipts,
+        receipts_free,
+        work_sales,
+        work_sales_free,
+        goods,
+        work_closing,
+    )
+    if apply_repairs():
+        return final
+    return original
 
 
 def _parse_product_wise_stock_statement_photo_panel(
@@ -26543,6 +27929,7 @@ def _parse_product_wise_stock_statement_photo_panel(
         sales_free = bands.get("sales_free", 0.0)
         goods = bands.get("goods", 0.0)
         closing = bands.get("closing", 0.0)
+        proposals: List[Any] = []
         (
             opening,
             receipts,
@@ -26552,7 +27939,14 @@ def _parse_product_wise_stock_statement_photo_panel(
             goods,
             closing,
         ) = _pwss_photo_repair_row(
-            opening, receipts, receipts_free, sales, sales_free, goods, closing
+            opening,
+            receipts,
+            receipts_free,
+            sales,
+            sales_free,
+            goods,
+            closing,
+            out_proposal=proposals,
         )
         # Fold Free/Goods into movement so Op+Rec-Sale = Cl.
         receipts_total = receipts + receipts_free
@@ -26577,9 +27971,19 @@ def _parse_product_wise_stock_statement_photo_panel(
         item["receipts_qty"] = receipts_total
         item["sales_qty"] = sales_total
         item["closing_qty"] = closing
-        item["sales_value"] = 0.0
-        item["closing_value"] = 0.0
+        item["sales_value"] = bands.get("sales_amount", 0.0)
+        item["closing_value"] = bands.get("closing_amount", 0.0)
         extra = item["extra"]
+        if proposals:
+            from services.stock_row_classifier import record_candidate
+
+            for prop in proposals:
+                record_candidate(
+                    item,
+                    dict(prop.fields or {}),
+                    str(prop.source),
+                    str(prop.reason or ""),
+                )
         extra["layout"] = "product_wise_stock_statement_photo"
         if receipts_free:
             extra["receipts_free"] = receipts_free
@@ -26967,6 +28371,72 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        # Phase 2b-2: Vision table PRIMARY for scanned PDFs when flagged on.
+        try:
+            from services.stock_vision_table import (
+                is_scanned_pdf_bytes,
+                run_vision_table_path,
+                stash_vision_table_fallback_meta,
+                vision_table_active_for,
+            )
+
+            if vision_table_active_for("scanned_pdf") and is_scanned_pdf_bytes(
+                file_bytes, doc
+            ):
+                request_id = "-"
+                try:
+                    from services.sales_extraction_runtime import resolve_request_id
+
+                    request_id = resolve_request_id()
+                except Exception:
+                    request_id = "-"
+                outcome = run_vision_table_path(
+                    file_bytes,
+                    "scanned_pdf",
+                    {
+                        "filename": filename,
+                        "ext": ".pdf",
+                        "request_id": request_id,
+                    },
+                )
+                if outcome.get("status") == "ok" and isinstance(
+                    outcome.get("result"), dict
+                ):
+                    out = outcome["result"]
+                    out.setdefault("totals", {}).setdefault("extra", {})[
+                        "statement_count"
+                    ] = 1
+                    try:
+                        from services.stock_reconciliation import (
+                            apply_stock_reconciliation,
+                        )
+
+                        out = apply_stock_reconciliation(
+                            out, request_id=request_id, page=1
+                        )
+                    except Exception:
+                        pass
+                    return out
+                stash_vision_table_fallback_meta(
+                    {
+                        "gemini_calls": int(outcome.get("gemini_calls") or 0),
+                        "gemini_budget": int(outcome.get("gemini_budget") or 2),
+                        "fallback_reason": outcome.get("reason"),
+                    }
+                )
+                logger.info(
+                    "VISION_TABLE request_id=%s status=fallback reason=%s "
+                    "continuing_existing_pdf_path",
+                    request_id,
+                    outcome.get("reason"),
+                )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s vision_table pdf path skipped: %s",
+                filename,
+                type(exc).__name__,
+            )
+
         packing_opstk = _parse_packing_opstk_sps_statement(doc, filename)
         if packing_opstk and packing_opstk.get("line_items"):
             packing_opstk["totals"]["extra"]["statement_count"] = 1
@@ -27665,7 +29135,6 @@ def _psr_repair_cls_amt_scale(items: List[Any]) -> None:
         outlier = rate > 1000 if median is None else rate > max(median * 8, median + 400)
         if not outlier:
             continue
-        extra = _psr_ensure_extra(item)
         best = val
         best_err = abs(rate - (median or 0))
         for div in (10, 100):
@@ -27676,8 +29145,13 @@ def _psr_repair_cls_amt_scale(items: List[Any]) -> None:
                 best = cand
                 best_err = err
         if best != val:
-            extra["cls_amt_scale_repaired"] = round(val / best)
-            item["closing_value"] = round(best, 2)
+            _repair_assign(
+                item,
+                {"closing_value": round(best, 2)},
+                "_psr_repair_cls_amt_scale",
+                "cls_amt_scale_repaired",
+                extra_flags={"cls_amt_scale_repaired": round(val / best)},
+            )
 
 
 def _qty_is_truncated_form(seen: float, expected: float) -> bool:
@@ -27775,11 +29249,31 @@ def _psr_repair_qty_identity(item: Dict[str, Any], kind: str = STOCK_IDENTITY_SA
         return
 
     def _commit(trial: Dict[str, Any], flags: Dict[str, Any]) -> None:
-        item["opening_qty"] = trial.get("opening_qty")
-        item["receipts_qty"] = trial.get("receipts_qty")
-        item["sales_qty"] = trial.get("sales_qty")
-        extra.update(trial.get("extra") or {})
-        extra.update(flags)
+        proposed = {
+            "opening_qty": trial.get("opening_qty"),
+            "receipts_qty": trial.get("receipts_qty"),
+            "sales_qty": trial.get("sales_qty"),
+        }
+        trial_extra = trial.get("extra") if isinstance(trial.get("extra"), dict) else {}
+        for key in ("total_stock", "sale_return", "exp_damage"):
+            if key in trial_extra:
+                proposed[f"extra.{key}"] = trial_extra[key]
+        from services.stock_row_classifier import apply_repairs, record_candidate
+
+        if apply_repairs():
+            item["opening_qty"] = trial.get("opening_qty")
+            item["receipts_qty"] = trial.get("receipts_qty")
+            item["sales_qty"] = trial.get("sales_qty")
+            extra.update(trial.get("extra") or {})
+            extra.update(flags)
+        else:
+            marker = ",".join(str(k) for k in flags.keys()) or "psr_repair_qty_identity"
+            record_candidate(
+                item,
+                proposed,
+                "_psr_repair_qty_identity",
+                marker,
+            )
 
     # Recover truncated Opening/Purchase from printed Total = Opening + Purchase
     if total > 0:
@@ -27891,10 +29385,18 @@ def _psr_repair_qty_identity(item: Dict[str, Any], kind: str = STOCK_IDENTITY_SA
         trial_extra["total_stock"] = opening / 10.0 + receipts
         trial["extra"] = trial_extra
         if _stock_row_identity_ok(trial, kind):
-            item["opening_qty"] = opening / 10.0
-            item["sales_qty"] = sales_qty / 10.0
-            extra["total_stock"] = opening / 10.0 + receipts
-            extra["qty_extra_zero_repaired"] = True
+            fields = {
+                "opening_qty": opening / 10.0,
+                "sales_qty": sales_qty / 10.0,
+                "extra.total_stock": opening / 10.0 + receipts,
+            }
+            _repair_assign(
+                item,
+                fields,
+                "_psr_repair_qty_identity",
+                "qty_extra_zero_repaired",
+                extra_flags={"qty_extra_zero_repaired": True},
+            )
 
 
 def _psr_norm_product(name: Any) -> str:
@@ -27932,8 +29434,10 @@ def _psr_overlay_ocr_qty(
         if src is None or not _stock_row_identity_ok(src, kind):
             continue
         extra = _psr_ensure_extra(item)
-        for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
-            item[field] = src.get(field)
+        proposed = {
+            field: src.get(field)
+            for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        }
         src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
         for field in (
             "total_stock",
@@ -27944,8 +29448,30 @@ def _psr_overlay_ocr_qty(
             "order_qty",
         ):
             if field in src_extra:
-                extra[field] = src_extra[field]
-        extra["qty_from_ocr"] = True
+                proposed[f"extra.{field}"] = src_extra[field]
+        from services.stock_row_classifier import apply_repairs, record_candidate
+
+        if apply_repairs():
+            for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+                item[field] = src.get(field)
+            for field in (
+                "total_stock",
+                "sale_return",
+                "sale_return_qty",
+                "exp_damage",
+                "exp_dmg",
+                "order_qty",
+            ):
+                if field in src_extra:
+                    extra[field] = src_extra[field]
+            extra["qty_from_ocr"] = True
+        else:
+            record_candidate(
+                item,
+                proposed,
+                "_psr_overlay_ocr_qty",
+                "qty_from_ocr",
+            )
     return result
 
 
@@ -27981,6 +29507,15 @@ def _psr_fill_missing_sales(result: Dict[str, Any]) -> Dict[str, Any]:
     """
     if not isinstance(result, dict) or not _is_product_stock_report_result(result):
         return result
+    # Locked direct Vision: never let OCR-oriented qty repair rewrite cells.
+    try:
+        from services.stock_direct_vision import is_stock_vision_locked
+
+        if is_stock_vision_locked(result):
+            _psr_fill_line_money_totals(result)
+            return result
+    except Exception:
+        pass
     # ClosStock / Clos.Amt sheets have no line sale-amount column. Do not
     # derive one from the closing rate; that overwrites the printed cells.
     if (
@@ -28002,19 +29537,36 @@ def _psr_fill_missing_sales(result: Dict[str, Any]) -> Dict[str, Any]:
         close_val = _to_float(item.get("closing_value"))
         if sales_qty <= 0:
             if copied:
-                item["sales_value"] = 0.0
+                _repair_assign(
+                    item,
+                    {"sales_value": 0.0},
+                    "_psr_fill_missing_sales",
+                    "clear_copied_cls_amt_as_sales",
+                )
             continue
         if closing <= 0 or close_val <= 0:
             if copied:
-                item["sales_value"] = 0.0
+                _repair_assign(
+                    item,
+                    {"sales_value": 0.0},
+                    "_psr_fill_missing_sales",
+                    "clear_copied_cls_amt_as_sales",
+                )
             continue
         sales_value = _to_float(item.get("sales_value"))
         if sales_value > 0 and not copied:
             continue
         rate = close_val / closing
-        item["sales_value"] = round(sales_qty * rate, 2)
-        extra["sales_value_from_cls_amt_rate"] = True
-        extra["unit_rate_from_cls_amt"] = round(rate, 4)
+        _repair_assign(
+            item,
+            {"sales_value": round(sales_qty * rate, 2)},
+            "_psr_fill_missing_sales",
+            "sales_value_from_cls_amt_rate",
+            extra_flags={
+                "sales_value_from_cls_amt_rate": True,
+                "unit_rate_from_cls_amt": round(rate, 4),
+            },
+        )
     _psr_fill_line_money_totals(result)
     return result
 
@@ -28211,6 +29763,25 @@ def _map_psr_numbers(
     # Positional fallback. SaleRet layout (Atul Medico / ZANDRA portal):
     # Opening, Purchase, Total, Sale, SaleRet, Exp/Dmg, Closing, Cls Amt, Order Qty
     # Sample layout (legacy): Opening, Purchase, Total, Sale, Sample, Exp/Clos, Closing, Cls Amt
+    # Phase 3b on-mode: do not invent values from position; mark STRUCTURAL_ERROR.
+    try:
+        from services.stock_native_resolver import stock_native_resolver_mode
+
+        if stock_native_resolver_mode() == "on":
+            from services.stock_row_classifier import RowStatus
+
+            item = empty_line_item()
+            item["extra"]["row_status"] = RowStatus.STRUCTURAL_ERROR.value
+            item["extra"]["candidates"] = [
+                {
+                    "source": "_map_psr_numbers_positional",
+                    "fields": {"raw_numbers": list(nums)},
+                    "reason": "unresolved_headers",
+                }
+            ]
+            return item
+    except Exception:
+        pass
     n = len(nums)
     if layout != "sample":
         layout = "saleret"
@@ -28929,6 +30500,167 @@ def _maybe_repair_product_stock_report(
         (result.get("totals") or {}).get("extra") or {}
     ).get("extraction_method")
     return _psr_fill_missing_sales(parsed)
+
+
+def _psr_denoise_digit_overlines(file_bytes: bytes) -> Tuple[bytes, Dict[str, Any]]:
+    """Whiten short horizontal bars drawn through digits on phone screenshots.
+
+    Returns (bytes_for_gemini, meta). Original upload is unchanged on disk.
+    """
+    import hashlib
+
+    meta = {
+        "original_sha256": hashlib.sha256(file_bytes).hexdigest(),
+        "normalized": False,
+        "normalization_reason": None,
+        "byte_length": len(file_bytes),
+    }
+    try:
+        from PIL import Image, ImageOps
+        import numpy as np
+    except ImportError:
+        meta["gemini_input_sha256"] = meta["original_sha256"]
+        return file_bytes, meta
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        meta["gemini_input_sha256"] = meta["original_sha256"]
+        return file_bytes, meta
+    arr = np.asarray(image).copy()
+    gray = (0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]).astype(
+        "float32"
+    )
+    height, width = gray.shape
+    # Only touch the numeric half — left product names must stay intact.
+    x_start = int(width * 0.42)
+    r = arr[:, :, 0].astype("int16")
+    g = arr[:, :, 1].astype("int16")
+    b = arr[:, :, 2].astype("int16")
+    # Blue UI overlines (common on this phone editor screenshot).
+    blue_dom = (b - r > 12) & (b - g > 6) & (b > 40) & (r < 200)
+    dark = gray < 145
+    # Skip solid blue header rows (high blue coverage across the numeric half).
+    row_blue_frac = blue_dom[:, x_start:].mean(axis=1)
+    headerish = row_blue_frac > 0.40
+    changed = 0
+
+    def _clear_runs(mask_row, y: int, max_run: int, min_run: int = 2) -> None:
+        nonlocal changed
+        x = x_start
+        while x < width:
+            if not mask_row[x]:
+                x += 1
+                continue
+            x1 = x
+            while x1 < width and mask_row[x1]:
+                x1 += 1
+            run = x1 - x
+            if min_run <= run <= max_run:
+                above = float(np.mean(gray[max(0, y - 1), x:x1]))
+                below = float(np.mean(gray[min(height - 1, y + 1), x:x1]))
+                mid = float(np.mean(gray[y, x:x1]))
+                if above > mid + 18 and below > mid + 18:
+                    arr[y, x:x1] = (255, 255, 255)
+                    changed += run
+            x = x1
+
+    # Remove short horizontal vinculum strokes through digits.
+    for y in range(1, height - 1):
+        if headerish[y]:
+            continue
+        _clear_runs(dark[y], y, max_run=16, min_run=3)
+        _clear_runs(blue_dom[y], y, max_run=36, min_run=2)
+    if changed < 40:
+        meta["gemini_input_sha256"] = meta["original_sha256"]
+        return file_bytes, meta
+    out = Image.fromarray(arr)
+    buf = io.BytesIO()
+    fmt = "PNG" if image.format == "PNG" else "JPEG"
+    if fmt == "JPEG":
+        out.save(buf, format="JPEG", quality=95)
+    else:
+        out.save(buf, format="PNG")
+    cleaned = buf.getvalue()
+    meta["normalized"] = True
+    meta["normalization_reason"] = "psr_digit_overline_denoise"
+    meta["gemini_input_sha256"] = hashlib.sha256(cleaned).hexdigest()
+    meta["byte_length"] = len(cleaned)
+    meta["overlines_cleared_px"] = int(changed)
+    return cleaned, meta
+
+
+def _psr_vision_identity_score(result: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(result, dict):
+        return -1
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return -1
+    score = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        total = _to_float(extra.get("total_stock"))
+        if total == 0:
+            total = round(opening + receipts, 2)
+        sale_ret = _to_float(extra.get("sale_return"))
+        exp_dmg = _to_float(extra.get("exp_damage"))
+        if abs(opening + receipts - total) <= 0.05:
+            score += 1
+        if abs(total - sales + sale_ret - exp_dmg - closing) <= 0.05:
+            score += 2
+        name = str(item.get("product_name") or "")
+        if len(re.sub(r"[^A-Za-z]", "", name)) >= 5:
+            score += 1
+    return score
+
+
+def _extract_product_stock_report_image_vision(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Direct original-image Product Stock Report (SaleRet / ClosStock) Vision.
+
+    Prefers the STOCK_DIRECT_VISION path (original bytes, max 2 attempts).
+    """
+    try:
+        from services.stock_direct_vision import extract_saleret_direct_vision
+
+        return extract_saleret_direct_vision(
+            file_bytes, filename, ext, reason="product_stock_report_image_vision"
+        )
+    except Exception as exc:
+        logger.info(
+            "Product Stock Report stock_direct_vision wrapper failed: %s", exc
+        )
+        return None
+
+
+def _looks_like_psr_saleret_image(
+    result: Optional[Dict[str, Any]] = None,
+    peek_text: str = "",
+) -> bool:
+    """True for Opening/Purchase/Sale/SaleRet/ClosStock phone screenshots."""
+    blob = " ".join(
+        [
+            peek_text or "",
+            str((result or {}).get("report_title") or ""),
+            str((result or {}).get("stockist_name") or ""),
+        ]
+    )
+    if re.search(r"SaleRet|ClosStock|Exp\s*/\s*Dmg|Clos\.Amt", blob, re.I):
+        return True
+    if re.search(r"\bOpening\b", blob, re.I) and re.search(
+        r"\bPurchase\b", blob, re.I
+    ) and re.search(r"\bSale\b", blob, re.I) and re.search(
+        r"\bTotal\b", blob, re.I
+    ):
+        return True
+    # This crop's OCR often labels the iOS Done button as stockist.
+    if str((result or {}).get("stockist_name") or "").strip().lower() == "done":
+        return True
+    return False
 
 
 def _reextract_product_stock_report_image(
@@ -29848,15 +31580,32 @@ def _apply_parsed_sales_json(
     company = (result.get("company_name") or "").upper()
     stockist_looks_mfr = bool(
         re.search(r"HEALTHCARE|PHARMA\s*LTD|LABORATOR|LIMITED", stockist)
-    ) and not re.search(r"AGENC|STORES|MEDICO|MEDICAL\s+AGENC", stockist)
+    ) and not re.search(r"AGENC|STORES|MEDICO|MEDISALES|MEDICAL\s+AGENC", stockist)
     company_looks_stockist = bool(
-        re.search(r"AGENC|STORES|MEDICO|MEDICAL\s+AGENC", company)
+        re.search(r"AGENC|STORES|MEDICO|MEDISALES|MEDICAL\s+AGENC", company)
     )
     if stockist_looks_mfr and company_looks_stockist:
         result["stockist_name"], result["company_name"] = (
             result.get("company_name"),
             result.get("stockist_name"),
         )
+    else:
+        # Reverse mix-up (Vardhman STOCK AND SALES etc.): Himalaya put in
+        # stockist_name, distributor letterhead put in company_name.
+        stockist = (result.get("stockist_name") or "").upper()
+        company = (result.get("company_name") or "").upper()
+        stockist_is_himalaya = bool(re.search(r"\bHIMALAYA\b", stockist))
+        company_is_distributor = bool(
+            re.search(
+                r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|PVT\.?\s*LTD",
+                company,
+            )
+        ) and not re.search(r"\bHIMALAYA\b", company)
+        if stockist_is_himalaya and company_is_distributor:
+            result["stockist_name"], result["company_name"] = (
+                result.get("company_name"),
+                result.get("stockist_name"),
+            )
 
     title = result.get("report_title") or ""
     m_range = re.search(
@@ -29921,6 +31670,19 @@ def _apply_parsed_sales_json(
         if opening_value not in (None, ""):
             item["opening_value"] = _to_float(opening_value)
             item.setdefault("extra", {})["opening_value"] = item["opening_value"]
+        receipts_value = raw.get("receipts_value")
+        if receipts_value in (None, "") and isinstance(raw.get("extra"), dict):
+            receipts_value = raw["extra"].get("receipts_value")
+            if receipts_value in (None, ""):
+                receipts_value = raw["extra"].get("purchase_value")
+        if receipts_value in (None, "") and isinstance(item.get("extra"), dict):
+            receipts_value = item["extra"].get("receipts_value")
+            if receipts_value in (None, ""):
+                receipts_value = item["extra"].get("purchase_value")
+        if receipts_value not in (None, ""):
+            item["receipts_value"] = _to_float(receipts_value)
+            item.setdefault("extra", {})["receipts_value"] = item["receipts_value"]
+            item["extra"]["purchase_value"] = item["receipts_value"]
         items.append(item)
     result["line_items"] = _drop_trailing_statement_total_item(items)
     result = _clear_summary_rtl_fabricated_qty(result)
@@ -32133,8 +33895,8 @@ def _is_op_pur_sale_bal_qnty_text(text: str) -> bool:
 def _op_pur_sale_bal_qnty_header_text(file_bytes: bytes) -> str:
     """OCR the title, dates, and OP QNTY column header only."""
     try:
-        import pytesseract
         from PIL import Image, ImageEnhance, ImageOps
+        from services.stock_ocr_policy import stock_ocr_context
     except ImportError:
         return ""
     try:
@@ -32145,9 +33907,14 @@ def _op_pur_sale_bal_qnty_header_text(file_bytes: bytes) -> str:
     crop = image.crop((0, int(height * 0.02), width, int(height * 0.16)))
     crop = ImageEnhance.Contrast(crop).enhance(1.4)
     try:
-        return pytesseract.image_to_string(crop, config="--psm 6")
+        tess = _a2z_tesseract()
     except Exception:
         return ""
+    with stock_ocr_context(region="op_pur_sale_bal_header", page="1"):
+        try:
+            return tess.image_to_string(crop, config="--psm 6") or ""
+        except Exception:
+            return ""
 
 
 def _pipe_digit_qty_choices(value: Any) -> List[float]:
@@ -34798,9 +36565,9 @@ def _looks_like_medica_stock_statement(result: Optional[Dict[str, Any]]) -> bool
 _MEDICA_STOCK_STATEMENT_PROMPT = """
 This image is a Medica Ultimate STOCK STATEMENT.
 Columns left to right:
-PRODUCT DESCRIPTION, PACKING, OPSTK, PURCH, SALE, SALE VAL, N/O/STOCK, STK VAL, JUL, JUN, STK126, EXP3M
+PRODUCT DESCRIPTION, PACKING, OPSTK, PURCH, SALE, SALE VAL, IN/OT (or IN/OUT), STOCK, STK VAL, JUL, JUN, STK120, EXP3M
 
-Keep every number on the same product row. Never move STK VAL or SALE VAL onto the previous or next product.
+Keep every number on the same product row. Never move a value onto the previous or next product.
 
 Map:
 - PRODUCT DESCRIPTION -> product_name
@@ -34809,23 +36576,82 @@ Map:
 - PURCH -> receipts_qty
 - SALE -> sales_qty
 - SALE VAL -> sales_value
-- N/O/STOCK -> closing_qty
+- IN/OT or IN/OUT -> extra.in_ot_qty   (NOT closing_qty)
+- STOCK -> closing_qty
 - STK VAL -> closing_value
 - JUL -> extra.jul_qty
 - JUN -> extra.jun_qty
 
+Critical:
+- IN/OT is never the closing quantity. STOCK is closing_qty.
+- STK VAL is the money column immediately after STOCK.
+- JUL is the next column after STK VAL. JUL is usually a small monthly qty.
+- Do not put STK VAL into closing_value when it belongs in JUL, and do not put STOCK into closing_value.
+- Do not put IN/OT into closing_qty.
+
 Skip the division banner (HIMALAYA-ZEAL) and the Division Total row.
 Ignore the phone status bar and the PDF viewer toolbar.
-STK VAL is the column immediately after N/O/STOCK. JUL is the next column and is not the stock value, even when JUL is a large number.
+stockist_name is the left-side distributor (example: SHREE DISTRIBUTORS), not the
+software footer "Medica Ultimate", and not the TO: customer line.
+company_name is the TO: party (example: HIMALAYA-ZEAL).
 
 Examples on one row each:
-- AACTARIL SOAP, packing 75 GM, opening 2, receipts 0, sales 2, sales_value 176, closing_qty 0, closing_value 0
-- ABANA TAB, packing 60 TAB, opening 0, receipts 3, sales 0, sales_value 0, closing_qty 3, closing_value 455, jul_qty 3
-- ACTARIL SOAP, packing NA, opening 64, receipts 0, sales 3, sales_value 262, closing_qty 0, closing_value 61, jul_qty 4738
-- CONFIDO TAB, packing 60 TAB, opening 37, receipts 0, sales 28, sales_value 5184, closing_qty 2, closing_value 11, jul_qty 1805
+- AACTARIL SOAP, packing 75 GM, opening_qty 2, receipts_qty 0, sales_qty 2, sales_value 176, in_ot_qty 0, closing_qty 0, closing_value 0
+- ABANA TAB, packing 60 TAB, opening_qty 0, receipts_qty 3, sales_qty 0, sales_value 0, in_ot_qty 0, closing_qty 3, closing_value 455, jul_qty 3, jun_qty 6
+- CONFIDO TAB, packing 60 TAB, opening_qty 37, receipts_qty 0, sales_qty 28, sales_value 5184, in_ot_qty 2, closing_qty 11, closing_value 1805, jul_qty 10, jun_qty 10
+- LIV 52 SYRUP BIG, packing 200 ML, opening_qty 187, receipts_qty 0, sales_qty 137, sales_value 24424, in_ot_qty 0, closing_qty 50, closing_value 7903, jul_qty 96, jun_qty 70
 
-Return ONLY JSON with stockist_name, company_name, period_from, period_to, report_title "STOCK STATEMENT", and line_items using the fields above.
+Return ONLY JSON with stockist_name, company_name, period_from, period_to, report_title "STOCK STATEMENT", and line_items using the fields above (put in_ot_qty / jul_qty / jun_qty under each item's extra object when present).
 """.strip()
+
+
+def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
+    """Fix the common Vision slip: IN/OT→closing_qty, STOCK→closing_value, STK VAL→jul.
+
+    The printed layout is IN/OT, STOCK, STK VAL, JUL. When jul looks like money and
+    closing_value looks like a stock qty, shift fields right.
+    """
+    if not isinstance(item, dict):
+        return
+    extra = item.get("extra")
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    closing_value = _to_float(item.get("closing_value"))
+    jul = _to_float(extra.get("jul_qty"))
+    if jul <= 0 or closing_value <= 0:
+        return
+    # STK VAL is usually much larger than the STOCK qty cell.
+    if jul < max(50.0, closing_value * 5.0):
+        return
+    # closing_value should look like a qty (STOCK), not rupees.
+    if abs(closing_value - round(closing_value)) > 0.05 or closing_value > 5000:
+        return
+    implied = round(opening + receipts - sales, 2)
+    candidate_stock = closing_value
+    # Prefer the repair when STOCK matches identity, or current closing looks like IN/OT.
+    identity_ok = abs(implied - candidate_stock) <= 0.05
+    current_looks_like_in_ot = closing <= 5 or (
+        abs(implied - closing) > 0.05 and abs(implied - candidate_stock) <= 0.05
+    )
+    if not (identity_ok or current_looks_like_in_ot):
+        return
+    if abs(implied - closing) <= 0.05 and closing_value < jul:
+        # Already balanced with STOCK in closing_qty; only STK VAL/JUL may be swapped.
+        if abs(implied - closing) <= 0.05 and jul >= max(50.0, closing * 5.0):
+            item["closing_value"] = jul
+            extra["jul_qty"] = None
+            extra["medica_stk_val_repaired"] = True
+        return
+    extra["in_ot_qty"] = closing
+    item["closing_qty"] = candidate_stock
+    item["closing_value"] = jul
+    extra["jul_qty"] = None
+    extra["medica_column_shift_repaired"] = True
 
 
 def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
@@ -34863,6 +36689,177 @@ def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
         strips.append(buf.getvalue())
         top += 120
     return strips or [file_bytes]
+
+
+def _medica_clean_stockist_name(value: Any) -> Optional[str]:
+    """Keep only the distributor; drop glued TO:/Jo: customer text and quotes."""
+    name = str(value or "").strip()
+    if not name or name.lower() in {"none", "null"}:
+        return None
+    name = re.sub(r"^[\"'`]+|[\"'`]+$", "", name).strip()
+    # OCR/Vision often glue: "'SHREE DISTRIBUTORS. Jo: HIMALAYA-ZEAL"
+    name = re.split(
+        r"\bTO\s*[:\-]|,\s*TO\b|\bJo\s*[:\-]|[.]\s*Jo\s*[:\-]",
+        name,
+        maxsplit=1,
+        flags=re.I,
+    )[0]
+    name = re.sub(r"^[\"'`]+|[\"'`]+$", "", name).strip(" .,-")
+    name = _clean_name(name)
+    if not name or len(name) < 4:
+        return None
+    if re.search(r"Medica\s+Ultimate|STOCK\s+STATEMENT|\bHIMALAYA\b", name, re.I):
+        return None
+    return name
+
+
+def _medica_stockist_needs_repair(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return True
+    if re.search(r"[\"'`]|\bJo\s*:|\bTO\s*:|\bHIMALAYA\b|Medica\s+Ultimate", text, re.I):
+        return True
+    return _medica_clean_stockist_name(text) is None
+
+
+def _medica_fill_header_from_image(
+    file_bytes: bytes, result: Dict[str, Any]
+) -> None:
+    """Fill stockist / company / period from the letterhead above the OPSTK grid.
+
+    Table-strip Vision rarely sees SHREE DISTRIBUTORS; phone OCR also garbles it.
+    """
+    if not isinstance(result, dict):
+        return
+    need_stockist = _medica_stockist_needs_repair(result.get("stockist_name"))
+    if need_stockist:
+        result["stockist_name"] = None
+    need_company = not (result.get("company_name") or "").strip() or bool(
+        re.search(r"Medica\s+Ultimate", str(result.get("company_name") or ""), re.I)
+    )
+    need_period = not result.get("period_from") or not result.get("period_to")
+    if not (need_stockist or need_company or need_period):
+        return
+
+    def _apply_letterhead_text(text: str) -> None:
+        nonlocal need_stockist, need_company, need_period
+        lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+        for index, stripped in enumerate(lines):
+            party = re.match(r"^TO\s*[:\-]\s*(.+)$", stripped, re.I)
+            if not party and re.search(r"\bTO\s*[:\-]\s*HIMALAYA", stripped, re.I):
+                party = re.search(r"TO\s*[:\-]\s*(.+)$", stripped, re.I)
+            if party and need_company:
+                result["company_name"] = _clean_name(party.group(1))
+                need_company = False
+            dates = re.search(
+                r"From\s*Date\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
+                r"To\s*Date\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                stripped,
+                re.I,
+            )
+            if dates and need_period:
+                result["period_from"] = _normalize_date(dates.group(1))
+                result["period_to"] = _normalize_date(dates.group(2))
+                need_period = False
+            if need_stockist and re.search(
+                r"DISTRIBUTORS?|AGENC(?:Y|IES)|ENTERPRISES|MEDICALS?",
+                stripped,
+                re.I,
+            ):
+                cleaned = _medica_clean_stockist_name(stripped)
+                if cleaned:
+                    result["stockist_name"] = cleaned
+                    need_stockist = False
+
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+    except Exception:
+        return
+    width, height = image.size
+    # Skip phone chrome; keep distributor block + TO: + From/To dates.
+    top = int(height * 0.06)
+    bottom = max(top + 80, int(height * 0.32))
+    crop = image.crop((0, top, width, bottom))
+    buf = io.BytesIO()
+    crop.save(buf, format="JPEG", quality=92)
+    letterhead = buf.getvalue()
+    try:
+        _apply_letterhead_text(
+            _ocr_image_to_text(letterhead, psm=6, enhance=True) or ""
+        )
+    except Exception:
+        pass
+    if not (need_stockist or need_company or need_period):
+        return
+
+    # OCR often cannot read the maroon distributor name on this phone shot.
+    import os
+
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    prompt = (
+        "Read only the letterhead of this Medica STOCK STATEMENT screenshot.\n"
+        "Return JSON only:\n"
+        "{\n"
+        '  "stockist_name": "left-side distributor name (e.g. SHREE DISTRIBUTORS)",\n'
+        '  "company_name": "TO: customer/division (e.g. HIMALAYA-ZEAL)",\n'
+        '  "period_from": "YYYY-MM-DD or null",\n'
+        '  "period_to": "YYYY-MM-DD or null"\n'
+        "}\n"
+        "stockist_name is NOT Medica Ultimate and NOT the phone status bar.\n"
+        "company_name is the TO: party, not the distributor."
+    )
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(letterhead).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 512},
+    }
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    try:
+        response = generate_content_via_vertex(
+            model=model, payload=payload, timeout=60, label="medica_letterhead"
+        )
+        parsed = _extract_json_object(_gemini_response_text(response))
+    except Exception as exc:
+        logger.info("Medica letterhead vision failed: %s", exc)
+        parsed = None
+    if not isinstance(parsed, dict):
+        return
+    if need_stockist and parsed.get("stockist_name"):
+        cleaned = _medica_clean_stockist_name(parsed.get("stockist_name"))
+        if cleaned:
+            result["stockist_name"] = cleaned
+    if need_company and parsed.get("company_name"):
+        company = _clean_name(str(parsed.get("company_name") or ""))
+        company = re.sub(r"^[\"'`]+|[\"'`]+$", "", company).strip(" .,-")
+        company = _clean_name(company)
+        if company and not re.search(r"Medica\s+Ultimate", company, re.I):
+            result["company_name"] = company
+    if need_period:
+        if parsed.get("period_from"):
+            result["period_from"] = _normalize_date(str(parsed.get("period_from")))
+        if parsed.get("period_to"):
+            result["period_to"] = _normalize_date(str(parsed.get("period_to")))
 
 
 def _extract_medica_stock_statement_vision(
@@ -34942,10 +36939,28 @@ def _extract_medica_stock_statement_vision(
         if not isinstance(extra, dict):
             extra = {}
             item["extra"] = extra
+        # Vision may put in_ot_qty on the item root; keep it under extra.
+        if item.get("in_ot_qty") not in (None, "") and extra.get("in_ot_qty") in (
+            None,
+            "",
+        ):
+            extra["in_ot_qty"] = _to_float(item.get("in_ot_qty"))
+        _repair_medica_vision_column_shift(item)
         extra["layout"] = "medica_stock_statement"
         kept.append(item)
     result["line_items"] = kept
     result["report_title"] = "STOCK STATEMENT"
+    # Strip Vision often returns "'SHREE DISTRIBUTORS. Jo: HIMALAYA-ZEAL".
+    cleaned_stockist = _medica_clean_stockist_name(result.get("stockist_name"))
+    if cleaned_stockist:
+        result["stockist_name"] = cleaned_stockist
+    else:
+        result["stockist_name"] = None
+    if re.search(r"Medica\s+Ultimate", str(result.get("company_name") or ""), re.I):
+        result["company_name"] = None
+    _medica_fill_header_from_image(file_bytes, result)
+    cleaned_stockist = _medica_clean_stockist_name(result.get("stockist_name"))
+    result["stockist_name"] = cleaned_stockist
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = "medica_stock_statement_vision"
     result["totals"]["extra"]["layout"] = "medica_stock_statement"
@@ -35327,6 +37342,9 @@ def _main_stock_is_garbage_name(name: str) -> bool:
     # Heavy symbol / garbage lines.
     if re.search(r"[™“”]|CEWwRe|liww|aanma|LUUML|10nA", cleaned, re.I):
         return True
+    # Glued OCR crumbs such as "pice ar) TAB 1°60" are not product names.
+    if "°" in cleaned and re.search(r"[A-Za-z]\)", cleaned):
+        return True
     if re.search(r"(?i)^SUGER\s+FREE\b", cleaned) and not re.search(
         r"(?i)LIV|DS\s*SYP", cleaned
     ):
@@ -35635,7 +37653,10 @@ def _extract_opening_receive_issue_closing_ocr(
     band_h = 480
     step = 360
     top = max(0, start_y - 40)
+    from services.stock_ocr_policy import stock_ocr_context
+
     # Dedicated first-rows crop so all-zero lead products (ARJUNA etc.) are kept.
+    # One named region for the whole band cascade (1 initial + 1 recovery max).
     try:
         head_band = image.crop((0, max(0, start_y - 40), width, min(height, start_y + 420)))
         head_band = ImageEnhance.Contrast(
@@ -35644,9 +37665,15 @@ def _extract_opening_receive_issue_closing_ocr(
                 Image.Resampling.LANCZOS,
             )
         ).enhance(1.85)
-        for psm in (6, 4):
+        with stock_ocr_context(region="opening_receive_bands", page="1"):
             _ingest(
-                pytesseract.image_to_string(head_band, config=f"--psm {psm}") or "",
+                pytesseract.image_to_string(head_band, config="--psm 6") or "",
+                merged,
+                order,
+            )
+        with stock_ocr_context(region="opening_receive_bands", page="1"):
+            _ingest(
+                pytesseract.image_to_string(head_band, config="--psm 4") or "",
                 merged,
                 order,
             )
@@ -35673,11 +37700,13 @@ def _extract_opening_receive_issue_closing_ocr(
                     Image.Resampling.LANCZOS,
                 )
             ).enhance(1.55)
-            _ingest(
-                pytesseract.image_to_string(crop, config="--psm 6") or "",
-                merged,
-                order,
-            )
+            # Same region: after initial+recovery these become REUSE/STOP.
+            with stock_ocr_context(region="opening_receive_bands", page="1"):
+                _ingest(
+                    pytesseract.image_to_string(crop, config="--psm 6") or "",
+                    merged,
+                    order,
+                )
         except Exception as exc:
             logger.info("Opening/receive/issue OCR band failed: %s", exc)
         top += step
@@ -35690,11 +37719,12 @@ def _extract_opening_receive_issue_closing_ocr(
                     Image.Resampling.LANCZOS,
                 )
             ).enhance(1.55)
-            _ingest(
-                pytesseract.image_to_string(page, config="--psm 6") or "",
-                merged,
-                order,
-            )
+            with stock_ocr_context(region="opening_receive_bands", page="1"):
+                _ingest(
+                    pytesseract.image_to_string(page, config="--psm 6") or "",
+                    merged,
+                    order,
+                )
         except Exception as exc:
             logger.info("Opening/receive/issue full-page OCR failed: %s", exc)
 
@@ -35829,27 +37859,52 @@ def _main_stock_repair_issue_qty(item: Dict[str, Any]) -> None:
         and abs(implied - round(implied)) <= 0.05
         and (sales_value == 0 or sales_value > 0.05)
     ):
-        item["sales_qty"] = _as_qty(implied)
+        _repair_assign(
+            item,
+            {"sales_qty": _as_qty(implied)},
+            "_main_stock_repair_issue_qty",
+            "fill_missing_issue",
+        )
         return
     # Stamp/OCR sometimes drops OPENING while ISSUE + CLOSING remain.
     if opening == 0 and sales > 0:
         implied_open = round(closing + sales - receipts, 2)
         if implied_open > 0.05 and abs(implied_open - round(implied_open)) <= 0.05:
-            item["opening_qty"] = _as_qty(implied_open)
+            _repair_assign(
+                item,
+                {"opening_qty": _as_qty(implied_open)},
+                "_main_stock_repair_issue_qty",
+                "fill_missing_opening",
+            )
             return
     # Digit-drop ISSUE (34→4) when identity fails but implied ends with OCR'd qty.
     if sales > 0 and _main_stock_digit_drop_of(sales, implied):
-        item["sales_qty"] = _as_qty(implied)
+        _repair_assign(
+            item,
+            {"sales_qty": _as_qty(implied)},
+            "_main_stock_repair_issue_qty",
+            "digit_drop_issue",
+        )
         sales = _to_float(item.get("sales_qty"))
         implied = round(opening + receipts - closing, 2)
     # Digit-drop OPENING (52→2) when ISSUE+CLOSING imply a longer opening.
     implied_open = round(closing + sales - receipts, 2)
     if opening > 0 and _main_stock_digit_drop_of(opening, implied_open):
-        item["opening_qty"] = _as_qty(implied_open)
+        _repair_assign(
+            item,
+            {"opening_qty": _as_qty(implied_open)},
+            "_main_stock_repair_issue_qty",
+            "digit_drop_opening",
+        )
         return
     # Zero-movement row: opening was dropped but closing stock remains.
     if opening == 0 and sales == 0 and receipts == 0 and closing > 0:
-        item["opening_qty"] = closing
+        _repair_assign(
+            item,
+            {"opening_qty": closing},
+            "_main_stock_repair_issue_qty",
+            "zero_movement_opening_from_closing",
+        )
 
 
 def _main_stock_harvest_name_only_zeros(
@@ -35879,9 +37934,14 @@ def _main_stock_harvest_name_only_zeros(
     except Exception:
         return
     text = ""
+    from services.stock_ocr_policy import stock_ocr_context
+
     for psm in (6, 4):
         try:
-            text += "\n" + (pytesseract.image_to_string(left, config=f"--psm {psm}") or "")
+            with stock_ocr_context(region="opening_receive_names", page="1"):
+                text += "\n" + (
+                    pytesseract.image_to_string(left, config=f"--psm {psm}") or ""
+                )
         except Exception:
             continue
     for raw in text.splitlines():
@@ -36585,6 +38645,13 @@ def _a2z_reread_digits(page, box: Dict[str, Any]) -> str:
     pytesseract = _a2z_tesseract()
     from PIL import Image
 
+    from services.stock_ocr_policy import (
+        cell_crop_covers_page,
+        current_stock_request_id,
+        log_stock_ocr,
+        stock_ocr_context,
+    )
+
     pad = 4
     cell = page.crop((
         max(0, int(box["x0"]) - pad),
@@ -36592,11 +38659,31 @@ def _a2z_reread_digits(page, box: Dict[str, Any]) -> str:
         int(box["x1"]) + pad,
         int(box["y1"]) + pad,
     ))
+    page_area = max(1, int(page.width) * int(page.height))
+    if cell_crop_covers_page(int(cell.width) * int(cell.height), page_area):
+        log_stock_ocr(
+            "STOCK_OCR_RETRY_STOP",
+            request_id=current_stock_request_id(),
+            page="-",
+            region="cell",
+            cell=f"{int(box['x0'])},{int(box['y0'])},{int(box['x1'])},{int(box['y1'])}",
+            attempt=0,
+            reason="cell_recovery_not_full_page",
+            elapsed_ms=0,
+            status="stopped",
+        )
+        return ""
     cell = cell.resize((max(1, cell.width * 3), max(1, cell.height * 3)), Image.Resampling.LANCZOS)
-    return pytesseract.image_to_string(
-        cell,
-        config="--psm 7 -c tessedit_char_whitelist=0123456789",
-    ).strip()
+    with stock_ocr_context(
+        region="cell",
+        cell=f"{int(box['x0'])},{int(box['y0'])},{int(box['x1'])},{int(box['y1'])}",
+        reason="numeric_cell_missing",
+        scope="cell",
+    ):
+        return pytesseract.image_to_string(
+            cell,
+            config="--psm 7 -c tessedit_char_whitelist=0123456789",
+        ).strip()
 
 
 def _a2z_reread_date(page, boxes: List[Dict[str, Any]]) -> str:
@@ -36606,6 +38693,13 @@ def _a2z_reread_date(page, boxes: List[Dict[str, Any]]) -> str:
     if page is None or not boxes:
         return ""
     pytesseract = _a2z_tesseract()
+    from services.stock_ocr_policy import (
+        cell_crop_covers_page,
+        current_stock_request_id,
+        log_stock_ocr,
+        stock_ocr_context,
+    )
+
     pad = 3
     cell = page.crop((
         max(0, min(int(box["x0"]) for box in boxes) - pad),
@@ -36613,15 +38707,35 @@ def _a2z_reread_date(page, boxes: List[Dict[str, Any]]) -> str:
         max(int(box["x1"]) for box in boxes) + pad,
         max(int(box["y1"]) for box in boxes) + pad,
     ))
+    page_area = max(1, int(page.width) * int(page.height))
+    if cell_crop_covers_page(int(cell.width) * int(cell.height), page_area):
+        log_stock_ocr(
+            "STOCK_OCR_RETRY_STOP",
+            request_id=current_stock_request_id(),
+            page="-",
+            region="cell",
+            cell="mexp",
+            attempt=0,
+            reason="cell_recovery_not_full_page",
+            elapsed_ms=0,
+            status="stopped",
+        )
+        return ""
     gray = ImageOps.grayscale(cell)
     # Collapse the vertical phosphor stripes, then scale back up.
     squeezed = gray.resize((max(1, gray.width // 3), gray.height), Image.Resampling.BOX)
     wide = squeezed.resize((gray.width * 6, gray.height * 6), Image.Resampling.LANCZOS)
     wide = ImageOps.autocontrast(wide)
-    text = pytesseract.image_to_string(
-        wide,
-        config="--psm 8 -c tessedit_char_whitelist=0123456789/",
-    )
+    with stock_ocr_context(
+        region="cell",
+        cell="mexp",
+        reason="low_confidence_cell",
+        scope="cell",
+    ):
+        text = pytesseract.image_to_string(
+            wide,
+            config="--psm 8 -c tessedit_char_whitelist=0123456789/",
+        )
     text = re.sub(r"\s+", "", text or "")
     return text if re.fullmatch(r"\d{1,2}/\d{2,4}", text) else ""
 
@@ -36728,12 +38842,19 @@ def _a2z_reread_candidates(tokens: List[Dict[str, Any]], page) -> List[float]:
 
 
 def _a2z_balanced_qtys(
-    cells: Dict[str, List[Dict[str, Any]]], page
+    cells: Dict[str, List[Dict[str, Any]]],
+    page,
+    *,
+    out_proposal: Optional[List[Any]] = None,
 ) -> Optional[Dict[str, float]]:
     """Fill only noisy qty cells when opening + receipt - issue = closing.
 
     A cell that already read as a digit is left unchanged.
+    When STOCK_NO_REWRITE is on, returns None (caller keeps printed OCR) and
+    appends a RepairProposal of the invented fills to ``out_proposal``.
     """
+    from services.stock_row_classifier import RepairProposal, apply_repairs
+
     names = ("opening", "receipt", "issue", "closing")
     trusted = {name: _a2z_trusted_qty(cells.get(name) or []) for name in names}
     if all(value is not None for value in trusted.values()):
@@ -36744,6 +38865,31 @@ def _a2z_balanced_qtys(
         if abs(opening + receipt - issue - closing) < 0.01:
             return trusted
         return None
+
+    def _emit_or_return(vals: Dict[str, float], reason: str):
+        if apply_repairs():
+            return vals
+        if out_proposal is not None:
+            proposed = {}
+            for name in names:
+                if trusted.get(name) is None and vals.get(name) is not None:
+                    field = {
+                        "opening": "opening_qty",
+                        "receipt": "receipts_qty",
+                        "issue": "sales_qty",
+                        "closing": "closing_qty",
+                    }[name]
+                    proposed[field] = vals[name]
+            if proposed:
+                out_proposal.append(
+                    RepairProposal(
+                        source="_a2z_balanced_qtys",
+                        fields=proposed,
+                        reason=reason,
+                    )
+                )
+        return None
+
     missing = [name for name in names if trusted[name] is None]
     if len(missing) > 2:
         return None
@@ -36767,7 +38913,7 @@ def _a2z_balanced_qtys(
         if abs(vals["opening"] + vals["receipt"] - vals["issue"] - vals["closing"]) < 0.01:
             hits.append(vals)
     if len(hits) == 1:
-        return hits[0]
+        return _emit_or_return(hits[0], "unique_balance_combo")
     if (
         not hits
         and trusted["opening"] is not None
@@ -36789,7 +38935,7 @@ def _a2z_balanced_qtys(
                 vals["issue"] = float(round(implied))
                 vals["opening"] = trusted["opening"]
                 vals["closing"] = trusted["closing"]
-                return vals
+                return _emit_or_return(vals, "implied_issue_from_identity")
     if len(hits) > 1 or len(missing) != 1:
         return None
     name = missing[0]
@@ -36809,7 +38955,7 @@ def _a2z_balanced_qtys(
     if implied < 0 or implied > 20000 or abs(implied - round(implied)) > 0.01:
         return None
     vals[name] = float(round(implied))
-    return vals
+    return _emit_or_return(vals, f"fill_missing_{name}")
 
 
 def _a2z_items_from_ocr_words(
@@ -36923,7 +39069,8 @@ def _a2z_items_from_ocr_words(
         ):
             continue
         pack = _clean_name(" ".join(pack_bits)) or None
-        balanced = _a2z_balanced_qtys(cells, page)
+        proposals: List[Any] = []
+        balanced = _a2z_balanced_qtys(cells, page, out_proposal=proposals)
         if balanced:
             opening = balanced["opening"]
             receipt = balanced["receipt"]
@@ -36959,6 +39106,16 @@ def _a2z_items_from_ocr_words(
             "m_exp": expiry,
             "expiry": expiry,
         }
+        if proposals:
+            from services.stock_row_classifier import record_candidate
+
+            for prop in proposals:
+                record_candidate(
+                    item,
+                    dict(prop.fields or {}),
+                    str(prop.source),
+                    str(prop.reason or ""),
+                )
         items.append(item)
     return items
 
@@ -39466,9 +41623,61 @@ def _parse_stock_valuation_stock_rate_text(
     return result
 
 
+def _ocr_stock_valuation_preview(file_bytes: bytes) -> str:
+    """Best-effort title OCR for STOCK VALUATION photos. Empty on failure."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    from services.stock_ocr_policy import stock_ocr_context
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+    except Exception:
+        return ""
+    try:
+        tess = _a2z_tesseract()
+    except Exception:
+        return ""
+    best = ""
+    # Title sits below the shop header; scan mid-upper bands + common rotations.
+    # One named region only: initial + one header_detection_failed recovery.
+    # Do not fan out dozens of PSM/band variants as independent OCR regions.
+    bands = ((0.12, 0.40), (0.0, 0.35), (0.15, 0.38), (0.10, 0.45))
+    attempts = (
+        (0, bands[0], 6, None),
+        (270, bands[0], 6, "header_detection_failed"),
+        (90, bands[1], 6, "header_detection_failed"),
+        (180, bands[1], 4, "header_detection_failed"),
+        (0, bands[1], 4, "header_detection_failed"),
+    )
+    for angle, (y0, y1), psm, reason in attempts:
+        base = image.rotate(angle, expand=True) if angle else image
+        scaled = base.resize(
+            (base.width * 2, base.height * 2), Image.Resampling.LANCZOS
+        )
+        im = ImageEnhance.Contrast(scaled).enhance(1.4)
+        crop = im.crop((0, int(im.height * y0), im.width, int(im.height * y1)))
+        ctx_kwargs = {"region": "valuation_preview", "page": "1"}
+        if reason:
+            ctx_kwargs["reason"] = reason
+        with stock_ocr_context(**ctx_kwargs):
+            try:
+                text = tess.image_to_string(crop, config=f"--psm {psm}") or ""
+            except Exception:
+                continue
+        if _is_stock_valuation_header_text(text):
+            return text
+        if not best and re.search(r"STOCK\s+VALUATION", text, re.I):
+            best = text
+    return best
+
+
 def _ocr_stock_valuation_rotated_texts(file_bytes: bytes) -> List[Tuple[int, str]]:
     """OCR STOCK VALUATION photos across orientations; returns (angle, text)."""
     from PIL import Image, ImageEnhance, ImageOps
+
+    from services.stock_ocr_policy import stock_ocr_context
 
     out: List[Tuple[int, str]] = []
     try:
@@ -39482,43 +41691,45 @@ def _ocr_stock_valuation_rotated_texts(file_bytes: bytes) -> List[Tuple[int, str
     except Exception:
         return out
     # Prefer 270/90 — upright phone photos of landscape printouts.
-    for angle in (270, 90, 0, 180):
+    # Cap to one named region (initial + optional header recovery), not 24 crops.
+    attempts = (
+        (270, (0.0, 1.0), 6, None),
+        (90, (0.0, 1.0), 6, "header_detection_failed"),
+        (0, (0.0, 0.28), 6, "header_detection_failed"),
+        (180, (0.50, 1.0), 4, "header_detection_failed"),
+    )
+    for angle, (y0, y1), psm, reason in attempts:
         im = image.rotate(angle, expand=True) if angle else image
-        bands = ((0.0, 1.0), (0.0, 0.28), (0.50, 1.0))
-        angle_texts: List[str] = []
-        for y0, y1 in bands:
-            crop = im.crop(
-                (0, int(im.height * y0), im.width, int(im.height * y1))
-            )
-            crop = ImageOps.grayscale(
-                ImageEnhance.Contrast(
-                    crop.resize(
-                        (
-                            max(1, int(crop.width * 2.0)),
-                            max(1, int(crop.height * 2.0)),
-                        ),
-                        Image.Resampling.LANCZOS,
-                    )
-                ).enhance(1.7)
-            )
-            for psm in (6, 4):
-                try:
-                    t = tess.image_to_string(crop, config=f"--psm {psm}") or ""
-                except Exception:
-                    continue
-                if t.strip():
-                    angle_texts.append(t)
-                    out.append((angle, t))
-        joined = "\n".join(angle_texts)
-        if _is_stock_valuation_header_text(joined) and len(
-            re.findall(
-                r"^\s*_?\s*\d{1,3}\s+[A-Za-z].+\s+\d+\s+[\d.]+",
-                joined,
-                re.M,
-            )
-        ) >= 8:
-            # Keep scanning lower bands of this angle only; skip other angles.
-            break
+        crop = im.crop((0, int(im.height * y0), im.width, int(im.height * y1)))
+        crop = ImageOps.grayscale(
+            ImageEnhance.Contrast(
+                crop.resize(
+                    (
+                        max(1, int(crop.width * 2.0)),
+                        max(1, int(crop.height * 2.0)),
+                    ),
+                    Image.Resampling.LANCZOS,
+                )
+            ).enhance(1.7)
+        )
+        ctx_kwargs = {"region": "valuation_rotated", "page": "1"}
+        if reason:
+            ctx_kwargs["reason"] = reason
+        with stock_ocr_context(**ctx_kwargs):
+            try:
+                t = tess.image_to_string(crop, config=f"--psm {psm}") or ""
+            except Exception:
+                continue
+        if t.strip():
+            out.append((angle, t))
+            if _is_stock_valuation_header_text(t) and len(
+                re.findall(
+                    r"^\s*_?\s*\d{1,3}\s+[A-Za-z].+\s+\d+\s+[\d.]+",
+                    t,
+                    re.M,
+                )
+            ) >= 8:
+                break
     return out
 
 
@@ -39594,49 +41805,6 @@ def _extract_stock_valuation_stock_rate_image(
         "SECONDARY_SALES_READER file=%s engine=tesseract method=stock_valuation_stock_rate",
         filename,
     )
-    return best
-
-
-def _ocr_stock_valuation_preview(file_bytes: bytes) -> str:
-    """Best-effort title OCR for STOCK VALUATION photos. Empty on failure."""
-    from PIL import Image, ImageEnhance, ImageOps
-
-    try:
-        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
-            "RGB"
-        )
-    except Exception:
-        return ""
-    try:
-        tess = _a2z_tesseract()
-    except Exception:
-        return ""
-    best = ""
-    # Title sits below the shop header; scan mid-upper bands + common rotations.
-    bands = ((0.12, 0.40), (0.15, 0.38), (0.10, 0.45), (0.0, 0.35))
-    for angle in (0, 270, 90, 180):
-        base = image.rotate(angle, expand=True) if angle else image
-        scaled = base.resize(
-            (base.width * 2, base.height * 2), Image.Resampling.LANCZOS
-        )
-        variants = [
-            ImageEnhance.Contrast(scaled).enhance(1.4),
-            ImageOps.autocontrast(ImageOps.grayscale(scaled)),
-        ]
-        for im in variants:
-            for y0, y1 in bands:
-                crop = im.crop(
-                    (0, int(im.height * y0), im.width, int(im.height * y1))
-                )
-                for psm in (6, 4):
-                    try:
-                        text = tess.image_to_string(crop, config=f"--psm {psm}") or ""
-                    except Exception:
-                        continue
-                    if _is_stock_valuation_header_text(text):
-                        return text
-                    if not best and re.search(r"STOCK\s+VALUATION", text, re.I):
-                        best = text
     return best
 
 
@@ -39897,6 +42065,7 @@ def _image_known_ocr_native_format(sample: str) -> bool:
         or _is_batchwise_stock_summary_text(sample)
         or bool(re.search(r"Batchwise\s+Stock\s+Summary", sample or "", re.I))
         or _is_product_wise_stock_statement_photo_text(sample)
+        or _is_opening_receive_issue_closing_stock_text(sample)
         or _is_stock_valuation_header_text(sample)
         or _is_stock_valuation_stock_rate_text(sample)
     )
@@ -39920,7 +42089,16 @@ def _maybe_early_vision_for_image(
         pass
 
     try:
-        sample = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
+        sample = ""
+        # Vision-first: filename portal codes (ZA/ZL) classify with ZERO OCR.
+        from services.stock_direct_vision import (
+            classify_stock_direct_vision,
+            try_stock_direct_vision,
+        )
+
+        pre = classify_stock_direct_vision("", filename)
+        if not pre:
+            sample = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s early image OCR sample failed: %s",
@@ -39928,6 +42106,68 @@ def _maybe_early_vision_for_image(
             exc,
         )
         sample = ""
+        pre = None
+
+    from services.extraction_quality import assess_source_text_quality
+
+    quality = assess_source_text_quality(sample)
+
+    # DIRECT STOCK VISION before known-OCR-native keepers and multi-band probes.
+    try:
+        from services.stock_direct_vision import try_stock_direct_vision
+
+        direct = try_stock_direct_vision(
+            file_bytes, filename, ext, peek_text=sample or ""
+        )
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s stock_direct_vision failed: %s",
+            filename,
+            exc,
+        )
+        direct = None
+    if direct and direct.get("line_items"):
+        logger.info(
+            "[SalesStatement] file=%s OCR quality=%s decision=STOCK_STATEMENT_VISION_FIRST "
+            "reason=%s rows=%s gemini_input=image_original numeric_source=gemini_vision",
+            filename,
+            quality.get("score"),
+            ((direct.get("totals") or {}).get("extra") or {}).get(
+                "early_vision_reason"
+            )
+            or "stock_direct_vision",
+            len(direct.get("line_items") or []),
+        )
+        return direct, True
+
+    # Need a peek when filename did not classify Vision-first.
+    if not sample:
+        try:
+            sample = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
+            quality = assess_source_text_quality(sample)
+            direct = try_stock_direct_vision(
+                file_bytes, filename, ext, peek_text=sample or ""
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s stock_direct_vision peek retry failed: %s",
+                filename,
+                exc,
+            )
+            direct = None
+        if direct and direct.get("line_items"):
+            logger.info(
+                "[SalesStatement] file=%s OCR quality=%s decision=STOCK_STATEMENT_VISION_FIRST "
+                "reason=%s rows=%s gemini_input=image_original numeric_source=gemini_vision",
+                filename,
+                quality.get("score"),
+                ((direct.get("totals") or {}).get("extra") or {}).get(
+                    "early_vision_reason"
+                )
+                or "stock_direct_vision",
+                len(direct.get("line_items") or []),
+            )
+            return direct, True
 
     if _image_known_ocr_native_format(sample):
         # Product wise stock statement photos: dedicated OCR column reader first.
@@ -39967,9 +42207,30 @@ def _maybe_early_vision_for_image(
         )
         return None, False
 
-    from services.extraction_quality import assess_source_text_quality
+    # Legacy SaleRet / ClosStock early path (kept if direct vision disabled/missed).
+    if _looks_like_psr_saleret_image(None, sample):
+        try:
+            psr = _extract_product_stock_report_image_vision(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s product-stock photo early (pre-quality) failed: %s",
+                filename,
+                exc,
+            )
+            psr = None
+        if psr and psr.get("line_items"):
+            extra = psr.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "product_stock_report_saleret"
+            logger.info(
+                "[SalesStatement] file=%s OCR quality=%s decision=PRODUCT_STOCK_REPORT_VISION "
+                "reason=saleret_closstock",
+                filename,
+                quality.get("score"),
+            )
+            return psr, True
 
-    quality = assess_source_text_quality(sample)
     logger.info(
         "[SalesStatement] file=%s OCR quality=%s decision=%s reason=%s",
         filename,
@@ -40023,6 +42284,74 @@ def _maybe_early_vision_for_image(
             extra["early_vision_reason"] = "code_item_stock_statement_photo"
             return code_item, True
 
+    # Medica Ultimate OPSTK/PURCH/SALE VAL photos — before generic Vision /
+    # Pharma Hub, which shift SALE VAL into closing and invent HIMALAYA-ZEAL.
+    medica_hint = "\n".join(
+        t for t in (sample or "", header_hint or "") if t
+    )
+    if _is_medica_opstk_statement(medica_hint) or (
+        re.search(r"\bOPSTK\b", medica_hint, re.I)
+        and re.search(r"\bPURCH\b", medica_hint, re.I)
+        and re.search(r"STOCK\s+STATEMENT", medica_hint, re.I)
+    ):
+        try:
+            medica = _extract_medica_stock_statement_vision(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s medica OPSTK photo before vision failed: %s",
+                filename,
+                exc,
+            )
+            medica = None
+        if medica and medica.get("line_items"):
+            extra = medica.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "medica_opstk_stock_statement"
+            return medica, True
+
+    # Marg OPENING/RECEIVE/ISSUE photos: a full-page sample often misses the
+    # gray header, so the column reader must run before generic Vision.
+    try:
+        opening = _extract_opening_receive_issue_closing_photo(
+            file_bytes, filename, ext
+        )
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s opening/receive photo before vision failed: %s",
+            filename,
+            exc,
+        )
+        opening = None
+    if opening and opening.get("line_items"):
+        extra = opening.setdefault("totals", {}).setdefault("extra", {})
+        extra.setdefault(
+            "early_vision_reason",
+            ",".join(quality.get("reasons") or []) or "opening_receive_issue_closing",
+        )
+        return opening, True
+
+    # Product Stock Report (SaleRet / ClosStock) before generic Vision. Generic
+    # Vision shifts Sale into ClosStock on overlined phone screenshots.
+    if _looks_like_psr_saleret_image(None, sample) or _looks_like_psr_saleret_image(
+        None, header_hint
+    ):
+        try:
+            psr = _extract_product_stock_report_image_vision(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s product-stock photo before vision failed: %s",
+                filename,
+                exc,
+            )
+            psr = None
+        if psr and psr.get("line_items"):
+            extra = psr.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "product_stock_report_saleret"
+            return psr, True
+
     # Poor OCR → skip the long format-probe cascade; try paid Vision early.
     try:
         from services.gemini_extraction_fallback import try_gemini_vision_extract
@@ -40047,6 +42376,25 @@ def _maybe_early_vision_for_image(
                 code_item = None
             if code_item and code_item.get("line_items"):
                 return code_item, True
+        # Generic early Vision often invents "Done" and shifts ClosStock columns.
+        if _looks_like_psr_saleret_image(early, sample) or str(
+            early.get("stockist_name") or ""
+        ).strip().lower() in {"done", "try out the tools first"}:
+            try:
+                psr = _extract_product_stock_report_image_vision(
+                    file_bytes, filename, ext
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s PSR repair after early vision failed: %s",
+                    filename,
+                    exc,
+                )
+                psr = None
+            if psr and psr.get("line_items"):
+                extra = psr.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = "product_stock_report_after_generic"
+                return psr, True
         extra = early.setdefault("totals", {}).setdefault("extra", {})
         extra["early_vision_reason"] = ",".join(quality.get("reasons") or []) or (
             "low_ocr_quality_score"
@@ -40973,6 +43321,224 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     )
 
     result = empty_result(filename, ext.lstrip("."))
+    _vt_meta: Dict[str, Any] = {}
+    _diag = {
+        "geometry_called": False,
+        "vision_called": False,
+        "geometry_result_returned": False,
+        "vision_fallback_reason": None,
+        "geometry_flag_env": os.getenv("STOCK_GEOMETRY_CELL_OCR_ENABLED", ""),
+        "geometry_flag_effective": False,
+        "selected_path": None,
+    }
+
+    # Geometry-first cell OCR for dense Excel Op.Stk|LMS layouts (flag OFF = no-op).
+    # Falls through to STOCK_VISION_TABLE when disabled or unsuitable.
+    try:
+        from services.stock_geometry_table_v3 import (
+            is_geometry_cell_ocr_enabled,
+            run_geometry_cell_ocr_path,
+        )
+
+        _diag["geometry_flag_effective"] = bool(is_geometry_cell_ocr_enabled())
+        logger.info(
+            "[STOCK_EXTRACTION_PATH] stage=parse_image geometry_flag=%s "
+            "geometry_env=%r file=%s extension=%s path=%s",
+            _diag["geometry_flag_effective"],
+            _diag["geometry_flag_env"],
+            filename,
+            ext,
+            "GEOMETRY_V3" if _diag["geometry_flag_effective"] else "VISION_TABLE",
+        )
+
+        if is_geometry_cell_ocr_enabled():
+            _diag["geometry_called"] = True
+            request_id = "-"
+            try:
+                from services.sales_extraction_runtime import resolve_request_id
+
+                request_id = resolve_request_id()
+            except Exception:
+                request_id = "-"
+            geo_outcome = run_geometry_cell_ocr_path(
+                file_bytes,
+                "image",
+                {"filename": filename, "ext": ext, "request_id": request_id},
+            )
+            if geo_outcome.get("status") == "ok" and isinstance(
+                geo_outcome.get("result"), dict
+            ):
+                result = geo_outcome["result"]
+                _diag["geometry_result_returned"] = True
+                _diag["selected_path"] = "GEOMETRY_V3"
+                # Final for this image — do NOT continue into STOCK_VISION_TABLE.
+                extra = result.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra, dict):
+                    extra["extraction_method"] = "geometry_cell_ocr"
+                    extra["extraction_engine"] = "geometry_v3"
+                    extra["geometry_version"] = "v3"
+                    extra["geometry_cell_ocr_final"] = True
+                    extra["vision_table_final"] = True
+                    extra["geometry_skipped_vision_table"] = True
+                    extra["geometry_called"] = True
+                    extra["vision_called"] = False
+                try:
+                    from services.stock_reconciliation import apply_stock_reconciliation
+
+                    result = apply_stock_reconciliation(
+                        result, request_id=request_id, page=1
+                    )
+                except Exception:
+                    pass
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=geometry_ok "
+                    "geometry_called=true vision_called=false "
+                    "geometry_skipped_vision_table=true "
+                    "request_id=%s line_items=%s",
+                    request_id,
+                    len(result.get("line_items") or []),
+                )
+                return result
+            _diag["vision_fallback_reason"] = str(
+                geo_outcome.get("reason") or "geometry_not_ok"
+            )
+            logger.info(
+                "GEOMETRY_CELL_OCR request_id=%s status=fallback reason=%s "
+                "continuing_vision_table",
+                request_id,
+                geo_outcome.get("reason"),
+            )
+        else:
+            logger.info(
+                "[STOCK_EXTRACTION_PATH] stage=geometry_skipped "
+                "geometry_called=false reason=flag_disabled "
+                "file=%s path=VISION_TABLE",
+                filename,
+            )
+    except Exception as exc:
+        _diag["vision_fallback_reason"] = f"geometry_exception:{type(exc).__name__}"
+        logger.info(
+            "[SalesStatement] file=%s geometry_cell_ocr path skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
+    # Phase 2b-2: schema-agnostic Vision table as PRIMARY path (flag OFF = no-op).
+    try:
+        from services.stock_vision_table import (
+            run_vision_table_path,
+            vision_table_active_for,
+            stash_vision_table_fallback_meta,
+        )
+
+        if vision_table_active_for("image"):
+            request_id = "-"
+            try:
+                from services.sales_extraction_runtime import resolve_request_id
+
+                request_id = resolve_request_id()
+            except Exception:
+                request_id = "-"
+            _diag["vision_called"] = True
+            outcome = run_vision_table_path(
+                file_bytes,
+                "image",
+                {"filename": filename, "ext": ext, "request_id": request_id},
+            )
+            if outcome.get("status") == "ok" and isinstance(outcome.get("result"), dict):
+                result = outcome["result"]
+                _diag["selected_path"] = "VISION_TABLE"
+                extra = result.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra, dict):
+                    # Diagnostic markers only — not shown in customer UI.
+                    extra.setdefault("extraction_method", "vision_table")
+                    extra["extraction_engine"] = "vision_table"
+                    extra["geometry_version"] = None
+                    extra["geometry_called"] = bool(_diag.get("geometry_called"))
+                    extra["vision_called"] = True
+                    extra["geometry_result_returned"] = bool(
+                        _diag.get("geometry_result_returned")
+                    )
+                    if _diag.get("vision_fallback_reason"):
+                        extra["geometry_fallback_reason"] = _diag[
+                            "vision_fallback_reason"
+                        ]
+                try:
+                    from services.stock_reconciliation import apply_stock_reconciliation
+
+                    result = apply_stock_reconciliation(
+                        result, request_id=request_id, page=1
+                    )
+                except Exception:
+                    pass
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=vision_ok "
+                    "geometry_called=%s vision_called=true "
+                    "geometry_result_returned=%s geometry_flag=%s "
+                    "request_id=%s line_items=%s",
+                    _diag.get("geometry_called"),
+                    _diag.get("geometry_result_returned"),
+                    _diag.get("geometry_flag_effective"),
+                    request_id,
+                    len(result.get("line_items") or []),
+                )
+                return result
+            _vt_meta = {
+                "gemini_calls": int(outcome.get("gemini_calls") or 0),
+                "gemini_budget": int(outcome.get("gemini_budget") or 2),
+                "fallback_reason": outcome.get("reason"),
+            }
+            stash_vision_table_fallback_meta(_vt_meta)
+            logger.info(
+                "VISION_TABLE request_id=%s status=fallback reason=%s "
+                "continuing_existing_image_path",
+                request_id,
+                outcome.get("reason"),
+            )
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s vision_table path skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
+    # Handwritten / ORDER FORM Vision-first before sideways RATE / Zeal crop paths.
+    # Tall phone ORDER FORM photos can also trip the sideways center-rule probe and
+    # waste Gemini on the wrong reader (missing products / zero Qty).
+    try:
+        from services.stock_direct_vision import (
+            detect_stock_handwriting_signals,
+            is_stock_vision_locked,
+            try_stock_direct_vision,
+        )
+
+        hw = detect_stock_handwriting_signals(file_bytes, "", filename)
+        if hw.get("order_form") or (hw.get("handwritten") or "false") in {
+            "true",
+            "mixed",
+        }:
+            direct = try_stock_direct_vision(
+                file_bytes, filename, ext, peek_text=""
+            )
+            if (
+                direct
+                and direct.get("line_items")
+                and is_stock_vision_locked(direct)
+            ):
+                logger.info(
+                    "[SalesStatement] file=%s decision=STOCK_STATEMENT_VISION_FIRST "
+                    "reason=handwritten_before_sideways handwritten=%s rows=%s",
+                    filename,
+                    hw.get("handwritten"),
+                    len(direct.get("line_items") or []),
+                )
+                return direct
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s handwritten pre-sideways vision skipped: %s",
+            filename,
+            exc,
+        )
 
     # Sideways wide RATE grid. The order-form reader sees the same center rule.
     if _sideways_full_width_stock_grid(file_bytes):
@@ -41000,6 +43566,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext
     )
+    # Locked direct Vision must not be displaced by phone-rate / hub OCR probes.
+    try:
+        from services.stock_direct_vision import is_stock_vision_locked
+
+        if (
+            early_vision
+            and early_vision.get("line_items")
+            and is_stock_vision_locked(early_vision)
+        ):
+            return early_vision
+    except Exception:
+        pass
     try:
         phone_rate = _extract_phone_rate_ssa_screenshot(file_bytes, filename, ext)
     except Exception as exc:

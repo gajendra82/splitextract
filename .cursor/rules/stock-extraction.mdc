@@ -1,0 +1,25 @@
+---
+description: Rules for the stock-statement extraction pipeline
+globs: services/**/*.py, tests/**/*.py
+alwaysApply: true
+---
+
+# Stock-statement extraction pipeline
+
+You are working on the stock-statement extraction pipeline (`/extract-sales-statement`).
+Goal: extract opening, purchase, sales, sales return, expiry/damage, closing qty and value per product row from any stockist format, accurately.
+
+## Non-negotiable rules
+
+1. **NEVER rewrite a printed number from arithmetic.** Identity math may only classify a row and append alternatives to `line_item["extra"]["candidates"]`. If you find existing code that overwrites a qty/value to make the identity balance, do not extend it; convert it only when the current task says so.
+2. **NEVER guess.** A value that is not printed or not readable is `None` in internal structures (and `0.0` at the API boundary only while the legacy contract flag is on), with `extra["field_source"][field] = "missing"`.
+3. **Column assignment comes from headers** (x-centre, cell index, or char window), never from "last N tokens" or position alone. If headers cannot be resolved, the row is `STRUCTURAL_ERROR`.
+4. **No filename codes** (`ZA`, `ZL`, portal codes) may select a schema or skip validation.
+5. **Do not touch** `/split-and-extract`, `app.py` endpoint signatures, or the Laravel-facing top-level keys unless the task explicitly says so.
+6. **Gemini budget:** max 2 calls per file (per page batch for PDFs). **Tesseract:** max 2 per page. Spreadsheets and TXT never call Gemini.
+7. **Locate code by FUNCTION NAME,** not line number; line numbers in task prompts are approximate. If a named function does not exist, stop and report rather than inventing a replacement.
+8. **Every behaviour change ships behind a flag** in config (env var, default OFF) until the task says to flip it, and every decision is logged with a stable prefix so it can be grepped.
+9. **Smallest diff** that does the task. No drive-by refactors, no renames, no reformatting untouched code.
+10. **Every task ends with:** tests added, full existing test suite run, and a short summary of files changed, flags added, and anything you could not do.
+11. **NO PER-FORMAT ROUTES.** Never add a parser, OCR route, regex, prompt or branch for a specific stockist, distributor, software, filename code (ZA, ZL, ...) or layout. When a statement extracts wrongly, the fix goes in ONE of: (a) stock_header_resolver ALIASES / rules, (b) the generic Vision table prompt or schema, (c) stock_row_classifier identity rules, (d) the generic native table builders. If none of these can fix it, stop and report why instead of adding a route.
+12. **Never assign a value to a column that is not printed on the document.** A field whose column is absent is None with field_source "missing", or "derived" only under an explicit derived-closing rule when closing is not printed, never guessed.
