@@ -30467,6 +30467,216 @@ async def extract_sales_statement_endpoint(
             final_status=final_status,
         )
 
+
+@app.post("/extract-sales-statement-multi")
+async def extract_sales_statement_multi_endpoint(
+    request: Request,
+    stockist_id: Optional[str] = Form(None),
+    month: Optional[str] = Form(None),
+    is_multi_page: Optional[str] = Form("true"),
+):
+    """Extract ONE stock statement from multiple ordered page images.
+
+    Flutter sends all pages in a single multipart request (files[]=...).
+    Does not change POST /extract-sales-statement.
+    """
+    from services.sales_extraction_runtime import (
+        SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+        SalesExtractionBusy,
+        acquire_sales_extraction_slot,
+        begin_sales_progress,
+        finish_sales_progress,
+        log_sales_extraction_event,
+        release_sales_extraction_slot,
+        resolve_request_id,
+        update_sales_progress,
+    )
+    from services.stock_multipage import (
+        MultiPageImageExtractionError,
+        extract_multipage_image_stock_statement,
+    )
+
+    _ = is_multi_page  # accepted for Flutter contract; always multi-page here
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    total_started = time.time()
+    queue_wait_seconds = 0.0
+    extraction_duration_seconds = None
+    slot_acquired = False
+    final_status = "failed"
+    filename = "multipage_stock_statement"
+    file_type = "image_multipage"
+    deadline_seconds = float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS)
+
+    form = await request.form()
+    uploads: List[UploadFile] = []
+    for key in ("files[]", "files"):
+        for item in form.getlist(key):
+            if hasattr(item, "read") and hasattr(item, "filename"):
+                uploads.append(item)  # type: ignore[arg-type]
+        if uploads:
+            break
+
+    begin_sales_progress(
+        request_id, filename, stage="queued", batch_id=stockist_id or request_id
+    )
+
+    def _fail_body(
+        *,
+        error: str,
+        message: str,
+        page_number: Optional[int] = None,
+        status_code: int = 422,
+    ) -> JSONResponse:
+        body: Dict[str, Any] = {
+            "success": False,
+            "error": error,
+            "message": message,
+            "is_multi_page": True,
+            "request_id": request_id,
+            "stockist_id": stockist_id,
+            "month": month,
+        }
+        if page_number is not None:
+            body["page_number"] = page_number
+        return JSONResponse(status_code=status_code, content=body)
+
+    if not uploads:
+        finish_sales_progress(request_id, "failed")
+        return _fail_body(
+            error="validation_failed",
+            message="No page images provided (expected files[])",
+            status_code=400,
+        )
+
+    tmp_dir = None
+    try:
+        tmp_dir = tempfile.mkdtemp(prefix="stock_multipage_")
+        pages: List[Tuple[str, bytes]] = []
+        for idx, upload in enumerate(uploads):
+            page_no = idx + 1
+            raw = await upload.read()
+            page_name = upload.filename or f"page_{page_no}.jpg"
+            # Preserve multipart order; store temp copy for debugging/replay.
+            safe = re.sub(r"[^\w.\-]+", "_", page_name)[:180] or f"page_{page_no}.jpg"
+            dest = os.path.join(tmp_dir, f"{page_no:02d}_{safe}")
+            with open(dest, "wb") as fh:
+                fh.write(raw or b"")
+            pages.append((page_name, raw or b""))
+
+        filename = pages[0][0] if pages else filename
+
+        try:
+            queue_wait_seconds = await acquire_sales_extraction_slot()
+            slot_acquired = True
+        except SalesExtractionBusy as busy:
+            return _fail_body(
+                error="queue_timeout",
+                message=(
+                    f"Server busy. Queue wait exceeded {busy.timeout}s. "
+                    "Please retry."
+                ),
+                status_code=429,
+            )
+
+        update_sales_progress(
+            request_id,
+            "preparing",
+            queue_wait_seconds=queue_wait_seconds,
+            file_type=file_type,
+            page_count=len(pages),
+        )
+        extraction_started = time.time()
+        update_sales_progress(request_id, "parsing", page_count=len(pages))
+
+        def _run_multi():
+            return extract_multipage_image_stock_statement(
+                pages,
+                request_id=request_id,
+                stockist_id=stockist_id,
+                month=month,
+            )
+
+        try:
+            sales_result = await asyncio.wait_for(
+                asyncio.to_thread(_run_multi),
+                timeout=deadline_seconds + 15.0,
+            )
+        except asyncio.TimeoutError:
+            final_status = "extraction_failed"
+            return _fail_body(
+                error="extraction_failed",
+                message=(
+                    "Stock statement extraction exceeded the maximum "
+                    f"execution time of {int(deadline_seconds)}s."
+                ),
+                status_code=422,
+            )
+        except MultiPageImageExtractionError as exc:
+            final_status = "extraction_failed"
+            return _fail_body(
+                error=exc.error,
+                message=exc.message,
+                page_number=exc.page_number or None,
+                status_code=422 if exc.error == "page_processing_failed" else 400,
+            )
+
+        extraction_duration_seconds = time.time() - extraction_started
+        final_status = "completed"
+        update_sales_progress(
+            request_id,
+            "validating",
+            file_type=file_type,
+            page_count=sales_result.get("page_count"),
+            extraction_method=(
+                (sales_result.get("totals") or {}).get("extra") or {}
+            ).get("extraction_method"),
+            extraction_duration_seconds=extraction_duration_seconds,
+        )
+        return JSONResponse(content=sales_result)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        final_status = "failed"
+        logger.exception(
+            "MULTI_PAGE_EXTRACTION_FAILED request_id=%s error=%s",
+            request_id,
+            type(exc).__name__,
+        )
+        return _fail_body(
+            error="extraction_failed",
+            message=str(exc) or "Multi-page extraction failed",
+            status_code=500,
+        )
+    finally:
+        if slot_acquired:
+            release_sales_extraction_slot()
+        total_duration_seconds = time.time() - total_started
+        finish_sales_progress(
+            request_id,
+            final_status,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            file_type=file_type,
+        )
+        log_sales_extraction_event(
+            request_id,
+            filename=filename,
+            file_type=file_type,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            total_duration_seconds=total_duration_seconds,
+            final_status=final_status,
+        )
+        if tmp_dir:
+            try:
+                import shutil
+
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+
 if __name__ == "__main__":
     import argparse
     import uvicorn

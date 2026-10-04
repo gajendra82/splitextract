@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 import re
 import time
 from dataclasses import asdict, dataclass, field
@@ -71,6 +72,20 @@ QTY_FIELDS = (
     "purchase_return_qty",
     "closing_qty",
 )
+
+# Printed value/amount columns — geometry-assigned separately from qty.
+VALUE_FIELDS = (
+    "closing_value",
+    "rate",
+)
+
+# All numeric columns hybrid OCR should read from mapped x-ranges.
+HYBRID_NUMERIC_FIELDS = QTY_FIELDS + VALUE_FIELDS
+
+# Env: restore legacy "always POSITIONAL_10 on 10-col grids" (default OFF).
+STOCK_HYBRID_FORCE_POSITIONAL_10 = "STOCK_HYBRID_FORCE_POSITIONAL_10"
+# Env: emit per-token column assignment diagnostics (default OFF).
+STOCK_HYBRID_TOKEN_DIAG = "STOCK_HYBRID_TOKEN_DIAG"
 
 _GARBAGE = re.compile(r"^(p\d+|pq|po|tt|le|lE|o)$", re.I)
 
@@ -206,15 +221,15 @@ def draw_debug(bgr: np.ndarray, geometry: Dict[str, Any], rows_meta: List[Dict],
     return path
 
 
-def resolve_column_map(
+def _ocr_header_cells(
     gray: np.ndarray,
     col_xs: List[int],
     header_y0: int,
     header_y1: int,
-) -> Tuple[List[Dict[str, Any]], str]:
-    """Map columns from header OCR when possible, else positional 10-col fallback."""
+) -> List[Dict[str, Any]]:
+    """OCR one header band cell per vertical column (geometry-bounded)."""
     n = len(col_xs) - 1
-    header_cells = []
+    header_cells: List[Dict[str, Any]] = []
     for i in range(n):
         x0, x1 = int(col_xs[i]), int(col_xs[i + 1])
         crop = gray[header_y0 + 1 : header_y1 - 1, x0 + 1 : x1 - 1]
@@ -230,25 +245,106 @@ def resolve_column_map(
                 Image.fromarray(bw), config="--oem 3 --psm 7"
             ).strip()
         header_cells.append(
-            {"text": text or f"col{i}", "col_index": i, "x_center": (x0 + x1) / 2.0}
+            {
+                "text": text or f"col{i}",
+                "col_index": i,
+                "x_center": (x0 + x1) / 2.0,
+                "x0": x0,
+                "x1": x1,
+            }
         )
+    return header_cells
+
+
+def _score_header_columns(columns: Sequence[Dict[str, Any]]) -> int:
+    """Higher = more like a real stock table header (not UI chrome / data)."""
+    weights = {
+        "product_name": 8,
+        "pack": 2,
+        "opening_qty": 4,
+        "purchase_qty": 3,
+        "total_qty": 3,
+        "sales_qty": 4,
+        "closing_qty": 4,
+        "closing_value": 4,
+        "rate": 3,
+        "sales_return_qty": 2,
+        "purchase_return_qty": 2,
+    }
+    score = 0
+    canons = [str(c.get("canonical") or "") for c in columns]
+    for c in canons:
+        score += weights.get(c, 0)
+    # Portal Op.Stk / Rate / Cl.Val layouts lack return cols — still valid.
+    if "product_name" in canons and "opening_qty" in canons:
+        if "closing_qty" in canons or "closing_value" in canons or "rate" in canons:
+            score += 5
+    return score
+
+
+def _ocr_header_confident(columns: Sequence[Dict[str, Any]]) -> bool:
+    canons = {str(c.get("canonical") or "") for c in columns}
+    if "product_name" not in canons or "opening_qty" not in canons:
+        return False
+    qty_ok = sum(1 for c in canons if c in QTY_FIELDS)
+    if qty_ok >= 4:
+        return True
+    # Rate/Cl.Val portal: opening + sales/closing + value/rate.
+    return bool(
+        ("sales_qty" in canons or "closing_qty" in canons)
+        and ("closing_value" in canons or "rate" in canons or "total_qty" in canons)
+    )
+
+
+def resolve_column_map(
+    gray: np.ndarray,
+    col_xs: List[int],
+    header_y0: int,
+    header_y1: int,
+) -> Tuple[List[Dict[str, Any]], str]:
+    """Map columns from header OCR when possible, else positional 10-col fallback."""
+    n = len(col_xs) - 1
+    header_cells = _ocr_header_cells(gray, col_xs, header_y0, header_y1)
 
     resolved = resolve_columns(header_cells)
     columns = list(resolved.get("columns") or [])
     qty_ok = sum(
-        1
-        for c in columns
-        if str(c.get("canonical") or "") in QTY_FIELDS
+        1 for c in columns if str(c.get("canonical") or "") in QTY_FIELDS
     )
     source = "ocr"
-    # Require all 7 qty fields + product; else positional if 10 cols.
-    if n == 10 and qty_ok < 6:
+    force_positional = os.getenv(
+        STOCK_HYBRID_FORCE_POSITIONAL_10, "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    # Prefer printed headers when they resolve coherently. Only fall back to
+    # blue-tick POSITIONAL_10 when OCR is weak or explicitly forced.
+    if n == 10 and (
+        force_positional or (not _ocr_header_confident(columns) and qty_ok < 6)
+    ):
         source = "positional_fallback"
         patched = [
-            {"text": POSITIONAL_10[i], "col_index": i, "x_center": (col_xs[i] + col_xs[i + 1]) / 2.0}
+            {
+                "text": POSITIONAL_10[i],
+                "col_index": i,
+                "x_center": (col_xs[i] + col_xs[i + 1]) / 2.0,
+            }
             for i in range(10)
         ]
         columns = list(resolve_columns(patched).get("columns") or [])
+        logger.info(
+            "[HYBRID_HEADER] source=positional_fallback force=%s qty_ok=%s "
+            "ocr_canons=%s",
+            force_positional,
+            qty_ok,
+            [c.get("canonical") for c in resolve_columns(header_cells).get("columns") or []],
+        )
+    else:
+        logger.info(
+            "[HYBRID_HEADER] source=ocr qty_ok=%s score=%s canons=%s texts=%s",
+            qty_ok,
+            _score_header_columns(columns),
+            [c.get("canonical") for c in columns],
+            [c.get("header_text") or c.get("text") for c in columns],
+        )
 
     for c in columns:
         idx = int(c.get("col_index") or 0)
@@ -257,6 +353,62 @@ def resolve_column_map(
             c["x1"] = int(col_xs[idx + 1])
             c["x_center"] = (c["x0"] + c["x1"]) / 2.0
     return columns, source
+
+
+def find_best_header_band(
+    gray: np.ndarray,
+    col_xs: List[int],
+    rows_y: Sequence[int],
+    *,
+    max_scan: int = 24,
+) -> Tuple[int, int, List[Dict[str, Any]], str, int]:
+    """Scan row bands; return (header_end_index, band_i, columns, source, score).
+
+    header_end_index is the rows_y index AFTER the header (first data band).
+    """
+    n_bands = min(max_scan, max(0, len(rows_y) - 1))
+    best: Optional[Tuple[int, int, List[Dict[str, Any]], str, int]] = None
+    for i in range(n_bands):
+        y0, y1 = int(rows_y[i]), int(rows_y[i + 1])
+        if y1 - y0 < 10:
+            continue
+        # Score OCR-only (no positional) so chrome bands don't look like blue-tick.
+        cells = _ocr_header_cells(gray, col_xs, y0, y1)
+        resolved = list(resolve_columns(cells).get("columns") or [])
+        score = _score_header_columns(resolved)
+        if best is None or score > best[4]:
+            best = (i + 1, i, resolved, "ocr", score)
+        logger.info(
+            "[HYBRID_HEADER_SCAN] band=%s y=%s-%s score=%s canons=%s texts=%s",
+            i,
+            y0,
+            y1,
+            score,
+            [c.get("canonical") for c in resolved],
+            [(c.get("header_text") or c.get("text") or "")[:24] for c in resolved],
+        )
+    if best is None:
+        # Degenerate: first band + resolve_column_map fallback.
+        y0, y1 = int(rows_y[0]), int(rows_y[min(1, len(rows_y) - 1)])
+        cols, src = resolve_column_map(gray, col_xs, y0, y1)
+        return 1, 0, cols, src, 0
+
+    header_end, band_i, _resolved, _src, score = best
+    y0, y1 = int(rows_y[band_i]), int(rows_y[band_i + 1])
+    # Re-run through resolve_column_map so positional fallback still applies
+    # when OCR for the winning band is weak.
+    columns, source = resolve_column_map(gray, col_xs, y0, y1)
+    # If OCR won but score is still tiny, keep positional path from resolve.
+    logger.info(
+        "[HYBRID_HEADER_BEST] band=%s header_end=%s source=%s score=%s "
+        "canons=%s",
+        band_i,
+        header_end,
+        source,
+        score,
+        [c.get("canonical") for c in columns],
+    )
+    return header_end, band_i, columns, source, score
 
 
 def _ink_ratio(crop: np.ndarray) -> float:

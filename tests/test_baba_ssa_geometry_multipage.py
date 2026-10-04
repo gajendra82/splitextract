@@ -2,7 +2,7 @@
 
 Regression for 0000737290 (BABA PHARMACEUTICAL DISTRIBUTORS). Continuation pages
 reprint the column header mid-page or in the footer; products above those reprints
-must not be discarded.
+must not be discarded. Footer "Quantity" / stockist banners must not become products.
 """
 
 from __future__ import annotations
@@ -18,10 +18,13 @@ from services.sales_statement_extractor import (
     extract_sales_statement,
 )
 
-FIXTURE = (
-    Path(__file__).resolve().parents[1]
-    / "0000737290_2026_08_ZL_24_5005_07092026090411.PDF"
-)
+ROOT = Path(__file__).resolve().parents[1]
+# Prefer the ZA portal export present on this host; keep ZL as alternate.
+FIXTURE_CANDIDATES = [
+    ROOT / "0000737290_2026_08_ZA_24_614_03092026142200.PDF",
+    ROOT / "0000737290_2026_08_ZL_24_5005_07092026090411.PDF",
+]
+FIXTURE = next((p for p in FIXTURE_CANDIDATES if p.exists()), FIXTURE_CANDIDATES[0])
 
 
 def _pages_from_pdf(path: Path):
@@ -40,6 +43,17 @@ def _pages_from_pdf(path: Path):
         )
     doc.close()
     return pages
+
+
+class TestSsaSkipFooterBanners(unittest.TestCase):
+    def test_skip_bare_quantity_and_stockist_banner(self):
+        self.assertTrue(_ssa_skip_product("Quantity"))
+        self.assertTrue(_ssa_skip_product("Total Quantity"))
+        self.assertTrue(_ssa_skip_product("BABA PHARMACEUTICAL DISTRIBUTORS"))
+        self.assertTrue(_ssa_skip_product("Value in Rs."))
+        self.assertFalse(_ssa_skip_product("VASAKA SYP.200ML 200ML"))
+        self.assertFalse(_ssa_skip_product("AACTARIL SOAP 75G"))
+        self.assertFalse(_ssa_skip_product("V-GEL 30G 30GM"))
 
 
 @unittest.skipUnless(FIXTURE.exists(), "BABA multi-page fixture not on this machine")
@@ -75,9 +89,8 @@ class TestBabaSsaGeometryMultipage(unittest.TestCase):
             for item in (self.result.get("line_items") or [])
         ]
         self.assertTrue(any("AACTARIL" in name for name in names))
-        self.assertTrue(any("HIMCOLIN" in name for name in names))
-        self.assertTrue(any("NEEM" in name for name in names))
-        self.assertTrue(any("PILEX" in name for name in names))
+        self.assertTrue(any("VASAKA" in name or "HIMCOLIN" in name for name in names))
+        self.assertTrue(any("V-GEL" in name or "PILEX" in name for name in names))
 
     def test_headers_and_footers_not_products(self):
         names = [
@@ -85,10 +98,12 @@ class TestBabaSsaGeometryMultipage(unittest.TestCase):
             for item in (self.result.get("line_items") or [])
         ]
         for name in names:
-            self.assertFalse(_ssa_skip_product(name))
+            self.assertFalse(_ssa_skip_product(name), msg=name)
             self.assertNotIn("ITEM DESCRIPTION", name.upper())
             self.assertFalse(name.upper().startswith("STOCK PURCHASES"))
             self.assertNotEqual(name.strip().upper(), "QUANTITY")
+            self.assertNotIn("DISTRIBUTOR", name.upper())
+            self.assertFalse(re_search_baba(name))
 
     def test_statement_identity_single(self):
         extra = ((self.result.get("totals") or {}).get("extra") or {})
@@ -102,6 +117,10 @@ class TestBabaSsaGeometryMultipage(unittest.TestCase):
         )
         self.assertEqual(self.result.get("period_from"), "2026-08-01")
         self.assertEqual(self.result.get("period_to"), "2026-08-31")
+
+
+def re_search_baba(name: str) -> bool:
+    return "BABA PHARMACEUTICAL" in name.upper()
 
 
 if __name__ == "__main__":

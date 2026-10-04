@@ -55,3 +55,19 @@ def test_v3_select_orig_vs_clean_arjuna_patterns():
     v, reason = select_orig_vs_clean(26.0, 26.0)
     assert v == 26.0
     assert reason == "agree"
+
+
+def test_select_ocr_variants_prefers_high_conf_blue_over_weak_orig():
+    from services.stock_geometry_hybrid_v3 import select_ocr_variants
+
+    values = [
+        ("A_original", "8", 0.0, 8.0, False, False),
+        ("D_blue_removed", "26", 96.0, 26.0, False, False),
+        ("D_blue_removed_otsu", "26", 96.0, 26.0, False, False),
+        ("H_max_channel", "26", 96.0, 26.0, False, False),
+    ]
+    best, reason, changed = select_ocr_variants(values, min_conf=40.0)
+    assert best is not None
+    assert best[3] == 26.0
+    assert changed is True
+    assert "blue" in reason or "agree" in reason

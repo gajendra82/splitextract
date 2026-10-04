@@ -8,6 +8,11 @@ Key change vs v2:
   of the SAME cell and returns one printed value (no arithmetic)
 - Candidate selection across preprocessing variants; disagreement → uncertain
 - Reconciliation is validation only (never overwrites printed values)
+
+Blue suppression (STOCK_BLUE_SUPPRESSION_ENABLED):
+- Configurable HSV blue mask + morphology + optional inpaint
+- OCR variants: grayscale / blue-suppressed / max(R,G,B) channel
+- Never invents values from neighbors; low-confidence → null
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 import re
 import time
 from collections import Counter
@@ -28,9 +34,14 @@ from PIL import Image
 
 from services.stock_geometry_hybrid_v2 import (
     FOCUS_EXPECTATIONS,
+    HYBRID_NUMERIC_FIELDS,
     POSITIONAL_10,
     QTY_FIELDS,
+    STOCK_HYBRID_FORCE_POSITIONAL_10,
+    STOCK_HYBRID_TOKEN_DIAG,
+    VALUE_FIELDS,
     detect_grid,
+    find_best_header_band,
     resolve_column_map,
     re_sub_name,
     find_product,
@@ -45,7 +56,61 @@ logger = logging.getLogger(__name__)
 
 _GARBAGE = re.compile(r"^(p\d+|pq|po|tt|le|lE|o)$", re.I)
 
-VARIANT_ORDER = ("A_original", "B_gray", "C_threshold", "D_blue_removed", "E_contrast")
+STOCK_BLUE_SUPPRESSION_FLAG = "STOCK_BLUE_SUPPRESSION_ENABLED"
+
+VARIANT_ORDER = (
+    "A_original",
+    "B_gray",
+    "C_threshold",
+    "D_blue_removed",
+    "E_contrast",
+    "H_max_channel",
+)
+
+# Module-level diagnostics accumulated during a run (reset by run_hybrid_v3).
+_BLUE_SUPPRESSION_STATS: Dict[str, Any] = {
+    "enabled": False,
+    "blue_pixels_detected": 0,
+    "blue_cells_detected": 0,
+    "cells_recovered": 0,
+    "blue_suppression_changed_ocr": 0,
+}
+
+
+def is_blue_suppression_enabled() -> bool:
+    return os.getenv(STOCK_BLUE_SUPPRESSION_FLAG, "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or str(raw).strip() == "":
+        return default
+    try:
+        return int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def reset_blue_suppression_stats() -> None:
+    _BLUE_SUPPRESSION_STATS.clear()
+    _BLUE_SUPPRESSION_STATS.update(
+        {
+            "enabled": is_blue_suppression_enabled(),
+            "blue_pixels_detected": 0,
+            "blue_cells_detected": 0,
+            "cells_recovered": 0,
+            "blue_suppression_changed_ocr": 0,
+        }
+    )
+
+
+def get_blue_suppression_stats() -> Dict[str, Any]:
+    return dict(_BLUE_SUPPRESSION_STATS)
 
 
 @dataclass
@@ -75,32 +140,153 @@ class CellResult:
         return asdict(self)
 
 
-def remove_blue_preserve_ink(bgr: np.ndarray) -> Tuple[np.ndarray, int, Dict[str, int]]:
-    """Remove blue/cyan UI marks without destroying dark printed digits.
+def _blue_hsv_thresholds() -> Tuple[int, int, int, int]:
+    """Configurable HSV blue mask (OpenCV hue 0–179).
 
-    Bright blue on background → white.
-    Blue overlapping dark ink → force black (preserve stroke).
+    Defaults tuned on blue-tick stock statements: saturated pen strokes
+    without swallowing adjacent black digit edges (S/V ~35 matched the
+    proven legacy mask; stricter 60/60 left sale/balance ticks in place).
     """
+    return (
+        _env_int("STOCK_BLUE_H_MIN", 85),
+        _env_int("STOCK_BLUE_H_MAX", 145),
+        _env_int("STOCK_BLUE_S_MIN", 35),
+        _env_int("STOCK_BLUE_V_MIN", 35),
+    )
+
+
+def build_blue_annotation_mask(bgr: np.ndarray) -> np.ndarray:
+    """Binary mask of blue annotation/markup pixels (not grayscale ink)."""
     if bgr is None or bgr.size == 0:
-        return bgr, 0, {"bright": 0, "dark": 0}
+        return np.zeros((0, 0), dtype=np.uint8)
+    if bgr.ndim == 2:
+        bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+    h_min, h_max, s_min, v_min = _blue_hsv_thresholds()
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(hsv)
-    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     b, g, r = cv2.split(bgr)
-    hsv_blue = (h >= 85) & (h <= 145) & (s >= 35) & (v >= 35)
+    hsv_blue = (h >= h_min) & (h <= h_max) & (s >= s_min) & (v >= v_min)
     bgr_blue = (
         ((b.astype(np.int16) - r.astype(np.int16)) > 25)
         & ((b.astype(np.int16) - g.astype(np.int16)) > 8)
         & (s >= 25)
     )
-    mask = hsv_blue | bgr_blue
-    out = bgr.copy()
+    mask = (hsv_blue | bgr_blue).astype(np.uint8) * 255
+    # Optional cleanup only — opening/dilation can erase digit edge pixels
+    # that sit next to blue ticks (verified: open alone made sale 26 / balance
+    # 53 unreadable while the raw mask preserved them).
+    if os.getenv("STOCK_BLUE_MORPH_OPEN", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+    dilate_px = _env_int("STOCK_BLUE_DILATE_PX", 0)
+    if dilate_px > 0:
+        k = max(1, min(2, dilate_px))
+        mask = cv2.dilate(mask, np.ones((k, k), np.uint8), iterations=1)
+    return mask
+
+
+def max_channel_blue_suppress(bgr: np.ndarray) -> np.ndarray:
+    """max(R,G,B) OCR view — blue ticks go bright; black print stays dark.
+
+    Coordinates must never be derived from this image.
+    """
+    if bgr is None or bgr.size == 0:
+        return bgr
+    if bgr.ndim == 2:
+        return bgr
+    b, g, r = cv2.split(bgr)
+    return np.maximum(np.maximum(r, g), b)
+
+
+def remove_blue_preserve_ink(bgr: np.ndarray) -> Tuple[np.ndarray, int, Dict[str, int]]:
+    """Remove blue/cyan annotation marks without destroying dark printed digits.
+
+    When STOCK_BLUE_SUPPRESSION_ENABLED:
+      - configurable HSV/BGR blue mask + small morphology cleanup
+      - bright blue on background → white
+      - blue overlapping dark ink → force black (preserve stroke)
+      - optional mild inpaint of bright-only mask (STOCK_BLUE_INPAINT=true)
+    When disabled: legacy thresholds, same white/black preserve-ink path.
+    Cell geometry is never shifted or resized.
+    """
+    if bgr is None or bgr.size == 0:
+        return bgr, 0, {"bright": 0, "dark": 0, "inpainted": 0}
+    if bgr.ndim == 2:
+        bgr = cv2.cvtColor(bgr, cv2.COLOR_GRAY2BGR)
+
+    enabled = is_blue_suppression_enabled()
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+
+    if enabled:
+        mask_u8 = build_blue_annotation_mask(bgr)
+        mask = mask_u8 > 0
+    else:
+        hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        b, g, r = cv2.split(bgr)
+        hsv_blue = (h >= 85) & (h <= 145) & (s >= 35) & (v >= 35)
+        bgr_blue = (
+            ((b.astype(np.int16) - r.astype(np.int16)) > 25)
+            & ((b.astype(np.int16) - g.astype(np.int16)) > 8)
+            & (s >= 25)
+        )
+        mask = hsv_blue | bgr_blue
+        mask_u8 = (mask.astype(np.uint8)) * 255
+
     bright = mask & (gray >= 95)
     dark = mask & (gray < 95)
+    out = bgr.copy()
+    inpainted_n = 0
     out[bright] = (255, 255, 255)
     out[dark] = (0, 0, 0)
-    stats = {"bright": int(bright.sum()), "dark": int(dark.sum())}
+
+    # Bright-only inpaint (optional): fills AA tick edges without punching ink.
+    do_inpaint = enabled and os.getenv("STOCK_BLUE_INPAINT", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if do_inpaint and int(bright.sum()) > 0:
+        bright_mask = (bright.astype(np.uint8)) * 255
+        try:
+            out = cv2.inpaint(out, bright_mask, 2, cv2.INPAINT_TELEA)
+            out[dark] = (0, 0, 0)
+            inpainted_n = int(bright.sum())
+        except Exception:
+            pass
+
+    stats = {
+        "bright": int(bright.sum()),
+        "dark": int(dark.sum()),
+        "inpainted": inpainted_n,
+        "enabled": bool(enabled),
+    }
     return out, int(mask.sum()), stats
+
+
+def write_blue_suppression_debug(
+    bgr: np.ndarray,
+    *,
+    suppressed_path: str = "/tmp/stock_blue_suppressed_debug.png",
+    mask_path: str = "/tmp/stock_blue_mask_debug.png",
+) -> Dict[str, str]:
+    """Full-page debug: blue ticks removed, black print + grid preserved."""
+    if bgr is None or bgr.size == 0:
+        return {}
+    mask = build_blue_annotation_mask(bgr)
+    cleaned, _, _ = remove_blue_preserve_ink(bgr)
+    cv2.imwrite(suppressed_path, cleaned)
+    # Visual mask overlay (blue channel highlight on black).
+    mask_vis = np.zeros_like(bgr)
+    mask_vis[mask > 0] = (255, 180, 0)
+    blend = cv2.addWeighted(bgr, 0.55, mask_vis, 0.45, 0)
+    cv2.imwrite(mask_path, blend)
+    return {"suppressed": suppressed_path, "mask": mask_path}
 
 
 def select_orig_vs_clean(
@@ -135,12 +321,169 @@ def select_orig_vs_clean(
     return float(orig), "prefer_orig_default"
 
 
+def select_ocr_variants(
+    values: List[Tuple[str, str, float, Optional[float], bool, bool]],
+    *,
+    min_conf: float = 40.0,
+) -> Tuple[Optional[Tuple[str, str, float, Optional[float], bool, bool]], str, bool]:
+    """Select among A (gray), B (blue-suppressed), C (max-channel) OCR reads.
+
+    values entries: (key, raw, conf, val, blank, uncertain)
+    Returns (best_entry_or_None, reason, changed_by_blue_suppression).
+
+    Rules:
+    - Never invent from neighbors
+    - Single adequate read → use it
+    - Agreement → agreed value
+    - Disagreement → confidence / select_orig_vs_clean heuristics
+    - Low confidence after suppression → null (caller marks uncertain)
+    """
+    adequate = [
+        v
+        for v in values
+        if v[3] is not None and not v[5] and float(v[2]) >= min_conf
+    ]
+    soft = [v for v in values if v[3] is not None and not v[5]]
+    pool = adequate or soft
+    if not pool:
+        return None, "no_numeric", False
+
+    def _is_blue(name: str) -> bool:
+        n = name.lower()
+        return "blue" in n or "max_channel" in n or n.startswith("h_")
+
+    def _is_orig(name: str) -> bool:
+        n = name.lower()
+        return n.startswith("a_") or "original" in n or n.startswith("b_gray")
+
+    # Classify from all soft reads (include low-conf original) so weak-orig
+    # vs strong-blue recovery is visible even when pool==adequate only.
+    blue_pool = [v for v in soft if _is_blue(v[0])]
+    orig_pool = [v for v in soft if _is_orig(v[0])]
+
+    def _is_preserve_ink(name: str) -> bool:
+        n = name.lower()
+        return "blue_removed" in n and "max_channel" not in n
+
+    # Prefer agreement among preserve-ink blue variants (D_*) first.
+    preserve_pool = [v for v in blue_pool if _is_preserve_ink(v[0])]
+    max_pool = [v for v in blue_pool if "max_channel" in v[0].lower()]
+
+    if preserve_pool:
+        pcounts = Counter(v[3] for v in preserve_pool)
+        pval, pn = pcounts.most_common(1)[0]
+        pagree = [v for v in preserve_pool if v[3] == pval]
+        pbest = max(pagree, key=lambda v: v[2])
+        if pn >= 2 and pbest[2] >= min_conf:
+            orig_weak = not orig_pool or all(float(v[2]) < min_conf for v in orig_pool)
+            if orig_weak or all(v[3] == pval for v in orig_pool):
+                changed = bool(orig_pool) and pval not in {v[3] for v in orig_pool}
+                return (
+                    pbest,
+                    "blue_variants_agree_orig_weak" if orig_weak else "all_variants_agree",
+                    changed,
+                )
+        # Single strong preserve-ink read + max-channel agrees.
+        if pbest[2] >= 70.0:
+            if max_pool and all(abs(float(v[3]) - float(pval)) < 0.51 for v in max_pool):
+                orig_weak = not orig_pool or all(float(v[2]) < min_conf for v in orig_pool)
+                if orig_weak:
+                    return pbest, "blue_and_max_channel_agree", True
+            # Strong preserve-ink alone when original empty/weak (sales 26 case
+            # with only one D_* collected before early-exit is still OK if conf high).
+            if (not orig_pool or all(float(v[2]) < 20 for v in orig_pool)) and pn >= 1:
+                # Require either second blue agreement OR very high conf.
+                if pn >= 2 or pbest[2] >= 70.0:
+                    return pbest, "prefer_blue_high_conf_vs_weak_orig", True
+
+    # Blue/max variants that agree with each other at high confidence.
+    if blue_pool:
+        bcounts = Counter(v[3] for v in blue_pool)
+        bval, bn = bcounts.most_common(1)[0]
+        bagree = [v for v in blue_pool if v[3] == bval]
+        bbest = max(bagree, key=lambda v: v[2])
+        if bn >= 2 and bbest[2] >= min_conf:
+            orig_vals = {v[3] for v in orig_pool}
+            changed = bool(orig_vals) and bval not in orig_vals
+            if not orig_pool or all(float(v[2]) < min_conf for v in orig_pool):
+                return bbest, "blue_variants_agree_orig_weak", changed
+            if all(v[3] == bval for v in orig_pool):
+                return bbest, "all_variants_agree", False
+
+    counts = Counter(v[3] for v in pool)
+    best_val, best_n = counts.most_common(1)[0]
+    agreeing = [v for v in pool if v[3] == best_val]
+    best = max(agreeing, key=lambda v: v[2])
+
+    if len(counts) == 1:
+        changed = _is_blue(best[0]) and (
+            not orig_pool or all(v[3] != best_val for v in orig_pool)
+        )
+        if best[2] < min_conf and not adequate:
+            return best, "low_confidence_uncertain", changed
+        # max-channel alone is noisier than preserve-ink — need high conf.
+        # Even if a weak preserve-ink read exists in soft, do not let a mid-conf
+        # max-channel majority invent a qty (purchase 60→5).
+        strong_preserve = [v for v in preserve_pool if float(v[2]) >= min_conf]
+        if (
+            "max_channel" in best[0].lower()
+            and not strong_preserve
+            and best[2] < 70.0
+        ):
+            return best, "low_confidence_uncertain", changed
+        return best, "majority_vote", changed
+
+    # Disagreement: prefer high-conf preserve-ink blue when original is weak.
+    if preserve_pool and (not orig_pool or all(float(v[2]) < min_conf for v in orig_pool)):
+        pbest = max(preserve_pool, key=lambda v: v[2])
+        if pbest[2] >= 70.0:
+            return pbest, "prefer_blue_orig_low_conf", True
+
+    if blue_pool and orig_pool:
+        # Prefer preserve-ink over max-channel when picking "best blue".
+        bbest = max(
+            blue_pool,
+            key=lambda v: (1 if _is_preserve_ink(v[0]) else 0, v[2]),
+        )
+        obest = max(orig_pool, key=lambda v: v[2])
+        if bbest[2] >= min_conf and obest[2] < min_conf:
+            return bbest, "prefer_blue_orig_low_conf", True
+        if bbest[2] >= 70 and obest[2] < 20 and bbest[3] != obest[3]:
+            return bbest, "prefer_blue_high_conf_vs_weak_orig", True
+        chosen, reason = select_orig_vs_clean(obest[3], bbest[3])
+        if chosen is None:
+            return None, reason, False
+        if abs(float(chosen) - float(bbest[3])) < 0.51:
+            return bbest, reason, True
+        return obest, reason, False
+
+    if len(adequate) == 1:
+        only = adequate[0]
+        # Lone max-channel / weak blue read must not invent a qty.
+        if "max_channel" in only[0].lower() and only[2] < 70.0:
+            return only, "low_confidence_uncertain", True
+        if _is_blue(only[0]) and only[2] < 70.0 and not preserve_pool:
+            return only, "low_confidence_uncertain", True
+        return only, "single_adequate_variant", _is_blue(only[0])
+
+    return best, "disagree_variants_uncertain", _is_blue(best[0])
+
+
 def _normalize_numeric(raw: str) -> Tuple[Optional[float], bool, bool]:
     text = (raw or "").strip()
     if text == "":
         return None, True, False
     if _GARBAGE.match(text):
         return None, False, True
+    # Strip cell-border OCR chrome; keep a leading minus if present after.
+    text = re.sub(r"^[\s\|§~•·=_]+", "", text)
+    text = re.sub(r"[\s\|§~•·=_]+$", "", text)
+    plain = text.replace(",", "").replace(" ", "")
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", plain):
+        try:
+            return float(plain), False, False
+        except ValueError:
+            return None, False, True
     digits = re.sub(r"[^\d]", "", text)
     if not digits:
         return None, False, True
@@ -162,12 +505,18 @@ def _ink_ratio(gray: np.ndarray) -> float:
 
 
 def _prep_variants(bgr_crop: np.ndarray) -> Tuple[Dict[str, np.ndarray], int, Dict[str, int]]:
-    """Build preprocessing variants A–E. Returns (variants, blue_px, blue_stats)."""
+    """Build preprocessing variants A/B/C (+ legacy extras).
+
+    A — original grayscale
+    B — blue-suppressed / inpainted (D_blue_removed*)
+    C — max(R,G,B) channel (H_max_channel) — OCR only, never for coordinates
+    """
     if bgr_crop.ndim == 2:
         bgr_crop = cv2.cvtColor(bgr_crop, cv2.COLOR_GRAY2BGR)
     gray = cv2.cvtColor(bgr_crop, cv2.COLOR_BGR2GRAY)
     cleaned, blue_px, blue_stats = remove_blue_preserve_ink(bgr_crop)
     cleaned_gray = cv2.cvtColor(cleaned, cv2.COLOR_BGR2GRAY)
+    max_ch = max_channel_blue_suppress(bgr_crop)
 
     def up(im: np.ndarray, fx: int = 6) -> np.ndarray:
         return cv2.resize(im, None, fx=fx, fy=fx, interpolation=cv2.INTER_CUBIC)
@@ -195,6 +544,8 @@ def _prep_variants(bgr_crop: np.ndarray) -> Tuple[Dict[str, np.ndarray], int, Di
     variants["E_contrast"] = cv2.copyMakeBorder(
         norm_bw(e2), 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=255
     )
+    if is_blue_suppression_enabled():
+        variants["H_max_channel"] = up(max_ch)
     return variants, blue_px, blue_stats
 
 
@@ -252,17 +603,27 @@ def ocr_numeric_cell(
         )
 
     variants, blue_px, blue_stats = _prep_variants(bcrop)
+    if blue_px > 0:
+        _BLUE_SUPPRESSION_STATS["blue_pixels_detected"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_pixels_detected") or 0
+        ) + int(blue_px)
+        _BLUE_SUPPRESSION_STATS["blue_cells_detected"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_cells_detected") or 0
+        ) + 1
     candidates: Dict[str, Any] = {
-        "_blue_stats": {"removed": blue_px, **blue_stats}
+        "_blue_stats": {"removed": blue_px, **blue_stats},
+        "ocr_variant_selected": None,
+        "blue_suppression_changed_ocr": False,
     }
     values: List[Tuple[str, str, float, Optional[float], bool, bool]] = []
     order = (
-        ("A_original", "D_blue_removed", "C_threshold")
+        ("A_original", "D_blue_removed", "H_max_channel", "C_threshold")
         if quick
         else (
             "A_original",
             "D_blue_removed",
             "D_blue_removed_otsu",
+            "H_max_channel",
             "C_threshold",
             "E_contrast",
             "B_gray",
@@ -282,7 +643,6 @@ def ocr_numeric_cell(
             "uncertain": uncertain,
         }
         values.append((name, raw, conf, val, blank, uncertain))
-        # Early exit for quick mode when two agree
         digit_vals = [v[3] for v in values if v[3] is not None]
         if (
             quick
@@ -291,17 +651,37 @@ def ocr_numeric_cell(
             and values[-1][2] >= 45
         ):
             break
-        if not quick and val is not None and conf >= 70 and not uncertain:
-            # still collect blue-removed for logging, but can stop after D variants
-            if name in ("D_blue_removed", "D_blue_removed_otsu") and len(
-                [v for v in values if v[3] == val]
-            ) >= 2:
+        # Need both blue-removed and max-channel before early exit so they can agree.
+        if (
+            not quick
+            and val is not None
+            and conf >= 70
+            and not uncertain
+            and name in ("D_blue_removed", "D_blue_removed_otsu", "H_max_channel")
+        ):
+            blue_vals = [
+                v[3]
+                for v in values
+                if v[3] is not None
+                and (
+                    "blue" in v[0].lower()
+                    or "max_channel" in v[0].lower()
+                )
+            ]
+            if len(blue_vals) >= 2 and len(set(blue_vals)) == 1:
                 break
 
     orig_raw = str((candidates.get("A_original") or {}).get("raw") or "")
     clean_raw = str((candidates.get("D_blue_removed") or {}).get("raw") or "")
-    non_null = [v for v in values if v[3] is not None]
-    if not non_null:
+    max_raw = str((candidates.get("H_max_channel") or {}).get("raw") or "")
+    if max_raw and not clean_raw:
+        clean_raw = max_raw
+
+    best, reason, changed = select_ocr_variants(values, min_conf=40.0)
+    candidates["ocr_variant_selected"] = best[0] if best else None
+    candidates["blue_suppression_changed_ocr"] = bool(changed)
+
+    if best is None:
         if ink < 0.012:
             return CellResult(
                 column=column,
@@ -328,18 +708,37 @@ def ocr_numeric_cell(
             selection_reason="empty_ocr_uncertain",
         )
 
-    counts = Counter(v[3] for v in non_null)
-    best_val, best_n = counts.most_common(1)[0]
-    agreeing = [v for v in non_null if v[3] == best_val]
-    best = max(agreeing, key=lambda v: v[2])
-    disagree = len(counts) > 1
-    low = best[2] < (15 if len(counts) == 1 else 40)
-    uncertain = disagree or low or best[5]
-    reason = "majority_vote"
-    if disagree:
-        reason = "disagree_variants_uncertain"
-    elif low:
-        reason = "low_confidence_uncertain"
+    best_val = best[3]
+    low = best[2] < 40.0 and "low_confidence" in reason
+    uncertain = (
+        reason in (
+            "disagree_variants_uncertain",
+            "low_confidence_uncertain",
+            "no_numeric",
+        )
+        or low
+        or best[5]
+        or best_val is None
+    )
+    # Accept high-confidence blue recovery even when original disagreed.
+    if reason in (
+        "blue_variants_agree_orig_weak",
+        "prefer_blue_orig_low_conf",
+        "prefer_blue_high_conf_vs_weak_orig",
+        "all_variants_agree",
+        "majority_vote",
+        "single_adequate_variant",
+    ) and best[2] >= 40.0 and best_val is not None:
+        uncertain = False
+
+    if changed and not uncertain and best_val is not None:
+        _BLUE_SUPPRESSION_STATS["cells_recovered"] = int(
+            _BLUE_SUPPRESSION_STATS.get("cells_recovered") or 0
+        ) + 1
+        _BLUE_SUPPRESSION_STATS["blue_suppression_changed_ocr"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_suppression_changed_ocr") or 0
+        ) + 1
+
     return CellResult(
         column=column,
         raw_ocr=best[1],
@@ -355,6 +754,7 @@ def ocr_numeric_cell(
         cleaned_ocr=clean_raw,
         selected_ocr=best[1],
         selection_reason=reason,
+        preferred_view="blue_suppressed" if changed else "original",
     )
 
 
@@ -485,25 +885,48 @@ def build_rows(
             }
         )
 
-    # Phase B: qty OCR — full variants for focus, lighter for others
+    # Phase B: qty/value OCR — full variants for focus, lighter for others
+    token_diag_on = os.getenv(STOCK_HYBRID_TOKEN_DIAG, "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     for item in prelim:
         y0, y1 = item["y0"], item["y1"]
         cells = item["cells"]
         is_focus = item["matched_name"] in FOCUS_EXPECTATIONS
-        for canon in QTY_FIELDS:
+        for canon in HYBRID_NUMERIC_FIELDS:
             c = col_by_canon.get(canon)
             if not c:
                 continue
             bbox = {"x0": int(c["x0"]), "y0": y0, "x1": int(c["x1"]), "y1": y1}
             cell = ocr_numeric_cell(bgr, gray, bbox, canon, quick=not is_focus)
-            # For non-focus, if first two variants agree high conf we already early-exited
-            # inside ocr — keep as-is.
             cells[canon] = cell
             if not cell.skipped:
                 tess_calls += len([k for k in cell.candidates if not k.startswith("_")]) or 1
+            if token_diag_on and not cell.skipped:
+                x_c = (bbox["x0"] + bbox["x1"]) / 2.0
+                y_c = (bbox["y0"] + bbox["y1"]) / 2.0
+                logger.info(
+                    "[HYBRID_TOKEN_DIAG] product=%r token=%r assigned=%s "
+                    "bbox=%s x_center=%.1f y_center=%.1f col_x=[%s,%s] "
+                    "normalized=%s blank=%s uncertain=%s",
+                    item["name"],
+                    cell.raw_ocr,
+                    canon,
+                    bbox,
+                    x_c,
+                    y_c,
+                    c.get("x0"),
+                    c.get("x1"),
+                    cell.normalized,
+                    cell.blank,
+                    cell.ocr_uncertain,
+                )
 
         qty_map: Dict[str, Optional[float]] = {}
-        for canon in QTY_FIELDS:
+        for canon in HYBRID_NUMERIC_FIELDS:
             cell = cells.get(canon)
             if not cell or cell.blank:
                 qty_map[canon] = None
@@ -516,7 +939,7 @@ def build_rows(
             "product_code": None,
             "product_name": item["name"] or None,
             "pack": item["pack"] or None,
-            **{k: qty_map[k] for k in QTY_FIELDS},
+            **{k: qty_map.get(k) for k in HYBRID_NUMERIC_FIELDS},
         }
         row = {
             "row_index": item["ri"] - header_end,
@@ -1024,8 +1447,13 @@ def run_hybrid_v3(
     if bgr is None:
         return {"error": f"cannot_read:{path}"}
 
+    reset_blue_suppression_stats()
     perf: Dict[str, Any] = {}
     t0 = time.perf_counter()
+    try:
+        write_blue_suppression_debug(bgr)
+    except Exception as exc:
+        logger.info("blue_suppression_debug_failed err=%s", type(exc).__name__)
     geometry = detect_grid(bgr)
     gray = geometry.pop("gray")
     perf["opencv_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
@@ -1035,17 +1463,21 @@ def run_hybrid_v3(
     if len(rows_y) < 3 or len(col_xs) < 5:
         return {"error": "GRID_DETECTION_FAILED", "geometry": geometry}
 
-    header_end = 1
-    if len(rows_y) >= 3 and rows_y[1] - rows_y[0] <= 25:
-        header_end = 2
-
     t1 = time.perf_counter()
-    columns, header_source = resolve_column_map(
-        gray, col_xs, int(rows_y[0]), int(rows_y[header_end])
-    )
-    # Force positional when 10-col grid (never let bad header OCR shift columns).
-    n = len(col_xs) - 1
-    if n == 10:
+    # Prefer the band whose OCR headers score as a real table header
+    # (Product / Op.Stk / … / Cl.Val), not the UI chrome at rows_y[0].
+    force_positional = os.getenv(
+        STOCK_HYBRID_FORCE_POSITIONAL_10, "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if force_positional and len(col_xs) - 1 == 10:
+        header_end = 1
+        if len(rows_y) >= 3 and rows_y[1] - rows_y[0] <= 25:
+            header_end = 2
+        columns, header_source = resolve_column_map(
+            gray, col_xs, int(rows_y[0]), int(rows_y[header_end])
+        )
+        # Legacy blue-tick path: always POSITIONAL_10 for 10-col.
+        n = len(col_xs) - 1
         header_source = "positional_fallback"
         patched = [
             {
@@ -1064,8 +1496,16 @@ def run_hybrid_v3(
                 c["x0"] = int(col_xs[idx])
                 c["x1"] = int(col_xs[idx + 1])
                 c["x_center"] = (c["x0"] + c["x1"]) / 2.0
+        logger.info(
+            "[HYBRID_HEADER] force_positional=true using POSITIONAL_10"
+        )
+    else:
+        header_end, _band_i, columns, header_source, _score = find_best_header_band(
+            gray, col_xs, rows_y
+        )
     perf["header_ms"] = round((time.perf_counter() - t1) * 1000.0, 1)
     perf["header_mapping_source"] = header_source
+    perf["header_end_row"] = header_end
 
     t2 = time.perf_counter()
     rows = build_rows(
@@ -1173,6 +1613,11 @@ def run_hybrid_v3(
     perf["total_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
 
     metrics = score_focus(rows)
+    blue_stats = get_blue_suppression_stats()
+    n_px = int(blue_stats.get("blue_pixels_detected") or 0)
+    h, w = bgr.shape[:2]
+    blue_stats["blue_pixel_ratio"] = round(n_px / float(max(1, h * w)), 6)
+    metrics["blue_suppression"] = blue_stats
 
     focus = []
     for product, expected in FOCUS_EXPECTATIONS.items():
@@ -1276,6 +1721,7 @@ def run_hybrid_v3(
         "focus": focus,
         "failed_cell_variants": failed_variants,
         "metrics": metrics,
+        "blue_suppression": blue_stats,
         "gemini": {
             "api_calls": gemini.get("api_calls"),
             "latency_ms": gemini.get("latency_ms"),

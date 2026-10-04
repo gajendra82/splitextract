@@ -60,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     jp, tp = write_reports(report, json_path=args.json_out, txt_path=args.txt_out)
 
     m = report.get("metrics") or {}
+    blue = report.get("blue_suppression") or m.get("blue_suppression") or {}
     print("=== METRICS ===")
     for k in (
         "product_row_recall",
@@ -89,8 +90,21 @@ def main(argv: list[str] | None = None) -> int:
         "sales_accuracy",
         "closing_accuracy",
         "value_accuracy",
+        # hybrid 10-col metrics
+        "cell_accuracy",
+        "exact_row_accuracy",
+        "product_match_accuracy",
     ):
-        print(f"{k}: {m.get(k)}")
+        if k in m:
+            print(f"{k}: {m.get(k)}")
+
+    print("\n=== BLUE SUPPRESSION ===")
+    print(json.dumps(blue, indent=2, default=str))
+    print("blue_pixels_detected:", blue.get("blue_pixels_detected"))
+    print("blue_cells_detected:", blue.get("blue_cells_detected"))
+    print("cells_recovered:", blue.get("cells_recovered"))
+    gem = report.get("gemini") or {}
+    print("gemini_fallback_cells:", gem.get("cells_applied") or gem.get("api_calls"))
 
     print("\n=== NON_PRODUCT REJECTED ===")
     for dr in report.get("debug_rows") or []:
@@ -100,6 +114,17 @@ def main(argv: list[str] | None = None) -> int:
     print("\n=== FOCUS ROWS (physical + business) ===")
     for f in report.get("focus") or []:
         print(json.dumps(f, default=str))
+        sel = f.get("selected") or {}
+        if f.get("product") == "ARJUNA TAB" or "ARJUNA" in str(f.get("product") or "").upper():
+            print(
+                "ARJUNA_QTY:",
+                sel.get("opening_qty"),
+                sel.get("purchase_qty") or sel.get("receipts_qty"),
+                sel.get("sales_return_qty") or sel.get("goods_return_qty"),
+                sel.get("total_qty"),
+                sel.get("sales_qty"),
+                sel.get("closing_qty"),
+            )
     if m.get("benchmark_failed_semantic_shift"):
         print("\nBENCHMARK FAILED: physical cells OK but semantic fields shifted")
         return 1
@@ -108,7 +133,9 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(report.get("feature_flag"), default=str))
     print("production_switched=", report.get("production_switched"))
     print("flag_env_enabled=", report.get("feature_flag", {}).get("enabled"))
+    print("detection_mode=", (report.get("geometry") or {}).get("detection_mode"))
     print(f"wrote {jp}\nwrote {tp}\nwrote {args.debug_png}")
+    print("blue_debug=/tmp/stock_blue_suppressed_debug.png /tmp/stock_blue_mask_debug.png")
     return 0
 
 

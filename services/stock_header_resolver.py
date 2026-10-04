@@ -219,6 +219,8 @@ ALIASES: Dict[str, List[str]] = {
         "bal qty",
         "clstk",
         "cl stk",
+        "cistk",  # OCR of Cl.Stk → CI.Stk
+        "ci stk",
         "cb",
         "closing stock",
         "closing qty",
@@ -334,7 +336,10 @@ def normalize_header(text: Any) -> str:
     """Lowercase; replace . _ / - + with space; collapse whitespace; strip."""
     s = str(text or "").lower()
     s = s.replace("₹", " ₹ ")
-    s = re.sub(r"[._/\-+]+", " ", s)
+    # Grid/OCR chrome often prefixes headers (|, —, ~, §).
+    s = re.sub(r"^[\s\|§~•·\-–—_/=]+", "", s)
+    s = re.sub(r"[\s\|§~•·\-–—_/=]+$", "", s)
+    s = re.sub(r"[._/\-+–—]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
@@ -416,6 +421,8 @@ _DIRECT_VALUE_FIELDS = {
     "closing val": "closing_value",
     "cl val": "closing_value",
     "clval": "closing_value",
+    "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
+    "cival": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
     "stock value": "closing_value",
@@ -581,8 +588,32 @@ def resolve_columns(
         combined = normalize_header(f"{text} {sub_s}".strip())
         idx = int(cell.get("col_index") or 0)
 
-        # Medica IN/OT (or IN/OUT) is a dedicated transfer column — not purchase "in".
+        # Serial / row-number headers (Sr., S.No, #) — never sales_return "sr".
         compact_hdr = re.sub(r"\s+", "", norm)
+        raw_stripped = text.strip()
+        if (
+            compact_hdr in {"sr", "sno", "slno", "sln", "no", "num", "hash"}
+            and re.match(
+                r"^(?:#|s\.?\s*r\.?|s\.?\s*no\.?|sl\.?\s*no\.?|no\.?)$",
+                raw_stripped,
+                re.I,
+            )
+        ):
+            prelim.append(
+                {
+                    "col_index": idx,
+                    "header_text": text,
+                    "subheader_text": sub_s or None,
+                    "group": None,
+                    "canonical": "ignore",
+                    "confidence": 0.0,
+                    "is_value": False,
+                    "reason": "serial_number_header",
+                }
+            )
+            continue
+
+        # Medica IN/OT (or IN/OUT) is a dedicated transfer column — not purchase "in".
         if compact_hdr in {"inot", "inout"} or norm in {"in ot", "in out"}:
             prelim.append(
                 {

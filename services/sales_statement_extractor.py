@@ -12130,6 +12130,47 @@ def _is_opstock_rcpts_clstk_header(cells: List[str]) -> bool:
     )
 
 
+def _opstock_rcpts_clstk_header_colmap_enabled() -> bool:
+    """When ON, map qty/value cells by header labels (handles optional SL.Value/Free)."""
+    return os.getenv("STOCK_HTML_EXCEL_OPSTOCK_HEADER_COLMAP", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _opstock_rcpts_clstk_colmap(header_cells: List[str]) -> Dict[str, int]:
+    """Column index by semantic key from printed headers (first match wins)."""
+    patterns = (
+        ("name", r"^Name$"),
+        ("product_code", r"^Code$"),
+        ("item", r"^Product$"),
+        ("pack", r"^Packing$"),
+        ("lms", r"^LMS$"),
+        ("op", r"^OP\.?\s*Stock$"),
+        ("pur", r"^Rcpts$"),
+        ("sale", r"^Sales$"),
+        ("sval", r"^SL\.?\s*Value$"),
+        ("free", r"^Free$"),
+        ("hos_sales", r"^HOS\.?\s*SALES$"),
+        ("bal", r"^CL\.?\s*Stk$"),
+        ("bval", r"^CL\.?\s*Value$"),
+    )
+    colmap: Dict[str, int] = {}
+    for idx, cell in enumerate(header_cells or []):
+        text = str(cell or "").strip()
+        if not text:
+            continue
+        for key, pat in patterns:
+            if key in colmap:
+                continue
+            if re.fullmatch(pat, text, re.I):
+                colmap[key] = idx
+                break
+    return colmap
+
+
 def _parse_html_excel_opstock_rcpts_clstk(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -12147,23 +12188,70 @@ def _parse_html_excel_opstock_rcpts_clstk(
     if header_idx is None:
         return None
 
+    use_header_colmap = _opstock_rcpts_clstk_header_colmap_enabled()
+    colmap = (
+        _opstock_rcpts_clstk_colmap(rows[header_idx]) if use_header_colmap else {}
+    )
+    # Legacy fixed indices for the original 11-col layout (no SL.Value / Free).
+    legacy = {
+        "name": 0,
+        "product_code": 1,
+        "item": 2,
+        "pack": 3,
+        "lms": 4,
+        "op": 5,
+        "pur": 6,
+        "sale": 7,
+        "hos_sales": 8,
+        "bal": 9,
+        "bval": 10,
+    }
+    if use_header_colmap and {"op", "pur", "sale", "bal", "bval"}.issubset(colmap):
+        idx_of = colmap
+        logger.info(
+            "STOCK_HTML_EXCEL_OPSTOCK_HEADER_COLMAP file=%s cols=%s",
+            filename,
+            sorted(colmap.items(), key=lambda kv: kv[1]),
+        )
+    else:
+        if use_header_colmap:
+            logger.info(
+                "STOCK_HTML_EXCEL_OPSTOCK_HEADER_COLMAP file=%s fallback=legacy "
+                "missing=%s",
+                filename,
+                sorted({"op", "pur", "sale", "bal", "bval"} - set(colmap)),
+            )
+        idx_of = legacy
+
+    def _at(padded: List[str], key: str) -> Any:
+        i = idx_of.get(key)
+        if i is None or i < 0 or i >= len(padded):
+            return None
+        return padded[i]
+
     result = empty_result(filename, ext.lstrip(".") or "xls")
     result["report_title"] = "Stock & Sales Statement"
     items: List[Dict[str, Any]] = []
     printed_sales_value = None
     printed_closing_value = None
+    width = max(11, max(idx_of.values()) + 1 if idx_of else 11)
 
     for cells in rows[header_idx + 1 :]:
-        padded = list(cells) + [""] * max(0, 11 - len(cells))
-        name_cell = str(padded[0] or "").strip()
-        code = str(padded[1] or "").strip()
-        product = _clean_name(str(padded[2] or ""))
-        packing = str(padded[3] or "").strip() or None
+        padded = list(cells) + [""] * max(0, width - len(cells))
+        name_cell = str(_at(padded, "name") or "").strip()
+        code = str(_at(padded, "product_code") or "").strip()
+        product = _clean_name(str(_at(padded, "item") or ""))
+        packing = str(_at(padded, "pack") or "").strip() or None
         if not product:
             continue
         if re.fullmatch(r"total", product, re.I):
-            printed_sales_value = _to_float(padded[7])
-            printed_closing_value = _to_float(padded[10])
+            # Prefer printed SL.Value when present; else Sales column (legacy totals).
+            sval = _to_float(_at(padded, "sval"))
+            sale_cell = _to_float(_at(padded, "sale"))
+            printed_sales_value = (
+                sval if sval not in (None, 0.0) else sale_cell
+            )
+            printed_closing_value = _to_float(_at(padded, "bval"))
             continue
         if name_cell and not result.get("company_name"):
             result["company_name"] = _clean_name(name_cell)
@@ -12172,18 +12260,21 @@ def _parse_html_excel_opstock_rcpts_clstk(
         item["product_code"] = code or None
         item["product_name"] = product
         item["packing"] = packing
-        item["opening_qty"] = _to_float(padded[5])
-        item["receipts_qty"] = _to_float(padded[6])
-        item["sales_qty"] = _to_float(padded[7])
-        # No sales-value column on product rows.
-        item["sales_value"] = None
-        item["closing_qty"] = _to_float(padded[9])
-        item["closing_value"] = _to_float(padded[10])
+        item["opening_qty"] = _to_float(_at(padded, "op"))
+        item["receipts_qty"] = _to_float(_at(padded, "pur"))
+        item["sales_qty"] = _to_float(_at(padded, "sale"))
+        # Sales value only when a SL.Value column is printed.
+        sval = _at(padded, "sval")
+        item["sales_value"] = _to_float(sval) if "sval" in idx_of else None
+        item["closing_qty"] = _to_float(_at(padded, "bal"))
+        item["closing_value"] = _to_float(_at(padded, "bval"))
         item["extra"] = {
             "layout": "html_excel_opstock_rcpts_clstk",
-            "lms_qty": _to_float(padded[4]),
-            "hos_sales_qty": _to_float(padded[8]),
+            "lms_qty": _to_float(_at(padded, "lms")),
+            "hos_sales_qty": _to_float(_at(padded, "hos_sales")),
         }
+        if "free" in idx_of:
+            item["extra"]["free_qty"] = _to_float(_at(padded, "free"))
         items.append(item)
 
     if len(items) < 3:
@@ -12192,6 +12283,8 @@ def _parse_html_excel_opstock_rcpts_clstk(
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "html_excel_opstock_rcpts_clstk"
     extra["layout"] = "html_excel_opstock_rcpts_clstk"
+    if use_header_colmap:
+        extra["opstock_header_colmap"] = True
     result["totals"]["sales_value"] = (
         printed_sales_value
         if printed_sales_value not in (None, 0.0)
@@ -13709,6 +13802,42 @@ def _clean_stockist_label(name: str) -> str:
     return text
 
 
+_PORTAL_UI_CHROME = re.compile(
+    r"(?i)\b(?:"
+    r"home|profile|dashboard|contact\s*us|sign\s*out|log\s*in|menu|"
+    r"retailer\s*mr\.?|uploads?|reports?|masters?|admin\s*tools?|"
+    r"ai\s*hub|secondary\s*sales"
+    r")\b"
+)
+_STRONG_STOCKIST_HINT = re.compile(
+    r"(?i)\b(?:distributors?|distribution|pharma(?:ceuticals?)?|"
+    r"medical\s+stores?|medico(?:s|se)?|enterprises?|traders?|"
+    r"associates|agenc(?:y|ies))\b"
+)
+
+
+def _stockist_candidate_score(line: str) -> int:
+    """Score a candidate stockist line; UI chrome scores negative."""
+    s = (line or "").strip()
+    if not s:
+        return -100
+    score = 0
+    if _PORTAL_UI_CHROME.search(s):
+        # Nav/chrome lines often contain a weak 'Agency' token — reject.
+        score -= 50
+    if _STRONG_STOCKIST_HINT.search(s):
+        score += 20
+    if re.search(r"(?i)\bdistributors?\b", s):
+        score += 15
+    if s.isupper() and 3 <= len(re.findall(r"[A-Za-z]{3,}", s)) <= 6:
+        score += 8
+    if _looks_like_stockist_header(s):
+        score += 5
+    else:
+        score -= 10
+    return score
+
+
 def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     """Return stockist name if this page starts a (new) statement."""
     lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
@@ -13720,14 +13849,73 @@ def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     if _page_text_looks_like_continuation(text):
         return None
 
-    # Prefer first stockist-like line near top
-    for ln in lines[:8]:
-        if _looks_like_stockist_header(ln):
-            # Require statement context somewhere on page when possible
-            if _STATEMENT_TITLE_HINT.search(text) or _STOCKIST_NAME_HINT.search(ln):
-                return _clean_stockist_label(ln)
-            return _clean_stockist_label(ln)
-    return None
+    # Score candidates in the header band; prefer distributor/pharma banners
+    # over portal nav chrome (e.g. "Home Profile Agency … Contact us").
+    scored: List[Tuple[int, int, str]] = []
+    for i, ln in enumerate(lines[:15]):
+        if not _looks_like_stockist_header(ln) and not _STRONG_STOCKIST_HINT.search(ln):
+            # Still consider ALL-CAPS short banners for pairing.
+            letters = re.sub(r"[^A-Za-z]", "", ln)
+            if not (
+                letters
+                and letters.isupper()
+                and 4 <= len(letters) <= 24
+                and len(ln.split()) <= 4
+            ):
+                continue
+        sc = _stockist_candidate_score(ln)
+        scored.append((sc, i, ln))
+        logger.info(
+            "[STOCKIST_MATCH] source_text=%r candidate_index=%s score=%s "
+            "matching_method=header_line_score",
+            ln[:120],
+            i,
+            sc,
+        )
+
+    if not scored:
+        return None
+
+    scored.sort(key=lambda t: (-t[0], t[1]))
+    best_score, best_i, best_ln = scored[0]
+    if best_score < 5:
+        logger.info(
+            "[STOCKIST_MATCH] final_stockist_id=null reason=low_confidence "
+            "best_score=%s best_text=%r",
+            best_score,
+            best_ln[:120],
+        )
+        return None
+
+    # Join adjacent ALL-CAPS name + "… DISTRIBUTORS" into one label.
+    chosen = best_ln
+    if best_i > 0 and re.search(r"(?i)\bdistributors?\b", best_ln):
+        prev = lines[best_i - 1]
+        prev_letters = re.sub(r"[^A-Za-z]", "", prev)
+        if (
+            prev_letters
+            and prev_letters.isupper()
+            and 3 <= len(prev_letters) <= 24
+            and len(prev.split()) <= 4
+            and not _PORTAL_UI_CHROME.search(prev)
+        ):
+            chosen = f"{prev} {best_ln}"
+            logger.info(
+                "[STOCKIST_MATCH] joined_banner prev=%r with=%r",
+                prev[:80],
+                best_ln[:80],
+            )
+
+    cleaned = _clean_stockist_label(chosen)
+    logger.info(
+        "[STOCKIST_MATCH] source_text=%r normalized_text=%r "
+        "matching_method=scored_header confidence=%s final_stockist_name=%r",
+        best_ln[:120],
+        cleaned[:120],
+        best_score,
+        cleaned,
+    )
+    return cleaned
 
 
 def _ocr_pdf_page_text(page, zoom: float = 2.0) -> Tuple[str, bytes]:
@@ -13996,7 +14184,14 @@ def _ssa_skip_product(name: str) -> bool:
         r"stock\s*&\s*sales|stock\s+and\s+sales|himalaya\s+wellness|"
         r"item\s*description|opening\s*stock|closing\s*stock|total\s*stock|"
         r"total\s*quantity|value\s+in\s+rs|continued|page\s*\d|grand\s*total|"
-        r"^total\b|column\s*no|formula",
+        r"^total\b|column\s*no|formula|"
+        # Page/section subtotal label (often without leading "Total").
+        r"^(?:total\s+)?quantity$|"
+        # Continuation-page stockist / distributor banner, not a SKU.
+        r"\b(?:pharmaceutical\s+)?distributors?\s*$|"
+        r"\bdrug\s+(?:house|distributors?)\s*$|"
+        r"\bagenc(?:y|ies)\s*$|"
+        r"\benterprises\s*$",
         text,
         re.I,
     ):
@@ -28371,6 +28566,56 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        # Camera-merged multi-page stock PDFs (Flutter): per-page extract +
+        # cross-page identity resolution. Image-only, page_count>=2 only —
+        # does not claim native/text multi-page PDFs.
+        try:
+            from services.stock_multipage import parse_camera_multipage_stock_pdf
+
+            multipage = parse_camera_multipage_stock_pdf(
+                file_bytes,
+                filename,
+                parse_image_fn=_parse_image,
+                max_pages=max_pages,
+                zoom=zoom,
+            )
+            if multipage and (multipage.get("line_items") or []):
+                try:
+                    from services.stock_reconciliation import (
+                        apply_stock_reconciliation,
+                    )
+
+                    request_id = "-"
+                    try:
+                        from services.sales_extraction_runtime import (
+                            resolve_request_id,
+                        )
+
+                        request_id = resolve_request_id()
+                    except Exception:
+                        request_id = "-"
+                    multipage = apply_stock_reconciliation(
+                        multipage, request_id=request_id, page=1
+                    )
+                except Exception:
+                    pass
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=camera_multipage_ok "
+                    "file=%s pages=%s line_items=%s",
+                    filename,
+                    ((multipage.get("totals") or {}).get("extra") or {}).get(
+                        "page_count"
+                    ),
+                    len(multipage.get("line_items") or []),
+                )
+                return multipage
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s camera_multipage path skipped: %s",
+                filename,
+                type(exc).__name__,
+            )
+
         # Phase 2b-2: Vision table PRIMARY for scanned PDFs when flagged on.
         try:
             from services.stock_vision_table import (
@@ -43374,8 +43619,10 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 # Final for this image — do NOT continue into STOCK_VISION_TABLE.
                 extra = result.setdefault("totals", {}).setdefault("extra", {})
                 if isinstance(extra, dict):
+                    _geo_engine = extra.get("extraction_engine") or "geometry_v3"
                     extra["extraction_method"] = "geometry_cell_ocr"
-                    extra["extraction_engine"] = "geometry_v3"
+                    # Preserve hybrid_10col / text_columns engine tags from geometry path.
+                    extra["extraction_engine"] = _geo_engine
                     extra["geometry_version"] = "v3"
                     extra["geometry_cell_ocr_final"] = True
                     extra["vision_table_final"] = True

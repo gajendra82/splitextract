@@ -29,8 +29,14 @@ import numpy as np
 from PIL import Image
 
 from services.stock_geometry_hybrid_v3 import (
+    get_blue_suppression_stats,
+    is_blue_suppression_enabled,
+    max_channel_blue_suppress,
     remove_blue_preserve_ink,
+    reset_blue_suppression_stats,
+    select_ocr_variants,
     select_orig_vs_clean,
+    write_blue_suppression_debug,
 )
 from services.stock_header_resolver import resolve_columns
 from services.stock_ocr_table_reconstructor import validate_row_identity
@@ -233,13 +239,103 @@ _NON_PRODUCT_RULES: List[Tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bprepared\b", re.I), "metadata_footer"),
     (re.compile(r"\bgenerated\b", re.I), "metadata_footer"),
     (re.compile(r"^\s*date\b", re.I), "metadata_date_row"),
-    (re.compile(r"\bdistributor\b", re.I), "metadata_distributor"),
+    # Period / report-range lines (OCR may drop leading "Peri").
+    (
+        re.compile(
+            r"(?:\bperiod\s*)?from\s+\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4}\s+to\b",
+            re.I,
+        ),
+        "period_meta",
+    ),
+    (re.compile(r"\bdistributors?\b", re.I), "metadata_distributor"),
     (re.compile(r"\baddress\b", re.I), "metadata_address"),
     (re.compile(r"\bgst(?:in)?\b", re.I), "metadata_gst"),
     (re.compile(r"\b(?:phone|mobile|tel|contact)\b", re.I), "metadata_contact"),
     (re.compile(r"^\s*name\s+packg?\b", re.I), "metadata_header_row"),
     (re.compile(r"^\s*op\.?\s*stk\b", re.I), "metadata_header_row"),
+    # Portal UI chrome / action labels under the table.
+    (
+        re.compile(
+            r"^(?:purchase\s+bills?|print\s+data|export\s+to\s+excel|file\s+list|"
+            r"home|profile|agency|retailer|m\.?r\.?)$",
+            re.I,
+        ),
+        "ui_chrome",
+    ),
+    # Company / division banners without SKU structure.
+    (
+        re.compile(r"\bdrug\s+co(?:mpany)?\b|\bwellness\b", re.I),
+        "metadata_company_banner",
+    ),
 ]
+
+_COLUMN_HEADING_NAME = re.compile(
+    r"^(?:product(?:\s*name)?|item(?:\s*name)?|pack(?:ing|g)?|op\.?\s*stk|"
+    r"purch(?:ase)?s?|sl/?iss|cl\.?\s*stk|rate|cl\.?\s*val|sr\.?|"
+    r"opening|receipts?|sales?|closing|lms|qty|quantity|value)$",
+    re.I,
+)
+
+_PACK_UNIT_HINT = re.compile(
+    r"\b\d+\s*(?:ml|mg|gm|g|kg|tab|tabs|cap|caps|syp|syrup|drops?|nos?)\b",
+    re.I,
+)
+
+_QTY_EVIDENCE_KEYS = (
+    "opening_qty",
+    "purchase_qty",
+    "receipts_qty",
+    "sales_qty",
+    "sales_return_qty",
+    "closing_qty",
+    "closing_value",
+    "total_qty",
+    "lms",
+)
+
+
+def _is_ocr_garbage_product_name(text: str) -> bool:
+    """True for decorative / glyph-noise strings that are not SKU names."""
+    t = str(text or "").strip()
+    if not t:
+        return True
+    letters = sum(1 for c in t if c.isalpha())
+    digits = sum(1 for c in t if c.isdigit())
+    alnum = letters + digits
+    if letters < 3 and digits < 1:
+        return True
+    if len(t) >= 8 and alnum / max(len(t), 1) < 0.45:
+        return True
+    # Long glyph runs (eeeeeee / ———) — ignore short product marks like V-GEL**.
+    if re.search(r"([A-Za-z])\1{5,}", t) or re.search(r"([^A-Za-z0-9\s])\1{4,}", t):
+        return True
+    # Heavy punctuation noise; allow common SKU marks (* - . /).
+    junk = sum(
+        1
+        for c in t
+        if (not c.isalnum()) and (not c.isspace()) and c not in "*-./()&+'"
+    )
+    if len(t) >= 8 and junk / max(len(t), 1) > 0.35:
+        return True
+    # Fragmented OCR crumbs (e.g. "rt_ : er per_ on") — mostly tiny letter tokens.
+    alpha_tokens = re.findall(r"[A-Za-z]+", t)
+    if (
+        digits == 0
+        and len(alpha_tokens) >= 3
+        and sum(1 for w in alpha_tokens if len(w) <= 2) / len(alpha_tokens) >= 0.6
+    ):
+        return True
+    return False
+
+
+def _selected_has_printed_qty(selected: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(selected, dict):
+        return False
+    # Only evaluate when qty keys were populated by the extractor.
+    present_keys = [k for k in _QTY_EVIDENCE_KEYS if k in selected]
+    if not present_keys:
+        return False
+    return any(selected.get(k) is not None for k in present_keys)
 
 
 def classify_grid_row(
@@ -251,7 +347,7 @@ def classify_grid_row(
     """Classify a geometry row as PRODUCT or NON_PRODUCT.
 
     Only PRODUCT rows may become line items. Classification uses normalized
-    text + structural cues — never filename codes.
+    text + structural cues — never filename codes or Product Master lookup.
     """
     text = str(product_text or "").strip()
     if not text:
@@ -260,13 +356,32 @@ def classify_grid_row(
     norm = re.sub(r"\s+", " ", text).strip()
     norm_l = norm.lower()
     compact = re.sub(r"[^a-z0-9]+", "", norm_l)
+    pack = str(packing or "").strip()
+    if isinstance(selected, dict):
+        if not pack:
+            pack = str(selected.get("packing") or selected.get("pack") or "").strip()
+
+    if _is_ocr_garbage_product_name(norm):
+        return "NON_PRODUCT", "ocr_garbage"
+
+    if _COLUMN_HEADING_NAME.match(norm):
+        return "NON_PRODUCT", "column_header"
 
     for pattern, reason in _NON_PRODUCT_RULES:
         if pattern.search(norm) or pattern.search(norm_l):
             return "NON_PRODUCT", reason
 
     # Lone place/header tokens (e.g. KALPETTA)
-    if compact in {"kalpetta", "name", "packg", "packing", "lms"}:
+    if compact in {
+        "kalpetta",
+        "name",
+        "packg",
+        "packing",
+        "pack",
+        "lms",
+        "product",
+        "productname",
+    }:
         return "NON_PRODUCT", "metadata_banner_token"
 
     # Must contain alphabetic product-like content
@@ -276,6 +391,14 @@ def classify_grid_row(
     # "Company 171 HIMALAY" without colon still non-product if starts with company
     if norm_l.startswith("company"):
         return "NON_PRODUCT", "metadata_company_row"
+
+    # When qty cells were OCR'd, require at least one printed quantity/value.
+    # Header/banner/OCR-noise rows typically have every qty cell missing.
+    if isinstance(selected, dict) and any(k in selected for k in _QTY_EVIDENCE_KEYS):
+        if not _selected_has_printed_qty(selected):
+            pack_ok = bool(_PACK_UNIT_HINT.search(pack) or _PACK_UNIT_HINT.search(norm))
+            if not pack_ok:
+                return "NON_PRODUCT", "no_printed_qty_evidence"
 
     return "PRODUCT", None
 
@@ -312,6 +435,7 @@ VARIANT_ORDER = (
     "E_adaptive",
     "F_blue_removed",
     "G_sharpened",
+    "H_max_channel",
 )
 
 
@@ -1441,12 +1565,14 @@ def _wipe_cell_grid_lines(gray_crop: np.ndarray) -> np.ndarray:
 
 
 def _prep_variants(bgr_crop: np.ndarray) -> Tuple[Dict[str, np.ndarray], int]:
+    """A=grayscale, B=blue-suppressed (F_*), C=max-channel (H_*) + legacy extras."""
     if bgr_crop.ndim == 2:
         bgr_crop = cv2.cvtColor(bgr_crop, cv2.COLOR_GRAY2BGR)
     gray = cv2.cvtColor(bgr_crop, cv2.COLOR_BGR2GRAY)
     gray_nogrid = _wipe_cell_grid_lines(gray)
     cleaned, blue_px, _ = remove_blue_preserve_ink(bgr_crop)
     cleaned_gray = _wipe_cell_grid_lines(cv2.cvtColor(cleaned, cv2.COLOR_BGR2GRAY))
+    max_ch = _wipe_cell_grid_lines(max_channel_blue_suppress(bgr_crop))
 
     def up(im: np.ndarray, fx: int = 6) -> np.ndarray:
         return cv2.resize(im, None, fx=fx, fy=fx, interpolation=cv2.INTER_CUBIC)
@@ -1480,6 +1606,8 @@ def _prep_variants(bgr_crop: np.ndarray) -> Tuple[Dict[str, np.ndarray], int]:
     blur = cv2.GaussianBlur(up(gray_nogrid), (0, 0), 1.0)
     sharp = cv2.addWeighted(up(gray_nogrid), 1.8, blur, -0.8, 0)
     variants["G_sharpened"] = sharp
+    if is_blue_suppression_enabled():
+        variants["H_max_channel"] = up(max_ch)
     return variants, blue_px
 
 
@@ -1573,6 +1701,15 @@ def ocr_numeric_cell(
         ink = _ink_ratio(gcrop)
 
     variants, blue_px = _prep_variants(bcrop)
+    if blue_px > 0:
+        from services.stock_geometry_hybrid_v3 import _BLUE_SUPPRESSION_STATS
+
+        _BLUE_SUPPRESSION_STATS["blue_pixels_detected"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_pixels_detected") or 0
+        ) + int(blue_px)
+        _BLUE_SUPPRESSION_STATS["blue_cells_detected"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_cells_detected") or 0
+        ) + 1
     cand_list: List[Dict[str, Any]] = []
     cand_map: Dict[str, Any] = {}
     values: List[Tuple[str, str, float, Optional[float], bool, bool]] = []
@@ -1582,7 +1719,12 @@ def ocr_numeric_cell(
         im = variants.get(name)
         if im is None:
             continue
-        for psm in psm_modes if name in ("A_original", "E_adaptive", "G_sharpened") else (8,):
+        for psm in psm_modes if name in (
+            "A_original",
+            "E_adaptive",
+            "G_sharpened",
+            "H_max_channel",
+        ) else (8,):
             raw, conf = _tess_read(
                 im, numeric=True, allow_decimal=allow_decimal, psm=psm
             )
@@ -1603,10 +1745,11 @@ def ocr_numeric_cell(
             cand_map[key] = entry
             values.append((key, raw, conf, val, blank, uncertain))
 
-    non_null = [v for v in values if v[3] is not None and not v[5]]
-    soft_null = [v for v in values if v[3] is not None]
-    use = non_null or soft_null
-    if not use:
+    best, reason, changed = select_ocr_variants(values, min_conf=40.0)
+    cand_map["ocr_variant_selected"] = best[0] if best else None
+    cand_map["blue_suppression_changed_ocr"] = bool(changed)
+
+    if best is None:
         # Sparse right-aligned digits can look nearly blank — do not invent,
         # but mark uncertain so Gemini cell fallback can read the crop.
         if ink < 0.007:
@@ -1642,18 +1785,36 @@ def ocr_numeric_cell(
             column_index=column_index,
         )
 
-    counts = Counter(v[3] for v in use)
-    best_val, _ = counts.most_common(1)[0]
-    agreeing = [v for v in use if v[3] == best_val]
-    best = max(agreeing, key=lambda v: v[2])
-    disagree = len(counts) > 1
-    low = best[2] < (20 if len(counts) == 1 else 40)
-    uncertain = disagree or low or best[5]
-    reason = "majority_vote"
-    if disagree:
-        reason = "disagree_variants_uncertain"
-    elif low:
-        reason = "low_confidence_uncertain"
+    best_val = best[3]
+    uncertain = (
+        reason
+        in (
+            "disagree_variants_uncertain",
+            "low_confidence_uncertain",
+            "no_numeric",
+        )
+        or best[5]
+        or best_val is None
+    )
+    if reason in (
+        "blue_variants_agree_orig_weak",
+        "prefer_blue_orig_low_conf",
+        "prefer_blue_high_conf_vs_weak_orig",
+        "blue_and_max_channel_agree",
+        "all_variants_agree",
+        "majority_vote",
+        "single_adequate_variant",
+    ) and best[2] >= 40.0 and best_val is not None:
+        uncertain = False
+    if changed and not uncertain and best_val is not None:
+        from services.stock_geometry_hybrid_v3 import _BLUE_SUPPRESSION_STATS
+
+        _BLUE_SUPPRESSION_STATS["cells_recovered"] = int(
+            _BLUE_SUPPRESSION_STATS.get("cells_recovered") or 0
+        ) + 1
+        _BLUE_SUPPRESSION_STATS["blue_suppression_changed_ocr"] = int(
+            _BLUE_SUPPRESSION_STATS.get("blue_suppression_changed_ocr") or 0
+        ) + 1
     return CellResult(
         column=column,
         raw_ocr=best[1],
@@ -2876,11 +3037,109 @@ def run_geometry_table_v3(
     if bgr is None:
         return {"error": f"cannot_read:{path}"}
 
+    reset_blue_suppression_stats()
+    try:
+        write_blue_suppression_debug(bgr)
+    except Exception as exc:
+        logger.info("blue_suppression_debug_failed err=%s", type(exc).__name__)
+
     t_all = time.perf_counter()
     perf: Dict[str, Any] = {
         "feature_flag": STOCK_GEOMETRY_CELL_OCR_FLAG,
         "feature_flag_enabled": is_geometry_cell_ocr_enabled(),
+        "blue_suppression_enabled": is_blue_suppression_enabled(),
     }
+
+    # 10-col Opening/Purchase/Sale/Balance statements use hybrid grid+OCR
+    # (same Geometry V3 family). Do not change Op.Stk/LMS 14-col path.
+    try:
+        from services.stock_geometry_hybrid_v2 import detect_grid as _detect_hybrid_grid
+        from services.stock_geometry_hybrid_v3 import run_hybrid_v3 as _run_hybrid_v3
+
+        _hg = _detect_hybrid_grid(bgr)
+        _ncols = len(_hg.get("col_xs") or []) - 1
+        if _ncols == 10 and len(_hg.get("row_ys") or []) >= 5:
+            hybrid = _run_hybrid_v3(
+                path,
+                debug_png=debug_png,
+                enable_gemini=enable_gemini,
+            )
+            if not hybrid.get("error"):
+                hybrid["feature_flag"] = {
+                    "name": STOCK_GEOMETRY_CELL_OCR_FLAG,
+                    "enabled": is_geometry_cell_ocr_enabled(),
+                }
+                hybrid["production_switched"] = False
+                geom = hybrid.setdefault("geometry", {})
+                geom["detection_mode"] = "hybrid_10col"
+                geom["header_source"] = str(
+                    hybrid.get("header_mapping_source") or "positional_fallback"
+                )
+                geom["text_column_format"] = "STOCK_OPENING_PURCHASE_SALE_BALANCE_10COL"
+                # Normalize rows for production accept path.
+                for r in hybrid.get("rows") or []:
+                    sel = dict(r.get("selected") or {})
+                    name = str(
+                        sel.get("product_name")
+                        or r.get("product_name_ocr")
+                        or ""
+                    ).strip()
+                    pack = str(sel.get("packing") or sel.get("pack") or "").strip()
+                    # Align hybrid field names before structural classification.
+                    if "purchase_qty" in sel and "receipts_qty" not in sel:
+                        sel["receipts_qty"] = sel.get("purchase_qty")
+                    if "pack" in sel and "packing" not in sel:
+                        sel["packing"] = sel.get("pack")
+                    row_class, reject_reason = classify_grid_row(
+                        name, pack, selected=sel
+                    )
+                    r["row_class"] = row_class
+                    if reject_reason:
+                        r["reject_reason"] = reject_reason
+                    if row_class != "PRODUCT":
+                        logger.info(
+                            "GEOMETRY_V3_HYBRID_ROW_REJECT request_id=- "
+                            "reason=%s name=%s",
+                            reject_reason,
+                            name[:80],
+                        )
+                        continue
+                    r["selected"] = sel
+                    r["business_fields"] = {
+                        "lms": None,
+                        "opening_qty": sel.get("opening_qty"),
+                        "receipts_qty": sel.get(
+                            "receipts_qty", sel.get("purchase_qty")
+                        ),
+                        "purchase_return_qty": sel.get("purchase_return_qty"),
+                        "sales_qty": sel.get("sales_qty"),
+                        "sales_return_qty": sel.get("sales_return_qty"),
+                        "breakage_qty": None,
+                        "replacement_qty": None,
+                        "closing_qty": sel.get("closing_qty"),
+                        "closing_value": sel.get("closing_value"),
+                        "free_out_qty": None,
+                        "total_qty": sel.get("total_qty"),
+                        "rate": sel.get("rate"),
+                    }
+                hybrid["file"] = str(path)
+                hybrid["non_product_rows_rejected"] = sum(
+                    1
+                    for r in (hybrid.get("rows") or [])
+                    if r.get("row_class") == "NON_PRODUCT"
+                )
+                logger.info(
+                    "GEOMETRY_V3 status=hybrid_10col_blue_tick rows=%s cols=10 "
+                    "blue_cells=%s",
+                    len(hybrid.get("rows") or []),
+                    (hybrid.get("blue_suppression") or {}).get("blue_cells_detected"),
+                )
+                return hybrid
+    except Exception as exc:
+        logger.info(
+            "GEOMETRY_V3 hybrid_10col_probe_failed err=%s — continuing table path",
+            type(exc).__name__,
+        )
 
     t0 = time.perf_counter()
     geometry = detect_table_geometry(bgr)
@@ -3198,9 +3457,33 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
 
     Missing printed cells stay missing in field_source; top-level qty uses 0.0
     only at the API boundary (legacy contract). Never invents from arithmetic.
+
+    Hybrid 10-col blue-tick layouts use purchase_qty/pack/total_qty in selected;
+    those are mapped to receipts_qty/packing/extra.total_stock here.
     """
-    sel = row.get("selected") or {}
-    biz = row.get("business_fields") or sel
+    sel = dict(row.get("selected") or {})
+    # Hybrid Opening/Purchase/Sale/Balance → Laravel field names.
+    if "receipts_qty" not in sel and sel.get("purchase_qty") is not None:
+        sel["receipts_qty"] = sel.get("purchase_qty")
+    if "packing" not in sel and sel.get("pack") is not None:
+        sel["packing"] = sel.get("pack")
+    if not sel.get("product_name"):
+        sel["product_name"] = row.get("product_name_ocr")
+    biz = dict(row.get("business_fields") or {})
+    if not biz:
+        biz = {
+            "opening_qty": sel.get("opening_qty"),
+            "receipts_qty": sel.get("receipts_qty", sel.get("purchase_qty")),
+            "purchase_return_qty": sel.get("purchase_return_qty"),
+            "sales_qty": sel.get("sales_qty"),
+            "sales_return_qty": sel.get("sales_return_qty"),
+            "closing_qty": sel.get("closing_qty"),
+            "closing_value": sel.get("closing_value"),
+            "lms": sel.get("lms"),
+            "total_qty": sel.get("total_qty"),
+        }
+    elif "receipts_qty" not in biz and biz.get("purchase_qty") is not None:
+        biz["receipts_qty"] = biz.get("purchase_qty")
 
     def _top(val: Any, *, closing: bool = False) -> Any:
         if val is None:
@@ -3235,6 +3518,10 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
     else:
         closing_value_source = "product_value_calculation"
 
+    total_qty = biz.get("total_qty")
+    if total_qty is None:
+        total_qty = sel.get("total_qty")
+
     item: Dict[str, Any] = {
         "product_code": None,
         "product_name": sel.get("product_name"),
@@ -3253,6 +3540,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
             "exp_damage": biz.get("breakage_qty"),
             "replacement_qty": biz.get("replacement_qty"),
             "free_out_qty": biz.get("free_out_qty"),
+            "total_stock": total_qty,
             "geometry_row": True,
             "geometry_row_index": row.get("row_index"),
             "physical_values": row.get("physical_values"),
@@ -3263,6 +3551,8 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
             "closing_value_source": closing_value_source,
         },
     }
+    if total_qty is not None:
+        item["extra"]["field_source"]["total_qty"] = "printed"
     return item
 
 
@@ -3344,6 +3634,8 @@ def run_geometry_cell_ocr_path(
         }
 
     header_source = str((report.get("geometry") or {}).get("header_source") or "")
+    if not header_source:
+        header_source = str(report.get("header_mapping_source") or "")
     detection_mode = str((report.get("geometry") or {}).get("detection_mode") or "")
     columns = list(report.get("columns") or [])
     has_sales_col = any(
@@ -3355,7 +3647,14 @@ def run_geometry_cell_ocr_path(
         and header_source.startswith("text_columns")
         and has_sales_col
     )
-    if not accept_physical and not accept_text_columns:
+    # Blue-tick Opening/Purchase/Goods Ret/Total In/Sale/Balance 10-col layout
+    # (Geometry hybrid v3). Generic — not filename-specific.
+    accept_hybrid_10col = detection_mode == "hybrid_10col" and has_sales_col and (
+        header_source.startswith("positional")
+        or "positional" in header_source
+        or bool(columns)
+    )
+    if not accept_physical and not accept_text_columns and not accept_hybrid_10col:
         return {
             "status": "fallback",
             "reason": "GEOMETRY_LAYOUT_NOT_OPSTK_LMS",
@@ -3367,6 +3666,29 @@ def run_geometry_cell_ocr_path(
     product_rows = [
         r for r in (report.get("rows") or []) if r.get("row_class") == "PRODUCT"
     ]
+    if accept_hybrid_10col and len(product_rows) < 3:
+        # Hybrid rows may lack row_class if built before normalize — recover.
+        recovered = []
+        for r in report.get("rows") or []:
+            sel = dict(r.get("selected") or {})
+            name = str(
+                sel.get("product_name")
+                or r.get("product_name_ocr")
+                or ""
+            ).strip()
+            pack = str(sel.get("packing") or sel.get("pack") or "").strip()
+            if "purchase_qty" in sel and "receipts_qty" not in sel:
+                sel["receipts_qty"] = sel.get("purchase_qty")
+            row_class, reject_reason = classify_grid_row(name, pack, selected=sel)
+            if row_class != "PRODUCT":
+                r["row_class"] = "NON_PRODUCT"
+                if reject_reason:
+                    r["reject_reason"] = reject_reason
+                continue
+            r["row_class"] = "PRODUCT"
+            r["selected"] = sel
+            recovered.append(r)
+        product_rows = recovered
     if len(product_rows) < 3:
         return {
             "status": "fallback",
@@ -3455,6 +3777,11 @@ def run_geometry_cell_ocr_path(
             "closing_value": None,
             "extra": {
                 "extraction_method": "geometry_cell_ocr",
+                "extraction_engine": (
+                    "geometry_v3_hybrid_10col"
+                    if accept_hybrid_10col
+                    else "geometry_v3"
+                ),
                 "vision_table_final": True,  # skip post Gemini gates
                 "geometry_cell_ocr_final": True,
                 "column_map": column_map,
@@ -3465,6 +3792,9 @@ def run_geometry_cell_ocr_path(
                 "gemini_budget": 2,
                 "skip_post_pipeline_gemini": True,
                 "text_column_format": text_fmt or None,
+                "detection_mode": detection_mode or None,
+                "blue_suppression": report.get("blue_suppression")
+                or (report.get("metrics") or {}).get("blue_suppression"),
                 "closing_value_source_mode": "per_line_item",
                 "stockist_metadata_source": meta.get("metadata_source"),
                 "stockist_metadata_reason": meta.get("metadata_reason"),
@@ -3473,11 +3803,12 @@ def run_geometry_cell_ocr_path(
     }
     logger.info(
         "GEOMETRY_CELL_OCR request_id=%s status=ok products=%s non_products=%s "
-        "gemini_calls=%s",
+        "gemini_calls=%s detection_mode=%s",
         request_id,
         len(product_rows),
         report.get("non_product_rows_rejected"),
         (report.get("gemini") or {}).get("api_calls"),
+        detection_mode,
     )
     return {
         "status": "ok",
