@@ -238,7 +238,7 @@ class ConfigDeadlineTests(unittest.TestCase):
     def test_defaults(self):
         self.assertEqual(runtime.MAX_CONCURRENT_EXTRACTIONS, 2)
         self.assertEqual(runtime.MAX_CONCURRENT_GEMINI_REQUESTS, 2)
-        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 600)
+        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 1200)
 
 
 if __name__ == "__main__":

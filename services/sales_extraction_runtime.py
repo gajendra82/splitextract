@@ -43,10 +43,11 @@ SALES_EXTRACTION_QUEUE_TIMEOUT = _env_positive_int(
     int(os.getenv("REQUEST_QUEUE_TIMEOUT", "3600") or "3600"),
 )
 # Hard wall-clock budget for one extraction after admission (not queue wait).
-# Live image+vision jobs commonly finish in ~200-285s; 600s leaves headroom
-# for Gemini 429 backoff without approaching Laravel's 3600s HTTP timeout.
+# Live image+vision jobs commonly finish in ~200-285s; large phone photos and
+# Gemini 429 backoff can exceed 600s. 1200s still sits under Laravel's 3600s
+# HTTP/queue timeout and does not change format routing.
 SALES_EXTRACTION_MAX_EXECUTION_SECONDS = _env_positive_int(
-    "SALES_EXTRACTION_MAX_EXECUTION_SECONDS", 600
+    "SALES_EXTRACTION_MAX_EXECUTION_SECONDS", 1200
 )
 # Bound each sales OCR subprocess even when global OCR timeout flag is off.
 SALES_TESSERACT_CALL_TIMEOUT_SECONDS = _env_positive_int(
