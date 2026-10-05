@@ -77,8 +77,9 @@ class TestZlOpeningBalScan(unittest.TestCase):
         self.assertIsNotNone(platenza)
         self.assertEqual(platenza["opening_qty"], 155.0)
         self.assertEqual(platenza["closing_qty"], 55.0)
-        self.assertEqual(result.get("period_from"), "2026-08-01")
-        self.assertEqual(result.get("period_to"), "2026-08-31")
+        # Scan OCR has no printed report period — do not invent from filename.
+        self.assertIsNone(result.get("period_from"))
+        self.assertIsNone(result.get("period_to"))
         self.assertGreater(_to_float_safe(result.get("totals", {}).get("closing_value")), 0)
 
 

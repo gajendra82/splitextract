@@ -164,6 +164,76 @@ class NumericChromeStripTests(unittest.TestCase):
         self.assertEqual(_normalize_numeric("2000"), (2000.0, False, False))
 
 
+class IdentityOcrPickTests(unittest.TestCase):
+    def test_opening_candidate_selected_when_total_balances(self):
+        from services.stock_geometry_hybrid_v3 import reconcile_row_from_ocr_candidates
+
+        row = {
+            "selected": {
+                "opening_qty": 356.0,
+                "purchase_qty": 0.0,
+                "total_qty": 36.0,
+                "sales_qty": 4.0,
+                "sales_return_qty": None,
+                "purchase_return_qty": None,
+                "closing_qty": None,
+            },
+            "cells": {
+                "opening_qty": {
+                    "normalized": 356.0,
+                    "candidates": {
+                        "A_original": {"normalized": 356.0},
+                        "H_max_channel": {"normalized": 36.0},
+                    },
+                },
+                "closing_qty": {
+                    "normalized": None,
+                    "ocr_uncertain": True,
+                    "candidates": {
+                        "C_threshold": {"normalized": 32.0, "uncertain": True},
+                    },
+                },
+            },
+        }
+        reconcile_row_from_ocr_candidates(row)
+        self.assertEqual(row["selected"]["opening_qty"], 36.0)
+        self.assertEqual(row["selected"]["closing_qty"], 32.0)
+
+    def test_purchase_candidate_selected_when_total_balances(self):
+        from services.stock_geometry_hybrid_v3 import reconcile_row_from_ocr_candidates
+
+        row = {
+            "selected": {
+                "opening_qty": 28.0,
+                "purchase_qty": 60.0,
+                "total_qty": 28.0,
+                "sales_qty": 0.0,
+                "closing_qty": 28.0,
+            },
+            "cells": {
+                "opening_qty": {
+                    "normalized": 28.0,
+                    "candidates": {"A_original": {"normalized": 28.0}},
+                },
+                "purchase_qty": {
+                    "normalized": 60.0,
+                    "candidates": {
+                        "A_original": {"normalized": 60.0},
+                        "C_threshold": {"normalized": 0.0},
+                        "E_contrast": {"normalized": 0.0},
+                    },
+                },
+                "closing_qty": {
+                    "normalized": 28.0,
+                    "candidates": {"A_original": {"normalized": 28.0}},
+                },
+            },
+        }
+        reconcile_row_from_ocr_candidates(row)
+        self.assertEqual(row["selected"]["purchase_qty"], 0.0)
+        self.assertEqual(row["selected"]["opening_qty"], 28.0)
+
+
 class StockistConsistencyTests(unittest.TestCase):
     def test_prefers_distributor_banner_over_nav_chrome(self):
         text = (

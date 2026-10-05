@@ -3728,8 +3728,15 @@ def run_geometry_cell_ocr_path(
         {
             "col_index": c.get("physical_column_index", c.get("col_index")),
             "canonical": c.get("business_field") or c.get("canonical"),
-            "header_text": c.get("source_header"),
-            "mapping_source": c.get("mapping_source"),
+            "header_text": c.get("source_header")
+            or c.get("header_text")
+            or c.get("text"),
+            "mapping_source": c.get("mapping_source")
+            or (report.get("perf") or {}).get("header_mapping_source")
+            or (report.get("geometry") or {}).get("header_source"),
+            "x0": c.get("x0"),
+            "x1": c.get("x1"),
+            "x_center": c.get("x_center"),
         }
         for c in (report.get("columns") or [])
     ]

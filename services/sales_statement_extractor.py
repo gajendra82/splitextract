@@ -517,6 +517,167 @@ def _apply_period_from_fallback(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _statement_period_content_only_enabled() -> bool:
+    """When on, never invent statement period from filename/upload/clock."""
+    import os
+
+    return os.getenv("STOCK_STATEMENT_PERIOD_CONTENT_ONLY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+# Report-header period patterns only — not bare transaction/print dates.
+_REPORT_PERIOD_RANGE_RE = re.compile(
+    r"(?:STOCK\s*&\s*SALES\s*(?:ANALYSIS)?|Sales\s*&\s*Stock\s*Statement|"
+    r"STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|Period\s*:?|FOR\s+THE\s+PERIOD|"
+    r"Statement\s+Period|Report\s+Period|Monthly\s+Stock)"
+    r"[^\n]{0,120}?"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|upto|-|–|—)\s*"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    re.I,
+)
+_REPORT_PERIOD_FROM_TO_RE = re.compile(
+    r"(?:FROM|FORM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
+    r"(?:TO|Upto|upto|and|to|-|–|—)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    re.I,
+)
+_REPORT_PERIOD_INLINE_RE = re.compile(
+    r"^\s*(?:STOCK\s*&\s*SALES\s*ANALYSIS|Sales\s*&\s*Stock\s*Statement)"
+    r"[^\d\n]{0,40}"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-|–|—)\s*"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    re.I | re.M,
+)
+
+
+def _extract_report_period_from_content(
+    text: Optional[str],
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """Extract statement period only from report/header wording in content.
+
+    Returns (period_from, period_to, source) or (None, None, None).
+    Does not read filename, upload time, or unrelated body dates.
+    """
+    if not text:
+        return None, None, None
+    # Prefer the first ~40 lines (title/header band).
+    header_band = "\n".join((text or "").splitlines()[:40])
+    for pattern, source in (
+        (_REPORT_PERIOD_INLINE_RE, "report_header"),
+        (_REPORT_PERIOD_RANGE_RE, "report_period"),
+        (_REPORT_PERIOD_FROM_TO_RE, "report_from_to"),
+    ):
+        m = pattern.search(header_band) or pattern.search(text[:4000])
+        if not m:
+            continue
+        pf = _normalize_date(m.group(1))
+        pt = _normalize_date(m.group(2))
+        if pf and pt:
+            return pf, pt, source
+    return None, None, None
+
+
+def _accept_vision_statement_period(
+    statement_period: Any,
+) -> Tuple[Optional[str], Optional[str]]:
+    """Accept Gemini statement_period only when it looks like a report range."""
+    text = str(statement_period or "").strip()
+    if not text:
+        return None, None
+    # Must contain a clear date range, not a lone print/upload date.
+    m = re.search(
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-|–|—)\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        text,
+        re.I,
+    )
+    if not m:
+        # Single ISO month range like 2026-08-01 to 2026-08-31 already covered.
+        m = re.search(
+            r"(\d{4}-\d{2}-\d{2})\s*(?:to|-|–|—)\s*(\d{4}-\d{2}-\d{2})",
+            text,
+            re.I,
+        )
+    if not m:
+        return None, None
+    # Prefer accompanying report cues when present; lone ranges still OK if
+    # the vision field was labeled statement_period and is a range.
+    pf = _normalize_date(m.group(1))
+    pt = _normalize_date(m.group(2))
+    if pf and pt:
+        return pf, pt
+    return None, None
+
+
+def _finalize_statement_period_fields(
+    result: Dict[str, Any],
+    *,
+    content_text: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Normalize period fields: content-only evidence, else null + log.
+
+    Does not invent dates from filename, upload time, or the clock.
+    Does not clear product rows when period is missing.
+    """
+    if not isinstance(result, dict):
+        return result
+    result = _apply_period_from_fallback(result)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return result
+
+    pf = _usable_period_date(result.get("period_from"))
+    pt = _usable_period_date(result.get("period_to"))
+    source = extra.get("statement_period_source")
+
+    if (pf is None or pt is None) and content_text:
+        c_from, c_to, c_source = _extract_report_period_from_content(content_text)
+        if c_from and not pf:
+            result["period_from"] = c_from
+            pf = c_from
+            source = c_source
+        if c_to and not pt:
+            result["period_to"] = c_to
+            pt = c_to
+            source = source or c_source
+
+    # Re-check after content fill.
+    pf = _usable_period_date(result.get("period_from"))
+    pt = _usable_period_date(result.get("period_to"))
+    if pf is not None:
+        result["period_from"] = _normalize_date(str(pf)) or result.get("period_from")
+    else:
+        result["period_from"] = None
+    if pt is not None:
+        result["period_to"] = _normalize_date(str(pt)) or result.get("period_to")
+    else:
+        result["period_to"] = None
+
+    if result.get("period_from") or result.get("period_to"):
+        extra["statement_period_source"] = source or extra.get(
+            "statement_period_source"
+        ) or "header"
+        month = _statement_month_key(result)
+        if month:
+            extra["statement_month"] = month
+        # Do not invent confidence scores beyond presence.
+        if "statement_period_confidence" not in extra:
+            extra["statement_period_confidence"] = "high"
+    else:
+        extra["statement_period_source"] = None
+        extra["statement_month"] = None
+        extra["statement_period_confidence"] = None
+        logger.info(
+            "STATEMENT_PERIOD_NOT_FOUND source=header reason=no_reliable_report_period "
+            "file=%s",
+            str(result.get("source_file") or "")[:120],
+        )
+    return result
+
+
 def _statement_month_key(stmt: Dict[str, Any]) -> Optional[str]:
     """Calendar month of the printed period.
 
@@ -1547,6 +1708,9 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             if m:
                 result["period_from"] = _normalize_date(m.group(1))
                 result["period_to"] = _normalize_date(m.group(2))
+                result.setdefault("totals", {}).setdefault("extra", {})[
+                    "statement_period_source"
+                ] = "report_header"
         if re.search(r"AUROBINDO|VERITAZ|HEALTHCARE", ln, re.I) and not re.search(
             r"PHARMACEUTICALS|ANALYSIS", ln, re.I
         ):
@@ -3349,6 +3513,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "free_return_total_value",
                 "op_pur_sale_bal_qnty_footer",
                 "product_wise_stock_statement_footer",
+                "docx_header_resolved_footer",
             }
         )
     )
@@ -5365,6 +5530,7 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 )
     except Exception:
         pass
+    result = _finalize_statement_period_fields(result)
     return _group_statements_by_stockist_month(result)
 
 
@@ -6366,7 +6532,17 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         daily.get("line_items")
         or (daily.get("multi_statement") and daily.get("statements"))
     ):
-        return daily
+        return _finalize_statement_period_fields(daily, content_text=text)
+
+    # OPENING / RECEIPT / ISSUE / CLOSING qty grid (STOCK & SALES ANALYSIS).
+    # Must run before the Kaveri-only path so report periods in the title are kept.
+    ps = _parse_ps_pharma_statement(text, filename)
+    if ps and (
+        ps.get("line_items")
+        or (ps.get("totals") or {}).get("opening_qty") is not None
+    ):
+        ps["source_format"] = "txt"
+        return _finalize_statement_period_fields(ps, content_text=text)
 
     fixed = _parse_fixed_sales_stock_statement(text, filename)
     if fixed and fixed.get("line_items"):
@@ -6421,12 +6597,18 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                         }
         except Exception:
             plan = None
-        return _txt_maybe_native_resolver(fixed, text.splitlines(), column_plan=plan)
+        return _finalize_statement_period_fields(
+            _txt_maybe_native_resolver(fixed, text.splitlines(), column_plan=plan),
+            content_text=text,
+        )
 
     if _is_product_stock_report_text(text):
         psr = _parse_product_stock_report(text, filename, "txt")
         if psr and psr.get("line_items"):
-            return _txt_maybe_native_resolver(psr, text.splitlines())
+            return _finalize_statement_period_fields(
+                _txt_maybe_native_resolver(psr, text.splitlines()),
+                content_text=text,
+            )
 
     result = empty_result(filename, "txt")
     lines = [ln.rstrip() for ln in text.splitlines()]
@@ -6443,6 +6625,19 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     for ln in lines:
         if re.search(r"MONTHLY\s+STOCK|STOCK\s*&\s*SALES|STOCK AND SALES", ln, re.I):
             result["report_title"] = _clean_name(ln)
+            # Inline report range on the title line (not filename).
+            m_title_period = re.search(
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-|–|—)\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+                ln,
+                re.I,
+            )
+            if m_title_period and not result.get("period_from"):
+                result["period_from"] = _normalize_date(m_title_period.group(1))
+                result["period_to"] = _normalize_date(m_title_period.group(2))
+                result.setdefault("totals", {}).setdefault("extra", {})[
+                    "statement_period_source"
+                ] = "report_header"
         m_co = re.search(r"COMPANY\s*NAME\s*:?\s*(.+)$", ln, re.I)
         if m_co and m_co.group(1).strip():
             result["company_name"] = _clean_name(m_co.group(1))
@@ -6457,6 +6652,9 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             result["period_from"] = _normalize_date(m_from.group(1))
             if m_from.group(2):
                 result["period_to"] = _normalize_date(m_from.group(2))
+            result.setdefault("totals", {}).setdefault("extra", {})[
+                "statement_period_source"
+            ] = "report_from_to"
 
     # Company name may be on its own line after "COMPANY NAME :"
     for i, ln in enumerate(lines):
@@ -6499,10 +6697,13 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     if not items:
         fallback = _parse_text_stock_fallback(text, filename)
         if fallback and fallback.get("line_items"):
-            return fallback
+            return _finalize_statement_period_fields(fallback, content_text=text)
 
     result["line_items"] = items
-    return _txt_maybe_native_resolver(result, lines)
+    return _finalize_statement_period_fields(
+        _txt_maybe_native_resolver(result, lines),
+        content_text=text,
+    )
 
 
 def _txt_maybe_native_resolver(
@@ -8347,6 +8548,258 @@ def _refile_sale_qty_held_as_receipt(result: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _normalize_docx_stock_qty_token(text: Any) -> str:
+    """Word stock grids often print '15-' (qty + dash sentinel), not accounting -15."""
+    raw = str(text or "").strip()
+    if re.fullmatch(r"\d+(?:\.\d+)?-", raw):
+        return raw[:-1]
+    return raw
+
+
+def _docx_header_resolved_table_enabled() -> bool:
+    """Parse Word stock tables via header resolver (OP/PUR/SR/BAL…). Default ON."""
+    import os
+
+    return os.getenv("STOCK_DOCX_HEADER_RESOLVED_TABLE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _apply_docx_header_meta(result: Dict[str, Any], file_bytes: bytes) -> Dict[str, Any]:
+    """Fill stockist / address / report period from word/header*.xml when present."""
+    if not isinstance(result, dict):
+        return result
+    for line in _docx_header_lines(file_bytes):
+        text = _clean_name(line)
+        if not text:
+            continue
+        if len(text) > 120 and text.count("FROM") + text.count("Page") > 1:
+            continue
+        # FROM- dd/mm/yyyy TO dd/mm/yyyy (OCR may print T0 for TO).
+        period = re.search(
+            r"FROM\s*[-:]?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
+            r"(?:TO|T0|Upto|upto|to|-|–|—)\s*"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            text,
+            re.I,
+        )
+        if period:
+            if not result.get("period_from"):
+                result["period_from"] = _normalize_date(period.group(1))
+            if not result.get("period_to"):
+                result["period_to"] = _normalize_date(period.group(2))
+            result.setdefault("totals", {}).setdefault("extra", {})[
+                "statement_period_source"
+            ] = "report_header"
+            continue
+        if re.search(r"^Page\s*:", text, re.I) or text.upper() in {"FR", "TO", "T0"}:
+            continue
+        if result.get("stockist_name") is None and re.search(r"[A-Za-z]", text):
+            if not re.search(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text):
+                result["stockist_name"] = text
+            continue
+        if (
+            result.get("stockist_name")
+            and result.get("stockist_address") is None
+            and text != result.get("stockist_name")
+            and not re.search(r"FROM\s*[-:]?\s*\d", text, re.I)
+        ):
+            result["stockist_address"] = text
+    return result
+
+
+def _is_docx_stock_sales_detail_headers(headers: List[str]) -> bool:
+    header_norm = {_norm_docx_header(h) for h in headers}
+    return (
+        ("item" in header_norm or "product" in header_norm or "productname" in header_norm)
+        and ("clval" in header_norm or "closingvalue" in header_norm)
+        and ("opqty" in header_norm or "openingqty" in header_norm)
+        and len(headers) >= 15
+    )
+
+
+def _parse_company_banner_from_docx_row(blob: str) -> Optional[str]:
+    """Extract company from 'COMPANY GROUP : … COMPANY : …' banner rows."""
+    text = str(blob or "")
+    m_co = re.search(r"(?<![A-Z])COMPANY\s*:\s*([^\t|:]+)", text, re.I)
+    if m_co:
+        name = _clean_name(m_co.group(1))
+        name = re.sub(r"\bCOMPANY\s*GROUP\b.*$", "", name, flags=re.I).strip(" -")
+        if name:
+            return name
+    m_grp = re.search(r"COMPANY\s*GROUP\s*:\s*([^\t|:]+)", text, re.I)
+    if m_grp:
+        name = _clean_name(m_grp.group(1))
+        name = re.sub(r"\bCOMPANY\s*:.*$", "", name, flags=re.I).strip(" -")
+        if name:
+            return name
+    return None
+
+
+def _parse_docx_header_resolved_tables(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Generic Word stock table via header resolver (not positional cell indices).
+
+    Handles OP./PUR./SR/…/BAL/BVAL grids (and similar) including company-group
+    banner rows and footer Opening/Closing value lines. Uses word/header*.xml
+    for stockist and report period when printed there.
+    """
+    if not _docx_header_resolved_table_enabled():
+        return None
+    from docx import Document
+    from services.stock_native_resolver import build_line_items_from_tokens
+    from services.stock_native_tables import from_docx_table, resolver_ready
+
+    doc = Document(io.BytesIO(file_bytes))
+    items: List[Dict[str, Any]] = []
+    company_name: Optional[str] = None
+    opening_value = None
+    closing_value = None
+    sales_value = None
+    used_tables = 0
+
+    for table in doc.tables:
+        if not table.rows:
+            continue
+        headers = [cell.text.replace("\n", " ").strip() for cell in table.rows[0].cells]
+        if _is_docx_stock_sales_detail_headers(headers):
+            continue
+        built = from_docx_table(table)
+        header_cells = built.get("header_cells") or []
+        ready = resolver_ready(header_cells)
+        if not ready.get("resolved"):
+            continue
+        columns = ready.get("columns") or []
+        canons = {
+            str(c.get("canonical") or "")
+            for c in columns
+            if c.get("canonical") not in (None, "ignore")
+        }
+        if "product_name" not in canons:
+            continue
+        if "opening_qty" not in canons or "closing_qty" not in canons:
+            continue
+        if "sales_qty" not in canons and "purchase_qty" not in canons:
+            continue
+
+        for row in table.rows[1:]:
+            cells = [cell.text.replace("\n", " ").strip() for cell in row.cells]
+            blob = " ".join(cells)
+            if re.search(r"COMPANY\s*GROUP\s*:|^\s*COMPANY\s*:", blob, re.I):
+                parsed_co = _parse_company_banner_from_docx_row(blob)
+                if parsed_co:
+                    company_name = parsed_co
+                continue
+            if re.search(r"Opening\s*Val|Closing\s*Val|Sale\s*\(", blob, re.I):
+                m_open = re.search(r"Opening\s*Val\s*:?\s*([\d,.]+)", blob, re.I)
+                m_close = re.search(r"Closing\s*Val\s*:?\s*([\d,.]+)", blob, re.I)
+                if m_open:
+                    opening_value = _to_float(m_open.group(1))
+                if m_close:
+                    closing_value = _to_float(m_close.group(1))
+                month_hits = list(
+                    re.finditer(
+                        r"Sale\s*\(\s*([A-Za-z]{3})\s*\)\s*:?\s*([\d,.]+)", blob, re.I
+                    )
+                )
+                if month_hits:
+                    # Prefer the rightmost month header when present (JUL/AUG → AUG).
+                    preferred = None
+                    header_blob = " ".join(headers).upper()
+                    for mon in ("DEC", "NOV", "OCT", "SEP", "AUG", "JUL", "JUN", "MAY", "APR", "MAR", "FEB", "JAN"):
+                        if mon in header_blob:
+                            preferred = mon
+                            break
+                    chosen = None
+                    if preferred:
+                        for m in month_hits:
+                            if m.group(1).upper() == preferred:
+                                chosen = m
+                    sales_value = _to_float((chosen or month_hits[-1]).group(2))
+                continue
+
+        # Normalize '15-' qty sentinels before native assign/parse_number.
+        token_rows: List[List[Dict[str, Any]]] = []
+        for tokens in built.get("data_rows") or []:
+            fixed: List[Dict[str, Any]] = []
+            for tok in tokens:
+                if not isinstance(tok, dict):
+                    continue
+                t = dict(tok)
+                t["text"] = _normalize_docx_stock_qty_token(t.get("text"))
+                fixed.append(t)
+            if fixed:
+                token_rows.append(fixed)
+
+        built_items = build_line_items_from_tokens(columns, token_rows)
+        for item in built_items:
+            name = _clean_name(item.get("product_name") or "")
+            if not name:
+                continue
+            if re.search(
+                r"COMPANY\s*GROUP|^\s*COMPANY\s*:|Opening\s*Val|Closing\s*Val|"
+                r"^\s*Total\s*:|^\s*Sales\s*:|^\s*Purchase\s*:",
+                name,
+                re.I,
+            ):
+                continue
+            item["product_name"] = name
+            item_extra = item.setdefault("extra", {})
+            item_extra["layout"] = "docx_header_resolved_table"
+            if company_name:
+                item_extra["company_name"] = company_name
+            items.append(item)
+        used_tables += 1
+
+    if used_tables < 1 or len(items) < 1:
+        return None
+
+    result = empty_result(filename, "docx")
+    result["report_title"] = "Stock Statement"
+    if company_name:
+        result["company_name"] = company_name
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "docx_header_resolved_table"
+    extra["layout"] = "op_pur_sr_bal_bval"
+    if opening_value is not None:
+        extra["opening_value"] = opening_value
+    if closing_value is not None:
+        result["totals"]["closing_value"] = closing_value
+    if sales_value is not None:
+        result["totals"]["sales_value"] = sales_value
+    if opening_value is not None or closing_value is not None or sales_value is not None:
+        extra["total_row_source"] = "docx_header_resolved_footer"
+    result["line_items"] = items
+    result = _apply_docx_header_meta(result, file_bytes)
+    # Append remaining address lines from the Word header (city after street).
+    if result.get("stockist_name") and result.get("stockist_address"):
+        addr_parts = [result["stockist_address"]]
+        for line in _docx_header_lines(file_bytes):
+            text = _clean_name(line)
+            if not text or text == result.get("stockist_name"):
+                continue
+            if text in addr_parts:
+                continue
+            if re.search(r"FROM\s*[-:]?\s*\d|^Page\s*:", text, re.I):
+                continue
+            if text.upper() in {"FR", "TO", "T0"}:
+                continue
+            if re.search(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text):
+                continue
+            if len(text) > 80:
+                continue
+            addr_parts.append(text)
+        result["stockist_address"] = _clean_name(" ".join(addr_parts))
+    return _finalize_statement_period_fields(
+        result,
+        content_text="\n".join(_docx_header_lines(file_bytes)),
+    )
+
+
 def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     from docx import Document
 
@@ -8373,6 +8826,10 @@ def _parse_docx(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     sale_closing = _parse_sale_closing_analysis_docx(file_bytes, filename)
     if sale_closing and sale_closing.get("line_items"):
         return sale_closing
+
+    header_resolved = _parse_docx_header_resolved_tables(file_bytes, filename)
+    if header_resolved and header_resolved.get("line_items"):
+        return header_resolved
 
     result = empty_result(filename, "docx")
     doc = Document(io.BytesIO(file_bytes))
@@ -14631,23 +15088,21 @@ def _extract_zl_opening_bal_scan_pdf(
     )
     if not result or not result.get("line_items"):
         return None
-    # Filename pattern …_YYYY_MM_… when the scan has no printed period.
-    if not result.get("period_from"):
-        match = re.search(r"_(\d{4})_(\d{2})_", filename or "")
-        if match:
-            year, month = match.group(1), match.group(2)
-            result["period_from"] = f"{year}-{month}-01"
-            # Last day of month is fine as inclusive period_to for monthly dumps.
-            import calendar
-
-            last = calendar.monthrange(int(year), int(month))[1]
-            result["period_to"] = f"{year}-{month}-{last:02d}"
+    # Never invent statement period from the filename (..._YYYY_MM_...).
+    # If the scan has no printed report period, leave period_from/to null.
+    if _statement_period_content_only_enabled():
+        if not (
+            _usable_period_date(result.get("period_from"))
+            or _usable_period_date(result.get("period_to"))
+        ):
+            result["period_from"] = None
+            result["period_to"] = None
     result["source_format"] = "pdf"
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = "zl_opening_bal_scan_vision"
     result["totals"]["extra"]["layout"] = "zl_opening_primary_closing"
     result["totals"]["extra"]["stock_identity_kind"] = "zl_opening_primary_closing"
-    return result
+    return _finalize_statement_period_fields(result)
 
 
 def _parse_zl_opening_bal_pdf_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
@@ -32611,12 +33066,17 @@ def _is_ssa_opening_receipt_issue_dump_text_fuzzy(text: str) -> bool:
     if re.search(r"\bRATE\b", text, re.I):
         return False
     blob = text.upper()
-    if not re.search(r"VALUE|VAWUE|VAUUE|VALLUE", blob):
+    has_value = bool(re.search(r"VALUE|VAWUE|VAUUE|VALLUE", blob))
+    # Phone photos of Excel often OCR the title but miss VALUE in the header band.
+    has_money = bool(re.search(r"\d+\.\d{2}", text))
+    if not has_value and not has_money:
         return False
     if not re.search(
         r"ITEM|TEM\s|DESCRIPTION|DERCASAT|OESCARPTION|DERCASAT", text, re.I
     ):
-        return False
+        # Title + money alone can still be this grid when ITEM is unreadable.
+        if not (has_money and re.search(r"CLOS|DUMP|ZANDRA|ANALYSIS", blob)):
+            return False
     hits = 0
     if re.search(r"OPEN|OPEX", blob):
         hits += 1
@@ -32626,7 +33086,89 @@ def _is_ssa_opening_receipt_issue_dump_text_fuzzy(text: str) -> bool:
         hits += 1
     if re.search(r"CLOS|CHOS|CUOST|CLOST|CLOSING", blob):
         hits += 1
-    return hits >= 2
+    if re.search(r"\bDUMP\b", blob):
+        hits += 1
+    # When VALUE failed OCR but money decimals and ANALYSIS title are present,
+    # accept with a single band hit (CLOSING/DUMP/OPEN…) plus money.
+    if has_value:
+        return hits >= 2
+    return hits >= 1 and has_money
+
+
+def _crop_bright_spreadsheet_region(file_bytes: bytes) -> Optional[bytes]:
+    """Crop the bright spreadsheet region out of a tall phone gallery photo.
+
+    Returns JPEG bytes of the table region, or None when no confident crop.
+    Gated by STOCK_SSA_PHOTO_TABLE_CROP (default off).
+    """
+    import os
+
+    if os.getenv("STOCK_SSA_PHOTO_TABLE_CROP", "false").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
+    try:
+        import cv2
+        import numpy as np
+        from PIL import Image, ImageOps
+    except Exception:
+        return None
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return None
+    arr = np.array(image)
+    h, w = arr.shape[:2]
+    if h < w * 1.4 or w < 600:
+        return None
+    gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    mask = (gray > 70).astype("uint8") * 255
+    cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not cnts:
+        return None
+    c = max(cnts, key=cv2.contourArea)
+    x, y, bw, bh = cv2.boundingRect(c)
+    area = float(h * w)
+    if bw * bh < 0.08 * area or bw < 0.55 * w:
+        return None
+    # Prefer landscape-ish table band (spreadsheet), not the whole portrait frame.
+    if bh > 0.85 * h and bw > 0.9 * w:
+        return None
+    pad = 8
+    x0, y0 = max(0, x - pad), max(0, y - pad)
+    x1, y1 = min(w, x + bw + pad), min(h, y + bh + pad)
+    # Include a title band above the bright grid (STOCK & SALES ANALYSIS).
+    title_pad = max(40, int(0.18 * (y1 - y0)))
+    y0 = max(0, y0 - title_pad)
+    crop = arr[y0:y1, x0:x1]
+    if crop.size < 1000:
+        return None
+    ch, cw = crop.shape[:2]
+    if max(ch, cw) < 1400:
+        scale = 1400.0 / float(max(ch, cw))
+        crop = cv2.resize(
+            crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC
+        )
+    from PIL import Image as PILImage
+
+    out = PILImage.fromarray(crop)
+    buf = io.BytesIO()
+    out.save(buf, format="JPEG", quality=92)
+    logger.info(
+        "STOCK_SSA_PHOTO_TABLE_CROP original=%sx%s crop_box=(%s,%s,%s,%s) out=%sx%s",
+        w,
+        h,
+        x0,
+        y0,
+        x1,
+        y1,
+        out.width,
+        out.height,
+    )
+    return buf.getvalue()
 
 
 def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
@@ -32676,22 +33218,60 @@ def _extract_ssa_opening_receipt_issue_dump_image(
     """
     from PIL import Image, ImageEnhance, ImageOps
 
+    vision_bytes = file_bytes
+    cropped = _crop_bright_spreadsheet_region(file_bytes)
+    if cropped:
+        vision_bytes = cropped
+        ext_for_mime = ".jpg"
+    else:
+        ext_for_mime = ext
+
     try:
-        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        image = ImageOps.exif_transpose(
+            Image.open(io.BytesIO(vision_bytes))
+        ).convert("RGB")
     except Exception:
         return None
     wide = image.resize((image.width * 2, image.height * 2), Image.Resampling.LANCZOS)
     wide = ImageEnhance.Contrast(wide).enhance(1.3)
     header = wide.crop((0, 0, wide.width, int(wide.height * 0.42)))
     try:
-        preview = _a2z_tesseract().image_to_string(header, config="--psm 6") or ""
+        # Avoid region-shared OCR cache: gate must see THIS crop/header.
+        import pytesseract
+
+        preview = pytesseract.image_to_string(header, config="--psm 6") or ""
     except Exception:
-        return None
+        try:
+            preview = _a2z_tesseract().image_to_string(header, config="--psm 6") or ""
+        except Exception:
+            return None
     if not (
         _is_ssa_opening_receipt_issue_dump_text(preview)
         or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
     ):
-        return None
+        if not cropped:
+            return None
+        # Crop OCR missed the title — fall back to full-image gate, keep crop
+        # for the vision payload when the title is found on the full frame.
+        try:
+            full = ImageOps.exif_transpose(
+                Image.open(io.BytesIO(file_bytes))
+            ).convert("RGB")
+            fwide = full.resize(
+                (full.width * 2, full.height * 2), Image.Resampling.LANCZOS
+            )
+            fwide = ImageEnhance.Contrast(fwide).enhance(1.3)
+            fheader = fwide.crop((0, 0, fwide.width, int(fwide.height * 0.42)))
+            import pytesseract
+
+            preview = pytesseract.image_to_string(fheader, config="--psm 6") or ""
+        except Exception:
+            return None
+        if not (
+            _is_ssa_opening_receipt_issue_dump_text(preview)
+            or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
+        ):
+            return None
     import os
 
     from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
@@ -32707,6 +33287,8 @@ opening_value=1064.00). When there is no receipt/issue, opening_value equals
 the printed CLOSING VALUE on that same row.
 A printed dash is 0. Do not shift later columns left to fill a dash.
 Keep each product's numbers on that same row.
+Never assign a number to a different column than the one it is printed under.
+Always emit packing when printed (30GM, 1X60). Packing is never a quantity.
 """
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
@@ -32717,8 +33299,8 @@ Keep each product's numbers on that same row.
                     {"text": prompt},
                     {
                         "inline_data": {
-                            "mime_type": _image_mime(ext),
-                            "data": base64.b64encode(file_bytes).decode("ascii"),
+                            "mime_type": _image_mime(ext_for_mime),
+                            "data": base64.b64encode(vision_bytes).decode("ascii"),
                         }
                     },
                 ],
@@ -32747,6 +33329,10 @@ Keep each product's numbers on that same row.
     result["line_items"] = _ssa_dump_repair_items(result.get("line_items") or [])
     if not _ssa_qty_value_result_usable(result):
         return None
+    if cropped:
+        extra = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["table_crop_applied"] = True
     return result
 
 

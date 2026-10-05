@@ -6,6 +6,7 @@ Alias tables are copied/merged from existing parsers; those tables are untouched
 
 from __future__ import annotations
 
+import os
 import re
 from statistics import median
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -547,6 +548,139 @@ def _cells_sorted(header_cells: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]
     return cells
 
 
+def _qty_value_sequence_enabled() -> bool:
+    return os.getenv("STOCK_HEADER_QTY_VALUE_SEQUENCE", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_QTY_VALUE_SEQUENCE_GROUPS: Tuple[Tuple[str, str, str], ...] = (
+    ("opening", "opening_qty", "opening_value"),
+    ("purchase", "purchase_qty", "purchase_value"),
+    ("sales", "sales_qty", "sales_value"),
+    ("closing", "closing_qty", "closing_value"),
+)
+
+
+def _is_bare_qty_header(norm: str) -> bool:
+    compact = re.sub(r"\s+", "", (norm or "").rstrip("."))
+    return compact in {"qty", "quantity", "qnty", "qty"}
+
+
+def _is_bare_value_header(norm: str, col: Dict[str, Any]) -> bool:
+    if col.get("canonical") == "value_marker":
+        return True
+    if col.get("reason") == "orphan_value":
+        return True
+    compact = re.sub(r"\s+", "", norm or "")
+    return compact in {"value", "val", "amt", "amount", "rs"}
+
+
+def _apply_bare_qty_value_sequence(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map unlabeled QTY/VALUE pairs left-to-right onto opening→…→closing.
+
+    Used when parent band headers (OPENING/RECEIPT/ISSUE) were dropped and every
+    pair looks like bare QTY + VALUE. Does not invent values — only renames
+    columns. Disabled unless STOCK_HEADER_QTY_VALUE_SEQUENCE is on.
+    """
+    if not _qty_value_sequence_enabled():
+        return False
+
+    pair_starts: List[int] = []
+    i = 0
+    while i < len(prelim) - 1:
+        left = prelim[i]
+        right = prelim[i + 1]
+        left_norm = normalize_header(left.get("header_text"))
+        right_norm = normalize_header(right.get("header_text"))
+        left_canon = str(left.get("canonical") or "ignore")
+        # Skip columns already tied to a named stock group.
+        if left.get("group") in _GROUP_TO_QTY and left_canon in {
+            "opening_qty",
+            "purchase_qty",
+            "sales_qty",
+            "closing_qty",
+            "opening_value",
+            "purchase_value",
+            "sales_value",
+            "closing_value",
+        }:
+            i += 1
+            continue
+        if _is_bare_qty_header(left_norm) and _is_bare_value_header(right_norm, right):
+            pair_starts.append(i)
+            i += 2
+            continue
+        i += 1
+
+    if len(pair_starts) < 3:
+        return False
+
+    labeled_closing = any(
+        c.get("group") == "closing" or c.get("canonical") == "closing_qty"
+        for c in prelim
+    )
+    # When CLOSING is already labeled separately, only claim the leading pairs.
+    max_pairs = 3 if labeled_closing else 4
+    assigned = 0
+    for gi, pi in enumerate(pair_starts[:max_pairs]):
+        if gi >= len(_QTY_VALUE_SEQUENCE_GROUPS):
+            break
+        gname, q_field, v_field = _QTY_VALUE_SEQUENCE_GROUPS[gi]
+        if labeled_closing and gname == "closing":
+            break
+        prelim[pi]["canonical"] = q_field
+        prelim[pi]["group"] = gname
+        prelim[pi]["is_value"] = False
+        prelim[pi]["confidence"] = 0.85
+        prelim[pi]["reason"] = "qty_value_sequence"
+        prelim[pi + 1]["canonical"] = v_field
+        prelim[pi + 1]["group"] = gname
+        prelim[pi + 1]["is_value"] = True
+        prelim[pi + 1]["confidence"] = 0.85
+        prelim[pi + 1]["reason"] = "qty_value_sequence"
+        assigned += 1
+
+    # CLOSING + empty/VALUE neighbour → closing_value when still unassigned.
+    for idx, col in enumerate(prelim):
+        if col.get("canonical") != "closing_qty":
+            continue
+        if idx + 1 >= len(prelim):
+            break
+        nxt = prelim[idx + 1]
+        nxt_norm = normalize_header(nxt.get("header_text"))
+        if nxt.get("canonical") in {"ignore", None, "value_marker"} and (
+            not nxt_norm
+            or _is_bare_value_header(nxt_norm, nxt)
+            or nxt.get("reason") == "orphan_value"
+        ):
+            nxt["canonical"] = "closing_value"
+            nxt["group"] = "closing"
+            nxt["is_value"] = True
+            nxt["confidence"] = 0.85
+            nxt["reason"] = "qty_value_sequence_closing"
+
+    if assigned:
+        errors.append(
+            {
+                "code": "QTY_VALUE_SEQUENCE",
+                "message": (
+                    f"Assigned {assigned} bare QTY/VALUE pairs left-to-right "
+                    "(opening/purchase/sales[/closing])"
+                ),
+                "pairs": assigned,
+            }
+        )
+        return True
+    return False
+
+
 def resolve_columns(
     header_cells: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
@@ -589,16 +723,18 @@ def resolve_columns(
         idx = int(cell.get("col_index") or 0)
 
         # Serial / row-number headers (Sr., S.No, #) — never sales_return "sr".
+        # Bare mid-table "SR" is a qty column (Sale / Sale-Ret), not a row index.
         compact_hdr = re.sub(r"\s+", "", norm)
         raw_stripped = text.strip()
-        if (
-            compact_hdr in {"sr", "sno", "slno", "sln", "no", "num", "hash"}
-            and re.match(
-                r"^(?:#|s\.?\s*r\.?|s\.?\s*no\.?|sl\.?\s*no\.?|no\.?)$",
+        is_serial_header = bool(
+            re.match(
+                r"^(?:#|s\.?\s*no\.?|sl\.?\s*no\.?|sr\.?\s*no\.?|s\.?\s*r\.?\s*no\.?|no\.?)$",
                 raw_stripped,
                 re.I,
             )
-        ):
+            or re.match(r"^s\.?r\.$", raw_stripped, re.I)  # "Sr." / "S.R."
+        )
+        if is_serial_header:
             prelim.append(
                 {
                     "col_index": idx,
@@ -828,6 +964,31 @@ def resolve_columns(
             col["canonical"] = "ignore"
             col["confidence"] = 0.0
             col["reason"] = "total_not_between"
+
+    # Bare "SR" between purchase and closing with no SALE column → sales_qty.
+    # Stock grids often label the sale column SR when SALE is absent.
+    has_sales_qty = any(c.get("canonical") == "sales_qty" for c in prelim)
+    if not has_sales_qty:
+        for i, col in enumerate(prelim):
+            if col.get("canonical") != "sales_return_qty":
+                continue
+            hdr_norm = normalize_header(str(col.get("header_text") or ""))
+            hdr_compact = re.sub(r"\s+", "", hdr_norm)
+            if hdr_compact not in {"sr", "sret"} and hdr_norm not in {"s r", "s.r"}:
+                continue
+            left_groups = {c.get("group") for c in prelim[:i] if c.get("group")}
+            right_groups = {c.get("group") for c in prelim[i + 1 :] if c.get("group")}
+            if not (left_groups & {"opening", "purchase"} and right_groups & {"closing"}):
+                continue
+            col["canonical"] = "sales_qty"
+            col["group"] = "sales"
+            col["is_value"] = False
+            col["confidence"] = max(float(col.get("confidence") or 0.0), 0.85)
+            col["reason"] = "sr_as_sales_no_sale_col"
+
+    # Bare QTY/VALUE pairs (parent OPENING/RECEIPT/ISSUE headers lost): assign
+    # left-to-right opening → purchase → sales → closing. Geometry/order only.
+    _apply_bare_qty_value_sequence(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

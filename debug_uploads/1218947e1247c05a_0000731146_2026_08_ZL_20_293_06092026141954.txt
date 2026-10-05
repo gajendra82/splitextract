@@ -1,0 +1,43 @@
+
+          SHIPRA MEDICAL STORE
+             SHOP NO.G-1,SHRI GOVINDAM APARTMENT,FILM COLONY,JAIPUR
+             Stock Statement w.e.f.01/08/26 to 31/08/26   Pg.No. 1
+                        HIMALAYA WELLNESS COMPANY JAIPUR
+--------------------------------------------------------------------------------
+Product name             Packing   Opng.Bal <---Receipts---->   Totals <----------Issued--------->   <---Clos.Bal---->  Expirable Dump Q
+                                            Purchase  Others              Sales   Qty*Rate    Others      Qty Qty*Rate  180days   60Dys
+--------------------------------------------------------------------------------
+AACTARIL SOAP            75 GM         --       --       --       --       --          0.00     --       --       --        --        --
+ABANA TAB                60TAB         --      100.0     --      100.0      2.0      289.98     --       98.0   14209.0     --        --
+BLEMINOR ANTIBLEMISH CRE 30 ML         42.0     --       --       42.0      5.0      846.70     --       37.0    6265.6     --        --
+BRAHMI SYP 200ML         200ML         --       --       --       --       --          0.00     --       --       --        --        --
+CLARINA ANTI ACNE CREAM  30 GM         80.0     --       --       80.0     11.0     1331.40     --       69.0    8351.5     --        --
+CLARINA ANTI ACNE FACE W 60 ML         45.0     --       --       45.0     26.0     2601.95     --       19.0    1901.4     --        --
+CONFIDO TABLETS          60 TAB        78.0     --       --       78.0     59.0     8930.24     --       19.0    2875.8     --        19.
+GASEX SYRUP              200 ML        20.0     --       --       20.0     20.0     1850.20     --       --       --        --        --
+HAIR ZONE SOLUTION 60 ML 60ML          25.0     --       --       25.0      8.0     1920.45     --       17.0    4081.0     --        17.
+HARIDRA TAB              60TAB         --       --       --       --       --          0.00     --       --       --        --        --
+HERBOLAX CAPSULES        10 CAP        --       --       --       --       --          0.00     --       --       --        --        --
+HERBOLAX TABLETS         100 TAB        2.0     --       --        2.0     --          0.00     --        2.0     263.2     --         2.
+HIMCOLIN GEL 30 GM       30 GM         50.0     --       --       50.0      5.0      980.68     --       45.0    8826.1     --        --
+IMMUSANTE TAB            20 TAB        --       --       --       --       --          0.00     --       --       --        --        --
+KOFLET H LOZENGES        6 TAB         --       --       --       --       --          0.00     --       --       --        --        --
+LIV 52 HB CAPSULES       10 CAP        --       --       --       --       --          0.00     --       --       --        --        --
+LIV 52 SYP 100 ML        100 ML         5.0     --       --        5.0      5.0      467.04     --       --       --        --        --
+LIV 52 SYP 200 ML        200 ML        --      175.0     --      175.0     96.0    14717.96     --       79.0   12111.7     --        --
+LIV 52 TAB               100 TAB      137.0    100.0     --      237.0     82.0    11722.61     --      155.0   22158.6     --        --
+MENTAT TAB               60'S          --       --       --       --       --          0.00     --       --       --        --        --
+PILEX FORTE OINTMENT     30 GM         65.0     --       --       65.0     64.0     5968.81     --        1.0      93.3     --         1.
+PILEX FORTE TAB.         2*30          --       --       --       --       --          0.00     --       --       --        --        --
+PILEX TAB                60 TAB        54.0    100.0     --      154.0     73.0    11127.47     --       81.0   12346.9     --        --
+PUNARNAVA TAB            60TAB         --       --       --       --       --          0.00     --       --       --        --        --
+SHUDDHA GUGGULU TAB      60TAB         --       --       --       --       --          0.00     --       --       --        --        --
+TENTEX FORTE             10 TAB        30.0     60.0     --       90.0     88.0     7449.49     --        2.0     169.3     --        --
+--------------------------------------------------------------------------------
+      Sale of period: 74060.79   GST:    4340.84 Cumulative :        0.00
+                                                                       Total stock as on :31/08/26     93653.40
+      Total cost of near expiry items:       0.00                     Total cost of dump stock more than 60 days:    7313.27
+      Purchase of period:      76315.23 GSTBase:   72499.45  GST:    3815.78
+      Total G/R credit for above period:       0.00 Cumulative G/R credit:       0.00
+      Purchase INV.3438(03/08/2026) INV.5136107271(06/08/2026) INV.3648(08/08/2026) INV.5136107955(20/08/2026)
+

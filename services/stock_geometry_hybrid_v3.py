@@ -419,7 +419,12 @@ def select_ocr_variants(
         changed = _is_blue(best[0]) and (
             not orig_pool or all(v[3] != best_val for v in orig_pool)
         )
+        # Several independent preprocess variants agreeing is stronger than a
+        # single low Tesseract confidence score (common on faint last-row cells).
+        agree_n = sum(1 for v in soft if v[3] is not None and abs(float(v[3]) - float(best_val)) < 0.51)
         if best[2] < min_conf and not adequate:
+            if agree_n >= 2:
+                return best, "majority_vote_low_conf_agree", changed
             return best, "low_confidence_uncertain", changed
         # max-channel alone is noisier than preserve-ink — need high conf.
         # Even if a weak preserve-ink read exists in soft, do not let a mid-conf
@@ -429,6 +434,7 @@ def select_ocr_variants(
             "max_channel" in best[0].lower()
             and not strong_preserve
             and best[2] < 70.0
+            and agree_n < 2
         ):
             return best, "low_confidence_uncertain", changed
         return best, "majority_vote", changed
@@ -584,14 +590,20 @@ def ocr_numeric_cell(
 ) -> CellResult:
     x0, y0, x1, y1 = bbox["x0"], bbox["y0"], bbox["x1"], bbox["y1"]
     h, w = gray.shape[:2]
-    ix0, iy0 = max(0, x0 + 1), max(0, y0 + 1)
-    ix1, iy1 = min(w, x1 - 1), min(h, y1 - 1)
+    row_h = max(1, y1 - y0)
+    # Thin grid rows (~20px): vertical +1/-1 inset clips digits into the
+    # horizontal rule and OCR returns blank/garbage. Keep full band height.
+    v_pad = 0 if row_h <= 24 else 1
+    h_pad_l, h_pad_r = 1, 1
+    ix0, iy0 = max(0, x0 + h_pad_l), max(0, y0 + v_pad)
+    ix1, iy1 = min(w, x1 - h_pad_r), min(h, y1 - v_pad if v_pad else y1)
     if ix1 <= ix0 or iy1 <= iy0:
         return CellResult(column=column, blank=True, bbox=bbox, confidence=99.0)
     gcrop = gray[iy0:iy1, ix0:ix1]
     bcrop = bgr[iy0:iy1, ix0:ix1]
     ink = _ink_ratio(gcrop)
-    if ink < 0.008:
+    # Faint last-row digits often sit just under the old 0.008 cutoff.
+    if ink < 0.004:
         return CellResult(
             column=column,
             blank=True,
@@ -602,160 +614,183 @@ def ocr_numeric_cell(
             selection_reason="low_ink_blank",
         )
 
-    variants, blue_px, blue_stats = _prep_variants(bcrop)
-    if blue_px > 0:
-        _BLUE_SUPPRESSION_STATS["blue_pixels_detected"] = int(
-            _BLUE_SUPPRESSION_STATS.get("blue_pixels_detected") or 0
-        ) + int(blue_px)
-        _BLUE_SUPPRESSION_STATS["blue_cells_detected"] = int(
-            _BLUE_SUPPRESSION_STATS.get("blue_cells_detected") or 0
-        ) + 1
-    candidates: Dict[str, Any] = {
-        "_blue_stats": {"removed": blue_px, **blue_stats},
-        "ocr_variant_selected": None,
-        "blue_suppression_changed_ocr": False,
-    }
-    values: List[Tuple[str, str, float, Optional[float], bool, bool]] = []
-    order = (
-        ("A_original", "D_blue_removed", "H_max_channel", "C_threshold")
-        if quick
-        else (
-            "A_original",
-            "D_blue_removed",
-            "D_blue_removed_otsu",
-            "H_max_channel",
-            "C_threshold",
-            "E_contrast",
-            "B_gray",
-        )
-    )
-    for name in order:
-        im = variants.get(name)
-        if im is None:
-            continue
-        raw, conf = _tess_read(im, numeric=True)
-        val, blank, uncertain = _normalize_numeric(raw)
-        candidates[name] = {
-            "raw": raw,
-            "confidence": conf,
-            "normalized": val,
-            "blank": blank,
-            "uncertain": uncertain,
+    def _run_variants(use_quick: bool) -> CellResult:
+        variants, blue_px, blue_stats = _prep_variants(bcrop)
+        if blue_px > 0:
+            _BLUE_SUPPRESSION_STATS["blue_pixels_detected"] = int(
+                _BLUE_SUPPRESSION_STATS.get("blue_pixels_detected") or 0
+            ) + int(blue_px)
+            _BLUE_SUPPRESSION_STATS["blue_cells_detected"] = int(
+                _BLUE_SUPPRESSION_STATS.get("blue_cells_detected") or 0
+            ) + 1
+        candidates: Dict[str, Any] = {
+            "_blue_stats": {"removed": blue_px, **blue_stats},
+            "ocr_variant_selected": None,
+            "blue_suppression_changed_ocr": False,
         }
-        values.append((name, raw, conf, val, blank, uncertain))
-        digit_vals = [v[3] for v in values if v[3] is not None]
-        if (
-            quick
-            and len(digit_vals) >= 2
-            and digit_vals[-1] == digit_vals[-2]
-            and values[-1][2] >= 45
-        ):
-            break
-        # Need both blue-removed and max-channel before early exit so they can agree.
-        if (
-            not quick
-            and val is not None
-            and conf >= 70
-            and not uncertain
-            and name in ("D_blue_removed", "D_blue_removed_otsu", "H_max_channel")
-        ):
-            blue_vals = [
-                v[3]
-                for v in values
-                if v[3] is not None
-                and (
-                    "blue" in v[0].lower()
-                    or "max_channel" in v[0].lower()
-                )
-            ]
-            if len(blue_vals) >= 2 and len(set(blue_vals)) == 1:
+        values: List[Tuple[str, str, float, Optional[float], bool, bool]] = []
+        order = (
+            ("A_original", "D_blue_removed", "H_max_channel", "C_threshold", "E_contrast")
+            if use_quick
+            else (
+                "A_original",
+                "D_blue_removed",
+                "D_blue_removed_otsu",
+                "H_max_channel",
+                "C_threshold",
+                "E_contrast",
+                "B_gray",
+            )
+        )
+        for name in order:
+            im = variants.get(name)
+            if im is None:
+                continue
+            raw, conf = _tess_read(im, numeric=True)
+            val, blank, uncertain = _normalize_numeric(raw)
+            candidates[name] = {
+                "raw": raw,
+                "confidence": conf,
+                "normalized": val,
+                "blank": blank,
+                "uncertain": uncertain,
+            }
+            values.append((name, raw, conf, val, blank, uncertain))
+            digit_vals = [v[3] for v in values if v[3] is not None]
+            if (
+                use_quick
+                and len(digit_vals) >= 2
+                and digit_vals[-1] == digit_vals[-2]
+                and values[-1][2] >= 45
+            ):
                 break
+            if (
+                not use_quick
+                and val is not None
+                and conf >= 70
+                and not uncertain
+                and name in ("D_blue_removed", "D_blue_removed_otsu", "H_max_channel")
+            ):
+                blue_vals = [
+                    v[3]
+                    for v in values
+                    if v[3] is not None
+                    and (
+                        "blue" in v[0].lower()
+                        or "max_channel" in v[0].lower()
+                    )
+                ]
+                if len(blue_vals) >= 2 and len(set(blue_vals)) == 1:
+                    break
 
-    orig_raw = str((candidates.get("A_original") or {}).get("raw") or "")
-    clean_raw = str((candidates.get("D_blue_removed") or {}).get("raw") or "")
-    max_raw = str((candidates.get("H_max_channel") or {}).get("raw") or "")
-    if max_raw and not clean_raw:
-        clean_raw = max_raw
+        orig_raw = str((candidates.get("A_original") or {}).get("raw") or "")
+        clean_raw = str((candidates.get("D_blue_removed") or {}).get("raw") or "")
+        max_raw = str((candidates.get("H_max_channel") or {}).get("raw") or "")
+        if max_raw and not clean_raw:
+            clean_raw = max_raw
 
-    best, reason, changed = select_ocr_variants(values, min_conf=40.0)
-    candidates["ocr_variant_selected"] = best[0] if best else None
-    candidates["blue_suppression_changed_ocr"] = bool(changed)
+        best, reason, changed = select_ocr_variants(values, min_conf=40.0)
+        candidates["ocr_variant_selected"] = best[0] if best else None
+        candidates["blue_suppression_changed_ocr"] = bool(changed)
 
-    if best is None:
-        if ink < 0.012:
+        if best is None:
+            if ink < 0.012:
+                return CellResult(
+                    column=column,
+                    blank=True,
+                    bbox=bbox,
+                    confidence=90.0,
+                    candidates=candidates,
+                    blue_pixels_removed=blue_px,
+                    original_ocr=orig_raw,
+                    cleaned_ocr=clean_raw,
+                    selection_reason="empty_ocr_low_ink",
+                )
             return CellResult(
                 column=column,
-                blank=True,
+                raw_ocr=values[0][1] if values else "",
+                normalized=None,
+                confidence=values[0][2] if values else -1.0,
                 bbox=bbox,
-                confidence=90.0,
+                ocr_uncertain=True,
                 candidates=candidates,
                 blue_pixels_removed=blue_px,
                 original_ocr=orig_raw,
                 cleaned_ocr=clean_raw,
-                selection_reason="empty_ocr_low_ink",
+                selection_reason="empty_ocr_uncertain",
             )
+
+        best_val = best[3]
+        low = best[2] < 40.0 and "low_confidence" in reason
+        uncertain = (
+            reason
+            in (
+                "disagree_variants_uncertain",
+                "low_confidence_uncertain",
+                "no_numeric",
+            )
+            or low
+            or best[5]
+            or best_val is None
+        )
+        # Accept agreed / high-conf recoveries — including multi-variant low-conf
+        # agreement on faint last-row cells (e.g. Cl.Val shared by all variants).
+        if best_val is not None and reason in (
+            "blue_variants_agree_orig_weak",
+            "prefer_blue_orig_low_conf",
+            "prefer_blue_high_conf_vs_weak_orig",
+            "all_variants_agree",
+            "majority_vote",
+            "majority_vote_low_conf_agree",
+            "single_adequate_variant",
+        ):
+            if reason == "majority_vote_low_conf_agree" or best[2] >= 40.0:
+                uncertain = False
+            elif reason == "all_variants_agree":
+                uncertain = False
+
+        if changed and not uncertain and best_val is not None:
+            _BLUE_SUPPRESSION_STATS["cells_recovered"] = int(
+                _BLUE_SUPPRESSION_STATS.get("cells_recovered") or 0
+            ) + 1
+            _BLUE_SUPPRESSION_STATS["blue_suppression_changed_ocr"] = int(
+                _BLUE_SUPPRESSION_STATS.get("blue_suppression_changed_ocr") or 0
+            ) + 1
+
         return CellResult(
             column=column,
-            raw_ocr=values[0][1] if values else "",
-            normalized=None,
-            confidence=values[0][2] if values else -1.0,
+            raw_ocr=best[1],
+            normalized=None if uncertain else best_val,
+            confidence=best[2],
             bbox=bbox,
-            ocr_uncertain=True,
+            variant=best[0],
+            ocr_uncertain=uncertain,
+            blank=False,
             candidates=candidates,
             blue_pixels_removed=blue_px,
             original_ocr=orig_raw,
             cleaned_ocr=clean_raw,
-            selection_reason="empty_ocr_uncertain",
+            selected_ocr=best[1],
+            selection_reason=reason,
+            preferred_view="blue_suppressed" if changed else "original",
         )
 
-    best_val = best[3]
-    low = best[2] < 40.0 and "low_confidence" in reason
-    uncertain = (
-        reason in (
-            "disagree_variants_uncertain",
-            "low_confidence_uncertain",
-            "no_numeric",
-        )
-        or low
-        or best[5]
-        or best_val is None
-    )
-    # Accept high-confidence blue recovery even when original disagreed.
-    if reason in (
-        "blue_variants_agree_orig_weak",
-        "prefer_blue_orig_low_conf",
-        "prefer_blue_high_conf_vs_weak_orig",
-        "all_variants_agree",
-        "majority_vote",
-        "single_adequate_variant",
-    ) and best[2] >= 40.0 and best_val is not None:
-        uncertain = False
-
-    if changed and not uncertain and best_val is not None:
-        _BLUE_SUPPRESSION_STATS["cells_recovered"] = int(
-            _BLUE_SUPPRESSION_STATS.get("cells_recovered") or 0
-        ) + 1
-        _BLUE_SUPPRESSION_STATS["blue_suppression_changed_ocr"] = int(
-            _BLUE_SUPPRESSION_STATS.get("blue_suppression_changed_ocr") or 0
-        ) + 1
-
-    return CellResult(
-        column=column,
-        raw_ocr=best[1],
-        normalized=None if uncertain else best_val,
-        confidence=best[2],
-        bbox=bbox,
-        variant=best[0],
-        ocr_uncertain=uncertain,
-        blank=False,
-        candidates=candidates,
-        blue_pixels_removed=blue_px,
-        original_ocr=orig_raw,
-        cleaned_ocr=clean_raw,
-        selected_ocr=best[1],
-        selection_reason=reason,
-        preferred_view="blue_suppressed" if changed else "original",
-    )
+    result = _run_variants(use_quick=quick)
+    # Thin / faint cells: quick path often misses — retry full variants.
+    if quick and (
+        result.blank
+        or result.ocr_uncertain
+        or result.normalized is None
+    ) and ink >= 0.004:
+        retry = _run_variants(use_quick=False)
+        if retry.normalized is not None and not retry.ocr_uncertain:
+            retry.selection_reason = (
+                str(retry.selection_reason or "") + "+full_retry_after_quick"
+            )
+            return retry
+        if result.normalized is None and retry.normalized is not None:
+            return retry
+    return result
 
 
 def ocr_text_cell(gray: np.ndarray, bbox: Dict[str, int], column: str) -> CellResult:
@@ -836,6 +871,175 @@ def _refresh_identity(row: Dict[str, Any]) -> None:
     row["identity"] = identity
     row["reconciliation_failed"] = bool(identity.get("reconciliation_failed"))
     row["column_shift"] = column_shift_detail(fake_item)
+
+
+def _candidate_numeric_values(cell: Any) -> List[Tuple[str, float]]:
+    """Collect distinct normalized values from OCR variant candidates."""
+    if cell is None:
+        return []
+    if isinstance(cell, CellResult):
+        meta = cell.candidates or {}
+        current = cell.normalized
+    elif isinstance(cell, dict):
+        meta = cell.get("candidates") or {}
+        current = cell.get("normalized")
+    else:
+        return []
+    out: List[Tuple[str, float]] = []
+    seen = set()
+    if current is not None:
+        try:
+            fv = float(current)
+            out.append(("selected", fv))
+            seen.add(fv)
+        except (TypeError, ValueError):
+            pass
+    for name, info in meta.items():
+        if not isinstance(info, dict):
+            continue
+        if str(name).startswith("_") or name in {
+            "ocr_variant_selected",
+            "blue_suppression_changed_ocr",
+        }:
+            continue
+        val = info.get("normalized")
+        if val is None or info.get("blank"):
+            continue
+        # Uncertain variants are still printed OCR candidates — eligible for
+        # identity pick when the primary selection failed reconciliation.
+        try:
+            fv = float(val)
+        except (TypeError, ValueError):
+            continue
+        if fv in seen:
+            continue
+        seen.add(fv)
+        out.append((str(name), fv))
+    return out
+
+
+def _identity_pick_enabled() -> bool:
+    return os.getenv("STOCK_HYBRID_IDENTITY_OCR_PICK", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def reconcile_row_from_ocr_candidates(row: Dict[str, Any]) -> None:
+    """If identity fails, prefer an alternate OCR variant that balances.
+
+    Only selects among values already returned by cell OCR — never invents.
+    Validation signal only; logs when a candidate is chosen.
+    """
+    if not _identity_pick_enabled():
+        return
+    selected = dict(row.get("selected") or {})
+    cells = row.get("cells") or {}
+    total = selected.get("total_qty")
+    purchase = selected.get("purchase_qty")
+    opening = selected.get("opening_qty")
+    sales = selected.get("sales_qty")
+    sale_ret = selected.get("sales_return_qty") or 0.0
+    pur_ret = selected.get("purchase_return_qty") or 0.0
+    closing = selected.get("closing_qty")
+
+    changed = False
+    # Opening + Purchase ≈ Total — try alternate OCR candidates for either side.
+    if total is not None and purchase is not None and opening is not None:
+        if abs(float(opening) + float(purchase) - float(total)) >= 0.51:
+            # Prefer a unique opening candidate that balances.
+            alts = []
+            for name, val in _candidate_numeric_values(cells.get("opening_qty")):
+                if abs(float(val) + float(purchase) - float(total)) < 0.51:
+                    alts.append((name, float(val)))
+            uniq = {v for _n, v in alts}
+            if len(uniq) == 1:
+                new_v = next(iter(uniq))
+                if abs(new_v - float(opening)) >= 0.51:
+                    logger.info(
+                        "[HYBRID_IDENTITY_OCR_PICK] field=opening_qty "
+                        "from=%s to=%s via=%s total=%s purchase=%s",
+                        opening,
+                        new_v,
+                        [n for n, v in alts if v == new_v],
+                        total,
+                        purchase,
+                    )
+                    selected["opening_qty"] = new_v
+                    opening = new_v
+                    changed = True
+            # Else try a unique purchase candidate that balances.
+            if abs(float(opening) + float(purchase) - float(total)) >= 0.51:
+                alts = []
+                for name, val in _candidate_numeric_values(cells.get("purchase_qty")):
+                    if abs(float(opening) + float(val) - float(total)) < 0.51:
+                        alts.append((name, float(val)))
+                uniq = {v for _n, v in alts}
+                if len(uniq) == 1:
+                    new_v = next(iter(uniq))
+                    if abs(new_v - float(purchase)) >= 0.51:
+                        logger.info(
+                            "[HYBRID_IDENTITY_OCR_PICK] field=purchase_qty "
+                            "from=%s to=%s via=%s total=%s opening=%s",
+                            purchase,
+                            new_v,
+                            [n for n, v in alts if v == new_v],
+                            total,
+                            opening,
+                        )
+                        selected["purchase_qty"] = new_v
+                        purchase = new_v
+                        changed = True
+
+    # Closing ≈ Total - Sale + SaleRet - PurRet
+    if total is not None and sales is not None:
+        expected = float(total) - float(sales) + float(sale_ret) - float(pur_ret)
+        need_closing = closing is None or abs(float(closing) - expected) >= 0.51
+        if need_closing:
+            alts = []
+            for name, val in _candidate_numeric_values(cells.get("closing_qty")):
+                if abs(float(val) - expected) < 0.51:
+                    alts.append((name, float(val)))
+            uniq = {v for _n, v in alts}
+            if len(uniq) == 1:
+                new_v = next(iter(uniq))
+                if closing is None or abs(new_v - float(closing)) >= 0.51:
+                    logger.info(
+                        "[HYBRID_IDENTITY_OCR_PICK] field=closing_qty "
+                        "from=%s to=%s via=%s expected=%s",
+                        closing,
+                        new_v,
+                        [n for n, v in alts if v == new_v],
+                        expected,
+                    )
+                    selected["closing_qty"] = new_v
+                    changed = True
+
+    if changed:
+        row["selected"] = selected
+        # Keep CellResult / dict normalized in sync for diagnostics.
+        for field in ("opening_qty", "purchase_qty", "closing_qty"):
+            cell = cells.get(field)
+            if cell is None or selected.get(field) is None:
+                continue
+            if isinstance(cell, CellResult):
+                cell.normalized = float(selected[field])
+                cell.ocr_uncertain = False
+                cell.selection_reason = (
+                    (cell.selection_reason or "") + "+identity_ocr_pick"
+                )
+            elif isinstance(cell, dict):
+                cell["normalized"] = float(selected[field])
+                cell["ocr_uncertain"] = False
+                cell["selection_reason"] = (
+                    str(cell.get("selection_reason") or "") + "+identity_ocr_pick"
+                )
+        row["cells"] = {
+            k: (v.to_dict() if isinstance(v, CellResult) else v)
+            for k, v in cells.items()
+        }
 
 
 def build_rows(
@@ -961,6 +1165,7 @@ def build_rows(
             "cells": {k: v.to_dict() for k, v in cells.items()},
             "is_focus": is_focus,
         }
+        reconcile_row_from_ocr_candidates(row)
         _refresh_identity(row)
         out.append(row)
 

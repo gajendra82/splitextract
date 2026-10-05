@@ -57,6 +57,360 @@ _EXTRA_FIELDS = {
     "purchase_value": "purchase_value",
 }
 
+# Left-to-right qty/value pairs for STOCK & SALES ANALYSIS style sheets.
+_QTY_VALUE_LAYOUT_FIELDS: Tuple[str, ...] = (
+    "opening_qty",
+    "opening_value",
+    "purchase_qty",
+    "purchase_value",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value",
+)
+
+
+def _cell_layout_repair_enabled() -> bool:
+    return os.getenv("STOCK_VISION_CELL_LAYOUT_REPAIR", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _classify_layout_cell(text: Any) -> str:
+    """Classify a printed cell for column-layout inference."""
+    s = str(text or "").strip()
+    if not s or s in {"-", "—", "–", ".", ".."}:
+        return "empty"
+    if re.match(r"^\s*TOTAL\b", s, re.I):
+        return "total"
+    compact = s.replace(",", "").replace(" ", "")
+    if re.fullmatch(r"\d{1,4}", compact):
+        return "serial_or_small_int"
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", compact):
+        if "." in compact:
+            return "number"
+        # Larger integers still count as numeric qty/value cells.
+        try:
+            return "serial_or_small_int" if abs(int(compact)) < 1000 else "number"
+        except Exception:
+            return "number"
+    if re.fullmatch(
+        r"\d+\s*(?:GM|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG)?|"
+        r"\d+\s*[xX*×]\s*\d+(?:\s*'?S)?",
+        s,
+        re.I,
+    ):
+        return "pack"
+    if re.search(r"[A-Za-z]{3,}", s):
+        return "product"
+    return "other"
+
+
+def _majority_kind(votes: List[str]) -> Optional[str]:
+    if not votes:
+        return None
+    counts: Dict[str, int] = {}
+    for v in votes:
+        if v in {"empty", "other"}:
+            continue
+        counts[v] = counts.get(v, 0) + 1
+    if not counts:
+        return None
+    return max(counts.items(), key=lambda kv: kv[1])[0]
+
+
+def _infer_qty_value_canons_from_rows(
+    rows: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Optional[List[str]]:
+    """Infer canonical column roles from cell contents (left-to-right geometry).
+
+    Detects optional leading serial + product + optional pack, then assigns
+    opening/receipt/issue/closing qty+value pairs. Returns None when the
+    layout is not confident enough.
+    """
+    if column_count < 8:
+        return None
+    votes: List[List[str]] = [[] for _ in range(column_count)]
+    product_rows = 0
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        if row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if len(cells) < column_count:
+            cells = cells + [None] * (column_count - len(cells))
+        kinds = [_classify_layout_cell(cells[i]) for i in range(column_count)]
+        if "total" in kinds:
+            continue
+        if "product" not in kinds:
+            continue
+        product_rows += 1
+        for i, kind in enumerate(kinds):
+            votes[i].append(kind)
+    if product_rows < 2:
+        return None
+
+    maj = [_majority_kind(v) for v in votes]
+    # Find product column (first product majority).
+    product_idx = next((i for i, k in enumerate(maj) if k == "product"), None)
+    if product_idx is None:
+        return None
+
+    canons = ["ignore"] * column_count
+    canons[product_idx] = "product_name"
+
+    # Leading serial column immediately left of product.
+    if product_idx > 0 and maj[product_idx - 1] in {
+        "serial_or_small_int",
+        "number",
+    }:
+        # Prefer serial when most values are small ints without decimals.
+        serial_votes = votes[product_idx - 1]
+        serial_like = sum(1 for k in serial_votes if k == "serial_or_small_int")
+        if serial_like >= max(2, int(0.6 * len(serial_votes))):
+            canons[product_idx - 1] = "ignore"  # serial
+            # keep ignore; reason applied by caller
+
+    # Pack immediately right of product.
+    num_start = product_idx + 1
+    if product_idx + 1 < column_count and maj[product_idx + 1] == "pack":
+        canons[product_idx + 1] = "pack"
+        num_start = product_idx + 2
+
+    # Collect remaining columns that look numeric (or empty placeholders).
+    num_idxs: List[int] = []
+    for i in range(num_start, column_count):
+        kind = maj[i]
+        if kind in {"number", "serial_or_small_int", None}:
+            # None = mostly empty — still a placeholder column in the grid.
+            nonempty = [k for k in votes[i] if k not in {"empty", "other"}]
+            if kind is None and not nonempty:
+                # Trailing all-empty columns after dump — stop.
+                if num_idxs and len(num_idxs) >= 8:
+                    break
+                continue
+            num_idxs.append(i)
+        elif kind == "pack":
+            # stray pack-like — skip
+            continue
+        elif kind == "product":
+            # second product col — stop numeric region
+            break
+        else:
+            if len(num_idxs) >= 8:
+                break
+
+    if len(num_idxs) < 6:
+        return None
+
+    # Assign up to 8 qty/value fields; optional 9th dump stays ignore.
+    for fi, col_i in enumerate(num_idxs[:8]):
+        canons[col_i] = _QTY_VALUE_LAYOUT_FIELDS[fi]
+
+    # Require opening + at least one of purchase/sales/closing.
+    assigned = {c for c in canons if c != "ignore"}
+    if "opening_qty" not in assigned or "product_name" not in assigned:
+        return None
+    if not assigned & {"purchase_qty", "sales_qty", "closing_qty"}:
+        return None
+    return canons
+
+
+def _product_col_looks_like_serial(
+    columns: Sequence[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+) -> bool:
+    product_cols = [
+        int(c["col_index"])
+        for c in columns
+        if isinstance(c, dict) and c.get("canonical") == "product_name"
+    ]
+    if not product_cols:
+        return False
+    pci = product_cols[0]
+    serial_hits = 0
+    product_hits = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if pci >= len(cells):
+            continue
+        kind = _classify_layout_cell(cells[pci])
+        if kind == "serial_or_small_int":
+            serial_hits += 1
+        elif kind == "product":
+            product_hits += 1
+    return serial_hits >= 3 and serial_hits > product_hits
+
+
+def _pack_token_parked_in_qty_column(
+    columns: Sequence[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+) -> bool:
+    """True when packing tokens sit in the first qty column (missing pack header)."""
+    qty_idx = next(
+        (
+            int(c["col_index"])
+            for c in columns
+            if isinstance(c, dict)
+            and c.get("canonical")
+            in {"opening_qty", "purchase_qty", "sales_qty", "closing_qty"}
+        ),
+        None,
+    )
+    if qty_idx is None:
+        return False
+    # Prefer opening_qty specifically when present.
+    for c in columns:
+        if isinstance(c, dict) and c.get("canonical") == "opening_qty":
+            try:
+                qty_idx = int(c["col_index"])
+            except (TypeError, ValueError):
+                pass
+            break
+    pack_hits = 0
+    numbered = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if qty_idx >= len(cells):
+            continue
+        kind = _classify_layout_cell(cells[qty_idx])
+        if kind == "pack":
+            pack_hits += 1
+        elif kind in {"number", "serial_or_small_int"}:
+            numbered += 1
+    return pack_hits >= 2 and pack_hits >= numbered
+
+
+def _shift_pack_out_of_qty_headers(
+    columns: List[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+    errors: List[str],
+) -> List[Dict[str, Any]]:
+    """When packing tokens sit in opening_qty, insert pack and shift qty/value right.
+
+    Does not invent cell values — only repairs the header→column map so printed
+    pack tokens are not parsed as quantities.
+    """
+    if not _cell_layout_repair_enabled():
+        return columns
+    if not _pack_token_parked_in_qty_column(columns, rows):
+        return columns
+    if any(c.get("canonical") == "pack" for c in columns if isinstance(c, dict)):
+        return columns
+
+    ordered = sorted(
+        [dict(c) for c in columns if isinstance(c, dict)],
+        key=lambda c: int(c.get("col_index") or 0),
+    )
+    oq_pos = next(
+        (i for i, c in enumerate(ordered) if c.get("canonical") == "opening_qty"),
+        None,
+    )
+    if oq_pos is None:
+        return columns
+
+    # Canonicals from opening_qty onward shift one column to the right.
+    tail = [c.get("canonical") for c in ordered[oq_pos:]]
+    ordered[oq_pos]["canonical"] = "pack"
+    ordered[oq_pos]["is_value"] = False
+    ordered[oq_pos]["confidence"] = 0.9
+    ordered[oq_pos]["reason"] = "pack_shift_from_qty"
+    ordered[oq_pos]["source"] = "cell_layout"
+
+    for offset, canon in enumerate(tail):
+        dest = oq_pos + 1 + offset
+        if dest >= len(ordered):
+            break
+        ordered[dest]["canonical"] = canon
+        ordered[dest]["is_value"] = str(canon).endswith("_value")
+        ordered[dest]["confidence"] = 0.85
+        ordered[dest]["reason"] = "pack_shift_from_qty"
+        ordered[dest]["source"] = "cell_layout"
+
+    errors.append("PACK_SHIFT_FROM_QTY")
+    logger.info(
+        "VISION_TABLE pack_shift_from_qty cols=%s",
+        [(c.get("col_index"), c.get("canonical")) for c in ordered],
+    )
+    return ordered
+
+
+def _apply_cell_layout_qty_value_repair(
+    columns: List[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+    column_count: int,
+    errors: List[str],
+) -> List[Dict[str, Any]]:
+    """Override broken header maps using left-to-right cell geometry."""
+    if not _cell_layout_repair_enabled():
+        return columns
+
+    core = {
+        str(c.get("canonical"))
+        for c in columns
+        if isinstance(c, dict) and c.get("canonical") not in {None, "ignore"}
+    }
+    need = (
+        "MISSING_CORE_COLUMNS" in errors
+        or len(core & {"opening_qty", "purchase_qty", "sales_qty", "closing_qty"}) < 2
+        or _product_col_looks_like_serial(columns, rows)
+        or _pack_token_parked_in_qty_column(columns, rows)
+        or any(e == "DUPLICATE_CANONICAL" for e in errors)
+    )
+    # Only repair when bare QTY/VALUE headers dominate or product looks serial.
+    bare_qty = sum(
+        1
+        for c in columns
+        if isinstance(c, dict)
+        and re.sub(r"\s+", "", normalize_header(c.get("header_text"))).rstrip(".")
+        in {"qty", "quantity", "qnty"}
+    )
+    if not need and bare_qty < 3:
+        return columns
+
+    inferred = _infer_qty_value_canons_from_rows(rows, column_count)
+    if not inferred:
+        return columns
+
+    by_idx = {
+        int(c.get("col_index") or 0): dict(c)
+        for c in columns
+        if isinstance(c, dict)
+    }
+    repaired: List[Dict[str, Any]] = []
+    for i, canon in enumerate(inferred):
+        base = by_idx.get(i) or {
+            "col_index": i,
+            "header_text": "",
+            "confidence": 0.0,
+            "is_value": False,
+            "reason": "unknown",
+        }
+        item = dict(base)
+        item["col_index"] = i
+        item["canonical"] = canon
+        item["confidence"] = 0.9 if canon != "ignore" else 0.0
+        item["is_value"] = canon.endswith("_value")
+        item["reason"] = "cell_layout_qty_value"
+        item["source"] = "cell_layout"
+        repaired.append(item)
+
+    errors.append("CELL_LAYOUT_QTY_VALUE_REPAIR")
+    logger.info(
+        "VISION_TABLE cell_layout_qty_value_repair cols=%s",
+        [(c["col_index"], c["canonical"]) for c in repaired],
+    )
+    return repaired
+
 
 def _boundary_debug_enabled() -> bool:
     """Temporary Vision mapping boundary logs (default ON while diagnosing)."""
@@ -123,6 +477,12 @@ def build_table_prompt() -> str:
         "header order. Do not skip a blank Goods Ret or Purc Ret cell — use "
         "null so later columns do not shift left. Total In is its own column; "
         "never put Total In digits into Goods Ret or Sale. "
+        "STOCK & SALES ANALYSIS / qty+value grids: emit TWO header rows — "
+        "parent bands OPENING, RECEIPT/RECEIPTS, ISSUE/SALES, CLOSING (and "
+        "DUMP if printed) on row 1, and QTY/VALUE sub-headers on row 2. "
+        "Keep a leading serial/Sr column and a packing column when printed. "
+        "Never put the serial number into product_name. Never freely reorder "
+        "numbers across columns — each cell stays under its printed column. "
         "Do not emit letterhead, address, period, company, or section-banner "
         "lines (e.g. 'NON MOVING PRODUCT') as product rows; mark those "
         "is_total_row=true or omit them. Emit every real product row, "
@@ -995,6 +1355,188 @@ def _merge_proposed_mapping(
 _GARBAGE_QTY_TOKEN = re.compile(r"^[pP]\d{1,4}$")
 
 
+def _flag_qty_value_geometry_suspicion(item: Dict[str, Any]) -> None:
+    """Flag rows where qty/value look swapped — never rewrite printed numbers."""
+    extra = item.setdefault("extra", {})
+    opening_qty = item.get("opening_qty")
+    opening_value = item.get("opening_value")
+    if opening_value is None and isinstance(extra, dict):
+        opening_value = extra.get("opening_value")
+    receipts_qty = item.get("receipts_qty")
+    flags = list(extra.get("flags") or []) if isinstance(extra, dict) else []
+    try:
+        oq = float(opening_qty) if opening_qty is not None else None
+        ov = float(opening_value) if opening_value is not None else None
+        rq = float(receipts_qty) if receipts_qty is not None else None
+    except (TypeError, ValueError):
+        return
+    suspicious = False
+    # Classic shift: money parked in receipts_qty while opening_value holds a
+    # small integer that looks like a quantity.
+    if (
+        rq is not None
+        and ov is not None
+        and rq >= 20
+        and abs(rq - int(rq)) > 0.001
+        and ov == int(ov)
+        and 0 < ov < 50
+        and (oq is None or oq == 0)
+    ):
+        suspicious = True
+    if suspicious and "QTY_VALUE_GEOMETRY_SUSPECTED" not in flags:
+        flags.append("QTY_VALUE_GEOMETRY_SUSPECTED")
+        extra["flags"] = flags
+        extra["row_status"] = "COLUMN_ASSIGNMENT_SUSPECTED"
+        logger.info(
+            "VISION_TABLE QTY_VALUE_GEOMETRY_SUSPECTED product=%s "
+            "opening_qty=%s opening_value=%s receipts_qty=%s",
+            str(item.get("product_name") or "")[:60],
+            opening_qty,
+            opening_value,
+            receipts_qty,
+        )
+
+
+def _looks_money(val: Any) -> bool:
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return False
+    return abs(v - int(v)) > 0.001 and abs(v) >= 1.0
+
+
+def _looks_small_qty(val: Any) -> bool:
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return False
+    return abs(v - int(v)) <= 0.001 and 0 <= abs(v) < 500
+
+
+def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
+    """Reassign trailing fields when a blank ISSUE/VALUE cell was dropped.
+
+    Pattern after a pack-column shift: sales_value holds closing_qty (small int),
+    closing_qty holds closing_value (money), closing_value holds dump (small int).
+    Move printed numbers right by one field; set sales_value to 0 (blank). Does
+    not invent new digits — only re-slots already printed numbers.
+    """
+    if not _cell_layout_repair_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    sq = item.get("sales_qty")
+    sv = item.get("sales_value")
+    cq = item.get("closing_qty")
+    cv = item.get("closing_value")
+    oq = item.get("opening_qty")
+    rq = item.get("receipts_qty")
+    if not (
+        (sq is None or float(sq or 0) == 0)
+        and _looks_small_qty(sv)
+        and _looks_money(cq)
+        and _looks_small_qty(cv)
+    ):
+        return False
+    try:
+        opening = float(oq or 0) + float(rq or 0)
+        # Identity: opening+receipts - 0 sales ≈ the value parked in sales_value.
+        if abs(opening - float(sv)) > 0.51 and float(sv) != 0:
+            # Still allow when dump-like trailing pattern is strong.
+            if not (_looks_money(cq) and _looks_small_qty(cv)):
+                return False
+    except (TypeError, ValueError):
+        return False
+
+    dump = cv
+    item["closing_value"] = float(cq)
+    item["closing_qty"] = float(sv)
+    item["sales_value"] = 0.0
+    # sales_qty stays 0/None
+    extra["dump_qty"] = float(dump) if dump is not None else extra.get("dump_qty")
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["sales_value"] = "missing"
+        fs["closing_qty"] = "printed"
+        fs["closing_value"] = "printed"
+        fs["dump_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "MISSING_PAIR_NULL_SHIFT" not in flags:
+        flags.append("MISSING_PAIR_NULL_SHIFT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE MISSING_PAIR_NULL_SHIFT product=%s "
+        "sales_value=%s closing_qty=%s closing_value=%s dump=%s",
+        str(item.get("product_name") or "")[:60],
+        sv,
+        cq,
+        item.get("closing_value"),
+        dump,
+    )
+    return True
+
+
+def _compare_line_sums_to_printed_total(
+    line_items: Sequence[Dict[str, Any]],
+    totals_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Report sum-vs-printed-TOTAL discrepancies without rewriting rows."""
+    fields = (
+        ("opening_qty", "opening_qty"),
+        ("opening_value", "opening_value"),
+        ("receipts_qty", "receipts_qty"),
+        ("receipts_value", "receipts_value"),
+        ("sales_qty", "sales_qty"),
+        ("sales_value", "sales_value"),
+        ("closing_qty", "closing_qty"),
+        ("closing_value", "closing_value"),
+    )
+
+    def _num(item: Dict[str, Any], key: str) -> float:
+        if key == "opening_value":
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            raw = item.get("opening_value")
+            if raw is None:
+                raw = extra.get("opening_value")
+        elif key == "receipts_value":
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            raw = item.get("receipts_value")
+            if raw is None:
+                raw = extra.get("purchase_value") or extra.get("receipts_value")
+        else:
+            raw = item.get(key)
+        try:
+            return float(raw or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    printed = next(
+        (
+            t
+            for t in totals_rows
+            if isinstance(t, dict)
+            and re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
+        ),
+        totals_rows[0] if totals_rows else None,
+    )
+    if not isinstance(printed, dict):
+        return {"compared": False, "reason": "no_printed_total"}
+
+    line_sums = {k: round(sum(_num(i, k) for i in line_items if isinstance(i, dict)), 2) for k, _ in fields}
+    printed_vals = {k: round(_num(printed, k), 2) for k, _ in fields}
+    diffs = {
+        k: round(line_sums[k] - printed_vals[k], 2)
+        for k, _ in fields
+        if abs(line_sums[k] - printed_vals[k]) > 0.51
+    }
+    return {
+        "compared": True,
+        "line_sums": line_sums,
+        "printed_total": printed_vals,
+        "discrepancies": diffs,
+        "ok": not diffs,
+    }
+
+
 def _maybe_repair_shifted_qty_row(
     item: Dict[str, Any],
     *,
@@ -1081,6 +1623,34 @@ def _empty_item() -> Dict[str, Any]:
         "closing_value": 0.0,
         "extra": {},
     }
+
+
+def _realign_cells_skipping_absent_pack(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+) -> List[Any]:
+    """TOTAL rows often omit packing; shift numeric cells left into qty/value cols.
+
+    Only runs when the pack column holds a number (not a pack token). Does not
+    invent values — only moves printed cells to the columns they belong in.
+    """
+    pack_idx = next(
+        (
+            int(c["col_index"])
+            for c in columns
+            if isinstance(c, dict) and c.get("canonical") == "pack"
+        ),
+        None,
+    )
+    if pack_idx is None or pack_idx >= len(cells):
+        return cells
+    kind = _classify_layout_cell(cells[pack_idx])
+    if kind not in {"number", "serial_or_small_int"}:
+        return cells
+    # Insert a blank pack slot and drop the trailing overflow cell.
+    out = list(cells)
+    out.insert(pack_idx, None)
+    return out[: len(cells)]
 
 
 def _apply_fields_to_item(
@@ -1455,6 +2025,16 @@ def _map_single_table(
         columns = _merge_proposed_mapping(
             columns, table.get("proposed_mapping") or [], errors
         )
+        # Prefer a surgical pack-column shift when headers are otherwise good.
+        columns = _shift_pack_out_of_qty_headers(
+            columns, table.get("rows") or [], errors
+        )
+        columns = _apply_cell_layout_qty_value_repair(
+            columns,
+            table.get("rows") or [],
+            column_count,
+            errors,
+        )
         header_used = {
             "column_count": column_count,
             "columns": columns,
@@ -1540,6 +2120,23 @@ def _map_single_table(
             cells = cells + [None] * (column_count - len(cells))
         elif len(cells) > column_count:
             cells = cells[:column_count]
+
+        # TOTAL lines often skip packing; realign before column assignment.
+        product_hint = None
+        for c in columns:
+            if isinstance(c, dict) and c.get("canonical") == "product_name":
+                try:
+                    pi = int(c["col_index"])
+                    if 0 <= pi < len(cells):
+                        product_hint = cells[pi]
+                except (TypeError, ValueError, KeyError):
+                    pass
+                break
+        if row.get("is_total_row") or (
+            isinstance(product_hint, str)
+            and re.match(r"^\s*TOTAL\b", product_hint, re.I)
+        ):
+            cells = _realign_cells_skipping_absent_pack(cells, columns)
 
         physical_pairs = {
             str(i): cells[i] for i in range(column_count) if i < len(cells)
@@ -1628,6 +2225,8 @@ def _map_single_table(
             if _is_non_product_vision_row(item):
                 continue
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
+            _repair_missing_pair_null_shift(item)
+            _flag_qty_value_geometry_suspicion(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
             )
@@ -2168,8 +2767,32 @@ def _stamp_vision_result(
         result["stockist_name"] = stockist_name
     period = str(statement_period or "").strip()
     if period:
-        # Best-effort: leave as report_title period text; parsers may normalize later.
-        result["report_title"] = result.get("report_title") or period
+        # Accept only a clear printed report range — never a guessed single date.
+        m = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2})\s*(?:to|-|–|—)\s*"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}-\d{2}-\d{2})",
+            period,
+            re.I,
+        )
+        if m:
+            try:
+                from services.sales_statement_extractor import _normalize_date
+
+                pf = _normalize_date(m.group(1))
+                pt = _normalize_date(m.group(2))
+            except Exception:
+                pf = pt = None
+            if pf:
+                result["period_from"] = pf
+            if pt:
+                result["period_to"] = pt
+            if pf or pt:
+                result["totals"]["extra"]["statement_period_source"] = "vision_header"
+            else:
+                result["report_title"] = result.get("report_title") or period
+        else:
+            # Keep raw text only as report_title when it is not a valid range.
+            result["report_title"] = result.get("report_title") or period
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "vision_table"
     extra["vision_table_final"] = True
@@ -2181,6 +2804,15 @@ def _stamp_vision_result(
     extra["gemini_budget"] = int(gemini_budget)
     if totals_rows:
         extra["vision_table_total_rows"] = totals_rows
+        try:
+            extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
+                line_items, totals_rows
+            )
+        except Exception as exc:
+            extra["printed_total_validation"] = {
+                "compared": False,
+                "reason": f"error:{type(exc).__name__}",
+            }
     # Skip post-pipeline Gemini gates.
     extra["stock_image_vision_decided"] = True
     extra["final_selected_extraction"] = "vision_table"
@@ -2231,7 +2863,18 @@ def run_vision_table_path(
 
         page_images: List[bytes]
         if kind == "image":
-            page_images = [file_bytes]
+            cropped = None
+            try:
+                from services.sales_statement_extractor import (
+                    _crop_bright_spreadsheet_region,
+                )
+
+                cropped = _crop_bright_spreadsheet_region(file_bytes)
+            except Exception:
+                cropped = None
+            page_images = [cropped or file_bytes]
+            if cropped:
+                _log("table_crop_applied", bytes=len(cropped))
             gemini_budget = 2
         elif kind == "scanned_pdf":
             from services.gemini_extraction_fallback import _pdf_images
