@@ -240,6 +240,156 @@ class ClassifyStockDirectVisionTests(unittest.TestCase):
         self.assertEqual(decision["layout"], "normal_stock_open_recp")
         self.assertNotIn("filename_za", decision["reason"])
 
+    def test_opbal_issue_beats_filename_za_saleret(self):
+        """JYOSTNA Op.Bal/Receipt/Issue/Closing must not use SaleRet schema."""
+        peek = (
+            "JYOSTNA DRUG DISTRIBUTORS\n"
+            "Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026)\n"
+            "PRODUCT NAME PACKING Op.Bal. Qty. Receipt Qty. Total Qty. "
+            "Issue Qty. Closing Balance MSR Price\n"
+            "CYSTONE FORTE TAB 0 174 0 174 62 112 0.00\n"
+        )
+        with patch.dict(
+            "os.environ", {"STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA": "true"}
+        ):
+            decision = classify_stock_direct_vision(
+                peek, "0000730196_2026_08_ZA_25_299_07092026181829.jpg"
+            )
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision["layout"], "sales_stock_opbal_issue")
+        self.assertEqual(decision["schema"], "opbal_receipt_issue_closing")
+        self.assertNotIn("filename_za", decision["reason"])
+
+    def test_opbal_issue_flag_off_keeps_filename_za(self):
+        peek = (
+            "Sales & Stock Statement\n"
+            "PRODUCT NAME PACKING Op.Bal. Qty. Receipt Qty. Total Qty. "
+            "Issue Qty. Closing Balance MSR Price\n"
+        )
+        with patch.dict(
+            "os.environ", {"STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA": "false"}
+        ):
+            decision = classify_stock_direct_vision(
+                peek, "0000730196_2026_08_ZA_25_299_07092026181829.jpg"
+            )
+        self.assertEqual(decision["layout"], "product_stock_report_saleret")
+        self.assertIn("filename_za", decision["reason"])
+
+    def test_opbal_issue_route_calls_swilerp_vision(self):
+        """Vision-first locks Op.Bal/Issue path so SaleRet cannot overwrite."""
+        from services.sales_statement_extractor import empty_line_item
+
+        peek = (
+            "Sales & Stock Statement\n"
+            "PRODUCT NAME PACKING Op.Bal. Qty. Receipt Qty. Total Qty. "
+            "Issue Qty. Closing Balance MSR Price\n"
+            "CYSTONE FORTE TAB 0 174 0 174 62 112 0.00\n"
+        )
+        result = empty_result("jyostna.jpg", "jpg")
+        item = empty_line_item()
+        item["product_name"] = "CYSTONE FORTE TAB"
+        item["opening_qty"] = 174.0
+        item["receipts_qty"] = 0.0
+        item["sales_qty"] = 62.0
+        item["closing_qty"] = 112.0
+        result["line_items"] = [item]
+        result["totals"]["extra"]["extraction_method"] = "swilerp_page_split_vision"
+
+        with patch.dict(
+            "os.environ", {"STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA": "true"}
+        ), patch(
+            "services.sales_statement_extractor._parse_swilerp_sales_stock_image",
+            return_value=result,
+        ) as mock_parse, patch(
+            "services.stock_direct_vision.detect_stock_handwriting_signals",
+            return_value={"handwritten": "false"},
+        ):
+            out = try_stock_direct_vision(
+                b"fake-image-bytes",
+                "0000730196_2026_08_ZA_25_299_07092026181829.jpg",
+                ".jpg",
+                peek_text=peek,
+            )
+        self.assertIsNotNone(out)
+        mock_parse.assert_called_once()
+        self.assertTrue(is_stock_vision_locked(out))
+        cystone = (out.get("line_items") or [])[0]
+        self.assertEqual(cystone["opening_qty"], 174.0)
+        self.assertEqual(cystone["closing_qty"], 112.0)
+        self.assertEqual(cystone["sales_qty"], 62.0)
+
+    def test_filename_za_saleret_rescue_to_opbal_issue(self):
+        """Garbled peek + _ZA_ SaleRet with ignored Issue rescues to Op.Bal vision."""
+        from services.sales_statement_extractor import empty_line_item
+        from services.stock_direct_vision import (
+            _saleret_looks_like_ignored_issue,
+        )
+
+        bad = empty_result("jyostna.jpg", "jpg")
+        for name, op, rec, cl in (
+            ("CYSTONE FORTE TAB", 174.0, 0.0, 174.0),
+            ("MENTAT DS SYP", 0.0, 120.0, 120.0),
+            ("MENTAT SYP", 27.0, 28.0, 55.0),
+            ("LIV 52 DS TAB", 1.0, 300.0, 301.0),
+        ):
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = op
+            item["receipts_qty"] = rec
+            item["sales_qty"] = 0.0
+            item["closing_qty"] = cl
+            bad["line_items"].append(item)
+        self.assertTrue(_saleret_looks_like_ignored_issue(bad))
+
+        good = empty_result("jyostna.jpg", "jpg")
+        for name, op, rec, sale, cl in (
+            ("CYSTONE FORTE TAB", 174.0, 0.0, 62.0, 112.0),
+            ("MENTAT DS SYP", 120.0, 0.0, 64.0, 56.0),
+            ("MENTAT SYP", 27.0, 28.0, 10.0, 45.0),
+            ("LIV 52 DS TAB", 1.0, 300.0, 212.0, 89.0),
+        ):
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = op
+            item["receipts_qty"] = rec
+            item["sales_qty"] = sale
+            item["closing_qty"] = cl
+            good["line_items"].append(item)
+
+        with patch.dict(
+            "os.environ", {"STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA": "true"}
+        ), patch(
+            "services.stock_direct_vision.extract_saleret_direct_vision",
+            return_value=bad,
+        ), patch(
+            "services.sales_statement_extractor._parse_swilerp_sales_stock_image",
+            return_value=good,
+        ) as mock_opbal, patch(
+            "services.stock_direct_vision.detect_stock_handwriting_signals",
+            return_value={"handwritten": "false"},
+        ):
+            out = try_stock_direct_vision(
+                b"fake-image-bytes",
+                "0000730196_2026_08_ZA_25_299_07092026181829.jpg",
+                ".jpg",
+                peek_text="garbled Seeeeeeoeeeonnee header noise only",
+            )
+        self.assertIsNotNone(out)
+        mock_opbal.assert_called_once()
+        by = {
+            str(i.get("product_name") or "").upper(): i
+            for i in (out.get("line_items") or [])
+        }
+        self.assertEqual(by["CYSTONE FORTE TAB"]["opening_qty"], 174.0)
+        self.assertEqual(by["CYSTONE FORTE TAB"]["closing_qty"], 112.0)
+        self.assertEqual(by["CYSTONE FORTE TAB"]["sales_qty"], 62.0)
+        self.assertEqual(
+            ((out.get("totals") or {}).get("extra") or {}).get(
+                "stock_direct_vision_route"
+            ),
+            "sales_stock_opbal_issue",
+        )
+
     def test_normal_stock_validation_open_recp_sales_clsg(self):
         from services.stock_direct_vision import validate_stock_direct_vision
         from services.sales_statement_extractor import empty_result, empty_line_item

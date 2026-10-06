@@ -49,11 +49,13 @@ ZA / Product Stock Report layout (left → right after Product Name):
   ClosStock                        -> closing_qty
 
 Do not confuse:
-- packing with quantity
+- packing with quantity (packing is never "0"; never duplicate "100 ML 100 ML")
+- Opening with Purchase (Opening stock stays in opening_qty even when Purchase is blank)
 - Sale with SaleRet
 - Exp/Dmg with SaleRet
 - ClosStock with any money/value column
 - product-name digits with table quantities
+Keep full brand names: LIV.52 (not UV 52 / IN 52 / "52 DS"), LUKOL (not IKOL), BONNISAN.
 
 Stock identity is VALIDATION ONLY (do not calculate a missing cell to balance):
   total_qty should equal opening_qty + receipts_qty
@@ -63,6 +65,9 @@ Ignore phone UI chrome (Done, free trial, Add text/image).
 Every numeric cell may have a thin blue/black OVERLINE through/above digits.
 Read the black digit UNDER the bar; do not invent leading digits from the bar
 (2.00≠12/32; 12.00≠212; 1.00≠21; 0.00≠30/50; 9.00≠0; 38.00≠30).
+List EVERY printed product row top to bottom. Do not skip a row because Sale
+or ClosStock is 0.00. Do not merge two products into one line.
+ClosStock is a quantity — never put Closing Amount / Cls Amt into closing_qty.
 
 Printed cells on this SaleRet/ClosStock phone style (copy exactly when present):
 - HIORA K TOOTHPASTE 100 GM: Opening 9, Purchase 50, Total 59, Sale 21,
@@ -918,6 +923,83 @@ def _has_normal_stock_open_recp_headers(text: str) -> bool:
     return False
 
 
+def _opbal_issue_beats_filename_za_enabled() -> bool:
+    """STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA — default OFF until explicitly enabled."""
+    return os.getenv("STOCK_OPBAL_ISSUE_BEATS_FILENAME_ZA", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _has_sales_stock_opbal_issue_headers(text: str) -> bool:
+    """Sales & Stock with Op.Bal / Receipt / Issue / Closing (not SaleRet).
+
+    Must beat filename _ZA_ → SaleRet: that path ignores Issue Qty so closing
+    collapses to opening+receipts (e.g. CYSTONE FORTE 174/0/174 instead of
+    174/62/112).
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"SaleRet|ClosStock|Clos\s*Stock", blob, re.I):
+        return False
+    if _has_product_wise_stock_headers(blob):
+        return False
+    has_op = bool(
+        re.search(r"Op\.?\s*Bal|Opal\.?|OpBal|Op\s*Ba[l1]", blob, re.I)
+    )
+    has_receipt = bool(re.search(r"\bReceipt\b", blob, re.I))
+    has_issue = bool(re.search(r"\bIssue\b", blob, re.I))
+    has_closing = bool(
+        re.search(r"Closing\s*Balance|\bClosing\b", blob, re.I)
+    )
+    if has_op and has_receipt and has_issue and has_closing:
+        return True
+    # Title survives when Op.Bal OCR fails on blue/phone headers.
+    if (
+        re.search(r"Sales\s*&\s*Stock\s*Statement", blob, re.I)
+        and has_receipt
+        and has_issue
+        and has_closing
+    ):
+        return True
+    return False
+
+
+def _saleret_looks_like_ignored_issue(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """SaleRet read dropped Issue: sales≈0 and closing≈opening+receipts."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 2:
+        return False
+    checked = 0
+    sales_zero = 0
+    close_eq_open_rec = 0
+    for item in items:
+        try:
+            op = float(item.get("opening_qty") or 0)
+            rec = float(item.get("receipts_qty") or 0)
+            sl = float(item.get("sales_qty") or 0)
+            cl = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not (op or rec or cl or sl):
+            continue
+        checked += 1
+        if abs(sl) <= 0.01:
+            sales_zero += 1
+        if abs(op + rec - cl) <= 0.51:
+            close_eq_open_rec += 1
+    if checked < 2:
+        return False
+    threshold = max(2, int(0.75 * checked))
+    return sales_zero >= threshold and close_eq_open_rec >= threshold
+
 
 def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     """C-Square PharmAssist Stock and Sale Report (photo or PDF OCR).
@@ -1022,6 +1104,16 @@ def classify_stock_direct_vision(
             "layout": "pharmassist_stock_sale",
             "schema": "pharmassist_op_pur_sale_bal",
             "reason": "pharmassist_stock_sale_report",
+        }
+
+    # Op.Bal/Receipt/Issue/Closing Sales & Stock must beat filename _ZA_ SaleRet.
+    if _opbal_issue_beats_filename_za_enabled() and _has_sales_stock_opbal_issue_headers(
+        peek_text or ""
+    ):
+        return {
+            "layout": "sales_stock_opbal_issue",
+            "schema": "opbal_receipt_issue_closing",
+            "reason": "sales_stock_opbal_issue_headers",
         }
 
     if re.search(r"SaleRet|Sale\s*Ret|ClosStock|Clos\s*Stock|Closstock|Exp\s*/\s*Dmg", compact, re.I):
@@ -3339,6 +3431,7 @@ def try_stock_direct_vision(
         and not _has_saleret_headers(layout_peek)
         and not _has_opqty_qoh_headers(layout_peek)
         and not _has_normal_stock_open_recp_headers(layout_peek)
+        and not _has_sales_stock_opbal_issue_headers(layout_peek)
         and re.search(r"_ZA_\d+", filename or "", re.I)
     ):
         # Blue Op.Qty/Op.Val headers need a dedicated BW OCR region (not the
@@ -3640,8 +3733,151 @@ def try_stock_direct_vision(
             file_bytes, filename, ext, reason=reason
         )
 
+    if layout == "sales_stock_opbal_issue":
+        started = time.time()
+        _log(
+            "STOCK_DIRECT_VISION_START",
+            filename=filename,
+            route="sales_stock_opbal_issue",
+            reason=reason,
+            gemini_model=model,
+            candidate=1,
+            byte_size=len(file_bytes),
+            numeric_source="gemini_vision",
+        )
+        try:
+            from services.sales_statement_extractor import (
+                _parse_swilerp_sales_stock_image,
+            )
+
+            opbal = _parse_swilerp_sales_stock_image(file_bytes, filename, ext)
+        except Exception as exc:
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason="opbal_issue_parse_error",
+                error_type=type(exc).__name__,
+            )
+            return None
+        elapsed_ms = int((time.time() - started) * 1000)
+        if not opbal or not opbal.get("line_items"):
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason="opbal_issue_empty",
+                elapsed_ms=elapsed_ms,
+                row_count=0,
+            )
+            return None
+        lock_stock_vision_result(
+            opbal,
+            early_vision_reason="sales_stock_opbal_issue",
+            stock_direct_vision_route="sales_stock_opbal_issue",
+            stock_direct_vision_candidate=1,
+            numeric_source="gemini_vision",
+            gemini_input_kind="image_original",
+            extraction_method=(
+                ((opbal.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or "swilerp_page_split_vision"
+            ),
+        )
+        _log(
+            "STOCK_DIRECT_VISION_END",
+            filename=filename,
+            route="sales_stock_opbal_issue",
+            reason=reason,
+            elapsed_ms=elapsed_ms,
+            status="ok",
+            row_count=len(opbal.get("line_items") or []),
+            numeric_source="gemini_vision",
+        )
+        _log(
+            "STOCK_VISION_FINAL",
+            filename=filename,
+            handwritten="false",
+            line_items=len(opbal.get("line_items") or []),
+            numeric_source="gemini_vision",
+            route="sales_stock_opbal_issue",
+        )
+        return opbal
 
     # SaleRet / ClosStock (and Opening/Purchase/Sale table signals)
-    return extract_saleret_direct_vision(
+    saleret = extract_saleret_direct_vision(
         file_bytes, filename, ext, reason=reason
     )
+    if (
+        saleret
+        and _opbal_issue_beats_filename_za_enabled()
+        and _saleret_looks_like_ignored_issue(saleret)
+        and re.search(r"_ZA_\d+", filename or "", re.I)
+    ):
+        started = time.time()
+        _log(
+            "STOCK_DIRECT_VISION_START",
+            filename=filename,
+            route="sales_stock_opbal_issue",
+            reason="saleret_ignored_issue_rescue",
+            gemini_model=model,
+            candidate=1,
+            byte_size=len(file_bytes),
+            numeric_source="gemini_vision",
+        )
+        try:
+            from services.sales_statement_extractor import (
+                _parse_swilerp_sales_stock_image,
+            )
+
+            rescued = _parse_swilerp_sales_stock_image(file_bytes, filename, ext)
+        except Exception as exc:
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout="sales_stock_opbal_issue",
+                schema="opbal_receipt_issue_closing",
+                reason="opbal_issue_rescue_error",
+                error_type=type(exc).__name__,
+            )
+            return saleret
+        elapsed_ms = int((time.time() - started) * 1000)
+        if rescued and (rescued.get("line_items") or []):
+            lock_stock_vision_result(
+                rescued,
+                early_vision_reason="saleret_ignored_issue_rescue",
+                stock_direct_vision_route="sales_stock_opbal_issue",
+                stock_direct_vision_candidate=1,
+                numeric_source="gemini_vision",
+                gemini_input_kind="image_original",
+                extraction_method=(
+                    ((rescued.get("totals") or {}).get("extra") or {}).get(
+                        "extraction_method"
+                    )
+                    or "swilerp_page_split_vision"
+                ),
+            )
+            _log(
+                "STOCK_DIRECT_VISION_END",
+                filename=filename,
+                route="sales_stock_opbal_issue",
+                reason="saleret_ignored_issue_rescue",
+                elapsed_ms=elapsed_ms,
+                status="ok",
+                row_count=len(rescued.get("line_items") or []),
+                numeric_source="gemini_vision",
+            )
+            return rescued
+        _log(
+            "STOCK_DIRECT_VISION_FALLBACK",
+            filename=filename,
+            detected_layout="sales_stock_opbal_issue",
+            schema="opbal_receipt_issue_closing",
+            reason="opbal_issue_rescue_empty",
+            elapsed_ms=elapsed_ms,
+            row_count=0,
+        )
+    return saleret

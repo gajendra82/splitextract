@@ -9,7 +9,11 @@ from pathlib import Path
 from services.sales_statement_extractor import (
     _is_rate_qty_value_header_text,
     _is_rate_qty_value_header_text_fuzzy,
+    _ocr_qty_token,
     _parse_rate_qty_value_image,
+    _sanitize_numeric_overrides,
+    empty_line_item,
+    empty_result,
 )
 
 
@@ -46,6 +50,30 @@ class TestRateQtyValueHeader(unittest.TestCase):
                 "STOCK & SALES ANALYSIS\nOPENING RECEIPT ISSUE CLOSING\nQTY VALUE"
             )
         )
+
+    def test_negative_closing_value_not_zeroed(self):
+        """Printed negative closing amounts must stay (CYSTONE FORTE style)."""
+        result = empty_result("shree.jpg", "jpg")
+        result["totals"]["extra"]["extraction_method"] = "rate_qty_value_columns"
+        item = empty_line_item()
+        item["product_name"] = "CYSTONE FORTE TAB"
+        item["opening_qty"] = 156.0
+        item["sales_qty"] = 157.0
+        item["closing_qty"] = -1.0
+        item["closing_value"] = -99.63
+        item["sales_value"] = 17027.14
+        item["extra"] = {"layout": "rate_qty_value"}
+        result["line_items"] = [item]
+        out = _sanitize_numeric_overrides(result, report_only=False, stage="lines")
+        cystone = out["line_items"][0]
+        self.assertEqual(cystone["closing_qty"], -1.0)
+        self.assertAlmostEqual(cystone["closing_value"], -99.63, places=2)
+        self.assertNotIn("rejected_closing_value", cystone.get("extra") or {})
+
+    def test_negative_issue_qty_token_parsed(self):
+        self.assertEqual(_ocr_qty_token("-8"), -8.0)
+        self.assertEqual(_ocr_qty_token("\u22128"), -8.0)
+        self.assertEqual(_ocr_qty_token("-1"), -1.0)
 
 
 @unittest.skipUnless(PHOTO.is_file(), "missing Dawaghar photo")

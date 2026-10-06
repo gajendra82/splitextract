@@ -15,6 +15,8 @@ from services.sales_statement_extractor import (
     _parse_product_stock_report,
     _parse_product_stock_report_from_rows,
     _product_stock_report_values_missing,
+    _psr_derive_blank_closstock,
+    _psr_document_closstock_unread,
     _psr_fill_missing_sales,
     _psr_overlay_ocr_qty,
     _psr_qty_needs_verify,
@@ -936,6 +938,502 @@ ABANA TAB            50'S             45       100        44     1234.50      10
         self.assertEqual(item["sales_value"], 1234.50)
         self.assertIsNone(item["closing_value"])
         self.assertEqual(item["extra"]["issue_value"], 1234.50)
+
+
+class TestPsrBlankClosstockDerive(unittest.TestCase):
+    def test_blank_closstock_derive_fills_unread_closing(self):
+        """Vision locked with ClosStock=0 on every row — derive when flag on."""
+        import os
+        from unittest import mock
+
+        result = empty_result("arquamed_psr.jpg", "jpg")
+        result["report_title"] = "Product Stock Report"
+        result["stockist_name"] = "ARQUAMED"
+        result["line_items"] = [
+            {
+                "product_name": "Arjuna tablets",
+                "packing": "60s",
+                "opening_qty": 0.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "Bonnisan drops",
+                "packing": "30 ml",
+                "opening_qty": 40.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "Cystone tablets",
+                "packing": "60s",
+                "opening_qty": 400.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "Platenza tablets",
+                "packing": "3x20s",
+                "opening_qty": 3000.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        result["totals"]["extra"]["psr_column_layout"] = "saleret"
+        result["totals"]["extra"]["stock_identity_kind"] = STOCK_IDENTITY_SALERET
+        result["totals"]["extra"]["stock_vision_locked"] = True
+
+        self.assertTrue(_psr_document_closstock_unread(result))
+        with mock.patch.dict(os.environ, {"STOCK_PSR_BLANK_CLOSING_DERIVE": "true"}):
+            fixed = _apply_stock_identity_validation(_psr_derive_blank_closstock(result))
+        by_name = {i["product_name"]: i for i in fixed["line_items"]}
+        self.assertEqual(by_name["Bonnisan drops"]["closing_qty"], 40.0)
+        self.assertEqual(
+            by_name["Bonnisan drops"]["extra"]["field_source"]["closing_qty"], "derived"
+        )
+        self.assertEqual(by_name["Cystone tablets"]["closing_qty"], 400.0)
+        self.assertEqual(by_name["Platenza tablets"]["closing_qty"], 3000.0)
+        self.assertEqual(by_name["Arjuna tablets"]["closing_qty"], 0.0)
+        self.assertEqual(fixed["totals"]["extra"]["stock_identity_fail_count"], 0)
+        self.assertGreaterEqual(
+            fixed["totals"]["extra"].get("psr_blank_closstock_derived") or 0, 3
+        )
+
+    def test_blank_closstock_derive_off_by_default(self):
+        import os
+        from unittest import mock
+
+        result = empty_result("arquamed_psr.jpg", "jpg")
+        result["report_title"] = "Product Stock Report"
+        result["line_items"] = [
+            {
+                "product_name": "A",
+                "opening_qty": 0.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "B",
+                "opening_qty": 40.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "C",
+                "opening_qty": 10.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        with mock.patch.dict(os.environ, {"STOCK_PSR_BLANK_CLOSING_DERIVE": ""}):
+            out = _psr_derive_blank_closstock(result)
+        self.assertEqual(out["line_items"][1]["closing_qty"], 0.0)
+
+    def test_blank_closstock_skips_when_any_closing_printed(self):
+        result = empty_result("ok.jpg", "jpg")
+        result["report_title"] = "Product Stock Report"
+        result["line_items"] = [
+            {
+                "product_name": "A",
+                "opening_qty": 10.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 10.0,
+                "closing_value": 100.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "B",
+                "opening_qty": 40.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "C",
+                "opening_qty": 5.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 5.0,
+                "closing_value": 50.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        self.assertFalse(_psr_document_closstock_unread(result))
+
+
+class TestPsrLockedQtyRecovery(unittest.TestCase):
+    def _basanti_like(self):
+        result = empty_result("basanti_za.jpg", "jpg")
+        result["report_title"] = "Product Stock Report"
+        result["stockist_name"] = "M/S BASANTI DISTRIBUTORS"
+        result["line_items"] = [
+            {
+                "product_name": "AACTARIL SOAP",
+                "packing": "75 GM",
+                "opening_qty": 78.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 2.0,
+                "sales_value": 0.0,
+                "closing_qty": 74.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 78.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "TENTEX ROYAL",
+                "packing": "10T",
+                "opening_qty": 55.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 54.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 55.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "RENALKA SYRUP",
+                "packing": "200ml",
+                "opening_qty": 20.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 46.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 20.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "CYSTONE",
+                "packing": "60T",
+                "opening_qty": 33.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 1.0,
+                "sales_value": 0.0,
+                "closing_qty": 121.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 33.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "CONFIDO",
+                "packing": "60T",
+                "opening_qty": 110.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 106.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 110.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "HIMCOLIN GEL",
+                "packing": "30g",
+                "opening_qty": 21.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 0.0,
+                "closing_qty": 21.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 21.0,
+                    "sale_return": 0.0,
+                    "exp_damage": 0.0,
+                    "layout": "product_stock_report",
+                },
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        result["totals"]["extra"]["psr_column_layout"] = "saleret"
+        result["totals"]["extra"]["stock_identity_kind"] = STOCK_IDENTITY_SALERET
+        result["totals"]["extra"]["stock_vision_locked"] = True
+        return result
+
+    def test_recovers_dropped_sale_and_misfiled_clos_amt(self):
+        import os
+        from unittest import mock
+
+        from services.sales_statement_extractor import _psr_recover_locked_vision_qty
+
+        result = self._basanti_like()
+        with mock.patch.dict(os.environ, {"STOCK_PSR_LOCKED_QTY_RECOVERY": "true"}):
+            fixed = _apply_stock_identity_validation(result)
+        by_name = {i["product_name"]: i for i in fixed["line_items"]}
+        self.assertEqual(by_name["TENTEX ROYAL"]["sales_qty"], 1.0)
+        self.assertEqual(by_name["TENTEX ROYAL"]["closing_qty"], 54.0)
+        self.assertEqual(by_name["CONFIDO"]["sales_qty"], 4.0)
+        self.assertEqual(by_name["CONFIDO"]["closing_qty"], 106.0)
+        self.assertEqual(by_name["RENALKA SYRUP"]["closing_qty"], 20.0)
+        self.assertEqual(by_name["RENALKA SYRUP"]["closing_value"], 46.0)
+        self.assertEqual(by_name["CYSTONE"]["closing_qty"], 32.0)
+        self.assertEqual(by_name["CYSTONE"]["closing_value"], 121.0)
+        self.assertEqual(by_name["HIMCOLIN GEL"]["closing_qty"], 21.0)
+        # AACTARIL stays flagged — both Sale and ClosStock printed, small gap.
+        self.assertEqual(by_name["AACTARIL SOAP"]["sales_qty"], 2.0)
+        self.assertEqual(by_name["AACTARIL SOAP"]["closing_qty"], 74.0)
+        self.assertFalse(by_name["AACTARIL SOAP"]["extra"].get("stock_identity_ok"))
+        self.assertEqual(fixed["totals"]["extra"]["stock_identity_fail_count"], 1)
+
+    def test_locked_qty_recovery_off_by_default(self):
+        import os
+        from unittest import mock
+
+        from services.sales_statement_extractor import _psr_recover_locked_vision_qty
+
+        result = self._basanti_like()
+        with mock.patch.dict(os.environ, {"STOCK_PSR_LOCKED_QTY_RECOVERY": ""}):
+            out = _psr_recover_locked_vision_qty(result)
+        self.assertEqual(out["line_items"][1]["sales_qty"], 0.0)
+        self.assertEqual(out["line_items"][2]["closing_qty"], 46.0)
+
+
+class TestPsrOpenPurchaseSwap(unittest.TestCase):
+    def test_swaps_opening_out_of_purchase_when_packing_corrupt(self):
+        import os
+        from unittest import mock
+
+        result = empty_result("jyotstna.jpeg", "jpeg")
+        # Vision often returns this title while layout is still PSR saleret.
+        result["report_title"] = "Sales & Stock Statement"
+        result["line_items"] = [
+            {
+                "product_name": "BRESOL SYP",
+                "packing": "200 ML",
+                "opening_qty": 39.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 39.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 39.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "CYSTONE FORTE TAB",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 174.0,
+                "sales_qty": 0.0,
+                "closing_qty": 174.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 174.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "MENTAT DS SYP",
+                "packing": "100 ML",
+                "opening_qty": 0.0,
+                "receipts_qty": 120.0,
+                "sales_qty": 0.0,
+                "closing_qty": 120.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 120.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "SEPTILIN SYP",
+                "packing": "200 ML",
+                "opening_qty": 0.0,
+                "receipts_qty": 70.0,
+                "sales_qty": 0.0,
+                "closing_qty": 70.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 70.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "UV 52 SUGAR FREE SY",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 56.0,
+                "sales_qty": 0.0,
+                "closing_qty": 56.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 56.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "IKOL TAB",
+                "packing": "60'S",
+                "opening_qty": 0.0,
+                "receipts_qty": 15.0,
+                "sales_qty": 0.0,
+                "closing_qty": 15.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 15.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "MENTAT TAB",
+                "packing": "60'S",
+                "opening_qty": 6.0,
+                "receipts_qty": 94.0,
+                "sales_qty": 0.0,
+                "closing_qty": 100.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 100.0,
+                    "layout": "product_stock_report",
+                },
+            },
+            {
+                "product_name": "EVECARE SYP",
+                "packing": "200 ML 200 ML",
+                "opening_qty": 0.0,
+                "receipts_qty": 64.0,
+                "sales_qty": 0.0,
+                "closing_qty": 64.0,
+                "closing_value": 0.0,
+                "extra": {
+                    "total_stock": 64.0,
+                    "layout": "product_stock_report",
+                },
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        result["totals"]["extra"]["layout"] = "product_stock_report"
+        result["totals"]["extra"]["psr_column_layout"] = "saleret"
+        result["totals"]["extra"]["stock_vision_locked"] = True
+
+        with mock.patch.dict(os.environ, {"STOCK_PSR_OPEN_PURCHASE_SWAP": "true"}):
+            fixed = _apply_stock_identity_validation(result)
+        by_name = {i["product_name"]: i for i in fixed["line_items"]}
+        self.assertEqual(by_name["CYSTONE FORTE TAB"]["opening_qty"], 174.0)
+        self.assertEqual(by_name["CYSTONE FORTE TAB"]["receipts_qty"], 0.0)
+        self.assertIsNone(by_name["CYSTONE FORTE TAB"]["packing"])
+        self.assertEqual(by_name["MENTAT DS SYP"]["opening_qty"], 120.0)
+        self.assertEqual(by_name["MENTAT DS SYP"]["receipts_qty"], 0.0)
+        # Mixed opening+purchase row must stay.
+        self.assertEqual(by_name["MENTAT TAB"]["opening_qty"], 6.0)
+        self.assertEqual(by_name["MENTAT TAB"]["receipts_qty"], 94.0)
+        self.assertEqual(by_name["EVECARE SYP"]["packing"], "200 ML")
+        self.assertEqual(by_name["LIV.52 SUGAR FREE SY"]["opening_qty"], 56.0)
+        self.assertEqual(by_name["LUKOL TAB"]["opening_qty"], 15.0)
+        self.assertEqual(fixed["totals"]["extra"]["stock_identity_fail_count"], 0)
+
+    def test_open_purchase_swap_off_by_default(self):
+        import os
+        from unittest import mock
+
+        from services.sales_statement_extractor import _psr_recover_open_purchase_swap
+
+        result = empty_result("x.jpeg", "jpeg")
+        result["report_title"] = "Product Stock Report"
+        result["line_items"] = [
+            {
+                "product_name": "A",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 10.0,
+                "sales_qty": 0.0,
+                "closing_qty": 10.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "B",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 20.0,
+                "sales_qty": 0.0,
+                "closing_qty": 20.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "C",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 30.0,
+                "sales_qty": 0.0,
+                "closing_qty": 30.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "D",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 40.0,
+                "sales_qty": 0.0,
+                "closing_qty": 40.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+            {
+                "product_name": "E",
+                "packing": "0",
+                "opening_qty": 0.0,
+                "receipts_qty": 50.0,
+                "sales_qty": 0.0,
+                "closing_qty": 50.0,
+                "extra": {"layout": "product_stock_report"},
+            },
+        ]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        with mock.patch.dict(os.environ, {"STOCK_PSR_OPEN_PURCHASE_SWAP": ""}):
+            out = _psr_recover_open_purchase_swap(result)
+        self.assertEqual(out["line_items"][0]["opening_qty"], 0.0)
+        self.assertEqual(out["line_items"][0]["receipts_qty"], 10.0)
 
 
 if __name__ == "__main__":
