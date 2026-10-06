@@ -20881,6 +20881,7 @@ _SALEABLE_ROW_RE = re.compile(
     r"(?P<issue>[\d.,]+|[—–\-]+)\s*\|\s*"
     r"(?P<bal>[\d.,]+|[—–\-]+)\s*$"
 )
+_SALEABLE_QTY_CELL_RE = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$|^[—–\-]+$")
 _SALEABLE_PACK_RE = re.compile(
     r"^(?P<name>.+?)\s+(?P<pack>(?:\d+\s*X\s*)?\d+(?:\.\d+)?\s*"
     r"(?:X\s*\d+\s*)?(?:TAB|CAPS?|GM|ML|S)?\.?)$",
@@ -20891,6 +20892,87 @@ _SALEABLE_SKIP_NAME_RE = re.compile(
     r"Page\s+No|\(From|\(Q\+F\)|Tel\.|EMail|A\b)",
     re.I,
 )
+
+
+def _saleable_movement_from_nums(nums: List[float]) -> Optional[Dict[str, float]]:
+    """Opn/Rec/Issue + Bal from printed qty/value totals (age buckets optional)."""
+    if len(nums) >= 7:
+        return {
+            "opening": nums[0],
+            "receipts": nums[1],
+            "sales": nums[2],
+            "closing": nums[-1],
+        }
+    if len(nums) >= 4:
+        return {
+            "opening": nums[-4],
+            "receipts": nums[-3],
+            "sales": nums[-2],
+            "closing": nums[-1],
+        }
+    return None
+
+
+def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
+    """Map a Saleable Stock Report row to name/pack/opn/rec/issue/bal.
+
+    Supports Particular|Opn|Rec|Issue|Bal and Particular|Packing|Opn|Rec|Issue|
+    age-buckets|Bal. Age buckets are ignored; Bal is always the last qty cell.
+    """
+    # Wider pipe layouts (Packing + age) must not use the short regex — it
+    # absorbs Opn/Rec/Issue into the name and reads age cells as movement.
+    if raw.count("|") >= 6:
+        parts = [p.strip() for p in raw.split("|")]
+        if len(parts) < 6:
+            return None
+        name = parts[0].strip()
+        if not name:
+            return None
+        idx = 1
+        pack = ""
+        if idx < len(parts) and parts[idx] and not _SALEABLE_QTY_CELL_RE.fullmatch(
+            parts[idx].replace(" ", "")
+        ):
+            pack = parts[idx]
+            idx += 1
+        while idx < len(parts) and not parts[idx]:
+            idx += 1
+        qty_cells: List[str] = []
+        for cell in parts[idx:]:
+            token = cell.replace(" ", "")
+            if not token:
+                continue
+            if _SALEABLE_QTY_CELL_RE.fullmatch(token) or re.fullmatch(
+                r"[—–\-]+", cell.strip()
+            ):
+                qty_cells.append(cell.strip())
+        if len(qty_cells) < 4:
+            return None
+        logger.info(
+            "saleable_stock_row layout=pack_age name=%s qty_cells=%d",
+            _clean_name(name)[:40],
+            len(qty_cells),
+        )
+        return {
+            "name": name,
+            "pack": pack,
+            "opn": qty_cells[0],
+            "rec": qty_cells[1],
+            "issue": qty_cells[2],
+            "bal": qty_cells[-1],
+        }
+
+    match = _SALEABLE_ROW_RE.match(raw)
+    if not match:
+        return None
+    return {
+        "name": match.group("name"),
+        "pack": "",
+        "opn": match.group("opn"),
+        "rec": match.group("rec"),
+        "issue": match.group("issue"),
+        "bal": match.group("bal"),
+    }
 
 
 def _is_saleable_stock_report_text(text: str) -> bool:
@@ -20976,39 +21058,43 @@ def _parse_saleable_stock_report(
             continue
 
         if re.search(r"^(?:COMPANY|Firm)\s+Total\b", raw, re.I):
-            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
-            if len(nums) >= 4 and raw.count("|") >= 3:
+            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+            moved = _saleable_movement_from_nums(nums)
+            if moved and raw.count("|") >= 3:
                 extra = result["totals"]["extra"]
-                extra["opening_qty"] = _to_float(nums[-4])
-                extra["receipts_qty"] = _to_float(nums[-3])
-                extra["sales_qty"] = _to_float(nums[-2])
-                extra["closing_qty"] = _to_float(nums[-1])
+                extra["opening_qty"] = moved["opening"]
+                extra["receipts_qty"] = moved["receipts"]
+                extra["sales_qty"] = moved["sales"]
+                extra["closing_qty"] = moved["closing"]
                 extra["total_row_source"] = "saleable_company_total"
             continue
         if re.search(r"\|A\|", raw):
-            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
-            if len(nums) >= 4:
+            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+            moved = _saleable_movement_from_nums(nums)
+            if moved:
                 extra = result["totals"]["extra"]
-                extra["opening_value"] = _to_float(nums[-4])
-                extra["receipts_value"] = _to_float(nums[-3])
-                extra["printed_sales_value"] = _to_float(nums[-2])
-                extra["printed_closing_value"] = _to_float(nums[-1])
+                extra["opening_value"] = moved["opening"]
+                extra["receipts_value"] = moved["receipts"]
+                extra["printed_sales_value"] = moved["sales"]
+                extra["printed_closing_value"] = moved["closing"]
             continue
 
-        match = _SALEABLE_ROW_RE.match(raw)
-        if not match:
+        matched = _saleable_match_row(raw)
+        if not matched:
             continue
-        name = _clean_name(match.group("name"))
+        name = _clean_name(matched["name"])
         if not name or _SALEABLE_SKIP_NAME_RE.search(name):
             continue
-        name, pack = _saleable_split_packing(name)
+        pack = _clean_name(matched.get("pack") or "") or None
+        if not pack:
+            name, pack = _saleable_split_packing(name)
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = pack
-        item["opening_qty"] = _saleable_qty(match.group("opn"))
-        item["receipts_qty"] = _saleable_qty(match.group("rec"))
-        item["sales_qty"] = _saleable_qty(match.group("issue"))
-        item["closing_qty"] = _saleable_qty(match.group("bal"))
+        item["opening_qty"] = _saleable_qty(matched["opn"])
+        item["receipts_qty"] = _saleable_qty(matched["rec"])
+        item["sales_qty"] = _saleable_qty(matched["issue"])
+        item["closing_qty"] = _saleable_qty(matched["bal"])
         items.append(item)
 
     if not items:
