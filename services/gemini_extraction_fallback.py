@@ -834,6 +834,38 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    if _allowlist_skip(
+        "ssa_qty_value_vision",
+        str(extra.get("extraction_method") or "")
+        in {
+            "ssa_qty_value_vision",
+            "ssa_qty_value_vision_pdf",
+            "ssa_qty_value_opening_repair",
+        }
+        or str(extra.get("layout") or "") == "ssa_opening_receipt_issue_value",
+    ):
+        return result
+
+    if _allowlist_skip(
+        "swil_receipt_pur_value_vision",
+        str(extra.get("extraction_method") or "")
+        in {
+            "swil_receipt_pur_value_vision",
+            "swil_opening_receipt_value",
+            "swil_landscape_qty_value",
+        }
+        or str(extra.get("layout") or "")
+        in {"swil_receipt_pur_value", "swil_landscape_qty_value"},
+    ):
+        return result
+
+    if _allowlist_skip(
+        "header_driven_stock_photo",
+        str(extra.get("extraction_method") or "") == "header_driven_stock_photo"
+        or str(extra.get("layout") or "") == "header_driven_stock_photo",
+    ):
+        return result
+
     # TXT/HTML have no visual page — do not invent Vision input.
     if (ext or "").lower() in {".txt", ".htm", ".html"}:
         _stamp(result, quality, "unavailable_text_only")

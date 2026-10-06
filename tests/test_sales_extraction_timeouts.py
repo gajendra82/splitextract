@@ -319,6 +319,7 @@ class ConfigDeadlineTests(unittest.TestCase):
         self.assertEqual(result, {"ok": True})
         self.assertFalse(runtime.sales_deadline_active())
         self.assertIsNone(getattr(runtime._deadline_local, "request_id", None))
+        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 1800)
 
 
 if __name__ == "__main__":
