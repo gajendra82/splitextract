@@ -933,6 +933,18 @@ def _opbal_issue_beats_filename_za_enabled() -> bool:
     }
 
 
+def _ssa_issue_closing_beats_filename_za_enabled() -> bool:
+    """STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA — default OFF until enabled."""
+    return os.getenv(
+        "STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA", ""
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _has_sales_stock_opbal_issue_headers(text: str) -> bool:
     """Sales & Stock with Op.Bal / Receipt / Issue / Closing (not SaleRet).
 
@@ -964,6 +976,44 @@ def _has_sales_stock_opbal_issue_headers(text: str) -> bool:
         and has_issue
         and has_closing
     ):
+        return True
+    return False
+
+
+def _has_ssa_opening_receipt_issue_closing_headers(text: str) -> bool:
+    """STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing(+Dump).
+
+    Must beat filename _ZA_ → SaleRet: that schema maps Issue↔ClosStock and
+    zeros money values (e.g. ARJUNA Opening 26 / Issue 0 / Closing 26 read as
+    sales=26 closing=0).
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"SaleRet|ClosStock|Clos\s*Stock", blob, re.I):
+        return False
+    if _has_product_wise_stock_headers(blob):
+        return False
+    # Op.Bal Sales & Stock keeps the dedicated SwilERP route.
+    if _has_sales_stock_opbal_issue_headers(blob):
+        return False
+    has_title = bool(
+        re.search(
+            r"STOCK\s*[&§]\s*SALES|STOCK\s+AND\s+SALES|STOCK\s*SALES\s*ANALYSIS",
+            blob,
+            re.I,
+        )
+    )
+    has_opening = bool(re.search(r"\bOpening\b", blob, re.I))
+    has_receipt = bool(re.search(r"\bReceipt\b", blob, re.I))
+    has_issue = bool(re.search(r"\bIssue\b", blob, re.I))
+    has_closing = bool(re.search(r"\bClosing\b", blob, re.I))
+    has_dump = bool(re.search(r"\bDump\b", blob, re.I))
+    if has_title and has_opening and has_receipt and has_issue and (
+        has_closing or has_dump
+    ):
+        return True
+    if has_opening and has_receipt and has_issue and has_closing and has_dump:
         return True
     return False
 
@@ -1000,6 +1050,118 @@ def _saleret_looks_like_ignored_issue(
     threshold = max(2, int(0.75 * checked))
     return sales_zero >= threshold and close_eq_open_rec >= threshold
 
+
+def _saleret_looks_like_issue_closing_swap(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """SaleRet misread Issue/Closing: blank ClosStock or sales≈opening.
+
+    Typical when STOCK & SALES ANALYSIS Opening/Issue/Closing is forced through
+    the SaleRet schema (filename _ZA_). After invent-sale is blocked, rows often
+    show opening>0 with sales=0, closing=0, Total unread.
+    """
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if re.search(
+        r"STOCK\s*&\s*SALES\s*ANALYSIS|STOCK\s+AND\s+SALES\s*ANALYSIS",
+        title,
+        re.I,
+    ):
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    checked = 0
+    swap_hits = 0
+    blank_hits = 0
+    invent_hits = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        try:
+            op = float(item.get("opening_qty") or 0)
+            rec = float(item.get("receipts_qty") or 0)
+            sl = float(item.get("sales_qty") or 0)
+            cl = float(item.get("closing_qty") or 0)
+            tot = float(extra.get("total_stock") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not (op or rec or cl or sl):
+            continue
+        checked += 1
+        if (
+            op > 1.0
+            and rec <= 0.05
+            and abs(sl - op) <= 0.05
+            and cl <= 0.05
+            and tot <= 0.05
+        ):
+            swap_hits += 1
+            if extra.get("sales_qty_from_identity"):
+                invent_hits += 1
+        # Closing column unread: Issue never mapped, ClosStock left 0.
+        if (
+            op > 1.0
+            and rec <= 0.05
+            and sl <= 0.05
+            and cl <= 0.05
+            and tot <= 0.05
+        ):
+            blank_hits += 1
+    if checked < 3:
+        return False
+    threshold = max(3, int(0.2 * checked))
+    return (
+        swap_hits >= threshold
+        or blank_hits >= threshold
+        or invent_hits >= max(3, int(0.15 * checked))
+    )
+
+
+def _lock_ssa_opening_receipt_issue_result(
+    result: Dict[str, Any],
+    *,
+    reason: str,
+    filename: str,
+    model: str,
+    started: float,
+) -> Dict[str, Any]:
+    """Lock + log a STOCK & SALES ANALYSIS Opening/Issue/Closing Vision result."""
+    elapsed_ms = int((time.time() - started) * 1000)
+    lock_stock_vision_result(
+        result,
+        early_vision_reason=reason,
+        stock_direct_vision_route="ssa_opening_receipt_issue",
+        stock_direct_vision_candidate=1,
+        numeric_source="gemini_vision",
+        gemini_input_kind="image_original",
+        extraction_method=(
+            ((result.get("totals") or {}).get("extra") or {}).get(
+                "extraction_method"
+            )
+            or "ssa_opening_receipt_issue_dump_vision"
+        ),
+    )
+    _log(
+        "STOCK_DIRECT_VISION_END",
+        filename=filename,
+        route="ssa_opening_receipt_issue",
+        reason=reason,
+        elapsed_ms=elapsed_ms,
+        status="ok",
+        row_count=len(result.get("line_items") or []),
+        numeric_source="gemini_vision",
+        gemini_model=model,
+    )
+    _log(
+        "STOCK_VISION_FINAL",
+        filename=filename,
+        handwritten="false",
+        line_items=len(result.get("line_items") or []),
+        numeric_source="gemini_vision",
+        route="ssa_opening_receipt_issue",
+    )
+    return result
 
 def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     """C-Square PharmAssist Stock and Sale Report (photo or PDF OCR).
@@ -1114,6 +1276,17 @@ def classify_stock_direct_vision(
             "layout": "sales_stock_opbal_issue",
             "schema": "opbal_receipt_issue_closing",
             "reason": "sales_stock_opbal_issue_headers",
+        }
+
+    # STOCK & SALES ANALYSIS Opening/Receipt/Issue/Closing must beat _ZA_ SaleRet.
+    if (
+        _ssa_issue_closing_beats_filename_za_enabled()
+        and _has_ssa_opening_receipt_issue_closing_headers(peek_text or "")
+    ):
+        return {
+            "layout": "ssa_opening_receipt_issue",
+            "schema": "opening_receipt_issue_closing_dump",
+            "reason": "ssa_opening_receipt_issue_headers",
         }
 
     if re.search(r"SaleRet|Sale\s*Ret|ClosStock|Clos\s*Stock|Closstock|Exp\s*/\s*Dmg", compact, re.I):
@@ -3432,6 +3605,7 @@ def try_stock_direct_vision(
         and not _has_opqty_qoh_headers(layout_peek)
         and not _has_normal_stock_open_recp_headers(layout_peek)
         and not _has_sales_stock_opbal_issue_headers(layout_peek)
+        and not _has_ssa_opening_receipt_issue_closing_headers(layout_peek)
         and re.search(r"_ZA_\d+", filename or "", re.I)
     ):
         # Blue Op.Qty/Op.Val headers need a dedicated BW OCR region (not the
@@ -3439,6 +3613,15 @@ def try_stock_direct_vision(
         opval_header = _layout_header_text_op_qty_val(file_bytes)
         if opval_header:
             layout_peek = f"{layout_peek}\n{opval_header}".strip()
+        # STOCK & SALES ANALYSIS Opening/Issue/Closing often survives in a tall
+        # header band when the short ZA peek is garbled.
+        if (
+            _ssa_issue_closing_beats_filename_za_enabled()
+            and not _has_ssa_opening_receipt_issue_closing_headers(layout_peek)
+        ):
+            ssa_header = _layout_header_text(file_bytes)
+            if ssa_header and ssa_header not in layout_peek:
+                layout_peek = f"{layout_peek}\n{ssa_header}".strip()
     if (
         re.search(r"_ZL_\d+", filename or "", re.I)
         and not _has_product_wise_stock_headers(layout_peek)
@@ -3807,6 +3990,111 @@ def try_stock_direct_vision(
         )
         return opbal
 
+    if layout == "ssa_opening_receipt_issue":
+        started = time.time()
+        _log(
+            "STOCK_DIRECT_VISION_START",
+            filename=filename,
+            route="ssa_opening_receipt_issue",
+            reason=reason,
+            gemini_model=model,
+            candidate=1,
+            byte_size=len(file_bytes),
+            numeric_source="gemini_vision",
+        )
+        try:
+            from services.sales_statement_extractor import (
+                _extract_ssa_opening_receipt_issue_dump_image,
+            )
+
+            ssa = _extract_ssa_opening_receipt_issue_dump_image(
+                file_bytes, filename, ext, skip_ocr_gate=True
+            )
+        except Exception as exc:
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason="ssa_issue_closing_parse_error",
+                error_type=type(exc).__name__,
+            )
+            return None
+        if not ssa or not ssa.get("line_items"):
+            elapsed_ms = int((time.time() - started) * 1000)
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason="ssa_issue_closing_empty",
+                elapsed_ms=elapsed_ms,
+                row_count=0,
+            )
+            return None
+        return _lock_ssa_opening_receipt_issue_result(
+            ssa,
+            reason=reason,
+            filename=filename,
+            model=model,
+            started=started,
+        )
+
+    # Garbled peek + filename _ZA_ often hides Opening/Issue/Closing SSA grids.
+    # Probe SSA dump first (Tesseract gate; Gemini only if gate passes) so we
+    # do not burn both Gemini candidates on the wrong SaleRet schema.
+    if (
+        _ssa_issue_closing_beats_filename_za_enabled()
+        and "filename_za" in str(reason or "")
+        and re.search(r"_ZA_\d+", filename or "", re.I)
+    ):
+        started = time.time()
+        _log(
+            "STOCK_DIRECT_VISION_START",
+            filename=filename,
+            route="ssa_opening_receipt_issue",
+            reason="filename_za_ssa_probe",
+            gemini_model=model,
+            candidate=1,
+            byte_size=len(file_bytes),
+            numeric_source="gemini_vision",
+        )
+        try:
+            from services.sales_statement_extractor import (
+                _extract_ssa_opening_receipt_issue_dump_image,
+            )
+
+            probed = _extract_ssa_opening_receipt_issue_dump_image(
+                file_bytes, filename, ext, skip_ocr_gate=True
+            )
+        except Exception as exc:
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout="ssa_opening_receipt_issue",
+                schema="opening_receipt_issue_closing_dump",
+                reason="filename_za_ssa_probe_error",
+                error_type=type(exc).__name__,
+            )
+            probed = None
+        if probed and (probed.get("line_items") or []):
+            return _lock_ssa_opening_receipt_issue_result(
+                probed,
+                reason="filename_za_ssa_probe",
+                filename=filename,
+                model=model,
+                started=started,
+            )
+        _log(
+            "STOCK_DIRECT_VISION_FALLBACK",
+            filename=filename,
+            detected_layout="ssa_opening_receipt_issue",
+            schema="opening_receipt_issue_closing_dump",
+            reason="filename_za_ssa_probe_empty_fallthrough_saleret",
+            elapsed_ms=int((time.time() - started) * 1000),
+            row_count=0,
+        )
+
     # SaleRet / ClosStock (and Opening/Purchase/Sale table signals)
     saleret = extract_saleret_direct_vision(
         file_bytes, filename, ext, reason=reason
@@ -3878,6 +4166,58 @@ def try_stock_direct_vision(
             schema="opbal_receipt_issue_closing",
             reason="opbal_issue_rescue_empty",
             elapsed_ms=elapsed_ms,
+            row_count=0,
+        )
+    if (
+        saleret
+        and _ssa_issue_closing_beats_filename_za_enabled()
+        and _saleret_looks_like_issue_closing_swap(saleret)
+        and re.search(r"_ZA_\d+", filename or "", re.I)
+    ):
+        started = time.time()
+        _log(
+            "STOCK_DIRECT_VISION_START",
+            filename=filename,
+            route="ssa_opening_receipt_issue",
+            reason="saleret_issue_closing_swap_rescue",
+            gemini_model=model,
+            candidate=1,
+            byte_size=len(file_bytes),
+            numeric_source="gemini_vision",
+        )
+        try:
+            from services.sales_statement_extractor import (
+                _extract_ssa_opening_receipt_issue_dump_image,
+            )
+
+            rescued = _extract_ssa_opening_receipt_issue_dump_image(
+                file_bytes, filename, ext, skip_ocr_gate=True
+            )
+        except Exception as exc:
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout="ssa_opening_receipt_issue",
+                schema="opening_receipt_issue_closing_dump",
+                reason="ssa_issue_closing_rescue_error",
+                error_type=type(exc).__name__,
+            )
+            return saleret
+        if rescued and (rescued.get("line_items") or []):
+            return _lock_ssa_opening_receipt_issue_result(
+                rescued,
+                reason="saleret_issue_closing_swap_rescue",
+                filename=filename,
+                model=model,
+                started=started,
+            )
+        _log(
+            "STOCK_DIRECT_VISION_FALLBACK",
+            filename=filename,
+            detected_layout="ssa_opening_receipt_issue",
+            schema="opening_receipt_issue_closing_dump",
+            reason="ssa_issue_closing_rescue_empty",
+            elapsed_ms=int((time.time() - started) * 1000),
             row_count=0,
         )
     return saleret

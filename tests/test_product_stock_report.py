@@ -1238,6 +1238,42 @@ class TestPsrLockedQtyRecovery(unittest.TestCase):
         self.assertEqual(out["line_items"][1]["sales_qty"], 0.0)
         self.assertEqual(out["line_items"][2]["closing_qty"], 46.0)
 
+    def test_does_not_invent_sale_when_total_and_closing_unread(self):
+        """Blank Total+ClosStock must not invent Sale=Opening (Issue↔Closing swap)."""
+        import os
+        from unittest import mock
+
+        result = empty_result("haji.jpeg", "jpeg")
+        item = {
+            "product_code": None,
+            "product_name": "ARJUNA TABLET",
+            "packing": "60's",
+            "opening_qty": 26.0,
+            "opening_value": None,
+            "receipts_qty": 0.0,
+            "receipts_value": None,
+            "sales_qty": 0.0,
+            "sales_value": 0.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {
+                "total_stock": 0.0,
+                "sale_return": 0.0,
+                "exp_damage": 0.0,
+                "layout": "product_stock_report",
+            },
+        }
+        result["line_items"] = [item]
+        result["totals"]["extra"]["extraction_method"] = "product_stock_report_vision"
+        result["totals"]["extra"]["psr_column_layout"] = "saleret"
+        result["totals"]["extra"]["stock_identity_kind"] = STOCK_IDENTITY_SALERET
+        result["totals"]["extra"]["stock_vision_locked"] = True
+        with mock.patch.dict(os.environ, {"STOCK_PSR_LOCKED_QTY_RECOVERY": "true"}):
+            fixed = _apply_stock_identity_validation(result)
+        arjuna = fixed["line_items"][0]
+        self.assertEqual(arjuna["sales_qty"], 0.0)
+        self.assertFalse(arjuna["extra"].get("sales_qty_from_identity"))
+
 
 class TestPsrOpenPurchaseSwap(unittest.TestCase):
     def test_swaps_opening_out_of_purchase_when_packing_corrupt(self):

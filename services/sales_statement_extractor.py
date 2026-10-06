@@ -3544,11 +3544,10 @@ def _looks_like_concatenated_totals(sales_value: Any, closing_value: Any) -> boo
 def _sanitize_rows_and_text(result: Dict[str, Any]) -> Dict[str, Any]:
     """(a) Row/text clean-up.
 
-    This sanitize path currently has no header/total/blank drops, name/pack
-    normalisation, or dedupe. Kept as a no-op hook so the old path calls all
-    three helpers without behaviour change.
+    Drops promotional/footer slogans mis-extracted as products (flag-gated).
+    Other name/pack normalisation stays elsewhere so legacy paths stay stable.
     """
-    return result
+    return _drop_promotional_footer_line_items(result)
 
 
 def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -5483,6 +5482,7 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         pass
     result = _ensure_stock_qty_value_fields(result)
     result = _product_wise_drop_banner_items(result)
+    result = _drop_promotional_footer_line_items(result)
 
     # Shared id joins ROW_CLASSIFY_SHADOW / FALLBACK_DECISION_CURRENT / FINAL.
     request_id = "-"
@@ -15091,7 +15091,158 @@ def _is_non_product_line_name(name: str) -> bool:
         re.I,
     ):
         return True
+    if (
+        _drop_promotional_footer_products_enabled()
+        and _looks_like_promotional_footer_text(text)
+    ):
+        return True
     return False
+
+
+# Promo / ERP / QR / contact slogans that appear as PDF footers, never SKUs.
+_PROMO_FOOTER_KEYWORD_RE = re.compile(
+    r"Digital\s+Purchase|"
+    r"ERP\s+Order(?:ing)?|"
+    r"QR\s*Code|QRCode|"
+    r"extra\s+earnings|"
+    r"\bCall\s+MARG\b|"
+    r"Healthcare\s+QR|"
+    r"on\s+bills\s+for|"
+    r"\border\s+online\b|"
+    r"\bdownload\s+(?:the\s+)?(?:app|application)\b|"
+    r"\bscan\s+(?:to|the|for)\s+(?:pay|qr|code)\b|"
+    r"\bwhatsapp\b|"
+    r"powered\s+by\s+marg|"
+    r"www\.|https?://",
+    re.I,
+)
+_PROMO_FOOTER_PHONE_RE = re.compile(
+    r"(?:\+?\d{1,3}[\s\-]?)?(?:\d{10}|\d{5}[\s,\-]+\d{5,10})"
+)
+
+
+def _looks_like_promotional_footer_text(name: str) -> bool:
+    """True for footer/promo/contact slogans misread as product names.
+
+    Generic: pipes, promo keywords, phone clusters, URLs — not an exact-string
+    match for one stockist footer.
+    """
+    text = str(name or "").strip()
+    if not text:
+        return False
+    # "A | B | C | Call … phones" style Marg footers.
+    if text.count("|") >= 2:
+        return True
+    if _PROMO_FOOTER_KEYWORD_RE.search(text):
+        return True
+    phones = _PROMO_FOOTER_PHONE_RE.findall(text)
+    if len(phones) >= 2 and len(text) >= 40:
+        return True
+    if (
+        len(text) >= 55
+        and phones
+        and re.search(r"\b(?:Call|Phone|Mobile|Contact|WhatsApp)\b", text, re.I)
+    ):
+        return True
+    if (
+        re.search(r"[\w.\-]+@[\w.\-]+\.\w+", text)
+        and len(text) >= 20
+        and not re.search(r"\d+\s*(?:ML|GM|TAB|CAP|MG|'S)\b", text, re.I)
+    ):
+        return True
+    return False
+
+
+def _line_item_has_stock_qty_signal(item: Dict[str, Any]) -> bool:
+    """True when the row carries printed-looking stock qty/value cells."""
+    if not isinstance(item, dict):
+        return False
+    packing = str(item.get("packing") or "").strip()
+    if packing and re.search(
+        r"\d+\s*(?:ML|GM|TAB|CAP|MG|PCS|'S|G)\b", packing, re.I
+    ):
+        return True
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "opening_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+    ):
+        try:
+            if abs(float(item.get(key) or 0)) > 0.05:
+                return True
+        except (TypeError, ValueError):
+            continue
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for key in ("total_stock", "sale_return", "exp_damage", "dump_qty"):
+        try:
+            if abs(float(extra.get(key) or 0)) > 0.05:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _drop_promotional_footer_products_enabled() -> bool:
+    """STOCK_DROP_PROMO_FOOTER_PRODUCTS — default OFF until explicitly enabled."""
+    return os.getenv("STOCK_DROP_PROMO_FOOTER_PRODUCTS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_promotional_footer_line_item(item: Dict[str, Any]) -> bool:
+    """Drop promo/footer rows; keep real SKUs even if a keyword overlaps weakly."""
+    if not isinstance(item, dict):
+        return False
+    name = str(item.get("product_name") or "")
+    if not _looks_like_promotional_footer_text(name):
+        return False
+    # Strong cues (multi-pipe / named promo phrases) always drop — Vision may
+    # hallucinate qty onto the slogan.
+    if name.count("|") >= 2 or _PROMO_FOOTER_KEYWORD_RE.search(name):
+        return True
+    return not _line_item_has_stock_qty_signal(item)
+
+
+def _drop_promotional_footer_line_items(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Post-extract filter: remove PDF footer/promo slogans from line_items."""
+    if not isinstance(result, dict):
+        return result
+    if not _drop_promotional_footer_products_enabled():
+        return result
+    items = result.get("line_items") or []
+    if not items:
+        return result
+    kept: List[Dict[str, Any]] = []
+    dropped = 0
+    for item in items:
+        if isinstance(item, dict) and _is_promotional_footer_line_item(item):
+            dropped += 1
+            logger.info(
+                "STOCK_PROMO_FOOTER_DROP product_name=%s file=%s",
+                str(item.get("product_name") or "")[:120],
+                result.get("source_file"),
+            )
+            continue
+        if isinstance(item, dict):
+            kept.append(item)
+    if not dropped:
+        return result
+    result["line_items"] = kept
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    if isinstance(extra, dict):
+        extra["promo_footer_rows_dropped"] = int(extra.get("promo_footer_rows_dropped") or 0) + dropped
+    for stmt in result.get("statements") or []:
+        if isinstance(stmt, dict):
+            _drop_promotional_footer_line_items(stmt)
+    return result
 
 
 def _looks_like_zandra_stock_sale_text(text: str) -> bool:
@@ -30657,9 +30808,13 @@ def _psr_repair_qty_identity(item: Dict[str, Any], kind: str = STOCK_IDENTITY_SA
         total_ok = abs(use_total - (opening + receipts)) < 0.05
         # Dropped Sale 0.00 (BONNISAN DROPS 115-109=6). Only when Total already
         # equals Opening+Purchase and the gap is not SaleRet / Exp/Dmg / Purchase.
+        # Require a printed Total cell: inventing Sale=Opening from blank Total +
+        # blank ClosStock is Issue↔Closing column-swap residue (HAJI ZA SaleRet).
+        printed_total_trusted = total > 0.05
         if (
             sales_qty <= 0
             and total_ok
+            and printed_total_trusted
             and implied_sale > 0.05
             and not (
                 (sale_return > 0.05 and abs(implied_sale - sale_return) < 0.05)
@@ -30671,14 +30826,19 @@ def _psr_repair_qty_identity(item: Dict[str, Any], kind: str = STOCK_IDENTITY_SA
             if _stock_row_identity_ok(trial, kind):
                 _commit(trial, {"sales_qty_from_identity": True})
                 return
-        if implied_sale >= 0 and _qty_is_truncated_form(sales_qty, implied_sale):
+        if (
+            printed_total_trusted
+            and implied_sale >= 0
+            and _qty_is_truncated_form(sales_qty, implied_sale)
+        ):
             trial = _psr_qty_trial(item, extra, sales_qty=implied_sale)
             if _stock_row_identity_ok(trial, kind):
                 _commit(trial, {"sales_qty_from_identity": True})
                 return
         expected_opening = round(use_total - receipts, 2)
         if (
-            implied_sale >= 0
+            printed_total_trusted
+            and implied_sale >= 0
             and expected_opening >= 0
             and _qty_is_truncated_form(opening, expected_opening)
             and _qty_is_truncated_form(sales_qty, implied_sale)
@@ -33913,11 +34073,18 @@ def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
 
 
 def _extract_ssa_opening_receipt_issue_dump_image(
-    file_bytes: bytes, filename: str, ext: str
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    *,
+    skip_ocr_gate: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Use the existing qty/value reader when the printed header is this grid.
 
     Other photos return None and keep the generic image path.
+    When ``skip_ocr_gate`` is True (filename-_ZA_ probe / SaleRet rescue),
+    skip the Tesseract title gate and call Vision directly — garbled phone
+    OCR often fails STOCK & SALES ANALYSIS detection while the pixels are fine.
     """
     from PIL import Image, ImageEnhance, ImageOps
 
@@ -33929,52 +34096,64 @@ def _extract_ssa_opening_receipt_issue_dump_image(
     else:
         ext_for_mime = ext
 
-    try:
-        image = ImageOps.exif_transpose(
-            Image.open(io.BytesIO(vision_bytes))
-        ).convert("RGB")
-    except Exception:
-        return None
-    wide = image.resize((image.width * 2, image.height * 2), Image.Resampling.LANCZOS)
-    wide = ImageEnhance.Contrast(wide).enhance(1.3)
-    header = wide.crop((0, 0, wide.width, int(wide.height * 0.42)))
-    try:
-        # Avoid region-shared OCR cache: gate must see THIS crop/header.
-        import pytesseract
-
-        preview = pytesseract.image_to_string(header, config="--psm 6") or ""
-    except Exception:
+    if not skip_ocr_gate:
         try:
-            preview = _a2z_tesseract().image_to_string(header, config="--psm 6") or ""
+            image = ImageOps.exif_transpose(
+                Image.open(io.BytesIO(vision_bytes))
+            ).convert("RGB")
         except Exception:
             return None
-    if not (
-        _is_ssa_opening_receipt_issue_dump_text(preview)
-        or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
-    ):
-        if not cropped:
-            return None
-        # Crop OCR missed the title — fall back to full-image gate, keep crop
-        # for the vision payload when the title is found on the full frame.
+        wide = image.resize(
+            (image.width * 2, image.height * 2), Image.Resampling.LANCZOS
+        )
+        wide = ImageEnhance.Contrast(wide).enhance(1.3)
+        header = wide.crop((0, 0, wide.width, int(wide.height * 0.42)))
         try:
-            full = ImageOps.exif_transpose(
-                Image.open(io.BytesIO(file_bytes))
-            ).convert("RGB")
-            fwide = full.resize(
-                (full.width * 2, full.height * 2), Image.Resampling.LANCZOS
-            )
-            fwide = ImageEnhance.Contrast(fwide).enhance(1.3)
-            fheader = fwide.crop((0, 0, fwide.width, int(fwide.height * 0.42)))
+            # Avoid region-shared OCR cache: gate must see THIS crop/header.
             import pytesseract
 
-            preview = pytesseract.image_to_string(fheader, config="--psm 6") or ""
+            preview = pytesseract.image_to_string(header, config="--psm 6") or ""
         except Exception:
-            return None
+            try:
+                preview = _a2z_tesseract().image_to_string(
+                    header, config="--psm 6"
+                ) or ""
+            except Exception:
+                return None
         if not (
             _is_ssa_opening_receipt_issue_dump_text(preview)
             or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
         ):
-            return None
+            if not cropped:
+                return None
+            # Crop OCR missed the title — fall back to full-image gate, keep crop
+            # for the vision payload when the title is found on the full frame.
+            try:
+                full = ImageOps.exif_transpose(
+                    Image.open(io.BytesIO(file_bytes))
+                ).convert("RGB")
+                fwide = full.resize(
+                    (full.width * 2, full.height * 2), Image.Resampling.LANCZOS
+                )
+                fwide = ImageEnhance.Contrast(fwide).enhance(1.3)
+                fheader = fwide.crop((0, 0, fwide.width, int(fwide.height * 0.42)))
+                import pytesseract
+
+                preview = pytesseract.image_to_string(fheader, config="--psm 6") or ""
+            except Exception:
+                return None
+            if not (
+                _is_ssa_opening_receipt_issue_dump_text(preview)
+                or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
+            ):
+                return None
+    else:
+        logger.info(
+            "ssa_dump_vision_skip_ocr_gate file=%s cropped=%s",
+            filename,
+            bool(cropped),
+        )
+
     import os
 
     from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
@@ -33992,6 +34171,10 @@ A printed dash is 0. Do not shift later columns left to fill a dash.
 Keep each product's numbers on that same row.
 Never assign a number to a different column than the one it is printed under.
 Always emit packing when printed (30GM, 1X60). Packing is never a quantity.
+Read EVERY product row on this page before the TOTAL / Continued footer.
+CLOSING QTY and CLOSING VALUE are the rightmost stock columns — never leave
+them 0 when the printed Closing cell is non-zero (e.g. ARJUNA Opening 26 /
+Issue 0 / Closing 26).
 """
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
@@ -34009,13 +34192,13 @@ Always emit packing when printed (30GM, 1X60). Packing is never a quantity.
                 ],
             }
         ],
-        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
     }
     parsed = None
     for attempt in range(2):
         try:
             response = generate_content_via_vertex(
-                model=model, payload=payload, timeout=60
+                model=model, payload=payload, timeout=90
             )
             parsed = _extract_json_object(_gemini_response_text(response))
             if parsed and parsed.get("line_items"):
@@ -34024,6 +34207,11 @@ Always emit packing when printed (30GM, 1X60). Packing is never a quantity.
             logger.warning("SSA dump photo vision failed for %s: %s", filename, exc)
             time.sleep(min(2 ** attempt, 4))
     if not parsed or not parsed.get("line_items"):
+        logger.info(
+            "ssa_dump_vision_empty file=%s skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
         return None
     parsed["line_items"] = _ssa_dump_repair_items(parsed.get("line_items") or [])
     result = empty_result(filename, ext.lstrip(".") or "jpg")
@@ -34031,11 +34219,21 @@ Always emit packing when printed (30GM, 1X60). Packing is never a quantity.
     # Repair before the quality gate — scanned sheets often omit opening_value.
     result["line_items"] = _ssa_dump_repair_items(result.get("line_items") or [])
     if not _ssa_qty_value_result_usable(result):
+        logger.info(
+            "ssa_dump_vision_unusable file=%s rows=%s skip_ocr_gate=%s",
+            filename,
+            len(result.get("line_items") or []),
+            skip_ocr_gate,
+        )
         return None
     if cropped:
         extra = result.setdefault("totals", {}).setdefault("extra", {})
         if isinstance(extra, dict):
             extra["table_crop_applied"] = True
+    if skip_ocr_gate:
+        extra = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["ssa_ocr_gate_skipped"] = True
     return result
 
 

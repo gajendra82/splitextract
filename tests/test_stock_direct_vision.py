@@ -390,6 +390,251 @@ class ClassifyStockDirectVisionTests(unittest.TestCase):
             "sales_stock_opbal_issue",
         )
 
+    def test_ssa_issue_closing_beats_filename_za_saleret(self):
+        """HAJI STOCK & SALES ANALYSIS Opening/Issue/Closing must not use SaleRet."""
+        peek = (
+            "HAJI ENTERPRISES\n"
+            "STOCK & SALES ANALYSIS (From 01/08/2026 To 28/08/2026)\n"
+            "ITEM DESCRIPTION PACK Opening Qty Value Receipt Qty Value "
+            "Issue Qty Value Closing Qty Value Dump\n"
+            "ARJUNA TABLET 60's 26 13833.71 0 0.00 0 0.00 26 13833.71 1\n"
+        )
+        with patch.dict(
+            "os.environ", {"STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA": "true"}
+        ):
+            decision = classify_stock_direct_vision(
+                peek, "0000733271_2026_08_ZA_09_363_04092026062006.jpeg"
+            )
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision["layout"], "ssa_opening_receipt_issue")
+        self.assertEqual(decision["schema"], "opening_receipt_issue_closing_dump")
+        self.assertNotIn("filename_za", decision["reason"])
+
+    def test_ssa_issue_closing_flag_off_keeps_filename_za(self):
+        peek = (
+            "STOCK & SALES ANALYSIS\n"
+            "ITEM DESCRIPTION PACK Opening Receipt Issue Closing Dump\n"
+        )
+        with patch.dict(
+            "os.environ", {"STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA": "false"}
+        ):
+            decision = classify_stock_direct_vision(
+                peek, "0000733271_2026_08_ZA_09_363_04092026062006.jpeg"
+            )
+        self.assertEqual(decision["layout"], "product_stock_report_saleret")
+        self.assertIn("filename_za", decision["reason"])
+
+    def test_ssa_issue_closing_route_calls_ssa_vision(self):
+        from services.sales_statement_extractor import empty_line_item
+
+        peek = (
+            "STOCK & SALES ANALYSIS\n"
+            "ITEM DESCRIPTION PACK Opening Qty Value Receipt Qty Value "
+            "Issue Qty Value Closing Qty Value Dump\n"
+            "ARJUNA TABLET 60's 26 13833.71 0 0.00 0 0.00 26 13833.71 1\n"
+        )
+        result = empty_result("haji.jpeg", "jpeg")
+        item = empty_line_item()
+        item["product_name"] = "ARJUNA TABLET"
+        item["packing"] = "60's"
+        item["opening_qty"] = 26.0
+        item["opening_value"] = 13833.71
+        item["receipts_qty"] = 0.0
+        item["sales_qty"] = 0.0
+        item["closing_qty"] = 26.0
+        item["closing_value"] = 13833.71
+        result["line_items"] = [item]
+        result["totals"]["extra"][
+            "extraction_method"
+        ] = "ssa_opening_receipt_issue_dump_vision"
+
+        with patch.dict(
+            "os.environ", {"STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA": "true"}
+        ), patch(
+            "services.sales_statement_extractor."
+            "_extract_ssa_opening_receipt_issue_dump_image",
+            return_value=result,
+        ) as mock_ssa, patch(
+            "services.stock_direct_vision.detect_stock_handwriting_signals",
+            return_value={"handwritten": "false"},
+        ):
+            out = try_stock_direct_vision(
+                b"fake-image-bytes",
+                "0000733271_2026_08_ZA_09_363_04092026062006.jpeg",
+                ".jpeg",
+                peek_text=peek,
+            )
+        self.assertIsNotNone(out)
+        mock_ssa.assert_called_once()
+        self.assertTrue(is_stock_vision_locked(out))
+        arjuna = (out.get("line_items") or [])[0]
+        self.assertEqual(arjuna["opening_qty"], 26.0)
+        self.assertEqual(arjuna["sales_qty"], 0.0)
+        self.assertEqual(arjuna["closing_qty"], 26.0)
+        self.assertEqual(arjuna["opening_value"], 13833.71)
+
+    def test_filename_za_ssa_probe_before_saleret(self):
+        """Garbled peek + _ZA_: probe SSA before burning SaleRet Gemini budget."""
+        from services.sales_statement_extractor import empty_line_item
+
+        good = empty_result("haji.jpeg", "jpeg")
+        item = empty_line_item()
+        item["product_name"] = "ARJUNA TABLET"
+        item["opening_qty"] = 26.0
+        item["opening_value"] = 13833.71
+        item["receipts_qty"] = 0.0
+        item["sales_qty"] = 0.0
+        item["closing_qty"] = 26.0
+        item["closing_value"] = 13833.71
+        good["line_items"] = [item]
+        good["report_title"] = "STOCK & SALES ANALYSIS"
+
+        with patch.dict(
+            "os.environ", {"STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA": "true"}
+        ), patch(
+            "services.sales_statement_extractor."
+            "_extract_ssa_opening_receipt_issue_dump_image",
+            return_value=good,
+        ) as mock_ssa, patch(
+            "services.stock_direct_vision.extract_saleret_direct_vision",
+        ) as mock_saleret, patch(
+            "services.stock_direct_vision.detect_stock_handwriting_signals",
+            return_value={"handwritten": "false"},
+        ):
+            out = try_stock_direct_vision(
+                b"fake-image-bytes",
+                "0000733271_2026_08_ZA_09_363_04092026062006.jpeg",
+                ".jpeg",
+                peek_text="garbled Seeeeeeoeeeonnee header noise only",
+            )
+        self.assertIsNotNone(out)
+        mock_ssa.assert_called_once()
+        kwargs = mock_ssa.call_args.kwargs
+        self.assertTrue(kwargs.get("skip_ocr_gate"))
+        mock_saleret.assert_not_called()
+        arjuna = (out.get("line_items") or [])[0]
+        self.assertEqual(arjuna["closing_qty"], 26.0)
+        self.assertEqual(arjuna["sales_qty"], 0.0)
+        self.assertEqual(arjuna["opening_value"], 13833.71)
+        self.assertEqual(
+            ((out.get("totals") or {}).get("extra") or {}).get(
+                "stock_direct_vision_route"
+            ),
+            "ssa_opening_receipt_issue",
+        )
+
+    def test_blank_closing_and_ssa_title_trigger_swap_detector(self):
+        from services.sales_statement_extractor import empty_line_item
+        from services.stock_direct_vision import (
+            _saleret_looks_like_issue_closing_swap,
+        )
+
+        titled = empty_result("haji.jpeg", "jpeg")
+        titled["report_title"] = "STOCK & SALES ANALYSIS"
+        self.assertTrue(_saleret_looks_like_issue_closing_swap(titled))
+
+        blank = empty_result("haji.jpeg", "jpeg")
+        for name, op in (
+            ("ARJUNA TABLET", 26.0),
+            ("BONNISAN DROPS-30ML", 209.0),
+            ("BONNISAN LIQUID", 234.0),
+            ("BONNISPAZ DROPS", 60.0),
+            ("BRAHMI TABLET 60'S", 60.0),
+        ):
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = op
+            item["receipts_qty"] = 0.0
+            item["sales_qty"] = 0.0
+            item["closing_qty"] = 0.0
+            item["extra"] = {"total_stock": 0.0}
+            blank["line_items"].append(item)
+        self.assertTrue(_saleret_looks_like_issue_closing_swap(blank))
+
+    def test_filename_za_saleret_rescue_to_ssa_issue_closing(self):
+        """When SSA probe misses, SaleRet blank-closing still rescues to SSA."""
+        from services.sales_statement_extractor import empty_line_item
+        from services.stock_direct_vision import (
+            _saleret_looks_like_issue_closing_swap,
+        )
+
+        bad = empty_result("haji.jpeg", "jpeg")
+        bad["report_title"] = "STOCK & SALES ANALYSIS"
+        for name, op in (
+            ("ARJUNA TABLET", 26.0),
+            ("BONNISAN DROPS-30ML", 209.0),
+            ("BONNISAN LIQUID", 234.0),
+            ("BONNISPAZ DROPS", 60.0),
+            ("BRAHMI TABLET 60'S", 60.0),
+        ):
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = op
+            item["receipts_qty"] = 0.0
+            item["sales_qty"] = 0.0
+            item["closing_qty"] = 0.0
+            item["extra"] = {
+                "total_stock": 0.0,
+                "sale_return": 0.0,
+                "exp_damage": 0.0,
+                "layout": "product_stock_report",
+            }
+            bad["line_items"].append(item)
+        self.assertTrue(_saleret_looks_like_issue_closing_swap(bad))
+
+        good = empty_result("haji.jpeg", "jpeg")
+        for name, op, sale, cl in (
+            ("ARJUNA TABLET", 26.0, 0.0, 26.0),
+            ("BONNISAN DROPS-30ML", 209.0, 0.0, 209.0),
+            ("BONNISAN LIQUID", 234.0, 12.0, 222.0),
+            ("BONNISPAZ DROPS", 60.0, 0.0, 60.0),
+            ("BRAHMI TABLET 60'S", 60.0, 5.0, 55.0),
+        ):
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = op
+            item["receipts_qty"] = 0.0
+            item["sales_qty"] = sale
+            item["closing_qty"] = cl
+            item["opening_value"] = 100.0
+            item["closing_value"] = 100.0
+            good["line_items"].append(item)
+
+        with patch.dict(
+            "os.environ", {"STOCK_SSA_ISSUE_CLOSING_BEATS_FILENAME_ZA": "true"}
+        ), patch(
+            "services.stock_direct_vision.extract_saleret_direct_vision",
+            return_value=bad,
+        ), patch(
+            "services.sales_statement_extractor."
+            "_extract_ssa_opening_receipt_issue_dump_image",
+            side_effect=[None, good],
+        ) as mock_ssa, patch(
+            "services.stock_direct_vision.detect_stock_handwriting_signals",
+            return_value={"handwritten": "false"},
+        ):
+            out = try_stock_direct_vision(
+                b"fake-image-bytes",
+                "0000733271_2026_08_ZA_09_363_04092026062006.jpeg",
+                ".jpeg",
+                peek_text="garbled Seeeeeeoeeeonnee header noise only",
+            )
+        self.assertIsNotNone(out)
+        self.assertEqual(mock_ssa.call_count, 2)
+        self.assertTrue(mock_ssa.call_args.kwargs.get("skip_ocr_gate"))
+        by = {
+            str(i.get("product_name") or "").upper(): i
+            for i in (out.get("line_items") or [])
+        }
+        self.assertEqual(by["ARJUNA TABLET"]["sales_qty"], 0.0)
+        self.assertEqual(by["ARJUNA TABLET"]["closing_qty"], 26.0)
+        self.assertEqual(
+            ((out.get("totals") or {}).get("extra") or {}).get(
+                "stock_direct_vision_route"
+            ),
+            "ssa_opening_receipt_issue",
+        )
+
     def test_normal_stock_validation_open_recp_sales_clsg(self):
         from services.stock_direct_vision import validate_stock_direct_vision
         from services.sales_statement_extractor import empty_result, empty_line_item
