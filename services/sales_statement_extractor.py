@@ -6185,6 +6185,21 @@ def _text_stock_families():
             ),
             False,
         ),
+        (
+            "op_receipts_sales_closing",
+            r"Product\s*Name",
+            r"<[-]+Receipts[-]+>",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "receipts_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
     )
 
 
@@ -6231,6 +6246,11 @@ def _match_text_stock_family(text: str):
                 re.I,
             ):
                 continue
+            logger.info(
+                "stock_txt_family matched family=%s roles=%s",
+                name,
+                ",".join(roles),
+            )
             return name, roles, has_code
     return None
 
@@ -6303,7 +6323,7 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             if len(raw) < 80:
                 result["company_name"] = _clean_name(raw.strip("* "))
         m_period = re.search(
-            r"(?:FROM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|Upto|and|to|-|–)\s*"
+            r"(?:FROM|From|w\.e\.f\.?|between)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|Upto|and|to|-|–)\s*"
             r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
             raw,
             re.I,
@@ -6322,7 +6342,12 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                 result["period_from"] = _normalize_date(m_from.group(1))
             if m_to and not result.get("period_to"):
                 result["period_to"] = _normalize_date(m_to.group(1))
-        if re.search(r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|S\.S\.REPORT", raw, re.I):
+        if re.search(
+            r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|"
+            r"STOCK.{0,40}STATEMENT|S\.S\.REPORT",
+            raw,
+            re.I,
+        ):
             if not result.get("report_title"):
                 result["report_title"] = _clean_name(raw)[:80]
         if '"' in raw or re.search(r"\bSlrt\b", raw, re.I):
