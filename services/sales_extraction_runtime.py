@@ -43,10 +43,10 @@ SALES_EXTRACTION_QUEUE_TIMEOUT = _env_positive_int(
     int(os.getenv("REQUEST_QUEUE_TIMEOUT", "3600") or "3600"),
 )
 # Hard wall-clock budget for one extraction after admission (not queue wait).
-# Live image+vision jobs commonly finish in ~200-285s; 600s leaves headroom
-# for Gemini 429 backoff without approaching Laravel's 3600s HTTP timeout.
+# Separate from SALES_EXTRACTION_QUEUE_TIMEOUT (admission/queue, default 3600s).
+# 1800s (30 min) covers large multipage image+vision jobs with Gemini 429 backoff.
 SALES_EXTRACTION_MAX_EXECUTION_SECONDS = _env_positive_int(
-    "SALES_EXTRACTION_MAX_EXECUTION_SECONDS", 600
+    "SALES_EXTRACTION_MAX_EXECUTION_SECONDS", 1800
 )
 # Bound each sales OCR subprocess even when global OCR timeout flag is off.
 SALES_TESSERACT_CALL_TIMEOUT_SECONDS = _env_positive_int(
@@ -125,6 +125,9 @@ class SalesExtractionRuntimeContext:
         "gemini_calls",
         "gemini_retries",
         "gemini_duration_ms",
+        "gemini_429_count",
+        "gemini_cooldown_ms",
+        "recovery_duration_ms",
         "stage",
         "file_size",
     )
@@ -149,6 +152,9 @@ class SalesExtractionRuntimeContext:
         self.gemini_calls = 0
         self.gemini_retries = 0
         self.gemini_duration_ms = 0.0
+        self.gemini_429_count = 0
+        self.gemini_cooldown_ms = 0.0
+        self.recovery_duration_ms = 0.0
         self.stage = "preparing"
         self.file_size = file_size
 
@@ -166,7 +172,14 @@ class SalesExtractionRuntimeContext:
             "ocr_seconds": round(float(self.ocr_duration_ms) / 1000.0, 3),
             "gemini_calls": int(self.gemini_calls),
             "gemini_retries": int(self.gemini_retries),
+            "gemini_429_count": int(self.gemini_429_count),
+            "gemini_cooldown_seconds": round(
+                float(self.gemini_cooldown_ms) / 1000.0, 3
+            ),
             "vision_seconds": round(float(self.gemini_duration_ms) / 1000.0, 3),
+            "recovery_seconds": round(
+                float(self.recovery_duration_ms) / 1000.0, 3
+            ),
             "total_seconds": round(self.elapsed_seconds(), 3),
             "remaining_seconds": round(self.remaining_seconds(), 3),
             "stage": self.stage,
@@ -625,6 +638,11 @@ async def _run_sales_background_job(
             request_cancel_sales_extraction(request_id)
             terminate_sales_tesseract_children()
             final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage="asyncio_timeout",
+                limit_seconds=deadline_seconds,
+            )
             update_sales_progress(
                 request_id,
                 "failed",
@@ -642,6 +660,11 @@ async def _run_sales_background_job(
             request_cancel_sales_extraction(request_id)
             terminate_sales_tesseract_children()
             final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage=exc.stage,
+                limit_seconds=float(exc.limit_seconds or deadline_seconds),
+            )
             update_sales_progress(
                 request_id,
                 "failed",
@@ -898,6 +921,7 @@ def start_sales_deadline(
     _deadline_local.ocr_cache = ctx.ocr_cache
     _deadline_local.ocr_budget = ctx.ocr_budget
     _deadline_local.started_mono = ctx.started_mono
+    _deadline_local._deadline_exceeded_logged = False
     logger.info(
         "sales_deadline_started request_id=%s limit=%ss ocr_budget=%s file_size=%s",
         request_id,
@@ -944,6 +968,8 @@ def clear_sales_deadline() -> None:
             ),
         }
     if rid and stats:
+        if getattr(_deadline_local, "_deadline_exceeded_logged", False):
+            stats["deadline_exceeded_logged"] = True
         with _progress_lock:
             _last_runtime_stats[rid] = dict(stats)
             entry = _sales_request_progress.get(rid)
@@ -951,15 +977,19 @@ def clear_sales_deadline() -> None:
                 entry.update(stats)
         logger.info(
             "sales_performance_breakdown request_id=%s ocr_calls=%s ocr_cache_hits=%s "
-            "gemini_calls=%s gemini_retries=%s ocr_seconds=%s vision_seconds=%s "
-            "total_seconds=%s",
+            "gemini_calls=%s gemini_retries=%s gemini_429_count=%s "
+            "gemini_cooldown_seconds=%s ocr_seconds=%s vision_seconds=%s "
+            "recovery_seconds=%s total_seconds=%s",
             rid,
             stats.get("ocr_calls"),
             stats.get("ocr_cache_hits"),
             stats.get("gemini_calls"),
             stats.get("gemini_retries"),
+            stats.get("gemini_429_count"),
+            stats.get("gemini_cooldown_seconds"),
             stats.get("ocr_seconds"),
             stats.get("vision_seconds"),
+            stats.get("recovery_seconds"),
             stats.get("total_seconds"),
         )
     if rid:
@@ -985,6 +1015,7 @@ def clear_sales_deadline() -> None:
         "ocr_cache",
         "ocr_budget",
         "started_mono",
+        "_deadline_exceeded_logged",
     ):
         if hasattr(_deadline_local, attr):
             delattr(_deadline_local, attr)
@@ -1035,11 +1066,74 @@ def check_sales_deadline(stage: str = "parsing") -> None:
     if remaining is None:
         return
     if remaining <= 0:
-        raise SalesExtractionDeadlineExceeded(
-            getattr(_deadline_local, "request_id", "unknown"),
-            stage,
-            float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+        request_id = getattr(_deadline_local, "request_id", "unknown")
+        limit_seconds = float(getattr(_deadline_local, "limit_seconds", 0) or 0)
+        log_extraction_deadline_exceeded(
+            request_id,
+            stage=stage,
+            limit_seconds=limit_seconds,
         )
+        raise SalesExtractionDeadlineExceeded(
+            request_id,
+            stage,
+            limit_seconds,
+        )
+
+
+def log_extraction_deadline_exceeded(
+    request_id: str,
+    *,
+    stage: str = "",
+    limit_seconds: Optional[float] = None,
+    page_count: Optional[int] = None,
+) -> None:
+    """Log greppable EXTRACTION_DEADLINE_EXCEEDED from real runtime counters only."""
+    # One log per request; survive clear_sales_deadline via last-stats flag.
+    if getattr(_deadline_local, "_deadline_exceeded_logged", False):
+        return
+    prior = get_last_runtime_stats(request_id) or {}
+    if prior.get("deadline_exceeded_logged"):
+        return
+    _deadline_local._deadline_exceeded_logged = True
+
+    ctx = getattr(_deadline_local, "ctx", None)
+    stats: Dict[str, Any] = {}
+    if isinstance(ctx, SalesExtractionRuntimeContext):
+        stats = ctx.snapshot()
+    else:
+        stats = dict(prior)
+
+    elapsed = stats.get("total_seconds")
+    if elapsed is None:
+        started = float(getattr(_deadline_local, "started_mono", 0) or 0)
+        if started:
+            elapsed = round(time.monotonic() - started, 3)
+
+    configured = limit_seconds
+    if configured is None:
+        configured = float(getattr(_deadline_local, "limit_seconds", 0) or 0) or float(
+            SALES_EXTRACTION_MAX_EXECUTION_SECONDS
+        )
+
+    logger.warning(
+        "EXTRACTION_DEADLINE_EXCEEDED request_id=%s elapsed_seconds=%s "
+        "configured_deadline_seconds=%s page_count=%s gemini_calls=%s "
+        "gemini_429_count=%s gemini_cooldown_seconds=%s stage=%s",
+        request_id,
+        elapsed,
+        configured,
+        page_count if page_count is not None else stats.get("page_count"),
+        stats.get("gemini_calls"),
+        stats.get("gemini_429_count"),
+        stats.get("gemini_cooldown_seconds"),
+        stage or stats.get("stage"),
+    )
+    # Persist dedupe flag even when deadline context was already cleared.
+    with _progress_lock:
+        entry = dict(_last_runtime_stats.get(request_id) or stats or {})
+        entry["deadline_exceeded_logged"] = True
+        if request_id:
+            _last_runtime_stats[request_id] = entry
 
 
 def mark_sales_stage(stage: str, **fields: Any) -> None:
@@ -1088,7 +1182,12 @@ def sales_ocr_budget_exhausted() -> bool:
     return remaining is not None and remaining <= 0
 
 
-def note_sales_gemini_call(duration_ms: float = 0.0, *, retry: bool = False) -> None:
+def note_sales_gemini_call(
+    duration_ms: float = 0.0,
+    *,
+    retry: bool = False,
+    label: str = "",
+) -> None:
     if not hasattr(_deadline_local, "gemini_calls"):
         return
     _deadline_local.gemini_calls = int(
@@ -1106,6 +1205,38 @@ def note_sales_gemini_call(duration_ms: float = 0.0, *, retry: bool = False) -> 
         ctx.gemini_calls = int(_deadline_local.gemini_calls)
         ctx.gemini_duration_ms = float(_deadline_local.gemini_duration_ms)
         ctx.gemini_retries = int(getattr(_deadline_local, "gemini_retries", 0) or 0)
+        label_l = str(label or "").lower()
+        if "recon" in label_l or "recovery" in label_l:
+            ctx.recovery_duration_ms = float(ctx.recovery_duration_ms or 0.0) + float(
+                duration_ms or 0.0
+            )
+
+
+def note_sales_gemini_retry() -> None:
+    """Count one provider retry (429 / 503 / timeout), not each cooldown sleep chunk."""
+    if not hasattr(_deadline_local, "gemini_retries"):
+        return
+    _deadline_local.gemini_retries = int(
+        getattr(_deadline_local, "gemini_retries", 0) or 0
+    ) + 1
+    ctx = getattr(_deadline_local, "ctx", None)
+    if isinstance(ctx, SalesExtractionRuntimeContext):
+        ctx.gemini_retries = int(_deadline_local.gemini_retries)
+
+
+def note_sales_gemini_429() -> None:
+    ctx = getattr(_deadline_local, "ctx", None)
+    if isinstance(ctx, SalesExtractionRuntimeContext):
+        ctx.gemini_429_count = int(ctx.gemini_429_count or 0) + 1
+    note_sales_gemini_retry()
+
+
+def note_sales_gemini_cooldown_wait(duration_ms: float) -> None:
+    ctx = getattr(_deadline_local, "ctx", None)
+    if isinstance(ctx, SalesExtractionRuntimeContext):
+        ctx.gemini_cooldown_ms = float(ctx.gemini_cooldown_ms or 0.0) + float(
+            duration_ms or 0.0
+        )
 
 
 def sales_sleep_respecting_deadline(seconds: float, stage: str = "gemini_retry") -> None:
@@ -1119,13 +1250,8 @@ def sales_sleep_respecting_deadline(seconds: float, stage: str = "gemini_retry")
     if sleep_for <= 0:
         check_sales_deadline(stage)
         return
-    if stage == "gemini_retry" and hasattr(_deadline_local, "gemini_retries"):
-        _deadline_local.gemini_retries = int(
-            getattr(_deadline_local, "gemini_retries", 0) or 0
-        ) + 1
-        ctx = getattr(_deadline_local, "ctx", None)
-        if isinstance(ctx, SalesExtractionRuntimeContext):
-            ctx.gemini_retries = int(_deadline_local.gemini_retries)
+    # Retry counts are recorded at the provider-error site (note_sales_gemini_429 /
+    # note_sales_gemini_retry), not per cooldown sleep chunk.
     time.sleep(sleep_for)
     check_sales_deadline(stage)
 
@@ -1383,6 +1509,7 @@ def note_gemini_provider_429(
         ) + 1
         rem = max(0.0, _provider_cooldown_until_mono - time.monotonic())
     deadline_rem = sales_deadline_remaining_seconds()
+    note_sales_gemini_429()
     logger.warning(
         "gemini_provider_429 request_id=%s gemini_label=%s model=%s attempt=%s "
         "provider_status=429 active_gemini_slots=%s gemini_limit=%s "
@@ -1495,6 +1622,7 @@ def wait_gemini_provider_cooldown(
         # If sleep was mocked or returned early, still consume cooldown budget so
         # waiters cannot spin forever while holding no progress.
         elapsed = time.monotonic() - before
+        note_sales_gemini_cooldown_wait(max(0.0, elapsed) * 1000.0)
         if elapsed < (chunk * 0.5):
             with _provider_cooldown_lock:
                 _provider_cooldown_until_mono = min(
@@ -1552,7 +1680,7 @@ def gemini_call_slot(label: str = "gemini_call"):
         yield
     finally:
         elapsed_ms = (time.monotonic() - started) * 1000.0
-        note_sales_gemini_call(elapsed_ms, retry=is_retry)
+        note_sales_gemini_call(elapsed_ms, retry=is_retry, label=label)
         _gemini_slot_depth.n = 0
         with _gemini_call_lock:
             _gemini_call_active = max(0, _gemini_call_active - 1)
@@ -1662,6 +1790,7 @@ def sales_generate_content_via_vertex(
                 attempt_transient += 1
                 note_gemini_provider_transient("503")
                 _bump_gemini_metric("gemini_retry_count")
+                note_sales_gemini_retry()
                 if attempt_transient >= max_retries:
                     raise
                 backoff = min(
@@ -1676,6 +1805,7 @@ def sales_generate_content_via_vertex(
             attempt_transient += 1
             note_gemini_provider_transient("timeout")
             _bump_gemini_metric("gemini_retry_count")
+            note_sales_gemini_retry()
             if attempt_transient >= max_retries:
                 raise
             backoff = min(
@@ -1695,6 +1825,7 @@ def sales_generate_content_via_vertex(
             if code_i is not None and 500 <= code_i <= 599:
                 attempt_transient += 1
                 _bump_gemini_metric("gemini_retry_count")
+                note_sales_gemini_retry()
                 if attempt_transient >= max_retries:
                     raise
                 backoff = min(
@@ -2009,6 +2140,11 @@ def log_sales_extraction_event(
     failure_reason: Optional[str] = None,
 ) -> None:
     stats = get_last_runtime_stats(request_id) or {}
+    total_seconds = (
+        round(float(total_duration_seconds), 3)
+        if total_duration_seconds is not None
+        else stats.get("total_seconds")
+    )
     logger.info(
         "sales_extraction_event request_id=%s filename=%s file_type=%s "
         "file_size=%s page_count=%s extraction_method=%s ocr_quality=%s "
@@ -2016,6 +2152,7 @@ def log_sales_extraction_event(
         "ocr_time=%s vision_time=%s validation_time=%s "
         "extraction_duration=%.3f total_duration=%.3f "
         "ocr_calls=%s ocr_cache_hits=%s gemini_calls=%s gemini_retries=%s "
+        "gemini_429_count=%s gemini_cooldown_seconds=%s recovery_seconds=%s "
         "final_status=%s failure_reason=%s",
         request_id,
         filename,
@@ -2036,6 +2173,9 @@ def log_sales_extraction_event(
         stats.get("ocr_cache_hits"),
         stats.get("gemini_calls"),
         stats.get("gemini_retries"),
+        stats.get("gemini_429_count"),
+        stats.get("gemini_cooldown_seconds"),
+        stats.get("recovery_seconds"),
         final_status,
         failure_reason,
     )
@@ -2047,9 +2187,30 @@ def log_sales_extraction_event(
             "ocr_cache_hits": stats.get("ocr_cache_hits"),
             "gemini_calls": stats.get("gemini_calls"),
             "gemini_retries": stats.get("gemini_retries"),
+            "gemini_429_count": stats.get("gemini_429_count"),
+            "gemini_cooldown_seconds": stats.get("gemini_cooldown_seconds"),
             "ocr_seconds": stats.get("ocr_seconds"),
             "vision_seconds": stats.get("vision_seconds"),
-            "total_seconds": round(float(total_duration_seconds or 0.0), 3),
+            "recovery_seconds": stats.get("recovery_seconds"),
+            "total_seconds": total_seconds,
             "final_status": final_status,
         },
+    )
+    # Greppable one-line request summary from real runtime instrumentation only.
+    logger.info(
+        "EXTRACTION_SUMMARY request_id=%s page_count=%s total_seconds=%s "
+        "gemini_calls=%s gemini_429_count=%s gemini_retry_count=%s "
+        "gemini_cooldown_seconds=%s ocr_seconds=%s gemini_seconds=%s "
+        "recovery_seconds=%s status=%s",
+        request_id,
+        page_count,
+        total_seconds,
+        stats.get("gemini_calls"),
+        stats.get("gemini_429_count"),
+        stats.get("gemini_retries"),
+        stats.get("gemini_cooldown_seconds"),
+        stats.get("ocr_seconds"),
+        stats.get("vision_seconds"),
+        stats.get("recovery_seconds"),
+        final_status,
     )

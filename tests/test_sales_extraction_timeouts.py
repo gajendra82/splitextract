@@ -238,7 +238,87 @@ class ConfigDeadlineTests(unittest.TestCase):
     def test_defaults(self):
         self.assertEqual(runtime.MAX_CONCURRENT_EXTRACTIONS, 2)
         self.assertEqual(runtime.MAX_CONCURRENT_GEMINI_REQUESTS, 2)
-        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 600)
+        self.assertEqual(runtime.SALES_EXTRACTION_QUEUE_TIMEOUT, 3600)
+        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 1800)
+
+    def test_queue_and_execution_timeouts_remain_separate(self):
+        self.assertGreater(
+            runtime.SALES_EXTRACTION_QUEUE_TIMEOUT,
+            runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+        )
+        self.assertEqual(runtime.SALES_EXTRACTION_QUEUE_TIMEOUT, 3600)
+        self.assertEqual(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS, 1800)
+        self.assertEqual(runtime.MAX_CONCURRENT_GEMINI_REQUESTS, 2)
+
+    def test_extraction_deadline_exceeded_log_uses_runtime_metrics(self):
+        runtime.start_sales_deadline("req-dl-log", limit_seconds=0.01)
+        runtime.note_sales_gemini_call(1000.0, label="stock_vision_table")
+        runtime.note_sales_gemini_429()
+        runtime.note_sales_gemini_cooldown_wait(2500.0)
+        time.sleep(0.02)
+        with self.assertLogs(
+            "services.sales_extraction_runtime", level="WARNING"
+        ) as captured:
+            with self.assertRaises(runtime.SalesExtractionDeadlineExceeded):
+                runtime.check_sales_deadline("gemini_request")
+        lines = [
+            line for line in captured.output if "EXTRACTION_DEADLINE_EXCEEDED" in line
+        ]
+        self.assertEqual(len(lines), 1)
+        line = lines[0]
+        self.assertIn("request_id=req-dl-log", line)
+        self.assertIn("configured_deadline_seconds=0.01", line)
+        self.assertIn("gemini_calls=1", line)
+        self.assertIn("gemini_429_count=1", line)
+        self.assertIn("gemini_cooldown_seconds=2.5", line)
+        runtime.clear_sales_deadline()
+
+    def test_deadline_cleanup_after_success_and_failure(self):
+        runtime.start_sales_deadline("req-clean-ok", limit_seconds=30)
+        self.assertTrue(runtime.sales_deadline_active())
+        self.assertEqual(
+            getattr(runtime._deadline_local, "request_id", None), "req-clean-ok"
+        )
+        runtime.clear_sales_deadline()
+        self.assertFalse(runtime.sales_deadline_active())
+        self.assertIsNone(getattr(runtime._deadline_local, "request_id", None))
+
+        runtime.start_sales_deadline("req-clean-fail", limit_seconds=0.01)
+        time.sleep(0.02)
+        with self.assertRaises(runtime.SalesExtractionDeadlineExceeded):
+            runtime.check_sales_deadline("parsing")
+        runtime.clear_sales_deadline()
+        self.assertFalse(runtime.sales_deadline_active())
+        self.assertIsNone(getattr(runtime._deadline_local, "request_id", None))
+
+    def test_multipage_binds_execution_deadline_to_request_id(self):
+        """Multi-page path must start/clear deadline with the same request_id."""
+        request_id = "req-multi-bind"
+        limit = float(runtime.SALES_EXTRACTION_MAX_EXECUTION_SECONDS)
+        self.assertEqual(limit, 1800.0)
+
+        def _run_multi_like():
+            runtime.start_sales_deadline(request_id, limit, file_size=12)
+            try:
+                self.assertTrue(runtime.sales_deadline_active())
+                self.assertEqual(
+                    getattr(runtime._deadline_local, "request_id", None), request_id
+                )
+                self.assertAlmostEqual(
+                    float(getattr(runtime._deadline_local, "limit_seconds", 0)),
+                    1800.0,
+                )
+                remaining = runtime.sales_deadline_remaining_seconds()
+                self.assertIsNotNone(remaining)
+                self.assertGreater(remaining, 1790.0)
+                return {"ok": True}
+            finally:
+                runtime.clear_sales_deadline()
+
+        result = _run_multi_like()
+        self.assertEqual(result, {"ok": True})
+        self.assertFalse(runtime.sales_deadline_active())
+        self.assertIsNone(getattr(runtime._deadline_local, "request_id", None))
 
 
 if __name__ == "__main__":

@@ -30139,6 +30139,7 @@ async def extract_sales_statement_endpoint(
         acquire_sales_extraction_slot,
         begin_sales_progress,
         finish_sales_progress,
+        log_extraction_deadline_exceeded,
         log_sales_extraction_event,
         release_sales_extraction_slot,
         request_cancel_sales_extraction,
@@ -30333,6 +30334,11 @@ async def extract_sales_statement_endpoint(
         except asyncio.TimeoutError as exc:
             request_cancel_sales_extraction(request_id)
             terminate_sales_tesseract_children()
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage="asyncio_timeout",
+                limit_seconds=deadline_seconds,
+            )
             raise HTTPException(
                 status_code=422,
                 detail=_extraction_failed_detail(
@@ -30357,6 +30363,11 @@ async def extract_sales_statement_endpoint(
                         stage=exc.stage,
                     ),
                 ) from exc
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage=exc.stage,
+                limit_seconds=float(exc.limit_seconds or deadline_seconds),
+            )
             raise HTTPException(
                 status_code=422,
                 detail=_extraction_failed_detail(
@@ -30483,12 +30494,16 @@ async def extract_sales_statement_multi_endpoint(
     from services.sales_extraction_runtime import (
         SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
         SalesExtractionBusy,
+        SalesExtractionDeadlineExceeded,
         acquire_sales_extraction_slot,
         begin_sales_progress,
+        clear_sales_deadline,
         finish_sales_progress,
+        log_extraction_deadline_exceeded,
         log_sales_extraction_event,
         release_sales_extraction_slot,
         resolve_request_id,
+        start_sales_deadline,
         update_sales_progress,
     )
     from services.stock_multipage import (
@@ -30590,12 +30605,24 @@ async def extract_sales_statement_multi_endpoint(
         update_sales_progress(request_id, "parsing", page_count=len(pages))
 
         def _run_multi():
-            return extract_multipage_image_stock_statement(
-                pages,
-                request_id=request_id,
-                stockist_id=stockist_id,
-                month=month,
+            # Bind request-local Gemini/OCR instrumentation + wall-clock deadline.
+            # Without this, multi-page Gemini logs show request_id=unknown and
+            # sales_extraction_event reports gemini_calls=None.
+            total_bytes = sum(len(b or b"") for _, b in pages)
+            start_sales_deadline(
+                request_id,
+                deadline_seconds,
+                file_size=total_bytes,
             )
+            try:
+                return extract_multipage_image_stock_statement(
+                    pages,
+                    request_id=request_id,
+                    stockist_id=stockist_id,
+                    month=month,
+                )
+            finally:
+                clear_sales_deadline()
 
         try:
             sales_result = await asyncio.wait_for(
@@ -30604,11 +30631,33 @@ async def extract_sales_statement_multi_endpoint(
             )
         except asyncio.TimeoutError:
             final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage="asyncio_timeout",
+                limit_seconds=deadline_seconds,
+                page_count=len(pages),
+            )
             return _fail_body(
                 error="extraction_failed",
                 message=(
                     "Stock statement extraction exceeded the maximum "
                     f"execution time of {int(deadline_seconds)}s."
+                ),
+                status_code=422,
+            )
+        except SalesExtractionDeadlineExceeded as exc:
+            final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage=exc.stage,
+                limit_seconds=float(exc.limit_seconds or deadline_seconds),
+                page_count=len(pages),
+            )
+            return _fail_body(
+                error="extraction_failed",
+                message=(
+                    "Stock statement extraction exceeded the maximum "
+                    f"execution time of {int(exc.limit_seconds or deadline_seconds)}s."
                 ),
                 status_code=422,
             )
@@ -30659,10 +30708,16 @@ async def extract_sales_statement_multi_endpoint(
             extraction_duration_seconds=extraction_duration_seconds,
             file_type=file_type,
         )
+        multi_page_count = None
+        try:
+            multi_page_count = len(pages)  # type: ignore[name-defined]
+        except Exception:
+            multi_page_count = len(uploads) if uploads else None
         log_sales_extraction_event(
             request_id,
             filename=filename,
             file_type=file_type,
+            page_count=multi_page_count,
             queue_wait_seconds=queue_wait_seconds,
             extraction_duration_seconds=extraction_duration_seconds,
             total_duration_seconds=total_duration_seconds,
