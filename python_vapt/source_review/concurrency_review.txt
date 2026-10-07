@@ -1,0 +1,12 @@
+Concurrency review. No load test was performed.
+
+Runtime environment: MAX_CONCURRENT_REQUESTS=1, REQUEST_QUEUE_TIMEOUT=3600.
+nginx vhost zydus-py.mediola.in sets client_max_body_size 500M for the TLS server, which includes location /extract/.
+
+Current source:
+- /split-and-extract acquires request_processing_semaphore (size MAX_CONCURRENT_REQUESTS) before work.
+- /test-extract does not acquire that semaphore.
+- /extract-pod-grn and the first /extract-sales-statement handler read the upload outside that semaphore.
+- Live OpenAPI exposes POST /test-extract. An empty unauthenticated POST returned HTTP 422, not HTTP 401.
+
+Status: Potential for availability impact.

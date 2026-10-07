@@ -1,0 +1,12 @@
+Container definition versus the running service.
+
+Dockerfile:
+  FROM python:3.11-slim
+  COPY app5.py .
+  CMD ["python", "app5.py", "--host", "0.0.0.0", "--port", "8001"]
+  EXPOSE 8001
+
+app5.py is not present in /var/www/html/split-extract.
+docker-compose.yml publishes 8001:8001 and builds that image.
+Docker was not running this service during the assessment.
+The live process is runner.py under the virtualenv, Python 3.12.3, not the image.

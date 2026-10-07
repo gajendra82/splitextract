@@ -1,0 +1,7 @@
+HTTP/1.1 400 Bad Request
+Server: nginx/1.24.0 (Ubuntu)
+Date: Tue, 22 Sep 2026 16:10:35 GMT
+Content-Type: application/json
+Content-Length: 43
+Connection: keep-alive
+

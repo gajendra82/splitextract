@@ -1,0 +1,6 @@
+HTTP/1.1 400 Bad Request
+date: Tue, 22 Sep 2026 16:10:33 GMT
+server: uvicorn
+content-length: 43
+content-type: application/json
+

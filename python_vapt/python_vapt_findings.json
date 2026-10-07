@@ -1,0 +1,515 @@
+{
+  "project": "Sales_POD_Invoice_Intelligence_Platform",
+  "component": "Python Data Extraction Service",
+  "report_version": "1.0",
+  "date": "2026-09-22",
+  "classification": "CONFIDENTIAL",
+  "framework": "FastAPI 0.115.8 / Uvicorn 0.34.0 / Starlette 0.45.3",
+  "python": "3.12.3",
+  "severity_counts": {
+    "Critical": 0,
+    "High": 0,
+    "Medium": 6,
+    "Low": 4,
+    "Informational": 3
+  },
+  "status_counts": {
+    "Confirmed": 8,
+    "Potential": 2,
+    "Informational": 3,
+    "False Positive": 0,
+    "Not Tested": 6
+  },
+  "findings": [
+    {
+      "id": "PY-VAPT-001",
+      "title": "Unauthenticated Public Access to the Extraction API",
+      "severity": "Medium",
+      "cvss": "6.5",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+      "cwe": "CWE-306: Missing Authentication for Critical Function",
+      "owasp": "OWASP Top 10 A01 Broken Access Control; A05 Security Misconfiguration; OWASP API Security API2 Broken Authentication",
+      "component": "FastAPI application app:app on 127.0.0.1:8001, published by nginx at https://zydus-py.mediola.in/extract/",
+      "endpoint": "GET / , /health, /live, /ready, /docs, /redoc, /openapi.json; POST /split-and-extract, /test-extract, /extract-sales-statement, /extract-pod-grn",
+      "description": "The running service accepts extraction and documentation requests without an API key, bearer token, mutual TLS, or source-IP allow list. Empty unauthenticated POSTs returned HTTP 400 or HTTP 422 (validation), not HTTP 401 or HTTP 403. Swagger UI, ReDoc, and the OpenAPI document are reachable on the public HTTPS path. A production POST /split-and-extract from 135.235.16.138 completed HTTP 200 during the assessment window; that observation shows the endpoint is in active use, and the same route accepted the assessor's unauthenticated probes.",
+      "evidence": "No authentication dependency, middleware, or shared-secret check exists on the FastAPI routes in the current source. Live requests without an Authorization header were processed. OpenAPI lists eight application routes plus the default documentation routes. nginx location /extract/ proxies to 127.0.0.1:8001 with no auth_request or allow/deny rule.",
+      "steps": "1. Request GET https://zydus-py.mediola.in/extract/docs with no credentials and observe HTTP 200.\n2. POST https://zydus-py.mediola.in/extract/split-and-extract with an empty body and no Authorization header.\n3. POST http://127.0.0.1:8001/test-extract with an empty body.\n4. Compare the status codes with an authentication challenge.",
+      "observed": "Documentation returned HTTP 200. Empty extraction calls returned HTTP 400 or HTTP 422 with a validation message. Neither response was an authentication failure.",
+      "impact": "Any client who can reach the host can invoke document extraction, read operational health data, and download the API schema. Laravel authorization checks, if any, are not enforced at this service.",
+      "root_cause": "Routes are registered on the FastAPI app with no authentication dependency. The reverse proxy forwards Internet clients directly to the application.",
+      "recommendation": "Require a shared API key or mTLS between the Laravel application and this service, and reject missing credentials with HTTP 401. Restrict the nginx location to the application servers. Disable /docs, /redoc, and /openapi.json on the public vhost.",
+      "status": "Confirmed",
+      "business_impact": "Unauthorized use of extraction capacity and a direct path around the Laravel application.",
+      "technical_impact": "Missing authentication on every assessed route, including interactive API documentation.",
+      "cvss_rationale": "Network access without credentials reaches processing and documentation. Confidentiality and integrity are Low because a customer invoice was not submitted by the assessment and cross-tenant data was not downloaded. Availability impact from flooding was not tested, so Availability is None.",
+      "expected": "HTTP 401 or HTTP 403 for callers without a service credential. Documentation disabled on the public interface.",
+      "actual": "HTTP 200 for /docs, /health, /openapi.json, and /. HTTP 400 or HTTP 422 for unauthenticated extraction posts.",
+      "request": "POST /split-and-extract HTTP/1.1\nHost: 127.0.0.1:8001\n(no Authorization header)\n\nPOST /test-extract HTTP/1.1\nHost: 127.0.0.1:8001\n(no Authorization header)\n\nGET /extract/docs HTTP/1.1\nHost: zydus-py.mediola.in",
+      "response": "split-and-extract -> HTTP 400\n{\"detail\":\"Provide either file upload or split_raw_blob_path/split_raw_url\"}\n\ntest-extract -> HTTP 422\n{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"file\"],\"msg\":\"Field required\"}]}\n\n/extract/docs -> HTTP 200 HTML Swagger UI",
+      "evidence_files": [
+        "evidence/post_split_noauth.headers",
+        "evidence/post_split_noauth.body",
+        "evidence/post_test_noauth.body",
+        "evidence/https_extract_health.body"
+      ],
+      "references": [
+        "CWE-306",
+        "OWASP API Security Top 10 API2"
+      ]
+    },
+    {
+      "id": "PY-VAPT-002",
+      "title": "Server-Side Request Forgery via split_raw_url",
+      "severity": "Medium",
+      "cvss": "6.5",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+      "cwe": "CWE-918: Server-Side Request Forgery",
+      "owasp": "OWASP Top 10 A10 SSRF; OWASP API Security API7 Server Side Request Forgery",
+      "component": "POST /split-and-extract and POST /extract-pod-grn form field split_raw_url",
+      "endpoint": "POST /split-and-extract ; POST /extract-pod-grn ; public path POST /extract/extract-pod-grn",
+      "description": "Both routes download split_raw_url with requests.get and no scheme, host, or redirect allow list. An assessor-controlled listener on 127.0.0.1:8765 recorded GET /marker.txt when the field was submitted to the local service and again when the same field was submitted through https://zydus-py.mediola.in/extract/extract-pod-grn. A closed local port on /split-and-extract produced HTTP 500 whose body was the Python HTTP client error, confirming that the running process attempted the connection. Cloud metadata addresses were not requested.",
+      "evidence": "Listener log shows two successful GET /marker.txt requests from 127.0.0.1. The pod-grn handler then returned HTTP 400 {\"detail\":\"Unsupported Excel format: .txt\"}, which shows the downloaded bytes were inspected. The split-and-extract handler returned the connection-refused exception text for http://127.0.0.1:9/closed.pdf.",
+      "steps": "1. Start a listener on 127.0.0.1:8765 serving a non-document marker file.\n2. POST /extract-pod-grn with split_raw_url=http://127.0.0.1:8765/marker.txt and use_blob_storage=false, without credentials.\n3. Repeat the POST through https://zydus-py.mediola.in/extract/extract-pod-grn.\n4. POST /split-and-extract with split_raw_url pointed at a closed local port and record the error body.",
+      "observed": "The service issued outbound HTTP GETs to the supplied URL and returned a response derived from that fetch. No Authorization header was required.",
+      "impact": "A remote caller can make the server request URLs of their choosing, including loopback addresses reachable from the host. A document the parser accepts would be processed by the extraction pipeline. Metadata and internal credential endpoints were not requested, so that impact is not claimed.",
+      "root_cause": "split_raw_url is passed to requests.get without an allow list. The same pattern is present on /extract-pod-grn.",
+      "recommendation": "Remove arbitrary URL fetch, or allow only HTTPS URLs on an explicit host list. Do not follow redirects to other hosts. Require authentication before any fetch. Return a generic error instead of the client exception.",
+      "status": "Confirmed",
+      "business_impact": "The service can be used as an open fetcher for internal HTTP endpoints that the host can reach.",
+      "technical_impact": "Unauthenticated server-side GET with response handling that inspects the downloaded body.",
+      "cvss_rationale": "Scope is Unchanged because the demonstration retrieved an assessor file and a connection error, not a separate security domain's secrets. Confidentiality and integrity are Low. Metadata access was Not Tested and is not included in the score.",
+      "expected": "URL fetch rejected, or limited to a known storage host, and unauthenticated callers rejected.",
+      "actual": "Listener recorded the GET. The API returned HTTP 400 for the marker file and HTTP 500 with the connection error for the closed port.",
+      "request": "POST /extract-pod-grn HTTP/1.1\nHost: zydus-py.mediola.in\nContent-Type: multipart/form-data\n\nsplit_raw_url=http://127.0.0.1:8765/marker.txt\nuse_blob_storage=false\n(no Authorization)\n\nPOST /split-and-extract HTTP/1.1\nHost: 127.0.0.1:8001\n\nsplit_raw_url=http://127.0.0.1:9/closed.pdf\nuse_blob_storage=false",
+      "response": "extract-pod-grn -> HTTP 400\n{\"detail\":\"Unsupported Excel format: .txt\"}\nListener: GET /marker.txt HTTP/1.1 200 (local and via the public HTTPS path)\n\nsplit-and-extract -> HTTP 500\n{\"detail\":\"HTTPConnectionPool(host='127.0.0.1', port=9): ... Connection refused\"}",
+      "evidence_files": [
+        "evidence/ssrf_listener.log",
+        "evidence/ssrf_pod.body",
+        "evidence/ssrf_https.headers",
+        "evidence/ssrf_split.body"
+      ],
+      "references": [
+        "CWE-918",
+        "OWASP API Security API7"
+      ]
+    },
+    {
+      "id": "PY-VAPT-003",
+      "title": "Exception Text Returned in API Error Responses",
+      "severity": "Low",
+      "cvss": "3.7",
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-209: Generation of Error Message Containing Sensitive Information",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "HTTPException(detail=str(e)) on extraction handlers, confirmed on the running /split-and-extract route",
+      "endpoint": "POST /split-and-extract",
+      "description": "When the URL download on /split-and-extract fails, the handler returns HTTP 500 and places the exception string in the JSON detail field. The captured body included the internal host, port, and operating-system error. Current source uses the same detail=str(e) pattern on /extract-sales-statement, /extract-pod-grn, /test-extract, and the blob upload helper. The captured body did not contain a credential or customer invoice.",
+      "evidence": "HTTP 500 response body from the closed-port probe. Source review of the exception handlers in app.py.",
+      "steps": "1. POST /split-and-extract with split_raw_url set to an unopened local port.\n2. Read the JSON detail field.",
+      "observed": "The client received the Python requests exception text, including 127.0.0.1 and port 9.",
+      "impact": "Callers learn internal failure details. If a later exception includes a storage path, account name, or upstream response, that text would be returned as well. That stronger case was not observed.",
+      "root_cause": "Broad exception handlers pass str(e) to HTTPException.",
+      "recommendation": "Return a stable error code to clients and write the exception only to the server log.",
+      "status": "Confirmed",
+      "business_impact": "Reconnaissance aid. Customer content was not present in the captured error.",
+      "technical_impact": "Internal connection details disclosed to an unauthenticated caller.",
+      "cvss_rationale": "Attack complexity is scored High because the confirmed body was a connection error. A score that assumes credential disclosure would overstate the evidence.",
+      "expected": "Generic HTTP 500 body with no internal host, port, or library traceback.",
+      "actual": "HTTP 500 JSON containing the connection-pool exception.",
+      "request": "POST /split-and-extract HTTP/1.1\nHost: 127.0.0.1:8001\n\nsplit_raw_url=http://127.0.0.1:9/closed.pdf",
+      "response": "HTTP/1.1 500 Internal Server Error\nContent-Type: application/json\n\n{\"detail\":\"HTTPConnectionPool(host='127.0.0.1', port=9): Max retries exceeded ... Connection refused\"}",
+      "evidence_files": [
+        "evidence/ssrf_split.headers",
+        "evidence/ssrf_split.body"
+      ],
+      "references": [
+        "CWE-209"
+      ]
+    },
+    {
+      "id": "PY-VAPT-004",
+      "title": "CORS Allows Any Origin With Credentials",
+      "severity": "Low",
+      "cvss": "3.1",
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-942: Permissive Cross-domain Policy with Untrusted Domains",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "CORSMiddleware on the FastAPI app",
+      "endpoint": "OPTIONS /health (representative); middleware applies to the application",
+      "description": "The application sets allow_origins to [\"*\"], allow_credentials to True, and allow_methods and allow_headers to [\"*\"]. A preflight from Origin https://evil.example received access-control-allow-origin: https://evil.example and access-control-allow-credentials: true. The service does not issue a session cookie, so a browser credential-theft scenario was not demonstrated.",
+      "evidence": "Captured preflight response. Source: app.add_middleware(CORSMiddleware, allow_origins=[\"*\"], allow_credentials=True, allow_methods=[\"*\"], allow_headers=[\"*\"]).",
+      "steps": "1. Send OPTIONS /health with Origin: https://evil.example and Access-Control-Request-Method: POST.\n2. Read Access-Control-Allow-Origin and Access-Control-Allow-Credentials.",
+      "observed": "The supplied origin was reflected and credentials were allowed.",
+      "impact": "If cookie authentication is added later, any website could make credentialed browser calls. With the current absence of cookie authentication, the demonstrated impact is policy weakness rather than data theft.",
+      "root_cause": "Wildcard origin combined with credentialed CORS. Starlette reflects the request origin when credentials are enabled.",
+      "recommendation": "Set an explicit origin list for the Laravel application. Do not combine a reflected origin with allow_credentials unless that origin is trusted.",
+      "status": "Confirmed",
+      "business_impact": "Limited today because the API is not cookie-authenticated. The policy is unsafe if session cookies are introduced.",
+      "technical_impact": "Arbitrary origin reflection with credentials enabled.",
+      "cvss_rationale": "User interaction is required for a browser attack, and cookie authentication was not present, so complexity is High and impact is Low.",
+      "expected": "Only approved application origins are returned. Credentials are disabled unless required.",
+      "actual": "access-control-allow-origin echoed the assessor origin and access-control-allow-credentials was true.",
+      "request": "OPTIONS /health HTTP/1.1\nHost: 127.0.0.1:8001\nOrigin: https://evil.example\nAccess-Control-Request-Method: POST",
+      "response": "HTTP/1.1 200 OK\naccess-control-allow-origin: https://evil.example\naccess-control-allow-credentials: true\naccess-control-allow-methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT",
+      "evidence_files": [
+        "evidence/cors.headers"
+      ],
+      "references": [
+        "CWE-942"
+      ]
+    },
+    {
+      "id": "PY-VAPT-005",
+      "title": "Missing Browser Security Headers and Version Disclosure",
+      "severity": "Low",
+      "cvss": "3.1",
+      "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-693: Protection Mechanism Failure; CWE-200: Exposure of Sensitive Information",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "nginx vhost zydus-py.mediola.in and the uvicorn process",
+      "endpoint": "GET https://zydus-py.mediola.in/extract/health ; GET http://127.0.0.1:8001/health",
+      "description": "The HTTPS response identified Server: nginx/1.24.0 (Ubuntu) and did not send Strict-Transport-Security, Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, or Referrer-Policy. The direct application response identified server: uvicorn. Version strings help target known web-server issues. Header absence matters mainly if a browser client is introduced; the current caller observed in logs is a server-side HTTP client.",
+      "evidence": "Response headers from the public health URL and from port 8001.",
+      "steps": "1. Request GET https://zydus-py.mediola.in/extract/health.\n2. Record response headers.\n3. Request GET http://127.0.0.1:8001/health and record the server header.",
+      "observed": "nginx version disclosed. The listed browser hardening headers were absent. uvicorn identified itself on port 8001.",
+      "impact": "Low reconnaissance value. Clickjacking and MIME-sniffing impact depend on a browser user, which was not the observed integration.",
+      "root_cause": "nginx and uvicorn default headers, with no security-header configuration on the extraction location.",
+      "recommendation": "Remove version tokens. Add HSTS on the HTTPS vhost and a baseline of X-Content-Type-Options, Referrer-Policy, and a restrictive Content-Security-Policy for the documentation pages.",
+      "status": "Confirmed",
+      "business_impact": "Easier version targeting. No demonstrated session compromise from the missing headers.",
+      "technical_impact": "Server version disclosure and absent hardening headers.",
+      "cvss_rationale": "Impact requires a browser context that was not shown, so user interaction is Required and complexity is High. Confidentiality of the version banner is Low.",
+      "expected": "No product version in Server. HSTS present on HTTPS responses.",
+      "actual": "Server: nginx/1.24.0 (Ubuntu). No HSTS or CSP. Direct port: server: uvicorn.",
+      "request": "GET /extract/health HTTP/1.1\nHost: zydus-py.mediola.in",
+      "response": "HTTP/1.1 200 OK\nServer: nginx/1.24.0 (Ubuntu)\nContent-Type: application/json\n(no Strict-Transport-Security, Content-Security-Policy, X-Content-Type-Options, or X-Frame-Options)",
+      "evidence_files": [
+        "evidence/https_security.headers",
+        "evidence/https_extract_health.headers"
+      ],
+      "references": [
+        "CWE-693",
+        "CWE-200"
+      ]
+    },
+    {
+      "id": "PY-VAPT-006",
+      "title": "World-Readable Environment File Holding Cloud and AI Credentials",
+      "severity": "Medium",
+      "cvss": "5.5",
+      "vector": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N",
+      "cwe": "CWE-732: Incorrect Permission Assignment for Critical Resource",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "/var/www/html/.env loaded by systemd EnvironmentFile for split-extract",
+      "endpoint": "Local filesystem. Not served by nginx (GET https://zydus-py.mediola.in/.env returned the plain-text banner, 35 bytes).",
+      "description": "The environment file mode is 644 (owner root, group root, world read). Non-empty values are present for the Azure storage connection string, the Azure account key, a Gemini API key, an OpenAI API key, and a Google application-credentials path. The Google JSON key file itself is mode 600 and root-owned. HTTP retrieval of /.env does not return the file. Secret values are not reproduced in this report.",
+      "evidence": "stat mode 644. Key names and value lengths were recorded without printing values. nginx body for /.env is the 35-byte service banner.",
+      "steps": "1. stat -c '%a %U:%G' /var/www/html/.env.\n2. Confirm secret-bearing keys are non-empty by length only.\n3. GET https://zydus-py.mediola.in/.env and confirm the body is the banner, not the file.",
+      "observed": "Mode 644. Credential material is readable by any local account, including www-data. The file is not downloadable through the nginx vhost.",
+      "impact": "A local user or a compromised low-privilege process can read cloud storage keys and AI provider keys.",
+      "root_cause": "The secrets file was created world-readable. The unit runs as root and does not require world read.",
+      "recommendation": "chmod 600 the file, or 640 with a dedicated service group. Move secrets to a secret store. Rotate the keys that have been stored in the world-readable file. Do not treat the nginx 200 banner as a download of the file.",
+      "status": "Confirmed",
+      "business_impact": "Full cloud and AI credential disclosure to any local account. Not a public HTTP download.",
+      "technical_impact": "World read on a secrets file. Attack vector is Local.",
+      "cvss_rationale": "Any local user can read the file (PR:L, AV:L). Confidentiality of the key material is High. Integrity and availability were not changed by the permission alone.",
+      "expected": "Mode 600 or 640. HTTP response remains the banner or HTTP 404, never the file.",
+      "actual": "Mode 644 root:root. HTTPS GET /.env body length 35, banner text only.",
+      "request": "Filesystem: stat /var/www/html/.env\nHTTP: GET /.env HTTP/1.1\nHost: zydus-py.mediola.in",
+      "response": "stat: 644 root:root\nHTTP/1.1 200 OK\nContent-Length: 35\nBody: Zydus Python API Server is running",
+      "evidence_files": [
+        "evidence/nginx_dotenv.body",
+        "network/ufw.txt"
+      ],
+      "references": [
+        "CWE-732"
+      ]
+    },
+    {
+      "id": "PY-VAPT-007",
+      "title": "Extraction API Listens in Cleartext on All Interfaces",
+      "severity": "Medium",
+      "cvss": "5.3",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-319: Cleartext Transmission of Sensitive Information",
+      "owasp": "OWASP Top 10 A02 Cryptographic Failures; A05 Security Misconfiguration",
+      "component": "runner.py / systemd unit bind 0.0.0.0:8001 ; host firewall INPUT policy ACCEPT ; ufw inactive",
+      "endpoint": "http://<host>:8001/  (parallel to https://zydus-py.mediola.in/extract/)",
+      "description": "The production process listens on 0.0.0.0:8001. A request to the host public address on port 8001 returned HTTP 200 for /health with server: uvicorn. Host iptables INPUT policy is ACCEPT and ufw is inactive. nginx already publishes the same application over TLS at /extract/. The cleartext listener bypasses that TLS terminator. An off-box Internet scan was not run because nmap was not installed; the port answered on the address configured on this host.",
+      "evidence": "ss shows 0.0.0.0:8001. curl to http://148.230.66.182:8001/health returned HTTP 200. The access log recorded that source address.",
+      "steps": "1. Confirm the listen address with ss.\n2. Request GET http://<public-address>:8001/health.\n3. Compare with the TLS path on port 443.",
+      "observed": "Cleartext HTTP on port 8001 returned the same health document as the TLS path. No TLS is negotiated on 8001.",
+      "impact": "Document uploads and any future API key sent to port 8001 travel without TLS. The nginx body-size limit and security headers also do not apply to this port.",
+      "root_cause": "runner.py sets HOST 0.0.0.0 and PORT 8001. The unit does not bind localhost. No host firewall restricts the port.",
+      "recommendation": "Bind the application to 127.0.0.1 and publish it only through the nginx TLS vhost. If a direct port must exist, restrict it with a firewall to the Laravel servers.",
+      "status": "Confirmed",
+      "business_impact": "Cleartext path for invoice uploads beside the intended HTTPS front door.",
+      "technical_impact": "Sensitive processing API available without TLS on a non-loopback bind.",
+      "cvss_rationale": "Confidentiality is Low for data that would be sent to this port. The assessment used a GET and did not transmit a document or a secret over the cleartext port.",
+      "expected": "Port 8001 unreachable except from localhost or an allow-listed application server. Clients use HTTPS only.",
+      "actual": "HTTP 200 from the public address on port 8001. Firewall does not filter it.",
+      "request": "GET /health HTTP/1.1\nHost: 148.230.66.182:8001",
+      "response": "HTTP/1.1 200 OK\nserver: uvicorn\ncontent-type: application/json",
+      "evidence_files": [
+        "network/listeners.txt",
+        "network/iptables.txt",
+        "network/ufw.txt"
+      ],
+      "references": [
+        "CWE-319"
+      ]
+    },
+    {
+      "id": "PY-VAPT-008",
+      "title": "Running Process Still Calls Google Vertex Gemini After the Source Tree Moved to an Internal AI Client",
+      "severity": "Medium",
+      "cvss": "5.3",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+      "cwe": "CWE-693: Protection Mechanism Failure",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "Live PID 1095352 (started 2026-09-21 05:15:25) versus app.py and services/internal_invoice_ai.py on disk (modified 2026-09-22)",
+      "endpoint": "POST /split-and-extract as executed by the running process; GET /health current_model",
+      "description": "GET /health on the running process reports current_model gemini-2.5-flash-lite. A journal excerpt from an existing client request shows google_genai and an HTTP 200 POST to aiplatform.googleapis.com for the model gemini-2.5-flash-lite. The same log prints the loaded pipeline as PDFPlumber, PyMuPDF, Tesseract, then Gemini. The source tree now names the model internal_invoice_ai and sends extraction to the HTTPS URL https://zydus-aimodel.mediola.in/v1/invoice/extract, with an optional bearer token. That URL is not present in the running process environment. The process was not restarted after the source change. The assessment did not submit a document to the model; the outbound call was already in the journal.",
+      "evidence": "Health JSON field current_model. Sanitized journal excerpt. Process start time versus file modification time. Disk function extract_full_data_from_text_gemini delegates to the internal client. Disk invoice_ai_api_url() rejects non-HTTPS URLs.",
+      "steps": "1. GET /health and record current_model.\n2. Compare that value with get_current_model_config() in the current app.py.\n3. Compare process start time with app.py modification time.\n4. Review the sanitized journal line for the generateContent URL.",
+      "observed": "Live model name is gemini-2.5-flash-lite. Disk model name is internal_invoice_ai. The journal shows a successful call to Google Vertex AI.",
+      "impact": "Invoice content processed by the running service is sent to Google Vertex AI. The source change that points inference at the internal endpoint is not what production is executing. Restarting onto the new code without a token would then call the internal endpoint with no bearer credential, because INVOICE_AI_API_TOKEN is not set in the environment file.",
+      "root_cause": "The long-running root process imported the previous application and has not been reloaded. dotenv in the working directory does not see /var/www/html/.env unless systemd injected it at start.",
+      "recommendation": "Restart only after the intended provider, token, and HTTPS URL are confirmed in the process environment. Verify /health reports internal_invoice_ai and that no generateContent calls remain. Keep provider credentials out of the world-readable environment file.",
+      "status": "Confirmed",
+      "business_impact": "Production does not match the current extraction design. Document text continues to leave the host for the Gemini endpoint observed in the journal.",
+      "technical_impact": "Stale process. External inference is the live behavior. The on-disk client is a different control and is not loaded.",
+      "cvss_rationale": "Confidentiality is Low relative to the external provider call observed in logs. The assessment did not create that request. Integrity and availability were not scored.",
+      "expected": "Running /health model name matches the deployed source. Outbound inference goes only to the configured internal HTTPS endpoint.",
+      "actual": "Live health model is gemini-2.5-flash-lite. Disk source names internal_invoice_ai. Journal shows HTTP 200 to the Gemini generateContent URL.",
+      "request": "GET /health HTTP/1.1\nHost: zydus-py.mediola.in\n\n(no document uploaded by the assessment)",
+      "response": "HTTP/1.1 200 OK\n{\"status\":\"healthy\",\"current_model\":\"gemini-2.5-flash-lite\", ... \"source_filename\":null,\"batch_id\":null}\n\nJournal (sanitized): POST https://aiplatform.googleapis.com/v1beta1/projects/pod-ocr-502015/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent HTTP/1.1 200 OK",
+      "evidence_files": [
+        "evidence/https_extract_health.body",
+        "evidence/runtime_gemini_egress_redacted.txt"
+      ],
+      "references": [
+        "CWE-693",
+        "OWASP A05"
+      ]
+    },
+    {
+      "id": "PY-VAPT-009",
+      "title": "Caller-Supplied Azure Container and Blob Path on an Unauthenticated API",
+      "severity": "Medium",
+      "cvss": "6.5",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+      "cwe": "CWE-284: Improper Access Control",
+      "owasp": "OWASP Top 10 A01 Broken Access Control; OWASP API Security API1",
+      "component": "blob_container, split_raw_blob_path, and target_invoices_blob_folder on /split-and-extract and /extract-pod-grn",
+      "endpoint": "POST /split-and-extract ; POST /extract-pod-grn",
+      "description": "Current source uses the caller-supplied container and blob path with the process Azure credential, and upload_split_pdf_to_blob can return a read SAS URL. The running process environment has a non-empty Azure connection string and account key. A production request in the journal performed a blob PUT and received HTTP 201, so blob upload is live. The assessment did not download or overwrite a customer blob. Status is Potential for attacker-controlled container access because that action was not executed.",
+      "evidence": "Source of get_blob_service_client, the download branch, and SAS generation. Credential lengths only. Sanitized journal PUT 201. No assessor blob API call.",
+      "steps": "1. Review the form fields blob_container and split_raw_blob_path.\n2. Confirm Azure credential variables are non-empty in the process environment without printing them.\n3. Do not issue a blob read against production data.",
+      "observed": "Code path and live credentials are present. A production upload was observed. An assessor-controlled blob read or container change was not performed.",
+      "impact": "If the loaded code matches the reviewed source, an unauthenticated caller could read a named blob and write extracted output into a chosen prefix, then receive a read URL. That outcome was not demonstrated.",
+      "root_cause": "Storage paths and container names are taken from the request and used with the service credential.",
+      "recommendation": "Ignore client container names. Authorize blob operations with a fixed container and a server-side prefix. Do not return account-key SAS URLs to unauthenticated clients. Prefer a user-delegation SAS with a short lifetime after authentication is added.",
+      "status": "Potential",
+      "business_impact": "Possible read or write of invoice objects in the storage account if the reviewed code path is reachable. Not demonstrated against live blobs.",
+      "technical_impact": "Missing authorization on storage parameters combined with a loaded storage credential.",
+      "cvss_rationale": "Scored as Low confidentiality and Low integrity because the code path is present and credentials are loaded, while a live cross-object read was intentionally not executed. Do not treat this as a confirmed data breach.",
+      "expected": "Client container and blob path rejected. No SAS issued to anonymous callers.",
+      "actual": "Not executed against Azure. Production logging shows the service itself can PUT an object and receive HTTP 201.",
+      "request": "Not sent. A live blob read was intentionally not performed.",
+      "response": "Not captured. Journal, sanitized: PUT https://[REDACTED].blob.core.windows.net/invoice-splits/[REDACTED] -> HTTP 201.",
+      "evidence_files": [
+        "evidence/runtime_gemini_egress_redacted.txt",
+        "source_review/blob_path_review.txt"
+      ],
+      "references": [
+        "CWE-284",
+        "OWASP API1"
+      ]
+    },
+    {
+      "id": "PY-VAPT-010",
+      "title": "No Per-Client Rate Limit; Test Route Does Not Use the Global Concurrency Gate",
+      "severity": "Low",
+      "cvss": "5.3",
+      "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+      "cwe": "CWE-770: Allocation of Resources Without Limits or Throttling",
+      "owasp": "OWASP Top 10 A04 Insecure Design; OWASP API Security API4 Unrestricted Resource Consumption",
+      "component": "/test-extract compared with the semaphore on /split-and-extract; nginx client_max_body_size 500M",
+      "endpoint": "POST /test-extract ; POST /split-and-extract ; POST /extract-sales-statement",
+      "description": "Current source limits /split-and-extract with a semaphore of MAX_CONCURRENT_REQUESTS=1 and a queue timeout of 3600 seconds. /test-extract does not acquire that semaphore. /extract-sales-statement and /extract-pod-grn also process uploads outside that gate. nginx allows a 500 MB body on the public vhost. A sustained load test was not performed. Status is Potential for availability impact. The missing gate in source, the public route, and the body-size setting are confirmed by inspection.",
+      "evidence": "Source comparison of the two handlers. Live OpenAPI exposes /test-extract. nginx client_max_body_size 500M. Environment MAX_CONCURRENT_REQUESTS=1. No load test.",
+      "steps": "1. Compare test_extract with split_and_extract_invoices for semaphore acquisition.\n2. Read client_max_body_size in the nginx vhost.\n3. Do not launch a concurrent upload test.",
+      "observed": "The test route is public and, in the current source, is outside the single-flight gate. Exhaustion was not measured.",
+      "impact": "A small number of concurrent extraction calls can occupy CPU and memory. The single-flight gate on the main route does not cover every upload route in the current source.",
+      "root_cause": "Concurrency control was added only around the primary route. No edge rate limit exists.",
+      "recommendation": "Apply one authenticated, size-capped queue to every extraction route. Remove or firewall /test-extract. Set a smaller nginx body limit that matches the application limit.",
+      "status": "Potential",
+      "business_impact": "Processing capacity can be consumed. Not measured.",
+      "technical_impact": "Uneven concurrency control and a large proxy body limit, without a demonstrated outage.",
+      "cvss_rationale": "Availability is Low and was not proven with a load test, which is why the status is Potential and the severity remains Low even though the base score is 5.3.",
+      "expected": "Every extraction route shares an authenticated limit. Oversized bodies are rejected before OCR.",
+      "actual": "Control gap confirmed by review. No availability failure was caused or observed.",
+      "request": "Not sent as a load test.",
+      "response": "Not captured. OpenAPI shows POST /test-extract is present.",
+      "evidence_files": [
+        "source_review/concurrency_review.txt"
+      ],
+      "references": [
+        "CWE-770",
+        "OWASP API4"
+      ]
+    },
+    {
+      "id": "PY-VAPT-011",
+      "title": "Dependency Advisories Reported by pip-audit (Exploitability Not Demonstrated)",
+      "severity": "Informational",
+      "cvss": "0.0",
+      "vector": "Not scored as an application CVSS. Advisory identifiers are those returned by pip-audit 2.10.1.",
+      "cwe": "CWE-1104: Use of Unmaintained Third Party Components",
+      "owasp": "OWASP Top 10 A06 Vulnerable and Outdated Components",
+      "component": "Python virtual environment /var/www/html/venv used by the running service",
+      "endpoint": "Not mapped to a single route. Packages are loaded by the service.",
+      "description": "pip-audit 2.10.1 reported 83 advisory records. After removing duplicate records, 44 identifiers remain across 10 packages. The assessment did not exploit any advisory. This item is software composition analysis, not a source-code vulnerability. Notable installed versions and the fix versions reported by the tool: pillow 11.1.0 (17 identifiers, fix versions include 12.1.1); starlette 0.45.3 (7, fixes include 0.49.1 and 1.0.1); python-multipart 0.0.20 (6, fixes include 0.0.22); cryptography 48.0.0 (4, fixes include 48.0.1); anyio 4.13.0 (CVE-2026-63374, CVE-2026-64847, fix 4.14.2); pdfminer-six 20231228 (2); pip 26.1.1 (2); requests 2.32.3 (2, fixes include 2.33.0); PyPDF2 3.0.1 (1, fix 3.9.0); python-dotenv 1.0.1 (1, fix 1.2.2). Full identifiers are in dependencies/pip_audit_unique.json.",
+      "evidence": "pip-audit JSON against the running virtual environment. No advisory was turned into an exploit.",
+      "steps": "1. Freeze or scan the virtual environment that runner.py uses.\n2. Deduplicate advisory identifiers.\n3. Do not treat the scanner count as a count of confirmed application vulnerabilities.",
+      "observed": "The scanner reported the packages and identifiers above. Runtime exploitability was not shown.",
+      "impact": "Unknown until each advisory is triaged against the code paths this service actually uses. Pillow, python-multipart, and the PDF libraries are in the upload path and should be patched first.",
+      "root_cause": "Pinned transitive and direct packages are below the fix versions reported by pip-audit.",
+      "recommendation": "Upgrade the listed packages in a test environment, rerun pip-audit, and retest invoice extraction. Prioritize pillow, python-multipart, starlette, and the PDF libraries.",
+      "status": "Informational",
+      "business_impact": "Patch planning input. Not a demonstrated breach.",
+      "technical_impact": "Known vulnerable versions present. Exploitation not shown.",
+      "cvss_rationale": "Aggregate score is 0.0 because individual advisory scores were not revalidated and no exploit was run.",
+      "expected": "pip-audit reports no advisories for the production environment, or each remaining item is accepted with a reason.",
+      "actual": "44 unique identifiers across 10 packages. No exploit output.",
+      "request": "Tool invocation: pip-audit --path <venv site-packages>",
+      "response": "See dependencies/pip_audit.json and dependencies/pip_audit_unique.json. No exploit response was generated.",
+      "evidence_files": [
+        "dependencies/pip_audit.json",
+        "dependencies/pip_audit_unique.json",
+        "dependencies/venv_freeze.txt"
+      ],
+      "references": [
+        "OWASP A06"
+      ]
+    },
+    {
+      "id": "PY-VAPT-012",
+      "title": "Extraction Process Runs as Root",
+      "severity": "Informational",
+      "cvss": "0.0",
+      "vector": "Not scored. No code-execution primitive was demonstrated.",
+      "cwe": "CWE-250: Execution with Unnecessary Privileges",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "systemd unit split-extract and live PID 1095352",
+      "endpoint": "Process credential, not a single route",
+      "description": "The unit sets User=root and Group=root. The live process uid is 0. No command injection, deserialization, or template execution issue was confirmed that would turn this into code execution. The privilege level matters if a parser vulnerability is later exploited.",
+      "evidence": "/proc uid line and the unit file User=root.",
+      "steps": "1. Read the unit User= setting.\n2. Confirm the live process uid.",
+      "observed": "The service runs as root. Code execution was not shown.",
+      "impact": "A future memory-corruption or command-injection bug in PDF, image, or OCR code would run as root.",
+      "root_cause": "The unit was written to run as root.",
+      "recommendation": "Run the service as a dedicated unprivileged user with write access only to its temp and log directories.",
+      "status": "Informational",
+      "business_impact": "Blast-radius note. Not a standalone exploit.",
+      "technical_impact": "Unnecessary privilege on the network-facing parser process.",
+      "cvss_rationale": "No CVSS. Impact was not demonstrated.",
+      "expected": "Non-root service account.",
+      "actual": "Uid 0 confirmed. No root-only action was abused.",
+      "request": "Not an HTTP request. Process inspection only.",
+      "response": "Uid: 0. Unit User=root.",
+      "evidence_files": [
+        "source_review/process_privileges.txt"
+      ],
+      "references": [
+        "CWE-250"
+      ]
+    },
+    {
+      "id": "PY-VAPT-013",
+      "title": "Container Build File Does Not Match the Running Service",
+      "severity": "Informational",
+      "cvss": "0.0",
+      "vector": "Not scored. The container is not the running deployment.",
+      "cwe": "CWE-1059: Insufficient Technical Documentation",
+      "owasp": "OWASP Top 10 A05 Security Misconfiguration",
+      "component": "Dockerfile and docker-compose.yml in /var/www/html/split-extract",
+      "endpoint": "Not applicable to the live listener. Production entry point is runner.py under systemd.",
+      "description": "The Dockerfile copies app5.py, which is not in the tree, installs dependencies as root, and listens on 0.0.0.0:8001. docker-compose publishes port 8001. Docker was not running this service. The live process is the virtualenv interpreter executing runner.py. Building the image as written would fail or run a different file than production.",
+      "evidence": "Dockerfile COPY app5.py. No app5.py in the project. No running container was found.",
+      "steps": "1. Read the Dockerfile CMD and COPY lines.\n2. Confirm app5.py is absent.\n3. Confirm the live process command line.",
+      "observed": "The image definition and the running process are different artifacts.",
+      "impact": "An operator who deploys the compose file would not reproduce the service that was tested. This is a deployment-integrity note, not a live exposure.",
+      "root_cause": "The image definition was not updated when the entry point became runner.py.",
+      "recommendation": "Point the image at runner.py or app:app, run as a non-root user, and do not publish port 8001 if nginx is the only front door.",
+      "status": "Informational",
+      "business_impact": "Risk of deploying the wrong artifact. The live host is not running this image.",
+      "technical_impact": "Build definition drift.",
+      "cvss_rationale": "No CVSS. The image is not in production on this host.",
+      "expected": "Image entry point matches the systemd service.",
+      "actual": "COPY app5.py is present. The file is absent. Live command is runner.py.",
+      "request": "Not an HTTP request.",
+      "response": "Dockerfile reviewed. Container runtime not in use for this service.",
+      "evidence_files": [
+        "source_review/container_review.txt"
+      ],
+      "references": [
+        "CWE-1059"
+      ]
+    }
+  ],
+  "not_tested": [
+    {
+      "id": "NT-01",
+      "item": "Off-box Internet port scan",
+      "reason": "nmap is not installed. Port exposure was assessed from this host."
+    },
+    {
+      "id": "NT-02",
+      "item": "Cloud metadata URL",
+      "reason": "The SSRF proof used an assessor listener and a closed port. 169.254.169.254 was not requested."
+    },
+    {
+      "id": "NT-03",
+      "item": "Live Azure blob read or overwrite",
+      "reason": "Credentials and code were reviewed. No customer object was downloaded or modified."
+    },
+    {
+      "id": "NT-04",
+      "item": "Resource-exhaustion load test",
+      "reason": "Concurrent large uploads were not sent."
+    },
+    {
+      "id": "NT-05",
+      "item": "Laravel response validation",
+      "reason": "Laravel source was not present on this host."
+    },
+    {
+      "id": "NT-06",
+      "item": "Burp Suite, OWASP ZAP, Nikto, Nuclei, Semgrep, Bandit, Trivy, testssl.sh",
+      "reason": "Those tools were not installed and were not run."
+    }
+  ],
+  "tools_used": [
+    "curl",
+    "openssl",
+    "ss",
+    "iptables",
+    "ufw",
+    "journalctl",
+    "manual source review",
+    "pip-audit 2.10.1"
+  ],
+  "tools_not_used": [
+    "Burp Suite",
+    "OWASP ZAP",
+    "Nikto",
+    "nmap",
+    "Nuclei",
+    "Semgrep",
+    "Bandit",
+    "Trivy",
+    "testssl.sh"
+  ]
+}
