@@ -324,6 +324,18 @@ def assess_stock_structured_quality(
     coverage_min = _env_float("STOCK_MIN_NUMERIC_COVERAGE", 0.50)
     if not items or (coverage < coverage_min and not trusted):
         reasons.append("numeric_coverage_low")
+    # Generic vision often emits product names with every qty coerced to 0.0 —
+    # treat that as low coverage so we do not KEEP_PARSER on empty movement.
+    if items and len(items) >= 3 and not trusted:
+        nonzero_move = any(
+            abs(_number(item.get(field)) or 0.0) > 0
+            for item in items
+            for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        )
+        if not nonzero_move:
+            if "numeric_coverage_low" not in reasons:
+                reasons.append("numeric_coverage_low")
+            reasons.append("all_zero_qtys")
 
     fail_count = extra.get("stock_identity_fail_count", signals.get("identity_fail_count"))
     identity_rate = None

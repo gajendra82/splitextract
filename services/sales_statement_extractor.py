@@ -6185,6 +6185,21 @@ def _text_stock_families():
             ),
             False,
         ),
+        (
+            "op_receipts_sales_closing",
+            r"Product\s*Name",
+            r"<[-]+Receipts[-]+>",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "receipts_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ),
+            False,
+        ),
     )
 
 
@@ -6231,6 +6246,11 @@ def _match_text_stock_family(text: str):
                 re.I,
             ):
                 continue
+            logger.info(
+                "stock_txt_family matched family=%s roles=%s",
+                name,
+                ",".join(roles),
+            )
             return name, roles, has_code
     return None
 
@@ -6303,7 +6323,7 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             if len(raw) < 80:
                 result["company_name"] = _clean_name(raw.strip("* "))
         m_period = re.search(
-            r"(?:FROM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|Upto|and|to|-|–)\s*"
+            r"(?:FROM|From|w\.e\.f\.?|between)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:TO|Upto|and|to|-|–)\s*"
             r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
             raw,
             re.I,
@@ -6322,7 +6342,12 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                 result["period_from"] = _normalize_date(m_from.group(1))
             if m_to and not result.get("period_to"):
                 result["period_to"] = _normalize_date(m_to.group(1))
-        if re.search(r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|S\.S\.REPORT", raw, re.I):
+        if re.search(
+            r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|"
+            r"STOCK.{0,40}STATEMENT|S\.S\.REPORT",
+            raw,
+            re.I,
+        ):
             if not result.get("report_title"):
                 result["report_title"] = _clean_name(raw)[:80]
         if '"' in raw or re.search(r"\bSlrt\b", raw, re.I):
@@ -20856,6 +20881,7 @@ _SALEABLE_ROW_RE = re.compile(
     r"(?P<issue>[\d.,]+|[—–\-]+)\s*\|\s*"
     r"(?P<bal>[\d.,]+|[—–\-]+)\s*$"
 )
+_SALEABLE_QTY_CELL_RE = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$|^[—–\-]+$")
 _SALEABLE_PACK_RE = re.compile(
     r"^(?P<name>.+?)\s+(?P<pack>(?:\d+\s*X\s*)?\d+(?:\.\d+)?\s*"
     r"(?:X\s*\d+\s*)?(?:TAB|CAPS?|GM|ML|S)?\.?)$",
@@ -20868,15 +20894,137 @@ _SALEABLE_SKIP_NAME_RE = re.compile(
 )
 
 
+def _saleable_movement_from_nums(nums: List[float]) -> Optional[Dict[str, float]]:
+    """Opn/Rec/Issue + Bal from printed qty/value totals (age buckets optional)."""
+    if len(nums) >= 7:
+        return {
+            "opening": nums[0],
+            "receipts": nums[1],
+            "sales": nums[2],
+            "closing": nums[-1],
+        }
+    if len(nums) >= 4:
+        return {
+            "opening": nums[-4],
+            "receipts": nums[-3],
+            "sales": nums[-2],
+            "closing": nums[-1],
+        }
+    return None
+
+
+def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
+    """Map a Saleable Stock Report row to name/pack/opn/rec/issue/bal.
+
+    Supports Particular|Opn|Rec|Issue|Bal and Particular|Packing|Opn|Rec|Issue|
+    age-buckets|Bal. Age buckets are ignored; Bal is always the last qty cell.
+    Phone OCR without pipes uses trailing qty cells (4 or 7 with age buckets).
+    """
+    # Wider pipe layouts (Packing + age) must not use the short regex — it
+    # absorbs Opn/Rec/Issue into the name and reads age cells as movement.
+    if raw.count("|") >= 6:
+        parts = [p.strip() for p in raw.split("|")]
+        if len(parts) < 6:
+            return None
+        name = parts[0].strip()
+        if not name:
+            return None
+        idx = 1
+        pack = ""
+        if idx < len(parts) and parts[idx] and not _SALEABLE_QTY_CELL_RE.fullmatch(
+            parts[idx].replace(" ", "")
+        ):
+            pack = parts[idx]
+            idx += 1
+        while idx < len(parts) and not parts[idx]:
+            idx += 1
+        qty_cells: List[str] = []
+        for cell in parts[idx:]:
+            token = cell.replace(" ", "")
+            if not token:
+                continue
+            if _SALEABLE_QTY_CELL_RE.fullmatch(token) or re.fullmatch(
+                r"[—–\-]+", cell.strip()
+            ):
+                qty_cells.append(cell.strip())
+        if len(qty_cells) < 4:
+            return None
+        logger.info(
+            "saleable_stock_row layout=pack_age name=%s qty_cells=%d",
+            _clean_name(name)[:40],
+            len(qty_cells),
+        )
+        return {
+            "name": name,
+            "pack": pack,
+            "opn": qty_cells[0],
+            "rec": qty_cells[1],
+            "issue": qty_cells[2],
+            "bal": qty_cells[-1],
+        }
+
+    match = _SALEABLE_ROW_RE.match(raw)
+    if match:
+        return {
+            "name": match.group("name"),
+            "pack": "",
+            "opn": match.group("opn"),
+            "rec": match.group("rec"),
+            "issue": match.group("issue"),
+            "bal": match.group("bal"),
+        }
+
+    # Phone OCR: no pipes — take last 7 (with age) or last 4 qty cells.
+    for count in (7, 4):
+        split = _trailing_metrics(raw, count)
+        if not split:
+            continue
+        left, metrics = split
+        if not left:
+            continue
+        tokens = list(left)
+        pack = ""
+        if (
+            len(tokens) >= 3
+            and re.fullmatch(r"\d+(?:\.\d+)?", tokens[-2])
+            and re.fullmatch(r"[A-Za-z']{1,8}", tokens[-1], re.I)
+        ):
+            pack = f"{tokens[-2]} {tokens[-1]}"
+            tokens = tokens[:-2]
+        elif len(tokens) >= 2:
+            tail = tokens[-1]
+            if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP|PCS|\bS\b", tail, re.I):
+                pack = tail.rstrip(",")
+                tokens = tokens[:-1]
+        name = " ".join(tokens).strip()
+        if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+            continue
+        return {
+            "name": name,
+            "pack": pack,
+            "opn": metrics[0],
+            "rec": metrics[1],
+            "issue": metrics[2],
+            "bal": metrics[-1],
+        }
+    return None
+
+
 def _is_saleable_stock_report_text(text: str) -> bool:
     if not text:
         return False
+    if not re.search(r"Saleable\s+Stock\s+Report", text, re.I):
+        return False
+    if not re.search(r"\bParticular\b", text, re.I):
+        return False
+    # Printed Opn/Rec/Issue/Bal, or OCR that kept only (Q+F) under those bands.
+    if re.search(r"\bOpn\b", text, re.I) and re.search(
+        r"\bIssue\b", text, re.I
+    ) and re.search(r"\bBal\b", text, re.I):
+        return True
     return bool(
-        re.search(r"Saleable\s+Stock\s+Report", text, re.I)
-        and re.search(r"\bParticular\b", text, re.I)
-        and re.search(r"\bOpn\b", text, re.I)
-        and re.search(r"\bIssue\b", text, re.I)
-        and re.search(r"\bBal\b", text, re.I)
+        re.search(r"\(?\s*Q\s*\+\s*F\s*\)?", text, re.I)
+        and re.search(r"\bPacking\b", text, re.I)
     )
 
 
@@ -20951,39 +21099,45 @@ def _parse_saleable_stock_report(
             continue
 
         if re.search(r"^(?:COMPANY|Firm)\s+Total\b", raw, re.I):
-            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
-            if len(nums) >= 4 and raw.count("|") >= 3:
+            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+            moved = _saleable_movement_from_nums(nums)
+            if moved:
                 extra = result["totals"]["extra"]
-                extra["opening_qty"] = _to_float(nums[-4])
-                extra["receipts_qty"] = _to_float(nums[-3])
-                extra["sales_qty"] = _to_float(nums[-2])
-                extra["closing_qty"] = _to_float(nums[-1])
+                extra["opening_qty"] = moved["opening"]
+                extra["receipts_qty"] = moved["receipts"]
+                extra["sales_qty"] = moved["sales"]
+                extra["closing_qty"] = moved["closing"]
                 extra["total_row_source"] = "saleable_company_total"
             continue
-        if re.search(r"\|A\|", raw):
-            nums = re.findall(r"-?\d+(?:\.\d+)?", raw)
-            if len(nums) >= 4:
+        if re.search(r"(?:\|A\||^\s*A\b)", raw) and re.search(
+            r"\d+\.\d{2}", raw
+        ):
+            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+            moved = _saleable_movement_from_nums(nums)
+            if moved:
                 extra = result["totals"]["extra"]
-                extra["opening_value"] = _to_float(nums[-4])
-                extra["receipts_value"] = _to_float(nums[-3])
-                extra["printed_sales_value"] = _to_float(nums[-2])
-                extra["printed_closing_value"] = _to_float(nums[-1])
+                extra["opening_value"] = moved["opening"]
+                extra["receipts_value"] = moved["receipts"]
+                extra["printed_sales_value"] = moved["sales"]
+                extra["printed_closing_value"] = moved["closing"]
             continue
 
-        match = _SALEABLE_ROW_RE.match(raw)
-        if not match:
+        matched = _saleable_match_row(raw)
+        if not matched:
             continue
-        name = _clean_name(match.group("name"))
+        name = _clean_name(matched["name"])
         if not name or _SALEABLE_SKIP_NAME_RE.search(name):
             continue
-        name, pack = _saleable_split_packing(name)
+        pack = _clean_name(matched.get("pack") or "") or None
+        if not pack:
+            name, pack = _saleable_split_packing(name)
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = pack
-        item["opening_qty"] = _saleable_qty(match.group("opn"))
-        item["receipts_qty"] = _saleable_qty(match.group("rec"))
-        item["sales_qty"] = _saleable_qty(match.group("issue"))
-        item["closing_qty"] = _saleable_qty(match.group("bal"))
+        item["opening_qty"] = _saleable_qty(matched["opn"])
+        item["receipts_qty"] = _saleable_qty(matched["rec"])
+        item["sales_qty"] = _saleable_qty(matched["issue"])
+        item["closing_qty"] = _saleable_qty(matched["bal"])
         items.append(item)
 
     if not items:
@@ -21000,6 +21154,60 @@ def _parse_saleable_stock_report(
 def _parse_saleable_stock_report_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
     text = "\n".join((page.get_text("text") or "") for page in doc)
     return _parse_saleable_stock_report(text, filename, "pdf")
+
+
+def _try_saleable_stock_report_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """OCR a phone photo of Saleable Stock Report and parse Opn/Rec/Issue/Bal."""
+    texts: List[str] = []
+    for enhance in (False, True):
+        try:
+            text = _ocr_image_to_text(file_bytes, psm=6, enhance=enhance) or ""
+        except Exception:
+            text = ""
+        if text.strip():
+            texts.append(text)
+    # Wider PSM sometimes recovers Particular / Opn headers on dense grids.
+    try:
+        text = _ocr_image_to_text(file_bytes, psm=4, enhance=True) or ""
+    except Exception:
+        text = ""
+    if text.strip():
+        texts.append(text)
+
+    for text in texts:
+        if not _is_saleable_stock_report_text(text):
+            continue
+        parsed = _parse_saleable_stock_report(
+            text, filename, (ext or "jpg").lstrip(".")
+        )
+        if not parsed or not parsed.get("line_items"):
+            continue
+        items = parsed["line_items"]
+        nonzero = any(
+            abs(float(it.get("opening_qty") or 0))
+            + abs(float(it.get("receipts_qty") or 0))
+            + abs(float(it.get("sales_qty") or 0))
+            + abs(float(it.get("closing_qty") or 0))
+            > 0
+            for it in items
+        )
+        if len(items) < 3 or not nonzero:
+            continue
+        extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+        extra["extraction_method"] = "saleable_stock_report"
+        extra["saleable_image_ocr"] = True
+        extra["vision_table_final"] = True
+        extra["stock_vision_locked"] = True
+        logger.info(
+            "saleable_stock_report_image file=%s rows=%s nonzero=%s",
+            filename,
+            len(items),
+            str(nonzero).lower(),
+        )
+        return parsed
+    return None
 
 
 _ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
@@ -45919,6 +46127,19 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             type(exc).__name__,
         )
 
+    # Clear Saleable Stock Report phone photos: OCR + existing pipe/trailing parser
+    # before generic Gemini (which often returns product names with all-zero qtys).
+    try:
+        saleable_img = _try_saleable_stock_report_image(file_bytes, filename, ext)
+        if saleable_img and saleable_img.get("line_items"):
+            return saleable_img
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s saleable image OCR skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
     # Phase 2b-2: schema-agnostic Vision table as PRIMARY path (flag OFF = no-op).
     try:
         from services.stock_vision_table import (
@@ -45991,6 +46212,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 request_id,
                 outcome.get("reason"),
             )
+            # Sparse Vision (names + null qtys) → try Saleable OCR before legacy
+            # Gemini, matching the server path that returns real Opn/Rec/Issue/Bal.
+            try:
+                saleable_after = _try_saleable_stock_report_image(
+                    file_bytes, filename, ext
+                )
+                if saleable_after and saleable_after.get("line_items"):
+                    return saleable_after
+            except Exception as saleable_exc:
+                logger.info(
+                    "[SalesStatement] file=%s saleable after vision fallback skipped: %s",
+                    filename,
+                    type(saleable_exc).__name__,
+                )
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s vision_table path skipped: %s",
