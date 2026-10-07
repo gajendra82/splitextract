@@ -571,6 +571,166 @@ def _qf_qty_sequence_enabled() -> bool:
     }
 
 
+def _column_bands_enabled() -> bool:
+    """STOCK_HEADER_COLUMN_BANDS — assign by header midpoint bands (zigzag-safe).
+
+    Default ON so deploy needs no env. Set false to restore nearest-centre assign.
+    """
+    return os.getenv("STOCK_HEADER_COLUMN_BANDS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _build_column_bands(
+    centers: Sequence[Tuple[int, float, str]],
+    pitch: float,
+) -> List[Dict[str, Any]]:
+    """Build [x0, x1] bands from sorted (col_index, x_center, canonical).
+
+    Boundaries are midpoints between neighbouring centres. A small dead zone
+    around each midpoint mirrors the old equidistant AMBIGUOUS_CELL behaviour.
+    """
+    ordered = sorted(centers, key=lambda t: t[1])
+    n = len(ordered)
+    if n == 0:
+        return []
+    half_dead = max(0.0, 0.05 * float(pitch or 50.0))
+    bands: List[Dict[str, Any]] = []
+    for i, (idx, xc, canon) in enumerate(ordered):
+        if i == 0:
+            left_mid = float("-inf")
+        else:
+            left_mid = (ordered[i - 1][1] + xc) / 2.0
+        if i == n - 1:
+            right_mid = float("inf")
+        else:
+            right_mid = (xc + ordered[i + 1][1]) / 2.0
+        x0 = left_mid if left_mid == float("-inf") else left_mid + half_dead
+        x1 = right_mid if right_mid == float("inf") else right_mid - half_dead
+        if x1 < x0:
+            # Degenerate pitch — fall back to a thin band around the centre.
+            x0, x1 = xc - half_dead, xc + half_dead
+        bands.append(
+            {
+                "col_index": int(idx),
+                "canonical": canon,
+                "x_center": float(xc),
+                "x0": float(x0),
+                "x1": float(x1),
+                "left_mid": float(left_mid),
+                "right_mid": float(right_mid),
+            }
+        )
+    return bands
+
+
+def _assign_cells_by_column_bands(
+    row_tokens: List[Dict[str, Any]],
+    centers: Sequence[Tuple[int, float, str]],
+    pitch: float,
+    fields: Dict[str, Optional[str]],
+) -> Dict[str, Any]:
+    """Assign tokens by header x-bands (row tokens already Y-clustered by caller)."""
+    errors: List[Dict[str, Any]] = []
+    bands = _build_column_bands(centers, pitch)
+    if not bands:
+        return {"fields": fields, "errors": errors}
+
+    bucket: Dict[int, List[str]] = {int(b["col_index"]): [] for b in bands}
+    ambiguous_canons: set = set()
+    assigned = 0
+    unassigned = 0
+    ambiguous = 0
+
+    for token in row_tokens:
+        if not isinstance(token, dict) or token.get("x") is None:
+            continue
+        tx = float(token["x"])
+        raw = str(token.get("text") or "")
+        hits = [b for b in bands if b["x0"] <= tx <= b["x1"]]
+        if len(hits) == 1:
+            bucket[int(hits[0]["col_index"])].append(raw)
+            assigned += 1
+            continue
+        if len(hits) > 1:
+            # Overlapping bands (should be rare) — treat as ambiguous.
+            errors.append(
+                {
+                    "code": "AMBIGUOUS_CELL",
+                    "message": raw,
+                    "x": tx,
+                    "cols": [int(b["col_index"]) for b in hits[:2]],
+                }
+            )
+            for b in hits[:2]:
+                ambiguous_canons.add(b["canonical"])
+                fields[b["canonical"]] = None
+            ambiguous += 1
+            continue
+        # Outside every open band → midpoint dead zone or beyond table.
+        # If between two centres, mark both neighbours ambiguous (zigzag boundary).
+        ordered = sorted(bands, key=lambda b: b["x_center"])
+        left_b = None
+        right_b = None
+        for b in ordered:
+            if b["x_center"] <= tx:
+                left_b = b
+            elif right_b is None:
+                right_b = b
+                break
+        if left_b is not None and right_b is not None:
+            errors.append(
+                {
+                    "code": "AMBIGUOUS_CELL",
+                    "message": raw,
+                    "x": tx,
+                    "cols": [int(left_b["col_index"]), int(right_b["col_index"])],
+                }
+            )
+            ambiguous_canons.add(left_b["canonical"])
+            ambiguous_canons.add(right_b["canonical"])
+            fields[left_b["canonical"]] = None
+            fields[right_b["canonical"]] = None
+            ambiguous += 1
+        else:
+            errors.append({"code": "UNASSIGNED_TOKEN", "message": raw, "x": tx})
+            unassigned += 1
+
+    for b in bands:
+        idx = int(b["col_index"])
+        canon = b["canonical"]
+        if canon in ambiguous_canons:
+            fields[canon] = None
+            continue
+        texts = bucket.get(idx) or []
+        if len(texts) == 0:
+            fields.setdefault(canon, None)
+        elif len(texts) == 1:
+            fields[canon] = texts[0]
+        else:
+            fields[canon] = None
+            errors.append(
+                {
+                    "code": "CELL_COLLISION",
+                    "message": f"Two tokens in column {idx} ({canon})",
+                    "col_index": idx,
+                }
+            )
+
+    logger.info(
+        "HEADER_COLUMN_BANDS mode=bands assigned=%s ambiguous=%s unassigned=%s "
+        "cols=%s",
+        assigned,
+        ambiguous,
+        unassigned,
+        len(bands),
+    )
+    return {"fields": fields, "errors": errors}
+
+
 _QTY_VALUE_SEQUENCE_GROUPS: Tuple[Tuple[str, str, str], ...] = (
     ("opening", "opening_qty", "opening_value"),
     ("purchase", "purchase_qty", "purchase_value"),
@@ -1219,6 +1379,14 @@ def assign_cells(
         if pitch <= 0:
             pitch = 50.0
 
+    # Midpoint bands (default ON). Kill switch STOCK_HEADER_COLUMN_BANDS=false
+    # restores nearest-centre assign for rollback without code revert.
+    if _column_bands_enabled():
+        return _assign_cells_by_column_bands(
+            row_tokens, centers, pitch, fields
+        )
+
+    # Legacy nearest-centre assign (flag off).
     # Map col_index -> list of assigned token texts (detect collisions).
     bucket: Dict[int, List[str]] = {idx: [] for idx, _x, _c in centers}
     ambiguous_canons: set = set()
