@@ -6311,7 +6311,7 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
         if re.search(r"\bFrom\s*:", raw, re.I) and not result.get("stockist_name"):
             left_name = re.split(r"\bFrom\s*:", raw, flags=re.I)[0].strip()
             if len(re.sub(r"[^A-Za-z]", "", left_name)) >= 4:
-                result["stockist_name"] = _clean_name(left_name)
+                result["stockist_name"] = _clean_stockist_label(left_name)
         if re.search(r"COMPANY\s*(?:NAME)?\s*:", raw, re.I):
             company = re.split(r"COMPANY\s*(?:NAME)?\s*:", raw, flags=re.I)[-1]
             company = re.split(r"\d{1,2}[./-]\d{1,2}", company)[0]
@@ -6363,7 +6363,7 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                     len(re.sub(r"[^A-Za-z]", "", raw)) >= 4
                     and not re.search(r"TOTAL|Value\s+Rs|Page\b", raw, re.I)
                 ):
-                    result["stockist_name"] = _clean_name(raw)
+                    result["stockist_name"] = _clean_stockist_label(raw)
             continue
         left, metrics = split
         label = _clean_name(" ".join(left))
@@ -6434,7 +6434,9 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
         if re.search(r"[^\x00-\x7f]", stockist):
             readable = re.findall(r"[A-Za-z][A-Za-z .&'-]{3,}", stockist)
             if readable:
-                result["stockist_name"] = _clean_name(readable[-1])
+                result["stockist_name"] = _clean_stockist_label(readable[-1])
+    if result.get("stockist_name"):
+        result["stockist_name"] = _clean_stockist_label(str(result["stockist_name"]))
     if result["totals"].get("sales_value") is None and not any(
         role.endswith("_value") for role in roles
     ):
@@ -14421,8 +14423,23 @@ def _looks_like_stockist_header(line: str) -> bool:
 
 
 def _clean_stockist_label(name: str) -> str:
+    """Normalize stockist banner; drop trailing print date/time chrome.
+
+    Dot-matrix / Vineet TXTs often put ``KRISHNA MEDICOS … 03/09/2026,16:15``
+    on one line — keep the agency name only.
+    """
     text = _clean_name(name)
     text = re.sub(r"\s+\d{2}-\d{2}\s*$", "", text).strip()
+    # Trailing print stamp: DD/MM/YYYY or DD-MM-YYYY[, ]HH:MM[:SS]
+    text = re.sub(
+        r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}"
+        r"(?:\s*,?\s*\d{1,2}:\d{2}(?::\d{2})?)?\s*$",
+        "",
+        text,
+    ).strip()
+    # Bare trailing clock if date already removed: ",16:15" / "16:15"
+    text = re.sub(r"(?:,\s*)?\b\d{1,2}:\d{2}(?::\d{2})?\s*$", "", text).strip()
+    text = text.rstrip(" ,;-")
     return text
 
 
