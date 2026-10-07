@@ -10,9 +10,12 @@ Weak OCR/heuristic methods always receive full quality scoring.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Generic / weak readers may be incomplete. Named format parsers stay primary.
 _GENERIC_METHODS = {
@@ -503,7 +506,6 @@ def evaluate_extraction_quality(
                 hard_fail = True
         elif fail_pct > identity_gate:
             if _keep_on_identity:
-                logger = __import__("logging").getLogger(__name__)
                 logger.info(
                     "STOCK_OP_QTY_VAL_KEEP method=%s fail_pct=%.1f "
                     "reason=keep_native_skip_gemini_identity_fallback",
