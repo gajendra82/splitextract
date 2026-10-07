@@ -1,0 +1,33 @@
+
+KRISHNA MEDICOS                                             03/09/2026,16:15
+HIMALAYA ZANDRA      >>>  CO.GST:09ACLPJ6378D1ZA
+# SALES & STOCK REPORT  FROM 01/08/2026 TO 31/08/2026           Page: 1
+================================================================================
+DESCRIPTION/PACKING    Pro. OPENING   PUR.  SALE  CR.NO. DR.NO. CLOSING   AMOUNT
+                        Age    QTY.   QTY.   QTY. ST.[+] ST.[-]   QTY.          
+================================================================================
+BLEMINOR CREAM          51      8      0      0      0      0      8
+BONNISAN DROPS                118      0     80      0      0     38
+BONNISAN LIQUID                54      0     54      0      0      0
+BRESOL SYRUP                   66      0     11      0      0     55
+CYSTONE FORTE TAB       38     40      0      0      0      0     40
+CYSTONE SYRUP                  48      0     38      0      0     10
+CYSTONE TAB                     5      0      5      0      0      0
+EVECARE SYRUP                  28      0     27      1      0      2
+GALACTOSURE GRANULES   153     12      0      0      0      0     12
+HIORA K T/P 50 GM              30      0     11      0      0     19
+LIV 52 DROPS 100 ML            52      0      1      0      0     51
+LIV 52 DROPS 60 ML             17      0     17      0      0      0
+LIV 52 DS SYP 100 ML           67      0     18      2      0     51
+LIV 52 DS SYP 200 ML          312      0     83      0      0    229
+LUKOL SYP                      11     28      9      0      0     30
+LUKOL TAB                      54      0      7      0      3     44
+MENTAT SYP                      3     28     13      0      0     18
+SEPTILIN SYP                   49      0      3      0      0     46
+SEPTILIN TAB                   81      0      6      0      0     75
+SPEMAN TABLETS                 20     50      7      0      0     63
+================================================================================
+TOTAL QTY. IN UNIT/PCS.     1075      106      390      3      3      791
+TOTAL AMOUNT >>>          179999    17849    59528    445    572   142700
+BY COST AMOUNT >>>         55495
+================================================================================

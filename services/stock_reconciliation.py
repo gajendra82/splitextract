@@ -312,6 +312,25 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
     }
 
 
+def _sale_closing_only_row(item: Dict[str, Any], fs: Dict[str, Any]) -> bool:
+    """True when Opening/Receipt columns are absent and Sale+Closing are printed.
+
+    Opening+Receipt−Sales=Closing does not apply; keep printed sales/closing.
+    Does not rewrite numbers or change the identity formula for other layouts.
+    """
+    opening_missing = fs.get("opening_qty") == "missing"
+    purchase_missing = (
+        fs.get("purchase_qty") == "missing" or fs.get("receipts_qty") == "missing"
+    )
+    sales_printed = fs.get("sales_qty") == "printed" or (
+        item.get("sales_qty") not in (None, "") and fs.get("sales_qty") != "missing"
+    )
+    closing_printed = fs.get("closing_qty") == "printed" or (
+        item.get("closing_qty") not in (None, "") and fs.get("closing_qty") != "missing"
+    )
+    return bool(opening_missing and purchase_missing and sales_printed and closing_printed)
+
+
 def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     """Return reconciliation dict; does not mutate quantities."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -321,6 +340,35 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     purchase = _printed_or_zero(item, "receipts_qty", "purchase_qty")
     sales = _printed_or_zero(item, "sales_qty")
     closing = item.get("closing_qty")
+
+    # SALE+CLOSING-only sheets: identity formula is not applicable.
+    if _sale_closing_only_row(item, fs):
+        closing_f = None if closing in (None, "") else _f(closing)
+        logger.info(
+            "STOCK_RECONCILIATION_SKIP reason=sale_closing_only product=%s "
+            "sales_qty=%s closing_qty=%s",
+            str(item.get("product_name") or "")[:80],
+            sales,
+            closing_f,
+        )
+        return {
+            "expected_total_qty": None,
+            "expected_closing_qty": closing_f,
+            "actual_closing_qty": closing_f,
+            "quantity_difference": 0.0,
+            "total_ok": True,
+            "closing_ok": True,
+            "valid": True,
+            "skipped": "sale_closing_only",
+            "opening_qty": None,
+            "purchase_qty": None,
+            "sales_qty": sales,
+            "extracted_closing_qty": closing_f,
+            "base_source": "sale_closing_only",
+            "sales_return_in_total": False,
+            "base_qty": None,
+            "adjustments": {},
+        }
 
     exp_total = expected_total_qty(item)
     exp_closing, formula = compute_closing_formula(item)

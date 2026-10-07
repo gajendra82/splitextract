@@ -825,6 +825,18 @@ def classify_row(
         info["checks"] = list(info.get("checks") or []) + ["closing_derived"]
         return RowStatus.CLOSING_DERIVED, info
 
+    # SALE + CLOSING only sheets (no Opening / Receipt columns printed).
+    # Opening+Receipt−Sales=Closing does not apply; keep printed sales/closing.
+    if (
+        opening is None
+        and purchase is None
+        and sales is not None
+        and closing is not None
+    ):
+        info["reason"] = "sale_closing_only"
+        info["checks"] = list(info.get("checks") or []) + ["sale_closing_only"]
+        return RowStatus.VALID, info
+
     if opening is None or (purchase is None and sales is None):
         info["reason"] = "missing_required_field"
         return RowStatus.MISSING_VALUE, info

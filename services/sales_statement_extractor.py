@@ -4125,13 +4125,45 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     ):
         return _apply_header_driven_stock_validation(result)
 
-    kind = _stock_identity_kind(result)
     items = result.get("line_items") or []
     totals = result.setdefault(
         "totals", {"sales_value": None, "closing_value": None, "extra": {}}
     )
     if not isinstance(totals.get("extra"), dict):
         totals["extra"] = {}
+    # SALE+CLOSING-only (SSA reorder parser or Vision SALE/CLOSING headers).
+    # Preserve stamped kind — do not score with opening+receipts−sales.
+    prior_kind = str(totals["extra"].get("stock_identity_kind") or "")
+    if (
+        totals["extra"].get("extraction_method") == "ssa_sale_closing_reorder"
+        or prior_kind in {"sale_closing_only", "sale_closing_reorder"}
+    ):
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = (
+            prior_kind if prior_kind in {"sale_closing_only", "sale_closing_reorder"}
+            else "sale_closing_reorder"
+        )
+        totals["extra"]["stock_identity_formula"] = (
+            "sales=SALE; closing=CLOSING; reorder=RE-ORDER; "
+            "no opening or receipt columns"
+        )
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": True,
+        }
+        return result
+
+    kind = _stock_identity_kind(result)
     totals["extra"]["stock_identity_kind"] = kind
     if kind == STOCK_IDENTITY_SALERET:
         totals["extra"]["stock_identity_formula"] = (
@@ -4377,31 +4409,6 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["sales_value"] = None
         if closing_value_sum > 0:
             totals["closing_value"] = closing_value_sum
-        return result
-
-    # SALE / CLOSING / RE-ORDER sheets have no opening or receipt columns.
-    # Do not score them with opening + receipts - sales, and do not fill those totals.
-    if totals["extra"].get("extraction_method") == "ssa_sale_closing_reorder":
-        sales_sum = sum(
-            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
-        )
-        closing_sum = sum(
-            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
-        )
-        totals["extra"]["sales_qty"] = sales_sum
-        totals["extra"]["closing_qty"] = closing_sum
-        totals["extra"]["stock_identity_kind"] = "sale_closing_reorder"
-        totals["extra"]["stock_identity_formula"] = (
-            "sales=SALE; closing=CLOSING; reorder=RE-ORDER; "
-            "no opening or receipt columns"
-        )
-        if _allow_force_zero_fail:
-            totals["extra"]["stock_identity_fail_count"] = 0
-        totals["extra"]["stock_validation"] = {
-            "extracted_sales_qty": sales_sum,
-            "extracted_closing": closing_sum,
-            "is_valid": True,
-        }
         return result
 
     # ITEM / PACK / OPENING / PURCHASE / S.RETURN / OTHERS / SUB TOTAL /
@@ -5212,6 +5219,8 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     extra = (result.get("totals") or {}).get("extra") or {}
     sale_closing_reorder = (
         str(extra.get("extraction_method") or "") == "ssa_sale_closing_reorder"
+        or str(extra.get("stock_identity_kind") or "")
+        in {"sale_closing_reorder", "sale_closing_only"}
     )
     method = str(extra.get("extraction_method") or "")
     title = str(result.get("report_title") or "")
@@ -5246,17 +5255,31 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     for item in line_items:
         if method == "summary_rtl_op_amt":
             continue
+        item_extra_fs = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        fs = (
+            item_extra_fs.get("field_source")
+            if isinstance(item_extra_fs.get("field_source"), dict)
+            else {}
+        )
+        row_sale_closing_only = sale_closing_reorder or (
+            fs.get("opening_qty") == "missing"
+            and (
+                fs.get("purchase_qty") == "missing"
+                or fs.get("receipts_qty") == "missing"
+            )
+            and fs.get("sales_qty") == "printed"
+            and fs.get("closing_qty") == "printed"
+        )
         # This print has no opening or receipt columns. Leave them empty
         # instead of turning a missing column into a false 0.
-        if sale_closing_reorder:
+        if row_sale_closing_only:
             for key in (
                 "opening_qty",
                 "opening_value",
                 "receipts_qty",
                 "receipts_value",
             ):
-                if key not in item:
-                    item[key] = None
+                item[key] = None
             for key in ("sales_qty", "sales_value", "closing_qty", "closing_value"):
                 if item.get(key) in (None, ""):
                     item[key] = 0.0

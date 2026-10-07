@@ -276,6 +276,11 @@ ALIASES: Dict[str, List[str]] = {
         "order qty",
         "orderqty",
         "ordqty",
+        "reorder",
+        "re order",
+        "re-order",
+        "re-order qty",
+        "reorder qty",
     ],
     "value_marker": [
         "value",

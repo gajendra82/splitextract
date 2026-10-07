@@ -98,8 +98,9 @@ def _classify_layout_cell(text: Any) -> str:
         except Exception:
             return "number"
     if re.fullmatch(
-        r"\d+\s*(?:GM|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG)?|"
-        r"\d+\s*[xX*×]\s*\d+(?:\s*'?S)?",
+        r"(?:\d+\s*(?:GM|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG)\.?|"
+        r"\d+\s*'?[Ss]\.?|"
+        r"\d+\s*[xX*×]\s*\d+(?:\s*'?S)?)",
         s,
         re.I,
     ):
@@ -1191,11 +1192,16 @@ def _flatten_header_cells(
         idx = int(cell.get("col_index") if cell.get("col_index") is not None else -1)
         if idx < 0:
             continue
+        inline_sub = cell.get("subheader_text")
+        inline_sub_s = (
+            str(inline_sub).strip() if inline_sub not in (None, "") else None
+        ) or None
         by_index[idx] = {
             "text": str(cell.get("text") or ""),
             "col_index": idx,
             "x_center": cell.get("x_center"),
-            "subheader_text": None,
+            # Vision sometimes puts QTY/VALUE on the same cell as the parent band.
+            "subheader_text": inline_sub_s,
         }
 
     if len(rows) >= 2:
@@ -1205,7 +1211,10 @@ def _flatten_header_cells(
                 continue
             sub = str(cell.get("text") or "")
             if idx in by_index:
-                by_index[idx]["subheader_text"] = sub or None
+                # Second header row is authoritative when present.
+                by_index[idx]["subheader_text"] = sub or by_index[idx].get(
+                    "subheader_text"
+                )
                 # Prefer x_center from the data-aligned sub-row when present.
                 if cell.get("x_center") is not None:
                     by_index[idx]["x_center"] = cell.get("x_center")
@@ -1657,6 +1666,47 @@ def _realign_cells_skipping_absent_pack(
     return out[: len(cells)]
 
 
+def _extract_unlabeled_pack_token(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], Optional[str]]:
+    """Pull a pack token that Vision put between product and SALE when PACK is not a header.
+
+    SALE/CLOSING-only sheets often print packing inside ITEM DESCRIPTION without a
+    PACK column. Extra pack cells shift qty/value into the wrong headers.
+
+    Handles both pre-truncate overflow (len > column_count) and post-truncate
+    cases where the pack token sits in the first qty column.
+    """
+    has_pack_col = any(
+        isinstance(c, dict) and c.get("canonical") == "pack" for c in columns
+    )
+    if has_pack_col:
+        return cells, None
+    product_idx = next(
+        (
+            int(c["col_index"])
+            for c in columns
+            if isinstance(c, dict) and c.get("canonical") == "product_name"
+        ),
+        0,
+    )
+    pack_idx = product_idx + 1
+    if pack_idx >= len(cells):
+        return cells, None
+    if _classify_layout_cell(cells[pack_idx]) != "pack":
+        return cells, None
+    pack_token = str(cells[pack_idx] or "").strip() or None
+    out = list(cells[:pack_idx]) + list(cells[pack_idx + 1 :])
+    # After removing pack, pad/truncate to the header column_count.
+    if column_count > 0:
+        if len(out) < column_count:
+            out = out + [None] * (column_count - len(out))
+        elif len(out) > column_count:
+            out = out[:column_count]
+    return out, pack_token
+
 def _apply_fields_to_item(
     fields: Dict[str, Optional[str]],
     *,
@@ -1726,7 +1776,16 @@ def _apply_fields_to_item(
             item.setdefault("extra", {})[_EXTRA_FIELDS[canon]] = value
 
     # Columns not printed on the document stay missing — never invent them.
+    # purchase_qty maps onto top-level receipts_qty. Do not stamp receipts_* as
+    # missing (or clear the value) when purchase_* was printed — read_row_fields
+    # treats any alias marked missing as None for the whole canonical.
     for absent in (
+        "opening_qty",
+        "opening_value",
+        "purchase_qty",
+        "purchase_value",
+        "receipts_qty",
+        "receipts_value",
         "closing_qty",
         "sales_return_qty",
         "purchase_return_qty",
@@ -1735,12 +1794,27 @@ def _apply_fields_to_item(
         "free_in_qty",
         "free_out_qty",
     ):
-        if printed and absent not in printed and absent not in field_source:
-            field_source[absent] = "missing"
-            if absent == "closing_qty":
-                item["closing_qty"] = None
-            elif absent in _EXTRA_FIELDS:
-                item.setdefault("extra", {})[_EXTRA_FIELDS[absent]] = None
+        if not printed or absent in printed or absent in field_source:
+            continue
+        if absent == "receipts_qty" and "purchase_qty" in printed:
+            continue
+        if absent == "purchase_qty" and "receipts_qty" in printed:
+            continue
+        if absent == "receipts_value" and "purchase_value" in printed:
+            continue
+        if absent == "purchase_value" and "receipts_value" in printed:
+            continue
+        field_source[absent] = "missing"
+        if absent == "closing_qty":
+            item["closing_qty"] = None
+        elif absent == "opening_qty":
+            item["opening_qty"] = None
+        elif absent in {"purchase_qty", "receipts_qty"}:
+            item["receipts_qty"] = None
+        elif absent in _EXTRA_FIELDS:
+            item.setdefault("extra", {})[_EXTRA_FIELDS[absent]] = None
+        elif absent in {"opening_value", "purchase_value", "receipts_value"}:
+            item.setdefault("extra", {})[absent] = None
 
     for col_idx, canon in col_to_canon.items():
         if col_idx in unreadable_cols and canon and canon != "ignore":
@@ -2120,6 +2194,10 @@ def _map_single_table(
         except (TypeError, ValueError):
             continue
         cells = list(row.get("cells") or [])
+        unlabeled_pack: Optional[str] = None
+        cells, unlabeled_pack = _extract_unlabeled_pack_token(
+            cells, columns, column_count
+        )
         if len(cells) < column_count:
             cells = cells + [None] * (column_count - len(cells))
         elif len(cells) > column_count:
@@ -2197,6 +2275,11 @@ def _map_single_table(
             row_index=row_index,
             printed_fields=printed_fields,
         )
+        if unlabeled_pack and not item.get("packing"):
+            item["packing"] = unlabeled_pack
+            fs = (item.get("extra") or {}).setdefault("field_source", {})
+            if isinstance(fs, dict):
+                fs["pack"] = "printed"
         _log_vision_boundary(
             "fields_to_line_item_output",
             {
@@ -2751,6 +2834,20 @@ def _empty_result(filename: str, ext: str) -> Dict[str, Any]:
     }
 
 
+def _column_map_sale_closing_only(column_map: Sequence[Dict[str, Any]]) -> bool:
+    """Headers print SALE+CLOSING (optionally RE-ORDER/M.EXP) without Opening/Receipt."""
+    canons = {
+        str(c.get("canonical") or "")
+        for c in (column_map or [])
+        if isinstance(c, dict)
+    }
+    has_sales = "sales_qty" in canons
+    has_closing = "closing_qty" in canons
+    has_opening = "opening_qty" in canons
+    has_purchase = bool(canons & {"purchase_qty", "receipts_qty"})
+    return bool(has_sales and has_closing and not has_opening and not has_purchase)
+
+
 def _stamp_vision_result(
     *,
     filename: str,
@@ -2806,6 +2903,16 @@ def _stamp_vision_result(
     extra["vision_table_errors"] = list(errors or [])
     extra["gemini_calls"] = int(gemini_calls)
     extra["gemini_budget"] = int(gemini_budget)
+    if _column_map_sale_closing_only(column_map):
+        extra["stock_identity_kind"] = "sale_closing_only"
+        extra["stock_identity_formula"] = (
+            "sales=SALE; closing=CLOSING; no opening or receipt columns"
+        )
+        logger.info(
+            "SALE_CLOSING_ONLY vision_table stamped stock_identity_kind=sale_closing_only "
+            "rows=%s",
+            len(line_items or []),
+        )
     if totals_rows:
         extra["vision_table_total_rows"] = totals_rows
         try:
@@ -2862,8 +2969,6 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
         min_ratio = float(os.getenv("STOCK_VISION_TABLE_MIN_VALID_RATIO", "0.50") or 0.50)
     except (TypeError, ValueError):
         min_ratio = 0.50
-    if valid_ratio < min_ratio:
-        return "valid_ratio_low"
     counts = extra.get("row_status_counts") or {}
     try:
         missing = int(counts.get("MISSING_VALUE") or 0)
@@ -2875,7 +2980,10 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
     for item in items:
         for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
             try:
-                if abs(float(item.get(field) or 0.0)) > 0:
+                val = item.get(field)
+                if val is None or val == "":
+                    continue
+                if abs(float(val)) > 0:
                     nonzero = True
                     break
             except (TypeError, ValueError):
@@ -2884,6 +2992,11 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
             break
     if not nonzero:
         return "all_zero_qtys"
+    # Identity mismatches with printed qtys stay on the Vision path (recon flags
+    # the row). Only treat low valid_ratio as empty/unreadable extraction when
+    # almost no movement columns were read.
+    if valid_ratio < min_ratio and missing / max(len(items), 1) >= 0.25:
+        return "valid_ratio_low"
     return None
 
 
