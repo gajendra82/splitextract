@@ -527,6 +527,234 @@ def _looks_like_repeated_header_row(item: Dict[str, Any]) -> bool:
     return False
 
 
+def normalize_page_period_yyyy_mm(page: Dict[str, Any]) -> Optional[str]:
+    """Canonical statement period key YYYY-MM from printed period_from/period_to.
+
+    Exact day is ignored. Returns None when no usable printed date exists
+    (continuation pages inherit the current group — never invent a month).
+    """
+    from services.sales_statement_extractor import _statement_month_key
+
+    return _statement_month_key(page if isinstance(page, dict) else {})
+
+
+def _page_stockist_group_key(page: Dict[str, Any]) -> str:
+    from services.sales_statement_extractor import _grouping_stockist_key
+
+    return _grouping_stockist_key(page if isinstance(page, dict) else {})
+
+
+def group_pages_by_stockist_period(
+    page_entries: Sequence[Dict[str, Any]],
+    *,
+    request_id: str = "",
+) -> List[Dict[str, Any]]:
+    """Group ordered page extract results by stockist identity + YYYY-MM.
+
+    Same month/year (different days) stays one group. A different YYYY-MM
+    starts a new statement group. Missing period/stockist on a page uses the
+    current group (continuation fallback) — never invents a date.
+    """
+    groups: List[Dict[str, Any]] = []
+    current: Optional[Dict[str, Any]] = None
+
+    for page in page_entries:
+        if not isinstance(page, dict):
+            continue
+        page_no = page.get("page_number")
+        detected_period = normalize_page_period_yyyy_mm(page)
+        detected_stockist = _page_stockist_group_key(page)
+        logger.info(
+            "MULTI_PAGE_PERIOD_DETECT request_id=%s page=%s detected_period=%s "
+            "stockist_key=%s",
+            request_id or "-",
+            page_no,
+            detected_period or "none",
+            detected_stockist or "none",
+        )
+
+        if current is None:
+            current = {
+                "period": detected_period,
+                "stockist_key": detected_stockist or "",
+                "pages": [page],
+                "page_numbers": [page_no],
+            }
+            continue
+
+        # Continuation: no independent period/stockist → stay in current group.
+        period_compatible = (
+            detected_period is None
+            or current["period"] is None
+            or detected_period == current["period"]
+        )
+        stockist_compatible = (
+            not detected_stockist
+            or not current["stockist_key"]
+            or detected_stockist == current["stockist_key"]
+        )
+
+        if period_compatible and stockist_compatible:
+            if current["period"] is None and detected_period:
+                current["period"] = detected_period
+            if not current["stockist_key"] and detected_stockist:
+                current["stockist_key"] = detected_stockist
+            current["pages"].append(page)
+            current["page_numbers"].append(page_no)
+            logger.info(
+                "MULTI_PAGE_PERIOD_GROUP request_id=%s page=%s action=continue_group "
+                "period=%s pages=%s",
+                request_id or "-",
+                page_no,
+                current["period"] or "none",
+                current["page_numbers"],
+            )
+            continue
+
+        logger.info(
+            "MULTI_PAGE_PERIOD_BOUNDARY request_id=%s page=%s "
+            "detected_period=%s previous_period=%s "
+            "detected_stockist=%s previous_stockist=%s action=new_statement_group",
+            request_id or "-",
+            page_no,
+            detected_period or "none",
+            current["period"] or "none",
+            detected_stockist or "none",
+            current["stockist_key"] or "none",
+        )
+        groups.append(current)
+        current = {
+            "period": detected_period,
+            "stockist_key": detected_stockist or "",
+            "pages": [page],
+            "page_numbers": [page_no],
+        }
+
+    if current is not None:
+        groups.append(current)
+        logger.info(
+            "MULTI_PAGE_STATEMENT_GROUP request_id=%s period=%s stockist_key=%s "
+            "pages=%s",
+            request_id or "-",
+            current["period"] or "none",
+            current["stockist_key"] or "none",
+            current["page_numbers"],
+        )
+
+    return groups
+
+
+def _metadata_from_pages(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """First non-empty header fields; period span = min(from)/max(to) in group."""
+    meta: Dict[str, Any] = {
+        "stockist_name": None,
+        "stockist_address": None,
+        "company_name": None,
+        "period_from": None,
+        "period_to": None,
+        "report_title": None,
+    }
+    from services.sales_statement_extractor import _normalize_date, _usable_period_date
+
+    starts: List[str] = []
+    ends: List[str] = []
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        for key in (
+            "stockist_name",
+            "stockist_address",
+            "company_name",
+            "report_title",
+        ):
+            if page.get(key) and not meta.get(key):
+                meta[key] = page.get(key)
+        pf = _usable_period_date(page.get("period_from"))
+        pt = _usable_period_date(page.get("period_to"))
+        if pf is not None:
+            iso = _normalize_date(str(pf))
+            if iso:
+                starts.append(iso)
+        if pt is not None:
+            iso = _normalize_date(str(pt))
+            if iso:
+                ends.append(iso)
+        # Some pages only print one date used as both from/to.
+        if pf is None and pt is not None:
+            iso = _normalize_date(str(pt))
+            if iso:
+                starts.append(iso)
+        if pt is None and pf is not None:
+            iso = _normalize_date(str(pf))
+            if iso:
+                ends.append(iso)
+    if starts:
+        meta["period_from"] = min(starts)
+    if ends:
+        meta["period_to"] = max(ends)
+    return meta
+
+
+def _rows_from_page_entry(page: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows = page.get("rows")
+    if isinstance(rows, list):
+        return [r for r in rows if isinstance(r, dict)]
+    # Camera PDF path stores full extract dicts without a "rows" key.
+    items = page.get("line_items") or []
+    return [r for r in items if isinstance(r, dict)]
+
+
+def build_statement_from_page_group(
+    group: Dict[str, Any],
+    *,
+    source_file: str,
+    source_format: str,
+    request_id: str = "",
+) -> Dict[str, Any]:
+    """Resolve cross-page product rows within one stockist+YYYY-MM group."""
+    pages = list(group.get("pages") or [])
+    page_numbers = [p for p in (group.get("page_numbers") or []) if p is not None]
+    all_items: List[Dict[str, Any]] = []
+    for page in pages:
+        for row in _rows_from_page_entry(page):
+            all_items.append(row)
+
+    page_span = len(page_numbers) if page_numbers else max(1, len(pages))
+    resolved, dedup_diag = resolve_cross_page_product_rows(
+        all_items, page_count=page_span
+    )
+    meta = _metadata_from_pages(pages)
+    statement: Dict[str, Any] = {
+        "source_file": source_file,
+        "source_format": source_format,
+        "stockist_name": meta.get("stockist_name"),
+        "stockist_address": meta.get("stockist_address"),
+        "company_name": meta.get("company_name"),
+        "period_from": meta.get("period_from"),
+        "period_to": meta.get("period_to"),
+        "report_title": meta.get("report_title"),
+        "line_items": resolved,
+        "totals": {
+            "sales_value": None,
+            "closing_value": None,
+            "extra": {
+                "statement_month": group.get("period"),
+                "multipage_group_pages": list(page_numbers),
+                "cross_page_dedup": dedup_diag,
+            },
+        },
+    }
+    logger.info(
+        "MULTI_PAGE_GROUP_BUILT request_id=%s period=%s pages=%s "
+        "line_items=%s",
+        request_id or "-",
+        group.get("period") or "none",
+        page_numbers,
+        len(resolved),
+    )
+    return statement
+
+
 def extract_multipage_image_stock_statement(
     pages: Sequence[Tuple[str, bytes]],
     *,
@@ -536,11 +764,12 @@ def extract_multipage_image_stock_statement(
     parse_image_fn=None,
     max_pages: int = _MAX_MULTI_PAGE_IMAGES,
 ) -> Dict[str, Any]:
-    """Extract one stock statement from ordered page images in a single request.
+    """Extract stock statement(s) from ordered page images in a single request.
 
     Pages are processed sequentially via the existing image path (_parse_image /
-    Geometry V3). Cross-page reconciliation reuses resolve_cross_page_product_rows
-    (no blind product_name uniquing).
+    Geometry V3). Pages are grouped by stockist + calendar month (YYYY-MM);
+    same-month days stay one statement. Cross-page product reconciliation runs
+    per statement group via resolve_cross_page_product_rows.
     """
     t0 = time.perf_counter()
     page_count = len(pages)
@@ -717,29 +946,33 @@ def extract_multipage_image_stock_statement(
             len(page_rows),
         )
 
+    groups = group_pages_by_stockist_period(page_results, request_id=request_id)
     logger.info(
         "MULTI_PAGE_RECONCILIATION_STARTED request_id=%s page_count=%s "
-        "line_item_count=%s",
+        "statement_groups=%s line_item_count=%s",
         request_id or "-",
         page_count,
+        len(groups),
         len(all_items),
     )
     recon_t0 = time.perf_counter()
-    resolved, dedup_diag = resolve_cross_page_product_rows(
-        all_items, page_count=page_count
-    )
+    source_name = pages[0][0] if pages else "multipage"
+    group_statements = [
+        build_statement_from_page_group(
+            group,
+            source_file=source_name,
+            source_format="image_multipage",
+            request_id=request_id,
+        )
+        for group in groups
+    ]
     logger.info(
         "MULTI_PAGE_RECONCILIATION_COMPLETED request_id=%s page_count=%s "
-        "duration=%.3f line_item_count=%s input_rows=%s output_rows=%s "
-        "kept_separate=%s merged_rows=%s",
+        "duration=%.3f statement_groups=%s",
         request_id or "-",
         page_count,
         time.perf_counter() - recon_t0,
-        len(resolved),
-        dedup_diag.get("input_rows"),
-        dedup_diag.get("output_rows"),
-        dedup_diag.get("kept_separate"),
-        dedup_diag.get("merged_rows"),
+        len(group_statements),
     )
 
     engine = (
@@ -747,76 +980,137 @@ def extract_multipage_image_stock_statement(
         if geometry_pages > 0
         else ("vision_table" if vision_pages > 0 else "image_multipage")
     )
+    any_geo = geometry_pages > 0
+    any_vision = vision_pages > 0
+    shared_extra = {
+        "extraction_method": (
+            "geometry_cell_ocr"
+            if any_geo
+            else ("vision_table" if any_vision else "image_multipage")
+        ),
+        "extraction_engine": engine,
+        "multi_page": True,
+        "is_multi_page": True,
+        "page_count": page_count,
+        "pages_processed": len(page_results),
+        "geometry_pages": geometry_pages,
+        "vision_pages": vision_pages,
+        "gemini_calls": gemini_calls,
+        "image_multipage": True,
+        "geometry_cell_ocr_final": bool(any_geo),
+        "vision_table_final": bool(any_geo or any_vision),
+        "skip_post_pipeline_gemini": True,
+        "geometry_skipped_vision_table": bool(any_geo),
+        "geometry_called": geometry_pages > 0,
+        "vision_called": vision_pages > 0,
+        "stockist_id": stockist_id,
+        "month": month,
+        "processing_time_ms": round((time.perf_counter() - t0) * 1000.0, 1),
+        "period_group_count": len(group_statements),
+    }
+
+    if len(group_statements) > 1:
+        for stmt in group_statements:
+            tex = (stmt.get("totals") or {}).setdefault("extra", {})
+            if isinstance(tex, dict):
+                tex.update(
+                    {
+                        k: v
+                        for k, v in shared_extra.items()
+                        if k
+                        not in (
+                            "statement_count",
+                            "final_statement_count",
+                            "external_extraction_request_count",
+                        )
+                    }
+                )
+                tex["statement_count"] = 1
+        payload: Dict[str, Any] = {
+            "success": True,
+            "is_multi_page": True,
+            "multi_statement": True,
+            "statement_count": len(group_statements),
+            "statements": group_statements,
+            "page_count": page_count,
+            "pages_processed": len(page_results),
+            "extraction_engine": engine,
+            "source_file": source_name,
+            "source_format": "image_multipage",
+            "stockist_id": stockist_id,
+            "month": month,
+            "page_results": page_results,
+            "line_items": [],
+            "totals": {
+                "sales_value": None,
+                "closing_value": None,
+                "extra": {
+                    **shared_extra,
+                    "statement_count": len(group_statements),
+                    "final_statement_count": len(group_statements),
+                    "external_extraction_request_count": 1,
+                    "period_groups": [
+                        {
+                            "period": g.get("period"),
+                            "pages": list(g.get("page_numbers") or []),
+                        }
+                        for g in groups
+                    ],
+                },
+            },
+        }
+        logger.info(
+            "MULTI_PAGE_EXTRACTION_COMPLETED request_id=%s page_count=%s "
+            "pages_processed=%s duration=%.3f statement_count=%s "
+            "extraction_engine=%s",
+            request_id or "-",
+            page_count,
+            len(page_results),
+            time.perf_counter() - t0,
+            len(group_statements),
+            engine,
+        )
+        return payload
+
+    # Single stockist+month group — preserve prior flat multipage contract.
+    primary = group_statements[0] if group_statements else {
+        "line_items": [],
+        "totals": {"extra": {}},
+    }
+    resolved = list(primary.get("line_items") or [])
+    dedup_diag = ((primary.get("totals") or {}).get("extra") or {}).get(
+        "cross_page_dedup"
+    ) or {}
     merged: Dict[str, Any] = {
         "success": True,
         "is_multi_page": True,
         "page_count": page_count,
         "pages_processed": len(page_results),
         "extraction_engine": engine,
-        "source_file": pages[0][0] if pages else "multipage",
+        "source_file": source_name,
         "source_format": "image_multipage",
         "stockist_id": stockist_id,
         "month": month,
-        "stockist_name": None,
-        "stockist_address": None,
-        "company_name": None,
-        "period_from": None,
-        "period_to": None,
-        "report_title": None,
+        "stockist_name": primary.get("stockist_name"),
+        "stockist_address": primary.get("stockist_address"),
+        "company_name": primary.get("company_name"),
+        "period_from": primary.get("period_from"),
+        "period_to": primary.get("period_to"),
+        "report_title": primary.get("report_title"),
         "line_items": resolved,
         "page_results": page_results,
         "totals": {
             "sales_value": None,
             "closing_value": None,
-            "extra": {},
+            "extra": {
+                **shared_extra,
+                "statement_count": 1,
+                "final_statement_count": 1,
+                "external_extraction_request_count": 1,
+                "cross_page_dedup": dedup_diag,
+            },
         },
     }
-    for pr in page_results:
-        for key in (
-            "stockist_name",
-            "stockist_address",
-            "company_name",
-            "period_from",
-            "period_to",
-            "report_title",
-        ):
-            if pr.get(key) and not merged.get(key):
-                merged[key] = pr.get(key)
-
-    any_geo = geometry_pages > 0
-    any_vision = vision_pages > 0
-    tex = merged["totals"]["extra"]
-    tex.update(
-        {
-            "extraction_method": (
-                "geometry_cell_ocr"
-                if any_geo
-                else ("vision_table" if any_vision else "image_multipage")
-            ),
-            "extraction_engine": engine,
-            "multi_page": True,
-            "is_multi_page": True,
-            "page_count": page_count,
-            "pages_processed": len(page_results),
-            "geometry_pages": geometry_pages,
-            "vision_pages": vision_pages,
-            "gemini_calls": gemini_calls,
-            "statement_count": 1,
-            "final_statement_count": 1,
-            "external_extraction_request_count": 1,
-            "image_multipage": True,
-            "geometry_cell_ocr_final": bool(any_geo),
-            "vision_table_final": bool(any_geo or any_vision),
-            "skip_post_pipeline_gemini": True,
-            "geometry_skipped_vision_table": bool(any_geo),
-            "geometry_called": geometry_pages > 0,
-            "vision_called": vision_pages > 0,
-            "cross_page_dedup": dedup_diag,
-            "stockist_id": stockist_id,
-            "month": month,
-            "processing_time_ms": round((time.perf_counter() - t0) * 1000.0, 1),
-        }
-    )
     logger.info(
         "MULTI_PAGE_EXTRACTION_COMPLETED request_id=%s page_count=%s "
         "pages_processed=%s duration=%.3f line_item_count=%s "
@@ -905,45 +1199,44 @@ def parse_camera_multipage_stock_pdf(
                 stamped = stamp_page_number(deepcopy(it), page_no)
                 all_items.append(stamped)
 
-            page_results.append(page_result)
+            # Normalize to the same page-entry shape used by image multipage grouping.
+            page_entry = {
+                "page_number": page_no,
+                "filename": page_name,
+                "rows": [
+                    stamp_page_number(deepcopy(it), page_no)
+                    for it in (page_result.get("line_items") or [])
+                    if isinstance(it, dict)
+                ],
+                "line_item_count": len(page_result.get("line_items") or []),
+                "extraction_method": method or None,
+                "stockist_name": page_result.get("stockist_name"),
+                "company_name": page_result.get("company_name"),
+                "period_from": page_result.get("period_from"),
+                "period_to": page_result.get("period_to"),
+                "report_title": page_result.get("report_title"),
+                "stockist_address": page_result.get("stockist_address"),
+                "line_items": page_result.get("line_items") or [],
+                "totals": page_result.get("totals") or {},
+            }
+            page_results.append(page_entry)
 
         if len(all_items) < 1:
             return None
 
-        resolved, dedup_diag = resolve_cross_page_product_rows(
-            all_items, page_count=page_count
+        groups = group_pages_by_stockist_period(
+            page_results, request_id=str(filename or "")
         )
+        group_statements = [
+            build_statement_from_page_group(
+                group,
+                source_file=filename,
+                source_format="pdf",
+                request_id=str(filename or ""),
+            )
+            for group in groups
+        ]
 
-        # Metadata from first non-empty page.
-        merged: Dict[str, Any] = {
-            "source_file": filename,
-            "source_format": "pdf",
-            "stockist_name": None,
-            "stockist_address": None,
-            "company_name": None,
-            "period_from": None,
-            "period_to": None,
-            "report_title": None,
-            "line_items": resolved,
-            "totals": {
-                "sales_value": None,
-                "closing_value": None,
-                "extra": {},
-            },
-        }
-        for pr in page_results:
-            for key in (
-                "stockist_name",
-                "stockist_address",
-                "company_name",
-                "period_from",
-                "period_to",
-                "report_title",
-            ):
-                if pr.get(key) and not merged.get(key):
-                    merged[key] = pr.get(key)
-
-        # Prefer geometry_cell_ocr_final if any page used geometry.
         any_geo_final = any(
             bool(((pr.get("totals") or {}).get("extra") or {}).get("geometry_cell_ocr_final"))
             for pr in page_results
@@ -952,33 +1245,92 @@ def parse_camera_multipage_stock_pdf(
             bool(((pr.get("totals") or {}).get("extra") or {}).get("vision_table_final"))
             for pr in page_results
         )
-        tex = merged["totals"]["extra"]
-        tex.update(
-            {
-                "extraction_method": (
-                    "geometry_cell_ocr"
-                    if any_geo_final
-                    else ("vision_table" if any_vision_final else "camera_multipage_pdf")
-                ),
-                "extraction_engine": "camera_multipage_pdf",
-                "multi_page": True,
-                "page_count": page_count,
-                "pages_processed": len(page_results),
-                "geometry_pages": geometry_pages,
-                "vision_pages": vision_pages,
-                "gemini_calls": gemini_calls,
-                "statement_count": 1,
-                "camera_multipage_pdf": True,
-                "geometry_cell_ocr_final": bool(any_geo_final),
-                "vision_table_final": bool(any_geo_final or any_vision_final),
-                "skip_post_pipeline_gemini": True,
-                "geometry_skipped_vision_table": bool(any_geo_final),
-                "geometry_called": geometry_pages > 0,
-                "vision_called": vision_pages > 0,
-                "cross_page_dedup": dedup_diag,
-                "processing_time_ms": round((time.perf_counter() - t0) * 1000.0, 1),
+        shared_extra = {
+            "extraction_method": (
+                "geometry_cell_ocr"
+                if any_geo_final
+                else ("vision_table" if any_vision_final else "camera_multipage_pdf")
+            ),
+            "extraction_engine": "camera_multipage_pdf",
+            "multi_page": True,
+            "page_count": page_count,
+            "pages_processed": len(page_results),
+            "geometry_pages": geometry_pages,
+            "vision_pages": vision_pages,
+            "gemini_calls": gemini_calls,
+            "camera_multipage_pdf": True,
+            "geometry_cell_ocr_final": bool(any_geo_final),
+            "vision_table_final": bool(any_geo_final or any_vision_final),
+            "skip_post_pipeline_gemini": True,
+            "geometry_skipped_vision_table": bool(any_geo_final),
+            "geometry_called": geometry_pages > 0,
+            "vision_called": vision_pages > 0,
+            "processing_time_ms": round((time.perf_counter() - t0) * 1000.0, 1),
+            "period_group_count": len(group_statements),
+        }
+
+        if len(group_statements) > 1:
+            for stmt in group_statements:
+                tex = (stmt.get("totals") or {}).setdefault("extra", {})
+                if isinstance(tex, dict):
+                    tex.update(shared_extra)
+                    tex["statement_count"] = 1
+            merged_multi: Dict[str, Any] = {
+                "source_file": filename,
+                "source_format": "pdf",
+                "multi_statement": True,
+                "statement_count": len(group_statements),
+                "statements": group_statements,
+                "totals": {
+                    "sales_value": None,
+                    "closing_value": None,
+                    "extra": {
+                        **shared_extra,
+                        "statement_count": len(group_statements),
+                        "period_groups": [
+                            {
+                                "period": g.get("period"),
+                                "pages": list(g.get("page_numbers") or []),
+                            }
+                            for g in groups
+                        ],
+                    },
+                },
             }
-        )
+            logger.info(
+                "STOCK_MULTIPAGE done file=%s pages=%s statement_groups=%s ms=%s",
+                filename,
+                page_count,
+                len(group_statements),
+                shared_extra["processing_time_ms"],
+            )
+            return merged_multi
+
+        primary = group_statements[0]
+        resolved = list(primary.get("line_items") or [])
+        dedup_diag = ((primary.get("totals") or {}).get("extra") or {}).get(
+            "cross_page_dedup"
+        ) or {}
+        merged: Dict[str, Any] = {
+            "source_file": filename,
+            "source_format": "pdf",
+            "stockist_name": primary.get("stockist_name"),
+            "stockist_address": primary.get("stockist_address"),
+            "company_name": primary.get("company_name"),
+            "period_from": primary.get("period_from"),
+            "period_to": primary.get("period_to"),
+            "report_title": primary.get("report_title"),
+            "line_items": resolved,
+            "totals": {
+                "sales_value": None,
+                "closing_value": None,
+                "extra": {
+                    **shared_extra,
+                    "statement_count": 1,
+                    "cross_page_dedup": dedup_diag,
+                },
+            },
+        }
         logger.info(
             "STOCK_MULTIPAGE done file=%s pages=%s items_in=%s items_out=%s "
             "geometry_pages=%s vision_pages=%s gemini_calls=%s ms=%s",
@@ -989,7 +1341,7 @@ def parse_camera_multipage_stock_pdf(
             geometry_pages,
             vision_pages,
             gemini_calls,
-            tex["processing_time_ms"],
+            shared_extra["processing_time_ms"],
         )
         return merged
     finally:
