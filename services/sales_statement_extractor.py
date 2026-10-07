@@ -46212,6 +46212,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 request_id,
                 outcome.get("reason"),
             )
+            # Sparse Vision (names + null qtys) → try Saleable OCR before legacy
+            # Gemini, matching the server path that returns real Opn/Rec/Issue/Bal.
+            try:
+                saleable_after = _try_saleable_stock_report_image(
+                    file_bytes, filename, ext
+                )
+                if saleable_after and saleable_after.get("line_items"):
+                    return saleable_after
+            except Exception as saleable_exc:
+                logger.info(
+                    "[SalesStatement] file=%s saleable after vision fallback skipped: %s",
+                    filename,
+                    type(saleable_exc).__name__,
+                )
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s vision_table path skipped: %s",

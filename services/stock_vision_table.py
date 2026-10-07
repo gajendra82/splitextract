@@ -2837,6 +2837,56 @@ def _pages_for_flagged(
     return [page_images[p] for p in sorted(pages_needed) if 0 <= p < len(page_images)]
 
 
+def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[str]:
+    """When Vision returns names but almost no printed qtys, hand back to OCR/Gemini.
+
+    Local STOCK_VISION_TABLE=on was keeping valid_ratio=0 / all-zero rows as
+    status=ok and skipping the path that works on server (flag off / legacy).
+    """
+    if os.getenv("STOCK_VISION_TABLE_QUALITY_FALLBACK", "true").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
+    items = result.get("line_items") or []
+    if not items:
+        return "empty_line_items"
+    extra = (result.get("totals") or {}).get("extra") or {}
+    try:
+        valid_ratio = float(extra.get("valid_ratio") or 0.0)
+    except (TypeError, ValueError):
+        valid_ratio = 0.0
+    try:
+        min_ratio = float(os.getenv("STOCK_VISION_TABLE_MIN_VALID_RATIO", "0.50") or 0.50)
+    except (TypeError, ValueError):
+        min_ratio = 0.50
+    if valid_ratio < min_ratio:
+        return "valid_ratio_low"
+    counts = extra.get("row_status_counts") or {}
+    try:
+        missing = int(counts.get("MISSING_VALUE") or 0)
+    except (TypeError, ValueError):
+        missing = 0
+    if missing / max(len(items), 1) >= 0.50:
+        return "missing_value_ratio_high"
+    nonzero = False
+    for item in items:
+        for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            try:
+                if abs(float(item.get(field) or 0.0)) > 0:
+                    nonzero = True
+                    break
+            except (TypeError, ValueError):
+                continue
+        if nonzero:
+            break
+    if not nonzero:
+        return "all_zero_qtys"
+    return None
+
+
 def run_vision_table_path(
     file_bytes: bytes,
     input_type: str,
@@ -3228,6 +3278,28 @@ def run_vision_table_path(
         )
         result["totals"]["extra"]["valid_ratio"] = classified.get("valid_ratio")
         result["totals"]["extra"]["gemini_calls"] = calls
+
+        quality_fail = _vision_table_quality_fallback_reason(result)
+        if quality_fail:
+            result["totals"]["extra"]["vision_table_quality_fallback"] = quality_fail
+            _log(
+                "status=fallback",
+                reason=quality_fail,
+                rows=len(result.get("line_items") or []),
+                valid_ratio=result["totals"]["extra"].get("valid_ratio"),
+                recon_fail=result["totals"]["extra"].get(
+                    "stock_reconciliation_fail_count"
+                ),
+                gemini_calls=calls,
+            )
+            return {
+                "status": "fallback",
+                "reason": quality_fail,
+                "result": result,
+                "gemini_calls": calls,
+                "gemini_budget": gemini_budget,
+                "skipped_gates": [],
+            }
 
         skipped = [
             "early_vision",
