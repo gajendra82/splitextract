@@ -39849,6 +39849,137 @@ Return ONLY JSON with stockist_name, company_name, period_from, period_to, repor
 """.strip()
 
 
+def _ignore_non_qty_headers_enabled() -> bool:
+    return os.getenv("STOCK_HEADER_IGNORE_NON_QTY", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _medica_stock_statement_prompt() -> str:
+    if not _ignore_non_qty_headers_enabled():
+        return _MEDICA_STOCK_STATEMENT_PROMPT
+    return (
+        _MEDICA_STOCK_STATEMENT_PROMPT
+        + "\n\n"
+        + "If a column named NRV appears, NRV is a rate column only — never "
+        + "opening_qty. Put NRV under extra.nrv.\n"
+        + "Alternate header set (common on NRV sheets): "
+        + "NRV | Opening Stock (Qty, Value) | Primary Sale (Qty, Value) | "
+        + "Secondary Sale (Qty, Value) | Closing Stock (Qty, Value).\n"
+        + "Map that set as: Opening Stock qty->opening_qty, Opening Stock "
+        + "value->extra.opening_value, Primary Sale qty->receipts_qty, "
+        + "Primary Sale value->extra.purchase_value, Secondary Sale "
+        + "qty->sales_qty, Secondary Sale value->sales_value, Closing Stock "
+        + "qty->closing_qty, Closing Stock value->closing_value.\n"
+        + "Only when OPSTK/Opening Stock is truly absent, leave opening_qty "
+        + "null/0 and map SALE to sales_qty."
+    )
+
+
+def _medica_nrv_shift_evidence(item: Dict[str, Any]) -> bool:
+    """True only when opening_qty looks like a printed NRV/rate, not stock qty."""
+    nrv = _to_float(item.get("opening_qty"))
+    sale_qty = _to_float(item.get("receipts_qty"))
+    sales_value = _to_float(item.get("sales_value"))
+    stock_qty = _to_float(item.get("closing_qty"))
+    stock_value = _to_float(item.get("closing_value"))
+    if nrv <= 0:
+        return False
+    tolerance = max(0.1, abs(nrv) * 0.02)
+    sale_matches = (
+        sale_qty > 0
+        and sales_value > 0
+        and abs((nrv * sale_qty) - sales_value) <= max(tolerance, sales_value * 0.01)
+    )
+    stock_matches = (
+        stock_qty > 0
+        and stock_value > 0
+        and abs((nrv * stock_qty) - stock_value) <= max(tolerance, stock_value * 0.01)
+    )
+    if stock_qty > 0 and stock_value > 0:
+        implied_rate = stock_value / stock_qty
+        # Real opening qty (e.g. 75) must not be treated as NRV when rate is 132.
+        if abs(nrv - implied_rate) > max(0.1, abs(implied_rate) * 0.02):
+            return bool(sale_matches)
+    return bool(sale_matches or stock_matches)
+
+
+def _repair_medica_nrv_column_shift(item: Dict[str, Any], *, force: bool = False) -> None:
+    """Move a printed NRV/rate column out of opening_qty on Medica STOCK sheets.
+
+    Two layouts after NRV:
+    - Opening Stock sheet (no packing): next qty is opening_qty.
+    - Classic SALE sheet (packing present): next qty is sales_qty; opening missing.
+    """
+    if not isinstance(item, dict):
+        return
+    extra = item.get("extra")
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    if extra.get("medica_nrv_column_shift_repaired"):
+        return
+    # force is ignored: never rewrite opening unless this row itself looks like NRV.
+    if not _medica_nrv_shift_evidence(item):
+        return
+    nrv = _to_float(item.get("opening_qty"))
+    next_qty = _to_float(item.get("receipts_qty"))
+    sales_qty = _to_float(item.get("sales_qty"))
+    sales_value = _to_float(item.get("sales_value"))
+    if nrv <= 0:
+        return
+    packing = str(item.get("packing") or "").strip()
+    sale_layout = bool(packing)
+    extra["nrv"] = nrv
+    fs = extra.get("field_source")
+    if not isinstance(fs, dict):
+        fs = {}
+        extra["field_source"] = fs
+    fs["nrv"] = "printed"
+    tolerance = max(0.1, abs(nrv) * 0.02)
+    value_matches_next = (
+        next_qty > 0
+        and sales_value > 0
+        and abs((nrv * next_qty) - sales_value) <= max(tolerance, sales_value * 0.01)
+    )
+    if sale_layout:
+        # NRV | SALE | ... — opening not printed; SALE landed in receipts_qty.
+        extra.setdefault("in_ot_qty", sales_qty)
+        item["opening_qty"] = 0.0
+        item["receipts_qty"] = 0.0
+        item["sales_qty"] = next_qty
+        fs["opening_qty"] = "missing"
+        fs["receipts_qty"] = "missing"
+        fs["sales_qty"] = "printed"
+        extra["medica_nrv_shift_kind"] = "sale_after_nrv"
+    else:
+        # NRV | Opening Stock qty | Opening value... — restore opening when present.
+        if next_qty > 0:
+            item["opening_qty"] = next_qty
+            fs["opening_qty"] = "printed"
+        else:
+            # Rate confirmed via closing_value/closing_qty; opening stock not in receipts.
+            item["opening_qty"] = 0.0
+            fs["opening_qty"] = "missing"
+        item["receipts_qty"] = 0.0
+        fs["receipts_qty"] = "missing"
+        if value_matches_next:
+            extra["opening_value"] = sales_value
+            item["sales_value"] = 0.0
+            fs["opening_value"] = "printed"
+            fs["sales_value"] = "missing"
+        extra["medica_nrv_shift_kind"] = "opening_after_nrv"
+    extra["medica_nrv_column_shift_repaired"] = True
+    logger.info(
+        "STOCK_HEADER_IGNORE_NON_QTY medica NRV column shift repaired product=%r kind=%s",
+        item.get("product_name"),
+        extra.get("medica_nrv_shift_kind"),
+    )
+
+
 def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
     """Fix the common Vision slip: IN/OT→closing_qty, STOCK→closing_value, STK VAL→jul.
 
@@ -40123,7 +40254,7 @@ def _extract_medica_stock_statement_vision(
                 {
                     "role": "user",
                     "parts": [
-                        {"text": _MEDICA_STOCK_STATEMENT_PROMPT},
+                        {"text": _medica_stock_statement_prompt()},
                         {
                             "inline_data": {
                                 "mime_type": "image/jpeg",
@@ -40192,6 +40323,18 @@ def _extract_medica_stock_statement_vision(
         _repair_medica_vision_column_shift(item)
         extra["layout"] = "medica_stock_statement"
         kept.append(item)
+    if _ignore_non_qty_headers_enabled() and kept:
+        evidence_count = sum(1 for item in kept if _medica_nrv_shift_evidence(item))
+        if evidence_count >= max(2, int(len(kept) * 0.15)):
+            logger.info(
+                "STOCK_HEADER_IGNORE_NON_QTY medica NRV table detected rows=%s evidence=%s",
+                len(kept),
+                evidence_count,
+            )
+            # Only shift rows that themselves look like NRV-in-opening — never force.
+            for item in kept:
+                if _medica_nrv_shift_evidence(item):
+                    _repair_medica_nrv_column_shift(item)
     result["line_items"] = kept
     result["report_title"] = "STOCK STATEMENT"
     # Strip Vision often returns "'SHREE DISTRIBUTORS. Jo: HIMALAYA-ZEAL".

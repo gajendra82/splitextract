@@ -103,6 +103,24 @@ ALIASES: Dict[str, List[str]] = {
         "last month sales",
         "last month sale qty",
     ],
+    # Descriptive / commercial columns that can sit before Opening in stock
+    # statements. They must never claim movement qty semantics.
+    "non_stock_qty": [
+        "nrv",
+        "net realisable value",
+        "net realizable value",
+        "age",
+        "pro age",
+        "product age",
+        "days age",
+        "stock age",
+        "margin",
+        "margin percent",
+        "margin %",
+        "tax",
+        "gst",
+        "hsn",
+    ],
     "opening": [
         "op",
         "opn",
@@ -366,6 +384,8 @@ def _alias_hits(norm: str) -> List[Tuple[str, str, float]]:
     for group, aliases in ALIASES.items():
         if group == "value_marker":
             continue
+        if group == "non_stock_qty" and not _ignore_non_qty_headers_enabled():
+            continue
         for alias in aliases:
             a_norm = normalize_header(alias)
             if not a_norm:
@@ -587,6 +607,35 @@ def _column_bands_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _ignore_non_qty_headers_enabled() -> bool:
+    """STOCK_HEADER_IGNORE_NON_QTY — keep NRV/Age/etc. out of qty fields."""
+    return os.getenv("STOCK_HEADER_IGNORE_NON_QTY", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _glued_stock_header_prefers_qty(norm: str, group: str) -> bool:
+    """Vision often glues 'Opening stock' + 'Value' into one qty-column header.
+
+    Exact value phrases (opening value / op val) stay values. Headers that still
+    carry a stock/qty noun with a glued Value token map to qty.
+    """
+    if not _ignore_non_qty_headers_enabled():
+        return False
+    if group not in {"opening", "closing"}:
+        return False
+    if _direct_value_field(norm):
+        return False
+    tokens = set(_tokens(norm))
+    compact = re.sub(r"\s+", "", norm)
+    if tokens & {"stock", "sto", "stoc", "stk", "qty", "quantity", "qnty"}:
+        return True
+    return any(tok in compact for tok in ("stock", "sto", "stoc", "stk"))
 
 
 def _build_column_bands(
@@ -1131,6 +1180,14 @@ def resolve_columns(
         elif group == "rate":
             canonical = "rate"
             is_value = False
+        elif group == "non_stock_qty":
+            canonical = "ignore"
+            is_value = False
+            logger.info(
+                "STOCK_HEADER_IGNORE_NON_QTY ignored header col_index=%s text=%r",
+                idx,
+                text,
+            )
         elif group in {"product_name", "pack", "batch", "lms"}:
             canonical = group
         elif group == "value_marker":
@@ -1153,6 +1210,16 @@ def resolve_columns(
                 valueish = False
             if sub_norm in {"value", "val", "amt", "amount"}:
                 valueish = True
+            # "Opening sto Value" is a qty column with glued Value OCR, not opening_value.
+            if valueish and group and _glued_stock_header_prefers_qty(norm, group):
+                valueish = False
+                reason = (f"{reason}|glued_stock_qty" if reason else "glued_stock_qty")
+                logger.info(
+                    "STOCK_HEADER_IGNORE_NON_QTY glued stock header prefers qty "
+                    "col_index=%s text=%r",
+                    idx,
+                    text,
+                )
             if valueish and group in _GROUP_TO_VALUE:
                 canonical = _GROUP_TO_VALUE[group]
                 is_value = True

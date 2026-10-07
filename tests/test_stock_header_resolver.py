@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from services.stock_header_resolver import (
     assign_cells,
@@ -186,6 +187,67 @@ class ResolveColumnsUnitTests(unittest.TestCase):
             _cells("Opening", "Receipt", "Total", "Sale")
         )
         self.assertNotIn("sales_return_qty", _canons(result))
+
+    def test_non_qty_column_before_opening_is_ignored_when_flagged(self):
+        with patch.dict("os.environ", {"STOCK_HEADER_IGNORE_NON_QTY": "true"}):
+            result = resolve_columns(
+                _cells("Product", "NRV", "Opening", "Purchase", "Sale", "Closing")
+            )
+            self.assertEqual(
+                _canons(result),
+                [
+                    "product_name",
+                    "ignore",
+                    "opening_qty",
+                    "purchase_qty",
+                    "sales_qty",
+                    "closing_qty",
+                ],
+            )
+
+            out = assign_cells(
+                [
+                    {"col_index": 0, "text": "LIV 52"},
+                    {"col_index": 1, "text": "123.45"},
+                    {"col_index": 2, "text": "8"},
+                    {"col_index": 3, "text": "2"},
+                    {"col_index": 4, "text": "3"},
+                    {"col_index": 5, "text": "7"},
+                ],
+                result["columns"],
+            )
+            self.assertEqual(out["fields"]["product_name"], "LIV 52")
+            self.assertEqual(out["fields"]["opening_qty"], "8")
+            self.assertEqual(out["fields"]["purchase_qty"], "2")
+            self.assertEqual(out["fields"]["sales_qty"], "3")
+            self.assertEqual(out["fields"]["closing_qty"], "7")
+            self.assertNotIn("nrv", out["fields"])
+
+    def test_glued_opening_sto_value_maps_to_opening_qty_when_flagged(self):
+        """Vision glues Opening stock + Value; qty must not land in opening_value."""
+        with patch.dict("os.environ", {"STOCK_HEADER_IGNORE_NON_QTY": "true"}):
+            result = resolve_columns(
+                _cells(
+                    "Product",
+                    "NRV",
+                    "Opening sto Value",
+                    "Primary sale Value",
+                    "Secondary s Value",
+                    "Closing stoc Value",
+                    "Value",
+                )
+            )
+            by_idx = {c["col_index"]: c["canonical"] for c in result["columns"]}
+            self.assertEqual(by_idx[2], "opening_qty")
+            self.assertEqual(by_idx[5], "closing_qty")
+            self.assertEqual(by_idx[6], "closing_value")
+            self.assertNotEqual(by_idx[2], "opening_value")
+
+            # Exact Opening Value still stays a value column.
+            classic = resolve_columns(
+                _cells("Product", "Opening Value", "Purchase Qty", "Sales Qty", "Closing Qty")
+            )
+            self.assertEqual(_canons(classic)[1], "opening_value")
 
 
 class AssignCellsTests(unittest.TestCase):
