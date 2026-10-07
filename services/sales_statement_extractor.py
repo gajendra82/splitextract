@@ -14308,7 +14308,8 @@ _STATEMENT_TITLE_HINT = re.compile(
 )
 _CONTINUATION_HINT = re.compile(
     r"(?:^|\n)\s*(?:--\s*)?(?:Continued(?:\s+Page)?|Contd\.?|Cont\.?)\b|"
-    r"(?:^|\n)\s*Page\s*No\.?\s*[:.]?\s*[2-9]\d*\b|"
+    # "Page No. 2", "Page No.- 2", "Page No:-2" (footer often uses hyphen)
+    r"(?:^|\n)\s*Page\s*No\.?\s*[-:.]?\s*[2-9]\d*\b|"
     r"(?:^|\n)\s*Page\s*[:.]?\s*[2-9]\d*\s*(?:of|/)",
     re.I,
 )
@@ -14359,10 +14360,14 @@ def _page_text_looks_like_continuation(text: str) -> bool:
     lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
     if not lines:
         return False
+    # Header band OR footer band — many CONSOLIDATED PDFs put "Page No.- 2"
+    # only at the bottom while the top reprints Item/Pack/Op.Qty headers.
     head = "\n".join(lines[:12])
-    if _CONTINUATION_HINT.search(head):
+    tail = "\n".join(lines[-8:])
+    probe = head + "\n" + tail
+    if _CONTINUATION_HINT.search(probe):
         return True
-    if re.search(r"Continued\s+Page|Cont(?:inue)?d\.?\s+Page", head, re.I):
+    if re.search(r"Continued\s+Page|Cont(?:inue)?d\.?\s+Page", probe, re.I):
         return True
     return False
 
@@ -14457,6 +14462,64 @@ def _stockist_candidate_score(line: str) -> int:
     return score
 
 
+def _page_has_op_qty_val_table_headers(text: str) -> bool:
+    """True when page text shows Op.Qty/Op.Val … Cls.Qty stock table headers."""
+    blob = text or ""
+    return bool(
+        re.search(r"\bOp\.?\s*Qty\b", blob, re.I)
+        and re.search(r"\bOp\.?\s*Val\b", blob, re.I)
+        and re.search(r"\bCls?\.?\s*Qty\b", blob, re.I)
+    )
+
+
+def _stockist_from_op_qty_val_letterhead(text: str) -> Optional[str]:
+    """Prefer PRIVATE LIMITED / MEDISALES letterhead over first product row.
+
+    Op.Qty CONSOLIDATED text streams often list Item/Pack then products before
+    the stockist line appears in reading order (letterhead is visual-top but
+    extract-order-bottom). Product names like AACTARIL SOAP must not become
+    stockist_name.
+    """
+    if not _page_has_op_qty_val_table_headers(text):
+        return None
+    # Full-line PRIVATE LIMITED / PVT LTD banners.
+    m = re.search(
+        r"(?m)^\s*([A-Z][A-Z0-9 &./'\-]{3,60}?(?:PRIVATE\s+LIMITED|PVT\.?\s*LTD\.?|"
+        r"LIMITED|LTD\.?))\s*$",
+        text or "",
+        re.I,
+    )
+    if m:
+        name = _clean_stockist_label(m.group(1))
+        if name and not re.search(r"\bHIMALAYA\b", name, re.I):
+            logger.info(
+                "[STOCKIST_MATCH] matching_method=op_qty_val_letterhead "
+                "final_stockist_name=%r",
+                name[:120],
+            )
+            return name
+    # MEDISALES / DISTRIBUTORS anywhere (single line).
+    for ln in (text or "").splitlines():
+        s = ln.strip()
+        if not s or len(s) > 90:
+            continue
+        if re.search(r"\bHIMALAYA\b", s, re.I):
+            continue
+        if re.search(
+            r"(?i)\b(?:MEDISALES|DISTRIBUTORS?|DISTRIBUTION|MEDICAL\s+STORES?)\b",
+            s,
+        ):
+            if _looks_like_stockist_header(s) or _STRONG_STOCKIST_HINT.search(s):
+                name = _clean_stockist_label(s)
+                logger.info(
+                    "[STOCKIST_MATCH] matching_method=op_qty_val_distributor "
+                    "final_stockist_name=%r",
+                    name[:120],
+                )
+                return name
+    return None
+
+
 def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     """Return stockist name if this page starts a (new) statement."""
     lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
@@ -14468,10 +14531,22 @@ def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     if _page_text_looks_like_continuation(text):
         return None
 
+    letterhead = _stockist_from_op_qty_val_letterhead(text)
+    if letterhead:
+        return letterhead
+
     # Score candidates in the header band; prefer distributor/pharma banners
     # over portal nav chrome (e.g. "Home Profile Agency … Contact us").
     scored: List[Tuple[int, int, str]] = []
+    # When Op.Qty table headers lead the stream, skip product-like ALL-CAPS
+    # rows in the first band (they are SKUs, not stockists).
+    skip_product_caps = _page_has_op_qty_val_table_headers(text)
     for i, ln in enumerate(lines[:15]):
+        if skip_product_caps and not (
+            _STRONG_STOCKIST_HINT.search(ln)
+            or re.search(r"(?i)\b(?:PRIVATE\s+LIMITED|PVT\.?\s*LTD|MEDISALES)\b", ln)
+        ):
+            continue
         if not _looks_like_stockist_header(ln) and not _STRONG_STOCKIST_HINT.search(ln):
             # Still consider ALL-CAPS short banners for pairing.
             letters = re.sub(r"[^A-Za-z]", "", ln)
@@ -18279,6 +18354,21 @@ def _extract_statement_from_pdf_group(
             ):
                 consolidated["stockist_name"] = group["stockist_name"]
             return consolidated
+
+    # Generic Op.Qty/Op.Val/P.Qty/…/Cls.Val(+Br.Trf) CONSOLIDATED (no ItemCode).
+    # Native words parser — avoids Gemini inventing products / dropping P.Val.
+    if _is_stock_sales_op_qty_val_words_text(combined_text):
+        opval_words = _parse_stock_sales_op_qty_val_words_pages(pages, filename)
+        if opval_words and opval_words.get("line_items"):
+            opval_words["totals"]["extra"]["split_pages"] = page_nos
+            opval_words["totals"]["extra"]["statement_count"] = 1
+            if group.get("stockist_name") and not re.search(
+                r"^Statement_\d+$", str(group.get("stockist_name") or "")
+            ):
+                # Prefer letterhead already on the parse; only fill if blank.
+                if not opval_words.get("stockist_name"):
+                    opval_words["stockist_name"] = group["stockist_name"]
+            return opval_words
 
     # STOCK VALUATION AS ON with Batch / M.R.P. (text PDF) — keep MRP.
     if _is_stock_valuation_mrp_batch_text(combined_text):
@@ -24324,6 +24414,398 @@ def _parse_meher_stock_sales_consolidated_from_doc(
     return _parse_meher_stock_sales_consolidated(combined, filename)
 
 
+def stock_op_qty_val_consolidated_native_enabled() -> bool:
+    """Native Item/Pack/Op.Qty…Cls.Val(+Br.Trf) CONSOLIDATED words parser."""
+    return os.getenv("STOCK_OP_QTY_VAL_CONSOLIDATED_NATIVE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_stock_sales_op_qty_val_words_text(text: str) -> bool:
+    """STOCK AND SALES Op.Qty/Op.Val/P.Qty/S.Qty/Cls.Qty (not Meher ItemCode)."""
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"ItemCode|Item\s*Code", blob, re.I):
+        return False
+    if re.search(r"Stock\s+and\s+Sales\s+Detail", blob, re.I):
+        return False
+    if re.search(r"\bOp\s*Stk\b", blob, re.I) and re.search(r"\bP\s*S\s*Qty\b", blob, re.I):
+        return False
+    has_op = bool(re.search(r"\bOp\.?\s*Qty\b", blob, re.I))
+    has_op_val = bool(re.search(r"\bOp\.?\s*Val\b", blob, re.I))
+    has_p = bool(re.search(r"\bP\.?\s*Qty\b", blob, re.I))
+    has_s = bool(re.search(r"\bS\.?\s*Qty\b", blob, re.I))
+    has_cls = bool(re.search(r"\bCls?\.?\s*Qty\b", blob, re.I))
+    return has_op and has_op_val and has_p and has_s and has_cls
+
+
+def _op_qty_val_cell(token: str) -> Optional[float]:
+    """Parse a numeric table cell. Blank/dash → 0.0 (printed zero / empty)."""
+    raw = str(token or "").strip().replace(",", "")
+    if raw in {"-", "--", "—", ""}:
+        return 0.0
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return float(raw)
+    return None
+
+
+def _op_qty_val_cell_was_blank(token: str) -> bool:
+    return str(token or "").strip() in {"-", "--", "—", ""}
+
+
+def _cluster_words_by_y(
+    words: List[Tuple[Any, ...]], y_tol: float = 4.0
+) -> List[List[Tuple[Any, ...]]]:
+    """Group fitz words into visual rows by y0."""
+    if not words:
+        return []
+    ordered = sorted(words, key=lambda w: (float(w[1]), float(w[0])))
+    rows: List[List[Tuple[Any, ...]]] = []
+    cur: List[Tuple[Any, ...]] = [ordered[0]]
+    cur_y = float(ordered[0][1])
+    for w in ordered[1:]:
+        y = float(w[1])
+        if abs(y - cur_y) <= y_tol:
+            cur.append(w)
+        else:
+            rows.append(sorted(cur, key=lambda t: float(t[0])))
+            cur = [w]
+            cur_y = y
+    if cur:
+        rows.append(sorted(cur, key=lambda t: float(t[0])))
+    return rows
+
+
+def _op_qty_val_header_centres(
+    row: List[Tuple[Any, ...]],
+) -> Optional[Dict[str, float]]:
+    """Map canonical column → x-centre from a header word row."""
+    joined = " ".join(str(w[4]) for w in row)
+    if not re.search(r"Op\.?\s*Qty", joined, re.I):
+        return None
+    if not re.search(r"Cls?\.?\s*Qty", joined, re.I):
+        return None
+    centres: Dict[str, float] = {}
+    # Only merge split fragments like "Br." + "Trf." — never glue complete
+    # headers (Op.Qty + Op.Val) which also prefix-match Op\.?\s*Qty.
+    _COMPLETE_HDR = re.compile(
+        r"(?i)^(Item|Pack(?:ing)?|Op\.?\s*Qty|Op\.?\s*Val|P\.?\s*Qty|P\.?\s*Val|"
+        r"S\.?\s*Qty|S\.?\s*Val|Cls?\.?\s*Qty|Cls?\.?\s*Val|Br\.?\s*Trf\.?)$"
+    )
+    i = 0
+    labels: List[Tuple[str, float]] = []
+    while i < len(row):
+        tok = str(row[i][4]).strip()
+        x0, x1 = float(row[i][0]), float(row[i][2])
+        if i + 1 < len(row) and not _COMPLETE_HDR.match(tok):
+            nxt = str(row[i + 1][4]).strip()
+            combo = f"{tok} {nxt}"
+            if re.match(r"(?i)^Br\.?\s*Trf\.?$", combo) or (
+                _COMPLETE_HDR.match(combo) and not _COMPLETE_HDR.match(tok)
+            ):
+                x1 = float(row[i + 1][2])
+                tok = combo
+                i += 2
+                labels.append((tok, (x0 + x1) / 2.0))
+                continue
+        labels.append((tok, (x0 + x1) / 2.0))
+        i += 1
+
+    alias_map = (
+        (r"(?i)^Item$|^Product$", "product_name"),
+        (r"(?i)^Pack(?:ing)?$", "packing"),
+        (r"(?i)^Op\.?\s*Qty$", "opening_qty"),
+        (r"(?i)^Op\.?\s*Val$", "opening_value"),
+        (r"(?i)^P\.?\s*Qty$", "receipts_qty"),
+        (r"(?i)^P\.?\s*Val$", "receipts_value"),
+        (r"(?i)^S\.?\s*Qty$", "sales_qty"),
+        (r"(?i)^S\.?\s*Val$", "sales_value"),
+        (r"(?i)^Cls?\.?\s*Qty$", "closing_qty"),
+        (r"(?i)^Cls?\.?\s*Val$", "closing_value"),
+        (r"(?i)^Br\.?\s*Trf\.?$", "br_trf"),
+    )
+    for label, cx in labels:
+        for pat, canon in alias_map:
+            if re.match(pat, label.strip()):
+                centres.setdefault(canon, cx)
+                break
+    needed = {
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "closing_value",
+    }
+    if not needed.issubset(centres):
+        return None
+    return centres
+
+
+def _assign_op_qty_val_row(
+    row: List[Tuple[Any, ...]], centres: Dict[str, float]
+) -> Optional[Dict[str, Any]]:
+    """Assign one product row by nearest header x-centre."""
+    texts = [str(w[4]).strip() for w in row]
+    joined = " ".join(texts)
+    if re.match(r"(?i)^Total\b", joined):
+        return {"__total__": True, "words": row}
+    if re.search(r"(?i)^Page\s*No|^Company:|^Address:|^From\s|^STOCK\s+AND\s+SALES", joined):
+        return None
+    if re.search(r"(?i)PRIVATE\s+LIMITED|PVT\.?\s*LTD", joined) and not any(
+        _op_qty_val_cell(t) is not None for t in texts
+    ):
+        return None
+
+    pack_x = centres.get("packing")
+    open_x = centres["opening_qty"]
+    # Pack sits well left of Op.Qty; keep name strictly left of pack band.
+    name_right = (pack_x - 40.0) if pack_x is not None else (open_x - 40.0)
+    name_parts: List[str] = []
+    pack_parts: List[str] = []
+    # (cx, value, was_blank_dash)
+    numeric_tokens: List[Tuple[float, float, bool]] = []
+    for w in row:
+        tok = str(w[4]).strip()
+        cx = (float(w[0]) + float(w[2])) / 2.0
+        if cx < name_right:
+            name_parts.append(tok)
+            continue
+        if pack_x is not None and abs(cx - pack_x) <= 40.0 and _op_qty_val_cell(tok) is None:
+            pack_parts.append(tok)
+            continue
+        val = _op_qty_val_cell(tok)
+        if val is None:
+            continue
+        numeric_tokens.append((cx, val, _op_qty_val_cell_was_blank(tok)))
+
+    if not name_parts:
+        return None
+    name = _clean_name(" ".join(name_parts))
+    name = re.sub(r"[~\u00b7]+$", "", name).strip()
+    if not re.search(r"[A-Za-z]{3,}", name):
+        return None
+    # Greedy left→right: each numeric token used at most once (blank "-" must
+    # not steal the Sales cell that sits slightly right of P.Val blanks).
+    numeric_fields = sorted(
+        (
+            (f, hx)
+            for f, hx in centres.items()
+            if f not in {"product_name", "packing"}
+        ),
+        key=lambda t: t[1],
+    )
+    fields: Dict[str, float] = {}
+    blank_fields: set = set()
+    used: set = set()
+    for field, hx in numeric_fields:
+        best_i = None
+        best_dist = 1e18
+        for i, (cx, _val, _blank) in enumerate(numeric_tokens):
+            if i in used:
+                continue
+            dist = abs(cx - hx)
+            if dist <= 55.0 and dist < best_dist:
+                best_dist = dist
+                best_i = i
+        if best_i is not None:
+            fields[field] = numeric_tokens[best_i][1]
+            if numeric_tokens[best_i][2]:
+                blank_fields.add(field)
+            used.add(best_i)
+
+    if "opening_qty" not in fields and "closing_qty" not in fields and "sales_qty" not in fields:
+        return None
+
+    def _qty(field: str) -> float:
+        return float(fields.get(field, 0.0))
+
+    def _val_or_none(field: str) -> Optional[float]:
+        if field not in fields:
+            return None
+        if field in blank_fields:
+            return None
+        return float(fields[field])
+
+    item = empty_line_item()
+    item["product_name"] = name
+    item["packing"] = _clean_name(" ".join(pack_parts)) or None
+    item["opening_qty"] = _qty("opening_qty")
+    item["opening_value"] = _val_or_none("opening_value")
+    item["receipts_qty"] = _qty("receipts_qty")
+    item["receipts_value"] = _val_or_none("receipts_value")
+    item["sales_qty"] = _qty("sales_qty")
+    item["sales_value"] = _val_or_none("sales_value")
+    if item["sales_value"] is None:
+        item["sales_value"] = 0.0
+    item["closing_qty"] = _qty("closing_qty")
+    item["closing_value"] = _val_or_none("closing_value")
+    if item["closing_value"] is None:
+        item["closing_value"] = 0.0
+    br = fields.get("br_trf")
+    if br is not None and "br_trf" in blank_fields:
+        br = 0.0
+    extra: Dict[str, Any] = {
+        "layout": "stock_sales_op_qty_val_words",
+    }
+    if item.get("opening_value") is not None:
+        extra["opening_value"] = item["opening_value"]
+    if item.get("receipts_value") is not None:
+        extra["receipts_value"] = item["receipts_value"]
+        extra["purchase_value"] = item["receipts_value"]
+    if br is not None:
+        extra["br_trf"] = br
+        # Adaptive reconcile decides whether Br.Trf. is an outward.
+        if br > 0:
+            extra["other_outward_qty"] = br
+    item["extra"] = extra
+    return item
+
+
+def _parse_stock_sales_op_qty_val_words_pages(
+    page_infos: List[Dict[str, Any]], filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse Op.Qty/Op.Val/P.Qty/…/Cls.Val(+Br.Trf) via word x-centres."""
+    if not stock_op_qty_val_consolidated_native_enabled():
+        return None
+    combined = "\n".join(str(p.get("text") or "") for p in page_infos)
+    if not _is_stock_sales_op_qty_val_words_text(combined):
+        return None
+
+    items: List[Dict[str, Any]] = []
+    totals_vals: Dict[str, float] = {}
+    centres: Optional[Dict[str, float]] = None
+    for info in page_infos:
+        words = list(info.get("words") or [])
+        if not words:
+            continue
+        rows = _cluster_words_by_y(words)
+        for row in rows:
+            header = _op_qty_val_header_centres(row)
+            if header:
+                centres = header
+                logger.info(
+                    "[OP_QTY_VAL_WORDS] header_centres=%s",
+                    {k: round(v, 1) for k, v in sorted(header.items())},
+                )
+                continue
+            if not centres:
+                continue
+            parsed = _assign_op_qty_val_row(row, centres)
+            if not parsed:
+                continue
+            if parsed.get("__total__"):
+                # Total row prints Op.Val / P.Val / S.Val / Cls.Val only.
+                for w in parsed.get("words") or []:
+                    tok = str(w[4]).strip().replace(",", "")
+                    if not re.fullmatch(r"-?\d+(?:\.\d+)?", tok):
+                        continue
+                    cx = (float(w[0]) + float(w[2])) / 2.0
+                    best_f, best_d = None, 1e18
+                    for field, hx in centres.items():
+                        if field not in {
+                            "opening_value",
+                            "receipts_value",
+                            "sales_value",
+                            "closing_value",
+                        }:
+                            continue
+                        dist = abs(cx - hx)
+                        if dist < best_d:
+                            best_d = dist
+                            best_f = field
+                    if best_f and best_d <= 60.0:
+                        totals_vals[best_f] = float(tok)
+                continue
+            items.append(parsed)
+
+    if len(items) < 3:
+        logger.info(
+            "[OP_QTY_VAL_WORDS] skip reason=too_few_rows count=%s",
+            len(items),
+        )
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK AND SALES (CONSOLIDATED)"
+    result["line_items"] = items
+    stockist = _stockist_from_op_qty_val_letterhead(combined) or _detect_stockist_from_page_text(
+        combined
+    )
+    if stockist:
+        result["stockist_name"] = stockist
+    company = re.search(
+        r"Company\s*:\s*(.+?)(?:\n|Address:|$)", combined, re.I
+    )
+    if company:
+        result["company_name"] = _clean_name(company.group(1))
+    addr = re.search(
+        r"(?m)^\s*(#[^\n]+?\d{3}\s*\d{3})\s*$", combined
+    )
+    if not addr:
+        addr = re.search(r"(?m)^\s*(#[^\n]{10,120})\s*$", combined)
+    if addr:
+        result["stockist_address"] = _clean_name(addr.group(1))
+    period = re.search(
+        r"From\s+(\d{1,2}[-/][A-Za-z]{3}[-/]\d{2,4}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})"
+        r"\s+To\s+(\d{1,2}[-/][A-Za-z]{3}[-/]\d{2,4}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        combined,
+        re.I,
+    )
+    if period:
+        result["period_from"] = _normalize_date(period.group(1))
+        result["period_to"] = _normalize_date(period.group(2))
+
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "stock_sales_op_qty_val_words"
+    extra["layout"] = "stock_sales_op_qty_val_words"
+    if totals_vals.get("sales_value") is not None:
+        result["totals"]["sales_value"] = totals_vals["sales_value"]
+        extra["sales_value"] = totals_vals["sales_value"]
+    else:
+        result["totals"]["sales_value"] = round(
+            sum(_to_float(i.get("sales_value")) for i in items), 2
+        )
+    if totals_vals.get("closing_value") is not None:
+        result["totals"]["closing_value"] = totals_vals["closing_value"]
+        extra["closing_value"] = totals_vals["closing_value"]
+    else:
+        result["totals"]["closing_value"] = round(
+            sum(_to_float(i.get("closing_value")) for i in items), 2
+        )
+    if totals_vals.get("opening_value") is not None:
+        extra["opening_value"] = totals_vals["opening_value"]
+    if totals_vals.get("receipts_value") is not None:
+        extra["purchase_value"] = totals_vals["receipts_value"]
+    logger.info(
+        "[OP_QTY_VAL_WORDS] rows=%s stockist=%r sales_total=%s closing_total=%s",
+        len(items),
+        result.get("stockist_name"),
+        result["totals"].get("sales_value"),
+        result["totals"].get("closing_value"),
+    )
+    return result
+
+
+def _parse_stock_sales_op_qty_val_words_from_doc(
+    doc: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    page_infos: List[Dict[str, Any]] = []
+    for page_index, page in enumerate(doc):
+        page_infos.append(
+            {
+                "page_index": page_index,
+                "text": page.get_text("text") or "",
+                "words": page.get_text("words") or [],
+            }
+        )
+    return _parse_stock_sales_op_qty_val_words_pages(page_infos, filename)
+
+
 def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Landscape Stock and Sales Detail with a printed Op.Val column.
 
@@ -30278,6 +30760,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if consolidated_opval and consolidated_opval.get("line_items"):
             consolidated_opval["totals"]["extra"]["statement_count"] = 1
             return consolidated_opval
+
+        op_qty_val_words = _parse_stock_sales_op_qty_val_words_from_doc(
+            doc, filename
+        )
+        if op_qty_val_words and op_qty_val_words.get("line_items"):
+            op_qty_val_words["totals"]["extra"]["statement_count"] = 1
+            return op_qty_val_words
 
         detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
         if detail_stmt and detail_stmt.get("line_items"):

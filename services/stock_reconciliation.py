@@ -96,11 +96,43 @@ def _sample_qty(item: Dict[str, Any]) -> float:
     return _printed_or_zero(item, "sample_qty", "free_out_qty")
 
 
-def _other_out_qty(item: Dict[str, Any]) -> float:
+def stock_br_trf_adaptive_identity_enabled() -> bool:
+    """When Br.Trf is printed, pick identity with/without it if either balances.
+
+    Default ON. Does not rewrite printed qtys — only chooses which expected
+    closing to compare against.
+    """
+    value = os.getenv("STOCK_BR_TRF_ADAPTIVE_IDENTITY", "true")
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _br_trf_qty(item: Dict[str, Any]) -> float:
+    """Printed branch-transfer qty (Br.Trf.), if present."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("br_trf") is not None:
+        return _f(extra.get("br_trf"))
+    if extra.get("branch_transfer_qty") is not None:
+        return _f(extra.get("branch_transfer_qty"))
+    return 0.0
+
+
+def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> float:
+    """Outward adjustments (scheme / other / optional Br.Trf.)."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     other = 0.0
+    br = _br_trf_qty(item)
     if extra.get("other_outward_qty") is not None:
-        other += _f(extra.get("other_outward_qty"))
+        o = _f(extra.get("other_outward_qty"))
+        # Native parser often mirrors br_trf into other_outward_qty — count once.
+        if br > 0 and abs(o - br) <= 1e-9:
+            if include_br_trf:
+                other += br
+        else:
+            other += o
+            if include_br_trf and br > 0:
+                other += br
+    elif include_br_trf and br > 0:
+        other += br
     if extra.get("sales_scheme_qty") is not None:
         other += _f(extra.get("sales_scheme_qty"))
     return other
@@ -223,7 +255,8 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     purchase_return = _purchase_return_qty(item)
     expiry = _expiry_qty(item)
     sample = _sample_qty(item)
-    other_out = _other_out_qty(item)
+    br = _br_trf_qty(item)
+    other_plain = _other_out_qty(item, include_br_trf=False)
     free_in = _free_in_qty(item)
     open_pur = opening + purchase + free_in
     total = _printed_total(item)
@@ -247,14 +280,52 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
         base_source = "opening_plus_purchase_plus_returns"
         sret_adj = 0.0  # already in base
 
-    expected = round(
-        base + sret_adj - sales - purchase_return - expiry - sample - other_out,
-        4,
-    )
+    core = base + sret_adj - sales - purchase_return - expiry - sample - other_plain
+    expected_plain = round(core, 4)
+    expected_with_br = round(core - br, 4)
+
+    # Adaptive: some CONSOLIDATED sheets print Br.Trf. that is already
+    # reflected in Cls.Qty; others need Br.Trf. as an outward. Prefer the
+    # variant that matches printed closing; never rewrite printed numbers.
+    br_in_identity = False
+    formula_variant = "opening_plus_purchase_minus_sales"
+    closing_printed = item.get("closing_qty")
+    tol = _qty_tolerance(opening, purchase, sales, br, expected_plain)
+    if (
+        stock_br_trf_adaptive_identity_enabled()
+        and br > tol
+        and closing_printed is not None
+        and closing_printed != ""
+    ):
+        cl = _f(closing_printed)
+        match_br = abs(cl - expected_with_br) <= tol
+        match_plain = abs(cl - expected_plain) <= tol
+        if match_br:
+            expected = expected_with_br
+            br_in_identity = True
+            formula_variant = "opening_plus_purchase_minus_sales_minus_br_trf"
+        elif match_plain:
+            expected = expected_plain
+            br_in_identity = False
+            formula_variant = "opening_plus_purchase_minus_sales_br_trf_excluded"
+        else:
+            # Layout default: Br.Trf. is an outward when neither matches.
+            expected = expected_with_br
+            br_in_identity = True
+            formula_variant = "opening_plus_purchase_minus_sales_minus_br_trf"
+    else:
+        expected = expected_with_br if br > 0 else expected_plain
+        br_in_identity = bool(br > 0)
+        if br_in_identity:
+            formula_variant = "opening_plus_purchase_minus_sales_minus_br_trf"
+
+    other_out = other_plain + (br if br_in_identity else 0.0)
     meta = {
         "base_source": base_source,
         "sales_return_in_total": bool(sret_in_total),
         "base_qty": round(base, 4),
+        "formula_variant": formula_variant,
+        "br_trf_in_identity": bool(br_in_identity),
         "adjustments": {
             "sales_return_qty": round(sret_adj, 4),
             "sales_qty": round(sales, 4),
@@ -262,8 +333,11 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
             "expiry_damage_qty": round(expiry, 4),
             "sample_qty": round(sample, 4),
             "other_outward_qty": round(other_out, 4),
+            "br_trf_qty": round(br, 4),
         },
         "expected_closing_qty": expected,
+        "expected_closing_without_br_trf": expected_plain,
+        "expected_closing_with_br_trf": expected_with_br,
     }
     return expected, meta
 
@@ -354,7 +428,10 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
         closing_ok = False
 
     valid = bool(total_ok and closing_ok)
-    value_diag = _value_reconciliation_diagnostic(item)
+    # Value identity ignores Br.Trf.; skip when transfer qty is printed.
+    value_diag = None
+    if _br_trf_qty(item) <= _TOL:
+        value_diag = _value_reconciliation_diagnostic(item)
 
     out: Dict[str, Any] = {
         "expected_total_qty": exp_total,
@@ -372,10 +449,57 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
         "sales_return_in_total": formula.get("sales_return_in_total"),
         "base_qty": formula.get("base_qty"),
         "adjustments": formula.get("adjustments"),
+        "formula_variant": formula.get("formula_variant"),
+        "br_trf_in_identity": formula.get("br_trf_in_identity"),
     }
     if value_diag is not None:
         out["value"] = value_diag
+    # Alternate expected when Br.Trf. adaptive considered both sides.
+    if formula.get("expected_closing_with_br_trf") is not None:
+        out["expected_closing_with_br_trf"] = formula.get(
+            "expected_closing_with_br_trf"
+        )
+    if formula.get("expected_closing_without_br_trf") is not None:
+        out["expected_closing_without_br_trf"] = formula.get(
+            "expected_closing_without_br_trf"
+        )
     return out
+
+
+def sync_br_trf_other_outward_for_identity(item: Dict[str, Any]) -> None:
+    """Align extra.other_outward_qty with adaptive Br.Trf. identity choice.
+
+    Keeps printed ``br_trf`` always. Clears mirrored ``other_outward_qty`` when
+    the plain Op+P-S formula matches closing (so classifiers do not subtract
+    Br.Trf. twice / incorrectly). Never rewrites opening/sales/closing qtys.
+    """
+    if not isinstance(item, dict):
+        return
+    if not stock_br_trf_adaptive_identity_enabled():
+        return
+    br = _br_trf_qty(item)
+    if br <= _TOL:
+        return
+    _expected, meta = compute_closing_formula(item)
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    if meta.get("br_trf_in_identity"):
+        extra["other_outward_qty"] = br
+        extra["br_trf_identity"] = "included"
+    else:
+        mirrored = extra.get("other_outward_qty")
+        if mirrored is not None and abs(_f(mirrored) - br) <= 1e-9:
+            extra.pop("other_outward_qty", None)
+        extra["br_trf_identity"] = "excluded"
+    logger.info(
+        "STOCK_BR_TRF_IDENTITY product=%r br_trf=%s role=%s variant=%s",
+        str(item.get("product_name") or "")[:60],
+        br,
+        extra.get("br_trf_identity"),
+        meta.get("formula_variant"),
+    )
 
 
 def apply_stock_reconciliation(
@@ -428,6 +552,8 @@ def apply_stock_reconciliation(
         if name.upper().startswith("TOTAL") or name.upper().startswith("GRAND"):
             continue
 
+        # Align Br.Trf. ↔ other_outward before scoring so identity + classifier agree.
+        sync_br_trf_other_outward_for_identity(item)
         recon = reconcile_row(item)
         extra = item.setdefault("extra", {})
         if not isinstance(extra, dict):
@@ -435,6 +561,30 @@ def apply_stock_reconciliation(
             item["extra"] = extra
         extra["reconciliation"] = recon
         extra["stock_identity_ok"] = bool(recon.get("valid"))
+        if recon.get("br_trf_in_identity") is not None:
+            extra["br_trf_in_identity"] = bool(recon.get("br_trf_in_identity"))
+        # Candidate alternate when adaptive considered both Br formulas.
+        if (
+            not recon.get("valid")
+            and recon.get("expected_closing_with_br_trf") is not None
+            and recon.get("expected_closing_without_br_trf") is not None
+        ):
+            cands = extra.setdefault("candidates", [])
+            if isinstance(cands, list):
+                cands.append(
+                    {
+                        "source": "br_trf_adaptive_identity",
+                        "fields": {},
+                        "reason": "printed_closing_matches_neither_br_trf_variant",
+                        "would_balance": False,
+                        "expected_with_br_trf": recon.get(
+                            "expected_closing_with_br_trf"
+                        ),
+                        "expected_without_br_trf": recon.get(
+                            "expected_closing_without_br_trf"
+                        ),
+                    }
+                )
 
         if recon.get("valid"):
             pass_n += 1

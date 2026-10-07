@@ -79,6 +79,8 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "issue",
     ),
     "free_out": (
+        # Set only when Br.Trf. participates in identity (see sync_br_trf_*).
+        "other_outward_qty",
         "free_out_qty",
         "sales_scheme_qty",
         "sales_scheme",
