@@ -10,9 +10,12 @@ Weak OCR/heuristic methods always receive full quality scoring.
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Generic / weak readers may be incomplete. Named format parsers stay primary.
 _GENERIC_METHODS = {
@@ -480,6 +483,14 @@ def evaluate_extraction_quality(
     # Vetoed input types use classifier thresholds, not the 20% tolerance.
     if veto_active:
         identity_gate = -1.0  # any fail_count > 0 fails when identity applies
+    # Native Op.Qty/Op.Val/…/Br.Trf words parses: many printed rows never balance
+    # (Br.Trf. vs Cls.Qty). Keep column-accurate extract; do not Gemini-overwrite.
+    _keep_on_identity = method in {
+        "stock_sales_op_qty_val_words",
+        "stock_sales_consolidated_opval",
+    } and os.getenv(
+        "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
     if (
         protected
         and items
@@ -494,9 +505,17 @@ def evaluate_extraction_quality(
                     reasons.append("stock_identity_failure")
                 hard_fail = True
         elif fail_pct > identity_gate:
-            protected = False
-            reasons.append("stock_identity_failure")
-            hard_fail = True
+            if _keep_on_identity:
+                logger.info(
+                    "STOCK_OP_QTY_VAL_KEEP method=%s fail_pct=%.1f "
+                    "reason=keep_native_skip_gemini_identity_fallback",
+                    method,
+                    fail_pct,
+                )
+            else:
+                protected = False
+                reasons.append("stock_identity_failure")
+                hard_fail = True
     if protected and not (veto_active and veto_info.get("veto")):
         return {
             "quality": "good",

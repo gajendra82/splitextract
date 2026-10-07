@@ -1728,7 +1728,34 @@ def _apply_fields_to_item(
 
         if is_name:
             text = None if missing else str(raw).strip()
-            if canon == "product_name":
+            if canon == "product_name" and text:
+                # Division banner glued into first Item cell:
+                # "HIMALAYA ZANDRA\nARJUNA TAB" → keep SKU only.
+                parts = [p.strip() for p in re.split(r"[\n\r]+", text) if p.strip()]
+                if len(parts) >= 2:
+                    productish = [
+                        p
+                        for p in parts
+                        if re.search(
+                            r"(?i)TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LIQ|WASH|GRAN|CREAM",
+                            p,
+                        )
+                    ]
+                    banners = [
+                        p
+                        for p in parts
+                        if re.search(
+                            r"(?i)HIMALAYA|ZANDRA|WELLNESS|DIVISION|DRUG\s*CO",
+                            p,
+                        )
+                        and p not in productish
+                    ]
+                    if productish:
+                        text = " ".join(productish)
+                    elif banners:
+                        text = " ".join(p for p in parts if p not in banners) or text
+                item["product_name"] = text
+            elif canon == "product_name":
                 item["product_name"] = text
             elif canon == "pack":
                 item["packing"] = text
@@ -2735,7 +2762,18 @@ _VISION_TABLE_TLS = threading.local()
 
 
 def stash_vision_table_fallback_meta(meta: Optional[Dict[str, Any]]) -> None:
-    _VISION_TABLE_TLS.meta = dict(meta or {})
+    payload = dict(meta or {})
+    _VISION_TABLE_TLS.meta = payload
+    # Lead SKUs kept separately so Op_Stk can prepend after take()/apply clears meta.
+    leads = payload.get("lead_products")
+    if isinstance(leads, list) and leads:
+        _VISION_TABLE_TLS.lead_products = list(leads)
+
+
+def take_vision_table_lead_products() -> List[Any]:
+    leads = getattr(_VISION_TABLE_TLS, "lead_products", None) or []
+    _VISION_TABLE_TLS.lead_products = None
+    return list(leads) if isinstance(leads, list) else []
 
 
 def take_vision_table_fallback_meta() -> Dict[str, Any]:

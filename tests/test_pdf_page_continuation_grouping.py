@@ -67,6 +67,16 @@ class TestPdfPageContinuationGrouping(unittest.TestCase):
         self.assertTrue(_page_text_looks_like_continuation(PAGE2_CONTINUED))
         self.assertFalse(_page_text_looks_like_continuation(PAGE1))
 
+    def test_page_no_hyphen_footer_continuation(self):
+        """CONSOLIDATED PDFs print 'Page No.- 2' only in the footer band."""
+        footer_page = (
+            "Item\nPack\nOp.Qty\nOp.Val\nP.Qty\n"
+            "PILEX KIT\nKIT\n0\n100\n10\n60\n"
+            "VARDHMAN MEDISALES PRIVATE LIMITED\n"
+            "Page No.- 2\n"
+        )
+        self.assertTrue(_page_text_looks_like_continuation(footer_page))
+
     def test_detect_stockist_skips_continuation_page(self):
         self.assertIsNotNone(_detect_stockist_from_page_text(PAGE1))
         self.assertIsNone(_detect_stockist_from_page_text(PAGE2_CONTINUED))

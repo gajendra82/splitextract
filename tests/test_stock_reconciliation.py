@@ -309,8 +309,17 @@ class HioraRecoveryPathTests(unittest.TestCase):
     """Recovery: 30→38 accepted; 30→30 stays failed; no blind rewrite."""
 
     def setUp(self):
-        self._env = {k: os.environ.get(k) for k in ("STOCK_RECONCILIATION_ENFORCE",)}
+        self._env = {
+            k: os.environ.get(k)
+            for k in (
+                "STOCK_RECONCILIATION_ENFORCE",
+                # Keep vision result when identity fails — this suite asserts
+                # reconciliation_failed on the returned row, not path fallback.
+                "STOCK_VISION_TABLE_QUALITY_FALLBACK",
+            )
+        }
         os.environ["STOCK_RECONCILIATION_ENFORCE"] = "true"
+        os.environ["STOCK_VISION_TABLE_QUALITY_FALLBACK"] = "false"
 
     def tearDown(self):
         for k, v in self._env.items():
