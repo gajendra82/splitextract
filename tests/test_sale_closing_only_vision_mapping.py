@@ -160,6 +160,116 @@ class SaleClosingOnlyMappingTests(unittest.TestCase):
         self.assertIsNone(item.get("receipts_qty"))
 
 
+class BareQtyValueSaleClosingTests(unittest.TestCase):
+    """Vision often drops <SALE>/<CLOSING> and only returns bare QTY/VALUE pairs."""
+
+    def test_two_bare_qty_value_pairs_map_to_sales_and_closing(self):
+        import os
+
+        os.environ["STOCK_HEADER_QTY_VALUE_SEQUENCE"] = "true"
+        table = {
+            "header_rows": [
+                {"text": "ITEM DESCRIPTION", "col_index": 0},
+                {"text": "QTY", "col_index": 1},
+                {"text": "VALUE", "col_index": 2},
+                {"text": "QTY", "col_index": 3},
+                {"text": "VALUE", "col_index": 4},
+                {"text": "RE-ORDER", "col_index": 5},
+                {"text": "M.EXP", "col_index": 6},
+            ],
+            "column_count": 7,
+            "rows": [
+                {
+                    "row_index": 0,
+                    "cells": [
+                        "AACTARIL SOAP",
+                        "75GM",
+                        "16",
+                        "1181",
+                        "100",
+                        "7380",
+                        "-",
+                        "10/28",
+                    ],
+                    "is_total_row": False,
+                },
+                {
+                    "row_index": 1,
+                    "cells": [
+                        "ABANA TAB.",
+                        "50'S",
+                        "30",
+                        "4235",
+                        "160",
+                        "22587",
+                        "-",
+                        "4/28",
+                    ],
+                    "is_total_row": False,
+                },
+            ],
+            "proposed_mapping": [],
+            "unreadable_cells": [],
+        }
+        mapped = map_vision_table(table)
+        canons = [c["canonical"] for c in mapped["column_map"]]
+        self.assertIn("sales_qty", canons)
+        self.assertIn("closing_qty", canons)
+        self.assertNotIn("opening_qty", canons)
+        self.assertNotIn("purchase_qty", canons)
+        item = mapped["line_items"][0]
+        self.assertEqual(item["sales_qty"], 16.0)
+        self.assertEqual(item["sales_value"], 1181.0)
+        self.assertEqual(item["closing_qty"], 100.0)
+        self.assertEqual(item["closing_value"], 7380.0)
+        self.assertIsNone(item.get("opening_qty"))
+        self.assertIsNone(item.get("receipts_qty"))
+
+    def test_reread_cannot_invent_opening_over_sale_closing(self):
+        from services.stock_vision_table import merge_reread
+
+        first = {
+            "product_name": "AACTARIL SOAP",
+            "opening_qty": None,
+            "receipts_qty": None,
+            "sales_qty": 16.0,
+            "sales_value": 1181.0,
+            "closing_qty": 100.0,
+            "closing_value": 7380.0,
+            "extra": {
+                "vision_row_index": 0,
+                "field_source": {
+                    "opening_qty": "missing",
+                    "purchase_qty": "missing",
+                    "receipts_qty": "missing",
+                    "sales_qty": "printed",
+                    "closing_qty": "printed",
+                },
+            },
+        }
+        bad = {
+            "product_name": "AACTARIL SOAP",
+            "opening_qty": 16.0,
+            "receipts_qty": 100.0,
+            "sales_qty": 0.0,
+            "closing_qty": 116.0,
+            "extra": {
+                "vision_row_index": 0,
+                "field_source": {
+                    "opening_qty": "printed",
+                    "purchase_qty": "printed",
+                    "sales_qty": "missing",
+                    "closing_qty": "printed",
+                },
+            },
+        }
+        merged = merge_reread([first], [bad], prefer_reconciled=True)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["sales_qty"], 16.0)
+        self.assertEqual(merged[0]["closing_qty"], 100.0)
+        self.assertIsNone(merged[0].get("opening_qty"))
+
+
 class OpeningReceiptSaleClosingUnchangedTests(unittest.TestCase):
     """Full Opening+Receipt+Sale+Closing layout must not shift columns."""
 

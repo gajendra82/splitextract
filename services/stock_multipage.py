@@ -19,6 +19,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 STOCK_MULTI_PAGE_FLAG = "STOCK_MULTI_PAGE_CAMERA_PDF_ENABLED"
+# When on: exact_duplicate requires a full row fingerprint (name+pack+qty+value),
+# not product name alone. Same name with different stock/sales figures stays.
+STOCK_MULTIPAGE_ROW_FINGERPRINT_FLAG = "STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP"
 
 # Top-level qty fields + extra aliases used for conflict / continuation checks.
 _TOP_QTY = (
@@ -33,6 +36,18 @@ _EXTRA_QTY = (
     ("total_stock", "total_qty"),
     ("lms", "lms"),
 )
+_TOP_VALUE = (
+    "opening_value",
+    "sales_value",
+    "closing_value",
+)
+_EXTRA_VALUE = (
+    ("opening_value", "opening_value"),
+    ("receipts_value", "receipts_value"),
+    ("purchase_value", "purchase_value"),
+    ("exp_damage", "expiry_damage_qty"),
+    ("expiry_damage", "expiry_damage_qty"),
+)
 
 
 def is_multipage_camera_pdf_enabled() -> bool:
@@ -44,13 +59,67 @@ def is_multipage_camera_pdf_enabled() -> bool:
     }
 
 
+def is_row_fingerprint_dedup_enabled() -> bool:
+    """Full-row fingerprint dedupe (default ON — name-alone collapse is unsafe)."""
+    return os.getenv(STOCK_MULTIPAGE_ROW_FINGERPRINT_FLAG, "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+# Cyrillic lookalikes Vision sometimes emits instead of Latin (e.g. ТАВ → TAB).
+_CYR_LAT_CONFUSABLES = str.maketrans(
+    {
+        "А": "A",
+        "В": "B",
+        "Е": "E",
+        "К": "K",
+        "М": "M",
+        "Н": "H",
+        "О": "O",
+        "Р": "P",
+        "С": "C",
+        "Т": "T",
+        "Х": "X",
+        "а": "a",
+        "е": "e",
+        "о": "o",
+        "р": "p",
+        "с": "c",
+        "у": "y",
+        "х": "x",
+    }
+)
+
+
 def normalize_product_name_key(name: Any) -> str:
-    """Reuse project-style alphanumeric product key (same as OCR benchmark)."""
-    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+    """Alphanumeric product key; map common Cyrillic OCR confusables to Latin."""
+    raw = str(name or "").translate(_CYR_LAT_CONFUSABLES).lower()
+    return re.sub(r"[^a-z0-9]", "", raw)
 
 
 def normalize_pack_key(pack: Any) -> str:
     return re.sub(r"[^a-z0-9]", "", str(pack or "").lower())
+
+
+def pack_numeric_core(pack: Any) -> str:
+    """Leading numeric core of a pack string (100ml → 100, 10mi → 10)."""
+    return re.sub(r"[^0-9.]", "", normalize_pack_key(pack))
+
+
+def packs_compatible(pack_a: Any, pack_b: Any) -> bool:
+    """True when packs are the same unit or OCR variants of one unit."""
+    a, b = normalize_pack_key(pack_a), normalize_pack_key(pack_b)
+    if not a or not b:
+        return True
+    if a == b:
+        return True
+    na, nb = pack_numeric_core(a), pack_numeric_core(b)
+    if na and nb and na == nb:
+        return True
+    return False
 
 
 def normalize_product_code_key(code: Any) -> str:
@@ -107,6 +176,175 @@ def printed_qty(item: Dict[str, Any], field: str) -> Optional[float]:
                 return _as_float(ex.get(ex_key))
             return _as_float(item.get(canon))
     return None
+
+
+def printed_value(item: Dict[str, Any], field: str) -> Optional[float]:
+    """Return printed money/value field or None when missing / not readable."""
+    fs = _field_source(item)
+    ex = _extra(item)
+    if field in _TOP_VALUE:
+        if fs.get(field) == "missing":
+            return None
+        top = _as_float(item.get(field))
+        if top is not None:
+            return top
+        if fs.get(field) == "printed":
+            return _as_float(ex.get(field))
+        return None
+    for ex_key, canon in _EXTRA_VALUE:
+        if field in (ex_key, canon):
+            if fs.get(canon) == "missing" or fs.get(ex_key) == "missing":
+                return None
+            if ex.get(ex_key) is not None:
+                return _as_float(ex.get(ex_key))
+            if item.get(canon) is not None:
+                return _as_float(item.get(canon))
+            return None
+    return None
+
+
+def _norm_fp_num(val: Optional[float]) -> Optional[float]:
+    if val is None:
+        return None
+    return round(float(val), 2)
+
+
+def row_fingerprint(item: Dict[str, Any]) -> Tuple[Any, ...]:
+    """Stable identity of an extracted statement row (not product name alone).
+
+    Same product name + different qty/value figures → different fingerprints.
+    Used only for genuine OCR/page-overlap duplicate collapse.
+    """
+    name = normalize_product_name_key(item.get("product_name"))
+    pack = normalize_pack_key(item.get("packing"))
+    parts: List[Any] = [name, pack]
+    for field in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+    ):
+        parts.append(_norm_fp_num(printed_qty(item, field)))
+    for field in ("opening_value", "sales_value", "closing_value"):
+        parts.append(_norm_fp_num(printed_value(item, field)))
+    # Receipts/purchase value: prefer receipts_value, else purchase_value.
+    rv = printed_value(item, "receipts_value")
+    if rv is None:
+        rv = printed_value(item, "purchase_value")
+    parts.append(_norm_fp_num(rv))
+    parts.append(_norm_fp_num(printed_value(item, "expiry_damage_qty")))
+    return tuple(parts)
+
+
+def _same_column_shape(
+    qa: Dict[str, Optional[float]], qb: Dict[str, Optional[float]]
+) -> bool:
+    """True when both rows print overlapping core qty columns (not complementary halves)."""
+    core = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+    a_set = {f for f in core if qa.get(f) is not None}
+    b_set = {f for f in core if qb.get(f) is not None}
+    if len(a_set) < 2 or len(b_set) < 2:
+        return False
+    # Complementary page-split halves (disjoint columns) are not the same shape.
+    if a_set.isdisjoint(b_set):
+        return False
+    return True
+
+
+def _printed_number_bag(item: Dict[str, Any]) -> List[float]:
+    """Printed qty/value numbers used to detect OCR page-overlap re-reads."""
+    bag: List[float] = []
+    for field in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+    ):
+        v = printed_qty(item, field)
+        if v is not None:
+            bag.append(round(float(v), 2))
+    for field in ("opening_value", "sales_value", "closing_value"):
+        v = printed_value(item, field)
+        if v is not None:
+            bag.append(round(float(v), 2))
+    rv = printed_value(item, "receipts_value")
+    if rv is None:
+        rv = printed_value(item, "purchase_value")
+    if rv is not None:
+        bag.append(round(float(rv), 2))
+    return bag
+
+
+def _numbers_nearly_equal(a: float, b: float) -> bool:
+    if abs(a - b) <= 0.51:
+        return True
+    scale = max(abs(a), abs(b), 1.0)
+    return abs(a - b) / scale <= 0.02
+
+
+def is_ocr_near_duplicate(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    """True when two same-identity rows look like OCR re-reads of one statement line.
+
+    Handles camera page-overlap where Vision remaps columns (e.g. sale/closing
+    swap) or drifts a value slightly. Does NOT match complementary page-halves
+    (disjoint columns) or truly different transaction figures.
+    """
+    if not packs_compatible(left.get("packing"), right.get("packing")):
+        return False
+    qa, qb = _printed_qty_map(left), _printed_qty_map(right)
+    if not _same_column_shape(qa, qb):
+        return False
+    bag_a = _printed_number_bag(left)
+    bag_b = _printed_number_bag(right)
+    if len(bag_a) < 2 or len(bag_b) < 2:
+        return False
+
+    # Multiset / column-swap: same numbers in different fields.
+    sa, sb = sorted(bag_a), sorted(bag_b)
+    if len(sa) == len(sb) and all(_numbers_nearly_equal(x, y) for x, y in zip(sa, sb)):
+        return True
+
+    # Shared printed numbers (Jaccard on rounded values with near-equality).
+    used_b = [False] * len(bag_b)
+    shared = 0
+    for av in bag_a:
+        for i, bv in enumerate(bag_b):
+            if used_b[i]:
+                continue
+            if _numbers_nearly_equal(av, bv):
+                used_b[i] = True
+                shared += 1
+                break
+    need = min(2, min(len(bag_a), len(bag_b)))
+    if shared >= need and shared >= 0.5 * min(len(bag_a), len(bag_b)):
+        return True
+    return False
+
+
+def _row_print_richness(item: Dict[str, Any]) -> int:
+    score = len(_printed_number_bag(item))
+    if normalize_pack_key(item.get("packing")):
+        score += 2
+    return score
+
+
+def is_weak_ocr_fragment(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
+    """Pack-less OCR twin of a packed same-name row (Vision junk / page-overlap)."""
+    qa, qb = _printed_qty_map(left), _printed_qty_map(right)
+    if not _same_column_shape(qa, qb):
+        return False
+    pa = normalize_pack_key(left.get("packing"))
+    pb = normalize_pack_key(right.get("packing"))
+    if pa and pb:
+        return False
+    if not pa and not pb:
+        return False
+    # One side missing pack while the other has a pack → fragment of the packed row.
+    return True
 
 
 def stamp_page_number(item: Dict[str, Any], page_number: int) -> Dict[str, Any]:
@@ -178,6 +416,51 @@ def classify_pair(
     """exact_duplicate | continuation | conflict | independent."""
     qa, qb = _printed_qty_map(left), _printed_qty_map(right)
     conflicts = [f for f in qa if _values_conflict(qa[f], qb[f])]
+    # Money/value conflicts (same schema fields only).
+    for field in _TOP_VALUE:
+        if _values_conflict(printed_value(left, field), printed_value(right, field)):
+            conflicts.append(field)
+    rv_l = printed_value(left, "receipts_value")
+    if rv_l is None:
+        rv_l = printed_value(left, "purchase_value")
+    rv_r = printed_value(right, "receipts_value")
+    if rv_r is None:
+        rv_r = printed_value(right, "purchase_value")
+    if _values_conflict(rv_l, rv_r):
+        conflicts.append("receipts_value")
+
+    if is_row_fingerprint_dedup_enabled():
+        # Genuine OCR/page-overlap duplicate: full row fingerprint match, or
+        # near-duplicate when Vision re-reads the same line with drift/swap.
+        if row_fingerprint(left) == row_fingerprint(right):
+            return "exact_duplicate"
+        if is_ocr_near_duplicate(left, right):
+            return "exact_duplicate"
+        if is_weak_ocr_fragment(left, right):
+            return "exact_duplicate"
+        if not packs_compatible(left.get("packing"), right.get("packing")):
+            return "independent"
+        if conflicts:
+            return "conflict"
+        # Two complete rows with the same column shape but unrelated figures
+        # must both survive (name alone is not enough to collapse).
+        if _same_column_shape(qa, qb):
+            return "independent"
+        a_only = [f for f in qa if qa[f] is not None and qb[f] is None]
+        b_only = [f for f in qa if qb[f] is not None and qa[f] is None]
+        overlap_equal = [
+            f
+            for f in qa
+            if qa[f] is not None and qb[f] is not None and abs(qa[f] - qb[f]) <= 0.51
+        ]
+        if a_only and b_only and not conflicts:
+            return "continuation"
+        if overlap_equal and (a_only or b_only) and not conflicts:
+            return "continuation"
+        if a_only or b_only:
+            return "continuation"
+        return "independent"
+
     if conflicts:
         return "conflict"
     # Any overlapping printed equal values + no conflicts
@@ -278,11 +561,18 @@ def resolve_cross_page_product_rows(
     line_items: Sequence[Dict[str, Any]],
     *,
     page_count: int = 1,
+    _pack_split: bool = True,
+    _log_pages: bool = True,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """Deduplicate / continue products across pages.
 
     Returns (resolved_items, diagnostics).
+
+    Dedup is never keyed by product name alone. With
+    STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP (default on), exact_duplicate
+    requires a full row fingerprint match (name+pack+qty+value).
     """
+    fingerprint_on = is_row_fingerprint_dedup_enabled()
     diagnostics: Dict[str, Any] = {
         "multi_page": page_count > 1,
         "page_count": int(page_count),
@@ -293,13 +583,40 @@ def resolve_cross_page_product_rows(
         "kept_separate": 0,
         "exact_duplicates_collapsed": 0,
         "continuations_merged": 0,
+        "fingerprint_dedup": fingerprint_on,
+        "duplicates_removed": 0,
+        "removed_duplicates": [],
     }
     items = [deepcopy(it) for it in (line_items or []) if isinstance(it, dict)]
     if page_count <= 1 or len(items) < 2:
         diagnostics["output_rows"] = len(items)
+        diagnostics["total_before_dedupe"] = len(items)
+        diagnostics["total_after_dedupe"] = len(items)
         return items, diagnostics
 
-    # Group by strong identity. Name-only groups are candidates only.
+    # Per-page counts for MULTIPAGE EXTRACTION debug.
+    per_page_counts: Dict[int, int] = defaultdict(int)
+    for it in items:
+        p = int(it.get("page_number") or _extra(it).get("page_number") or 0)
+        per_page_counts[p] += 1
+    diagnostics["per_page_extracted_rows"] = dict(sorted(per_page_counts.items()))
+    diagnostics["total_before_dedupe"] = len(items)
+    if _log_pages:
+        for pno, cnt in sorted(per_page_counts.items()):
+            logger.info(
+                "MULTIPAGE EXTRACTION page=%s extracted_rows=%s",
+                pno,
+                cnt,
+            )
+        logger.info(
+            "MULTIPAGE EXTRACTION total_before_dedupe=%s fingerprint_dedup=%s",
+            len(items),
+            fingerprint_on,
+        )
+
+    # Group by identity. With fingerprint dedupe, prefer name-level groups so
+    # OCR pack drift (100 vs 100ml, 10mi vs 10ml) can still near-match; pack
+    # incompatibility is enforced inside classify_pair.
     groups: Dict[Tuple[Any, ...], List[Dict[str, Any]]] = defaultdict(list)
     methods: Dict[Tuple[Any, ...], str] = {}
     unmatched: List[Dict[str, Any]] = []
@@ -308,10 +625,16 @@ def resolve_cross_page_product_rows(
         if method == "none":
             unmatched.append(it)
             continue
+        if fingerprint_on and method in ("name", "name_pack"):
+            name = normalize_product_name_key(it.get("product_name"))
+            if name:
+                key = ("n", name)
+                method = "name"
         groups[key].append(it)
         methods[key] = method
 
     resolved: List[Dict[str, Any]] = list(unmatched)
+    removed_log: List[Dict[str, Any]] = []
 
     for key, group in groups.items():
         method = methods[key]
@@ -334,23 +657,56 @@ def resolve_cross_page_product_rows(
             ),
         )
 
-        # Name-only: do not merge across different packs if packs appear.
+        # Name-only: incompatible pack numeric cores stay separate
+        # (e.g. 100ml vs 200ml), but OCR unit drift (100 vs 100ml) may merge.
         if method == "name":
-            packs = {
-                normalize_pack_key(g.get("packing"))
+            pack_cores = {
+                pack_numeric_core(g.get("packing"))
                 for g in group_sorted
-                if normalize_pack_key(g.get("packing"))
+                if pack_numeric_core(g.get("packing"))
             }
-            if len(packs) > 1:
+            if len(pack_cores) > 1:
+                # Split into compatible pack buckets first.
+                by_core: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+                no_core: List[Dict[str, Any]] = []
                 for g in group_sorted:
-                    ex = _extra(g)
-                    ex["cross_page_resolution"] = "kept_separate"
-                    ex["cross_page_identity_ambiguous"] = True
-                    ex["identity_match_method"] = method
-                    diagnostics["ambiguous_rows"] += 1
-                    diagnostics["kept_separate"] += 1
-                    resolved.append(g)
-                continue
+                    core = pack_numeric_core(g.get("packing"))
+                    if core:
+                        by_core[core].append(g)
+                    else:
+                        no_core.append(g)
+                # Attach pack-less rows to the largest core group (OCR fragment).
+                if no_core and by_core:
+                    primary = max(by_core.values(), key=len)
+                    primary.extend(no_core)
+                    no_core = []
+                split_groups = list(by_core.values())
+                if no_core:
+                    split_groups.append(no_core)
+                # Process each pack-core subgroup independently below via recursion
+                # on a flat local list — fall through with group_sorted replaced
+                # only when a single core remains; otherwise handle each subgroup.
+                if len(split_groups) > 1 and _pack_split:
+                    for sub in split_groups:
+                        sub_out, sub_diag = resolve_cross_page_product_rows(
+                            sub,
+                            page_count=page_count,
+                            _pack_split=False,
+                            _log_pages=False,
+                        )
+                        resolved.extend(sub_out)
+                        for dk in (
+                            "dedup_candidates",
+                            "merged_rows",
+                            "ambiguous_rows",
+                            "kept_separate",
+                            "exact_duplicates_collapsed",
+                            "continuations_merged",
+                            "duplicates_removed",
+                        ):
+                            diagnostics[dk] += int(sub_diag.get(dk) or 0)
+                        removed_log.extend(sub_diag.get("removed_duplicates") or [])
+                    continue
 
         # Greedy merge chain: try to fold each next row into an accumulator bucket.
         buckets: List[List[Dict[str, Any]]] = [[group_sorted[0]]]
@@ -360,13 +716,65 @@ def resolve_cross_page_product_rows(
                 kind = classify_pair(bucket[-1], nxt)
                 # Also allow merge against merged view of bucket
                 if kind in ("conflict", "independent"):
-                    kind2 = classify_pair(merge_line_items(bucket, identity_method=method, resolution="probe"), nxt)
+                    kind2 = classify_pair(
+                        merge_line_items(
+                            bucket, identity_method=method, resolution="probe"
+                        ),
+                        nxt,
+                    )
                     if kind2 in ("continuation", "exact_duplicate"):
                         kind = kind2
                 if kind == "exact_duplicate":
                     bucket.append(nxt)
+                    # Richer OCR row becomes merge base (keeps real pack/values).
+                    bucket.sort(
+                        key=lambda r: (
+                            _row_print_richness(r),
+                            -int(
+                                r.get("page_number")
+                                or _extra(r).get("page_number")
+                                or 0
+                            ),
+                        ),
+                        reverse=True,
+                    )
                     placed = True
                     diagnostics["exact_duplicates_collapsed"] += 1
+                    diagnostics["duplicates_removed"] += 1
+                    kept_name = str(bucket[0].get("product_name") or "")
+                    drop_name = str(nxt.get("product_name") or "")
+                    if not fingerprint_on:
+                        reason = "qty_overlap_exact_duplicate"
+                    elif any(
+                        row_fingerprint(r) == row_fingerprint(nxt) for r in bucket
+                    ):
+                        reason = "row_fingerprint_match"
+                    elif any(is_ocr_near_duplicate(r, nxt) for r in bucket):
+                        reason = "ocr_near_duplicate"
+                    elif any(is_weak_ocr_fragment(r, nxt) for r in bucket):
+                        reason = "ocr_weak_fragment"
+                    else:
+                        reason = "ocr_near_duplicate"
+                    removed_log.append(
+                        {
+                            "product_name": drop_name,
+                            "kept_product_name": kept_name,
+                            "reason": reason,
+                            "page": int(
+                                nxt.get("page_number")
+                                or _extra(nxt).get("page_number")
+                                or 0
+                            ),
+                        }
+                    )
+                    logger.info(
+                        "MULTIPAGE EXTRACTION duplicate_removed product=%s "
+                        "kept=%s reason=%s page=%s",
+                        drop_name,
+                        kept_name,
+                        reason,
+                        removed_log[-1]["page"],
+                    )
                     break
                 if kind == "continuation":
                     # Name-only continuation requires sparse complementary side
@@ -416,9 +824,19 @@ def resolve_cross_page_product_rows(
 
     resolved.sort(key=_sort_key)
     diagnostics["output_rows"] = len(resolved)
+    diagnostics["total_after_dedupe"] = len(resolved)
+    diagnostics["removed_duplicates"] = removed_log
+    logger.info(
+        "MULTIPAGE EXTRACTION total_before_dedupe=%s duplicates_removed=%s "
+        "total_after_dedupe=%s final_persisted_rows=%s",
+        diagnostics["total_before_dedupe"],
+        diagnostics["duplicates_removed"],
+        diagnostics["total_after_dedupe"],
+        diagnostics["total_after_dedupe"],
+    )
     logger.info(
         "STOCK_MULTIPAGE resolve input=%s output=%s candidates=%s merged=%s "
-        "ambiguous=%s kept_separate=%s pages=%s",
+        "ambiguous=%s kept_separate=%s pages=%s fingerprint=%s",
         diagnostics["input_rows"],
         diagnostics["output_rows"],
         diagnostics["dedup_candidates"],
@@ -426,6 +844,7 @@ def resolve_cross_page_product_rows(
         diagnostics["ambiguous_rows"],
         diagnostics["kept_separate"],
         page_count,
+        fingerprint_on,
     )
     return resolved, diagnostics
 
@@ -478,6 +897,11 @@ _REPEATED_HEADER_NAME = re.compile(
     r"lms|pack(ing|g)?|code|qty|value)$",
     re.I,
 )
+# Banner / division lines Vision sometimes emits as product rows.
+_BANNER_PRODUCT_NAME = re.compile(
+    r"(wellness\s*com|stock\s*&\s*sales|item\s*description|reorder\s*:)",
+    re.I,
+)
 
 
 def is_valid_stock_page_image(file_bytes: bytes) -> bool:
@@ -510,6 +934,8 @@ def _looks_like_repeated_header_row(item: Dict[str, Any]) -> bool:
     if not name:
         return False
     if _REPEATED_HEADER_NAME.match(name):
+        return True
+    if _BANNER_PRODUCT_NAME.search(name):
         return True
     # Header rows rarely have any printed qty identity fields.
     qty_printed = any(

@@ -123,6 +123,14 @@ def _majority_kind(votes: List[str]) -> Optional[str]:
     return max(counts.items(), key=lambda kv: kv[1])[0]
 
 
+_SALE_CLOSING_LAYOUT_FIELDS: Tuple[str, ...] = (
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value",
+)
+
+
 def _infer_qty_value_canons_from_rows(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
@@ -130,10 +138,10 @@ def _infer_qty_value_canons_from_rows(
     """Infer canonical column roles from cell contents (left-to-right geometry).
 
     Detects optional leading serial + product + optional pack, then assigns
-    opening/receipt/issue/closing qty+value pairs. Returns None when the
-    layout is not confident enough.
+    qty/value pairs. Exactly two pairs (no Opening/Receipt geometry) map to
+    SALE+CLOSING. Four pairs map opening→purchase→sales→closing.
     """
-    if column_count < 8:
+    if column_count < 6:
         return None
     votes: List[List[str]] = [[] for _ in range(column_count)]
     product_rows = 0
@@ -205,6 +213,24 @@ def _infer_qty_value_canons_from_rows(
         else:
             if len(num_idxs) >= 8:
                 break
+
+    # Two qty/value pairs only → SALE + CLOSING (not Opening + Receipt).
+    if 4 <= len(num_idxs) <= 5:
+        for fi, col_i in enumerate(num_idxs[:4]):
+            canons[col_i] = _SALE_CLOSING_LAYOUT_FIELDS[fi]
+        assigned = {c for c in canons if c != "ignore"}
+        if (
+            "product_name" in assigned
+            and "sales_qty" in assigned
+            and "closing_qty" in assigned
+        ):
+            logger.info(
+                "VISION_TABLE cell_layout_sale_closing num_cols=%s cols=%s",
+                len(num_idxs),
+                [(i, canons[i]) for i in num_idxs[:4]],
+            )
+            return canons
+        return None
 
     if len(num_idxs) < 6:
         return None
@@ -2722,6 +2748,33 @@ def merge_reread(
             except Exception:
                 cand_ok, first_ok = False, False
             accept = cand_ok and not first_ok
+        # Do not let recon recovery invent Opening/Receipt when the first
+        # reading already treated the row as SALE+CLOSING-only.
+        fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+        cand_extra = (
+            candidate.get("extra") if isinstance(candidate.get("extra"), dict) else {}
+        )
+        cfs = (
+            cand_extra.get("field_source")
+            if isinstance(cand_extra.get("field_source"), dict)
+            else {}
+        )
+        if (
+            accept
+            and fs.get("opening_qty") == "missing"
+            and fs.get("sales_qty") == "printed"
+            and (
+                cfs.get("opening_qty") == "printed"
+                or cfs.get("purchase_qty") == "printed"
+                or cfs.get("receipts_qty") == "printed"
+            )
+        ):
+            logger.info(
+                "SALE_CLOSING_ONLY reread_rejected invented_opening_or_purchase "
+                "product=%s",
+                str(item.get("product_name") or "")[:80],
+            )
+            accept = False
         if accept:
             out.append(candidate)
         else:

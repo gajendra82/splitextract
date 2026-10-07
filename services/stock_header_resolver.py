@@ -805,6 +805,66 @@ def _apply_bare_qty_value_sequence(
             continue
         i += 1
 
+    header_blob = " ".join(
+        normalize_header(c.get("header_text")) for c in prelim if isinstance(c, dict)
+    )
+    has_named_movement = any(
+        isinstance(c, dict)
+        and (
+            c.get("group") in {"opening", "purchase", "sales", "closing"}
+            or str(c.get("canonical") or "")
+            in {
+                "opening_qty",
+                "purchase_qty",
+                "sales_qty",
+                "closing_qty",
+            }
+        )
+        for c in prelim
+    )
+    has_opening_purchase_text = bool(
+        re.search(
+            r"\b(opening|op\s*bal|opbal|receipt|receipts|purchase|purchases|issue)\b",
+            header_blob,
+            re.I,
+        )
+    )
+
+    # Exactly two bare QTY/VALUE pairs with no Opening/Receipt parent bands →
+    # SALE + CLOSING (STOCK & SALES ANALYSIS crops often drop <SALE>/<CLOSING>).
+    if len(pair_starts) == 2 and not has_named_movement and not has_opening_purchase_text:
+        assigned = 0
+        for gi, pi in enumerate(pair_starts):
+            gname, q_field, v_field = _QTY_VALUE_SEQUENCE_GROUPS[gi + 2]  # sales, closing
+            prelim[pi]["canonical"] = q_field
+            prelim[pi]["group"] = gname
+            prelim[pi]["is_value"] = False
+            prelim[pi]["confidence"] = 0.9
+            prelim[pi]["reason"] = "qty_value_sequence_sale_closing"
+            prelim[pi + 1]["canonical"] = v_field
+            prelim[pi + 1]["group"] = gname
+            prelim[pi + 1]["is_value"] = True
+            prelim[pi + 1]["confidence"] = 0.9
+            prelim[pi + 1]["reason"] = "qty_value_sequence_sale_closing"
+            assigned += 1
+        if assigned:
+            errors.append(
+                {
+                    "code": "QTY_VALUE_SEQUENCE_SALE_CLOSING",
+                    "message": (
+                        "Assigned 2 bare QTY/VALUE pairs as SALE then CLOSING "
+                        "(no opening/receipt headers)"
+                    ),
+                    "pairs": assigned,
+                }
+            )
+            logger.info(
+                "HEADER_RESOLVER qty_value_sequence_sale_closing pairs=%s",
+                assigned,
+            )
+            return True
+        return False
+
     if len(pair_starts) < 3:
         return False
 
