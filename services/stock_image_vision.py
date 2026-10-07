@@ -132,11 +132,13 @@ _TRUSTED_METHODS = frozenset(
         "stock_valuation_as_on",
         "stock_valuation_stock_rate",
         "batchwise_stock_summary",
+        "op_stk_rcpts_stock_sale_vision",
     }
 )
 _TRUSTED_LAYOUTS = frozenset(
     {
         "opening_receive_issue_closing",
+        "op_stk_rcpts_sales_closing",
         "code_item_stock_statement",
         "pack_op_pur_bal_stock_sale",
         "op_pur_sp_sale_bal_val",
@@ -359,11 +361,23 @@ def assess_stock_structured_quality(
     if fail_count is not None and items:
         identity_rate = float(fail_count) / len(items)
         threshold = _env_float("STOCK_MAX_IDENTITY_FAILURE_RATE", 0.25)
+        # Marg OPENING/RECEIVE reader must not stay "trusted" when most rows
+        # fail identity — Op_Stk|Rcpts|Sales|Cl_Stk photos land here often.
+        main_stock_layout = (
+            method
+            in {
+                "main_stock_sales_statement",
+                "main_stock_sales_statement_sheets",
+            }
+            or layout == "opening_receive_issue_closing"
+        )
         if identity_rate >= threshold:
             # Phase 1: do not suppress identity for trusted methods when veto is on.
-            if (not trusted and not vision) or veto_active:
+            if (not trusted and not vision) or veto_active or main_stock_layout:
                 if "identity_failure_rate" not in reasons:
                     reasons.append("identity_failure_rate")
+                if main_stock_layout:
+                    trusted = False
             elif method in {"gemini_vision", "gemini_extraction_fallback"}:
                 # Generic vision often shifts SaleRet / ClosStock / Exp/Dmg sheets.
                 has_saleret = any(
@@ -774,6 +788,62 @@ def apply_direct_stock_image_gemini(
         ",".join(decision.get("reasons") or []) or "none",
         decision.get("row_count"),
     )
+    # Prefer Op_Stk|Rcpts|Sales|Cl_Stk BEFORE the trusted-structured early return.
+    # Misfiled Marg main_stock was returning with needs_direct_gemini=false.
+    method = str(extra.get("extraction_method") or "")
+    title = str(result.get("report_title") or "")
+    layout = str(extra.get("layout") or "")
+    peek_text = ""
+    try:
+        from services.sales_statement_extractor import _ocr_image_to_text
+
+        peek_text = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+    except Exception:
+        peek_text = ""
+
+    try:
+        from services.sales_statement_extractor import (
+            _extract_op_stk_rcpts_stock_sale_vision,
+            _looks_like_op_stk_rcpts_grid_text,
+            _main_stock_result_is_op_stk_misfiled,
+        )
+
+        want_op_stk = _looks_like_op_stk_rcpts_grid_text(peek_text) or (
+            _main_stock_result_is_op_stk_misfiled(result, peek_text)
+        )
+        if want_op_stk and _enabled():
+            op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+                file_bytes, filename, ext, ocr_hint=peek_text
+            )
+        else:
+            op_stk = None
+    except Exception as exc:
+        logger.info(
+            "STOCK_IMAGE_GEMINI file=%s op_stk_rcpts preferred path failed: %s",
+            filename,
+            exc,
+        )
+        op_stk = None
+    if op_stk and op_stk.get("line_items"):
+        selected_extra = op_stk.setdefault("totals", {}).setdefault("extra", {})
+        selected_extra["quality_decision"] = decision
+        selected_extra["structured_extraction"] = {
+            "extraction_method": extra.get("extraction_method"),
+            "layout": layout,
+            "schema": decision.get("schema"),
+            "row_count": decision.get("row_count"),
+            "line_items": copy.deepcopy(result.get("line_items") or []),
+        }
+        selected_extra["final_selected_extraction"] = "gemini"
+        selected_extra["stock_image_vision_decided"] = True
+        selected_extra["stock_image_gemini_status"] = "op_stk_rcpts_preferred"
+        logger.info(
+            "STOCK_IMAGE_GEMINI file=%s status=op_stk_rcpts_preferred rows=%s",
+            filename,
+            len(op_stk.get("line_items") or []),
+        )
+        return op_stk
+
     if not force_gemini:
         extra["final_selected_extraction"] = "structured"
         return result
@@ -784,16 +854,6 @@ def apply_direct_stock_image_gemini(
 
     # Prefer the dedicated Medica OPSTK strip reader over the generic prompt when
     # Pharma Hub / generic vision already misfiled this STOCK STATEMENT photo.
-    method = str(extra.get("extraction_method") or "")
-    title = str(result.get("report_title") or "")
-    peek_text = ""
-    try:
-        from services.sales_statement_extractor import _ocr_image_to_text
-
-        peek_text = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
-    except Exception:
-        peek_text = ""
-
     try:
         from services.sales_statement_extractor import (
             _extract_product_stock_report_image_vision,

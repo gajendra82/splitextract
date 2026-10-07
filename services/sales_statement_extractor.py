@@ -10578,6 +10578,8 @@ _XLS_HEADER_ALIASES = {
     "op.": "op",
     "opstock": "op",
     "op.stock": "op",
+    "opstk": "op",
+    "op.stk": "op",
     "opening": "op",
     "openingstock": "op",
     "openingqty": "op",
@@ -10587,6 +10589,8 @@ _XLS_HEADER_ALIASES = {
     "openingquantity": "op",
     "openingbalqty": "op",
     "openingbalanceqty": "op",
+    # Last-month-sale — never opening/receipts (OP.Stock is opening).
+    "lms": "lms",
     "pur": "pur",
     "purch": "pur",
     "purchase": "pur",
@@ -10596,6 +10600,8 @@ _XLS_HEADER_ALIASES = {
     "receipts": "pur",
     "receiptqty": "pur",
     "receiptsqty": "pur",
+    "rcpt": "pur",
+    "rcpts": "pur",
     "receive": "pur",
     "receiveqty": "pur",
     "inward": "pur",
@@ -10620,6 +10626,8 @@ _XLS_HEADER_ALIASES = {
     "bal.": "bal",
     "clstock": "bal",
     "cl.stock": "bal",
+    "clstk": "bal",
+    "cl.stk": "bal",
     "closing": "bal",
     "closingstock": "bal",
     "closingqty": "bal",
@@ -10643,8 +10651,14 @@ _XLS_HEADER_ALIASES = {
     "closingstockvalue": "bval",
     "closingvaluation": "bval",
     "clvalue": "bval",
+    "cl.val": "bval",
+    "cl.val.": "bval",
     "clval": "bval",
     "sval": "sval",
+    "slvalue": "sval",
+    "sl.val": "sval",
+    "sl.val.": "sval",
+    "sl.value": "sval",
     "secondaryvalue": "sval",
     "issuevalue": "sval",
     "issueval": "sval",
@@ -12714,18 +12728,18 @@ def _html_excel_table_rows(file_bytes: bytes) -> List[List[str]]:
 
 
 def _is_opstock_rcpts_clstk_header(cells: List[str]) -> bool:
-    """Name/Code/Product/Packing/LMS/OP.Stock/Rcpts/Sales/HOS.SALES/CL.Stk/CL.Value."""
-    if not cells or len(cells) < 10:
+    """LMS | OP.Stock | Rcpts | Sales | … | CL.Stk | CL.Value (HOS.SALES optional)."""
+    if not cells or len(cells) < 8:
         return False
     joined = " ".join(str(c or "") for c in cells)
     return bool(
-        re.search(r"\bOP\.?\s*Stock\b", joined, re.I)
+        re.search(r"\bLMS\b", joined, re.I)
+        and re.search(r"\bOP\.?\s*Stock\b|\bOp\.?\s*Stk\b", joined, re.I)
         and re.search(r"\bRcpts\b", joined, re.I)
         and re.search(r"\bCL\.?\s*Stk\b", joined, re.I)
         and re.search(r"\bCL\.?\s*Value\b", joined, re.I)
         and re.search(r"\bProduct\b", joined, re.I)
         and re.search(r"\bPacking\b", joined, re.I)
-        and re.search(r"HOS\.?\s*SALES", joined, re.I)
     )
 
 
@@ -12747,7 +12761,7 @@ def _opstock_rcpts_clstk_colmap(header_cells: List[str]) -> Dict[str, int]:
         ("item", r"^Product$"),
         ("pack", r"^Packing$"),
         ("lms", r"^LMS$"),
-        ("op", r"^OP\.?\s*Stock$"),
+        ("op", r"^OP\.?\s*Stock$|^Op\.?\s*Stk$"),
         ("pur", r"^Rcpts$"),
         ("sale", r"^Sales$"),
         ("sval", r"^SL\.?\s*Value$"),
@@ -14147,6 +14161,12 @@ def _xls_fill_from_rows(
         _assign_number("sales_value", sval_i)
         _assign_number("opening_value", _col("opval"), into_extra=True)
         _assign_number("receipts_value", _col("purval"), into_extra=True)
+        # LMS is last-month sale — never opening_qty (OP.Stock / Op.Stk is opening).
+        lms_i = _col("lms")
+        if lms_i is not None:
+            _assign_number("lms", lms_i, into_extra=True)
+            if item["extra"].get("lms") is not None:
+                item["extra"]["lms_qty"] = item["extra"].get("lms")
         for extra_field, extra_names in (
             ("scheme_qty", ("scheme",)),
             ("free_qty", ("free",)),
@@ -15278,10 +15298,14 @@ def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     # Abbreviated Op/Pur/Pur Val/Bal Val desk photos are handled separately.
     if _looks_like_pack_op_pur_bal_stock_sale_text(blob):
         return False
-    if re.search(r"Stock\s+and\s+Sale\s+Statement|Op\s*Stk|Cl\s*Stk", blob, re.I):
+    if re.search(
+        r"Stock\s+and\s+Sale\s+Statement|Op[_\s.]*Stk|Cl[_\s.]*Stk", blob, re.I
+    ):
         return True
-    if re.search(r"Sale\s+Statement", blob, re.I) and re.search(
-        r"Item\s*Cd|Op\s*St|BINAL|ZANDR", blob, re.I
+    if _looks_like_op_stk_rcpts_grid_text(blob):
+        return True
+    if re.search(r"Sale\s+Statement|STOCK\s*&\s*SALES\s+STATEMENT", blob, re.I) and re.search(
+        r"Item\s*Cd|Op[_\s.]*St|Rcpts?|BINAL|ZANDR", blob, re.I
     ):
         return True
     return False
@@ -15951,6 +15975,408 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = "zandra_stock_sale_vision"
     return result
+
+
+_OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT = """
+This image is a printed "STOCK & SALES STATEMENT" grid (not Marg OPENING/RECEIVE/ISSUE).
+
+Printed columns LEFT TO RIGHT (names may vary slightly):
+Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
+
+Qty mapping ONLY (blank cell = 0). NEVER shift a later number left into a blank cell.
+- Op_Stk -> opening_qty
+- Rcpts -> receipts_qty
+- Sales -> sales_qty
+- Cl_Stk -> closing_qty
+- Value -> closing_value
+- LMS -> extra.lms (NOT opening_qty)
+- Rate -> extra.rate (NOT a qty)
+- P.Ret / Hos.Sal / Brk / Repl -> ignore for opening/receipts/sales/closing
+
+Do not put Value or Rate into opening_qty. Do not put Op_Stk into closing_qty.
+Packing (200ml / 30ml / 60) belongs in packing, not product_name.
+
+If Item mixes a division banner with the SKU ("HIMALAYA ZANDRA" + product on next line),
+product_name is ONLY the SKU. company_name is the banner. Include that first SKU row
+even when every Op_Stk/Rcpts/Sales/Cl_Stk cell is blank (use 0).
+
+stockist_name = distributor above the title. period from the statement date line.
+Include EVERY product row. Skip TOTAL lines.
+
+Skip TOTAL / Grand Total lines. Skip page chrome and stamps.
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "STOCK & SALES STATEMENT",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number
+    }
+  ]
+}
+""".strip()
+
+
+def _repair_stockist_company_from_statement_header(
+    result: Dict[str, Any], ocr_text: str = ""
+) -> None:
+    """When Vision swaps stockist into company_name on STOCK & SALES title lines."""
+    cn = str(result.get("company_name") or "").strip()
+    sn = str(result.get("stockist_name") or "").strip()
+    blob = ocr_text or ""
+    if sn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
+        return
+    if cn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
+        if not sn:
+            result["stockist_name"] = cn
+        him = re.search(
+            r"(HIMALAYA(?:\s+ZANDRA(?:\s+DIVISION)?|\s*\([^)]+\))?|THE\s+HIMALAYA\s+DRUG[^,\n]{0,40})",
+            blob,
+            re.I,
+        )
+        result["company_name"] = _clean_name(him.group(1)) if him else None
+        return
+    if not cn and blob:
+        party = re.search(
+            r"^([A-Z][A-Z0-9 &./()\-]{4,}?)\s+STOCK\s*&\s*SALES\s+STATEMENT",
+            blob,
+            re.I | re.M,
+        )
+        if party and not re.search(r"HIMALAYA|ZANDRA", party.group(1), re.I):
+            result["stockist_name"] = _clean_name(party.group(1))
+        him = re.search(r"(HIMALAYA(?:\s+ZANDRA)?[^,\n]{0,30})", blob, re.I)
+        if him:
+            result["company_name"] = _clean_name(him.group(1))
+
+
+def _op_stk_clean_product_name(name: str) -> str:
+    """Strip division banner glued into the first Item cell (HIMALAYA ZANDRA\\nSKU)."""
+    text = str(name or "").replace("\r", "\n")
+    # Prefer the last non-banner line when Vision stacks banner + SKU.
+    parts = [p.strip() for p in text.split("\n") if p.strip()]
+    if len(parts) >= 2:
+        cleaned_parts = []
+        for part in parts:
+            if re.fullmatch(
+                r"HIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?",
+                part,
+                re.I,
+            ):
+                continue
+            cleaned_parts.append(part)
+        if cleaned_parts:
+            text = " ".join(cleaned_parts)
+    text = text.replace("\n", " ")
+    # Same-line glue: "HIMALAYA ZANDRA ARJUNA TAB" → "ARJUNA TAB".
+    text = re.sub(
+        r"(?i)^\s*HIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?\s+",
+        "",
+        text,
+    )
+    text = re.sub(
+        r"(?i)\bHIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?\b",
+        " ",
+        text,
+    )
+    text = re.sub(r"\s+", " ", text).strip(" -|/\\")
+    return _clean_name(text)
+
+
+def _op_stk_ocr_product_name_lines(file_bytes: bytes, ocr_hint: str = "") -> List[str]:
+    """Left-column product names from OCR (top-to-bottom), for lead-row recovery."""
+    names: List[str] = []
+    texts: List[str] = []
+    if ocr_hint:
+        texts.append(ocr_hint)
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+        width, height = image.size
+        # Header + first product band — lead SKUs sit just under the column titles.
+        left = image.crop(
+            (0, int(height * 0.08), max(1, int(width * 0.48)), min(height, int(height * 0.42)))
+        )
+        left = ImageEnhance.Contrast(
+            left.resize(
+                (max(1, int(left.width * 2.0)), max(1, int(left.height * 2.0))),
+                Image.Resampling.LANCZOS,
+            )
+        ).enhance(1.7)
+        buf = io.BytesIO()
+        left.save(buf, format="JPEG", quality=90)
+        texts.append(_ocr_image_to_text(buf.getvalue(), psm=6) or "")
+        texts.append(_ocr_image_to_text(buf.getvalue(), psm=4) or "")
+    except Exception as exc:
+        logger.info("OP_STK_LEAD_OCR skipped: %s", exc)
+    seen: set = set()
+    for blob in texts:
+        for raw in (blob or "").splitlines():
+            line = re.sub(r"[ \t]+", " ", str(raw or "").strip())
+            if not line or not re.search(r"[A-Za-z]{3,}", line):
+                continue
+            if re.search(
+                r"TOTAL|PRODUCT|STOCK|SALES|OPENING|RECEIVE|ISSUE|CLOSING|PAGE|"
+                r"Op[_\s.]*Stk|Rcpts?|Cl[_\s.]*Stk|\bValue\b|DISTRIBUT|"
+                r"MOHAN|BENGALURU|STATEMENT|COMPANY",
+                line,
+                re.I,
+            ):
+                continue
+            # Banner+SKU share one OCR line — keep the SKU, do not drop the line.
+            name = _op_stk_clean_product_name(line)
+            name = re.sub(r"[\d.,OoIl|@qQ\(\)\[\]\{\}\'\"`~]+$", "", name).strip()
+            name = re.sub(r"\s+\d[\d.,]*$", "", name).strip()
+            name = _clean_name(name)
+            if not name or _is_non_product_line_name(name) or _main_stock_is_garbage_name(name):
+                continue
+            if not re.search(
+                r"(?i)TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LOTION|WASH|GRAN|GUMMI|"
+                r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL|BIG",
+                name,
+            ):
+                continue
+            key = _main_stock_product_key(name)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            names.append(name)
+    return names
+
+
+def _op_stk_zero_lead_item(name: str, packing: Optional[str] = None) -> Dict[str, Any]:
+    item = empty_line_item()
+    item["product_name"] = name
+    if packing:
+        item["packing"] = packing
+    item["opening_qty"] = 0.0
+    item["receipts_qty"] = 0.0
+    item["sales_qty"] = 0.0
+    item["sales_value"] = 0.0
+    item["closing_qty"] = 0.0
+    item["closing_value"] = 0.0
+    item["extra"] = {
+        "layout": "op_stk_rcpts_sales_closing",
+        "zero_row_from_name_column": True,
+        "field_source": {
+            "opening_qty": "missing",
+            "receipts_qty": "missing",
+            "sales_qty": "missing",
+            "closing_qty": "missing",
+        },
+    }
+    return item
+
+
+def _op_stk_prepend_name_list(
+    result: Dict[str, Any],
+    candidate_names: List[Any],
+    *,
+    source: str,
+) -> Dict[str, Any]:
+    """Prepend cleaned candidate names that sit above Vision's first product."""
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3 or not candidate_names:
+        return result
+    existing: Dict[str, Dict[str, Any]] = {}
+    for item in items:
+        key = _main_stock_product_key(str(item.get("product_name") or ""))
+        if key:
+            existing[key] = item
+    first_keys = [
+        _main_stock_product_key(str(i.get("product_name") or ""))
+        for i in items[:4]
+        if _main_stock_product_key(str(i.get("product_name") or ""))
+    ]
+    lead: List[Dict[str, Any]] = []
+    for raw in candidate_names:
+        packing = None
+        if isinstance(raw, dict):
+            name = _op_stk_clean_product_name(str(raw.get("product_name") or ""))
+            packing = raw.get("packing")
+        else:
+            name = _op_stk_clean_product_name(str(raw or ""))
+        if not name:
+            continue
+        key = _main_stock_product_key(name)
+        if not key:
+            continue
+        if _main_stock_find_existing_key(existing, key):
+            break
+        if any(_main_stock_keys_match(key, fk) for fk in first_keys):
+            break
+        item = _op_stk_zero_lead_item(name, packing if isinstance(packing, str) else None)
+        item["extra"]["lead_recover_source"] = source
+        lead.append(item)
+        existing[key] = item
+        if len(lead) >= 5:
+            break
+    if not lead:
+        return result
+    result["line_items"] = lead + items
+    logger.info(
+        "OP_STK_LEAD_RECOVER source=%s prepended=%s first=%s",
+        source,
+        len(lead),
+        lead[0].get("product_name"),
+    )
+    return result
+
+
+def _op_stk_prepend_missing_lead_products(
+    result: Dict[str, Any], file_bytes: bytes, ocr_hint: str = ""
+) -> Dict[str, Any]:
+    """Prepend printed lead products Vision skipped (e.g. first all-zero SKU).
+
+    Uses left-column OCR only — does not invent qty; missing cells stay 0 with
+    zero_row_from_name_column like Marg name harvest.
+    """
+    import os
+
+    if os.getenv("STOCK_OP_STK_LEAD_NAME_OCR", "true").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return result
+    ocr_names = _op_stk_ocr_product_name_lines(file_bytes, ocr_hint)
+    return _op_stk_prepend_name_list(result, ocr_names, source="lead_ocr")
+
+
+def _op_stk_recover_lead_from_vision_table_hint(
+    result: Dict[str, Any], ocr_text: str = ""
+) -> Dict[str, Any]:
+    """Use product names from a prior vision_table fallback (banner+SKU row)."""
+    leads: List[Any] = []
+    try:
+        from services.stock_vision_table import take_vision_table_lead_products
+
+        leads = take_vision_table_lead_products()
+    except Exception:
+        leads = []
+    # Banner glued into OCR hint: "HIMALAYA ZANDRA\\nARJUNA TAB"
+    if ocr_text:
+        for m in re.finditer(
+            r"HIMALAYA\s+ZANDRA[\s\n]+([A-Z][A-Z0-9 &*./()\-]{2,}?)(?=\s*$|\s+\d)",
+            ocr_text,
+            re.I | re.M,
+        ):
+            leads.append({"product_name": m.group(1)})
+    if not leads:
+        return result
+    return _op_stk_prepend_name_list(result, leads, source="vision_table_fallback")
+
+
+def _finalize_op_stk_rcpts_stock_sale(
+    result: Dict[str, Any],
+    ocr_text: str = "",
+    file_bytes: Optional[bytes] = None,
+) -> Dict[str, Any]:
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _op_stk_clean_product_name(str(item.get("product_name") or ""))
+        item["product_name"] = name
+        if not name or _is_non_product_line_name(name) or re.search(
+            r"^TOTAL\b|^GRAND\s*TOTAL|STOCK\s*&\s*SALES\s*STATEMENT",
+            name,
+            re.I,
+        ):
+            continue
+        items.append(item)
+    result["line_items"] = _drop_trailing_statement_total_item(items)
+    result["report_title"] = result.get("report_title") or "STOCK & SALES STATEMENT"
+    _repair_stockist_company_from_statement_header(result, ocr_text)
+    if file_bytes:
+        result = _op_stk_prepend_missing_lead_products(result, file_bytes, ocr_text)
+        # stock_vision_table often sees banner+SKU before Op_Stk vision drops it.
+        result = _op_stk_recover_lead_from_vision_table_hint(result, ocr_text)
+    result.setdefault("totals", {}).setdefault("extra", {})
+    result["totals"]["extra"]["extraction_method"] = "op_stk_rcpts_stock_sale_vision"
+    result["totals"]["extra"]["layout"] = "op_stk_rcpts_sales_closing"
+    logger.info(
+        "OP_STK_RCPTS_VISION rows=%s stockist=%s company=%s",
+        len(result.get("line_items") or []),
+        result.get("stockist_name"),
+        result.get("company_name"),
+    )
+    return result
+
+
+def _extract_op_stk_rcpts_stock_sale_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".jpg",
+    ocr_hint: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Op_Stk | Rcpts | Sales | Cl_Stk abbreviated STOCK & SALES photo grid."""
+    import os
+
+    if os.getenv("STOCK_OP_STK_RCPTS_EARLY_VISION", "true").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
+
+    from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                break
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 8))
+    if last_err and not (parsed and parsed.get("line_items")):
+        logger.warning(
+            "OP_STK_RCPTS vision failed for %s: %s", filename, last_err
+        )
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed)
+    return _finalize_op_stk_rcpts_stock_sale(
+        result, ocr_hint, file_bytes=file_bytes
+    )
 
 
 def _extract_zandra_stock_sale_vision(
@@ -17907,6 +18333,8 @@ def _extract_statement_from_pdf_group(
     ):
         result = _structure_sales_text(combined_text, filename, "pdf")
         if result.get("line_items"):
+            # Safety net: Gemini path inside structure may still LMS-shift.
+            _repair_lms_shifted_into_opening(result, combined_text)
             result["totals"]["extra"]["extraction_method"] = (
                 result.get("totals", {}).get("extra", {}).get("extraction_method")
                 or "pdf_split_text"
@@ -32555,6 +32983,286 @@ def _lstsl_qty_token(token: str) -> bool:
     return bool(re.fullmatch(r"-?\d+|-", (token or "").strip()))
 
 
+def _text_has_lms_opstock_rcpts_headers(text: str) -> bool:
+    """True when LMS and OP.Stock/Rcpts/CL.Stk are all printed (header-driven)."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"\bLMS\b", text, re.I)
+        and re.search(r"\bOP\.?\s*St(?:oc)?k\b|\bOp\.?\s*Stk\b", text, re.I)
+        and re.search(r"\bRcpts?\b", text, re.I)
+        and re.search(r"\bCL\.?\s*Stk\b", text, re.I)
+    )
+
+
+def _repair_lms_shifted_into_opening(result: Dict[str, Any], text: str = "") -> int:
+    """Fix Gemini/text collapse: LMS→opening_qty, OP.Stock→receipts_qty, Rcpts=0 dropped.
+
+    Reassigns printed values only (does not invent numbers). Triggers when LMS +
+    OP.Stock headers are present, or when a clear majority of rows show the
+    classic shift: (receipts - sales) == closing while (opening + receipts - sales) does not.
+    """
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 2:
+        return 0
+
+    def _f(item: Dict[str, Any], key: str) -> Optional[float]:
+        try:
+            v = item.get(key)
+            if v is None or v == "":
+                return None
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    shift_hits = 0
+    candidates: List[Dict[str, Any]] = []
+    for item in items:
+        op = _f(item, "opening_qty")
+        rc = _f(item, "receipts_qty")
+        sa = _f(item, "sales_qty")
+        cl = _f(item, "closing_qty")
+        if op is None or rc is None or sa is None or cl is None:
+            continue
+        # Already balances with current labels — leave alone.
+        if abs((op + rc - sa) - cl) < 0.051:
+            continue
+        # Shifted pattern: OP.Stock sits in receipts; blank Rcpts was dropped.
+        if abs((rc - sa) - cl) < 0.051 and abs(op) + abs(rc) > 0.051:
+            shift_hits += 1
+            candidates.append(item)
+
+    header_ok = _text_has_lms_opstock_rcpts_headers(text or "")
+    # Without headers, require a strong majority so other layouts stay untouched.
+    if not header_ok and shift_hits < max(3, int(0.35 * len(items))):
+        return 0
+    if not candidates:
+        return 0
+
+    repaired = 0
+    for item in candidates:
+        op = _f(item, "opening_qty")
+        rc = _f(item, "receipts_qty")
+        if op is None or rc is None:
+            continue
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            continue
+        # Preserve printed LMS; move OP.Stock into opening; blank Rcpts → 0.
+        extra["lms"] = op
+        extra["lms_qty"] = op
+        item["opening_qty"] = rc
+        item["receipts_qty"] = 0.0
+        fs = extra.setdefault("field_source", {})
+        if isinstance(fs, dict):
+            fs["lms"] = "printed"
+            fs["opening_qty"] = "printed"
+            fs["receipts_qty"] = "printed"
+        extra["lms_opening_shift_repaired"] = True
+        repaired += 1
+
+    if repaired:
+        tot_extra = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(tot_extra, dict):
+            tot_extra["lms_opening_shift_repaired_count"] = repaired
+            tot_extra["layout"] = tot_extra.get("layout") or "lms_opstock_rcpts"
+        logger.info(
+            "LMS_OPENING_SHIFT_REPAIR status=ok repaired=%s header=%s",
+            repaired,
+            header_ok,
+        )
+    return repaired
+
+
+def _parse_text_lms_opstock_rcpts(
+    text: str, filename: str, source_format: str
+) -> Optional[Dict[str, Any]]:
+    """PDF/OCR text: LMS | OP.Stock | Rcpts | Sales | [SL.Value] | [Free] | CL.Stk | CL.Value.
+
+    LMS is never opening_qty. OP.Stock is opening. Header labels decide columns —
+    not left-to-right collapse of blank cells. Same schema as HTML excel opstock.
+    """
+    if not _text_has_lms_opstock_rcpts_headers(text):
+        return None
+
+    lines = [re.sub(r"[ \t]+", " ", ln.replace("\u00a0", " ")).strip() for ln in text.splitlines()]
+    lines = [ln for ln in lines if ln]
+    header_idx = None
+    header_cells: List[str] = []
+    for i, ln in enumerate(lines[:40]):
+        if not (
+            re.search(r"\bLMS\b", ln, re.I)
+            and re.search(r"\bOP\.?\s*Stock\b|\bOp\.?\s*Stk\b", ln, re.I)
+            and re.search(r"\bRcpts\b", ln, re.I)
+            and re.search(r"\bCL\.?\s*Stk\b", ln, re.I)
+        ):
+            continue
+        # Keep dotted labels intact (OP.Stock / CL.Stk / SL.Value).
+        cells = re.findall(
+            r"OP\.?\s*Stock|Op\.?\s*Stk|CL\.?\s*Stk|CL\.?\s*Value|SL\.?\s*Value|"
+            r"HOS\.?\s*SALES|[A-Za-z][A-Za-z0-9./']*",
+            ln,
+            re.I,
+        )
+        cells = [re.sub(r"\s+", " ", c).strip() for c in cells if c and c.strip()]
+        if _is_opstock_rcpts_clstk_header(cells) or (
+            "lms" in {_xls_norm_header(c) for c in cells}
+            and "op" in {_xls_norm_header(c) for c in cells}
+            and "pur" in {_xls_norm_header(c) for c in cells}
+            and "bal" in {_xls_norm_header(c) for c in cells}
+        ):
+            header_idx = i
+            header_cells = cells
+            break
+    if header_idx is None or not header_cells:
+        return None
+
+    colmap = _opstock_rcpts_clstk_colmap(header_cells)
+    # Fallback via shared XLS aliases when regex colmap missed a label.
+    if "op" not in colmap or "pur" not in colmap or "bal" not in colmap:
+        alias_map = _xls_header_colmap(header_cells)
+        for key in ("lms", "op", "pur", "sale", "sval", "free", "hos_sales", "bal", "bval",
+                    "item", "pack", "product_code", "name"):
+            if key not in colmap and key in alias_map:
+                colmap[key] = alias_map[key]
+    if not {"op", "pur", "sale", "bal"}.issubset(colmap):
+        logger.info(
+            "LMS_OPSTOCK_RCPTS file=%s status=skip reason=incomplete_colmap cols=%s",
+            filename,
+            sorted(colmap.items(), key=lambda kv: kv[1]),
+        )
+        return None
+
+    numeric_keys = [
+        k
+        for k, _idx in sorted(colmap.items(), key=lambda kv: kv[1])
+        if k
+        in {
+            "lms",
+            "op",
+            "pur",
+            "sale",
+            "sval",
+            "free",
+            "hos_sales",
+            "bal",
+            "bval",
+        }
+    ]
+    if len(numeric_keys) < 4:
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = result.get("report_title") or "StockStatement Report"
+    for ln in lines[:header_idx]:
+        if not result.get("stockist_name") and re.search(
+            r"PHARMA|MEDICAL|AGENC|STORES|DISTRIBUT|DRUG", ln, re.I
+        ) and not re.search(r"STOCK|SALES|STATEMENT|HIMALAYA\s+DRUG", ln, re.I):
+            result["stockist_name"] = _clean_name(ln)
+        if not result.get("company_name") and re.search(
+            r"HIMALAYA|ZENITH|AUROBINDO|MANUFACTUR", ln, re.I
+        ):
+            result["company_name"] = _clean_name(ln)
+        period = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-)\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            ln,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    num_re = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
+    for ln in lines[header_idx + 1 :]:
+        if re.search(r"^(total|grand\s+total|page\s+\d)", ln, re.I):
+            continue
+        nums = [m.group(0) for m in num_re.finditer(ln)]
+        if len(nums) < len(numeric_keys):
+            continue
+        # Trailing numeric block matches header numeric columns left-to-right.
+        tail = nums[-len(numeric_keys) :]
+        head = ln
+        for tok in reversed(tail):
+            # Strip from the right once per token occurrence.
+            idx = head.rfind(tok)
+            if idx >= 0:
+                head = (head[:idx] + head[idx + len(tok) :]).rstrip()
+        head = head.strip()
+        code = None
+        packing = None
+        name = head
+        m_code = re.match(r"^(\d{4,})\s+(.+)$", head)
+        if m_code:
+            code = m_code.group(1)
+            name = m_code.group(2).strip()
+        pack_m = re.search(
+            r"^(.*?)(\d+\s*(?:ML|GMS?|GM|G|TAB|TABS|CAP|CAPS|'S|S)|"
+            r"\d+ML|\d+GMS?|\d+'S|\d+\"S)\s*$",
+            name,
+            re.I,
+        )
+        if pack_m:
+            name = pack_m.group(1).strip(" -")
+            packing = pack_m.group(2).strip()
+        name = _clean_name(name)
+        if not name or len(name) < 2:
+            continue
+        if re.search(r"product|packing|op\.?\s*stock|stockist", name, re.I):
+            continue
+
+        values = {k: _to_float(v) for k, v in zip(numeric_keys, tail)}
+        item = empty_line_item()
+        item["product_code"] = code
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = values.get("op")
+        item["receipts_qty"] = values.get("pur")
+        item["sales_qty"] = values.get("sale")
+        item["sales_value"] = values.get("sval") if "sval" in values else None
+        item["closing_qty"] = values.get("bal")
+        item["closing_value"] = values.get("bval")
+        item["extra"] = {
+            "layout": "text_lms_opstock_rcpts",
+            "lms": values.get("lms"),
+            "lms_qty": values.get("lms"),
+            "field_source": {
+                "opening_qty": "printed",
+                "receipts_qty": "printed",
+                "sales_qty": "printed",
+                "closing_qty": "printed",
+                "lms": "printed" if values.get("lms") is not None else "missing",
+            },
+        }
+        if "free" in values:
+            item["extra"]["free_qty"] = values.get("free")
+        if "hos_sales" in values:
+            item["extra"]["hos_sales_qty"] = values.get("hos_sales")
+        items.append(item)
+
+    if len(items) < 3:
+        logger.info(
+            "LMS_OPSTOCK_RCPTS file=%s status=skip reason=too_few_rows n=%s",
+            filename,
+            len(items),
+        )
+        return None
+
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "text_lms_opstock_rcpts"
+    extra["layout"] = "text_lms_opstock_rcpts"
+    extra["stock_identity_kind"] = "opening_receipts_sales_closing"
+    extra["stock_identity_formula"] = "closing=opening+receipts-sales"
+    logger.info(
+        "LMS_OPSTOCK_RCPTS file=%s status=ok rows=%s cols=%s",
+        filename,
+        len(items),
+        sorted(colmap.items(), key=lambda kv: kv[1]),
+    )
+    return result
+
+
 def _parse_lstsl_open_recd_statement(
     text: str, filename: str, source_format: str
 ) -> Optional[Dict[str, Any]]:
@@ -32863,6 +33571,11 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
     if lstsl and lstsl.get("line_items"):
         return lstsl
 
+    # LMS | OP.Stock | Rcpts | … | CL.Stk — LMS must not become opening_qty.
+    lms_op = _parse_text_lms_opstock_rcpts(text, filename, source_format)
+    if lms_op and lms_op.get("line_items"):
+        return lms_op
+
     # 1) Local TXT heuristics (works well for Kaveri-like layouts)
     local = _parse_txt(text.encode("utf-8", errors="ignore"), filename)
     local["source_format"] = source_format
@@ -32929,6 +33642,8 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
                         _repair_medivision_op_wsale_sales(item)
                         _repair_medivision_nm60_closing(item)
                 result["totals"]["extra"]["layout"] = "medivision_nm60d"
+            # Gemini often maps LMS→opening_qty and OP.Stock→receipts_qty.
+            _repair_lms_shifted_into_opening(result, text)
             return _apply_total_row_to_result(result, text)
     except Exception as exc:
         logger.warning("PDF text Gemini structuring failed: %s", exc)
@@ -32989,6 +33704,11 @@ Rules:
 - Stock Statement columns Code, Item Description, Packing, Opening, Purchase, Stock-Out, Jun, Jul, Sales, Stock-In, Closing, Stock-Value, Sales-Value: opening_qty=Opening, receipts_qty=Purchase, sales_qty=Sales only, closing_qty=Closing, closing_value=Stock-Value, sales_value=Sales-Value. Jun and Jul are earlier months. Do not put Jun, Jul, Stock-Out, or Stock-In into sales_qty. Example: CONFIDO TAB opening 53, Jun 8, Jul 13, Sales 12, closing 41.
 - Map Cl.Qnt / Closing / Cl Stk -> closing_qty; Cl.Value / Cl Val -> closing_value
 - Map Op.Qnt / Opening / OpBal / Op Stk -> opening_qty
+- When LMS and OP.Stock/Op.Stk are both printed: LMS -> extra.lms only (never
+  opening_qty). OP.Stock -> opening_qty, Rcpts -> receipts_qty, Sales -> sales_qty,
+  SL.Value -> sales_value, Free -> extra.free_qty, CL.Stk -> closing_qty,
+  CL.Value -> closing_value. Example: LMS=12 OP.Stock=61 Rcpts=0 Sales=3 CL.Stk=58
+  → extra.lms=12, opening_qty=61, receipts_qty=0, sales_qty=3, closing_qty=58.
 - Map Op.Amt / OP AMT / Opening Amount -> extra.opening_value (not sales_value)
 - Map Receipt Amt / Purchase Value -> extra.receipts_value when that column is printed
 - When the header is OP QTY | OP AMT | SALE AMT | CLOSING | CLOSING AMT
@@ -33060,6 +33780,13 @@ Rules:
 - Ignore handwritten notes.
 - stockist_name = agency/seller header; company_name = manufacturer/division.
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026).
+- When columns include LMS and OP.Stock (or Op.Stk) together:
+  LMS -> extra.lms (last-month sale; NEVER opening_qty),
+  OP.Stock/Op.Stk -> opening_qty, Rcpts -> receipts_qty, Sales -> sales_qty,
+  SL.Value -> sales_value, Free -> extra.free_qty, CL.Stk -> closing_qty,
+  CL.Value -> closing_value. Do not shift LMS into opening_qty.
+  Example: LMS=12, OP.Stock=61, Rcpts=0, Sales=3, CL.Stk=58 →
+  extra.lms=12, opening_qty=61, receipts_qty=0, sales_qty=3, closing_qty=58.
 - Map Op.Qnt/Opening/OpBal/Op Stk -> opening_qty; Pur.Qnt/Purchase/Receipt/P Qty -> receipts_qty;
   Sl.Qnt/Sales/Issue/S Qty -> sales_qty; Sl.Value/S Val/Amount -> sales_value;
   Cl.Qnt/Closing Balance/Cl Stk -> closing_qty; Cl.Value/Cl Val -> closing_value.
@@ -39017,6 +39744,131 @@ If unsure, keep the visible fragment. Keep every qty/value on its own product ro
 """.strip()
 
 
+def _looks_like_op_stk_rcpts_grid_text(text: str) -> bool:
+    """Op_Stk / Op.Stk / Rcpts / Cl_Stk grids — not Marg OPENING/RECEIVE/ISSUE."""
+    if not text:
+        return False
+    if re.search(r"\bOp[_\s.]*Stk\b|\bOP[_\s.]*STK\b", text, re.I) and (
+        re.search(r"\bRcpts?\b", text, re.I)
+        or re.search(r"\bCl[_\s.]*Stk\b|\bCL[_\s.]*STK\b", text, re.I)
+    ):
+        return True
+    # Abbreviated desk photo: Product | Op_Stk | Rcpts | Sales | Cl_Stk | Value
+    # (title STOCK & SALES STATEMENT — not Marg OPENING/RECEIVE/ISSUE columns).
+    if re.search(r"STOCK\s*&\s*SALES\s*STATEMENT", text, re.I):
+        if re.search(r"\bRcpts?\b", text, re.I) and re.search(r"\bSales\b", text, re.I):
+            if not re.search(
+                r"RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC(?:RIPTION)?",
+                text,
+                re.I,
+            ):
+                return True
+    return False
+
+
+def _main_stock_result_is_op_stk_misfiled(
+    result: Optional[Dict[str, Any]], text: str = ""
+) -> bool:
+    """Marg main_stock reader applied to Op_Stk|Rcpts|Sales|Cl_Stk grids."""
+    if text and _looks_like_op_stk_rcpts_grid_text(text):
+        return True
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    extra_tot = ((result.get("totals") or {}).get("extra") or {})
+    method = str(extra_tot.get("extraction_method") or "")
+    layout = str(extra_tot.get("layout") or "")
+    is_main = method in {
+        "main_stock_sales_statement",
+        "main_stock_sales_statement_sheets",
+    } or layout == "opening_receive_issue_closing"
+    if not is_main:
+        return False
+    value_as_open = 0
+    closing_only = 0
+    pack_rows = 0
+    identity_fail_rows = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if str(item.get("packing") or "").strip():
+            pack_rows += 1
+        if extra.get("stock_identity_ok") is False or extra.get("reconciliation_failed"):
+            identity_fail_rows += 1
+        oq = _to_float(item.get("opening_qty"))
+        ov = _to_float(extra.get("opening_value") or item.get("opening_value"))
+        cq = _to_float(item.get("closing_qty"))
+        inflow = oq + _to_float(item.get("receipts_qty")) + _to_float(item.get("sales_qty"))
+        if oq == 0 and ov > 0.05:
+            value_as_open += 1
+        if cq > 0.05 and inflow == 0:
+            closing_only += 1
+    if value_as_open >= max(3, len(items) // 6):
+        return True
+    if closing_only >= max(3, len(items) // 6):
+        return True
+    fail_count = extra_tot.get("stock_identity_fail_count")
+    try:
+        fail_rate = (
+            float(fail_count) / len(items)
+            if fail_count is not None
+            else (identity_fail_rows / len(items))
+        )
+    except (TypeError, ValueError):
+        fail_rate = identity_fail_rows / len(items)
+    # Abbreviated Op_Stk grids print packing (200ml/30ml) and Marg OPENING VALUE
+    # columns are absent — high identity fail + packing is a misfile signal.
+    if pack_rows >= max(5, len(items) // 3) and fail_rate >= 0.40:
+        return True
+    title = str(result.get("report_title") or "")
+    company = str(result.get("company_name") or "")
+    if (
+        re.search(r"STOCK\s*&\s*SALES\s*STATEMENT", title, re.I)
+        and company
+        and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|MARG", company, re.I)
+        and fail_rate >= 0.40
+    ):
+        return True
+    return False
+
+
+def _main_stock_result_is_all_zero_shell(result: Optional[Dict[str, Any]]) -> bool:
+    """True when names exist but almost every qty/value is zero (failed OCR/vision)."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    nonzero = 0
+    name_vision_zeros = 0
+    for item in items:
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "sales_value",
+            "closing_value",
+        ):
+            try:
+                if abs(float(item.get(key) or 0.0)) > 0.051:
+                    nonzero += 1
+                    break
+            except (TypeError, ValueError):
+                continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if extra.get("zero_row_from_name_vision") or extra.get(
+            "zero_row_from_name_column"
+        ):
+            name_vision_zeros += 1
+    if nonzero <= max(1, len(items) // 10) and name_vision_zeros >= max(
+        3, int(0.5 * len(items))
+    ):
+        return True
+    return nonzero == 0 and len(items) >= 8
+
+
 def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
     """Marg-style PRODUCT DESCRIPTION / OPENING STOCK / RECEIVE / ISSUE / CLOSING.
 
@@ -39031,7 +39883,15 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
         r"\bRECEIPT\b", upper
     ) and not re.search(r"RECEIVE\s+QUANTITY|RECEIVE\s+QTY", upper):
         return False
-    if re.search(r"\bDUMP\b|QTY\.?\s+VALUE|\bOp\s*Stk\b|\bP\s*Qty\b", upper):
+    # Op_Stk / Op.Stk / P Qty / Cl_Stk grids must not enter the Marg path
+    # (underscore headers previously slipped past Op\\s*Stk and returned zeros).
+    if re.search(
+        r"\bDUMP\b|QTY\.?\s+VALUE|\bOp[_\s.]*Stk\b|\bP\s*Qty\b|\bCl[_\s.]*Stk\b",
+        upper,
+        re.I,
+    ):
+        return False
+    if _looks_like_op_stk_rcpts_grid_text(text):
         return False
 
     exact = (
@@ -39046,6 +39906,10 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
 
     # Photographed Marg sheets: title is readable; gray header often is not.
     if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", upper):
+        return False
+    if re.search(r"\bRcpts?\b", upper) and re.search(r"\bSales\b", upper):
+        return False
+    if _looks_like_op_stk_rcpts_grid_text(text):
         return False
     has_open = bool(re.search(r"OPEN(?:ING)?\s*STOCK|OPEN(?:ING)?\s*VAL|\bOPN\b|\bOP\s*[\{\[]", upper))
     has_recv = bool(re.search(r"RECEIVE|REC\s*[\{\[]|\bRECE\b|\bREC\b", upper))
@@ -40486,9 +41350,55 @@ def _extract_opening_receive_issue_closing_photo(
     elif not full_text:
         full_text = text
 
+    # Op_Stk|Rcpts|Cl_Stk photos must not use Marg OPENING/RECEIVE path
+    # (name-vision then locks all-zero rows as trusted structured).
+    probe = "\n".join(x for x in (text, full_text) if x)
+    if _looks_like_op_stk_rcpts_grid_text(probe):
+        logger.info(
+            "MAIN_STOCK_SKIP file=%s reason=op_stk_rcpts_grid",
+            filename,
+        )
+        op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+            file_bytes, filename, ext, ocr_hint=probe
+        )
+        if op_stk and op_stk.get("line_items"):
+            return op_stk
+        return None
+
     if not _is_opening_receive_issue_closing_stock_text(text):
         # Gray/blue header strips alone are not enough; require statement title.
         if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text or "", re.I):
+            return None
+        # Title alone + strips is unsafe when headers look like Op_Stk grids.
+        if _looks_like_op_stk_rcpts_grid_text(probe):
+            return None
+        # Title without Marg OPENING/RECEIVE QUANTITY headers: try Op_Stk grid
+        # first. Desk photos often OCR only "STOCK & SALES STATEMENT" + packs.
+        if not re.search(
+            r"OPENING\s+STOCK|RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC",
+            probe,
+            re.I,
+        ):
+            op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+                file_bytes, filename, ext, ocr_hint=probe
+            )
+            if (
+                op_stk
+                and op_stk.get("line_items")
+                and not _main_stock_result_is_all_zero_shell(op_stk)
+            ):
+                logger.info(
+                    "MAIN_STOCK_SKIP file=%s reason=title_only_try_op_stk rows=%s",
+                    filename,
+                    len(op_stk.get("line_items") or []),
+                )
+                return op_stk
+            # Do not fall through into Marg OCR/vision on title alone — that
+            # path invents OPENING VALUE columns and zeroes opening qty.
+            logger.info(
+                "MAIN_STOCK_SKIP file=%s reason=title_only_no_marg_headers",
+                filename,
+            )
             return None
         strips = _main_stock_sales_strips(file_bytes)
         if len(strips) < 2:
@@ -40507,11 +41417,17 @@ def _extract_opening_receive_issue_closing_photo(
             ocr_result
             and len(ocr_result.get("line_items") or []) >= 8
             and not _main_stock_ocr_contaminated_by_ui(ocr_result, text)
+            and not _main_stock_result_is_all_zero_shell(ocr_result)
+            and not _main_stock_result_is_op_stk_misfiled(ocr_result, probe)
         ):
             return ocr_result
 
     fallback = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
-    if ocr_result and ocr_result.get("line_items"):
+    if (
+        ocr_result
+        and ocr_result.get("line_items")
+        and not _main_stock_result_is_all_zero_shell(ocr_result)
+    ):
         fallback = ocr_result
     # Seed meta from Sheets body text so Vision can inherit stockist/period.
     if spreadsheet_shot:
@@ -40524,7 +41440,20 @@ def _extract_opening_receive_issue_closing_photo(
         sheets_screenshot=spreadsheet_shot,
     )
     if vision and vision.get("line_items"):
-        if spreadsheet_shot:
+        if _main_stock_result_is_all_zero_shell(vision) and not spreadsheet_shot:
+            logger.info(
+                "MAIN_STOCK_SKIP file=%s reason=all_zero_shell_vision",
+                filename,
+            )
+            vision = None
+    if vision and vision.get("line_items"):
+        if _main_stock_result_is_op_stk_misfiled(vision, probe):
+            logger.info(
+                "MAIN_STOCK_SKIP file=%s reason=op_stk_misfiled_vision",
+                filename,
+            )
+            vision = None
+        elif spreadsheet_shot:
             _main_stock_enrich_spreadsheet_meta(vision, full_text or text)
             _main_stock_repair_clipped_himalaya_names(vision, full_text or text)
             vision.setdefault("totals", {}).setdefault("extra", {})
@@ -40539,7 +41468,7 @@ def _extract_opening_receive_issue_closing_photo(
                 len(vision.get("line_items") or []),
             )
             return vision
-        if len(vision.get("line_items") or []) >= len(
+        elif len(vision.get("line_items") or []) >= len(
             (ocr_result or {}).get("line_items") or []
         ):
             return vision
@@ -40548,6 +41477,31 @@ def _extract_opening_receive_issue_closing_photo(
         _main_stock_enrich_spreadsheet_meta(ocr_result, full_text or text)
         _main_stock_repair_clipped_himalaya_names(ocr_result, full_text or text)
         return ocr_result
+    if ocr_result and _main_stock_result_is_all_zero_shell(ocr_result):
+        logger.info(
+            "MAIN_STOCK_SKIP file=%s reason=all_zero_shell_ocr",
+            filename,
+        )
+        return None
+    if ocr_result and _main_stock_result_is_op_stk_misfiled(ocr_result, probe):
+        logger.info(
+            "MAIN_STOCK_SKIP file=%s reason=op_stk_misfiled_ocr",
+            filename,
+        )
+        ocr_result = None
+    # Always try Op_Stk when Marg was rejected or produced misfiled columns.
+    if not vision and not ocr_result:
+        op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+            file_bytes, filename, ext, ocr_hint=probe
+        )
+        if op_stk and op_stk.get("line_items"):
+            return op_stk
+    elif vision and _main_stock_result_is_op_stk_misfiled(vision, probe):
+        op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+            file_bytes, filename, ext, ocr_hint=probe
+        )
+        if op_stk and op_stk.get("line_items"):
+            return op_stk
     return ocr_result or vision
 
 
@@ -44330,6 +45284,46 @@ def _maybe_early_vision_for_image(
             extra["early_vision_reason"] = "medica_opstk_stock_statement"
             return medica, True
 
+    op_stk_probe = "\n".join(t for t in (sample or "", header_hint or "") if t)
+    title_stock_sales = bool(
+        re.search(r"STOCK\s*&\s*SALES\s*STATEMENT", op_stk_probe, re.I)
+    )
+    has_marg_headers = bool(
+        re.search(
+            r"OPENING\s+STOCK|RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC",
+            op_stk_probe,
+            re.I,
+        )
+    )
+    try_op_stk_early = _looks_like_op_stk_rcpts_grid_text(op_stk_probe) or (
+        _looks_like_zandra_stock_sale_text(op_stk_probe) and title_stock_sales
+    ) or (title_stock_sales and not has_marg_headers)
+    if try_op_stk_early:
+        try:
+            op_stk_early = _extract_op_stk_rcpts_stock_sale_vision(
+                file_bytes, filename, ext, ocr_hint=op_stk_probe
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk/Rcpts early vision failed: %s",
+                filename,
+                exc,
+            )
+            op_stk_early = None
+        if (
+            op_stk_early
+            and op_stk_early.get("line_items")
+            and not _main_stock_result_is_all_zero_shell(op_stk_early)
+        ):
+            extra = op_stk_early.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "op_stk_rcpts_stock_sale"
+            logger.info(
+                "[SalesStatement] file=%s decision=OP_STK_RCPTS_VISION rows=%s",
+                filename,
+                len(op_stk_early.get("line_items") or []),
+            )
+            return op_stk_early, True
+
     # Marg OPENING/RECEIVE/ISSUE photos: a full-page sample often misses the
     # gray header, so the column reader must run before generic Vision.
     try:
@@ -44344,12 +45338,39 @@ def _maybe_early_vision_for_image(
         )
         opening = None
     if opening and opening.get("line_items"):
-        extra = opening.setdefault("totals", {}).setdefault("extra", {})
-        extra.setdefault(
-            "early_vision_reason",
-            ",".join(quality.get("reasons") or []) or "opening_receive_issue_closing",
-        )
-        return opening, True
+        if _main_stock_result_is_all_zero_shell(opening):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=all_zero_shell",
+                filename,
+            )
+            opening = None
+        elif _main_stock_result_is_op_stk_misfiled(opening, op_stk_probe):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=op_stk_misfiled",
+                filename,
+            )
+            try:
+                op_stk_rescue = _extract_op_stk_rcpts_stock_sale_vision(
+                    file_bytes, filename, ext, ocr_hint=op_stk_probe
+                )
+            except Exception:
+                op_stk_rescue = None
+            if (
+                op_stk_rescue
+                and op_stk_rescue.get("line_items")
+                and not _main_stock_result_is_all_zero_shell(op_stk_rescue)
+            ):
+                extra = op_stk_rescue.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = "op_stk_rcpts_after_main_stock_misfile"
+                return op_stk_rescue, True
+            opening = None
+        else:
+            extra = opening.setdefault("totals", {}).setdefault("extra", {})
+            extra.setdefault(
+                "early_vision_reason",
+                ",".join(quality.get("reasons") or []) or "opening_receive_issue_closing",
+            )
+            return opening, True
 
     # Product Stock Report (SaleRet / ClosStock) before generic Vision. Generic
     # Vision shifts Sale into ClosStock on overlined phone screenshots.
@@ -46148,7 +47169,30 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             stash_vision_table_fallback_meta,
         )
 
-        if vision_table_active_for("image"):
+        # Op_Stk|Rcpts|Cl_Stk STOCK & SALES photos: vision_table burns the Gemini
+        # budget then falls back with shifted columns. Prefer the dedicated
+        # Op_Stk reader (early vision) which keeps opening/closing on the row.
+        _op_stk_peek = ""
+        try:
+            _op_stk_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+        except Exception:
+            _op_stk_peek = ""
+        _skip_vt_for_op_stk = _looks_like_op_stk_rcpts_grid_text(_op_stk_peek) or (
+            re.search(r"STOCK\s*&\s*SALES\s*STATEMENT", _op_stk_peek, re.I)
+            and re.search(r"\bOp[_\s.]*Stk\b|\bRcpts?\b", _op_stk_peek, re.I)
+            and not re.search(
+                r"OPENING\s+STOCK|RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY",
+                _op_stk_peek,
+                re.I,
+            )
+        )
+        if _skip_vt_for_op_stk:
+            logger.info(
+                "[SalesStatement] file=%s VISION_TABLE skipped reason=op_stk_rcpts_grid",
+                filename,
+            )
+
+        if vision_table_active_for("image") and not _skip_vt_for_op_stk:
             request_id = "-"
             try:
                 from services.sales_extraction_runtime import resolve_request_id
@@ -46200,11 +47244,29 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     len(result.get("line_items") or []),
                 )
                 return result
-            _vt_meta = {
+            _vt_meta: Dict[str, Any] = {
                 "gemini_calls": int(outcome.get("gemini_calls") or 0),
                 "gemini_budget": int(outcome.get("gemini_budget") or 2),
                 "fallback_reason": outcome.get("reason"),
             }
+            # Keep lead SKUs when fallback drops a banner-glued first row
+            # (e.g. "HIMALAYA ZANDRA\\nARJUNA TAB") so Op_Stk can prepend them.
+            _vt_result = outcome.get("result") if isinstance(outcome.get("result"), dict) else {}
+            _lead_products: List[Dict[str, Any]] = []
+            for _row in (_vt_result.get("line_items") or [])[:6]:
+                if not isinstance(_row, dict):
+                    continue
+                _pname = _op_stk_clean_product_name(str(_row.get("product_name") or ""))
+                if not _pname or _is_non_product_line_name(_pname):
+                    continue
+                _lead_products.append(
+                    {
+                        "product_name": _pname,
+                        "packing": _row.get("packing"),
+                    }
+                )
+            if _lead_products:
+                _vt_meta["lead_products"] = _lead_products
             stash_vision_table_fallback_meta(_vt_meta)
             logger.info(
                 "VISION_TABLE request_id=%s status=fallback reason=%s "
@@ -46834,6 +47896,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     )
                     if zandra and zandra.get("line_items"):
                         return zandra
+                if _looks_like_op_stk_rcpts_grid_text(peek_ocr) or _main_stock_result_is_op_stk_misfiled(
+                    result, peek_ocr
+                ):
+                    op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+                        file_bytes, filename, ext, ocr_hint=peek_ocr
+                    )
+                    if op_stk and op_stk.get("line_items"):
+                        return op_stk
                 if _looks_like_unfilled_sap_order_form(result) or _unfilled_sap_order_photo(
                     result, file_bytes
                 ):
