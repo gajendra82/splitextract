@@ -20918,6 +20918,7 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
 
     Supports Particular|Opn|Rec|Issue|Bal and Particular|Packing|Opn|Rec|Issue|
     age-buckets|Bal. Age buckets are ignored; Bal is always the last qty cell.
+    Phone OCR without pipes uses trailing qty cells (4 or 7 with age buckets).
     """
     # Wider pipe layouts (Packing + age) must not use the short regex — it
     # absorbs Opn/Rec/Issue into the name and reads age cells as movement.
@@ -20963,27 +20964,67 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
         }
 
     match = _SALEABLE_ROW_RE.match(raw)
-    if not match:
-        return None
-    return {
-        "name": match.group("name"),
-        "pack": "",
-        "opn": match.group("opn"),
-        "rec": match.group("rec"),
-        "issue": match.group("issue"),
-        "bal": match.group("bal"),
-    }
+    if match:
+        return {
+            "name": match.group("name"),
+            "pack": "",
+            "opn": match.group("opn"),
+            "rec": match.group("rec"),
+            "issue": match.group("issue"),
+            "bal": match.group("bal"),
+        }
+
+    # Phone OCR: no pipes — take last 7 (with age) or last 4 qty cells.
+    for count in (7, 4):
+        split = _trailing_metrics(raw, count)
+        if not split:
+            continue
+        left, metrics = split
+        if not left:
+            continue
+        tokens = list(left)
+        pack = ""
+        if (
+            len(tokens) >= 3
+            and re.fullmatch(r"\d+(?:\.\d+)?", tokens[-2])
+            and re.fullmatch(r"[A-Za-z']{1,8}", tokens[-1], re.I)
+        ):
+            pack = f"{tokens[-2]} {tokens[-1]}"
+            tokens = tokens[:-2]
+        elif len(tokens) >= 2:
+            tail = tokens[-1]
+            if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP|PCS|\bS\b", tail, re.I):
+                pack = tail.rstrip(",")
+                tokens = tokens[:-1]
+        name = " ".join(tokens).strip()
+        if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+            continue
+        return {
+            "name": name,
+            "pack": pack,
+            "opn": metrics[0],
+            "rec": metrics[1],
+            "issue": metrics[2],
+            "bal": metrics[-1],
+        }
+    return None
 
 
 def _is_saleable_stock_report_text(text: str) -> bool:
     if not text:
         return False
+    if not re.search(r"Saleable\s+Stock\s+Report", text, re.I):
+        return False
+    if not re.search(r"\bParticular\b", text, re.I):
+        return False
+    # Printed Opn/Rec/Issue/Bal, or OCR that kept only (Q+F) under those bands.
+    if re.search(r"\bOpn\b", text, re.I) and re.search(
+        r"\bIssue\b", text, re.I
+    ) and re.search(r"\bBal\b", text, re.I):
+        return True
     return bool(
-        re.search(r"Saleable\s+Stock\s+Report", text, re.I)
-        and re.search(r"\bParticular\b", text, re.I)
-        and re.search(r"\bOpn\b", text, re.I)
-        and re.search(r"\bIssue\b", text, re.I)
-        and re.search(r"\bBal\b", text, re.I)
+        re.search(r"\(?\s*Q\s*\+\s*F\s*\)?", text, re.I)
+        and re.search(r"\bPacking\b", text, re.I)
     )
 
 
@@ -21060,7 +21101,7 @@ def _parse_saleable_stock_report(
         if re.search(r"^(?:COMPANY|Firm)\s+Total\b", raw, re.I):
             nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
             moved = _saleable_movement_from_nums(nums)
-            if moved and raw.count("|") >= 3:
+            if moved:
                 extra = result["totals"]["extra"]
                 extra["opening_qty"] = moved["opening"]
                 extra["receipts_qty"] = moved["receipts"]
@@ -21068,7 +21109,9 @@ def _parse_saleable_stock_report(
                 extra["closing_qty"] = moved["closing"]
                 extra["total_row_source"] = "saleable_company_total"
             continue
-        if re.search(r"\|A\|", raw):
+        if re.search(r"(?:\|A\||^\s*A\b)", raw) and re.search(
+            r"\d+\.\d{2}", raw
+        ):
             nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
             moved = _saleable_movement_from_nums(nums)
             if moved:
@@ -21111,6 +21154,60 @@ def _parse_saleable_stock_report(
 def _parse_saleable_stock_report_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
     text = "\n".join((page.get_text("text") or "") for page in doc)
     return _parse_saleable_stock_report(text, filename, "pdf")
+
+
+def _try_saleable_stock_report_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """OCR a phone photo of Saleable Stock Report and parse Opn/Rec/Issue/Bal."""
+    texts: List[str] = []
+    for enhance in (False, True):
+        try:
+            text = _ocr_image_to_text(file_bytes, psm=6, enhance=enhance) or ""
+        except Exception:
+            text = ""
+        if text.strip():
+            texts.append(text)
+    # Wider PSM sometimes recovers Particular / Opn headers on dense grids.
+    try:
+        text = _ocr_image_to_text(file_bytes, psm=4, enhance=True) or ""
+    except Exception:
+        text = ""
+    if text.strip():
+        texts.append(text)
+
+    for text in texts:
+        if not _is_saleable_stock_report_text(text):
+            continue
+        parsed = _parse_saleable_stock_report(
+            text, filename, (ext or "jpg").lstrip(".")
+        )
+        if not parsed or not parsed.get("line_items"):
+            continue
+        items = parsed["line_items"]
+        nonzero = any(
+            abs(float(it.get("opening_qty") or 0))
+            + abs(float(it.get("receipts_qty") or 0))
+            + abs(float(it.get("sales_qty") or 0))
+            + abs(float(it.get("closing_qty") or 0))
+            > 0
+            for it in items
+        )
+        if len(items) < 3 or not nonzero:
+            continue
+        extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+        extra["extraction_method"] = "saleable_stock_report"
+        extra["saleable_image_ocr"] = True
+        extra["vision_table_final"] = True
+        extra["stock_vision_locked"] = True
+        logger.info(
+            "saleable_stock_report_image file=%s rows=%s nonzero=%s",
+            filename,
+            len(items),
+            str(nonzero).lower(),
+        )
+        return parsed
+    return None
 
 
 _ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
@@ -46026,6 +46123,19 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         _diag["vision_fallback_reason"] = f"geometry_exception:{type(exc).__name__}"
         logger.info(
             "[SalesStatement] file=%s geometry_cell_ocr path skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
+    # Clear Saleable Stock Report phone photos: OCR + existing pipe/trailing parser
+    # before generic Gemini (which often returns product names with all-zero qtys).
+    try:
+        saleable_img = _try_saleable_stock_report_image(file_bytes, filename, ext)
+        if saleable_img and saleable_img.get("line_items"):
+            return saleable_img
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s saleable image OCR skipped: %s",
             filename,
             type(exc).__name__,
         )

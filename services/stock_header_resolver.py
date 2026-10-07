@@ -6,10 +6,13 @@ Alias tables are copied/merged from existing parsers; those tables are untouched
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from statistics import median
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+logger = logging.getLogger(__name__)
 
 CANONICAL_FIELDS = (
     "product_name",
@@ -52,6 +55,7 @@ ALIASES: Dict[str, List[str]] = {
         "product description",
         "product desc",
         "particulars",
+        "particular",
         "medicine name",
         "drug name",
         "mat name",
@@ -557,11 +561,28 @@ def _qty_value_sequence_enabled() -> bool:
     }
 
 
+def _qf_qty_sequence_enabled() -> bool:
+    """STOCK_HEADER_QF_SEQUENCE — map repeated (Q+F) headers Opn→Rec→Issue→Bal."""
+    return os.getenv("STOCK_HEADER_QF_SEQUENCE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 _QTY_VALUE_SEQUENCE_GROUPS: Tuple[Tuple[str, str, str], ...] = (
     ("opening", "opening_qty", "opening_value"),
     ("purchase", "purchase_qty", "purchase_value"),
     ("sales", "sales_qty", "sales_value"),
     ("closing", "closing_qty", "closing_value"),
+)
+
+_QF_QTY_SEQUENCE_GROUPS: Tuple[Tuple[str, str], ...] = (
+    ("opening", "opening_qty"),
+    ("purchase", "purchase_qty"),
+    ("sales", "sales_qty"),
+    ("closing", "closing_qty"),
 )
 
 
@@ -679,6 +700,84 @@ def _apply_bare_qty_value_sequence(
         )
         return True
     return False
+
+
+def _is_qf_subheader(norm: str) -> bool:
+    """True for Saleable Stock Report qty sub-headers like (Q+F) / Q+F."""
+    compact = re.sub(r"[^a-z0-9]+", "", (norm or "").lower())
+    return compact in {"qf", "qplusf", "qtyf", "qandf"}
+
+
+def _apply_qf_qty_sequence(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """When parent Opn/Rec/Issue/Bal labels are lost and only (Q+F) remains.
+
+    Maps consecutive (Q+F) columns left-to-right onto
+    opening_qty → purchase_qty → sales_qty → closing_qty. Does not invent
+    values — only renames columns. Default ON (STOCK_HEADER_QF_SEQUENCE).
+    """
+    if not _qf_qty_sequence_enabled():
+        return False
+    if not any(
+        str(c.get("canonical") or "") in {"product_name", "pack"} for c in prelim
+    ):
+        return False
+
+    idxs: List[int] = []
+    for i, col in enumerate(prelim):
+        norm = normalize_header(col.get("header_text"))
+        canon = str(col.get("canonical") or "ignore")
+        if not _is_qf_subheader(norm):
+            continue
+        # Remap only unlabeled (Q+F) cells — never override named Opn/Rec/etc.
+        if canon not in {"ignore", "value_marker"}:
+            continue
+        idxs.append(i)
+
+    if len(idxs) < 3:
+        return False
+
+    run: List[int] = []
+    best: List[int] = []
+    for i in idxs:
+        if not run or i == run[-1] + 1:
+            run.append(i)
+        else:
+            if len(run) > len(best):
+                best = list(run)
+            run = [i]
+    if len(run) > len(best):
+        best = list(run)
+    if len(best) < 3:
+        return False
+    best = best[:4]
+
+    for gi, pi in enumerate(best):
+        gname, q_field = _QF_QTY_SEQUENCE_GROUPS[gi]
+        prelim[pi]["canonical"] = q_field
+        prelim[pi]["group"] = gname
+        prelim[pi]["is_value"] = False
+        prelim[pi]["confidence"] = 0.9
+        prelim[pi]["reason"] = "qf_qty_sequence"
+
+    logger.info(
+        "stock_header_qf_sequence assigned=%d cols=%s",
+        len(best),
+        ",".join(str(prelim[i]["col_index"]) for i in best),
+    )
+    errors.append(
+        {
+            "code": "QF_QTY_SEQUENCE",
+            "message": (
+                f"Assigned {len(best)} (Q+F) columns left-to-right "
+                "(opening/purchase/sales[/closing])"
+            ),
+            "cols": len(best),
+        }
+    )
+    return True
 
 
 def resolve_columns(
@@ -989,6 +1088,8 @@ def resolve_columns(
     # Bare QTY/VALUE pairs (parent OPENING/RECEIPT/ISSUE headers lost): assign
     # left-to-right opening → purchase → sales → closing. Geometry/order only.
     _apply_bare_qty_value_sequence(prelim, errors)
+    # Saleable Stock Report: parent Opn/Rec/Issue/Bal lost; only (Q+F) remains.
+    _apply_qf_qty_sequence(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}
