@@ -412,7 +412,11 @@ class TallCropBudgetTests(unittest.TestCase):
         clear_gemini_responses()
         import os
 
-        for k in ("STOCK_VISION_SPLIT_MIN_HEIGHT", "STOCK_IDENTITY_VETO"):
+        for k in (
+            "STOCK_VISION_SPLIT_MIN_HEIGHT",
+            "STOCK_IDENTITY_VETO",
+            "STOCK_VISION_VERTICAL_SPLIT_EAGER",
+        ):
             os.environ.pop(k, None)
 
     def test_vertical_split_sets_reread_skipped_budget(self):
@@ -422,6 +426,8 @@ class TallCropBudgetTests(unittest.TestCase):
         os.environ["STOCK_VISION_SPLIT_MIN_HEIGHT"] = "100"
         os.environ["STOCK_IDENTITY_VETO"] = "true"
         os.environ["STOCK_RECONCILIATION_ENFORCE"] = "true"
+        # Keep recon-priority deferral even if .env enables eager split.
+        os.environ["STOCK_VISION_VERTICAL_SPLIT_EAGER"] = "false"
 
         # Tiny JPEG that would previously trigger an eager split.
         from PIL import Image

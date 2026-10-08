@@ -514,6 +514,10 @@ def build_table_prompt() -> str:
         "Keep a leading serial/Sr column and a packing column when printed. "
         "Never put the serial number into product_name. Never freely reorder "
         "numbers across columns — each cell stays under its printed column. "
+        "A company/division title in the header band (e.g. 'HIMALAYA DRUG "
+        "WELLNESS (ZANDRA)') is not a Packing column — map it to ignore and "
+        "still emit Pack/Size when a real packing header is printed. "
+        "y_center must be a fraction of image height (0..1), never pixels. "
         "Do not emit letterhead, address, period, company, or section-banner "
         "lines (e.g. 'NON MOVING PRODUCT') as product rows; mark those "
         "is_total_row=true or omit them. Emit every real product row, "
@@ -645,6 +649,94 @@ def _split_min_height() -> int:
         return max(500, int(os.getenv("STOCK_VISION_SPLIT_MIN_HEIGHT", "2800")))
     except (TypeError, ValueError):
         return 2800
+
+
+def _vertical_split_eager_enabled() -> bool:
+    """STOCK_VISION_VERTICAL_SPLIT_EAGER — tall images: top+bottom halves first.
+
+    Default OFF (recon-priority deferral). ON uses both Gemini slots for halves
+    so dense statements keep opening/receipt cells instead of nulling them.
+    """
+    return os.getenv("STOCK_VISION_VERTICAL_SPLIT_EAGER", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _coerce_y_center_to_fraction(
+    y: Any,
+    image_height: Optional[float] = None,
+) -> Optional[float]:
+    """Vision must emit y_center in 0..1; some responses use pixel rows.
+
+    Pixel centres (e.g. 396 on a 2000px image) break crop_row_bands which
+    multiplies by height — recovery then reads the wrong band and products
+    keep missing opening/receipt. Convert pixels when height is known.
+    """
+    if y is None:
+        return None
+    try:
+        yf = float(y)
+    except (TypeError, ValueError):
+        return None
+    if yf != yf:  # NaN
+        return None
+    if 0.0 <= yf <= 1.0:
+        return yf
+    # Slight overflow past the bottom edge — clamp.
+    if 1.0 < yf <= 1.5:
+        return 1.0
+    h = float(image_height or 0.0)
+    if h > 1.0 and yf > 1.5:
+        frac = yf / h
+        logger.info(
+            "STOCK_VISION_Y_CENTER_PIXEL_TO_FRAC y=%s height=%s frac=%.4f",
+            yf,
+            h,
+            frac,
+        )
+        return max(0.0, min(1.0, frac))
+    # Unknown height + pixel-like value — refuse rather than crop wrongly.
+    if yf > 1.5:
+        logger.info(
+            "STOCK_VISION_Y_CENTER_UNUSABLE y=%s (no image height for pixel convert)",
+            yf,
+        )
+        return None
+    return max(0.0, min(1.0, yf))
+
+
+_COMPANY_OR_DIVISION_HEADER = re.compile(
+    r"(?ix)\b(?:himalaya|wellness|zandra|division|drug\s*co(?:mpany)?|"
+    r"pharma(?:ceuticals?)?|pvt\.?\s*ltd|private\s+limited)\b"
+)
+_PACK_HEADER_TOKEN = re.compile(
+    r"(?ix)\b(?:pack(?:ing|g)?|size|unit|pack\s*size)\b"
+)
+
+
+def _header_is_company_not_pack(text: Any) -> bool:
+    """True when a header names a company/division, not Pack/Size."""
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    if _PACK_HEADER_TOKEN.search(raw) and len(raw) < 40:
+        return False
+    if _COMPANY_OR_DIVISION_HEADER.search(raw) and len(raw) >= 10:
+        return True
+    return False
+
+
+def _pack_cell_is_company_banner(text: Any) -> bool:
+    """Packing cell wrongly filled with a division/company banner."""
+    raw = str(text or "").strip()
+    if not raw or len(raw) < 10:
+        return False
+    if _classify_layout_cell(raw) == "pack":
+        return False
+    return bool(_COMPANY_OR_DIVISION_HEADER.search(raw))
 
 
 def _normalize_product_key(name: Any) -> str:
@@ -1369,6 +1461,17 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
                     errors.append(f"LMS_MODEL_BLOCK col={idx}")
+            # Company/division titles are not packing (model often guesses pack).
+            if model_canon == "pack" and _header_is_company_not_pack(
+                col.get("header_text")
+            ):
+                header_ok = False
+                errors.append(f"COMPANY_HEADER_NOT_PACK col={idx}")
+                logger.info(
+                    "STOCK_VISION_COMPANY_HEADER_NOT_PACK col=%s text=%r",
+                    idx,
+                    col.get("header_text"),
+                )
             if (
                 resolver_canon == "ignore"
                 and resolver_conf < 0.5
@@ -1784,6 +1887,13 @@ def _apply_fields_to_item(
             elif canon == "product_name":
                 item["product_name"] = text
             elif canon == "pack":
+                if text and _pack_cell_is_company_banner(text):
+                    logger.info(
+                        "STOCK_VISION_PACK_CELL_COMPANY_BANNER cleared text=%r",
+                        text,
+                    )
+                    text = None
+                    missing = True
                 item["packing"] = text
             else:
                 item.setdefault("extra", {})["batch"] = text
@@ -2581,10 +2691,7 @@ def crop_row_bands(
                 if not isinstance(entry, dict):
                     continue
                 y = entry.get("y_center")
-                try:
-                    yf = float(y) if y is not None else None
-                except (TypeError, ValueError):
-                    yf = None
+                yf = _coerce_y_center_to_fraction(y, h)
                 if yf is None:
                     # Fall back to full image once.
                     buf = io.BytesIO()
@@ -3161,9 +3268,11 @@ def run_vision_table_path(
             }
 
         pages_per = _pages_per_call()
-        # Defer tall-image vertical split: recon recovery has higher priority
-        # than optional quality crops that would consume the spare Gemini call.
+        # Tall-image vertical split: default defers for recon-recovery priority.
+        # STOCK_VISION_VERTICAL_SPLIT_EAGER=true spends both Gemini slots on
+        # overlapping top/bottom halves so dense statements keep product qtys.
         deferred_vertical_split = False
+        eager_vertical_split = False
         original_image_for_reread: Optional[bytes] = (
             file_bytes if kind == "image" else None
         )
@@ -3172,13 +3281,26 @@ def run_vision_table_path(
             and len(page_images) == 1
             and _needs_vertical_split(page_images[0])
         ):
-            deferred_vertical_split = True
-            _log(
-                "vertical_split_deferred",
-                reason="recon_priority",
-                height=_image_dimensions(file_bytes)[1],
-                min_height=_split_min_height(),
-            )
+            if _vertical_split_eager_enabled():
+                page_images = _vertical_halves(page_images[0])
+                pages_per = 1
+                gemini_budget = max(int(gemini_budget), len(page_images))
+                eager_vertical_split = True
+                _log(
+                    "vertical_split_eager",
+                    halves=len(page_images),
+                    height=_image_dimensions(file_bytes)[1],
+                    min_height=_split_min_height(),
+                    gemini_budget=gemini_budget,
+                )
+            else:
+                deferred_vertical_split = True
+                _log(
+                    "vertical_split_deferred",
+                    reason="recon_priority",
+                    height=_image_dimensions(file_bytes)[1],
+                    min_height=_split_min_height(),
+                )
 
         all_items: List[Dict[str, Any]] = []
         all_totals: List[Dict[str, Any]] = []
@@ -3288,6 +3410,15 @@ def run_vision_table_path(
                 "gemini_budget": gemini_budget,
             }
 
+        if eager_vertical_split:
+            all_items, dedupe_errs = dedupe_crop_overlap_rows(all_items)
+            errors.extend(str(e) for e in dedupe_errs)
+            # Re-stamp sequential vision_row_index after overlap drop.
+            for i, item in enumerate(all_items):
+                if isinstance(item, dict):
+                    item.setdefault("extra", {})["vision_row_index"] = i
+            _log("vertical_split_deduped", rows=len(all_items))
+
         result = _stamp_vision_result(
             filename=filename,
             ext=ext,
@@ -3308,6 +3439,8 @@ def run_vision_table_path(
         result["totals"]["extra"]["tables_found"] = tables_found_total
         if deferred_vertical_split:
             result["totals"]["extra"]["vertical_split_deferred"] = "recon_priority"
+        if eager_vertical_split:
+            result["totals"]["extra"]["vertical_split_eager"] = True
         _log_vision_boundary(
             "api_response_payload",
             {

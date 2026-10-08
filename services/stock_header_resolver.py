@@ -619,6 +619,124 @@ def _ignore_non_qty_headers_enabled() -> bool:
     }
 
 
+def _multi_stock_enabled() -> bool:
+    """STOCK_HEADER_MULTI_STOCK — leftmost bare STOCK=opening, rightmost=closing.
+
+    Vision often flattens OPENING STOCK / CLOSING STOCK into repeated bare
+    STOCK headers; without this, medica_stock maps the first to closing and
+    the real closing is dropped as DUPLICATE_CANONICAL. Default OFF.
+    """
+    return os.getenv("STOCK_HEADER_MULTI_STOCK", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _apply_multi_stock_sequence(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map repeated bare STOCK headers: first→opening_qty, last→closing_qty.
+
+    Also treats adjacent SALES + QTY as a section label + sales_qty (Vision
+    splits multi-line 'SALES QTY' into two columns; values sit under QTY).
+    """
+    if not _multi_stock_enabled():
+        return False
+
+    stock_idxs: List[int] = []
+    for i, col in enumerate(prelim):
+        norm = normalize_header(col.get("header_text"))
+        if norm != "stock":
+            continue
+        canon = str(col.get("canonical") or "ignore")
+        reason = str(col.get("reason") or "")
+        # Only remappable bare STOCK (medica_stock / closing / still unknown).
+        if canon not in {"closing_qty", "opening_qty", "ignore"} and reason != "medica_stock":
+            continue
+        stock_idxs.append(i)
+
+    applied = False
+    if len(stock_idxs) >= 2:
+        first_i = stock_idxs[0]
+        last_i = stock_idxs[-1]
+        prelim[first_i]["canonical"] = "opening_qty"
+        prelim[first_i]["group"] = "opening"
+        prelim[first_i]["is_value"] = False
+        prelim[first_i]["confidence"] = max(
+            float(prelim[first_i].get("confidence") or 0.0), 0.9
+        )
+        prelim[first_i]["reason"] = "multi_stock_opening"
+        prelim[last_i]["canonical"] = "closing_qty"
+        prelim[last_i]["group"] = "closing"
+        prelim[last_i]["is_value"] = False
+        prelim[last_i]["confidence"] = max(
+            float(prelim[last_i].get("confidence") or 0.0), 0.9
+        )
+        prelim[last_i]["reason"] = "multi_stock_closing"
+        for mid_i in stock_idxs[1:-1]:
+            prelim[mid_i]["canonical"] = "ignore"
+            prelim[mid_i]["group"] = None
+            prelim[mid_i]["confidence"] = 0.0
+            prelim[mid_i]["reason"] = "multi_stock_middle"
+        logger.info(
+            "STOCK_HEADER_MULTI_STOCK opening_col=%s closing_col=%s middle=%s",
+            prelim[first_i]["col_index"],
+            prelim[last_i]["col_index"],
+            ",".join(str(prelim[i]["col_index"]) for i in stock_idxs[1:-1]) or "-",
+        )
+        errors.append(
+            {
+                "code": "MULTI_STOCK_SEQUENCE",
+                "message": (
+                    f"Bare STOCK columns: opening at col_index="
+                    f"{prelim[first_i]['col_index']}, closing at "
+                    f"col_index={prelim[last_i]['col_index']}"
+                ),
+                "opening_col": prelim[first_i]["col_index"],
+                "closing_col": prelim[last_i]["col_index"],
+            }
+        )
+        applied = True
+
+    # SALES | QTY. → section label + sales_qty (values under QTY).
+    _qty_norms = frozenset({"qty", "quantity", "qnty", "qty."})
+    for i, col in enumerate(prelim):
+        if i + 1 >= len(prelim):
+            break
+        left_norm = normalize_header(col.get("header_text"))
+        right_norm = normalize_header(prelim[i + 1].get("header_text"))
+        if left_norm not in {"sales", "sale"}:
+            continue
+        if right_norm not in _qty_norms:
+            continue
+        if str(col.get("canonical") or "") not in {"sales_qty", "sales_value", "ignore"}:
+            continue
+        right = prelim[i + 1]
+        right_canon = str(right.get("canonical") or "ignore")
+        if right_canon not in {"ignore", "sales_qty", "value_marker"}:
+            continue
+        col["canonical"] = "ignore"
+        col["group"] = "sales"
+        col["confidence"] = 0.0
+        col["reason"] = "sales_section_label"
+        right["canonical"] = "sales_qty"
+        right["group"] = "sales"
+        right["is_value"] = False
+        right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
+        right["reason"] = "sales_qty_after_sales_label"
+        logger.info(
+            "STOCK_HEADER_MULTI_STOCK sales_qty_pair label_col=%s qty_col=%s",
+            col.get("col_index"),
+            right.get("col_index"),
+        )
+        applied = True
+
+    return applied
+
+
 def _glued_stock_header_prefers_qty(norm: str, group: str) -> bool:
     """Vision often glues 'Opening stock' + 'Value' into one qty-column header.
 
@@ -1295,6 +1413,9 @@ def resolve_columns(
                 col["canonical"] = "ignore"
                 col["reason"] = "orphan_value"
                 col["confidence"] = 0.0
+
+    # Repeated bare STOCK → first opening, last closing (before free/dedupe).
+    _apply_multi_stock_sequence(prelim, errors)
 
     # Free / scheme direction from neighbours.
     for i, col in enumerate(prelim):

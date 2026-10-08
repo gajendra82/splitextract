@@ -249,6 +249,68 @@ class ResolveColumnsUnitTests(unittest.TestCase):
             )
             self.assertEqual(_canons(classic)[1], "opening_value")
 
+    def test_multi_stock_first_opening_last_closing_when_flagged(self):
+        """Vision flattens OPENING/CLOSING STOCK into bare STOCK repeats."""
+        headers = (
+            "ITEM DESCRIPTION",
+            "STOCK",
+            "PURCHASE",
+            "S/R",
+            "REPL/",
+            "TOTAL",
+            "SALES",
+            "QTY.",
+            "FREE",
+            "STOCK",
+            "P/R",
+            "REPL/",
+            "STOCK",
+        )
+        with patch.dict("os.environ", {"STOCK_HEADER_MULTI_STOCK": "false"}, clear=False):
+            off = resolve_columns(_cells(*headers))
+            off_by = {c["col_index"]: c["canonical"] for c in off["columns"]}
+            self.assertEqual(off_by[1], "closing_qty")
+            self.assertEqual(off_by[12], "ignore")
+
+        with patch.dict("os.environ", {"STOCK_HEADER_MULTI_STOCK": "true"}, clear=False):
+            on = resolve_columns(_cells(*headers))
+            by = {c["col_index"]: c for c in on["columns"]}
+            self.assertEqual(by[1]["canonical"], "opening_qty")
+            self.assertEqual(by[1]["reason"], "multi_stock_opening")
+            self.assertEqual(by[12]["canonical"], "closing_qty")
+            self.assertEqual(by[12]["reason"], "multi_stock_closing")
+            self.assertEqual(by[9]["canonical"], "ignore")
+            self.assertEqual(by[6]["canonical"], "ignore")  # SALES section label
+            self.assertEqual(by[7]["canonical"], "sales_qty")
+            self.assertEqual(by[2]["canonical"], "purchase_qty")
+            self.assertEqual(by[8]["canonical"], "free_out_qty")
+
+            # AACTARIL-style identity: open 53, sale 19, free 2, close 32.
+            assigned = assign_cells(
+                [
+                    {"col_index": 0, "text": "AACTARIL SOAP 750M"},
+                    {"col_index": 1, "text": "53"},
+                    {"col_index": 2, "text": "0"},
+                    {"col_index": 3, "text": "0"},
+                    {"col_index": 4, "text": "0"},
+                    {"col_index": 5, "text": "0"},
+                    {"col_index": 6, "text": "53"},
+                    {"col_index": 7, "text": "19"},
+                    {"col_index": 8, "text": "2"},
+                    {"col_index": 9, "text": "0"},
+                    {"col_index": 10, "text": "0"},
+                    {"col_index": 11, "text": "0"},
+                    {"col_index": 12, "text": "32"},
+                ],
+                on["columns"],
+            )
+            fields = assigned["fields"]
+            self.assertEqual(fields["opening_qty"], "53")
+            self.assertEqual(fields["purchase_qty"], "0")
+            self.assertEqual(fields["sales_qty"], "19")
+            self.assertEqual(fields["free_out_qty"], "2")
+            self.assertEqual(fields["closing_qty"], "32")
+
 
 class AssignCellsTests(unittest.TestCase):
     def _qty_columns(self, centers):
