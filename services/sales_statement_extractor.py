@@ -36344,6 +36344,128 @@ def _ssa_dump_infer_opening_qty(item: Dict[str, Any]) -> float:
     return float(inferred)
 
 
+def _ssa_dump_sales_closing_cascade_enabled() -> bool:
+    """Shift mis-aligned sales/closing qty down when identity proves the move."""
+    return os.getenv(
+        "STOCK_SSA_DUMP_SALES_CLOSING_CASCADE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_row_balances(
+    opening: float, receipt: float, sales: float, closing: float
+) -> bool:
+    return abs((opening + receipt - sales) - closing) <= 0.51
+
+
+def _ssa_dump_effective_closing_qty(item: Dict[str, Any]) -> float:
+    """Closing qty cell, or closing_value when qty is empty and value is whole qty.
+
+    Qty-only SSA rows sometimes park printed closing in closing_value (0 cq).
+    Cascade must see that printed number — never invent.
+    """
+    cq = _to_float(item.get("closing_qty"))
+    if abs(cq) > 0.001:
+        return cq
+    cv = item.get("closing_value")
+    try:
+        cv_f = float(cv) if cv is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+    if abs(cv_f) < 0.001:
+        return 0.0
+    # Whole-number qty-like only (no money decimals).
+    if abs(cv_f - int(cv_f)) > 0.001:
+        return 0.0
+    return float(cv_f)
+
+
+def _ssa_dump_shift_sales_closing_cascade(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Vision sometimes parks row N+1 sales/closing on row N (qty-only SSA).
+
+    Walk bottom-up: if giving the current row's sales+closing to the next row
+    makes the next row balance, and the current row does not balance with them,
+    move those printed numbers down. Current sales/closing become missing —
+    never invent replacement digits.
+    """
+    if not _ssa_dump_sales_closing_cascade_enabled():
+        return items
+    if len(items) < 2:
+        return items
+    for index in range(len(items) - 2, -1, -1):
+        cur = items[index]
+        nxt = items[index + 1]
+        if not isinstance(cur, dict) or not isinstance(nxt, dict):
+            continue
+        o_c = _to_float(cur.get("opening_qty"))
+        r_c = _to_float(cur.get("receipts_qty"))
+        s_c = _to_float(cur.get("sales_qty"))
+        c_c = _ssa_dump_effective_closing_qty(cur)
+        o_n = _to_float(nxt.get("opening_qty"))
+        r_n = _to_float(nxt.get("receipts_qty"))
+        s_n = _to_float(nxt.get("sales_qty"))
+        c_n = _ssa_dump_effective_closing_qty(nxt)
+        # Donor must carry a non-trivial sales/closing block.
+        if s_c == 0 and c_c == 0:
+            continue
+        if _ssa_dump_row_balances(o_c, r_c, s_c, c_c):
+            continue
+        # Next already balances with its own numbers — do not steal.
+        if (s_n != 0 or c_n != 0) and _ssa_dump_row_balances(o_n, r_n, s_n, c_n):
+            continue
+        if not _ssa_dump_row_balances(o_n, r_n, s_c, c_c):
+            continue
+        logger.info(
+            "SSA_DUMP_SALES_CLOSING_CASCADE from=%s to=%s "
+            "sales=%s closing=%s",
+            str(cur.get("product_name") or "")[:50],
+            str(nxt.get("product_name") or "")[:50],
+            s_c,
+            c_c,
+        )
+        nxt["sales_qty"] = s_c
+        nxt["closing_qty"] = c_c
+        nxt["closing_value"] = None
+        nxt_extra = nxt.setdefault("extra", {})
+        if not isinstance(nxt_extra, dict):
+            nxt_extra = {}
+            nxt["extra"] = nxt_extra
+        nxt_fs = nxt_extra.setdefault("field_source", {})
+        if isinstance(nxt_fs, dict):
+            nxt_fs["sales_qty"] = "printed"
+            nxt_fs["closing_qty"] = "printed"
+            nxt_fs["closing_value"] = "missing"
+        nxt_flags = list(nxt_extra.get("flags") or [])
+        if "SSA_DUMP_SALES_CLOSING_CASCADE" not in nxt_flags:
+            nxt_flags.append("SSA_DUMP_SALES_CLOSING_CASCADE")
+        nxt_extra["flags"] = nxt_flags
+
+        # Clear donor — never invent replacement sales/closing.
+        cur["sales_qty"] = None
+        cur["closing_qty"] = None
+        cur["closing_value"] = None
+        cur_extra = cur.setdefault("extra", {})
+        if not isinstance(cur_extra, dict):
+            cur_extra = {}
+            cur["extra"] = cur_extra
+        cur_fs = cur_extra.setdefault("field_source", {})
+        if isinstance(cur_fs, dict):
+            cur_fs["sales_qty"] = "missing"
+            cur_fs["closing_qty"] = "missing"
+            cur_fs["closing_value"] = "missing"
+        cur_flags = list(cur_extra.get("flags") or [])
+        if "SSA_DUMP_SALES_CLOSING_CASCADE" not in cur_flags:
+            cur_flags.append("SSA_DUMP_SALES_CLOSING_CASCADE")
+        cur_extra["flags"] = cur_flags
+    return items
+
+
 def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Fill missing opening_qty/value and move a shifted 100ML block off the BIG row."""
     repaired: List[Dict[str, Any]] = []
@@ -36363,6 +36485,16 @@ def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 item["opening_qty"] = inferred
         repaired.append(item)
     repaired = _ssa_dump_move_opening_row_up(repaired)
+    repaired = _ssa_dump_shift_sales_closing_cascade(repaired)
+    # Closing qty parked in closing_value (PILEX 70, CONFIDO 75, …) → qty slot.
+    try:
+        from services.stock_vision_table import (
+            _apply_closing_qty_parked_in_value_pass,
+        )
+
+        _apply_closing_qty_parked_in_value_pass(repaired)
+    except Exception:
+        logger.exception("SSA_DUMP_CLOSING_QTY_PARKED_IN_VALUE_PASS failed")
     return _ssa_dump_repair_opening_values(repaired)
 
 
