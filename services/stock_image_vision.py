@@ -805,11 +805,16 @@ def apply_direct_stock_image_gemini(
         from services.sales_statement_extractor import (
             _extract_op_stk_rcpts_stock_sale_vision,
             _looks_like_op_stk_rcpts_grid_text,
+            _looks_like_ostk_qoh_stock_sales_text,
             _main_stock_result_is_op_stk_misfiled,
         )
 
-        want_op_stk = _looks_like_op_stk_rcpts_grid_text(peek_text) or (
-            _main_stock_result_is_op_stk_misfiled(result, peek_text)
+        want_op_stk = (
+            not _looks_like_ostk_qoh_stock_sales_text(peek_text)
+            and (
+                _looks_like_op_stk_rcpts_grid_text(peek_text)
+                or _main_stock_result_is_op_stk_misfiled(result, peek_text)
+            )
         )
         if want_op_stk and _enabled():
             op_stk = _extract_op_stk_rcpts_stock_sale_vision(

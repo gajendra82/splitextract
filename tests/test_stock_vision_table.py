@@ -287,7 +287,9 @@ class MappingPolicyTests(unittest.TestCase):
             any(e.startswith("MAPPING_DISAGREE col=2") for e in mapped["errors"])
         )
 
-    def test_x_order_violation_structural(self):
+    def test_x_order_violation_relaxed_keeps_col_index_order(self):
+        # Unsorted x_center must not discard an otherwise readable table;
+        # cells stay in col_index order (VISION_TABLE_X_ORDER_RELAXED).
         from services.stock_vision_table import map_vision_table
 
         table = {
@@ -300,13 +302,25 @@ class MappingPolicyTests(unittest.TestCase):
                 ]
             ],
             "column_count": 4,
-            "rows": [],
+            "rows": [
+                {
+                    "row_index": 0,
+                    "y_center": 0.4,
+                    "cells": ["DEMO TAB", "10", "3", "7"],
+                    "is_total_row": False,
+                }
+            ],
             "proposed_mapping": [],
             "unreadable_cells": [],
         }
         mapped = map_vision_table(table)
-        self.assertIn("STRUCTURAL_ERROR", mapped["errors"])
-        self.assertEqual(mapped["line_items"], [])
+        self.assertNotIn("STRUCTURAL_ERROR", mapped["errors"])
+        self.assertEqual(len(mapped["line_items"]), 1)
+        item = mapped["line_items"][0]
+        self.assertEqual(item["product_name"], "DEMO TAB")
+        self.assertEqual(item["opening_qty"], 10.0)
+        self.assertEqual(item["sales_qty"], 3.0)
+        self.assertEqual(item["closing_qty"], 7.0)
 
 
 class MergeRereadTests(unittest.TestCase):
@@ -357,6 +371,25 @@ class MergeRereadTests(unittest.TestCase):
         self.assertEqual(out[0]["opening_qty"], 20.0)
         self.assertEqual(out[0]["receipts_qty"], 0.0)
         self.assertEqual(out[0]["closing_qty"], 20.0)
+
+    def test_index_collision_does_not_replace_different_product(self):
+        """Recon recovery must not overwrite a neighbor via wrong row_index."""
+        from services.stock_vision_table import merge_reread
+
+        first = [
+            self._item("BONNISAN SYRUP 100ML", 47, 0, 8, 39, 3, ok=True),
+            self._item("BONNISPAZ DROPS", 0, 0, 0, 161, 4, ok=False),
+        ]
+        # Recovery returns BONNISPAZ under the neighbor's row_index.
+        reread = [
+            self._item("BONNISPAZ DROPS", 161, 0, 0, 161, 3, ok=True),
+        ]
+        out = merge_reread(first, reread, prefer_reconciled=True)
+        self.assertEqual(out[0]["product_name"], "BONNISAN SYRUP 100ML")
+        self.assertEqual(out[0]["opening_qty"], 47.0)
+        self.assertEqual(out[0]["sales_qty"], 8.0)
+        self.assertEqual(out[1]["product_name"], "BONNISPAZ DROPS")
+        self.assertEqual(out[1]["opening_qty"], 161.0)
 
 
 class ExtractVisionCallTests(unittest.TestCase):

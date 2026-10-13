@@ -223,6 +223,37 @@ class ClassifyStockDirectVisionTests(unittest.TestCase):
         self.assertEqual(decision["layout"], "opqty_qoh_stock_sales")
         self.assertNotIn("filename_za", decision["reason"])
 
+    def test_ostk_qoh_not_soft_saleret_from_footer_values(self):
+        """Profitmaker footer Opening/Sale/Closing Value must not select SaleRet."""
+        peek = (
+            "SRI VENKATESHWARA MEDICAL DISTRIBUTORS\n"
+            "Stock & Sales Statement\n"
+            "From 01/09/2026 To 30/09/2026\n"
+            "Product Name Packing O.Stk Purc Tot Sale Qoh Value Age\n"
+            "BONNISAN DROPS 30ML 50 150 200 39 161 10668.09 3\n"
+            "Opening value : 0.00 Sale value : 66198.40\n"
+            "Purchase Value : 50719.08 Closing Value : 188496.83\n"
+        )
+        decision = classify_stock_direct_vision(peek, "189.jpg")
+        self.assertIsNotNone(decision)
+        self.assertEqual(decision["layout"], "opqty_qoh_stock_sales")
+        self.assertNotEqual(decision["layout"], "product_stock_report_saleret")
+
+    def test_footer_only_stock_sales_not_soft_saleret(self):
+        """When column headers OCR fails, footer money labels alone ≠ SaleRet."""
+        peek = (
+            "SRI VENKATESHWARA MEDICAL DISTRIBUTORS\n"
+            "Stock & Sales Statement\n"
+            "BONNISAN DROPS 30ML 50 150 200 39 161 10668.09 3\n"
+            "Opening value : 0.00 Sale value : 66198.40\n"
+            "Purchase Value : 50719.08 Closing Value : 188496.83\n"
+        )
+        decision = classify_stock_direct_vision(peek, "189.jpg")
+        self.assertTrue(
+            decision is None or decision.get("layout") != "product_stock_report_saleret",
+            msg=decision,
+        )
+
     def test_normal_stock_open_recp_beats_filename_za_saleret(self):
         """Parshava Excel Normal Stock Statement must not use SaleRet/ClosStock."""
         peek = (

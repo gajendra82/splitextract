@@ -182,6 +182,59 @@ class ResolveColumnsUnitTests(unittest.TestCase):
                 msg=label,
             )
 
+    def test_ostk_purc_tot_sale_qoh_value_age(self):
+        """Profitmaker Stock & Sales: O.Stk / Purc / Tot / Sale / Qoh / Value / Age."""
+        with patch.dict("os.environ", {"STOCK_HEADER_IGNORE_NON_QTY": "true"}):
+            result = resolve_columns(
+                _cells(
+                    "Product Name",
+                    "Packing",
+                    "O.Stk",
+                    "Purc",
+                    "Tot",
+                    "Sale",
+                    "Qoh",
+                    "Value",
+                    "Age",
+                )
+            )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "pack",
+                "opening_qty",
+                "purchase_qty",
+                "total_qty",
+                "sales_qty",
+                "closing_qty",
+                "closing_value",
+                "ignore",
+            ],
+        )
+        self.assertEqual(result["columns"][7]["reason"], "inherit_left_qty")
+        out = assign_cells(
+            [
+                {"col_index": 0, "text": "BONNISAN DROPS"},
+                {"col_index": 1, "text": "30ML"},
+                {"col_index": 2, "text": "50"},
+                {"col_index": 3, "text": "150"},
+                {"col_index": 4, "text": "200"},
+                {"col_index": 5, "text": "39"},
+                {"col_index": 6, "text": "161"},
+                {"col_index": 7, "text": "10668.09"},
+                {"col_index": 8, "text": "3"},
+            ],
+            result["columns"],
+        )
+        self.assertEqual(out["fields"]["product_name"], "BONNISAN DROPS")
+        self.assertEqual(out["fields"]["opening_qty"], "50")
+        self.assertEqual(out["fields"]["purchase_qty"], "150")
+        self.assertEqual(out["fields"]["total_qty"], "200")
+        self.assertEqual(out["fields"]["sales_qty"], "39")
+        self.assertEqual(out["fields"]["closing_qty"], "161")
+        self.assertEqual(out["fields"]["closing_value"], "10668.09")
+
     def test_no_sales_return_without_return_header(self):
         result = resolve_columns(
             _cells("Opening", "Receipt", "Total", "Sale")
@@ -310,6 +363,75 @@ class ResolveColumnsUnitTests(unittest.TestCase):
             self.assertEqual(fields["sales_qty"], "19")
             self.assertEqual(fields["free_out_qty"], "2")
             self.assertEqual(fields["closing_qty"], "32")
+
+    def test_group_wise_sales_sequence_maps_sales_qty_not_first_sales(self):
+        """Repeated bare Sales headers: Sales Qty is before Cl.Stock, not first Sales."""
+        headers = (
+            "Product Name",
+            "Strength",
+            "Op.",
+            "Purchase",
+            "Free",
+            "Purchase",
+            "Purchase",
+            "Sales",
+            "Sales",
+            "Sales",
+            "Sales",
+            "Cl.Stock",
+        )
+        with patch.dict(
+            "os.environ", {"STOCK_HEADER_GROUP_WISE_SEQUENCE": "false"}, clear=False
+        ):
+            off = resolve_columns(_cells(*headers))
+            off_by = {c["col_index"]: c["canonical"] for c in off["columns"]}
+            self.assertEqual(off_by[1], "pack")  # Strength alias always on
+            self.assertEqual(off_by[7], "sales_qty")  # first Sales kept
+            self.assertEqual(off_by[9], "ignore")
+
+        with patch.dict(
+            "os.environ", {"STOCK_HEADER_GROUP_WISE_SEQUENCE": "true"}, clear=False
+        ):
+            on = resolve_columns(_cells(*headers))
+            by = {c["col_index"]: c for c in on["columns"]}
+            self.assertEqual(by[1]["canonical"], "pack")
+            self.assertEqual(by[2]["canonical"], "opening_qty")
+            self.assertEqual(by[3]["canonical"], "purchase_qty")
+            self.assertEqual(by[4]["canonical"], "free_in_qty")
+            self.assertEqual(by[5]["canonical"], "purchase_return_qty")
+            self.assertEqual(by[7]["canonical"], "sales_return_qty")
+            self.assertEqual(by[9]["canonical"], "sales_qty")
+            self.assertEqual(by[10]["canonical"], "free_out_qty")
+            self.assertEqual(by[11]["canonical"], "closing_qty")
+            self.assertTrue(
+                any(
+                    e.get("code") == "GROUP_WISE_SALES_SEQUENCE"
+                    for e in on["errors"]
+                    if isinstance(e, dict)
+                )
+            )
+
+            hair = assign_cells(
+                [
+                    {"col_index": 0, "text": "HAIR ZONE SOLUTION"},
+                    {"col_index": 1, "text": "60'S"},
+                    {"col_index": 2, "text": "53"},
+                    {"col_index": 3, "text": "0"},
+                    {"col_index": 4, "text": "0"},
+                    {"col_index": 5, "text": "0"},
+                    {"col_index": 6, "text": "0"},
+                    {"col_index": 7, "text": "0"},
+                    {"col_index": 8, "text": "0"},
+                    {"col_index": 9, "text": "3"},
+                    {"col_index": 10, "text": "0"},
+                    {"col_index": 11, "text": "50"},
+                ],
+                on["columns"],
+            )["fields"]
+            self.assertEqual(hair["opening_qty"], "53")
+            self.assertEqual(hair["sales_qty"], "3")
+            self.assertEqual(hair["closing_qty"], "50")
+            self.assertEqual(hair["pack"], "60'S")
 
 
 class AssignCellsTests(unittest.TestCase):

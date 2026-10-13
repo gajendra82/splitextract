@@ -75,6 +75,7 @@ ALIASES: Dict[str, List[str]] = {
         "packing size",
         "size",
         "unit",
+        "strength",  # Group Wise Sales Strength column
     ],
     "batch": [
         "batch",
@@ -128,6 +129,8 @@ ALIASES: Dict[str, List[str]] = {
         "opening",
         "opstk",
         "op stk",
+        "ostk",
+        "o stk",  # O.Stk / O Stk (Profitmaker Stock & Sales)
         "ob",
         "opbal",
         "op bal",
@@ -213,6 +216,9 @@ ALIASES: Dict[str, List[str]] = {
         "puret",
         "purchase return",
         "purchase ret",
+        "purchase rtn",
+        "pur rtn",
+        "purchase rtn qty",
         "purc ret qty",
         "dn",
     ],
@@ -249,6 +255,10 @@ ALIASES: Dict[str, List[str]] = {
         "closing qty",
         "cl qty",
         "clq",
+        "qoh",  # Qty on hand (Profitmaker / Daxinsoft)
+        "qo h",
+        "qty on hand",
+        "quantity on hand",
         "stock",  # Medica STOCK when paired with STK VAL; disambiguated below
         "bal.",
         "clstock",
@@ -279,6 +289,10 @@ ALIASES: Dict[str, List[str]] = {
         "total",
         "tot",
         "total qty",
+        "total stock",
+        "total stk",
+        "tot stock",
+        "tot stk",
         "total in",
         "total in qty",
         "tot in",
@@ -299,6 +313,7 @@ ALIASES: Dict[str, List[str]] = {
         "re-order",
         "re-order qty",
         "reorder qty",
+        "re order qty",
     ],
     "value_marker": [
         "value",
@@ -632,6 +647,182 @@ def _multi_stock_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _group_wise_sales_sequence_enabled() -> bool:
+    """STOCK_HEADER_GROUP_WISE_SEQUENCE — Op/Purchase/Free/Ret/Sales/Cl.Stock map.
+
+    Group Wise Sales grids flatten multi-line headers into repeated bare
+    Purchase/Sales labels; keeping the first Sales as sales_qty drops the
+    real Sales Qty column. Default OFF.
+    """
+    return os.getenv("STOCK_HEADER_GROUP_WISE_SEQUENCE", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+# Between Op.Stock and Cl.Stock on Group Wise Sales (qty columns only).
+_GROUP_WISE_MID_CANONICALS: Tuple[str, ...] = (
+    "purchase_qty",
+    "free_in_qty",
+    "purchase_return_qty",
+    "ignore",  # Purchase Ret Free
+    "sales_return_qty",
+    "ignore",  # Sales Ret Free
+    "sales_qty",
+    "free_out_qty",
+)
+
+
+def _header_norm_tokens(text: Any) -> str:
+    return normalize_header(text)
+
+
+def _looks_like_group_wise_sales_headers(prelim: Sequence[Dict[str, Any]]) -> bool:
+    """True for Op.Stock + Strength/Purchase/Free + repeated Sales + Cl.Stock."""
+    norms = [_header_norm_tokens(c.get("header_text")) for c in prelim]
+    if not norms:
+        return False
+    has_strength = any(n == "strength" for n in norms)
+    has_op = any(
+        n in {"op", "op.", "op stock", "op.stock", "opening", "opening stock", "opn"}
+        or n.startswith("op ")
+        or n.startswith("op.")
+        for n in norms
+    )
+    has_cl = any(
+        "cl.stock" in n
+        or n in {"cl stock", "closing", "closing stock", "clstock", "cls"}
+        or n.startswith("cl.stock")
+        for n in norms
+    )
+    sales_like = sum(
+        1
+        for n in norms
+        if n == "sales"
+        or n.startswith("sales ")
+        or n.startswith("sale ")
+        or n in {"sale", "sales qty", "sales free", "sales ret", "sales ret free"}
+    )
+    purchase_like = sum(
+        1
+        for n in norms
+        if "purchase" in n or n in {"free", "pur", "purc"}
+    )
+    if not (has_op and has_cl and sales_like >= 3):
+        return False
+    return bool(has_strength or purchase_like >= 2)
+
+
+def _apply_group_wise_sales_sequence(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map Group Wise Op/Purchase/Free/Ret/Sales/Cl.Stock column order.
+
+    Does not invent values — only renames columns so duplicate bare Sales /
+    Purchase headers do not collapse onto the first hit.
+    """
+    if not _group_wise_sales_sequence_enabled():
+        return False
+    if not _looks_like_group_wise_sales_headers(prelim):
+        return False
+
+    op_i = next(
+        (
+            i
+            for i, c in enumerate(prelim)
+            if c.get("canonical") == "opening_qty"
+            or (
+                c.get("group") == "opening"
+                and not c.get("is_value")
+            )
+        ),
+        None,
+    )
+    cl_i = next(
+        (
+            i
+            for i, c in enumerate(reversed(prelim))
+            if c.get("canonical") == "closing_qty"
+            or (
+                c.get("group") == "closing"
+                and not c.get("is_value")
+            )
+        ),
+        None,
+    )
+    if cl_i is not None:
+        cl_i = len(prelim) - 1 - cl_i
+    if op_i is None or cl_i is None or cl_i <= op_i + 1:
+        return False
+
+    mid = list(range(op_i + 1, cl_i))
+    if len(mid) < 6:
+        return False
+    # Use the rightmost len(_GROUP_WISE_MID_CANONICALS) mid columns when Vision
+    # emits an extra Free/Purchase fragment before the classic block.
+    roles = list(_GROUP_WISE_MID_CANONICALS)
+    if len(mid) > len(roles):
+        mid = mid[-len(roles) :]
+    elif len(mid) < len(roles):
+        roles = roles[: len(mid)]
+        # Prefer keeping sales_qty + free_out at the end of a short mid span.
+        if len(roles) >= 2:
+            roles[-2] = "sales_qty"
+            roles[-1] = "free_out_qty"
+
+    for idx, canon in zip(mid, roles):
+        col = prelim[idx]
+        col["canonical"] = canon
+        col["is_value"] = False
+        col["confidence"] = 0.92
+        col["reason"] = "group_wise_sales_sequence"
+        if canon == "purchase_qty":
+            col["group"] = "purchase"
+        elif canon == "sales_qty":
+            col["group"] = "sales"
+        elif canon == "sales_return_qty":
+            col["group"] = "sales_return"
+        elif canon == "purchase_return_qty":
+            col["group"] = "purchase_return"
+        elif canon in {"free_in_qty", "free_out_qty"}:
+            col["group"] = "free"
+        else:
+            col["group"] = None
+
+    prelim[op_i]["canonical"] = "opening_qty"
+    prelim[op_i]["group"] = "opening"
+    prelim[op_i]["is_value"] = False
+    prelim[op_i]["confidence"] = max(float(prelim[op_i].get("confidence") or 0.0), 0.92)
+    prelim[op_i]["reason"] = "group_wise_sales_sequence"
+    prelim[cl_i]["canonical"] = "closing_qty"
+    prelim[cl_i]["group"] = "closing"
+    prelim[cl_i]["is_value"] = False
+    prelim[cl_i]["confidence"] = max(float(prelim[cl_i].get("confidence") or 0.0), 0.92)
+    prelim[cl_i]["reason"] = "group_wise_sales_sequence"
+
+    logger.info(
+        "STOCK_HEADER_GROUP_WISE_SEQUENCE op_col=%s cl_col=%s mid=%s",
+        prelim[op_i].get("col_index"),
+        prelim[cl_i].get("col_index"),
+        [(prelim[i].get("col_index"), roles[j]) for j, i in enumerate(mid)],
+    )
+    errors.append(
+        {
+            "code": "GROUP_WISE_SALES_SEQUENCE",
+            "message": (
+                f"Assigned Group Wise Sales mid columns op={prelim[op_i].get('col_index')} "
+                f"cl={prelim[cl_i].get('col_index')}"
+            ),
+            "op_col": prelim[op_i].get("col_index"),
+            "cl_col": prelim[cl_i].get("col_index"),
+        }
+    )
+    return True
 
 
 def _apply_multi_stock_sequence(
@@ -1503,6 +1694,8 @@ def resolve_columns(
     _apply_bare_qty_value_sequence(prelim, errors)
     # Saleable Stock Report: parent Opn/Rec/Issue/Bal lost; only (Q+F) remains.
     _apply_qf_qty_sequence(prelim, errors)
+    # Group Wise Sales: Op/Purchase/Free/Ret/Sales Qty/Cl.Stock (before dedup).
+    _apply_group_wise_sales_sequence(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

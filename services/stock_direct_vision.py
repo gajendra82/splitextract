@@ -882,17 +882,28 @@ def _has_opqty_qoh_headers(text: str) -> bool:
     if re.search(r"\bSaleRet\b", blob, re.I) and not re.search(r"\bQoh\b", blob, re.I):
         return False
     has_qoh = bool(re.search(r"\bQoh\b", blob, re.I))
-    has_sale = bool(re.search(r"SaleQty|Sale\s*Qty", blob, re.I))
-    has_op = bool(
-        re.search(r"OpQty|Op\s*Qty|\bPaty\b|\bOpty\b", blob, re.I)
+    has_sale = bool(
+        re.search(r"SaleQty|Sale\s*Qty|\bSale\b", blob, re.I)
     )
-    has_pur = bool(re.search(r"PurQty|Pur\s*Qty|Puraty|Puraty", blob, re.I))
+    has_op = bool(
+        re.search(
+            r"OpQty|Op\s*Qty|\bPaty\b|\bOpty\b|O\.?\s*Stk|\bOstk\b",
+            blob,
+            re.I,
+        )
+    )
+    has_pur = bool(
+        re.search(r"PurQty|Pur\s*Qty|Puraty|\bPurc\b|\bPurch\b", blob, re.I)
+    )
     has_age = bool(re.search(r"\bAge\b", blob, re.I))
     has_title = bool(re.search(r"Stock\s*&\s*Sales\s*Statement", blob, re.I))
     has_sret = bool(re.search(r"SRetQty|SRetaty|PRetQty", blob, re.I))
     if has_qoh and has_sale and (has_op or has_pur):
         return True
     if has_qoh and has_title and (has_sale or has_sret or has_age):
+        return True
+    # Profitmaker O.Stk / Purc / Tot / Sale / Qoh / Value / Age (Qoh=closing).
+    if has_title and has_op and has_pur and has_sale and has_qoh:
         return True
     return False
 
@@ -1315,17 +1326,35 @@ def classify_stock_direct_vision(
         }
 
     # Garbled phone OCR of Opening/Purchase/Sale/Total/Clos still counts.
-    has_open = bool(re.search(r"Op(?:ening|stk|@ring|\.?\s*Bal)?", compact, re.I))
-    has_purch = bool(re.search(r"Purch(?:ase)?|PURCH", compact, re.I))
-    has_sale = bool(re.search(r"\bSale\b|SaleRet", compact, re.I))
-    has_total = bool(re.search(r"\bTotal\b", compact, re.I))
-    has_clos = bool(re.search(r"Clos|Closing|ClosStock", compact, re.I))
+    # Do not treat footer money labels ("Opening value", "Closing Value") alone
+    # as SaleRet/ClosStock — that steals Stock & Sales Statement Qoh layouts.
+    sniff = re.sub(
+        r"Opening\s+value\s*:?\s*[\d.,]*|"
+        r"Purchase\s+Value\s*:?\s*[\d.,]*|"
+        r"Sale\s+value\s*:?\s*[\d.,]*|"
+        r"Closing\s+Value\s*:?\s*[\d.,_]*",
+        " ",
+        compact,
+        flags=re.I,
+    )
+    has_open = bool(re.search(r"Op(?:ening|stk|@ring|\.?\s*Bal)?", sniff, re.I))
+    has_purch = bool(re.search(r"Purch(?:ase)?|PURCH", sniff, re.I))
+    has_sale = bool(re.search(r"\bSale\b|SaleRet", sniff, re.I))
+    has_total = bool(re.search(r"\bTotal\b", sniff, re.I))
+    has_clos = bool(re.search(r"Clos|Closing|ClosStock", sniff, re.I))
     if has_open and has_purch and has_sale and (has_total or has_clos):
-        return {
-            "layout": "product_stock_report_saleret",
-            "schema": "saleret_closstock",
-            "reason": "opening_purchase_sale_table_signals",
-        }
+        # Stock & Sales Statement without SaleRet/ClosStock is Qoh/O.Stk family,
+        # not the SaleRet phone-screenshot layout.
+        if re.search(r"Stock\s*&\s*Sales\s*Statement", compact, re.I) and not re.search(
+            r"SaleRet|ClosStock|Clos\s*Stock|Exp\s*/\s*Dmg", compact, re.I
+        ):
+            pass
+        else:
+            return {
+                "layout": "product_stock_report_saleret",
+                "schema": "saleret_closstock",
+                "reason": "opening_purchase_sale_table_signals",
+            }
 
     # Filename portal codes: ZL Medica OPSTK photos often have unreadable OCR.
     fname = filename or ""

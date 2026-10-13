@@ -965,9 +965,19 @@ def normalize_page_period_yyyy_mm(page: Dict[str, Any]) -> Optional[str]:
 
 
 def _page_stockist_group_key(page: Dict[str, Any]) -> str:
-    from services.sales_statement_extractor import _grouping_stockist_key
+    from services.sales_statement_extractor import (
+        _grouping_stockist_key,
+        _is_statement_division_banner,
+    )
 
-    return _grouping_stockist_key(page if isinstance(page, dict) else {})
+    key = _grouping_stockist_key(page if isinstance(page, dict) else {})
+    # Himalaya division banners are not stockist boundaries — continuation.
+    if key and _is_statement_division_banner(key):
+        return ""
+    raw_name = str((page or {}).get("stockist_name") or "")
+    if raw_name and _is_statement_division_banner(raw_name):
+        return ""
+    return key
 
 
 def group_pages_by_stockist_period(
@@ -1551,6 +1561,15 @@ def extract_multipage_image_stock_statement(
     return merged
 
 
+def _vision_first_enabled() -> bool:
+    return os.getenv("STOCK_VISION_FIRST", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def parse_camera_multipage_stock_pdf(
     file_bytes: bytes,
     filename: str,
@@ -1586,10 +1605,17 @@ def parse_camera_multipage_stock_pdf(
 
             parse_image_fn = _parse_image
 
+        # Vision-first: slightly higher DPI for small printed digits.
+        # (Avoid >=3.0 full-page zoom — it has regressed leading-row association.)
+        if _vision_first_enabled() and zoom < 2.5:
+            zoom = 2.5
+
         page_results: List[Dict[str, Any]] = []
         geometry_pages = 0
         vision_pages = 0
         gemini_calls = 0
+        vision_pages_ok = 0
+        vision_pages_failed = 0
         all_items: List[Dict[str, Any]] = []
 
         for page_index in range(page_count):
@@ -1606,13 +1632,32 @@ def parse_camera_multipage_stock_pdf(
                 )
                 page_result = {
                     "line_items": [],
-                    "totals": {"extra": {"extraction_error": type(exc).__name__}},
+                    "totals": {
+                        "extra": {
+                            "extraction_error": type(exc).__name__,
+                            "vision_page_status": "failed",
+                        }
+                    },
                 }
             if not isinstance(page_result, dict):
                 page_result = {"line_items": []}
 
             extra = (page_result.get("totals") or {}).get("extra") or {}
+            if not isinstance(extra, dict):
+                extra = {}
+                page_result.setdefault("totals", {})["extra"] = extra
             method = str(extra.get("extraction_method") or "")
+            n_items = len(page_result.get("line_items") or [])
+            if extra.get("extraction_error") or (
+                _vision_first_enabled()
+                and n_items < 1
+                and extra.get("vision_page_status") != "ok"
+            ):
+                extra["vision_page_status"] = "failed"
+                vision_pages_failed += 1
+            elif n_items >= 1:
+                extra.setdefault("vision_page_status", "ok")
+                vision_pages_ok += 1
             if "geometry" in method:
                 geometry_pages += 1
             elif "vision" in method or extra.get("vision_called"):
@@ -1693,7 +1738,19 @@ def parse_camera_multipage_stock_pdf(
             "vision_called": vision_pages > 0,
             "processing_time_ms": round((time.perf_counter() - t0) * 1000.0, 1),
             "period_group_count": len(group_statements),
+            "vision_pages_ok": vision_pages_ok,
+            "vision_pages_failed": vision_pages_failed,
+            "vision_first": _vision_first_enabled(),
+            "render_zoom": zoom,
         }
+        if vision_pages_failed > 0:
+            shared_extra["vision_incomplete"] = True
+            logger.info(
+                "STOCK_MULTIPAGE vision_incomplete file=%s ok=%s failed=%s",
+                filename,
+                vision_pages_ok,
+                vision_pages_failed,
+            )
 
         if len(group_statements) > 1:
             for stmt in group_statements:

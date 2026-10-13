@@ -9,6 +9,8 @@ from services.sales_statement_extractor import (
     _is_daxinsoft_stock_sales_text,
     _is_ssa_opening_receipt_issue_value_text,
     _is_ved_stock_sales_statement_text,
+    _looks_like_op_stk_rcpts_grid_text,
+    _looks_like_ostk_qoh_stock_sales_text,
     extract_sales_statement,
 )
 
@@ -55,6 +57,82 @@ class TestDaxinsoftDetection(unittest.TestCase):
         self.assertFalse(_is_daxinsoft_stock_sales_text(""))
         self.assertFalse(_is_ved_stock_sales_statement_text(HEADER))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(HEADER))
+
+    def test_ostk_qoh_not_claimed_by_op_stk_rcpts_reader(self):
+        """Qoh/Value/Age pages must not use Op_Stk|Rcpts (Age→closing_value)."""
+        self.assertTrue(_looks_like_ostk_qoh_stock_sales_text(HEADER))
+        self.assertFalse(_looks_like_op_stk_rcpts_grid_text(HEADER))
+        footer_only = (
+            "Stock & Sales Statement\n"
+            "SPEMAN TAB 60.8 37 0 37 12 25 4089.23 123\n"
+            "Generated in PROFITMAKER software Daxinsoft Technologies\n"
+        )
+        self.assertTrue(_looks_like_ostk_qoh_stock_sales_text(footer_only))
+        self.assertFalse(_looks_like_op_stk_rcpts_grid_text(footer_only))
+        op_stk = (
+            "STOCK & SALES STATEMENT\n"
+            "Product Op_Stk Rcpts Sales Cl_Stk Value\n"
+            "LIV 52 10 2 3 9 100.00\n"
+        )
+        self.assertFalse(_looks_like_ostk_qoh_stock_sales_text(op_stk))
+        self.assertTrue(_looks_like_op_stk_rcpts_grid_text(op_stk))
+
+    def test_speman_value_maps_to_closing_not_age(self):
+        """Value 4089.23 is closing_value; Age 123 must not become closing_value."""
+        from services.stock_vision_table import map_vision_table
+
+        raw = {
+            "tables": [
+                {
+                    "table_index": 0,
+                    "column_count": 9,
+                    "header_rows": [
+                        [
+                            {"col_index": i, "text": t, "x_center": 0.9 - i * 0.05}
+                            for i, t in enumerate(
+                                [
+                                    "Product Name",
+                                    "Packing",
+                                    "O.Stk",
+                                    "Purc",
+                                    "Tot",
+                                    "Sale",
+                                    "Qoh",
+                                    "Value",
+                                    "Age",
+                                ]
+                            )
+                        ]
+                    ],
+                    "rows": [
+                        {
+                            "row_index": 0,
+                            "cells": [
+                                "SPEMAN TAB",
+                                "60.8",
+                                "37",
+                                "0",
+                                "37",
+                                "12",
+                                "25",
+                                "4089.23",
+                                "123",
+                            ],
+                            "is_total_row": False,
+                        }
+                    ],
+                    "proposed_mapping": [],
+                }
+            ]
+        }
+        mapped = map_vision_table(raw, request_id="speman")
+        self.assertNotIn("STRUCTURAL_ERROR", mapped.get("errors") or [])
+        self.assertEqual(len(mapped.get("line_items") or []), 1)
+        item = mapped["line_items"][0]
+        self.assertEqual(item.get("product_name"), "SPEMAN TAB")
+        self.assertEqual(float(item.get("sales_qty")), 12.0)
+        self.assertEqual(float(item.get("closing_qty")), 25.0)
+        self.assertEqual(float(item.get("closing_value")), 4089.23)
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Daxinsoft Profitmaker fixture")
