@@ -3623,6 +3623,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "op_pur_sale_bal_qnty_footer",
                 "product_wise_stock_statement_footer",
                 "docx_header_resolved_footer",
+                "ssa_value_footer",
             }
         )
     )
@@ -3675,6 +3676,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "lstsl_open_recd_footer",
             "free_return_total_value",
             "op_pur_sale_bal_qnty_footer",
+            "ssa_value_footer",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -4769,8 +4771,14 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     # SALES QTY and SALES FREE are separate columns. Closing is total stock
     # minus sales qty, sales free, sample, stock transfer, purchase return,
     # and the outgoing repl/other column. This does not rewrite those qtys.
-    if totals["extra"].get("extraction_method") == "ssa_sales_free_columns" or (
-        totals["extra"].get("layout") == "ssa_sales_free_columns"
+    # stock_sales_analysis (Busy TOTAL STOCK ≠ CLOSING) uses the same identity.
+    if totals["extra"].get("extraction_method") in {
+        "ssa_sales_free_columns",
+        "stock_sales_analysis",
+        "stock_sales_analysis_geometry",
+    } or (
+        totals["extra"].get("layout")
+        in {"ssa_sales_free_columns", "stock_sales_analysis"}
     ):
         def _col(item: Dict[str, Any], name: str) -> float:
             extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -5238,6 +5246,12 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
         or method.startswith("ps_pharma")
         or method.startswith("product_wise")
         or method.startswith("ezeal_inward_outward")
+        or method
+        in {
+            "stock_sales_analysis",
+            "stock_sales_analysis_geometry",
+            "ssa_sales_free_columns",
+        }
         or bool(extra.get("qty_only"))
     )
     line_items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
@@ -5250,6 +5264,9 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
     )
     has_printed_sales_value = any(
         _extra_number(i, "sales_value") is not None for i in line_items
+    )
+    has_printed_closing_value = any(
+        _extra_number(i, "closing_value") is not None for i in line_items
     )
     no_sales_value_col = bool(extra.get("no_sales_value"))
     for item in line_items:
@@ -5331,10 +5348,14 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
         for key in ("sales_value", "closing_value"):
             if item.get(key) in (None, ""):
                 # Qty-only layouts (product-wise / E-ZEAL PTR) keep money null.
-                # Compressed Datewise has no Sales Amount column — keep null.
+                # Busy SSA prints money only on footer Value-in-Rs bands.
                 if key == "sales_value" and (
                     no_sales_value_col
                     or (preserve_null_pair_values and not has_printed_sales_value)
+                ):
+                    item[key] = None
+                elif key == "closing_value" and (
+                    preserve_null_pair_values and not has_printed_closing_value
                 ):
                     item[key] = None
                 elif preserve_null_pair_values and extra.get("qty_only"):
@@ -15168,6 +15189,8 @@ def _ssa_skip_product(name: str) -> bool:
         r"^total\b|column\s*no|formula|"
         # Page/section subtotal label (often without leading "Total").
         r"^(?:total\s+)?quantity$|"
+        # Division / company section banners are not SKUs.
+        r"\bdivision\s*$|"
         # Continuation-page stockist / distributor banner, not a SKU.
         r"\b(?:pharmaceutical\s+)?distributors?\s*$|"
         r"\bdrug\s+(?:house|distributors?)\s*$|"
@@ -27465,9 +27488,12 @@ def _parse_ssa_sales_free_image(
 
 
 def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
-    """STOCK & SALES ANALYSIS: TOTAL STOCK is not the SALES QTY column.
+    """STOCK & SALES ANALYSIS: TOTAL STOCK is not the CLOSING / SALES column.
 
-    Returns None unless that two-line header is printed.
+    Busy/Himalaya two-line headers print OPENING/PURCHASE/TOTAL/SALES/CLOSING
+    over STOCK/QTY/FREE/... . TOTAL STOCK must stay out of closing_qty. Sales
+    FREE and SAMPLE are kept in extra so identity can use them without rewriting
+    printed qtys. Returns None unless that header is printed.
     """
     page_texts = [(page.get_text("text") or "") for page in doc]
     if not any(re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I) for text in page_texts):
@@ -27476,6 +27502,22 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     result = empty_result(filename, "pdf")
     result["report_title"] = "STOCK & SALES ANALYSIS"
     items: List[Dict[str, Any]] = []
+    # Sub-row labels left→right under the parent band (Busy SSA, 13 cells).
+    _SSA_SUB_FIELDS = (
+        "opening_qty",
+        "receipts_qty",
+        "purchase_free",
+        "sr_qty",
+        "sr_free",
+        "repl_other_in",
+        "total_stock",
+        "sales_qty",
+        "sales_free",
+        "sample_qty",
+        "stock_tf_qty",
+        "repl_other_out",
+        "closing_qty",
+    )
 
     def parent_field(token: str) -> Optional[str]:
         norm = re.sub(r"[^A-Z]", "", token.upper())
@@ -27491,17 +27533,36 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
             return "closing"
         return None
 
+    def _pack_token(token: str) -> bool:
+        return bool(
+            re.fullmatch(
+                r"\d+\s*(?:ML|GM|MG|G|KG|TAB|CAP|S|'S|S)?",
+                token,
+                re.I,
+            )
+            or re.search(r"(?i)\d+\s*(?:ML|GM|MG|'S|S)\b", token)
+            or re.fullmatch(r"\d+[A-Za-z'].+", token)
+        )
+
     for page, text in zip(doc, page_texts):
         if not result.get("stockist_name"):
             for line in text.splitlines():
                 line = line.strip()
-                if line and not re.search(r"GSTIN|STOCK|---|ITEM", line, re.I):
+                if line and not re.search(r"GSTIN|STOCK|---|ITEM|Phone|E-Mail", line, re.I):
                     result["stockist_name"] = _clean_name(line)
                     break
         if not result.get("company_name"):
             company = re.search(r"\((HIMALAYA[^)]+)\)", text, re.I)
             if company:
                 result["company_name"] = _clean_name(company.group(1))
+            else:
+                div = re.search(
+                    r"^\s*((?:HIMALAYA|HIMALAYAN)\s+[A-Z0-9 .&/-]*DIVISION)\s*$",
+                    text,
+                    re.I | re.M,
+                )
+                if div:
+                    result["company_name"] = _clean_name(div.group(1))
         if result["period_from"] is None:
             m = re.search(
                 r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
@@ -27526,6 +27587,7 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
 
         columns: Optional[List[Tuple[str, float, float]]] = None
         name_end = 160.0
+        pack_end = 160.0
         for i, row in enumerate(rows[:-1]):
             parents = []
             for x0, x1, token in row["words"]:
@@ -27537,27 +27599,77 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
             ):
                 continue
             sub = rows[i + 1]
-            starts: List[Tuple[Optional[str], float]] = []
+            # Prefer ordered Busy sub-labels when the full STOCK/QTY/FREE band
+            # is present — nearest-parent alone misses SALES FREE/SAMPLE.
+            sub_labels = []
             for x0, x1, token in sub["words"]:
-                norm = re.sub(r"[^A-Z]", "", token.upper())
-                center = (x0 + x1) / 2.0
-                nearest, dist = min(
-                    ((field, abs(center - mid)) for field, mid in parents),
-                    key=lambda item: item[1],
-                )
-                parent = nearest if dist <= 28 else ""
-                field = None
-                if parent == "opening" and norm == "STOCK":
-                    field = "opening_qty"
-                elif parent == "purchase" and norm == "QTY":
-                    field = "receipts_qty"
-                elif parent == "total" and norm == "STOCK":
-                    field = "total_stock"
-                elif parent == "sales" and norm == "QTY":
-                    field = "sales_qty"
-                elif parent == "closing" and norm == "STOCK":
-                    field = "closing_qty"
-                starts.append((field, x0))
+                norm = re.sub(r"[^A-Z/]", "", token.upper())
+                if norm in {
+                    "STOCK",
+                    "QTY",
+                    "FREE",
+                    "OTHER",
+                    "SAMPLE",
+                    "TF",
+                    "PR",
+                } or token.upper() in {"T/F", "P/R", "QTY."}:
+                    sub_labels.append((x0, token))
+            starts: List[Tuple[Optional[str], float]] = []
+            if len(sub_labels) >= 10:
+                # Full band: OPENING STOCK … CLOSING STOCK (13 cells). Trailing
+                # P/R + REPL/OTHER share one numeric before closing on some
+                # pages; map by index then rename pr→repl when 14 labels exist.
+                ordered = sorted(sub_labels, key=lambda item: item[0])
+                fields = list(_SSA_SUB_FIELDS)
+                if len(ordered) >= 14:
+                    # STOCK,QTY,FREE,QTY,FREE,OTHER,STOCK,QTY,FREE,SAMPLE,T/F,P/R,OTHER,STOCK
+                    fields = (
+                        "opening_qty",
+                        "receipts_qty",
+                        "purchase_free",
+                        "sr_qty",
+                        "sr_free",
+                        "repl_other_in",
+                        "total_stock",
+                        "sales_qty",
+                        "sales_free",
+                        "sample_qty",
+                        "stock_tf_qty",
+                        "pr_qty",
+                        "repl_other_out",
+                        "closing_qty",
+                    )
+                for idx, (x0, _tok) in enumerate(ordered):
+                    if idx >= len(fields):
+                        break
+                    starts.append((fields[idx], x0))
+            else:
+                for x0, x1, token in sub["words"]:
+                    norm = re.sub(r"[^A-Z]", "", token.upper())
+                    center = (x0 + x1) / 2.0
+                    nearest, dist = min(
+                        ((field, abs(center - mid)) for field, mid in parents),
+                        key=lambda item: item[1],
+                    )
+                    parent = nearest if dist <= 55 else ""
+                    field = None
+                    if parent == "opening" and norm == "STOCK":
+                        field = "opening_qty"
+                    elif parent == "purchase" and norm == "QTY":
+                        field = "receipts_qty"
+                    elif parent == "purchase" and norm == "FREE":
+                        field = "purchase_free"
+                    elif parent == "total" and norm == "STOCK":
+                        field = "total_stock"
+                    elif parent == "sales" and norm == "QTY":
+                        field = "sales_qty"
+                    elif parent == "sales" and norm == "FREE":
+                        field = "sales_free"
+                    elif parent == "sales" and norm == "SAMPLE":
+                        field = "sample_qty"
+                    elif parent == "closing" and norm == "STOCK":
+                        field = "closing_qty"
+                    starts.append((field, x0))
             if not {"opening_qty", "total_stock", "sales_qty", "closing_qty"}.issubset(
                 {name for name, _x in starts}
             ):
@@ -27567,7 +27679,10 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
                 end = starts[idx + 1][1] if idx + 1 < len(starts) else 10000.0
                 spans.append((name, start, end))
             columns = spans
-            name_end = next(x for name, x in starts if name == "opening_qty") - 55
+            open_x = next(x for name, x in starts if name == "opening_qty")
+            # Packing sits between the product name and OPENING STOCK.
+            name_end = open_x - 70
+            pack_end = open_x - 8
             break
         if not columns:
             continue
@@ -27575,16 +27690,21 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
         def field_for(x1: float) -> Optional[str]:
             probe = x1 - 0.5
             for name, start, end in columns:
-                if start <= probe < end:
+                if name and start <= probe < end:
                     return name
             return None
 
         for row in rows:
             cells: Dict[str, List[str]] = {}
             name_tokens: List[str] = []
+            pack_tokens: List[str] = []
             for x0, x1, token in row["words"]:
-                if x0 < name_end and not re.fullmatch(r"[\d.]+", token):
+                # Keep size digits inside the name band (e.g. "SYP 100 ML").
+                if x0 < name_end:
                     name_tokens.append(token)
+                    continue
+                if name_end <= x0 < pack_end and _pack_token(token):
+                    pack_tokens.append(token)
                     continue
                 field = field_for(x1)
                 if field and re.fullmatch(r"-?\d+(?:\.\d+)?", token):
@@ -27592,10 +27712,14 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
             name = _clean_name(" ".join(name_tokens))
             if not name or re.search(r"ITEM|DESCRIPTION|OPENING|TOTAL", name, re.I):
                 continue
+            if _ssa_skip_product(name):
+                continue
             if "opening_qty" not in cells and "sales_qty" not in cells:
                 continue
             item = empty_line_item()
             item["product_name"] = name
+            if pack_tokens:
+                item["packing"] = _clean_name(" ".join(pack_tokens))
             item["opening_qty"] = _detail_opval_number(cells.get("opening_qty") or []) or 0.0
             item["receipts_qty"] = _detail_opval_number(cells.get("receipts_qty") or []) or 0.0
             item["sales_qty"] = _detail_opval_number(cells.get("sales_qty") or []) or 0.0
@@ -27605,6 +27729,36 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
             total = _detail_opval_number(cells.get("total_stock") or [])
             if total is not None:
                 extra["total_stock"] = total
+            for src in (
+                "sales_free",
+                "sample_qty",
+                "stock_tf_qty",
+                "pr_qty",
+                "repl_other_out",
+                "purchase_free",
+            ):
+                val = _detail_opval_number(cells.get(src) or [])
+                if val is not None:
+                    extra[src] = val
+            # Qty columns are printed; value columns are only on footer bands.
+            fs = extra.setdefault("field_source", {})
+            if isinstance(fs, dict):
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "total_qty",
+                ):
+                    fs[key] = "printed"
+                fs["sales_value"] = "missing"
+                fs["closing_value"] = "missing"
+                fs["opening_value"] = "missing"
+                fs["receipts_value"] = "missing"
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["opening_value"] = None
+            item["receipts_value"] = None
             items.append(item)
 
     if not items:
@@ -27612,7 +27766,76 @@ def _parse_stock_sales_analysis(doc, filename: str) -> Optional[Dict[str, Any]]:
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "stock_sales_analysis"
     result["totals"]["extra"]["layout"] = "stock_sales_analysis"
+    # Printed Value-in-Rs footers (division/grand) — not inventing per-SKU values.
+    footer_vals = _ssa_parse_value_footer_totals("\n".join(page_texts))
+    if footer_vals:
+        result["totals"]["extra"]["total_row_source"] = "ssa_value_footer"
+        if footer_vals.get("sales_value") is not None:
+            result["totals"]["sales_value"] = footer_vals["sales_value"]
+            result["totals"]["extra"]["footer_sales_value"] = footer_vals["sales_value"]
+        if footer_vals.get("closing_value") is not None:
+            result["totals"]["closing_value"] = footer_vals["closing_value"]
+            result["totals"]["extra"]["footer_closing_value"] = footer_vals[
+                "closing_value"
+            ]
+        if footer_vals.get("opening_value") is not None:
+            result["totals"]["extra"]["footer_opening_value"] = footer_vals[
+                "opening_value"
+            ]
+        logger.info(
+            "SSA_VALUE_FOOTER file=%s opening=%s sales=%s closing=%s",
+            filename,
+            footer_vals.get("opening_value"),
+            footer_vals.get("sales_value"),
+            footer_vals.get("closing_value"),
+        )
+    logger.info(
+        "SSA_TOTAL_STOCK_NATIVE file=%s rows=%s total_ne_closing=%s",
+        filename,
+        len(items),
+        sum(
+            1
+            for it in items
+            if (it.get("extra") or {}).get("total_stock") is not None
+            and abs(
+                float((it.get("extra") or {}).get("total_stock") or 0)
+                - float(it.get("closing_qty") or 0)
+            )
+            > 0.05
+        ),
+    )
     return result
+
+
+def _ssa_parse_value_footer_totals(text: str) -> Optional[Dict[str, float]]:
+    """Parse the last printed ``Value in Rs.`` grand-total band on Busy SSA.
+
+    Layout prints opening / sales / closing money on the footer only — never
+    invents per-product values. Returns None when the band is absent.
+    """
+    if not text:
+        return None
+    last = None
+    for line in text.splitlines():
+        if not re.search(r"Value\s+in\s+Rs", line, re.I):
+            continue
+        nums = [
+            float(tok.replace(",", ""))
+            for tok in re.findall(r"\d+(?:,\d{3})*(?:\.\d+)?", line)
+        ]
+        if len(nums) >= 4:
+            last = nums
+    if not last:
+        return None
+    # Observed Busy order: opening, (gap zeros), sales, (gap zeros), closing.
+    opening = last[0]
+    closing = last[-1]
+    sales = last[3] if len(last) >= 7 else last[1]
+    return {
+        "opening_value": opening,
+        "sales_value": sales,
+        "closing_value": closing,
+    }
 
 
 def _is_pharmassist_stock_sale_report(text: str) -> bool:

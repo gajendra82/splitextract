@@ -184,6 +184,44 @@ class LayoutBGoodsReturnTests(unittest.TestCase):
         self.assertEqual(expected_closing_qty(item), 23.0)
         self.assertTrue(reconcile_row(item)["valid"])
 
+    def test_sales_free_deducted_for_busy_ssa(self):
+        # TOTAL 64 - SALES 28 - FREE 1 = CLOSING 35
+        item = {
+            "product_name": "BRESOL-SYP 200ML",
+            "opening_qty": 36.0,
+            "receipts_qty": 28.0,
+            "sales_qty": 28.0,
+            "closing_qty": 35.0,
+            "extra": {
+                "layout": "stock_sales_analysis",
+                "total_stock": 64.0,
+                "sales_free": 1.0,
+                "sample_qty": 0.0,
+                "field_source": _fs(
+                    "opening_qty",
+                    "purchase_qty",
+                    "total_qty",
+                    "sales_qty",
+                    "closing_qty",
+                ),
+            },
+        }
+        self.assertEqual(expected_closing_qty(item), 35.0)
+        recon = reconcile_row(item)
+        self.assertTrue(recon["valid"], recon)
+        self.assertEqual(recon["adjustments"]["sales_free_qty"], 1.0)
+        out = apply_stock_reconciliation(
+            {
+                "line_items": [item],
+                "totals": {"sales_value": None, "closing_value": None, "extra": {}},
+            },
+            request_id="ssa-free",
+        )
+        row = out["line_items"][0]
+        self.assertTrue(row["extra"].get("stock_identity_ok"))
+        self.assertFalse(row["extra"].get("reconciliation_failed"))
+        self.assertEqual(row["closing_qty"], 35.0)
+
 
 class HioraReconciliationTests(unittest.TestCase):
     def _hiora(self, closing: float) -> dict:

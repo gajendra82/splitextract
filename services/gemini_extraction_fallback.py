@@ -867,6 +867,19 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    # Busy/Himalaya STOCK & SALES ANALYSIS: TOTAL STOCK ≠ CLOSING STOCK.
+    # Gemini often maps TOTAL→closing and zeroes sales; keep native mapping.
+    if _allowlist_skip(
+        "stock_sales_analysis",
+        str(extra.get("extraction_method") or "")
+        in {
+            "stock_sales_analysis",
+            "stock_sales_analysis_geometry",
+        }
+        or str(extra.get("layout") or "") == "stock_sales_analysis",
+    ):
+        return result
+
     if _allowlist_skip(
         "swil_receipt_pur_value_vision",
         str(extra.get("extraction_method") or "")

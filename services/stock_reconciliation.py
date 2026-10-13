@@ -93,7 +93,17 @@ def _sample_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     if extra.get("free_out_qty") is not None:
         return _f(extra.get("free_out_qty"))
+    if extra.get("sample_qty") is not None:
+        return _f(extra.get("sample_qty"))
     return _printed_or_zero(item, "sample_qty", "free_out_qty")
+
+
+def _sales_free_qty(item: Dict[str, Any]) -> float:
+    """Printed SALES FREE qty (Busy SSA); distinct from SAMPLE / free_out."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("sales_free") is not None:
+        return _f(extra.get("sales_free"))
+    return _printed_or_zero(item, "sales_free_qty", "sales_free")
 
 
 def stock_br_trf_adaptive_identity_enabled() -> bool:
@@ -135,6 +145,10 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
         other += br
     if extra.get("sales_scheme_qty") is not None:
         other += _f(extra.get("sales_scheme_qty"))
+    # Busy SSA trailing out-columns when printed (STOCK T/F, P/R, REPL/OTHER).
+    for key in ("stock_tf_qty", "pr_qty", "repl_other_out"):
+        if extra.get(key) is not None:
+            other += _f(extra.get(key))
     return other
 
 
@@ -142,6 +156,8 @@ def _free_in_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     if extra.get("free_in_qty") is not None:
         return _f(extra.get("free_in_qty"))
+    if extra.get("purchase_free") is not None:
+        return _f(extra.get("purchase_free"))
     return 0.0
 
 
@@ -160,8 +176,13 @@ def _sales_return_column_present(item: Dict[str, Any]) -> bool:
 def _printed_total(item: Dict[str, Any]) -> Optional[float]:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
-    if fs.get("total_qty") == "printed" and extra.get("total_stock") is not None:
+    if fs.get("total_qty") == "missing":
+        return None
+    if extra.get("total_stock") is not None and extra.get("total_stock") != "":
+        # Busy SSA and Layout-A sheets store printed TOTAL STOCK here.
         return _f(extra.get("total_stock"))
+    if fs.get("total_qty") == "printed" and extra.get("total_qty") is not None:
+        return _f(extra.get("total_qty"))
     return None
 
 
@@ -255,6 +276,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     purchase_return = _purchase_return_qty(item)
     expiry = _expiry_qty(item)
     sample = _sample_qty(item)
+    sales_free = _sales_free_qty(item)
     br = _br_trf_qty(item)
     other_plain = _other_out_qty(item, include_br_trf=False)
     free_in = _free_in_qty(item)
@@ -280,7 +302,17 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
         base_source = "opening_plus_purchase_plus_returns"
         sret_adj = 0.0  # already in base
 
-    core = base + sret_adj - sales - purchase_return - expiry - sample - other_plain
+    # SALES FREE is a separate Busy SSA outward (not SAMPLE / free_out).
+    core = (
+        base
+        + sret_adj
+        - sales
+        - sales_free
+        - purchase_return
+        - expiry
+        - sample
+        - other_plain
+    )
     expected_plain = round(core, 4)
     expected_with_br = round(core - br, 4)
 
@@ -329,6 +361,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
         "adjustments": {
             "sales_return_qty": round(sret_adj, 4),
             "sales_qty": round(sales, 4),
+            "sales_free_qty": round(sales_free, 4),
             "purchase_return_qty": round(purchase_return, 4),
             "expiry_damage_qty": round(expiry, 4),
             "sample_qty": round(sample, 4),
