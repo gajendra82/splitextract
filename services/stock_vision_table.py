@@ -79,6 +79,35 @@ def _cell_layout_repair_enabled() -> bool:
     }
 
 
+def _data_header_layout_repair_enabled() -> bool:
+    """When Vision puts a data row in header_rows, force cell-layout remap.
+
+    Continuation pages often omit the OPENING/RECEIVE/ISSUE/CLOSING band;
+    Gemini then copies the first product row into headers and invents free_in.
+    Default ON — only fires when headers look like data, never invents digits.
+    """
+    return os.getenv(
+        "STOCK_VISION_DATA_HEADER_LAYOUT_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _prefer_carry_on_data_headers_enabled() -> bool:
+    """Prefer prior-page carry_header when this page's headers look like data."""
+    return os.getenv(
+        "STOCK_VISION_PREFER_CARRY_ON_DATA_HEADERS", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _closing_money_in_qty_repair_enabled() -> bool:
     """When Closing QTY cell holds money and VALUE is empty, re-slot — default ON."""
     return os.getenv(
@@ -89,6 +118,54 @@ def _closing_money_in_qty_repair_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+_STOCK_HEADER_HINT_RE = re.compile(
+    r"\b("
+    r"product|particular|item|description|name|"
+    r"opening|op\.?|open|"
+    r"receipt|receive|rcv|purchase|purch|"
+    r"issue|sale|sales|sold|"
+    r"closing|close|cls|bal|balance|"
+    r"qty|quantity|qnty|value|val|amt|amount|"
+    r"free|scheme|total|stock|expiry|pack|rate"
+    r")\b",
+    re.I,
+)
+
+
+def _vision_header_cells_look_like_data(
+    header_cells: Sequence[Any],
+) -> bool:
+    """True when header_rows are a product/number data row, not stock labels.
+
+    Continuation crops often omit the real header band; Vision copies the first
+    data row into header_rows (e.g. 'LIV 52 SYP 100ML', '147', '13898.85', …).
+    """
+    texts: List[str] = []
+    for cell in header_cells or []:
+        if isinstance(cell, dict):
+            texts.append(str(cell.get("text") or cell.get("header_text") or "").strip())
+        else:
+            texts.append(str(cell or "").strip())
+    texts = [t for t in texts if t]
+    if len(texts) < 5:
+        return False
+    hint_hits = sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t))
+    kinds = [_classify_layout_cell(t) for t in texts]
+    numeric_hits = sum(
+        1 for k in kinds if k in {"number", "serial_or_small_int"}
+    )
+    product_hits = sum(1 for k in kinds if k == "product")
+    # Real headers: Opening/Receive/Issue/Closing/Product/Qty/Value…
+    if hint_hits >= 3:
+        return False
+    # Data masquerading as header: mostly numbers, optional product name.
+    if numeric_hits >= 4 and hint_hits <= 1:
+        return True
+    if product_hits >= 1 and numeric_hits >= 4 and hint_hits <= 2:
+        return True
+    return False
 
 
 def _classify_layout_cell(text: Any) -> str:
@@ -426,9 +503,11 @@ def _apply_cell_layout_qty_value_repair(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
     errors: List[str],
+    *,
+    force: bool = False,
 ) -> List[Dict[str, Any]]:
     """Override broken header maps using left-to-right cell geometry."""
-    if not _cell_layout_repair_enabled():
+    if not force and not _cell_layout_repair_enabled():
         return columns
 
     core = {
@@ -437,11 +516,16 @@ def _apply_cell_layout_qty_value_repair(
         if isinstance(c, dict) and c.get("canonical") not in {None, "ignore"}
     }
     need = (
-        "MISSING_CORE_COLUMNS" in errors
+        force
+        or "MISSING_CORE_COLUMNS" in errors
         or len(core & {"opening_qty", "purchase_qty", "sales_qty", "closing_qty"}) < 2
         or _product_col_looks_like_serial(columns, rows)
         or _pack_token_parked_in_qty_column(columns, rows)
         or any(e == "DUPLICATE_CANONICAL" for e in errors)
+        or any(
+            isinstance(c, dict) and c.get("canonical") == "free_in_qty"
+            for c in columns
+        )
     )
     # Only repair when bare QTY/VALUE headers dominate or product looks serial.
     bare_qty = sum(
@@ -1474,6 +1558,9 @@ def _merge_proposed_mapping(
             "expiry_damage_qty",
             "closing_qty",
             "closing_value",
+            # Never invent free columns from numeric/data "headers".
+            "free_in_qty",
+            "free_out_qty",
         }
     )
     _GROUP_FOR_CANON = {
@@ -1482,6 +1569,8 @@ def _merge_proposed_mapping(
         "expiry_damage_qty": "expiry_damage",
         "closing_qty": "closing",
         "closing_value": "closing",
+        "free_in_qty": "free",
+        "free_out_qty": "free",
     }
 
     by_prop = {}
@@ -1799,6 +1888,121 @@ def _apply_closing_money_parked_in_qty_pass(
             fixed,
         )
     return fixed
+
+
+def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
+    """Re-slot when ISSUE qty was mapped to free_in and values shifted left.
+
+    Pattern (continuation page, bogus headers + proposed free_in):
+      free_in_qty = ISSUE qty (small int)
+      sales_qty   = ISSUE value (money)
+      sales_value = CLOSING qty (small int)
+      closing_*   = missing
+    Identity check: opening + purchase - free_in ≈ sales_value (as closing).
+    Closing value is taken from an unused printed money cell — never invented.
+    """
+    if not _data_header_layout_repair_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if fs.get("free_in_qty") != "printed":
+        return False
+    free_in = extra.get("free_in_qty")
+    sq = item.get("sales_qty")
+    sv = item.get("sales_value")
+    cq = item.get("closing_qty")
+    if not _looks_small_qty(free_in):
+        return False
+    if not _looks_money(sq):
+        return False
+    if not _looks_small_qty(sv):
+        return False
+    # Closing already printed correctly — do not reshuffle.
+    if cq is not None and fs.get("closing_qty") == "printed":
+        try:
+            if abs(float(cq)) > 0.001:
+                return False
+        except (TypeError, ValueError):
+            return False
+    try:
+        oq = float(item.get("opening_qty") or 0)
+        rq = float(item.get("receipts_qty") or 0)
+        fi = float(free_in)
+        closing_as_sv = float(sv)
+        if abs((oq + rq - fi) - closing_as_sv) > 0.51:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    # Unused printed money → closing_value (not opening/purchase/issue money).
+    closing_value = None
+    used_money = set()
+    for key in ("opening_value", "purchase_value", "receipts_value"):
+        raw = item.get(key)
+        if raw is None:
+            raw = extra.get(key)
+        try:
+            if raw is not None:
+                used_money.add(round(float(raw), 2))
+        except (TypeError, ValueError):
+            pass
+    try:
+        used_money.add(round(float(sq), 2))  # issue value currently in sales_qty
+    except (TypeError, ValueError):
+        pass
+    candidates: List[Any] = []
+    phys = extra.get("physical_cells")
+    if isinstance(phys, dict):
+        for k in sorted(phys.keys(), key=lambda x: int(x) if str(x).isdigit() else 0):
+            candidates.append(phys.get(k))
+    raw_cells = extra.get("vision_raw_cells")
+    if isinstance(raw_cells, (list, tuple)):
+        candidates.extend(raw_cells)
+    for cell in candidates:
+        if cell is None:
+            continue
+        text = str(cell).strip()
+        if not text or not _looks_money(text, raw_text=text):
+            continue
+        try:
+            val = float(text.replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if round(val, 2) in used_money:
+            continue
+        closing_value = val
+        break
+
+    item["sales_qty"] = float(free_in)
+    item["sales_value"] = float(sq)
+    item["closing_qty"] = float(sv)
+    if closing_value is not None:
+        item["closing_value"] = float(closing_value)
+        fs["closing_value"] = "printed"
+    else:
+        item["closing_value"] = None
+        fs["closing_value"] = "missing"
+    extra["free_in_qty"] = None
+    fs["free_in_qty"] = "missing"
+    fs["sales_qty"] = "printed"
+    fs["sales_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "FREE_IN_ISSUE_CLOSING_SHIFT" not in flags:
+        flags.append("FREE_IN_ISSUE_CLOSING_SHIFT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE FREE_IN_ISSUE_CLOSING_SHIFT product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        item.get("sales_qty"),
+        item.get("sales_value"),
+        item.get("closing_qty"),
+        item.get("closing_value"),
+    )
+    return True
 
 
 def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
@@ -2491,10 +2695,34 @@ def _map_single_table(
     header_rows = table.get("header_rows") or []
     header_used: Optional[Dict[str, Any]] = None
     columns: List[Dict[str, Any]] = []
+    data_as_headers = False
 
     if header_rows:
         header_cells = _flatten_header_cells(header_rows, column_count)
-        if _x_order_violation(header_cells):
+        data_as_headers = _vision_header_cells_look_like_data(header_cells)
+        # Continuation page: Vision copied a data row into headers — prefer
+        # prior-page carry when column counts match (never invent columns).
+        use_carry = False
+        if (
+            data_as_headers
+            and _prefer_carry_on_data_headers_enabled()
+            and isinstance(carry_header, dict)
+        ):
+            carried_count = int(carry_header.get("column_count") or 0)
+            if carried_count == column_count and carry_header.get("columns"):
+                use_carry = True
+                columns = list(carry_header.get("columns") or [])
+                header_used = carry_header
+                errors.append("PREFER_CARRY_ON_DATA_HEADERS")
+                logger.info(
+                    "VISION_TABLE PREFER_CARRY_ON_DATA_HEADERS "
+                    "column_count=%s request_id=%s",
+                    column_count,
+                    request_id,
+                )
+        if use_carry:
+            pass
+        elif _x_order_violation(header_cells):
             errors.append("STRUCTURAL_ERROR")
             return {
                 "line_items": [],
@@ -2503,30 +2731,56 @@ def _map_single_table(
                 "header_used": None,
                 "totals_rows": [],
             }
-        resolved = resolve_columns(header_cells)
-        columns = list(resolved.get("columns") or [])
-        for err in resolved.get("errors") or []:
-            code = err.get("code") if isinstance(err, dict) else str(err)
-            if code:
-                errors.append(str(code))
-        columns = _merge_proposed_mapping(
-            columns, table.get("proposed_mapping") or [], errors
-        )
-        # Prefer a surgical pack-column shift when headers are otherwise good.
-        columns = _shift_pack_out_of_qty_headers(
-            columns, table.get("rows") or [], errors
-        )
-        columns = _apply_cell_layout_qty_value_repair(
-            columns,
-            table.get("rows") or [],
-            column_count,
-            errors,
-        )
-        header_used = {
-            "column_count": column_count,
-            "columns": columns,
-            "header_cells": header_cells,
-        }
+        else:
+            resolved = resolve_columns(header_cells)
+            columns = list(resolved.get("columns") or [])
+            for err in resolved.get("errors") or []:
+                code = err.get("code") if isinstance(err, dict) else str(err)
+                if code:
+                    errors.append(str(code))
+            # Do not let the model invent free_in from numeric "headers".
+            proposed = table.get("proposed_mapping") or []
+            if data_as_headers:
+                proposed = [
+                    e
+                    for e in proposed
+                    if not (
+                        isinstance(e, dict)
+                        and str(e.get("canonical") or e.get("field") or "")
+                        in {"free_in_qty", "free_out_qty"}
+                    )
+                ]
+            columns = _merge_proposed_mapping(columns, proposed, errors)
+            # Prefer a surgical pack-column shift when headers are otherwise good.
+            columns = _shift_pack_out_of_qty_headers(
+                columns, table.get("rows") or [], errors
+            )
+            force_layout = bool(
+                data_as_headers and _data_header_layout_repair_enabled()
+            )
+            columns = _apply_cell_layout_qty_value_repair(
+                columns,
+                table.get("rows") or [],
+                column_count,
+                errors,
+                force=force_layout,
+            )
+            if force_layout:
+                errors.append("DATA_HEADER_LAYOUT_REPAIR")
+            header_used = {
+                "column_count": column_count,
+                "columns": columns,
+                "header_cells": header_cells,
+            }
+            # Never poison later pages with data-as-header maps.
+            if data_as_headers and "CELL_LAYOUT_QTY_VALUE_REPAIR" not in errors:
+                # Layout failed (e.g. <2 product rows) — still mark so callers
+                # know not to treat this as a trusted header carry source.
+                header_used = {
+                    **header_used,
+                    "data_as_headers": True,
+                    "untrusted_carry": True,
+                }
     elif carry_header and isinstance(carry_header, dict):
         carried_count = int(carry_header.get("column_count") or 0)
         if carried_count != column_count:
@@ -2721,6 +2975,7 @@ def _map_single_table(
             if _is_non_product_vision_row(item):
                 continue
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
+            _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
             _repair_closing_money_parked_in_qty(item)
             _flag_qty_value_geometry_suspicion(item)
@@ -2787,12 +3042,32 @@ def map_vision_table(
     rows_per_table: List[int] = []
 
     for t_idx, t in enumerate(expanded):
-        # Carry header only when this table lacks headers (continuation crop).
-        carry = carry_header if not (t.get("header_rows") or []) else None
+        # Carry when this table lacks headers OR headers look like a data row
+        # (continuation crop) — _map_single_table decides whether to prefer carry.
+        raw_headers = t.get("header_rows") or []
+        looks_data = False
+        if raw_headers:
+            try:
+                cc = int(t.get("column_count") or 0)
+            except (TypeError, ValueError):
+                cc = 0
+            looks_data = _vision_header_cells_look_like_data(
+                _flatten_header_cells(raw_headers, cc)
+            )
+        carry = (
+            carry_header
+            if (not raw_headers or looks_data)
+            else None
+        )
         mapped = _map_single_table(t, carry_header=carry, request_id=req_id)
         all_errors.extend(str(e) for e in (mapped.get("errors") or []))
-        if mapped.get("header_used") and header_used is None:
-            header_used = mapped["header_used"]
+        used = mapped.get("header_used")
+        if (
+            isinstance(used, dict)
+            and not used.get("untrusted_carry")
+            and header_used is None
+        ):
+            header_used = used
             column_map = list(mapped.get("column_map") or [])
         elif mapped.get("column_map") and not column_map:
             column_map = list(mapped.get("column_map") or [])
@@ -3654,8 +3929,9 @@ def run_vision_table_path(
                         "gemini_calls": calls,
                         "gemini_budget": gemini_budget,
                     }
-            if mapped.get("header_used"):
-                carry = mapped["header_used"]
+            hu = mapped.get("header_used")
+            if isinstance(hu, dict) and not hu.get("untrusted_carry"):
+                carry = hu
                 column_map = list(mapped.get("column_map") or column_map)
             errors.extend(str(e) for e in (mapped.get("errors") or []))
             if mapped.get("stockist_name") and not stockist_name:
