@@ -16,7 +16,7 @@ import threading
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -1668,6 +1668,63 @@ def _parse_product_wise_stock_statement(doc, filename: str) -> Optional[Dict[str
     return result
 
 
+def _ps_pharma_orphan_qty_shift_enabled() -> bool:
+    """When a desc-band orphan qty sits left of OPENING, prefer last-4 ORIC.
+
+    Flag default ON. Paras-style DUMP after CLOSING still uses first-4 when
+    those four already balance.
+    """
+    return os.getenv("STOCK_PS_PHARMA_ORPHAN_QTY_SHIFT", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ps_pharma_oric_balances(opening: float, receipt: float, issue: float, closing: float) -> bool:
+    return abs((opening + receipt - issue) - closing) <= 0.51
+
+
+def _ps_pharma_pick_oric_tokens(
+    tokens: Sequence[str],
+    *,
+    product_hint: str = "",
+) -> Tuple[str, str, str, str]:
+    """Choose OPENING/RECEIPT/ISSUE/CLOSING from 4 or 5 trailing qty tokens.
+
+    Five tokens are either [O,R,I,C,DUMP] (keep first four when they balance) or
+    [orphan,O,R,I,C] (desc-band number left of OPENING — use last four when they
+    balance and the first four do not). Never invent digits.
+    """
+    toks = [str(t).strip() for t in tokens]
+    if len(toks) < 4:
+        raise ValueError("need at least 4 qty tokens")
+    if len(toks) == 4 or not _ps_pharma_orphan_qty_shift_enabled():
+        return toks[0], toks[1], toks[2], toks[3]
+
+    def _q(tok: str) -> float:
+        if tok == "-":
+            return 0.0
+        return _to_float(tok)
+
+    first4 = toks[0:4]
+    last4 = toks[-4:]
+    a_ok = _ps_pharma_oric_balances(_q(first4[0]), _q(first4[1]), _q(first4[2]), _q(first4[3]))
+    b_ok = _ps_pharma_oric_balances(_q(last4[0]), _q(last4[1]), _q(last4[2]), _q(last4[3]))
+    if a_ok:
+        return first4[0], first4[1], first4[2], first4[3]
+    if b_ok:
+        logger.info(
+            "PS_PHARMA_ORPHAN_QTY_SHIFT product=%s dropped=%s oric=%s",
+            str(product_hint or "")[:50],
+            toks[0],
+            ",".join(last4),
+        )
+        return last4[0], last4[1], last4[2], last4[3]
+    return first4[0], first4[1], first4[2], first4[3]
+
+
 def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, Any]]:
     """Parse P.S.PHARMACEUTICALS OPENING/RECEIPT/ISSUE/CLOSING stock & sales analysis."""
     if not text:
@@ -1741,8 +1798,8 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
-    # This sheet prints a fifth number after Closing. The four qty columns
-    # are the ones before it. A 4-column row still uses row_re.
+    # Five trailing numbers: either DUMP after CLOSING, or an orphan qty left of
+    # OPENING in the description band. Identity picks which four are ORIC.
     row5_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
@@ -1816,7 +1873,11 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             continue
         m5 = row5_re.match(ln)
         if m5 and _ps_name_pack(m5.group(1))[1]:
-            row = _ps_item(m5.group(1), m5.group(2), m5.group(3), m5.group(4), m5.group(5))
+            o, r, i, c = _ps_pharma_pick_oric_tokens(
+                [m5.group(2), m5.group(3), m5.group(4), m5.group(5), m5.group(6)],
+                product_hint=m5.group(1),
+            )
+            row = _ps_item(m5.group(1), o, r, i, c)
             if row:
                 items.append(row)
             pending_name = ""
