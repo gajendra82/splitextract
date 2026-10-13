@@ -275,6 +275,13 @@ def _pdf_is_image_only(file_bytes: bytes) -> bool:
 def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
     rows: List[List[str]] = []
     try:
+        # Read the full product grid (was capped at 60 and dropped ZEAL/half sheets).
+        _max_sheet_rows = int(
+            os.getenv("STOCK_GEMINI_SHEET_MAX_ROWS", "500") or 500
+        )
+        _max_sheet_cols = int(
+            os.getenv("STOCK_GEMINI_SHEET_MAX_COLS", "16") or 16
+        )
         if ext in {".xlsx", ".xlsm"}:
             from openpyxl import load_workbook
 
@@ -282,12 +289,16 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
             try:
                 ws = wb.worksheets[0]
                 for index, row in enumerate(
-                    ws.iter_rows(max_row=60, max_col=10, values_only=True)
+                    ws.iter_rows(
+                        max_row=_max_sheet_rows,
+                        max_col=_max_sheet_cols,
+                        values_only=True,
+                    )
                 ):
-                    if index >= 60:
+                    if index >= _max_sheet_rows:
                         break
                     rows.append(
-                        ["" if cell is None else str(cell)[:40] for cell in row]
+                        ["" if cell is None else str(cell)[:80] for cell in row]
                     )
             finally:
                 wb.close()
@@ -296,11 +307,11 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
 
             book = xlrd.open_workbook(file_contents=file_bytes)
             sheet = book.sheet_by_index(0)
-            for r in range(min(sheet.nrows, 60)):
+            for r in range(min(sheet.nrows, _max_sheet_rows)):
                 rows.append(
                     [
-                        str(sheet.cell_value(r, c))[:40]
-                        for c in range(min(sheet.ncols, 10))
+                        str(sheet.cell_value(r, c))[:80]
+                        for c in range(min(sheet.ncols, _max_sheet_cols))
                     ]
                 )
     except Exception as exc:
@@ -846,6 +857,42 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    # Native (GroupWise) Open/Rec/Sale/Close qty+value XLS — never replace with
+    # Gemini sheet-screenshot (previously truncated mid-ZEAL at 60 rows).
+    if _allowlist_skip(
+        "groupwise_qty_value_xls",
+        str(extra.get("extraction_method") or "") == "groupwise_qty_value_xls"
+        or str(extra.get("layout") or "")
+        == "groupwise_opening_receipt_sales_closing_qty_value",
+    ):
+        return result
+
+    # Marg OPENING/RECEIPT/ISSUE/CLOSING M.EXP grid — native cell map is authoritative.
+    # Gemini often returns all-zero product shells and drops printed qtys.
+    if _allowlist_skip(
+        "marg_closing_mexp",
+        str(extra.get("extraction_method") or "")
+        in {
+            "marg_closing_mexp_xls",
+            "marg_closing_mexp_photo",
+        }
+        or str(extra.get("layout") or "") == "marg_closing_mexp",
+    ):
+        return result
+
+    # Busy/Himalaya STOCK & SALES ANALYSIS: TOTAL STOCK ≠ CLOSING STOCK.
+    # Gemini often maps TOTAL→closing and zeroes sales; keep native mapping.
+    if _allowlist_skip(
+        "stock_sales_analysis",
+        str(extra.get("extraction_method") or "")
+        in {
+            "stock_sales_analysis",
+            "stock_sales_analysis_geometry",
+        }
+        or str(extra.get("layout") or "") == "stock_sales_analysis",
+    ):
+        return result
+
     if _allowlist_skip(
         "swil_receipt_pur_value_vision",
         str(extra.get("extraction_method") or "")
@@ -975,6 +1022,36 @@ def maybe_apply_gemini_fallback(
     )
     if shifted >= max(5, len(gemini_items) // 4):
         gemini_ok = False
+
+    def _nonzero_qty_rows(payload: Dict[str, Any]) -> int:
+        count = 0
+        for item in payload.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            if any(
+                abs(float(item.get(key) or 0)) > 0.001
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                )
+            ):
+                count += 1
+        return count
+
+    # All-zero Gemini "balances" identity but wipes a good native sheet read.
+    native_nz = _nonzero_qty_rows(result)
+    gemini_nz = _nonzero_qty_rows(gemini_result)
+    if gemini_ok and gemini_nz == 0 and native_nz >= 3:
+        gemini_ok = False
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK rejected "
+            "reason=all_zero_vs_native_nonzero native_nz=%s gemini_nz=%s",
+            filename,
+            native_nz,
+            gemini_nz,
+        )
 
     # Phase 1: keep whichever reading balances better under the classifier.
     if force_veto or veto_on:

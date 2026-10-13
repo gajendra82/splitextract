@@ -956,6 +956,97 @@ def _ssa_issue_closing_beats_filename_za_enabled() -> bool:
     }
 
 
+def _closing_qty_value_grid_beats_ssa_enabled() -> bool:
+    """Closing Stock QTY|VALUE (+ L.M.S / PRODUCT NAME & PACKING) defers to Vision table.
+
+    STOCK_CLOSING_QTY_VALUE_GRID_BEATS_SSA — default ON. Filename-_ZA_ SSA probe
+    otherwise locks a qty/value Vision schema that truncates/hallucinates SKUs.
+    """
+    return os.getenv(
+        "STOCK_CLOSING_QTY_VALUE_GRID_BEATS_SSA", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _has_closing_stock_qty_value_grid_headers(text: str) -> bool:
+    """Closing Stock QTY|VALUE grid owned by STOCK_VISION_TABLE (not SSA dump).
+
+    Typical printed headers: PRODUCT NAME & PACKING, L.M.S / LMS, OPENING STOCK,
+    RECEIPTS, ISSUES, CLOSING STOCK with QTY / VALUE sub-columns. Distinct from
+    SaleRet/ClosStock and from SSA Opening/Receipt/Issue/Closing(+Dump) money
+    pairs under every band.
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"SaleRet|ClosStock|Clos\s*Stock", blob, re.I):
+        return False
+    has_product_pack = bool(
+        re.search(
+            r"PRODUCT\s+NAME\s*&\s*PACKING|PRODUCT\s+NAME\s+AND\s+PACKING|"
+            r"PRODUCT\s+NAME.*PACKING",
+            blob,
+            re.I,
+        )
+    )
+    has_lms = bool(re.search(r"\bL\.?\s*M\.?\s*S\.?\b|\bLMS\b", blob, re.I))
+    has_closing_stock = bool(re.search(r"CLOSING\s+STOCK", blob, re.I))
+    has_qty = bool(re.search(r"\bQTY\.?\b|\bQTY\b", blob, re.I))
+    has_value = bool(re.search(r"\bVALUE\b|\bVAL\b", blob, re.I))
+    # Closing Stock ** QTY | VALUE (sub-headers often marked with **)
+    if has_closing_stock and has_qty and has_value and (has_product_pack or has_lms):
+        return True
+    if has_product_pack and has_lms and has_closing_stock:
+        return True
+    return False
+
+
+def _ssa_probe_invented_opening_values(result: Optional[Dict[str, Any]]) -> bool:
+    """True when SSA Vision copied CLOSING VALUE into opening_value on moved rows.
+
+    Real SSA sheets can print equal opening/closing values with no movement.
+    When qty moved (sales/receipts or opening≠closing) but opening_value still
+    equals closing_value and sales_value is always 0, the probe invented money
+    columns — reject so Vision table / generic path can retry.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    moved = 0
+    invented = 0
+    for item in items:
+        try:
+            oq = float(item.get("opening_qty") or 0)
+            cq = float(item.get("closing_qty") or 0)
+            sq = float(item.get("sales_qty") or 0)
+            rq = float(item.get("receipts_qty") or 0)
+            sv = float(item.get("sales_value") or 0)
+            ov = item.get("opening_value")
+            if ov is None:
+                extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                ov = extra.get("opening_value")
+            cv = item.get("closing_value")
+            if ov is None or cv is None:
+                continue
+            ov_f, cv_f = float(ov), float(cv)
+        except (TypeError, ValueError):
+            continue
+        if abs(oq - cq) <= 0.51 and sq <= 0 and rq <= 0:
+            continue
+        moved += 1
+        if cv_f > 1.0 and abs(ov_f - cv_f) < 0.02 and abs(sv) < 0.02:
+            invented += 1
+    if moved < 5:
+        return False
+    return (invented / moved) >= 0.60
+
+
 def _has_sales_stock_opbal_issue_headers(text: str) -> bool:
     """Sales & Stock with Op.Bal / Receipt / Issue / Closing (not SaleRet).
 
@@ -1007,6 +1098,12 @@ def _has_ssa_opening_receipt_issue_closing_headers(text: str) -> bool:
         return False
     # Op.Bal Sales & Stock keeps the dedicated SwilERP route.
     if _has_sales_stock_opbal_issue_headers(blob):
+        return False
+    # PRODUCT NAME & PACKING + L.M.S + Closing Stock QTY|VALUE → Vision table.
+    if (
+        _closing_qty_value_grid_beats_ssa_enabled()
+        and _has_closing_stock_qty_value_grid_headers(blob)
+    ):
         return False
     has_title = bool(
         re.search(
@@ -3708,6 +3805,22 @@ def try_stock_direct_vision(
     if not decision:
         return None
 
+    # Closing Stock QTY|VALUE (+ L.M.S / PRODUCT NAME & PACKING): do not lock
+    # SSA dump or SaleRet from filename _ZA_ — STOCK_VISION_TABLE owns this grid.
+    if (
+        _closing_qty_value_grid_beats_ssa_enabled()
+        and _has_closing_stock_qty_value_grid_headers(layout_peek or peek_text or "")
+    ):
+        _log(
+            "STOCK_DIRECT_VISION_FALLBACK",
+            filename=filename,
+            detected_layout=decision.get("layout"),
+            schema=decision.get("schema"),
+            reason="closing_qty_value_grid_defer_vision_table",
+            peek_chars=len(layout_peek or peek_text or ""),
+        )
+        return None
+
     layout = decision["layout"]
     reason = decision["reason"]
     schema = decision["schema"]
@@ -4061,6 +4174,20 @@ def try_stock_direct_vision(
                 row_count=0,
             )
             return None
+        if (
+            _closing_qty_value_grid_beats_ssa_enabled()
+            and _ssa_probe_invented_opening_values(ssa)
+        ):
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason="ssa_issue_closing_invented_opening_values",
+                elapsed_ms=int((time.time() - started) * 1000),
+                row_count=len(ssa.get("line_items") or []),
+            )
+            return None
         return _lock_ssa_opening_receipt_issue_result(
             ssa,
             reason=reason,
@@ -4077,52 +4204,82 @@ def try_stock_direct_vision(
         and "filename_za" in str(reason or "")
         and re.search(r"_ZA_\d+", filename or "", re.I)
     ):
-        started = time.time()
-        _log(
-            "STOCK_DIRECT_VISION_START",
-            filename=filename,
-            route="ssa_opening_receipt_issue",
-            reason="filename_za_ssa_probe",
-            gemini_model=model,
-            candidate=1,
-            byte_size=len(file_bytes),
-            numeric_source="gemini_vision",
-        )
-        try:
-            from services.sales_statement_extractor import (
-                _extract_ssa_opening_receipt_issue_dump_image,
+        # Closing Stock QTY|VALUE grids: skip probe (Vision table owns them).
+        if (
+            _closing_qty_value_grid_beats_ssa_enabled()
+            and _has_closing_stock_qty_value_grid_headers(
+                layout_peek or peek_text or ""
             )
-
-            probed = _extract_ssa_opening_receipt_issue_dump_image(
-                file_bytes, filename, ext, skip_ocr_gate=True
-            )
-        except Exception as exc:
+        ):
             _log(
                 "STOCK_DIRECT_VISION_FALLBACK",
                 filename=filename,
                 detected_layout="ssa_opening_receipt_issue",
                 schema="opening_receipt_issue_closing_dump",
-                reason="filename_za_ssa_probe_error",
-                error_type=type(exc).__name__,
+                reason="filename_za_ssa_probe_skip_closing_qty_value_grid",
             )
-            probed = None
-        if probed and (probed.get("line_items") or []):
-            return _lock_ssa_opening_receipt_issue_result(
-                probed,
-                reason="filename_za_ssa_probe",
+        else:
+            started = time.time()
+            _log(
+                "STOCK_DIRECT_VISION_START",
                 filename=filename,
-                model=model,
-                started=started,
+                route="ssa_opening_receipt_issue",
+                reason="filename_za_ssa_probe",
+                gemini_model=model,
+                candidate=1,
+                byte_size=len(file_bytes),
+                numeric_source="gemini_vision",
             )
-        _log(
-            "STOCK_DIRECT_VISION_FALLBACK",
-            filename=filename,
-            detected_layout="ssa_opening_receipt_issue",
-            schema="opening_receipt_issue_closing_dump",
-            reason="filename_za_ssa_probe_empty_fallthrough_saleret",
-            elapsed_ms=int((time.time() - started) * 1000),
-            row_count=0,
-        )
+            try:
+                from services.sales_statement_extractor import (
+                    _extract_ssa_opening_receipt_issue_dump_image,
+                )
+
+                probed = _extract_ssa_opening_receipt_issue_dump_image(
+                    file_bytes, filename, ext, skip_ocr_gate=True
+                )
+            except Exception as exc:
+                _log(
+                    "STOCK_DIRECT_VISION_FALLBACK",
+                    filename=filename,
+                    detected_layout="ssa_opening_receipt_issue",
+                    schema="opening_receipt_issue_closing_dump",
+                    reason="filename_za_ssa_probe_error",
+                    error_type=type(exc).__name__,
+                )
+                probed = None
+            if probed and (probed.get("line_items") or []):
+                if (
+                    _closing_qty_value_grid_beats_ssa_enabled()
+                    and _ssa_probe_invented_opening_values(probed)
+                ):
+                    _log(
+                        "STOCK_DIRECT_VISION_FALLBACK",
+                        filename=filename,
+                        detected_layout="ssa_opening_receipt_issue",
+                        schema="opening_receipt_issue_closing_dump",
+                        reason="filename_za_ssa_probe_invented_opening_values",
+                        elapsed_ms=int((time.time() - started) * 1000),
+                        row_count=len(probed.get("line_items") or []),
+                    )
+                    # Do not fall through to SaleRet — wrong schema for this grid.
+                    return None
+                return _lock_ssa_opening_receipt_issue_result(
+                    probed,
+                    reason="filename_za_ssa_probe",
+                    filename=filename,
+                    model=model,
+                    started=started,
+                )
+            _log(
+                "STOCK_DIRECT_VISION_FALLBACK",
+                filename=filename,
+                detected_layout="ssa_opening_receipt_issue",
+                schema="opening_receipt_issue_closing_dump",
+                reason="filename_za_ssa_probe_empty_fallthrough_saleret",
+                elapsed_ms=int((time.time() - started) * 1000),
+                row_count=0,
+            )
 
     # SaleRet / ClosStock (and Opening/Purchase/Sale table signals)
     saleret = extract_saleret_direct_vision(

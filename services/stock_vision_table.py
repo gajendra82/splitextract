@@ -79,6 +79,114 @@ def _cell_layout_repair_enabled() -> bool:
     }
 
 
+def _data_header_layout_repair_enabled() -> bool:
+    """When Vision puts a data row in header_rows, force cell-layout remap.
+
+    Continuation pages often omit the OPENING/RECEIVE/ISSUE/CLOSING band;
+    Gemini then copies the first product row into headers and invents free_in.
+    Default ON — only fires when headers look like data, never invents digits.
+    """
+    return os.getenv(
+        "STOCK_VISION_DATA_HEADER_LAYOUT_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _prefer_carry_on_data_headers_enabled() -> bool:
+    """Prefer prior-page carry_header when this page's headers look like data."""
+    return os.getenv(
+        "STOCK_VISION_PREFER_CARRY_ON_DATA_HEADERS", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _closing_money_in_qty_repair_enabled() -> bool:
+    """When Closing QTY cell holds money and VALUE is empty, re-slot — default ON."""
+    return os.getenv(
+        "STOCK_VISION_CLOSING_MONEY_IN_QTY_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_STOCK_HEADER_HINT_RE = re.compile(
+    r"\b("
+    r"product|particular|item|description|name|"
+    r"opening|op\.?|open|"
+    r"receipt|receive|rcv|purchase|purch|"
+    r"issue|sale|sales|sold|"
+    r"closing|close|cls|bal|balance|"
+    r"qty|quantity|qnty|value|val|amt|amount|"
+    r"free|scheme|total|stock|expiry|pack|rate"
+    r")\b",
+    re.I,
+)
+
+
+def _vision_header_cells_look_like_data(
+    header_cells: Sequence[Any],
+) -> bool:
+    """True when header_rows are a product/number data row, not stock labels.
+
+    Continuation crops often omit the real header band; Vision copies the first
+    data row into header_rows (e.g. 'LIV 52 SYP 100ML', '147', '13898.85', …).
+    Also catches short qty-only rows: product + pack + ≥2 numbers (len ≥ 4).
+    """
+    texts: List[str] = []
+    for cell in header_cells or []:
+        if isinstance(cell, dict):
+            texts.append(str(cell.get("text") or cell.get("header_text") or "").strip())
+        else:
+            texts.append(str(cell or "").strip())
+    texts = [t for t in texts if t]
+    if len(texts) < 4:
+        return False
+    hint_hits = sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t))
+    kinds = [_classify_layout_cell(t) for t in texts]
+    numeric_hits = sum(
+        1 for k in kinds if k in {"number", "serial_or_small_int"}
+    )
+    product_hits = sum(1 for k in kinds if k == "product")
+    pack_hits = sum(1 for k in kinds if k == "pack")
+    # Real headers: Opening/Receive/Issue/Closing/Product/Qty/Value…
+    if hint_hits >= 3:
+        return False
+    # Data masquerading as header: mostly numbers, optional product name.
+    if numeric_hits >= 4 and hint_hits <= 1:
+        return True
+    if product_hits >= 1 and numeric_hits >= 4 and hint_hits <= 2:
+        return True
+    # Short SSA-style row used as header: NAME | 60'S | 87 | 75 | 12
+    if (
+        len(texts) >= 4
+        and product_hits >= 1
+        and numeric_hits >= 2
+        and pack_hits >= 1
+        and hint_hits <= 1
+    ):
+        return True
+    # NAME | 147 | 210 | 169 | 188 (no pack cell, qty-only)
+    if (
+        len(texts) >= 4
+        and product_hits >= 1
+        and numeric_hits >= 3
+        and hint_hits <= 1
+    ):
+        return True
+    return False
+
+
 def _classify_layout_cell(text: Any) -> str:
     """Classify a printed cell for column-layout inference."""
     s = str(text or "").strip()
@@ -97,10 +205,15 @@ def _classify_layout_cell(text: Any) -> str:
             return "serial_or_small_int" if abs(int(compact)) < 1000 else "number"
         except Exception:
             return "number"
+    # Pack tokens printed beside product (SSA qty-only / dump layouts).
+    # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 100ML.
     if re.fullmatch(
-        r"(?:\d+\s*(?:GM|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG)\.?|"
-        r"\d+\s*'?[Ss]\.?|"
-        r"\d+\s*[xX*×]\s*\d+(?:\s*'?S)?)",
+        r"(?:"
+        r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
+        r"|\d+\s*[,']?\s*[Ss]\.?"
+        r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?"
+        r"|\d+\s*\+\s*\d+"
+        r")",
         s,
         re.I,
     ):
@@ -130,19 +243,87 @@ _SALE_CLOSING_LAYOUT_FIELDS: Tuple[str, ...] = (
     "closing_value",
 )
 
+_QTY_ONLY_ORIC_FIELDS: Tuple[str, ...] = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_qty",
+    "closing_qty",
+)
+
+
+def _num_idxs_look_qty_value_paired(
+    rows: Sequence[Dict[str, Any]],
+    num_idxs: Sequence[int],
+) -> bool:
+    """True when alternate numeric cols look like money (qty/value pairs)."""
+    if len(num_idxs) < 4:
+        return False
+    moneyish = 0
+    qtyish = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        for vi in (1, 3):
+            if vi >= len(num_idxs):
+                continue
+            idx = int(num_idxs[vi])
+            if idx >= len(cells):
+                continue
+            raw = cells[idx]
+            if raw is None or str(raw).strip() == "":
+                continue
+            if _looks_money(raw, raw_text=str(raw)):
+                moneyish += 1
+            elif _looks_small_qty(raw) or _classify_layout_cell(raw) in {
+                "number",
+                "serial_or_small_int",
+            }:
+                qtyish += 1
+    return moneyish > qtyish and moneyish >= 2
+
 
 def _infer_qty_value_canons_from_rows(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
+    header_texts: Optional[Sequence[Any]] = None,
 ) -> Optional[List[str]]:
     """Infer canonical column roles from cell contents (left-to-right geometry).
 
     Detects optional leading serial + product + optional pack, then assigns
     qty/value pairs. Exactly two pairs (no Opening/Receipt geometry) map to
-    SALE+CLOSING. Four pairs map opening→purchase→sales→closing.
+    SALE+CLOSING. Four qty-only columns map opening→receipt→issue→closing.
+    Four pairs map opening→purchase→sales→closing.
+
+    When header_texts are provided, Rate / NRV / Age columns are reserved and
+    never consume an opening→…→closing layout slot.
     """
-    if column_count < 6:
+    if column_count < 4:
         return None
+    from services.stock_header_resolver import (
+        ALIASES as _HEADER_ALIASES,
+        _is_rate,
+        normalize_header,
+    )
+
+    _non_qty_aliases = {
+        normalize_header(a) for a in _HEADER_ALIASES.get("non_stock_qty", [])
+    }
+    headers = [normalize_header(h) for h in (header_texts or [])]
+
+    def _header_rate_or_non_qty(col_i: int) -> Optional[str]:
+        if col_i >= len(headers):
+            return None
+        ht = headers[col_i]
+        if not ht:
+            return None
+        if _is_rate(ht):
+            return "rate"
+        tokens = set(ht.split())
+        if ht in _non_qty_aliases or bool(tokens & _non_qty_aliases):
+            return "ignore"
+        return None
+
     votes: List[List[str]] = [[] for _ in range(column_count)]
     product_rows = 0
     for row in rows or []:
@@ -192,8 +373,18 @@ def _infer_qty_value_canons_from_rows(
         num_start = product_idx + 2
 
     # Collect remaining columns that look numeric (or empty placeholders).
+    # Skip Rate/NRV/Age headers so they never become opening_qty.
     num_idxs: List[int] = []
     for i in range(num_start, column_count):
+        reserved = _header_rate_or_non_qty(i)
+        if reserved is not None:
+            canons[i] = reserved
+            logger.info(
+                "VISION_TABLE cell_layout skip rate/non_qty col=%s canon=%s",
+                i,
+                reserved,
+            )
+            continue
         kind = maj[i]
         if kind in {"number", "serial_or_small_int", None}:
             # None = mostly empty — still a placeholder column in the grid.
@@ -214,8 +405,44 @@ def _infer_qty_value_canons_from_rows(
             if len(num_idxs) >= 8:
                 break
 
-    # Two qty/value pairs only → SALE + CLOSING (not Opening + Receipt).
-    if 4 <= len(num_idxs) <= 5:
+    # Four numeric columns: either qty/value SALE+CLOSING or qty-only ORIC.
+    if len(num_idxs) == 4:
+        if _num_idxs_look_qty_value_paired(rows, num_idxs):
+            for fi, col_i in enumerate(num_idxs[:4]):
+                canons[col_i] = _SALE_CLOSING_LAYOUT_FIELDS[fi]
+            assigned = {c for c in canons if c != "ignore"}
+            if (
+                "product_name" in assigned
+                and "sales_qty" in assigned
+                and "closing_qty" in assigned
+            ):
+                logger.info(
+                    "VISION_TABLE cell_layout_sale_closing num_cols=%s cols=%s",
+                    len(num_idxs),
+                    [(i, canons[i]) for i in num_idxs[:4]],
+                )
+                return canons
+            return None
+        for fi, col_i in enumerate(num_idxs[:4]):
+            canons[col_i] = _QTY_ONLY_ORIC_FIELDS[fi]
+        assigned = {c for c in canons if c != "ignore"}
+        if (
+            "product_name" in assigned
+            and "opening_qty" in assigned
+            and "closing_qty" in assigned
+        ):
+            logger.info(
+                "VISION_TABLE cell_layout_qty_only_oric num_cols=%s cols=%s",
+                len(num_idxs),
+                [(i, canons[i]) for i in num_idxs[:4]],
+            )
+            return canons
+        return None
+
+    # Five numeric columns with money pairs → SALE+CLOSING (+ trailing dump).
+    if len(num_idxs) == 5:
+        if not _num_idxs_look_qty_value_paired(rows, num_idxs):
+            return None
         for fi, col_i in enumerate(num_idxs[:4]):
             canons[col_i] = _SALE_CLOSING_LAYOUT_FIELDS[fi]
         assigned = {c for c in canons if c != "ignore"}
@@ -667,9 +894,11 @@ def _apply_cell_layout_qty_value_repair(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
     errors: List[str],
+    *,
+    force: bool = False,
 ) -> List[Dict[str, Any]]:
     """Override broken header maps using left-to-right cell geometry."""
-    if not _cell_layout_repair_enabled():
+    if not force and not _cell_layout_repair_enabled():
         return columns
     # SSA purchase qty grids already resolve TOTAL STOCK / SALES / CLOSING from
     # headers. Inferring qty/value pairs from cell geometry remaps TOTAL→sales.
@@ -696,11 +925,16 @@ def _apply_cell_layout_qty_value_repair(
         has_op_cl or has_op_sales
     )
     need = (
-        "MISSING_CORE_COLUMNS" in errors
+        force
+        or "MISSING_CORE_COLUMNS" in errors
         or len(core & {"opening_qty", "purchase_qty", "sales_qty", "closing_qty"}) < 2
         or _product_col_looks_like_serial(columns, rows)
         or _pack_token_parked_in_qty_column(columns, rows)
         or dup_only_ok
+        or any(
+            isinstance(c, dict) and c.get("canonical") == "free_in_qty"
+            for c in columns
+        )
     )
     # Only repair when bare QTY/VALUE headers dominate or product looks serial.
     bare_qty = sum(
@@ -713,7 +947,20 @@ def _apply_cell_layout_qty_value_repair(
     if not need and bare_qty < 3:
         return columns
 
-    inferred = _infer_qty_value_canons_from_rows(rows, column_count)
+    header_texts: List[Any] = [""] * column_count
+    for c in columns:
+        if not isinstance(c, dict):
+            continue
+        try:
+            idx = int(c.get("col_index") or 0)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= idx < column_count:
+            header_texts[idx] = c.get("header_text") or ""
+
+    inferred = _infer_qty_value_canons_from_rows(
+        rows, column_count, header_texts=header_texts
+    )
     if not inferred:
         return columns
 
@@ -848,6 +1095,12 @@ def build_table_prompt() -> str:
         "stockist_name is the distributor letterhead ABOVE the STOCK & SALES "
         "ANALYSIS title (e.g. EVERGREEN DRUGS DISTRIBUTOR), never the title "
         "itself and never the HIMALAYA (ZENITH) division in parentheses. "
+        "When headers include PRODUCT NAME & PACKING and L.M.S / LMS: keep the "
+        "full product name+packing text in the product cell (do not truncate or "
+        "invent SKUs); L.M.S is last-month sale — map to ignore / extra.lms, "
+        "never opening_qty or sales_qty. Closing Stock QTY and VALUE are "
+        "separate cells — never put the VALUE money into the QTY cell. "
+        "Emit every printed product row top-to-bottom before TOTAL. "
         "Saleable Stock Report (Particular|Packing|Opn|Rec|Issue|Bal): put "
         "Opn/Rec/Issue/Bal (or Opening/Receipt/Issue/Balance) as the header "
         "text for those columns — never replace them with only '(Q+F)'. Put "
@@ -1325,7 +1578,22 @@ def _normalize_row_cells(
         if len(cells) < width:
             cells = cells + [None] * (width - len(cells))
         elif len(cells) > width:
-            cells = cells[:width]
+            # Keep pack+qty overflow for `_extract_unlabeled_pack_token`.
+            # Truncating here drops CLOSING when Vision emits
+            # ITEM|PACK|OPEN|RECEIPT|ISSUE|CLOSE into a 5-col ORIC header.
+            pack_overflow = (
+                width >= 2
+                and len(cells) == width + 1
+                and _classify_layout_cell(cells[1]) == "pack"
+                and _classify_layout_cell(cells[-1])
+                in {"number", "serial_or_small_int"}
+            )
+            if not pack_overflow:
+                cells = cells[:width]
+            else:
+                coercions["pack_qty_overflow_kept"] = (
+                    coercions.get("pack_qty_overflow_kept", 0) + 1
+                )
     return cells
 
 
@@ -1732,7 +2000,16 @@ def _merge_proposed_mapping(
     Never invent return/expiry fields unless the printed header text itself
     resolves to that group (no phantom SaleRet column).
     """
-    from services.stock_header_resolver import _pick_group, normalize_header
+    from services.stock_header_resolver import (
+        ALIASES as _HEADER_ALIASES,
+        _is_rate,
+        _pick_group,
+        normalize_header,
+    )
+
+    _non_qty_aliases = {
+        normalize_header(a) for a in _HEADER_ALIASES.get("non_stock_qty", [])
+    }
 
     _HEADER_MATCH_REQUIRED = frozenset(
         {
@@ -1741,6 +2018,9 @@ def _merge_proposed_mapping(
             "expiry_damage_qty",
             "closing_qty",
             "closing_value",
+            # Never invent free columns from numeric/data "headers".
+            "free_in_qty",
+            "free_out_qty",
         }
     )
     _GROUP_FOR_CANON = {
@@ -1749,6 +2029,8 @@ def _merge_proposed_mapping(
         "expiry_damage_qty": "expiry_damage",
         "closing_qty": "closing",
         "closing_value": "closing",
+        "free_in_qty": "free",
+        "free_out_qty": "free",
     }
 
     by_prop = {}
@@ -1806,6 +2088,41 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
                     errors.append(f"LMS_MODEL_BLOCK col={idx}")
+            # Rate / NRV / Age must never become opening (or other movement qty).
+            # Check ALIASES directly so NRV is blocked even when
+            # STOCK_HEADER_IGNORE_NON_QTY is off (resolver skips that group).
+            header_tokens = set(header_norm.split())
+            looks_non_qty = bool(header_norm) and (
+                header_norm in _non_qty_aliases
+                or bool(header_tokens & _non_qty_aliases)
+            )
+            rate_or_non_qty = (
+                resolver_canon == "rate"
+                or _is_rate(header_norm)
+                or looks_non_qty
+            )
+            if rate_or_non_qty and model_canon in {
+                "opening_qty",
+                "opening_value",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+                "receipts_qty",
+                "receipts_value",
+            }:
+                header_ok = False
+                errors.append(f"RATE_NON_QTY_MODEL_BLOCK col={idx}")
+                logger.info(
+                    "STOCK_VISION_RATE_NON_QTY_MODEL_BLOCK col=%s text=%r "
+                    "model=%s resolver=%s",
+                    idx,
+                    col.get("header_text"),
+                    model_canon,
+                    resolver_canon,
+                )
             # Company/division titles are not packing (model often guesses pack).
             if model_canon == "pack" and _header_is_company_not_pack(
                 col.get("header_text")
@@ -1884,12 +2201,65 @@ def _flag_qty_value_geometry_suspicion(item: Dict[str, Any]) -> None:
         )
 
 
-def _looks_money(val: Any) -> bool:
+def _closing_qty_raw_text(item: Dict[str, Any]) -> Optional[str]:
+    """Best-effort printed text for the value currently in closing_qty."""
+    cq = item.get("closing_qty")
+    if cq is None:
+        return None
     try:
-        v = float(val)
+        cq_f = float(cq)
+    except (TypeError, ValueError):
+        return None
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    candidates: List[Any] = []
+    phys = extra.get("physical_cells")
+    if isinstance(phys, dict):
+        candidates.extend(phys.values())
+    raw = extra.get("vision_raw_cells")
+    if isinstance(raw, (list, tuple)):
+        candidates.extend(raw)
+    for cell in candidates:
+        if cell is None:
+            continue
+        text = str(cell).strip()
+        if not text:
+            continue
+        try:
+            parsed = float(text.replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if abs(parsed - cq_f) <= 0.001:
+            return text
+    return None
+
+
+def _looks_money(val: Any, *, raw_text: Optional[str] = None) -> bool:
+    """True for rupee-like amounts (decimals, thousands commas, or large wholes)."""
+    text = raw_text if raw_text is not None else (str(val) if isinstance(val, str) else None)
+    if text is not None:
+        s = str(text).strip()
+        if re.search(r",\d{3}", s):
+            return True
+        if re.search(r"\.\d{2}\s*$", s):
+            try:
+                parsed = abs(float(s.replace(",", "")))
+                # Vision often formats qty as "38.00"; treat small wholes as qty.
+                if abs(parsed - int(parsed)) <= 0.001 and parsed < 500.0:
+                    return False
+                return parsed >= 1.0
+            except (TypeError, ValueError):
+                pass
+    try:
+        v = float(str(val).replace(",", "")) if val is not None else None
     except (TypeError, ValueError):
         return False
-    return abs(v - int(v)) > 0.001 and abs(v) >= 1.0
+    if v is None or abs(v) < 1.0:
+        return False
+    # Paise / decimal rupees.
+    if abs(v - int(v)) > 0.001:
+        return True
+    # Whole-rupee VALUE cells (e.g. 3,276.00 → 3276.0) are far above pack qtys.
+    return abs(v) >= 500.0
 
 
 def _looks_small_qty(val: Any) -> bool:
@@ -1898,6 +2268,419 @@ def _looks_small_qty(val: Any) -> bool:
     except (TypeError, ValueError):
         return False
     return abs(v - int(v)) <= 0.001 and 0 <= abs(v) < 500
+
+
+def _closing_value_missing(item: Dict[str, Any]) -> bool:
+    """True when closing_value was not printed (None or field_source missing)."""
+    cv = item.get("closing_value")
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    if fs.get("closing_value") == "missing":
+        return True
+    if cv is None:
+        return True
+    try:
+        return float(cv) == 0.0 and fs.get("closing_value") in {None, "missing"}
+    except (TypeError, ValueError):
+        return cv in {"", "-", "—", "–"}
+
+
+def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
+    """True when Vision headers are OPENING/RECEIPT/ISSUE/CLOSING (no VALUE)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)) or not headers:
+        return False
+    blob = " ".join(str(h or "").upper() for h in headers)
+    if re.search(r"\bVAL(?:UE)?\b", blob):
+        return False
+    has_open = bool(re.search(r"\bOPEN", blob))
+    has_close = bool(re.search(r"\bCLOS", blob))
+    has_mid = bool(re.search(r"\b(?:RECEIPT|ISSUE|SALE)\b", blob))
+    return has_open and has_close and has_mid
+
+
+def _repair_closing_qty_parked_in_value(item: Dict[str, Any]) -> bool:
+    """Move closing qty that landed in closing_value back to closing_qty.
+
+    When closing_qty is empty/0 and closing_value is a whole number that
+    equals opening+receipt-sales, that digit is printed closing qty mis-slotted
+    into the value field — re-slot only, never invent. Applies to qty-only ORIC
+    and to rows whose VALUE field_source was wrongly marked printed.
+    """
+    if not _closing_qty_parked_in_value_repair_enabled():
+        return False
+    cv = item.get("closing_value")
+    try:
+        cv_f = float(cv)
+    except (TypeError, ValueError):
+        return False
+    if abs(cv_f) < 0.001:
+        return False
+    cq = item.get("closing_qty")
+    cq_missing = cq is None
+    try:
+        if cq is not None and abs(float(cq)) > 0.001:
+            return False
+        if cq is not None:
+            cq_missing = abs(float(cq)) <= 0.001
+    except (TypeError, ValueError):
+        cq_missing = True
+    if not cq_missing:
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    flags = list(extra.get("flags") or [])
+    # Must be whole (no paisa) — money like 6285.60 stays put.
+    try:
+        if abs(cv_f - int(cv_f)) > 0.001:
+            return False
+    except (TypeError, ValueError):
+        return False
+    # Identity gate: printed digit in closing_value equals expected closing qty.
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        receipt = float(
+            item.get("receipts_qty")
+            if item.get("receipts_qty") not in (None, "")
+            else (item.get("purchase_qty") or 0)
+        )
+        sales = float(item.get("sales_qty") or 0)
+        if abs((opening + receipt - sales) - cv_f) > 0.51:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    item["closing_qty"] = cv_f
+    item["closing_value"] = None
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_QTY_PARKED_IN_VALUE" not in flags:
+        flags.append("CLOSING_QTY_PARKED_IN_VALUE")
+    # Drop the mistaken money-park flag if present.
+    flags = [f for f in flags if f != "CLOSING_VALUE_PARKED_IN_QTY"]
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE CLOSING_QTY_PARKED_IN_VALUE product=%s "
+        "closing_qty=%s closing_value=missing",
+        str(item.get("product_name") or "")[:60],
+        item.get("closing_qty"),
+    )
+    return True
+
+
+def _apply_closing_qty_parked_in_value_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_closing_qty_parked_in_value(item):
+            fixed += 1
+    if fixed:
+        logger.info(
+            "VISION_TABLE CLOSING_QTY_PARKED_IN_VALUE_PASS fixed=%s",
+            fixed,
+        )
+    return fixed
+
+
+def _closing_qty_parked_in_value_repair_enabled() -> bool:
+    """Inverse of money-in-qty: qty parked in closing_value — default ON."""
+    return os.getenv(
+        "STOCK_VISION_CLOSING_QTY_IN_VALUE_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_closing_money_parked_in_qty(item: Dict[str, Any]) -> bool:
+    """Move money parked in closing_qty into closing_value when VALUE cell is empty.
+
+    Printed layout often has Closing Stock QTY | VALUE; Vision reads the money
+    into the QTY slot and leaves VALUE null. Re-slot only — never invent qty.
+    """
+    if not _closing_money_in_qty_repair_enabled():
+        return False
+    # Qty-only ORIC (OPENING/RECEIPT/ISSUE/CLOSING) has no VALUE column.
+    if _vision_headers_qty_only_oric(item):
+        return False
+    cq = item.get("closing_qty")
+    raw = _closing_qty_raw_text(item)
+    if not _looks_money(cq, raw_text=raw):
+        return False
+    if not _closing_value_missing(item):
+        return False
+    # If opening + receipt - sales ≈ closing_qty, the cell is qty — do not park.
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        receipt = float(item.get("receipts_qty") or 0)
+        sales = float(item.get("sales_qty") or 0)
+        cq_f = float(cq)
+        if abs((opening + receipt - sales) - cq_f) <= 0.51:
+            return False
+    except (TypeError, ValueError):
+        pass
+    # Defer when shift-repair pattern applies: non-zero sales_value holds qty
+    # and non-zero closing_value holds dump (zeros are missing, not dump).
+    sv = item.get("sales_value")
+    cv = item.get("closing_value")
+    try:
+        sv_f = float(sv) if sv is not None else None
+        cv_f = float(cv) if cv is not None else None
+    except (TypeError, ValueError):
+        sv_f, cv_f = None, None
+    if (
+        sv_f is not None
+        and cv_f is not None
+        and abs(sv_f) > 0.001
+        and abs(cv_f) > 0.001
+        and _looks_small_qty(sv_f)
+        and _looks_small_qty(cv_f)
+    ):
+        return False
+
+    extra = item.setdefault("extra", {})
+    item["closing_value"] = float(cq)
+    item["closing_qty"] = None
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["closing_value"] = "printed"
+        fs["closing_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_VALUE_PARKED_IN_QTY" not in flags:
+        flags.append("CLOSING_VALUE_PARKED_IN_QTY")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE CLOSING_VALUE_PARKED_IN_QTY product=%s "
+        "closing_value=%s closing_qty=missing",
+        str(item.get("product_name") or "")[:60],
+        item.get("closing_value"),
+    )
+    return True
+
+
+def _apply_closing_money_parked_in_qty_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    """Re-slot money parked in closing_qty across a list of Vision line items."""
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_closing_money_parked_in_qty(item):
+            fixed += 1
+    if fixed:
+        logger.info(
+            "VISION_TABLE CLOSING_VALUE_PARKED_IN_QTY_PASS fixed=%s",
+            fixed,
+        )
+    return fixed
+
+
+def _pack_qty_realign_enabled() -> bool:
+    """Reassign open/issue/close when pack extraction left-shifted qty cells.
+
+    Default ON — only fires when printed numbers already satisfy
+    opening - receipts ≈ sales (receipts is really issue, sales is closing).
+    Never invents digits.
+    """
+    return os.getenv(
+        "STOCK_VISION_PACK_QTY_REALIGN", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
+    """After unlabeled pack extract: receipt holds issue, sales holds closing.
+
+    Pattern (SSA ITEM|PACK|OPEN|ISSUE|CLOSE mapped onto OPEN|RECEIPT|ISSUE|CLOSE):
+      opening_qty = printed open
+      receipts_qty = printed issue
+      sales_qty = printed closing
+      closing_qty = missing
+    Identity: opening - receipts ≈ sales. Re-slot only; never invent.
+    """
+    if not _pack_qty_realign_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    # Closing already printed — do not reshuffle.
+    if fs.get("closing_qty") == "printed" and item.get("closing_qty") not in (
+        None,
+        "",
+    ):
+        try:
+            if abs(float(item.get("closing_qty"))) > 0.001:
+                return False
+        except (TypeError, ValueError):
+            return False
+    if fs.get("opening_qty") != "printed":
+        return False
+    # Need the middle+right numbers that were parked in receipt/sales.
+    if fs.get("purchase_qty") != "printed" or fs.get("sales_qty") != "printed":
+        return False
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        parked_issue = float(item.get("receipts_qty") or 0)
+        parked_close = float(item.get("sales_qty") or 0)
+    except (TypeError, ValueError):
+        return False
+    if parked_issue < 0 or parked_close < 0:
+        return False
+    # opening - issue ≈ closing (receipts column was blank on the sheet).
+    if abs((opening - parked_issue) - parked_close) > 0.51:
+        return False
+    # Genuine receipt rows (open + receipt - sales = close) must not match:
+    # that would need closing printed. Here closing is missing/empty.
+    logger.info(
+        "VISION_TABLE PACK_QTY_REALIGN product=%s open=%s "
+        "receipt_as_issue=%s sales_as_close=%s -> sales=%s closing=%s",
+        str(item.get("product_name") or "")[:60],
+        opening,
+        parked_issue,
+        parked_close,
+        parked_issue,
+        parked_close,
+    )
+    item["sales_qty"] = parked_issue
+    item["closing_qty"] = parked_close
+    item["receipts_qty"] = 0.0
+    fs["sales_qty"] = "printed"
+    fs["closing_qty"] = "printed"
+    fs["purchase_qty"] = "missing"
+    extra["receipts_value"] = None
+    if "purchase_value" in extra:
+        extra["purchase_value"] = None
+    flags = list(extra.get("flags") or [])
+    if "PACK_QTY_REALIGN" not in flags:
+        flags.append("PACK_QTY_REALIGN")
+    extra["flags"] = flags
+    return True
+
+
+def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
+    """Re-slot when ISSUE qty was mapped to free_in and values shifted left.
+
+    Pattern (continuation page, bogus headers + proposed free_in):
+      free_in_qty = ISSUE qty (small int)
+      sales_qty   = ISSUE value (money)
+      sales_value = CLOSING qty (small int)
+      closing_*   = missing
+    Identity check: opening + purchase - free_in ≈ sales_value (as closing).
+    Closing value is taken from an unused printed money cell — never invented.
+    """
+    if not _data_header_layout_repair_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if fs.get("free_in_qty") != "printed":
+        return False
+    free_in = extra.get("free_in_qty")
+    sq = item.get("sales_qty")
+    sv = item.get("sales_value")
+    cq = item.get("closing_qty")
+    if not _looks_small_qty(free_in):
+        return False
+    if not _looks_money(sq):
+        return False
+    if not _looks_small_qty(sv):
+        return False
+    # Closing already printed correctly — do not reshuffle.
+    if cq is not None and fs.get("closing_qty") == "printed":
+        try:
+            if abs(float(cq)) > 0.001:
+                return False
+        except (TypeError, ValueError):
+            return False
+    try:
+        oq = float(item.get("opening_qty") or 0)
+        rq = float(item.get("receipts_qty") or 0)
+        fi = float(free_in)
+        closing_as_sv = float(sv)
+        if abs((oq + rq - fi) - closing_as_sv) > 0.51:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    # Unused printed money → closing_value (not opening/purchase/issue money).
+    closing_value = None
+    used_money = set()
+    for key in ("opening_value", "purchase_value", "receipts_value"):
+        raw = item.get(key)
+        if raw is None:
+            raw = extra.get(key)
+        try:
+            if raw is not None:
+                used_money.add(round(float(raw), 2))
+        except (TypeError, ValueError):
+            pass
+    try:
+        used_money.add(round(float(sq), 2))  # issue value currently in sales_qty
+    except (TypeError, ValueError):
+        pass
+    candidates: List[Any] = []
+    phys = extra.get("physical_cells")
+    if isinstance(phys, dict):
+        for k in sorted(phys.keys(), key=lambda x: int(x) if str(x).isdigit() else 0):
+            candidates.append(phys.get(k))
+    raw_cells = extra.get("vision_raw_cells")
+    if isinstance(raw_cells, (list, tuple)):
+        candidates.extend(raw_cells)
+    for cell in candidates:
+        if cell is None:
+            continue
+        text = str(cell).strip()
+        if not text or not _looks_money(text, raw_text=text):
+            continue
+        try:
+            val = float(text.replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if round(val, 2) in used_money:
+            continue
+        closing_value = val
+        break
+
+    item["sales_qty"] = float(free_in)
+    item["sales_value"] = float(sq)
+    item["closing_qty"] = float(sv)
+    if closing_value is not None:
+        item["closing_value"] = float(closing_value)
+        fs["closing_value"] = "printed"
+    else:
+        item["closing_value"] = None
+        fs["closing_value"] = "missing"
+    extra["free_in_qty"] = None
+    fs["free_in_qty"] = "missing"
+    fs["sales_qty"] = "printed"
+    fs["sales_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "FREE_IN_ISSUE_CLOSING_SHIFT" not in flags:
+        flags.append("FREE_IN_ISSUE_CLOSING_SHIFT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE FREE_IN_ISSUE_CLOSING_SHIFT product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        item.get("sales_qty"),
+        item.get("sales_value"),
+        item.get("closing_qty"),
+        item.get("closing_value"),
+    )
+    return True
 
 
 def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
@@ -2954,45 +3737,95 @@ def _map_single_table(
     header_rows = table.get("header_rows") or []
     header_used: Optional[Dict[str, Any]] = None
     columns: List[Dict[str, Any]] = []
+    data_as_headers = False
 
     if header_rows:
         header_cells = _flatten_header_cells(header_rows, column_count)
-        if _x_order_violation(header_cells):
-            # Vision cell arrays are col_index-ordered; unsorted x_center must
-            # not discard an otherwise readable table (Qoh/Value/Age grids).
-            logger.info(
-                "VISION_TABLE_X_ORDER_RELAXED request_id=%s cols=%s",
-                request_id,
-                len(header_cells),
+        data_as_headers = _vision_header_cells_look_like_data(header_cells)
+        # Continuation page: Vision copied a data row into headers — prefer
+        # prior-page carry when column counts match (never invent columns).
+        use_carry = False
+        if (
+            data_as_headers
+            and _prefer_carry_on_data_headers_enabled()
+            and isinstance(carry_header, dict)
+        ):
+            carried_count = int(carry_header.get("column_count") or 0)
+            if carried_count == column_count and carry_header.get("columns"):
+                use_carry = True
+                columns = list(carry_header.get("columns") or [])
+                header_used = carry_header
+                errors.append("PREFER_CARRY_ON_DATA_HEADERS")
+                logger.info(
+                    "VISION_TABLE PREFER_CARRY_ON_DATA_HEADERS "
+                    "column_count=%s request_id=%s",
+                    column_count,
+                    request_id,
+                )
+        if use_carry:
+            pass
+        else:
+            if _x_order_violation(header_cells):
+                # Vision cell arrays are col_index-ordered; unsorted x_center must
+                # not discard an otherwise readable table (Qoh/Value/Age grids).
+                logger.info(
+                    "VISION_TABLE_X_ORDER_RELAXED request_id=%s cols=%s",
+                    request_id,
+                    len(header_cells),
+                )
+                for cell in header_cells:
+                    if isinstance(cell, dict):
+                        cell["x_center"] = None
+            resolved = resolve_columns(header_cells)
+            columns = list(resolved.get("columns") or [])
+            for err in resolved.get("errors") or []:
+                code = err.get("code") if isinstance(err, dict) else str(err)
+                if code:
+                    errors.append(str(code))
+            # Do not let the model invent free_in from numeric "headers".
+            proposed = table.get("proposed_mapping") or []
+            if data_as_headers:
+                proposed = [
+                    e
+                    for e in proposed
+                    if not (
+                        isinstance(e, dict)
+                        and str(e.get("canonical") or e.get("field") or "")
+                        in {"free_in_qty", "free_out_qty"}
+                    )
+                ]
+            columns = _merge_proposed_mapping(columns, proposed, errors)
+            # Prefer a surgical pack-column shift when headers are otherwise good.
+            columns = _shift_pack_out_of_qty_headers(
+                columns, table.get("rows") or [], errors
             )
-            for cell in header_cells:
-                if isinstance(cell, dict):
-                    cell["x_center"] = None
-        resolved = resolve_columns(header_cells)
-        columns = list(resolved.get("columns") or [])
-        for err in resolved.get("errors") or []:
-            code = err.get("code") if isinstance(err, dict) else str(err)
-            if code:
-                errors.append(str(code))
-        columns = _merge_proposed_mapping(
-            columns, table.get("proposed_mapping") or [], errors
-        )
-        # Prefer a surgical pack-column shift when headers are otherwise good.
-        columns = _shift_pack_out_of_qty_headers(
-            columns, table.get("rows") or [], errors
-        )
-        columns = _apply_cell_layout_qty_value_repair(
-            columns,
-            table.get("rows") or [],
-            column_count,
-            errors,
-        )
-        columns = _repair_ssa_missing_sales_after_total(columns, errors)
-        header_used = {
-            "column_count": column_count,
-            "columns": columns,
-            "header_cells": header_cells,
-        }
+            force_layout = bool(
+                data_as_headers and _data_header_layout_repair_enabled()
+            )
+            columns = _apply_cell_layout_qty_value_repair(
+                columns,
+                table.get("rows") or [],
+                column_count,
+                errors,
+                force=force_layout,
+            )
+            if force_layout:
+                errors.append("DATA_HEADER_LAYOUT_REPAIR")
+            columns = _repair_ssa_missing_sales_after_total(columns, errors)
+            header_used = {
+                "column_count": column_count,
+                "columns": columns,
+                "header_cells": header_cells,
+            }
+            # Never poison later pages with data-as-header maps.
+            if data_as_headers and "CELL_LAYOUT_QTY_VALUE_REPAIR" not in errors:
+                # Layout failed (e.g. <2 product rows) — still mark so callers
+                # know not to treat this as a trusted header carry source.
+                header_used = {
+                    **header_used,
+                    "data_as_headers": True,
+                    "untrusted_carry": True,
+                }
     elif carry_header and isinstance(carry_header, dict):
         carried_count = int(carry_header.get("column_count") or 0)
         if carried_count != column_count:
@@ -3198,11 +4031,19 @@ def _map_single_table(
                 continue
             seen_product_row = True
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
+            _repair_pack_shifted_open_issue_close(item)
+            _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
+            _repair_closing_money_parked_in_qty(item)
+            _repair_closing_qty_parked_in_value(item)
             _flag_qty_value_geometry_suspicion(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
             )
+            # After derive: money still in qty (whole-rupee / missed earlier) → re-slot.
+            _repair_closing_money_parked_in_qty(item)
+            # Inverse: qty-only ORIC closing parked in value after money pass.
+            _repair_closing_qty_parked_in_value(item)
             line_items.append(item)
 
     if leading_banner_items:
@@ -3295,12 +4136,32 @@ def map_vision_table(
     rows_per_table: List[int] = []
 
     for t_idx, t in enumerate(expanded):
-        # Carry header only when this table lacks headers (continuation crop).
-        carry = carry_header if not (t.get("header_rows") or []) else None
+        # Carry when this table lacks headers OR headers look like a data row
+        # (continuation crop) — _map_single_table decides whether to prefer carry.
+        raw_headers = t.get("header_rows") or []
+        looks_data = False
+        if raw_headers:
+            try:
+                cc = int(t.get("column_count") or 0)
+            except (TypeError, ValueError):
+                cc = 0
+            looks_data = _vision_header_cells_look_like_data(
+                _flatten_header_cells(raw_headers, cc)
+            )
+        carry = (
+            carry_header
+            if (not raw_headers or looks_data)
+            else None
+        )
         mapped = _map_single_table(t, carry_header=carry, request_id=req_id)
         all_errors.extend(str(e) for e in (mapped.get("errors") or []))
-        if mapped.get("header_used") and header_used is None:
-            header_used = mapped["header_used"]
+        used = mapped.get("header_used")
+        if (
+            isinstance(used, dict)
+            and not used.get("untrusted_carry")
+            and header_used is None
+        ):
+            header_used = used
             column_map = list(mapped.get("column_map") or [])
         elif mapped.get("column_map") and not column_map:
             column_map = list(mapped.get("column_map") or [])
@@ -3347,6 +4208,9 @@ def map_vision_table(
                 item.setdefault("extra", {})["total_in_layout"] = True
                 item["extra"]["column_map"] = column_map
 
+    _apply_closing_money_parked_in_qty_pass(all_items)
+    _apply_closing_qty_parked_in_value_pass(all_items)
+
     return {
         "line_items": all_items,
         "column_map": column_map,
@@ -3375,12 +4239,44 @@ def _numeric_fingerprint(item: Dict[str, Any]) -> Tuple[Any, ...]:
     )
 
 
+def _crop_overlap_prefer_identity_enabled() -> bool:
+    """When crop duplicates disagree, keep the identity-balancing row."""
+    return os.getenv(
+        "STOCK_VISION_CROP_OVERLAP_PREFER_IDENTITY", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _item_stock_identity_ok(item: Dict[str, Any]) -> bool:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("stock_identity_ok") is True:
+        return True
+    recon = extra.get("reconciliation") if isinstance(extra.get("reconciliation"), dict) else {}
+    if recon.get("valid") is True:
+        return True
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        receipt = float(item.get("receipts_qty") or 0)
+        sales = float(item.get("sales_qty") or 0)
+        closing = item.get("closing_qty")
+        if closing is None:
+            return False
+        return abs((opening + receipt - sales) - float(closing)) <= 0.51
+    except (TypeError, ValueError):
+        return False
+
+
 def dedupe_crop_overlap_rows(
     items: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
     """Dedupe tall-crop overlap: same name + same numbers → keep one.
 
-    Same name but different numbers → keep both, flag CROP_OVERLAP_CONFLICT.
+    Same name but different numbers → keep both, flag CROP_OVERLAP_CONFLICT,
+    unless prefer-identity is on and exactly one side balances — then keep that.
     """
     errors: List[str] = []
     out: List[Dict[str, Any]] = []
@@ -3395,13 +4291,34 @@ def dedupe_crop_overlap_rows(
         idxs = by_key.get(key) or []
         matched_exact = False
         conflict = False
+        replaced = False
         for idx in idxs:
             prev = out[idx]
             if _numeric_fingerprint(prev) == _numeric_fingerprint(item):
                 matched_exact = True
                 break
             conflict = True
-        if matched_exact:
+            if _crop_overlap_prefer_identity_enabled():
+                prev_ok = _item_stock_identity_ok(prev)
+                item_ok = _item_stock_identity_ok(item)
+                if item_ok and not prev_ok:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_IDENTITY "
+                        "keep_new product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    out[idx] = item
+                    replaced = True
+                    break
+                if prev_ok and not item_ok:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_IDENTITY "
+                        "keep_prev product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    matched_exact = True  # drop new
+                    break
+        if matched_exact or replaced:
             continue
         if conflict:
             extra = item.setdefault("extra", {})
@@ -4430,6 +5347,26 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
         missing = int(counts.get("MISSING_VALUE") or 0)
     except (TypeError, ValueError):
         missing = 0
+    # Closing Stock QTY|VALUE: money was parked in QTY and re-slotted to VALUE,
+    # leaving closing_qty missing. That is a partial read — keep Vision table
+    # rather than falling through to filename-_ZA_ SSA (hallucinates SKUs).
+    parked = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        flags = (item.get("extra") or {}).get("flags") or []
+        if "CLOSING_VALUE_PARKED_IN_QTY" in flags:
+            parked += 1
+    parked_ratio = parked / max(len(items), 1)
+    if parked_ratio >= 0.20:
+        logger.info(
+            "VISION_TABLE quality_fallback skip reason=closing_value_parked_in_qty "
+            "parked=%s rows=%s valid_ratio=%s",
+            parked,
+            len(items),
+            valid_ratio,
+        )
+        return None
     if missing / max(len(items), 1) >= 0.50:
         return "missing_value_ratio_high"
     nonzero = False
@@ -4642,8 +5579,9 @@ def run_vision_table_path(
                         "gemini_calls": calls,
                         "gemini_budget": gemini_budget,
                     }
-            if mapped.get("header_used"):
-                carry = mapped["header_used"]
+            hu = mapped.get("header_used")
+            if isinstance(hu, dict) and not hu.get("untrusted_carry"):
+                carry = hu
                 column_map = list(mapped.get("column_map") or column_map)
             errors.extend(str(e) for e in (mapped.get("errors") or []))
             if mapped.get("stockist_name") and not stockist_name:
@@ -4679,6 +5617,10 @@ def run_vision_table_path(
                 if isinstance(item, dict):
                     item.setdefault("extra", {})["vision_row_index"] = i
             _log("vertical_split_deduped", rows=len(all_items))
+
+        # Final pass before stamp/classify — catches money still parked in qty.
+        _apply_closing_money_parked_in_qty_pass(all_items)
+        _apply_closing_qty_parked_in_value_pass(all_items)
 
         result = _stamp_vision_result(
             filename=filename,
@@ -5012,6 +5954,10 @@ def run_vision_table_path(
             result["totals"]["extra"]["reread_skipped"] = "budget"
         elif deferred_vertical_split and calls >= gemini_budget:
             result["totals"]["extra"]["reread_skipped"] = "budget"
+
+        # After recon/reread merges: money must not remain in closing_qty.
+        _apply_closing_money_parked_in_qty_pass(result.get("line_items") or [])
+        _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
 
         classified = classify_result(result)
         result["totals"]["extra"]["row_status_counts"] = (

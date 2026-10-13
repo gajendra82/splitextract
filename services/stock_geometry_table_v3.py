@@ -232,7 +232,11 @@ _NON_PRODUCT_RULES: List[Tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bcompany\s*:\s*\d*", re.I), "metadata_company_row"),
     (re.compile(r"stock\s*&\s*sales\s*statement", re.I), "metadata_statement_title"),
     (re.compile(r"stock\s*&\s*statement", re.I), "metadata_statement_title"),
+    # Title fragment when "STATEMENT" landed in packing OCR.
+    (re.compile(r"^\s*stock\s*&\s*sales\s*$", re.I), "metadata_statement_title"),
     (re.compile(r"\bmonth\s+of\b", re.I), "metadata_statement_title"),
+    # Footer item-count rows ("items : 42") — not SKUs.
+    (re.compile(r"^\s*items?\s*:\s*\d+\s*$", re.I), "metadata_items_count"),
     (re.compile(r"^\s*grand\s*total\b", re.I), "metadata_total_row"),
     (re.compile(r"^\s*total\b", re.I), "metadata_total_row"),
     (re.compile(r"^\s*page\b", re.I), "metadata_page_row"),
@@ -370,6 +374,15 @@ def classify_grid_row(
     for pattern, reason in _NON_PRODUCT_RULES:
         if pattern.search(norm) or pattern.search(norm_l):
             return "NON_PRODUCT", reason
+
+    # Packing-side footer / title spill (product cell is short; money/title in pack).
+    pack_l = pack.lower()
+    if re.search(r"total\s+value\s+in\s+rs", pack_l):
+        return "NON_PRODUCT", "metadata_total_row"
+    if re.search(r"stat(?:e)?ment\s+from\s+\d", pack_l) and re.search(
+        r"stock\s*&\s*sales", norm_l
+    ):
+        return "NON_PRODUCT", "metadata_statement_title"
 
     # Lone place/header tokens (e.g. KALPETTA)
     if compact in {
@@ -1499,6 +1512,8 @@ def resolve_column_geometry(
         if c.get("canonical") == "pack":
             c["canonical"] = "packing"
             c["business_field"] = "packing"
+    if detection_mode == "text_columns":
+        _remap_duplicate_sales_to_value(columns)
     source = (
         "text_columns_header_ocr"
         if detection_mode == "text_columns"
@@ -3452,6 +3467,170 @@ def write_reports(
 # ---------------------------------------------------------------------------
 
 
+# Rate (x.xx) + opening/LMS integer glued into PACKING when Rate/Op columns
+# were absorbed into a too-wide packing band.
+_PACK_RATE_OPENING = re.compile(
+    r"^(?P<pack>.*?)\s*(?P<rate>\d+\.\d{2})\s+(?P<open>\d+)\s*$",
+    re.I,
+)
+
+
+def _peel_pack_rate_opening_enabled() -> bool:
+    return os.getenv(
+        "STOCK_GEOMETRY_PEEL_PACK_RATE_OPENING", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _text_columns_quality_gate_enabled() -> bool:
+    return os.getenv(
+        "STOCK_GEOMETRY_TEXT_COLUMNS_QUALITY_GATE", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def peel_rate_opening_from_packing(sel: Dict[str, Any]) -> bool:
+    """When packing OCR holds rate + opening and opening_qty is missing, peel.
+
+    Does not invent numbers — only splits printed tokens already in packing.
+    Rate stays out of qty fields (never assigned as opening/purchase/sales).
+    Returns True when a peel was applied.
+    """
+    if not _peel_pack_rate_opening_enabled():
+        return False
+    pack_raw = str(sel.get("packing") or sel.get("pack") or "").strip()
+    if not pack_raw:
+        return False
+    open_v = sel.get("opening_qty")
+    if open_v is not None:
+        try:
+            if abs(float(open_v)) > 0.051:
+                return False
+        except (TypeError, ValueError):
+            return False
+    m = _PACK_RATE_OPENING.match(pack_raw)
+    if not m:
+        return False
+    pack_clean = (m.group("pack") or "").strip(" .,-/;|'\"")
+    try:
+        open_qty = float(m.group("open"))
+    except (TypeError, ValueError):
+        return False
+    sel["packing"] = pack_clean or None
+    if "pack" in sel:
+        sel["pack"] = sel["packing"]
+    sel["opening_qty"] = open_qty
+    sel["_peeled_rate"] = m.group("rate")
+    logger.info(
+        "GEOMETRY_PEEL_PACK_RATE_OPENING pack=%r rate=%s opening=%s",
+        pack_clean,
+        m.group("rate"),
+        open_qty,
+    )
+    return True
+
+
+def text_columns_quality_fail_reason(
+    line_items: Sequence[Dict[str, Any]],
+    columns: Sequence[Dict[str, Any]],
+) -> Optional[str]:
+    """Reject text_columns geometry when packing absorbed rate/opening.
+
+    Physical Op.Stk+LMS and hybrid_10col paths are not checked here.
+    """
+    if not _text_columns_quality_gate_enabled():
+        return None
+    items = [i for i in line_items if isinstance(i, dict)]
+    if len(items) < 3:
+        return None
+
+    canons = {
+        str(c.get("business_field") or c.get("canonical") or "")
+        for c in columns
+        if isinstance(c, dict)
+    }
+    has_rate_or_open_col = bool(
+        canons & {"rate", "opening_qty", "lms", "opening_value"}
+    )
+
+    absorb_hits = 0
+    identity_bad = 0
+    for item in items:
+        pack = str(item.get("packing") or "").strip()
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if re.search(r"\d+\.\d{2}", pack) or extra.get(
+            "geometry_peel_pack_rate_opening"
+        ):
+            absorb_hits += 1
+        try:
+            o = float(item.get("opening_qty") or 0.0)
+            p = float(item.get("receipts_qty") or 0.0)
+            s = float(item.get("sales_qty") or 0.0)
+            c_raw = item.get("closing_qty")
+            if c_raw is None:
+                identity_bad += 1
+                continue
+            c = float(c_raw)
+            if abs((o + p - s) - c) > max(0.51, 0.02 * abs(c or 1.0)):
+                identity_bad += 1
+        except (TypeError, ValueError):
+            identity_bad += 1
+
+    n = len(items)
+    # Packing band absorbed Rate (+ Opening): no dedicated rate/opening column,
+    # many packs still show money or were just peeled, and identity still fails
+    # (often because Sales qty/value columns were swapped).
+    if (
+        not has_rate_or_open_col
+        and absorb_hits >= max(3, int(0.45 * n))
+        and identity_bad >= max(3, int(0.55 * n))
+    ):
+        logger.info(
+            "GEOMETRY_TEXT_COLUMNS_QUALITY_FAIL reason=pack_rate_opening_absorb "
+            "absorb=%s/%s identity_bad=%s/%s",
+            absorb_hits,
+            n,
+            identity_bad,
+            n,
+        )
+        return "GEOMETRY_TEXT_COLUMNS_PACK_RATE_OPENING_ABSORB"
+    return None
+
+
+def _remap_duplicate_sales_to_value(columns: List[Dict[str, Any]]) -> None:
+    """Sales then bare SALES/'SALES → sales_qty then sales_value (qty≠value)."""
+    ordered = sorted(
+        [c for c in columns if isinstance(c, dict)],
+        key=lambda c: int(c.get("col_index") or c.get("physical_column_index") or 0),
+    )
+    for i, col in enumerate(ordered[:-1]):
+        canon = str(col.get("canonical") or col.get("business_field") or "")
+        if canon != "sales_qty":
+            continue
+        nxt = ordered[i + 1]
+        nxt_canon = str(nxt.get("canonical") or nxt.get("business_field") or "")
+        if nxt_canon not in {"ignore", "sales_qty"}:
+            continue
+        hdr = re.sub(
+            r"[^a-z0-9]+",
+            "",
+            str(nxt.get("source_header") or nxt.get("header_text") or "").lower(),
+        )
+        if "sale" not in hdr:
+            continue
+        nxt["canonical"] = "sales_value"
+        nxt["business_field"] = "sales_value"
+        nxt["is_value"] = True
+        nxt["reason"] = "duplicate_sales_as_value"
+        nxt["mapping_source"] = str(
+            nxt.get("mapping_source") or "text_columns_header_ocr"
+        )
+        logger.info(
+            "GEOMETRY_DUPLICATE_SALES_AS_VALUE qty_col=%s value_col=%s hdr=%r",
+            col.get("col_index"),
+            nxt.get("col_index"),
+            nxt.get("source_header") or nxt.get("header_text"),
+        )
+
+
 def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
     """Convert a PRODUCT geometry row to a Laravel-facing line_item.
 
@@ -3469,6 +3648,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
         sel["packing"] = sel.get("pack")
     if not sel.get("product_name"):
         sel["product_name"] = row.get("product_name_ocr")
+    peeled = peel_rate_opening_from_packing(sel)
     biz = dict(row.get("business_fields") or {})
     if not biz:
         biz = {
@@ -3477,6 +3657,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
             "purchase_return_qty": sel.get("purchase_return_qty"),
             "sales_qty": sel.get("sales_qty"),
             "sales_return_qty": sel.get("sales_return_qty"),
+            "sales_value": sel.get("sales_value"),
             "closing_qty": sel.get("closing_qty"),
             "closing_value": sel.get("closing_value"),
             "lms": sel.get("lms"),
@@ -3484,6 +3665,10 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
         }
     elif "receipts_qty" not in biz and biz.get("purchase_qty") is not None:
         biz["receipts_qty"] = biz.get("purchase_qty")
+    if peeled and biz.get("opening_qty") in (None, 0, 0.0):
+        biz["opening_qty"] = sel.get("opening_qty")
+    if "sales_value" not in biz and sel.get("sales_value") is not None:
+        biz["sales_value"] = sel.get("sales_value")
 
     def _top(val: Any, *, closing: bool = False) -> Any:
         if val is None:
@@ -3500,6 +3685,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
         "purchase_return_qty",
         "sales_qty",
         "sales_return_qty",
+        "sales_value",
         "breakage_qty",
         "replacement_qty",
         "closing_qty",
@@ -3508,6 +3694,11 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
     ):
         raw = sel.get(field) if field in ("product_name", "packing") else biz.get(field)
         field_source[field] = "missing" if raw is None else "printed"
+    if peeled:
+        field_source["opening_qty"] = "printed"
+        field_source["packing"] = (
+            "printed" if sel.get("packing") else "missing"
+        )
 
     # closing_value provenance: printed Bal.Val / Cl.Value only — never Balance Qty.
     closing_val = biz.get("closing_value")
@@ -3522,6 +3713,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
     if total_qty is None:
         total_qty = sel.get("total_qty")
 
+    sales_val = biz.get("sales_value")
     item: Dict[str, Any] = {
         "product_code": None,
         "product_name": sel.get("product_name"),
@@ -3529,7 +3721,7 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
         "opening_qty": _top(biz.get("opening_qty")),
         "receipts_qty": _top(biz.get("receipts_qty")),
         "sales_qty": _top(biz.get("sales_qty")),
-        "sales_value": 0.0,
+        "sales_value": _top(sales_val) if sales_val is not None else 0.0,
         "closing_qty": _top(biz.get("closing_qty"), closing=True),
         "closing_value": _top(biz.get("closing_value")),
         "extra": {
@@ -3551,6 +3743,10 @@ def geometry_row_to_line_item(row: Dict[str, Any]) -> Dict[str, Any]:
             "closing_value_source": closing_value_source,
         },
     }
+    if peeled:
+        item["extra"]["geometry_peel_pack_rate_opening"] = True
+        if sel.get("_peeled_rate") is not None:
+            item["extra"]["peeled_rate"] = sel.get("_peeled_rate")
     if total_qty is not None:
         item["extra"]["field_source"]["total_qty"] = "printed"
     return item
@@ -3724,6 +3920,18 @@ def run_geometry_cell_ocr_path(
                 }
 
     line_items = [geometry_row_to_line_item(r) for r in product_rows]
+    if accept_text_columns:
+        qfail = text_columns_quality_fail_reason(line_items, columns)
+        if qfail:
+            return {
+                "status": "fallback",
+                "reason": qfail,
+                "result": None,
+                "gemini_calls": int(
+                    (report.get("gemini") or {}).get("api_calls") or 0
+                ),
+                "gemini_budget": 2,
+            }
     column_map = [
         {
             "col_index": c.get("physical_column_index", c.get("col_index")),

@@ -634,6 +634,22 @@ def _ignore_non_qty_headers_enabled() -> bool:
     }
 
 
+def _absorb_ignore_geometry_enabled() -> bool:
+    """STOCK_HEADER_ABSORB_IGNORE_GEOMETRY — keep ignore columns in x-bands.
+
+    When OFF (default), ignore columns (NRV/Age/unrecognized Rate OCR, etc.)
+    are dropped from geometry centres and their tokens spill into neighbouring
+    qty bands — often opening_qty. When ON, those columns absorb tokens so
+    rate/NRV never become opening/closing qty.
+    """
+    return os.getenv("STOCK_HEADER_ABSORB_IGNORE_GEOMETRY", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _multi_stock_enabled() -> bool:
     """STOCK_HEADER_MULTI_STOCK — leftmost bare STOCK=opening, rightmost=closing.
 
@@ -1029,8 +1045,11 @@ def _assign_cells_by_column_bands(
                 }
             )
             for b in hits[:2]:
-                ambiguous_canons.add(b["canonical"])
-                fields[b["canonical"]] = None
+                canon = b["canonical"]
+                if canon == "ignore":
+                    continue
+                ambiguous_canons.add(canon)
+                fields[canon] = None
             ambiguous += 1
             continue
         # Outside every open band → midpoint dead zone or beyond table.
@@ -1053,10 +1072,12 @@ def _assign_cells_by_column_bands(
                     "cols": [int(left_b["col_index"]), int(right_b["col_index"])],
                 }
             )
-            ambiguous_canons.add(left_b["canonical"])
-            ambiguous_canons.add(right_b["canonical"])
-            fields[left_b["canonical"]] = None
-            fields[right_b["canonical"]] = None
+            for b in (left_b, right_b):
+                canon = b["canonical"]
+                if canon == "ignore":
+                    continue
+                ambiguous_canons.add(canon)
+                fields[canon] = None
             ambiguous += 1
         else:
             errors.append({"code": "UNASSIGNED_TOKEN", "message": raw, "x": tx})
@@ -1065,6 +1086,9 @@ def _assign_cells_by_column_bands(
     for b in bands:
         idx = int(b["col_index"])
         canon = b["canonical"]
+        # Absorber columns keep tokens out of qty bands; never write to fields.
+        if canon == "ignore":
+            continue
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
@@ -1811,12 +1835,24 @@ def assign_cells(
         return {"fields": fields, "errors": errors}
 
     # Geometry assignment.
+    # Optionally keep ignore columns as absorbers so Rate/NRV tokens do not
+    # spill into neighbouring opening/closing bands.
+    absorb_ignore = _absorb_ignore_geometry_enabled()
     centers: List[Tuple[int, float, str]] = []
     for c in columns:
-        if c.get("x_center") is None or c.get("canonical") == "ignore":
+        if c.get("x_center") is None:
             continue
-        centers.append((int(c["col_index"]), float(c["x_center"]), c["canonical"]))
+        canon = str(c.get("canonical") or "ignore")
+        if canon == "ignore" and not absorb_ignore:
+            continue
+        centers.append((int(c["col_index"]), float(c["x_center"]), canon))
     centers.sort(key=lambda t: t[1])
+    if absorb_ignore:
+        logger.info(
+            "STOCK_HEADER_ABSORB_IGNORE_GEOMETRY centers=%s ignore_absorbers=%s",
+            len(centers),
+            sum(1 for _i, _x, c in centers if c == "ignore"),
+        )
     if len(centers) < 2:
         pitch = 50.0
     else:
@@ -1870,14 +1906,17 @@ def assign_cells(
                         "cols": [dists[0][1], dists[1][1]],
                     }
                 )
-                ambiguous_canons.add(dists[0][2])
-                ambiguous_canons.add(dists[1][2])
-                fields[dists[0][2]] = None
-                fields[dists[1][2]] = None
+                for _d, _i, amb_canon in dists[:2]:
+                    if amb_canon == "ignore":
+                        continue
+                    ambiguous_canons.add(amb_canon)
+                    fields[amb_canon] = None
                 continue
         bucket[best_idx].append(raw)
 
     for idx, _x, canon in centers:
+        if canon == "ignore":
+            continue
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
