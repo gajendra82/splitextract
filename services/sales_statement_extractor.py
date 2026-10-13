@@ -11464,6 +11464,50 @@ def _split_marg_closing_mexp(value: Any) -> Tuple[float, Optional[str]]:
     return float(matched.group(1)), matched.group(2)
 
 
+def _is_marg_closing_mexp_junk_row(raw_name: str, row: Sequence[Any]) -> bool:
+    """True for purchase-invoice / footer blocks that sit under the product grid.
+
+    Marg appends supplier invoice lines (invoice no. in OPENING, date in RECEIPT /
+    CLOSING). Those are not stock rows — never map them as products.
+    """
+    name = str(raw_name or "").strip()
+    if not name:
+        return True
+    if re.search(
+        r"^(TOTAL\b|MARG\s+ERP|Digital\b|Import\s+Purchase|No\s+Manual\s+Entry)",
+        name,
+        re.I,
+    ):
+        return True
+    opening_cell = row[1] if len(row) > 1 else None
+    opening_f: Optional[float] = None
+    if isinstance(opening_cell, (int, float)) and not isinstance(opening_cell, bool):
+        opening_f = float(opening_cell)
+    else:
+        opening_text = str(opening_cell or "").strip()
+        if opening_text and opening_text not in {"-", "—", "--"}:
+            try:
+                opening_f = float(opening_text.replace(",", ""))
+            except (TypeError, ValueError):
+                opening_f = None
+    # Invoice numbers dwarf pack qtys (e.g. 5126108555).
+    if opening_f is not None and abs(opening_f) >= 1_000_000:
+        return True
+    receipt_text = str(row[2] if len(row) > 2 else "")
+    closing_text = str(row[4] if len(row) > 4 else "")
+    has_date = bool(
+        re.search(r"\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", receipt_text)
+        or re.search(r"\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", closing_text)
+    )
+    if has_date and re.search(
+        r"\b(?:DRUG|PHARMA|LTD|PVT|COM(?:PANY)?|INDORE|DIVISION)\b",
+        name,
+        re.I,
+    ):
+        return True
+    return False
+
+
 _MARG_ANALYSIS_PARENT = (
     "itemdescription",
     "opening",
@@ -11992,9 +12036,13 @@ def _parse_marg_closing_mexp_xls(
             result["stockist_address"] = _clean_name(text)
 
     items: List[Dict[str, Any]] = []
+    skipped_junk = 0
     for row in rows[header_idx + 1 :]:
         raw_name = str(row[0] or "").strip() if row else ""
-        if not raw_name or re.search(r"^(TOTAL|MARG\s+ERP|Digital)\b", raw_name, re.I):
+        if not raw_name:
+            continue
+        if _is_marg_closing_mexp_junk_row(raw_name, row or []):
+            skipped_junk += 1
             continue
         parts = re.split(r"\s{2,}", raw_name, maxsplit=1)
         name = _clean_name(parts[0])
@@ -12036,6 +12084,13 @@ def _parse_marg_closing_mexp_xls(
     result["totals"]["extra"]["extraction_method"] = "marg_closing_mexp_xls"
     result["totals"]["extra"]["layout"] = "marg_closing_mexp"
     result["totals"]["extra"]["sheet"] = sheet_name
+    if skipped_junk:
+        result["totals"]["extra"]["marg_mexp_junk_rows_skipped"] = skipped_junk
+        logger.info(
+            "MARG_CLOSING_MEXP_JUNK_SKIPPED file=%s count=%s",
+            filename,
+            skipped_junk,
+        )
     return result
 
 

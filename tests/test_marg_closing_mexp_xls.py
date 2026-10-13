@@ -27,6 +27,18 @@ MEXP_ROWS = [
     [" TOTAL", 249106, 13238, 85122, 179799],
 ]
 
+# Purchase-invoice footer under the product grid (KIMALAY / Suraj Shree style).
+MEXP_WITH_INVOICE_FOOTER = [
+    ["SURAJ SHREE MEDICOSE"],
+    ["STOCK & SALES ANALYSIS  (HIMALAYA ZANDRA DIVSION) 01-09-2026 - 30-09-2026"],
+    ["ITEM DESCRIPTION", "OPENING", "RECEIPT", "ISSUE", "CLOSING M.EXP"],
+    ["BONNISAN DROP 30ML     1X30ML", 95.0, "     -", 20.0, "    75 11/23"],
+    ["BRESOL SYP 200ML       1X200M", 26.0, "    -1", 3.0, "    22  2/23"],
+    ["THE HIMALAYA DRUG COM INDORE", 5126108555.0, "15-09-2026", "", "15-09-2026    38290.00"],
+    ["THE HIMALAYA DRUG COM INDORE", 5126108656.0, "17-09-2026", "", "17-09-2026    33994.00"],
+    ["", "", "", "", "TOTAL :   181212.00"],
+]
+
 FIXTURE = Path(
     r"C:\Users\adity\Downloads\ZL_2026_August"
     r"\0000735982_2026_08_ZL_20_296_03092026131548.xls"
@@ -62,6 +74,27 @@ class TestMargClosingMexpDetection(unittest.TestCase):
         self.assertEqual(hadjod["closing_qty"], 60.0)
         self.assertEqual(hadjod["extra"]["expiry"], "6/29")
         self.assertNotIn("TOTAL", by_name)
+
+    def test_invoice_footer_rows_are_not_products(self):
+        parsed = _parse_marg_closing_mexp_xls(
+            MEXP_WITH_INVOICE_FOOTER, "kimalay.xls", ".xls", "Sheet1"
+        )
+        self.assertIsNotNone(parsed)
+        names = [item["product_name"] for item in parsed["line_items"]]
+        self.assertEqual(len(names), 2)
+        self.assertNotIn("THE HIMALAYA DRUG COM INDORE", names)
+        by_name = {item["product_name"]: item for item in parsed["line_items"]}
+        drop = by_name["BONNISAN DROP 30ML"]
+        self.assertEqual(drop["opening_qty"], 95.0)
+        self.assertEqual(drop["sales_qty"], 20.0)
+        self.assertEqual(drop["closing_qty"], 75.0)
+        self.assertEqual(drop["extra"]["expiry"], "11/23")
+        bresol = by_name["BRESOL SYP 200ML"]
+        self.assertEqual(bresol["receipts_qty"], -1.0)
+        self.assertEqual(bresol["closing_qty"], 22.0)
+        self.assertEqual(
+            parsed["totals"]["extra"].get("marg_mexp_junk_rows_skipped"), 2
+        )
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Marg CLOSING M.EXP workbook")

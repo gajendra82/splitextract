@@ -867,6 +867,19 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    # Marg OPENING/RECEIPT/ISSUE/CLOSING M.EXP grid — native cell map is authoritative.
+    # Gemini often returns all-zero product shells and drops printed qtys.
+    if _allowlist_skip(
+        "marg_closing_mexp",
+        str(extra.get("extraction_method") or "")
+        in {
+            "marg_closing_mexp_xls",
+            "marg_closing_mexp_photo",
+        }
+        or str(extra.get("layout") or "") == "marg_closing_mexp",
+    ):
+        return result
+
     # Busy/Himalaya STOCK & SALES ANALYSIS: TOTAL STOCK ≠ CLOSING STOCK.
     # Gemini often maps TOTAL→closing and zeroes sales; keep native mapping.
     if _allowlist_skip(
@@ -1009,6 +1022,36 @@ def maybe_apply_gemini_fallback(
     )
     if shifted >= max(5, len(gemini_items) // 4):
         gemini_ok = False
+
+    def _nonzero_qty_rows(payload: Dict[str, Any]) -> int:
+        count = 0
+        for item in payload.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            if any(
+                abs(float(item.get(key) or 0)) > 0.001
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                )
+            ):
+                count += 1
+        return count
+
+    # All-zero Gemini "balances" identity but wipes a good native sheet read.
+    native_nz = _nonzero_qty_rows(result)
+    gemini_nz = _nonzero_qty_rows(gemini_result)
+    if gemini_ok and gemini_nz == 0 and native_nz >= 3:
+        gemini_ok = False
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK rejected "
+            "reason=all_zero_vs_native_nonzero native_nz=%s gemini_nz=%s",
+            filename,
+            native_nz,
+            gemini_nz,
+        )
 
     # Phase 1: keep whichever reading balances better under the classifier.
     if force_veto or veto_on:
