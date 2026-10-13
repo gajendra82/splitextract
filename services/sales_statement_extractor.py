@@ -5691,6 +5691,37 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 )
     except Exception:
         pass
+    # Late pass: closing qty parked in closing_value (identity+whole) → qty slot.
+    # Runs after every path (vision / SSA / gemini). Flag default ON.
+    try:
+        from services.stock_vision_table import (
+            _apply_closing_qty_parked_in_value_pass,
+        )
+
+        _late_fixed = 0
+        if result.get("multi_statement") and isinstance(
+            result.get("statements"), list
+        ):
+            for _stmt in result["statements"]:
+                if isinstance(_stmt, dict):
+                    _late_fixed += _apply_closing_qty_parked_in_value_pass(
+                        _stmt.get("line_items") or []
+                    )
+        else:
+            _late_fixed = _apply_closing_qty_parked_in_value_pass(
+                result.get("line_items") or []
+            )
+        if _late_fixed:
+            result = _ensure_stock_qty_value_fields(result)
+            logger.info(
+                "CLOSING_QTY_PARKED_IN_VALUE late_pass fixed=%s file=%s",
+                _late_fixed,
+                name,
+            )
+    except Exception:
+        logger.exception(
+            "CLOSING_QTY_PARKED_IN_VALUE late_pass failed file=%s", name
+        )
     result = _finalize_statement_period_fields(result)
     return _group_statements_by_stockist_month(result)
 
@@ -49076,6 +49107,21 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         return medivision
                 if sale_closing_only or _vision_filed_sale_qty_as_receipt(result):
                     return _refile_sale_qty_held_as_receipt(result)
+                # Unpark closing qty from closing_value even when openings are filled
+                # (PILEX 3+100-33→70). Full SSA dump repair still needs empty openings.
+                try:
+                    from services.stock_vision_table import (
+                        _apply_closing_qty_parked_in_value_pass,
+                    )
+
+                    _apply_closing_qty_parked_in_value_pass(
+                        result.get("line_items") or []
+                    )
+                except Exception:
+                    logger.exception(
+                        "SSA closing_qty parked-in-value pass failed for %s",
+                        filename,
+                    )
                 if _ssa_dump_opening_qty_missing(result):
                     result["line_items"] = _ssa_dump_repair_items(
                         result.get("line_items") or []

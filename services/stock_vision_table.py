@@ -1997,7 +1997,11 @@ def _repair_closing_qty_parked_in_value(item: Dict[str, Any]) -> bool:
     # Identity gate: printed digit in closing_value equals expected closing qty.
     try:
         opening = float(item.get("opening_qty") or 0)
-        receipt = float(item.get("receipts_qty") or 0)
+        receipt = float(
+            item.get("receipts_qty")
+            if item.get("receipts_qty") not in (None, "")
+            else (item.get("purchase_qty") or 0)
+        )
         sales = float(item.get("sales_qty") or 0)
         if abs((opening + receipt - sales) - cv_f) > 0.51:
             return False
