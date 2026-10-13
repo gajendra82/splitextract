@@ -12467,6 +12467,249 @@ def _parse_marg_qty_value_dump_xls(
     return result
 
 
+def _groupwise_qty_value_xls_enabled() -> bool:
+    """STOCK_XLS_GROUPWISE_QTY_VALUE — headerless Open/Rec/Sale/Close qty+value grid.
+
+    Default ON: without it these sheets return 0 rows and Gemini fallback truncates
+    mid-inventory and invents inverted FY periods.
+    """
+    return os.getenv("STOCK_XLS_GROUPWISE_QTY_VALUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _xls_cell_text(cell: Any) -> str:
+    if cell is None:
+        return ""
+    return str(cell).replace("\u00a0", " ").strip()
+
+
+def _is_groupwise_qty_value_xls_rows(rows: List[List[Any]]) -> bool:
+    """Detect (GroupWise) sheets: unit + Opening/Receipt/Sales/Closing qty|value.
+
+    No printed column headers — layout is fixed left→right after product name.
+    """
+    if not _groupwise_qty_value_xls_enabled() or not rows:
+        return False
+    head = "\n".join(
+        _xls_cell_text(c)
+        for row in rows[:20]
+        if isinstance(row, list)
+        for c in row
+        if _xls_cell_text(c)
+    )
+    if not re.search(r"\(\s*Group\s*Wise\s*\)|\(GroupWise\)", head, re.I):
+        return False
+    # Prefer stock-statement title; avoid unrelated GroupWise exports.
+    if not re.search(r"STOCK|SALES", head, re.I):
+        return False
+    unit_rows = 0
+    for row in rows:
+        if not isinstance(row, list) or len(row) < 10:
+            continue
+        unit = _xls_cell_text(row[2] if len(row) > 2 else None)
+        if not re.fullmatch(r"unit", unit, re.I):
+            continue
+        name = _xls_cell_text(row[1] if len(row) > 1 else None)
+        if not name or re.match(r"^(Total|Grand\s*Total)\b", name, re.I):
+            continue
+        unit_rows += 1
+        if unit_rows >= 3:
+            return True
+    return False
+
+
+def _groupwise_pick_statement_period(
+    ranges: List[Tuple[str, str]],
+) -> Optional[Tuple[str, str]]:
+    """Prefer the statement month range over a financial-year Apr–Mar span."""
+    if not ranges:
+        return None
+    if len(ranges) == 1:
+        return ranges[0]
+
+    def _span_days(pair: Tuple[str, str]) -> Optional[int]:
+        try:
+            a = datetime.strptime(pair[0], "%Y-%m-%d")
+            b = datetime.strptime(pair[1], "%Y-%m-%d")
+            return abs((b - a).days)
+        except ValueError:
+            return None
+
+    scored: List[Tuple[int, Tuple[str, str]]] = []
+    for pair in ranges:
+        days = _span_days(pair)
+        if days is None:
+            continue
+        # FY spans (~365d) lose to month spans (~28–31d).
+        scored.append((days, pair))
+    if not scored:
+        return ranges[0]
+    scored.sort(key=lambda x: x[0])
+    return scored[0][1]
+
+
+def _parse_groupwise_qty_value_xls(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+) -> Optional[Dict[str, Any]]:
+    """Parse headerless GroupWise Open/Rec/Sale/Close qty+value spreadsheet rows.
+
+    Columns after product: unit | OQ | OV | RQ | RV | SQ | SV | CQ | CV.
+    Section banners (ZANDRA/ZEAL) and Total/Grand Total rows are not products.
+    Does not invent quantities — blank cells stay 0 via `_to_float`.
+    """
+    if not _is_groupwise_qty_value_xls_rows(rows):
+        return None
+
+    result = empty_result(filename, ext.lstrip(".") or "xlsx")
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "groupwise_qty_value_xls"
+    extra["layout"] = "groupwise_opening_receipt_sales_closing_qty_value"
+
+    period_ranges: List[Tuple[str, str]] = []
+    items: List[Dict[str, Any]] = []
+    grand_total_row: Optional[List[Any]] = None
+
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        texts = [_xls_cell_text(c) for c in row]
+        joined = " ".join(t for t in texts if t)
+        if not joined:
+            continue
+
+        # Collect every DD Mon YYYY-DD Mon YYYY style range from header cells.
+        for m in re.finditer(
+            rf"({_DATE_TOKEN_RE})\s*(?:to|[-–])\s*({_DATE_TOKEN_RE})",
+            joined,
+            re.I,
+        ):
+            pf, pt = _normalize_date(m.group(1)), _normalize_date(m.group(2))
+            if pf and pt:
+                period_ranges.append((pf, pt))
+
+        first = texts[0] if texts else ""
+        if re.search(r"MAKERWISE\s+STOCK|STOCK\s+STATEMENT", first, re.I):
+            result["report_title"] = result.get("report_title") or "STOCK STATEMENT"
+            if re.search(r"MAKERWISE", first, re.I) and not result.get("company_name"):
+                result["company_name"] = _clean_name(
+                    re.sub(r"\s+", " ", first)
+                ) or result.get("company_name")
+            continue
+        if re.fullmatch(r"\(\s*Group\s*Wise\s*\)|\(GroupWise\)", first, re.I):
+            continue
+
+        # Stockist line often ends with the statement period.
+        if (
+            not result.get("stockist_name")
+            and re.search(r"M/?s\.?|ENTERPRISE|AGENC|MEDICAL|PHARMA", first, re.I)
+            and not re.match(r"^(Total|Grand\s*Total|ZANDRA|ZEAL)\b", first, re.I)
+        ):
+            stockist = re.sub(
+                rf"\s*{_DATE_TOKEN_RE}\s*(?:to|[-–])\s*{_DATE_TOKEN_RE}\s*$",
+                "",
+                first,
+                flags=re.I,
+            ).strip()
+            stockist = re.sub(r"\s+", " ", stockist)
+            if stockist:
+                result["stockist_name"] = _clean_name(stockist)
+            continue
+
+        # Bare FY line (already captured into period_ranges).
+        if re.fullmatch(
+            rf"{_DATE_TOKEN_RE}\s*(?:to|[-–])\s*{_DATE_TOKEN_RE}",
+            first,
+            re.I,
+        ):
+            continue
+
+        unit = _xls_cell_text(row[2] if len(row) > 2 else None)
+        name = _xls_cell_text(row[1] if len(row) > 1 else None)
+        code_raw = _xls_cell_text(row[0] if len(row) > 0 else None)
+
+        # Section banner: single label, no unit / product grid.
+        if not re.fullmatch(r"unit", unit, re.I):
+            if re.match(r"^(Grand\s*Total)\b", first, re.I) or re.match(
+                r"^(Grand\s*Total)\b", name, re.I
+            ):
+                grand_total_row = row
+            continue
+
+        label = name or code_raw
+        if re.match(r"^(Total|Grand\s*Total)\b", label, re.I):
+            if re.match(r"^Grand\s*Total\b", label, re.I):
+                grand_total_row = row
+            continue
+        if not name or len(name) < 2:
+            continue
+        if re.fullmatch(r"[-–—]+", name):
+            continue
+
+        item = empty_line_item()
+        item["product_name"] = _clean_name(name)
+        if code_raw and re.search(r"\d", code_raw) and not re.fullmatch(
+            r"[-–—\s]+", code_raw
+        ):
+            # Codes are numeric / alphanumeric — ignore blank spacer cells.
+            if not re.fullmatch(r"unit", code_raw, re.I):
+                item["product_code"] = code_raw.strip()
+        item["opening_qty"] = _to_float(row[3] if len(row) > 3 else None)
+        item["opening_value"] = _to_float(row[4] if len(row) > 4 else None)
+        item["receipts_qty"] = _to_float(row[5] if len(row) > 5 else None)
+        item["receipts_value"] = _to_float(row[6] if len(row) > 6 else None)
+        item["sales_qty"] = _to_float(row[7] if len(row) > 7 else None)
+        item["sales_value"] = _to_float(row[8] if len(row) > 8 else None)
+        item["closing_qty"] = _to_float(row[9] if len(row) > 9 else None)
+        item["closing_value"] = _to_float(row[10] if len(row) > 10 else None)
+        # Keep money mirrors under extra for API consumers that read them there.
+        item_extra = item.setdefault("extra", {})
+        if isinstance(item_extra, dict):
+            item_extra["opening_value"] = item.get("opening_value")
+            item_extra["receipts_value"] = item.get("receipts_value")
+            item_extra["purchase_value"] = item.get("receipts_value")
+        items.append(item)
+
+    if len(items) < 3:
+        return None
+
+    chosen = _groupwise_pick_statement_period(period_ranges)
+    if chosen:
+        result["period_from"], result["period_to"] = chosen
+
+    result["line_items"] = items
+    if grand_total_row is not None and len(grand_total_row) > 10:
+        result["totals"]["sales_value"] = _to_float(grand_total_row[8])
+        result["totals"]["closing_value"] = _to_float(grand_total_row[10])
+        extra["opening_qty"] = _to_float(grand_total_row[3])
+        extra["opening_value"] = _to_float(grand_total_row[4])
+        extra["receipts_qty"] = _to_float(grand_total_row[5])
+        extra["receipts_value"] = _to_float(grand_total_row[6])
+        extra["sales_qty"] = _to_float(grand_total_row[7])
+        extra["closing_qty"] = _to_float(grand_total_row[9])
+    else:
+        result["totals"]["sales_value"] = round(
+            sum(_to_float(i.get("sales_value")) for i in items), 2
+        )
+        result["totals"]["closing_value"] = round(
+            sum(_to_float(i.get("closing_value")) for i in items), 2
+        )
+
+    logger.info(
+        "GROUPWISE_QTY_VALUE_XLS file=%s rows=%s period=%s..%s",
+        filename,
+        len(items),
+        result.get("period_from"),
+        result.get("period_to"),
+    )
+    return result
+
+
 def _find_stock_and_sale_analysis_xls_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
@@ -12988,6 +13231,10 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             return _xls_finalize_result(
                 _parse_zl_secondary_xlsx(rows, filename, ext, zl_header)
             )
+        # (GroupWise) headerless Open/Rec/Sale/Close qty+value — before Marg/Gemini.
+        groupwise = _parse_groupwise_qty_value_xls(rows, filename, ext)
+        if groupwise and groupwise.get("line_items"):
+            return _xls_finalize_result(groupwise)
         # Marg ERP Himalaya/Zeal STOCK & SALES STATEMENT — format-specific early exit
         marg_header = _find_marg_erp_xls_header(rows)
         if marg_header is not None:

@@ -275,6 +275,13 @@ def _pdf_is_image_only(file_bytes: bytes) -> bool:
 def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
     rows: List[List[str]] = []
     try:
+        # Read the full product grid (was capped at 60 and dropped ZEAL/half sheets).
+        _max_sheet_rows = int(
+            os.getenv("STOCK_GEMINI_SHEET_MAX_ROWS", "500") or 500
+        )
+        _max_sheet_cols = int(
+            os.getenv("STOCK_GEMINI_SHEET_MAX_COLS", "16") or 16
+        )
         if ext in {".xlsx", ".xlsm"}:
             from openpyxl import load_workbook
 
@@ -282,12 +289,16 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
             try:
                 ws = wb.worksheets[0]
                 for index, row in enumerate(
-                    ws.iter_rows(max_row=60, max_col=10, values_only=True)
+                    ws.iter_rows(
+                        max_row=_max_sheet_rows,
+                        max_col=_max_sheet_cols,
+                        values_only=True,
+                    )
                 ):
-                    if index >= 60:
+                    if index >= _max_sheet_rows:
                         break
                     rows.append(
-                        ["" if cell is None else str(cell)[:40] for cell in row]
+                        ["" if cell is None else str(cell)[:80] for cell in row]
                     )
             finally:
                 wb.close()
@@ -296,11 +307,11 @@ def _sheet_image(file_bytes: bytes, ext: str) -> Optional[bytes]:
 
             book = xlrd.open_workbook(file_contents=file_bytes)
             sheet = book.sheet_by_index(0)
-            for r in range(min(sheet.nrows, 60)):
+            for r in range(min(sheet.nrows, _max_sheet_rows)):
                 rows.append(
                     [
-                        str(sheet.cell_value(r, c))[:40]
-                        for c in range(min(sheet.ncols, 10))
+                        str(sheet.cell_value(r, c))[:80]
+                        for c in range(min(sheet.ncols, _max_sheet_cols))
                     ]
                 )
     except Exception as exc:
@@ -843,6 +854,16 @@ def maybe_apply_gemini_fallback(
             "ssa_qty_value_opening_repair",
         }
         or str(extra.get("layout") or "") == "ssa_opening_receipt_issue_value",
+    ):
+        return result
+
+    # Native (GroupWise) Open/Rec/Sale/Close qty+value XLS — never replace with
+    # Gemini sheet-screenshot (previously truncated mid-ZEAL at 60 rows).
+    if _allowlist_skip(
+        "groupwise_qty_value_xls",
+        str(extra.get("extraction_method") or "") == "groupwise_qty_value_xls"
+        or str(extra.get("layout") or "")
+        == "groupwise_opening_receipt_sales_closing_qty_value",
     ):
         return result
 
