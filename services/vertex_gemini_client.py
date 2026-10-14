@@ -32,8 +32,76 @@ GOOGLE_APPLICATION_CREDENTIALS = os.getenv(
     "GOOGLE_APPLICATION_CREDENTIALS", ""
 ).strip()
 
+# Hard cap on a single Vertex HTTP round-trip (seconds). future.result uses the
+# caller timeout; HttpOptions enforces the same bound inside httpx.
+_VERTEX_HTTP_TIMEOUT_CAP = int(
+    os.getenv("VERTEX_GEMINI_HTTP_TIMEOUT_SECONDS", "180") or "180"
+)
+
 _vertex_client: Optional[genai.Client] = None
 _vertex_client_initialized = False
+
+
+def _env_flag(name: str, default: bool = True) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _bounded_timeout_seconds(timeout: int) -> int:
+    try:
+        base = int(timeout or 1)
+    except (TypeError, ValueError):
+        base = 1
+    cap = max(1, int(_VERTEX_HTTP_TIMEOUT_CAP or 180))
+    return max(1, min(base, cap))
+
+
+def _attach_http_timeout(
+    config: Optional[types.GenerateContentConfig],
+    timeout_seconds: int,
+) -> types.GenerateContentConfig:
+    """Ensure GenerateContentConfig carries an httpx timeout (milliseconds)."""
+    timeout_ms = max(1, int(timeout_seconds)) * 1000
+    http_opts = types.HttpOptions(timeout=timeout_ms)
+    if config is None:
+        return types.GenerateContentConfig(http_options=http_opts)
+    try:
+        return config.model_copy(update={"http_options": http_opts})
+    except Exception:
+        # Older/newer SDK shapes — best-effort mutate.
+        try:
+            config.http_options = http_opts  # type: ignore[attr-defined]
+            return config
+        except Exception:
+            return types.GenerateContentConfig(http_options=http_opts)
+
+
+def run_callable_with_timeout(fn, timeout: int, *, label: str = "vertex_gemini"):
+    """Run ``fn`` with a wall-clock timeout that does not block on shutdown.
+
+    ``ThreadPoolExecutor.__exit__`` defaults to ``shutdown(wait=True)``, which
+    re-blocks after ``future.result(timeout=…)`` fires whenever the worker is
+    still stuck on a hung HTTP/socket read. That made Gemini "timeouts"
+    ineffective in production (observed ~60s timeout + ~70s shutdown wait).
+    """
+    timeout = _bounded_timeout_seconds(timeout)
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=label[:12] or "vtx")
+    future = executor.submit(fn)
+    try:
+        return future.result(timeout=timeout)
+    except FuturesTimeoutError as exc:
+        logger.error(
+            "vertex_gemini_call_timeout label=%s timeout=%ss "
+            "(abandoning worker thread; shutdown wait=False)",
+            label,
+            timeout,
+        )
+        raise TimeoutError(f"Gemini request timed out after {timeout}s") from exc
+    finally:
+        # Never wait for a hung httpx/socket read — release the caller immediately.
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 class GeminiProviderError(Exception):
@@ -53,13 +121,6 @@ class GeminiRestResponse:
 
     def json(self) -> Dict[str, Any]:
         return self._data
-
-
-def _env_flag(name: str, default: bool = True) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def initialize_vertex_gemini_client() -> genai.Client:
@@ -376,7 +437,11 @@ def generate_content_via_vertex(
     """Invoke Vertex AI generate_content and return REST-shaped response."""
     client = get_vertex_gemini_client()
     contents = payload_to_contents(payload)
-    config = payload_to_generate_config(payload)
+    eff_timeout = _bounded_timeout_seconds(timeout)
+    config = _attach_http_timeout(
+        payload_to_generate_config(payload),
+        eff_timeout,
+    )
 
     def _invoke():
         try:
@@ -391,12 +456,11 @@ def generate_content_via_vertex(
                 raise GeminiProviderError(exc.code, str(exc)) from exc
             raise
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_invoke)
-        try:
-            response = future.result(timeout=timeout)
-        except FuturesTimeoutError as exc:
-            raise TimeoutError(f"Gemini request timed out after {timeout}s") from exc
+    response = run_callable_with_timeout(
+        _invoke,
+        eff_timeout,
+        label="vertex_gemini",
+    )
 
     return GeminiRestResponse(
         status_code=200,

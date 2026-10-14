@@ -145,8 +145,11 @@ app.add_middleware(
 @app.middleware("http")
 async def _track_extract_inflight(request: Request, call_next):
     """Count open extract calls + log connection lifecycle (no OCR logic)."""
-    tracked = request.url.path.rstrip(
-        "/") in ("/split-and-extract", "/test-extract")
+    path = request.url.path.rstrip("/")
+    tracked = path in ("/split-and-extract", "/test-extract")
+    # Close after sales extract responses so wedged keep-alives cannot pin
+    # Laravel queue workers after the JSON body has already been written.
+    sales_extract = path == "/extract-sales-statement"
     peer = (
         f"{request.client.host}:{request.client.port}"
         if request.client
@@ -174,6 +177,8 @@ async def _track_extract_inflight(request: Request, call_next):
                 getattr(response, "status_code", "?"),
                 time.monotonic() - t0,
             )
+        if sales_extract:
+            response.headers["Connection"] = "close"
         return response
     except Exception:
         if tracked:
@@ -633,6 +638,14 @@ async def _reliability_startup():
     register_tesseract_slot_probe(_tesseract_slot_probe)
     register_request_progress_sync(_sync_request_progress_from_reliability)
     start_watchdog()
+    try:
+        from services.stuck_tcp_reaper import start_stuck_tcp_reaper
+
+        start_stuck_tcp_reaper()
+    except Exception as exc:
+        logger.warning(
+            "stuck_tcp_reaper_start_failed error=%s", type(exc).__name__
+        )
     try:
         from services.stock_row_classifier import log_soffice_availability_once
 
@@ -29941,6 +29954,26 @@ async def ready():
     """Non-blocking readiness probe (lightweight resource snapshot)."""
     runtime = get_runtime_health_snapshot()
     return get_ready_snapshot(runtime)
+
+
+@app.get("/extract-sales-statement/health")
+async def extract_sales_statement_health():
+    """Extraction readiness vs process liveness.
+
+    ``/`` and ``/live`` only prove the ASGI process is up. This probe reports
+    Tesseract availability, extraction/Gemini slot pressure, and Vertex cooldown
+    without running OCR or model calls.
+    """
+    from services.sales_extraction_runtime import get_sales_extraction_health_snapshot
+
+    snap = get_sales_extraction_health_snapshot()
+    status = "ready" if snap.get("extraction_ready") else "degraded"
+    return {
+        "status": status,
+        "alive": True,
+        "request_id_header": "X-Request-ID",
+        **snap,
+    }
 
 
 @app.get("/extract-sales-statement/status/{request_id}")

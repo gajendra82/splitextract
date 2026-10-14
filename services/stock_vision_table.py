@@ -1863,18 +1863,37 @@ def extract_stock_table_vision(
         "generationConfig": gen_cfg,
     }
 
-    # Prefer sales Vertex path when available (quota + cooldown); fall back to app.
+    # Prefer sales Vertex path when available (quota + cooldown); fall back to app
+    # only when the sales wrapper is unavailable — never on timeout/provider errors
+    # (that would start a second unbounded Gemini call while slots are exhausted).
     response = None
+    _no_fallback_types: tuple = (TimeoutError,)
     try:
-        from services.sales_extraction_runtime import sales_generate_content_via_vertex
+        from services.sales_extraction_runtime import (
+            SalesExtractionDeadlineExceeded,
+            sales_generate_content_via_vertex,
+        )
+        from services.vertex_gemini_client import GeminiProviderError
 
+        _no_fallback_types = (
+            TimeoutError,
+            GeminiProviderError,
+            SalesExtractionDeadlineExceeded,
+        )
         response = sales_generate_content_via_vertex(
             model=model_config["name"],
             payload=payload,
             timeout=int(model_config.get("timeout") or 120),
             label=str(ctx.get("label") or "stock_vision_table"),
         )
-    except Exception:
+    except Exception as exc:
+        if isinstance(exc, _no_fallback_types):
+            raise
+        logger.warning(
+            "VISION_TABLE sales_vertex_unavailable falling_back_to_quota "
+            "error_type=%s",
+            type(exc).__name__,
+        )
         response = call_gemini_with_quota(
             model=model_config["name"],
             payload=payload,

@@ -22700,10 +22700,15 @@ def _parse_swil_scanned_qty_value_pair_doc(doc, filename: str) -> Optional[Dict[
     return _parse_swil_scanned_qty_value_pair_text(texts, filename)
 
 
-_CODE_ITEM_CODE_RE = re.compile(r"^\d{4,6}$")
+# Himalaya Code/Item statements print 3–6 digit product codes (e.g. 725 CONFIDO).
+_CODE_ITEM_CODE_RE = re.compile(r"^\d{3,6}$")
 _CODE_ITEM_SKIP_RE = re.compile(
     r"Stock\s+Stat(?:e)?ment|Item\s+Description|GANESH|Page\s+\d|"
     r"\bTOTALS?\b|^Batch\b|ExPDt|Stock\s*:|MRP\s*:|^\-+$",
+    re.I,
+)
+_CODE_ITEM_MONTH_RE = re.compile(
+    r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?,?\s+(\d{4})\b",
     re.I,
 )
 
@@ -22801,9 +22806,31 @@ def _parse_code_item_stock_statement(doc, filename: str) -> Optional[Dict[str, A
             if m:
                 result["report_title"] = "Stock Statement"
                 company = _clean_name(m.group(1))
-                company = re.sub(r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$", "", company)
+                # Strip trailing print date and statement month ("Sep, 2026 01/10/26").
+                company = re.sub(
+                    r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$", "", company
+                )
+                company = re.sub(
+                    r"\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+                    r"[a-z]*\.?,?\s+\d{4}\s*$",
+                    "",
+                    company,
+                    flags=re.I,
+                )
                 if company:
                     result["company_name"] = company
+        # Prefer printed statement month ("Sep, 2026") over trailing print date
+        # ("01/10/26") on the same Stock Statement title line.
+        if not result.get("period_from") or not result.get("period_to"):
+            m_month = _CODE_ITEM_MONTH_RE.search(text or "")
+            if m_month:
+                from_day, to_day = _month_period(
+                    m_month.group(1), int(m_month.group(2))
+                )
+                if from_day and not result.get("period_from"):
+                    result["period_from"] = from_day
+                if to_day and not result.get("period_to"):
+                    result["period_to"] = to_day
         if not result.get("period_to"):
             m_date = re.search(
                 r"Stock\s+Stat(?:e)?ment[\s\S]{0,80}?(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
@@ -23083,13 +23110,16 @@ def _code_item_enrich_meta_from_ocr(result: Dict[str, Any], text: str) -> None:
     ):
         company = _clean_name(title.group(1))
         company = re.sub(r"\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\s*$", "", company)
+        company = re.sub(
+            r"\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+            r"[a-z]*\.?,?\s+\d{4}\s*$",
+            "",
+            company,
+            flags=re.I,
+        )
         if company:
             result["company_name"] = company
-    month = re.search(
-        r"\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(\d{4})\b",
-        text,
-        re.I,
-    )
+    month = _CODE_ITEM_MONTH_RE.search(text)
     if month and (not result.get("period_from") or not result.get("period_to")):
         from_day, to_day = _month_period(month.group(1), int(month.group(2)))
         if from_day and not result.get("period_from"):

@@ -1334,21 +1334,25 @@ def run_bounded_sales_tesseract(fn: Callable[[], Any], label: str) -> Any:
     check_sales_deadline("ocr")
     mark_sales_stage("ocr")
     timeout = sales_tesseract_timeout_seconds()
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="sales-tess") as pool:
-        fut = pool.submit(fn)
-        try:
-            return fut.result(timeout=timeout)
-        except FuturesTimeoutError as exc:
-            logger.error(
-                "sales_tesseract_timeout label=%s timeout=%ss request_id=%s",
-                label,
-                timeout,
-                getattr(_deadline_local, "request_id", None),
-            )
-            terminate_sales_tesseract_children()
-            raise TimeoutError(
-                f"Sales Tesseract call timed out after {timeout}s"
-            ) from exc
+    # Do NOT use `with ThreadPoolExecutor`: __exit__ calls shutdown(wait=True),
+    # which re-blocks after future.result times out while Tesseract is wedged.
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sales-tess")
+    fut = pool.submit(fn)
+    try:
+        return fut.result(timeout=timeout)
+    except FuturesTimeoutError as exc:
+        logger.error(
+            "sales_tesseract_timeout label=%s timeout=%ss request_id=%s",
+            label,
+            timeout,
+            getattr(_deadline_local, "request_id", None),
+        )
+        terminate_sales_tesseract_children()
+        raise TimeoutError(
+            f"Sales Tesseract call timed out after {timeout}s"
+        ) from exc
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
 
 @contextmanager
@@ -1449,6 +1453,51 @@ def release_sales_extraction_slot() -> None:
 def gemini_active_slots() -> int:
     with _gemini_call_lock:
         return int(_gemini_call_active)
+
+
+def sales_extraction_active_slots() -> int:
+    with _sales_extraction_waiters_lock:
+        return int(_sales_extraction_active)
+
+
+def sales_extraction_waiting_slots() -> int:
+    with _sales_extraction_waiters_lock:
+        return int(_sales_extraction_waiting)
+
+
+def get_sales_extraction_health_snapshot() -> Dict[str, Any]:
+    """Lightweight extraction readiness (no OCR/Gemini calls).
+
+    Distinguishes process liveness from OCR/Gemini capacity: a process can answer
+    ``/`` or ``/live`` while every extraction slot is busy or Vertex is cooling down.
+    """
+    cooldown = get_gemini_provider_cooldown_remaining()
+    active = sales_extraction_active_slots()
+    waiting = sales_extraction_waiting_slots()
+    gemini_active = gemini_active_slots()
+    tesseract_ok = False
+    try:
+        import shutil
+
+        tesseract_ok = bool(shutil.which("tesseract"))
+    except Exception:
+        tesseract_ok = False
+    capacity_ok = active < MAX_CONCURRENT_EXTRACTIONS and cooldown < 1.0
+    return {
+        "extraction_ready": bool(tesseract_ok and capacity_ok),
+        "tesseract_available": tesseract_ok,
+        "extraction_active": active,
+        "extraction_waiting": waiting,
+        "extraction_limit": MAX_CONCURRENT_EXTRACTIONS,
+        "gemini_active": gemini_active,
+        "gemini_limit": MAX_CONCURRENT_GEMINI_REQUESTS,
+        "gemini_provider_cooldown_remaining": round(float(cooldown), 1),
+        "max_execution_seconds": SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+        "queue_timeout_seconds": SALES_EXTRACTION_QUEUE_TIMEOUT,
+        "tesseract_call_timeout_seconds": SALES_TESSERACT_CALL_TIMEOUT_SECONDS,
+        "gemini_429_max_retries": GEMINI_PROVIDER_429_MAX_RETRIES,
+        "provider_metrics": get_gemini_provider_metrics(),
+    }
 
 
 def get_gemini_provider_metrics() -> Dict[str, int]:
@@ -1661,7 +1710,32 @@ def gemini_call_slot(label: str = "gemini_call"):
         waiting,
         MAX_CONCURRENT_GEMINI_REQUESTS,
     )
-    _gemini_call_semaphore.acquire()
+    # Bound semaphore wait — never block forever if all Gemini slots are wedged.
+    rem = sales_deadline_remaining_seconds()
+    if rem is None:
+        acquire_timeout = float(SALES_EXTRACTION_QUEUE_TIMEOUT)
+    else:
+        acquire_timeout = max(1.0, float(rem))
+    acquired = _gemini_call_semaphore.acquire(timeout=acquire_timeout)
+    if not acquired:
+        with _gemini_call_lock:
+            _gemini_call_waiting = max(0, _gemini_call_waiting - 1)
+        request_id = getattr(_deadline_local, "request_id", None) or "unknown"
+        logger.error(
+            "gemini_call_slot_timeout label=%s acquire_timeout=%.1fs "
+            "active=%s waiting=%s limit=%s request_id=%s",
+            label,
+            acquire_timeout,
+            gemini_active_slots(),
+            _gemini_call_waiting,
+            MAX_CONCURRENT_GEMINI_REQUESTS,
+            request_id,
+        )
+        raise SalesExtractionDeadlineExceeded(
+            request_id,
+            "gemini_request",
+            float(getattr(_deadline_local, "limit_seconds", 0) or 0),
+        )
     with _gemini_call_lock:
         _gemini_call_waiting = max(0, _gemini_call_waiting - 1)
         _gemini_call_active += 1
@@ -1801,11 +1875,24 @@ def sales_generate_content_via_vertex(
                 sales_sleep_respecting_deadline(backoff, "gemini_retry")
                 continue
             raise
-        except TimeoutError:
+        except TimeoutError as timeout_exc:
             attempt_transient += 1
             note_gemini_provider_transient("timeout")
             _bump_gemini_metric("gemini_retry_count")
             note_sales_gemini_retry()
+            logger.warning(
+                "gemini_provider_timeout request_id=%s gemini_label=%s model=%s "
+                "attempt=%s eff_timeout=%ss error=%s remaining_deadline=%s",
+                request_id,
+                label,
+                model,
+                attempt_429 + attempt_transient,
+                eff_timeout,
+                timeout_exc,
+                None
+                if sales_deadline_remaining_seconds() is None
+                else round(sales_deadline_remaining_seconds() or 0.0, 1),
+            )
             if attempt_transient >= max_retries:
                 raise
             backoff = min(

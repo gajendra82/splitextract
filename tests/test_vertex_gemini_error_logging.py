@@ -7,12 +7,16 @@ from unittest.mock import patch
 
 from google.genai import errors as genai_errors
 
+import services.vertex_gemini_client as vertex_mod
 from services.vertex_gemini_client import (
     GeminiProviderError,
     _safe_vertex_error_headers,
     _sanitize_vertex_error_details,
     _vertex_provider_error_diag,
-    generate_content_via_vertex,
+)
+from tests.gemini_offline import (
+    ensure_gemini_offline_guard,
+    uninstall_gemini_offline_guard,
 )
 
 
@@ -135,6 +139,13 @@ class _RaiseClient:
 class TestGenerateContentViaVertexErrors(unittest.TestCase):
     _payload = {"contents": [{"role": "user", "parts": [{"text": "ping"}]}]}
 
+    def setUp(self):
+        # Call the real leaf, not the suite-wide offline blocker import binding.
+        uninstall_gemini_offline_guard()
+
+    def tearDown(self):
+        ensure_gemini_offline_guard()
+
     def test_429_raises_provider_error_unchanged(self):
         exc = _api_error(429, VERTEX_QUOTA_BODY, {"Retry-After": "4"})
         with patch(
@@ -145,7 +156,7 @@ class TestGenerateContentViaVertexErrors(unittest.TestCase):
                 "services.vertex_gemini_client", level="WARNING"
             ) as logs:
                 with self.assertRaises(GeminiProviderError) as caught:
-                    generate_content_via_vertex(
+                    vertex_mod.generate_content_via_vertex(
                         "gemini-2.5-flash-lite", self._payload, timeout=5
                     )
         self.assertEqual(caught.exception.code, 429)
@@ -166,7 +177,7 @@ class TestGenerateContentViaVertexErrors(unittest.TestCase):
             return_value=_RaiseClient(exc),
         ):
             with self.assertRaises(GeminiProviderError) as caught:
-                generate_content_via_vertex(
+                vertex_mod.generate_content_via_vertex(
                     "gemini-2.5-flash-lite", self._payload, timeout=5
                 )
         self.assertEqual(caught.exception.code, 503)
@@ -179,7 +190,7 @@ class TestGenerateContentViaVertexErrors(unittest.TestCase):
             return_value=_RaiseClient(exc),
         ):
             with self.assertRaises(genai_errors.APIError) as caught:
-                generate_content_via_vertex(
+                vertex_mod.generate_content_via_vertex(
                     "gemini-2.5-flash-lite", self._payload, timeout=5
                 )
         self.assertIs(caught.exception, exc)
