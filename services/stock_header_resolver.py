@@ -253,6 +253,10 @@ ALIASES: Dict[str, List[str]] = {
         "cb",
         "closing stock",
         "closing qty",
+        "closing balance",
+        "closing bal",
+        "cl bal",
+        "cl balance",
         "cl qty",
         "clq",
         "qoh",  # Qty on hand (Profitmaker / Daxinsoft)

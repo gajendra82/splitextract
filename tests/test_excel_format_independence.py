@@ -61,6 +61,17 @@ class TestExcelAliases(unittest.TestCase):
         self.assertNotEqual(_xls_norm_header("ISSUE\nVALUE"), "sale")
         self.assertNotEqual(_xls_norm_header("CLOSING\nVALUE"), "bal")
 
+    def test_opening_closing_balance_are_qty_not_amount(self):
+        """ZA / Swil-style: Opening Balance + Closing Balance qty; Closing Amount money."""
+        self.assertEqual(_xls_norm_header("Opening\nBalance"), "op")
+        self.assertEqual(_xls_norm_header("Opening Balance"), "op")
+        self.assertEqual(_xls_norm_header("Closing\nBalance"), "bal")
+        self.assertEqual(_xls_norm_header("Closing Balance"), "bal")
+        self.assertEqual(_xls_norm_header("Closing\nAmount"), "bval")
+        self.assertEqual(_xls_norm_header("Closing Amount"), "bval")
+        self.assertNotEqual(_xls_norm_header("Closing Amount"), "bal")
+        self.assertNotEqual(_xls_norm_header("Opening Balance"), "opval")
+
     def test_numeric_normalization(self):
         self.assertEqual(_to_float("1,250"), 1250.0)
         self.assertEqual(_to_float("₹ 1,250.50"), 1250.50)

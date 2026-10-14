@@ -2023,18 +2023,53 @@ def _looks_like_packing_token(tok: str) -> bool:
     if not t:
         return False
     if re.fullmatch(
-        r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|PH)", t, re.I
+        r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|GRM|PH|UNT)",
+        t,
+        re.I,
     ):
         return True
     # SwilERP: "50 S", "60'S", "30ML", "50 GR", "100GR", "(C200 GR"
-    if re.fullmatch(r"\(?[A-Z]?\d+(?:\.\d+)?\s*(?:S|'S|ML|GR|GM|PH)\)?", t, re.I):
+    if re.fullmatch(
+        r"\(?[A-Z]?\d+(?:\.\d+)?\s*(?:S|'S|ML|GR|GM|GRM|PH|TAB|TABS|CAP|UNT)\)?",
+        t,
+        re.I,
+    ):
         return True
     if re.fullmatch(r"\d+\*\d+", t):
         return True
+    # "1X60", "1 X200ML", "1 X 100GRM"
+    if re.fullmatch(
+        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
+        t,
+        re.I,
+    ):
+        return True
     # OCR packing like 10TAB_ / 5M. / 1OTAB (O for 0)
-    if re.fullmatch(r"\d+(?:\.\d+)?(?:TAB|ML|MG|CAP|S|GR)[A-Za-z._]*", t, re.I):
+    if re.fullmatch(r"\d+(?:\.\d+)?(?:TAB|ML|MG|CAP|S|GR|GRM)[A-Za-z._]*", t, re.I):
         return True
     if re.fullmatch(r"\d+[Oo]TAB[A-Za-z._]*", t, re.I):
+        return True
+    return False
+
+
+def _looks_like_packing_line(ln: str) -> bool:
+    """True for a stacked packing-only line (may be multi-token: '60 TAB')."""
+    s = str(ln or "").strip()
+    if not s or _is_stacked_opbal_qty_line(s):
+        return False
+    if _looks_like_packing_token(s):
+        return True
+    if re.fullmatch(
+        r"\(?\d+(?:\.\d+)?\s*(?:TAB|TABS|CAP|CAPS|ML|MG|GM|GRM|GR|UNT|S|'S)\)?\.?",
+        s,
+        re.I,
+    ):
+        return True
+    if re.fullmatch(
+        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?\.?",
+        s,
+        re.I,
+    ):
         return True
     return False
 
@@ -10737,6 +10772,13 @@ _XLS_HEADER_ALIASES = {
     "openingquantity": "op",
     "openingbalqty": "op",
     "openingbalanceqty": "op",
+    # Opening Balance (qty) — distinct from Opening Value / Amount.
+    "openingbalance": "op",
+    "openingbal": "op",
+    "opbalqty": "op",
+    "opbal.": "op",
+    "op.bal.qty": "op",
+    "op.bal.qty.": "op",
     # Last-month-sale — never opening/receipts (OP.Stock is opening).
     "lms": "lms",
     "pur": "pur",
@@ -10785,6 +10827,11 @@ _XLS_HEADER_ALIASES = {
     "cb": "bal",
     "closingbalqty": "bal",
     "closingbalanceqty": "bal",
+    # Closing Balance (qty) — distinct from Closing Amount / Closing Value.
+    "closingbalance": "bal",
+    "closingbal": "bal",
+    "clbal": "bal",
+    "clbalqty": "bal",
     "date": "date",
     "statementdate": "date",
     "stockdate": "date",
@@ -14399,6 +14446,11 @@ def _xls_fill_from_rows(
             k = _xls_norm_header(n)
             if k in colmap:
                 return colmap[k]
+            # If a raw compact key slipped past aliases (Opening Balance →
+            # openingbalance), still resolve it for qty assignment.
+            compact = _xls_label_compact(n)
+            if compact in colmap:
+                return colmap[compact]
         return None
 
     if header_idx and not result.get("stockist_name"):
@@ -14579,12 +14631,25 @@ def _xls_fill_from_rows(
         if pack_i is not None and pack_i < len(row) and row[pack_i]:
             item["packing"] = str(row[pack_i]).strip()
 
-        op_i = _col("op.", "op", "ob (qty)")
-        pur_i = _col("pur", "primary (qty)")
-        sale_i = _col("sale", "secondary qty total")
-        bal_i = _col("bal.", "bal", "cb (qty)")
-        bval_i = _col("bval")
-        sval_i = _col("sval", "secondary value")
+        # Opening/Closing Balance (qty) aliases → op/bal via _xls_norm_header.
+        op_i = _col(
+            "op.",
+            "op",
+            "ob (qty)",
+            "opening balance",
+            "opening balance qty",
+        )
+        pur_i = _col("pur", "primary (qty)", "purchases")
+        sale_i = _col("sale", "secondary qty total", "sales")
+        bal_i = _col(
+            "bal.",
+            "bal",
+            "cb (qty)",
+            "closing balance",
+            "closing balance qty",
+        )
+        bval_i = _col("bval", "closing amount")
+        sval_i = _col("sval", "secondary value", "sales amount")
         rate_i = _col("rate", "secondary rate")
 
         def _assign_number(key: str, idx: Optional[int], into_extra: bool = False) -> None:
@@ -14710,6 +14775,13 @@ def _xls_fill_from_rows(
     column_mapping = {}
     for role, field in role_fields.items():
         idx = colmap.get(field)
+        if idx is None:
+            # Recover Opening Balance / Closing Balance if left unmapped as
+            # openingbalance / closingbalance (same cells, wrong colmap key).
+            for key, ci in colmap.items():
+                if _xls_norm_header(key) == field:
+                    idx = ci
+                    break
         header = None
         if (
             idx is not None
