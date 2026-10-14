@@ -6,6 +6,7 @@ layout handled by _parse_opbal_receipt_issue_statement, which must stay unchange
 
 from __future__ import annotations
 
+import re
 import unittest
 from pathlib import Path
 
@@ -134,6 +135,87 @@ BONNISAN DROPS
 68
 """
 
+# Star-pack + Reorder/Dump/Near trailing qtys (Parikh-style).
+PARIKH_STAR_PACK = """
+PARIKH MEDICAL AGENCY
+GOMTI APARTMENT,SHANTI BHAWAN,DHANBAD 826001
+Page No.1
+Sales & Stock Statement(From 01/08/2026 Upto 31/08/2026)
+Sep  2
+HIMALAYA      DRUG Co.
+PRODUCT NAME        Shelf
+PACKING    Op.Bal.  Receipt  Retrn
+   Total
+   Issue  Retrn  Closing  Reorder      Dump
+     Near
+ID
+    Qty.
+    Qty.
+   Qty
+    Qty.
+    Qty.
+   Qty  Balance
+    Qty.
+    Stock
+   Expiry
+BLEMINOR CREAM
+1*30GM.
+      50
+       0
+     0
+      50
+       0
+     0
+      50
+     -50
+        2
+        0
+BONNISAN SYP 200M
+1*200ML.
+      38
+       0
+     0
+      38
+       3
+     0
+      35
+     -32
+        7
+        0
+CLARINA ANTI ACN
+1 *1KIT
+       0
+       0
+     0
+       0
+       0
+     0
+       0
+       0
+        0
+        0
+AYURSLIM CAP
+3*60
+       0
+       0
+     0
+       0
+       0
+     0
+       0
+       0
+        0
+        0
+TOTAL
+     100
+       0
+     0
+     100
+       3
+     0
+      85
+"""
+
 
 class _FakePage:
     def __init__(self, text: str):
@@ -222,6 +304,26 @@ class TestSwilERPRetrnSalesStock(unittest.TestCase):
         self.assertEqual(oxi["opening_qty"], 9.0)
         self.assertEqual(oxi["sales_qty"], 9.0)
         self.assertEqual(oxi["closing_qty"], 0.0)
+
+    def test_star_pack_not_used_as_product_name(self):
+        self.assertTrue(_is_swilerp_retrn_sales_stock_text(PARIKH_STAR_PACK))
+        doc = _FakeDoc([_FakePage(PARIKH_STAR_PACK)])
+        result = _parse_swilerp_retrn_sales_stock_pdf(doc, "parikh.pdf")
+        self.assertIsNotNone(result)
+        self.assertIn("HIMALAYA", str(result.get("company_name") or "").upper())
+        items = result.get("line_items") or []
+        names = [i["product_name"] for i in items]
+        self.assertFalse(any("*" in n for n in names))
+        self.assertFalse(any(re.fullmatch(r"1\s*\*.*", n) for n in names))
+        by = {i["product_name"]: i for i in items}
+        self.assertEqual(by["BLEMINOR CREAM"]["packing"], "1*30GM.")
+        self.assertEqual(by["BLEMINOR CREAM"]["opening_qty"], 50.0)
+        self.assertEqual(by["BLEMINOR CREAM"]["closing_qty"], 50.0)
+        self.assertEqual(by["BONNISAN SYP 200M"]["packing"], "1*200ML.")
+        self.assertEqual(by["BONNISAN SYP 200M"]["sales_qty"], 3.0)
+        self.assertEqual(by["BONNISAN SYP 200M"]["closing_qty"], 35.0)
+        self.assertEqual(by["CLARINA ANTI ACN"]["packing"], "1*1KIT")
+        self.assertEqual(by["AYURSLIM CAP"]["packing"], "3*60")
 
 
 if __name__ == "__main__":
