@@ -2037,15 +2037,15 @@ def _looks_like_packing_token(tok: str) -> bool:
         return True
     if re.fullmatch(r"\d+\*\d+", t):
         return True
-    # "1X60", "1 X200ML", "1 X 100GRM", bare "X20" / "X200ML"
+    # "1X60", "1 X200ML", "1 X 100GRM", "1 X400G", bare "X20" / "X200ML"
     if re.fullmatch(
-        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
+        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
         t,
         re.I,
     ):
         return True
     if re.fullmatch(
-        r"X\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
+        r"X\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
         t,
         re.I,
     ):
@@ -2115,7 +2115,7 @@ def _looks_like_packing_line(ln: str) -> bool:
     ):
         return True
     if re.fullmatch(
-        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?\.?",
+        r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?\.?",
         s,
         re.I,
     ):
@@ -2603,10 +2603,24 @@ def _parse_swil_tax_pack_dump_near_pdf(
     return result
 
 
+def _swil_rcpt_oth_qty_value_enabled() -> bool:
+    """Swil Op.Bal + Rcpt Oth / Issue Ot + Closing Value (7 qty + value).
+
+    Flag default ON — recovers stacked PDFs that Dump collapse truncates.
+    """
+    return os.getenv("STOCK_SWIL_RCPT_OTH_QTY_VALUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_swil_stacked_opbal_rcpt_oth_format(text: str) -> bool:
     """SwilERP Sales & Stock with Op.Bal + Rcpt Oth / Issue Oth / Shortage.
 
     Distinct from 5-column Biswas/Mahajan OpBal Receipt Total Issue Closing.
+    Also matches truncated header 'Issue Ot' and qty+value variants (no Surplus).
     """
     if not text:
         return False
@@ -2617,10 +2631,35 @@ def _is_swil_stacked_opbal_rcpt_oth_format(text: str) -> bool:
         return False
     has_rcpt_oth = bool(re.search(r"Rcpt\s*Oth|Receipt\s*Oth", header, re.I))
     has_issue_extra = bool(
-        re.search(r"Issue\s*Oth", header, re.I)
+        re.search(r"Issue\s*Ot(?:h)?\b", header, re.I)
         or re.search(r"\bShortage\b", header, re.I)
     )
     return has_rcpt_oth and has_issue_extra
+
+
+def _swil_rcpt_oth_is_qty_value_variant(text: str) -> bool:
+    """True when columns are Op/Rec/RcptOth/Total/Issue/IssueOt/Closing + Value.
+
+    No Surplus / Shortage columns (Prakash-style SwilERP Tax/Rate sheets).
+    """
+    header = "\n".join(ln for ln in (text or "").splitlines()[:60] if ln.strip())
+    if re.search(r"\bSurplus\b", header, re.I) or re.search(
+        r"\bShortage\b", header, re.I
+    ):
+        return False
+    return bool(re.search(r"\bValue\b", header, re.I))
+
+
+def _strip_swil_trailing_tax_rate(name: str) -> str:
+    """Drop trailing GST/Tax rate printed beside product name (e.g. '5.00')."""
+    s = str(name or "").strip()
+    s = re.sub(r"\s+\d+(?:\.\d{1,2})?\s*$", "", s).strip()
+    return s
+
+
+def _is_swil_tax_rate_line(ln: str) -> bool:
+    """Lone tax/rate line between product name and packing (e.g. '5.00')."""
+    return bool(re.fullmatch(r"\d+(?:\.\d{1,2})?", str(ln or "").strip()))
 
 
 def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, Any]]:
@@ -2636,11 +2675,12 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
     )
     skip_line = re.compile(
         r"PRODUCT\s*NAME|\bPACKING\b|Op\.?\s*Bal|\bReceipt\b|Rcpt\s*Oth|"
-        r"Surplus|^\s*Total\s*$|^\s*Issue\s*$|Issue\s*Oth|Shortage|"
+        r"Surplus|^\s*Total\s*$|^\s*Issue\s*$|Issue\s*Ot(?:h)?|Shortage|"
         r"^\s*Closing\s*$|^\s*Qty\.?\s*$|^\s*Balance\s*$|Page\s*No|"
         r"Sales\s*&\s*Stock|^\*{2,}|\bHIMALAYA\b|^M/?S\b|GRAND\s*TOTAL|"
         r"^\s*TOTAL\b|Powered\s+By|SwilERP|Continued|Aug\s+\d|Sep\s+\d|"
-        r"From\s+\d{1,2}[./-]|ZEAL\s+DIVISION",
+        r"From\s+\d{1,2}[./-]|ZEAL\s+DIVISION|\bTax\b|^\s*Rate\s*$|"
+        r"^\s*Value\s*$",
         re.I,
     )
 
@@ -2649,6 +2689,9 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
     while i < len(lines):
         ln = lines[i]
         if skip_line.search(ln) or _is_stacked_opbal_qty_line(ln):
+            i += 1
+            continue
+        if _looks_like_packing_token(ln) or _looks_like_packing_line(ln):
             i += 1
             continue
 
@@ -2663,7 +2706,7 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
             and _looks_like_packing_token(lines[i + 1])
             and all(_is_stacked_opbal_qty_line(lines[i + j]) for j in range(2, 11))
         ):
-            name = _clean_name(ln)
+            name = _clean_name(_strip_swil_trailing_tax_rate(ln))
             packing = lines[i + 1].strip()
             nums = [_to_float(lines[i + j]) for j in range(2, 11)]
             i += 11
@@ -2674,7 +2717,7 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
                 and i + 9 < len(lines)
                 and all(_is_stacked_opbal_qty_line(lines[i + j]) for j in range(1, 10))
             ):
-                name = _clean_name(m.group(1))
+                name = _clean_name(_strip_swil_trailing_tax_rate(m.group(1)))
                 packing = m.group(2).strip()
                 nums = [_to_float(lines[i + j]) for j in range(1, 10)]
                 i += 10
@@ -2683,7 +2726,7 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
                 and re.search(r"[A-Za-z]{3,}", ln)
                 and all(_is_stacked_opbal_qty_line(lines[i + j]) for j in range(1, 10))
             ):
-                name = _clean_name(ln)
+                name = _clean_name(_strip_swil_trailing_tax_rate(ln))
                 packing = None
                 nums = [_to_float(lines[i + j]) for j in range(1, 10)]
                 i += 10
@@ -2718,13 +2761,154 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
     return rows
 
 
+def _collapse_stacked_swil_opbal_rcpt_oth_7_value_lines(
+    text: str,
+) -> List[Dict[str, Any]]:
+    """Join Product [/Tax] / Packing / 7 qty + closing value for Rcpt Oth sheets.
+
+    Columns: Op.Bal Receipt RcptOth Total Issue IssueOt Closing [Value].
+    """
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if len(lines) < 10:
+        return []
+
+    skip_line = re.compile(
+        r"PRODUCT\s*NAME|\bPACKING\b|Op\.?\s*Bal|\bReceipt\b|Rcpt\s*Oth|"
+        r"^\s*Total\s*$|^\s*Issue\s*$|Issue\s*Ot(?:h)?|"
+        r"^\s*Closing\s*$|^\s*Qty\.?\s*$|^\s*Balance\s*$|Page\s*No|"
+        r"Sales\s*&\s*Stock|^\*{2,}|\bHIMALAYA\b|^M/?S\b|GRAND\s*TOTAL|"
+        r"^\s*TOTAL\b|Powered\s+By|SwilERP|Continued|Aug\s+\d|Sep\s+\d|"
+        r"From\s+\d{1,2}[./-]|\bTax\b|^\s*Rate\s*$|^\s*Value\s*$|"
+        r"Purchase\s+Invoice|Receipt\s+Date|Amount\s*Rs|Dtd\.",
+        re.I,
+    )
+
+    rows: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
+        if skip_line.search(ln) or _is_stacked_opbal_qty_line(ln):
+            i += 1
+            continue
+        if _looks_like_packing_token(ln) or _looks_like_packing_line(ln):
+            i += 1
+            continue
+        if not re.search(r"[A-Za-z]{2,}", ln):
+            i += 1
+            continue
+
+        j = i + 1
+        # Optional lone tax/rate line after name.
+        if j < len(lines) and _is_swil_tax_rate_line(lines[j]):
+            # Only treat as tax when a packing line follows (not OpBal qty).
+            if j + 1 < len(lines) and (
+                _looks_like_packing_token(lines[j + 1])
+                or _looks_like_packing_line(lines[j + 1])
+            ):
+                j += 1
+
+        if j >= len(lines) or not (
+            _looks_like_packing_token(lines[j]) or _looks_like_packing_line(lines[j])
+        ):
+            i += 1
+            continue
+
+        packing = lines[j].strip()
+        qty_start = j + 1
+        # 7 qty lines required; optional 8th closing value.
+        if qty_start + 6 >= len(lines):
+            i += 1
+            continue
+        if not all(
+            _is_stacked_opbal_qty_line(lines[qty_start + k]) for k in range(7)
+        ):
+            i += 1
+            continue
+
+        nums = [_to_float(lines[qty_start + k]) for k in range(7)]
+        closing_value = None
+        consumed = qty_start + 7
+        if consumed < len(lines) and _is_stacked_opbal_qty_line(lines[consumed]):
+            # Trailing value / balance amount (often has decimals).
+            closing_value = _to_float(lines[consumed])
+            consumed += 1
+
+        name = _clean_name(_strip_swil_trailing_tax_rate(ln))
+        if not name or len(name) < 3 or re.match(r"^\s*TOTAL\b", name, re.I):
+            i += 1
+            continue
+
+        opening, receipt, rcpt_oth, total, issue, issue_oth, closing = nums
+        # Identity: opening + receipt + rcpt_oth == total (tolerance for OCR).
+        expected_total = opening + receipt + rcpt_oth
+        if abs(expected_total - total) > max(
+            5.0, 0.25 * max(abs(expected_total), abs(total), 1.0)
+        ):
+            logger.info(
+                "SWIL_RCPT_OTH_7_VALUE skip_bad_total name=%r op=%s rec=%s "
+                "rcpt_oth=%s total=%s",
+                name,
+                opening,
+                receipt,
+                rcpt_oth,
+                total,
+            )
+            i += 1
+            continue
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipt + rcpt_oth
+        item["sales_qty"] = issue + issue_oth
+        item["closing_qty"] = closing
+        item["sales_value"] = None
+        item["closing_value"] = closing_value
+        item["extra"]["total_stock"] = total
+        item["extra"]["rcpt_oth_qty"] = rcpt_oth
+        item["extra"]["issue_oth_qty"] = issue_oth
+        item["extra"]["field_source"] = {
+            "opening_qty": "native",
+            "receipts_qty": "native",
+            "sales_qty": "native",
+            "closing_qty": "native",
+            "closing_value": "native" if closing_value is not None else "missing",
+        }
+        rows.append(item)
+        logger.info(
+            "SWIL_RCPT_OTH_7_VALUE row name=%r pack=%r op=%s sales=%s close=%s",
+            name,
+            packing,
+            opening,
+            item["sales_qty"],
+            closing,
+        )
+        i = consumed
+    return rows
+
+
 def _parse_swil_stacked_opbal_rcpt_oth_statement(
     text: str, filename: str, source_format: str = "pdf"
 ) -> Optional[Dict[str, Any]]:
     """Parse SwilERP stacked Op.Bal / Rcpt Oth / Issue Oth / Shortage sheets."""
     if not _is_swil_stacked_opbal_rcpt_oth_format(text):
         return None
-    items = _collapse_stacked_swil_opbal_9_product_lines(text)
+
+    layout_tag = "rcpt_oth_issue_oth_shortage"
+    items: List[Dict[str, Any]] = []
+    if _swil_rcpt_oth_qty_value_enabled() and _swil_rcpt_oth_is_qty_value_variant(text):
+        items = _collapse_stacked_swil_opbal_rcpt_oth_7_value_lines(text)
+        if len(items) >= 3:
+            layout_tag = "rcpt_oth_issue_oth_closing_value"
+            logger.info(
+                "SWIL_RCPT_OTH_7_VALUE accepted rows=%s file=%s",
+                len(items),
+                filename,
+            )
+    if len(items) < 3:
+        items = _collapse_stacked_swil_opbal_9_product_lines(text)
+        layout_tag = "rcpt_oth_issue_oth_shortage"
     if len(items) < 3:
         return None
 
@@ -2743,7 +2927,7 @@ def _parse_swil_stacked_opbal_rcpt_oth_statement(
                 if not result.get("stockist_name"):
                     result["stockist_name"] = _clean_name(ln)
                 elif not result.get("stockist_address") and re.search(
-                    r"ROAD|STREET|NAGAR|LANE|DIST|PIN", ln, re.I
+                    r"ROAD|STREET|NAGAR|LANE|DIST|PIN|BAZAR|MARKET", ln, re.I
                 ):
                     result["stockist_address"] = _clean_name(ln)
                 elif not result.get("stockist_address") and result.get("stockist_name"):
@@ -2764,16 +2948,24 @@ def _parse_swil_stacked_opbal_rcpt_oth_statement(
                 result["period_from"] = _normalize_date(m.group(1))
                 result["period_to"] = _normalize_date(m.group(2))
         if not result.get("company_name") and re.search(
-            r"HIMALAYA\s*(?:ZEAL|WELLNESS|\([^)]+\))?", ln, re.I
+            r"HIMALAYA\s*(?:ZEAL|WELLNESS|DRUG|\([^)]+\))?", ln, re.I
         ):
             result["company_name"] = _clean_name(ln)
 
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "swil_stacked_opbal_rcpt_oth"
-    result["totals"]["extra"]["opbal_layout"] = "rcpt_oth_issue_oth_shortage"
+    result["totals"]["extra"]["opbal_layout"] = layout_tag
     result["totals"]["extra"]["opbal_stacked_lines"] = True
     result["totals"]["sales_value"] = None
-    result["totals"]["closing_value"] = None
+    # Prefer sum of printed closing values when present.
+    close_vals = [
+        float(it["closing_value"])
+        for it in items
+        if it.get("closing_value") is not None
+    ]
+    result["totals"]["closing_value"] = (
+        round(sum(close_vals), 2) if close_vals else None
+    )
     result = _apply_total_row_to_result(result, text)
     return result
 
@@ -3215,13 +3407,56 @@ def _parse_opbal_receipt_issue_statement(
 # quantity, so this dedicated parser must run first.
 # ---------------------------------------------------------------------------
 
+_SWIL_SS_RETRN_PACK_UNIT = (
+    r"ML|MG|GM|G|GRM|GR|KIT|UNIT|JAR|TAB|TABS|WASH|'?S"
+)
+# Packing may be "200ML", "10'S", or Swil "1*30GM." / "3*60" / "1 *1KIT" / "1WASH".
 _SWIL_SS_RETRN_PACK = re.compile(
-    r"^\(?[A-Za-z]?\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|KIT|'?S)\.?\)?$", re.I
+    rf"^(?:"
+    rf"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:{_SWIL_SS_RETRN_PACK_UNIT})?\.?"
+    rf"|1\s*(?:WASH|JAR)\.?"
+    rf"|\(?[A-Za-z]?\d+(?:\.\d+)?\s*(?:{_SWIL_SS_RETRN_PACK_UNIT})\.?\)?"
+    rf")$",
+    re.I,
 )
 _SWIL_SS_RETRN_NAME_PACK = re.compile(
-    r"^(.*?)\s*(\(?\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|KIT|'?S)\.?\)?)$", re.I
+    rf"^(.*?)\s+"
+    rf"(\(?\d+(?:\.\d+)?\s*(?:{_SWIL_SS_RETRN_PACK_UNIT})\.?\)?"
+    rf"|\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:{_SWIL_SS_RETRN_PACK_UNIT})?\.?)$",
+    re.I,
 )
 _SWIL_SS_RETRN_INT = re.compile(r"^-?\d[\d,]*$")
+
+
+def _swil_retrn_star_pack_enabled() -> bool:
+    """Treat '1*30GM.' / '3*60' lines as packing, not product names.
+
+    Flag default ON — fixes Swil Retrn sheets that print pack as 1*N unit.
+    """
+    return os.getenv("STOCK_SWIL_RETRN_STAR_PACK", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_swil_retrn_packing_line(ln: str) -> bool:
+    s = str(ln or "").strip()
+    if not s:
+        return False
+    if _SWIL_SS_RETRN_PACK.match(s):
+        return True
+    if not _swil_retrn_star_pack_enabled():
+        return False
+    # Fallback: digit*digit packing with optional unit / period.
+    return bool(
+        re.fullmatch(
+            rf"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:{_SWIL_SS_RETRN_PACK_UNIT})?\.?",
+            s,
+            re.I,
+        )
+    )
 
 
 def _is_swilerp_retrn_sales_stock_text(text: str) -> bool:
@@ -3294,8 +3529,14 @@ def _parse_swilerp_retrn_sales_stock_pdf(
         r"^GRAND\s*TOTAL|^TOTAL\b",
         re.I,
     )
-    company_re = re.compile(r"^(Himalaya\b[^\n]*)$", re.I)
-    date_re = re.compile(r"^[A-Za-z]{3,9}\s+\d{1,2},\s*\d{4}$")
+    # Himalaya (Zandra) or "HIMALAYA DRUG Co." (no parentheses).
+    company_re = re.compile(
+        r"^(Himalaya\b.*|HIMALAYA(?:\s+DRUG(?:\s*Co\.?)?)?\b.*)$",
+        re.I,
+    )
+    date_re = re.compile(
+        r"^[A-Za-z]{3,9}\s+\d{1,2}(?:,\s*\d{4})?$"
+    )
     stock_skip = None
     guard = [re.escape(x) for x in (stockist, address) if x]
     if guard:
@@ -3318,7 +3559,11 @@ def _parse_swilerp_retrn_sales_stock_pdf(
     while i < n:
         ln = lines[i]
         comp = company_re.match(ln)
-        if comp and "(" in ln:
+        if comp and (
+            "(" in ln
+            or re.search(r"HIMALAYA\s+DRUG|Himalaya\s*\(", ln, re.I)
+            or re.fullmatch(r"Himalaya\b.*", ln, re.I)
+        ):
             _ensure(_clean_name(comp.group(1)))
             i += 1
             continue
@@ -3327,23 +3572,34 @@ def _parse_swilerp_retrn_sales_stock_pdf(
             or date_re.match(ln)
             or _SWIL_SS_RETRN_INT.match(ln)
             or (stock_skip and stock_skip.search(ln))
+            or _is_swil_retrn_packing_line(ln)
         ):
+            # Lone packing lines are never products (name was on previous line).
             i += 1
             continue
 
         name = None
         packing = None
         m_np = _SWIL_SS_RETRN_NAME_PACK.match(ln)
-        if m_np and re.search(r"[A-Za-z]", m_np.group(1)):
+        if (
+            m_np
+            and re.search(r"[A-Za-z]", m_np.group(1) or "")
+            and not _is_swil_retrn_packing_line(m_np.group(1) or "")
+        ):
             name = _clean_name(m_np.group(1))
             packing = re.sub(r"\s+", "", m_np.group(2))
         else:
             name = _clean_name(ln)
-            if i + 1 < n and _SWIL_SS_RETRN_PACK.match(lines[i + 1]):
+            if i + 1 < n and _is_swil_retrn_packing_line(lines[i + 1]):
                 packing = re.sub(r"\s+", "", lines[i + 1])
                 i += 1
 
-        if not name or len(re.sub(r"[^A-Za-z]", "", name)) < 2:
+        # Packing-only tokens must never become product_name (e.g. "1*30GM.").
+        if (
+            not name
+            or len(re.sub(r"[^A-Za-z]", "", name)) < 2
+            or _is_swil_retrn_packing_line(name)
+        ):
             i += 1
             continue
 
@@ -3355,6 +3611,12 @@ def _parse_swilerp_retrn_sales_stock_pdf(
         if len(vals) < 7:
             i += 1
             continue
+
+        # Optional trailing Reorder / Dump / Near Expiry qty columns.
+        trailing: List[float] = []
+        while j < n and _SWIL_SS_RETRN_INT.match(lines[j]) and len(trailing) < 3:
+            trailing.append(_to_float(lines[j].replace(",", "")))
+            j += 1
 
         sec = _ensure(None if current is None else current.get("company_name"))
         item = empty_line_item()
@@ -3372,8 +3634,24 @@ def _parse_swilerp_retrn_sales_stock_pdf(
             extra["total_stock_qty"] = vals[3]
             extra["purchase_return_qty"] = vals[2]
             extra["sales_return_qty"] = vals[5]
+            if trailing:
+                if len(trailing) >= 1:
+                    extra["reorder_qty"] = trailing[0]
+                if len(trailing) >= 2:
+                    extra["dump_qty"] = trailing[1]
+                if len(trailing) >= 3:
+                    extra["near_expiry_qty"] = trailing[2]
             if sec.get("company_name"):
                 extra["company_name"] = sec.get("company_name")
+            if packing and "*" in str(packing):
+                logger.info(
+                    "SWIL_RETRN_STAR_PACK row name=%r pack=%r op=%s sales=%s close=%s",
+                    name,
+                    packing,
+                    vals[0],
+                    vals[4],
+                    vals[6],
+                )
         sec["items"].append(item)
         i = j
 
