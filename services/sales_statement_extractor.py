@@ -2037,9 +2037,15 @@ def _looks_like_packing_token(tok: str) -> bool:
         return True
     if re.fullmatch(r"\d+\*\d+", t):
         return True
-    # "1X60", "1 X200ML", "1 X 100GRM"
+    # "1X60", "1 X200ML", "1 X 100GRM", bare "X20" / "X200ML"
     if re.fullmatch(
         r"1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
+        t,
+        re.I,
+    ):
+        return True
+    if re.fullmatch(
+        r"X\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
         t,
         re.I,
     ):
@@ -2050,6 +2056,49 @@ def _looks_like_packing_token(tok: str) -> bool:
     if re.fullmatch(r"\d+[Oo]TAB[A-Za-z._]*", t, re.I):
         return True
     return False
+
+
+def _opbal_peel_junk_pack_qty_enabled() -> bool:
+    """Peel OCR junk packing (e.g. '60 0') swallowed into the trailing qty run.
+
+    Flag default ON — reassigns printed tokens from qty slots to packing only.
+    """
+    return os.getenv("STOCK_OPBAL_PEEL_JUNK_PACK_QTY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _peel_opbal_leading_junk_pack_qty(
+    qtys: List[float],
+    packing: Optional[str],
+) -> Tuple[List[float], Optional[str]]:
+    """If pack-size + OCR zero prefixed the OpBal run, move them to packing."""
+    if packing is not None or len(qtys) < 7:
+        return qtys, packing
+    if not _opbal_peel_junk_pack_qty_enabled():
+        return qtys, packing
+
+    def _op_rec_total_ok(vals: List[float]) -> bool:
+        if len(vals) < 3:
+            return False
+        op, rec, total = vals[0], vals[1], vals[2]
+        return abs((op + rec) - total) <= max(
+            5.0, 0.25 * max(abs(total), abs(op + rec), 1.0)
+        )
+
+    # "60 0" before OpBal/Receipt/Total/...
+    if qtys[0] >= 10 and qtys[1] == 0.0 and _op_rec_total_ok(qtys[2:]):
+        pack = str(int(qtys[0])) if float(qtys[0]).is_integer() else str(qtys[0])
+        logger.info(
+            "OPBAL_PEEL_JUNK_PACK peeled=%s remaining_n=%s",
+            pack,
+            len(qtys) - 2,
+        )
+        return qtys[2:], pack
+    return qtys, packing
 
 
 def _looks_like_packing_line(ln: str) -> bool:
@@ -2730,11 +2779,13 @@ def _parse_swil_stacked_opbal_rcpt_oth_statement(
 
 
 def _collapse_stacked_opbal_product_lines(text: str) -> str:
-    """Join Product / Packing / 5 qty lines that PDF text extraction split vertically.
+    """Join Product / Packing / qty lines that PDF text extraction split vertically.
 
-    Biswas-style Sales & Stock prints each field on its own line. Existing
-    OpBal row parsing expects one product per line; only rewrite when that
-    stacked pattern is present so single-line Mahajan/Srinandan text is unchanged.
+    Biswas-style Sales & Stock prints each field on its own line. Dump layouts
+    print 6 qty columns (OpBal Receipt Total Issue Closing Dump); others print 5.
+    Existing OpBal row parsing expects one product per line; only rewrite when
+    that stacked pattern is present so single-line Mahajan/Srinandan text is
+    unchanged.
     """
     if not text:
         return text
@@ -2748,20 +2799,40 @@ def _collapse_stacked_opbal_product_lines(text: str) -> str:
     if len(lines) < 8:
         return text
 
+    header_blob = "\n".join(lines[:40])
+    # Closing + Dump (+ optional Stock sub-label) → 6 stacked qty lines.
+    qty_width = (
+        6
+        if re.search(r"\bDump\b", header_blob, re.I)
+        and re.search(r"\bClosing\b|\bBalance\b", header_blob, re.I)
+        else 5
+    )
+
     pack_on_name = re.compile(
-        r"^(.+?)\s+(\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|TAB|TABS|CAP|SYP|INJ|"
-        r"['’]?S)[;']?)\s*$",
+        r"^(.+?)\s+("
+        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|TAB|TABS|CAP|SYP|INJ|GRM|GR|UNT|['’]?S)\.?"
+        r"|1\s*X\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?\.?"
+        r"|\d+\*\d+"
+        r")\s*$",
         re.I,
     )
     skip_line = re.compile(
         r"PRODUCT\s*NAME|\bPACKING\b|Op\.?\s*Bal|\bReceipt\b|^\s*Total\s*$|"
-        r"^\s*Issue\s*$|^\s*Closing\s*$|^\s*Qty\.?\s*$|^\s*Balance\s*$|"
-        r"Page\s*No|Sales\s*&\s*Stock|^\*{2,}|\bHIMALAYA\b|^M/?S\b|"
+        r"^\s*Issue\s*$|^\s*Closing\s*$|^\s*Dump\s*$|^\s*Qty\.?\s*$|^\s*Balance\s*$|"
+        r"^\s*Stock\s*$|Page\s*No|Sales\s*&\s*Stock|^\*{2,}|\bHIMALAYA\b|^M/?S\b|"
         r"^\d+/S/|GRAND\s*TOTAL|^\s*TOTAL\b|Continued|BCDA|CHATTARA|"
         r"WELLNESS\s+COMPANY|ZANDRA|ZENITH|\bZEAL\b|Aug\s+\d|Sep\s+\d|"
-        r"From\s+\d{1,2}[./-]",
+        r"From\s+\d{1,2}[./-]|Purchase\s+Invoice|Receipt\s+Date|Amount\s*Rs",
         re.I,
     )
+
+    def _join_qty_block(start: int, count: int) -> Optional[str]:
+        end = start + count
+        if end > len(lines):
+            return None
+        if not all(_is_stacked_opbal_qty_line(lines[start + j]) for j in range(count)):
+            return None
+        return "  ".join(lines[start:end])
 
     collapsed: List[str] = []
     i = 0
@@ -2773,33 +2844,56 @@ def _collapse_stacked_opbal_product_lines(text: str) -> str:
             i += 1
             continue
 
-        # name + packing + OpBal Receipt Total Issue Closing
+        # name + packing line + N qty lines
         if (
-            i + 6 < len(lines)
+            i + 1 + qty_width < len(lines)
             and re.search(r"[A-Za-z]{2,}", ln)
-            and _looks_like_packing_token(lines[i + 1])
-            and all(_is_stacked_opbal_qty_line(lines[i + j]) for j in range(2, 7))
+            and _looks_like_packing_line(lines[i + 1])
         ):
-            collapsed.append(
-                f"{ln}  {lines[i + 1]}  " + "  ".join(lines[i + 2 : i + 7])
-            )
-            joined_rows += 1
-            i += 7
-            continue
+            qty_blob = _join_qty_block(i + 2, qty_width)
+            if qty_blob is not None:
+                collapsed.append(f"{ln}  {lines[i + 1]}  {qty_blob}")
+                joined_rows += 1
+                i += 2 + qty_width
+                continue
 
-        # name already ends with packing, then 5 qty lines
-        m = pack_on_name.match(ln)
+        # name + OCR junk packing (e.g. "60 0") + N qty lines
         if (
-            m
-            and i + 5 < len(lines)
-            and all(_is_stacked_opbal_qty_line(lines[i + j]) for j in range(1, 6))
+            i + 1 + qty_width < len(lines)
+            and re.search(r"[A-Za-z]{2,}", ln)
+            and re.fullmatch(r"\d+(?:\s+\d+)?", lines[i + 1] or "")
+            and not _is_stacked_opbal_qty_line(lines[i + 1])
         ):
-            collapsed.append(
-                f"{m.group(1)}  {m.group(2)}  " + "  ".join(lines[i + 1 : i + 6])
-            )
-            joined_rows += 1
-            i += 6
-            continue
+            qty_blob = _join_qty_block(i + 2, qty_width)
+            if qty_blob is not None:
+                collapsed.append(f"{ln}  {lines[i + 1]}  {qty_blob}")
+                joined_rows += 1
+                i += 2 + qty_width
+                continue
+
+        # name already ends with packing, then N qty lines
+        m = pack_on_name.match(ln)
+        if m:
+            qty_blob = _join_qty_block(i + 1, qty_width)
+            if qty_blob is not None:
+                collapsed.append(f"{m.group(1)}  {m.group(2)}  {qty_blob}")
+                joined_rows += 1
+                i += 1 + qty_width
+                continue
+
+        # Name with glued/mangled packing (e.g. BONNISAN LIQUID 100100 ML.) —
+        # still absorb the following N qty lines so Dump layouts do not orphan.
+        if (
+            re.search(r"[A-Za-z]{2,}", ln)
+            and not _looks_like_packing_line(ln)
+            and i + qty_width < len(lines)
+        ):
+            qty_blob = _join_qty_block(i + 1, qty_width)
+            if qty_blob is not None:
+                collapsed.append(f"{ln}  {qty_blob}")
+                joined_rows += 1
+                i += 1 + qty_width
+                continue
 
         collapsed.append(ln)
         i += 1
@@ -2896,16 +2990,31 @@ def _parse_opbal_receipt_issue_row(
     elif (
         len(left) >= 2
         and re.fullmatch(r"\(?[A-Z]?\d+(?:\.\d+)?", left[-2] or "", re.I)
-        and re.fullmatch(r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|PH)\)?", left[-1] or "", re.I)
+        and re.fullmatch(
+            r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|PH|UNT)\)?\.?",
+            left[-1] or "",
+            re.I,
+        )
     ):
-        packing = f"{left[-2]} {left[-1]}".strip()
+        packing = f"{left[-2]} {left[-1]}".strip().rstrip(".,-_")
         left = left[:-2]
     elif (
         len(left) >= 2
         and re.fullmatch(r"\d+(?:\.\d+)?", left[-2] or "")
-        and re.fullmatch(r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS)", left[-1] or "", re.I)
+        and re.fullmatch(r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|UNT)\.?", left[-1] or "", re.I)
     ):
-        packing = f"{left[-2]}{left[-1]}"
+        packing = f"{left[-2]} {left[-1]}".strip().rstrip(".,-_")
+        left = left[:-2]
+    elif (
+        len(left) >= 2
+        and re.fullmatch(r"1", left[-2] or "")
+        and re.fullmatch(
+            r"X\d+(?:\.\d+)?(?:ML|MG|GM|GRM|GR|TAB|TABS|CAP|UNT)?",
+            left[-1] or "",
+            re.I,
+        )
+    ):
+        packing = f"{left[-2]} {left[-1]}".strip()
         left = left[:-2]
     # Drop trailing bare shelf code left in the name (e.g. "... TAB 11")
     if left and re.fullmatch(r"\d{1,2}", left[-1] or ""):
@@ -2916,6 +3025,9 @@ def _parse_opbal_receipt_issue_row(
         return None
     if re.fullmatch(r"AUROBINDO.*|VERITAZ.*|Qy\.?", product_name, re.I):
         return None
+
+    # OCR junk packing ("60 0") often lands in the trailing qty run — peel first.
+    qtys, packing = _peel_opbal_leading_junk_pack_qty(qtys, packing)
 
     # Prefer full 7-col layout, then 6, then 5. With Remain Day an 8th trailing
     # qty is common — drop it first so Closing/Dump stay aligned.
@@ -3035,13 +3147,30 @@ def _parse_opbal_receipt_issue_statement(
             r"MAHAJAN|ASSOCIATES|Sales\s*&\s*Stock", ln, re.I
         ):
             result["company_name"] = _clean_name(ln)
-        # Biswas / Srinandan division banner (keep first match only)
+        # Biswas / Srinandan / ZANDRA division banner (keep first match only)
         if not result.get("company_name") and re.search(
             r"HIMALAYA\s*(?:\([^)]+\))?|HIMALAYA\s+WELLNESS", ln, re.I
         ):
             result["company_name"] = _clean_name(ln)
-        if re.search(r"GARH|JAMMU|MOHALLA|ROAD|NAGAR|R\.?\s*N\.?\s*PURA", ln, re.I) and not result.get(
-            "stockist_address"
+        if not result.get("company_name") and re.fullmatch(
+            r"ZANDRA|ZENITH|ZEAL|ZANDU",
+            ln.strip(),
+            re.I,
+        ):
+            result["company_name"] = _clean_name(ln)
+        if (
+            not result.get("stockist_address")
+            and re.search(
+                r"GARH|JAMMU|MOHALLA|ROAD|NAGAR|R\.?\s*N\.?\s*PURA|"
+                r"TOWER|DHANBAD|BANK\s+MORE|URMILA|LG\d{2,}",
+                ln,
+                re.I,
+            )
+            and not re.search(
+                r"Sales\s*&\s*Stock|PRODUCT\s*NAME|Op\.?\s*Bal|Page\s*No",
+                ln,
+                re.I,
+            )
         ):
             result["stockist_address"] = _clean_name(ln)
 
