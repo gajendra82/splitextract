@@ -42,14 +42,16 @@ class HeaderSamplesTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.samples), 10)
 
     def test_every_sample_resolves(self):
-        for name, sample in self.samples.items():
-            with self.subTest(format=name):
-                result = resolve_columns(sample["header_cells"])
-                self.assertEqual(
-                    _canons(result),
-                    sample["expected"],
-                    msg=f"{name}: got {_canons(result)} errors={result['errors']}",
-                )
+        # Samples encode default-OFF mappings; flag-ON covered by MedicaInOtFreeInTests.
+        with patch.dict("os.environ", {"STOCK_MEDICA_IN_OT_AS_FREE_IN": "false"}):
+            for name, sample in self.samples.items():
+                with self.subTest(format=name):
+                    result = resolve_columns(sample["header_cells"])
+                    self.assertEqual(
+                        _canons(result),
+                        sample["expected"],
+                        msg=f"{name}: got {_canons(result)} errors={result['errors']}",
+                    )
 
 
 class ResolveColumnsUnitTests(unittest.TestCase):
@@ -524,6 +526,33 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(normalize_header("Op.Bal."), "op bal")
         self.assertEqual(normalize_header("Exp/Dmg"), "exp dmg")
         self.assertEqual(normalize_header("Stock-Value"), "stock value")
+
+
+class MedicaInOtFreeInTests(unittest.TestCase):
+    _HDR = ("OPSTK", "PURCH", "SALE", "SALE VAL", "IN/OT", "STOCK", "STK VAL")
+
+    def test_flag_off_in_ot_ignored(self):
+        with patch.dict("os.environ", {"STOCK_MEDICA_IN_OT_AS_FREE_IN": "false"}):
+            cols = resolve_columns(_cells(*self._HDR))["columns"]
+        self.assertEqual(cols[4]["canonical"], "ignore")
+        self.assertEqual(cols[4]["reason"], "medica_in_ot")
+
+    def test_flag_on_in_ot_is_free_in_and_stock_is_closing(self):
+        with patch.dict("os.environ", {"STOCK_MEDICA_IN_OT_AS_FREE_IN": "true"}):
+            for in_ot in ("IN/OT", "IN/OUT", "INOT"):
+                hdr = list(self._HDR)
+                hdr[4] = in_ot
+                cols = resolve_columns(_cells(*hdr))["columns"]
+                self.assertEqual(cols[4]["canonical"], "free_in_qty")
+                self.assertEqual(cols[4]["reason"], "medica_in_ot")
+                self.assertEqual(cols[5]["canonical"], "closing_qty")
+
+    def test_flag_on_glued_in_ot_stock_stays_closing(self):
+        hdr = list(self._HDR[:4]) + ["INOTSTOCK", "STK VAL"]
+        with patch.dict("os.environ", {"STOCK_MEDICA_IN_OT_AS_FREE_IN": "true"}):
+            cols = resolve_columns(_cells(*hdr))["columns"]
+        self.assertEqual(cols[4]["canonical"], "closing_qty")
+        self.assertIn("medica_in_ot_glued", cols[4]["reason"])
 
 
 if __name__ == "__main__":

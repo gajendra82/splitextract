@@ -183,6 +183,9 @@ ALIASES: Dict[str, List[str]] = {
         "sl",
         "issue",
         "iss",
+        "issu",  # OCR truncate of ISSUE
+        "issur",
+        "isue",
         "issues",
         "out",
         "outward",
@@ -245,6 +248,8 @@ ALIASES: Dict[str, List[str]] = {
         "cls",
         "clos",
         "close",  # LstSL Close column (exact; "clos" alone also hits via compact)
+        "closin",  # OCR truncate of CLOSING
+        "closi",
         "closing",
         "clos stock",
         "closstock",
@@ -662,6 +667,16 @@ def _absorb_ignore_geometry_enabled() -> bool:
     rate/NRV never become opening/closing qty.
     """
     return os.getenv("STOCK_HEADER_ABSORB_IGNORE_GEOMETRY", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _medica_in_ot_as_free_in_enabled() -> bool:
+    """STOCK_MEDICA_IN_OT_AS_FREE_IN — Medica printed IN/OT is free_in_qty. Default OFF."""
+    return os.getenv("STOCK_MEDICA_IN_OT_AS_FREE_IN", "false").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -1563,6 +1578,25 @@ def resolve_columns(
 
         # Medica IN/OT (or IN/OUT) is a dedicated transfer column — not purchase "in".
         if compact_hdr in {"inot", "inout"} or norm in {"in ot", "in out"}:
+            if _medica_in_ot_as_free_in_enabled():
+                logger.info(
+                    "MEDICA_IN_OT_FREE_IN header resolved col_index=%s text=%r -> free_in_qty",
+                    idx,
+                    text,
+                )
+                prelim.append(
+                    {
+                        "col_index": idx,
+                        "header_text": text,
+                        "subheader_text": sub_s or None,
+                        "group": None,
+                        "canonical": "free_in_qty",
+                        "confidence": 0.9,
+                        "is_value": False,
+                        "reason": "medica_in_ot",
+                    }
+                )
+                continue
             prelim.append(
                 {
                     "col_index": idx,
@@ -1671,6 +1705,21 @@ def resolve_columns(
             reason = "unknown"
 
         # Medica IN/OT handled above.
+
+        # Glued "IN/OT STOCK" is one header cell: it cannot be split into two
+        # columns here, so STOCK stays closing_qty and the glue is logged.
+        if (
+            compact_hdr in {"inotstock", "inoutstock"}
+            and canonical == "closing_qty"
+            and _medica_in_ot_as_free_in_enabled()
+        ):
+            reason = f"{reason}|medica_in_ot_glued" if reason else "medica_in_ot_glued"
+            logger.warning(
+                "MEDICA_IN_OT_FREE_IN glued header col_index=%s text=%r kept as "
+                "closing_qty (IN/OT part cannot be split from one header cell)",
+                idx,
+                text,
+            )
 
         # Bare "stock" (Medica STOCK) → closing_qty.
         if (canonical == "ignore" or group == "closing") and norm == "stock":

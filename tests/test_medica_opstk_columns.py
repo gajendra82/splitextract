@@ -1,12 +1,15 @@
 """Medica Ultimate OPSTK statement: STOCK is closing qty, IN/OT is not."""
 
+import os
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from services.sales_statement_extractor import (
     _medica_opstk_items_from_words,
     extract_sales_statement,
 )
+from services.stock_row_classifier import RowStatus, classify_row, read_row_fields
 
 
 def _word(x0, x1, y, text):
@@ -158,6 +161,90 @@ class TestMedicaOpstkColumns(unittest.TestCase):
         self.assertEqual(paz["sales_value"], 256)
         self.assertEqual(paz["closing_qty"], 0)
         self.assertEqual(paz["closing_value"], 0)
+
+
+_FLAG = "STOCK_MEDICA_IN_OT_AS_FREE_IN"
+
+
+def _in_ot_rows(flag_on):
+    words = list(_HEADER)
+    # BONNISAN LIQ. 100ML: 158 + 168 - 134 + 13 = 205.
+    y = 190.9
+    words += [
+        _word(23, 60, y, "BONNISAN"),
+        _word(66, 90, y, "LIQ."),
+        _word(95, 125, y, "100ML"),
+        _word(177, 190, y, "100"),
+        _word(191, 206, y, "ML"),
+        _qty(249, y, "158", 12),
+        _qty(284, y, "168", 12),
+        _qty(319, y, "134", 12),
+        _qty(364, y, "9800", 20),
+        _qty(389, y, "13"),
+        _qty(419, y, "205", 12),
+        _qty(459, y, "12000", 20),
+    ]
+    # CYSTONE (FC) 60TABS: 318 + 100 - 234 - 20 = 164.
+    y = 202.9
+    words += [
+        _word(23, 55, y, "CYSTONE"),
+        _word(61, 85, y, "(FC)"),
+        _word(90, 125, y, "60TABS"),
+        _word(177, 190, y, "60"),
+        _word(191, 206, y, "TAB"),
+        _qty(249, y, "318", 12),
+        _qty(284, y, "100", 12),
+        _qty(319, y, "234", 12),
+        _qty(364, y, "20000", 20),
+        _qty(389, y, "-20", 10),
+        _qty(419, y, "164", 12),
+        _qty(459, y, "9000", 20),
+    ]
+    with patch.dict(os.environ, {_FLAG: "true" if flag_on else "false"}):
+        return {i["product_name"]: i for i in _medica_opstk_items_from_words(words)}
+
+
+class TestMedicaInOtFreeIn(unittest.TestCase):
+    def test_positive_in_ot_is_free_in_and_row_is_valid(self):
+        item = _in_ot_rows(True)["BONNISAN LIQ. 100ML"]
+        self.assertEqual(item["extra"]["free_in_qty"], 13)
+        self.assertEqual(item["extra"]["field_source"]["free_in_qty"], "printed")
+        self.assertEqual(item["receipts_qty"], 168)
+        self.assertEqual(item["closing_qty"], 205)
+        status, _ = classify_row(read_row_fields(item))
+        self.assertEqual(status, RowStatus.VALID)
+
+    def test_negative_in_ot_balances_to_stock(self):
+        item = _in_ot_rows(True)["CYSTONE (FC) 60TABS"]
+        self.assertEqual(item["extra"]["free_in_qty"], -20)
+        self.assertEqual(item["receipts_qty"], 100)
+        self.assertEqual(item["closing_qty"], 164)
+        status, _ = classify_row(read_row_fields(item))
+        self.assertEqual(status, RowStatus.VALID)
+
+    def test_flag_off_keeps_free_in_absent(self):
+        for item in _in_ot_rows(False).values():
+            self.assertNotIn("free_in_qty", item.get("extra") or {})
+            self.assertEqual(item["closing_qty"] in (205, 164), True)
+
+    def test_printed_zero_in_ot_is_zero(self):
+        words = list(_HEADER)
+        y = 190.9
+        words += [
+            _word(23, 60, y, "EVECARE"),
+            _word(177, 190, y, "30"),
+            _qty(249, y, "5"),
+            _qty(284, y, "0"),
+            _qty(319, y, "1"),
+            _qty(364, y, "195", 15),
+            _qty(389, y, "0"),
+            _qty(419, y, "4"),
+            _qty(459, y, "694", 15),
+        ]
+        with patch.dict(os.environ, {_FLAG: "true"}):
+            item = _medica_opstk_items_from_words(words)[0]
+        self.assertEqual(item["extra"]["free_in_qty"], 0)
+        self.assertEqual(item["extra"]["field_source"]["free_in_qty"], "printed")
 
 
 _SOURCE = Path(

@@ -206,11 +206,14 @@ def _classify_layout_cell(text: Any) -> str:
         except Exception:
             return "number"
     # Pack tokens printed beside product (SSA qty-only / dump layouts).
-    # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 100ML.
+    # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 30', 100ML.
+    # Bare "30'" / "60'" (apostrophe-only tablet pack) must peel so OPENING
+    # is not shifted and CLOSING is not filled with ISSUE VALUE money.
     # STOCK_VISION_RATE_PACK_PEEL (default ON) also matches RATE-column packs
     # like 30,S CAP / 1PACK / L SIZE / JAR that otherwise shift OPENING left.
     pack_core = (
         r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
+        r"|\d+\s*'"  # 30' / 60' tablet pack (OCR of 60'S without S)
         r"|\d+\s*[,']?\s*[Ss]\.?"
         r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?"
         r"|\d+\s*\+\s*\d+"
@@ -218,6 +221,7 @@ def _classify_layout_cell(text: Any) -> str:
     if _rate_pack_peel_enabled():
         pack_core = (
             r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G|L|LTR|LITRE)\.?"
+            r"|\d+\s*'"  # 30' / 60' tablet pack
             r"|\d+\s*[,']?\s*[Ss]\.?(?:\s*(?:CAP|CAPS|TAB|TABS|TABLETS?))?"
             r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?(?:\s*(?:TAB|TABS|CAP|CAPS|ML|GM|G))?"
             r"|\d+\s*\+\s*\d+"
@@ -2291,6 +2295,32 @@ def _merge_proposed_mapping(
                     idx,
                     col.get("header_text"),
                 )
+            # OCR truncations: ISSU→sales, CLOSIN→closing. Model must not
+            # remap them to purchase/opening_value (drops printed closing).
+            header_compact = re.sub(r"\s+", "", header_norm)
+            header_group, _, _ = _pick_group(header_norm)
+            if header_group == "sales" or header_compact.startswith("iss"):
+                if model_canon in {
+                    "purchase_qty",
+                    "purchase_value",
+                    "opening_qty",
+                    "opening_value",
+                    "closing_qty",
+                    "closing_value",
+                }:
+                    header_ok = False
+                    errors.append(f"ISSUE_NOT_PURCHASE_MODEL_BLOCK col={idx}")
+            if header_group == "closing" or header_compact.startswith("clos"):
+                if model_canon in {
+                    "opening_qty",
+                    "opening_value",
+                    "purchase_qty",
+                    "purchase_value",
+                    "sales_qty",
+                    "sales_value",
+                }:
+                    header_ok = False
+                    errors.append(f"CLOSING_NOT_OPENING_MODEL_BLOCK col={idx}")
             if (
                 resolver_canon == "ignore"
                 and resolver_conf < 0.5
@@ -2309,8 +2339,71 @@ def _merge_proposed_mapping(
                 and model_canon != resolver_canon
             ):
                 errors.append(f"MAPPING_DISAGREE col={idx}")
+            elif (
+                resolver_canon != "ignore"
+                and resolver_conf >= 0.5
+                and model_canon in CANONICAL_FIELDS
+                and model_canon != "ignore"
+                and model_canon != resolver_canon
+            ):
+                # Keep resolver when it already matched a movement header
+                # (e.g. CLOSIN→closing_qty at 0.75); do not let model win.
+                errors.append(f"MAPPING_DISAGREE col={idx}")
         out.append(item)
+    # After model fills an ignore qty, re-attach orphan VALUE to its left qty.
+    _reinherit_orphan_value_columns(out)
     return out
+
+
+def _reinherit_orphan_value_columns(columns: List[Dict[str, Any]]) -> None:
+    """Bare VALUE right of a newly mapped qty → that group's value field.
+
+    Only touches VALUE-marker orphans — never unknown headers like ZZZ.
+    """
+    from services.stock_header_resolver import (
+        _GROUP_TO_VALUE,
+        normalize_header,
+    )
+
+    _QTY_TO_GROUP = {
+        "opening_qty": "opening",
+        "purchase_qty": "purchase",
+        "sales_qty": "sales",
+        "closing_qty": "closing",
+    }
+    for i, col in enumerate(columns):
+        if not isinstance(col, dict):
+            continue
+        if str(col.get("canonical") or "") != "ignore":
+            continue
+        hdr = normalize_header(col.get("header_text"))
+        is_value_header = bool(col.get("is_value")) or hdr in {
+            "value",
+            "val",
+            "amt",
+            "amount",
+            "rs",
+        }
+        if str(col.get("reason") or "") != "orphan_value" and not is_value_header:
+            continue
+        if i == 0:
+            continue
+        left = columns[i - 1]
+        left_canon = str(left.get("canonical") or "")
+        group = _QTY_TO_GROUP.get(left_canon)
+        if not group or group not in _GROUP_TO_VALUE:
+            continue
+        col["canonical"] = _GROUP_TO_VALUE[group]
+        col["is_value"] = True
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.8)
+        col["reason"] = "inherit_left_qty_after_merge"
+        col["source"] = col.get("source") or "resolver"
+        logger.info(
+            "STOCK_VISION_VALUE_REINHERIT col=%s -> %s left=%s",
+            col.get("col_index"),
+            col["canonical"],
+            left_canon,
+        )
 
 
 _GARBAGE_QTY_TOKEN = re.compile(r"^[pP]\d{1,4}$")
