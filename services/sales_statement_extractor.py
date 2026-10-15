@@ -11777,6 +11777,42 @@ def _xls_expand_xlrd_merged(sh: Any, rows: List[List[Any]]) -> None:
                     rows[r][c] = value
 
 
+def _xls_delimited_text_rows(file_bytes: bytes) -> Optional[List[List[Any]]]:
+    """Rows from a comma/tab/semicolon text export saved with a .xls name.
+
+    Returns None for anything that is not plain delimited text (so real BIFF
+    handling and its errors are unchanged). Cells stay as printed strings.
+    """
+    if not file_bytes or b"\x00" in file_bytes[:4096]:
+        return None
+    try:
+        text = file_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            text = file_bytes.decode("latin-1")
+        except Exception:
+            return None
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    if len(lines) < 2:
+        return None
+    sample = lines[: min(len(lines), 50)]
+    delim = None
+    for cand in (",", "\t", ";"):
+        if sum(1 for ln in sample if ln.count(cand) >= 2) >= max(2, len(sample) // 2):
+            delim = cand
+            break
+    if delim is None:
+        return None
+    import csv
+
+    rows: List[List[Any]] = []
+    for rec in csv.reader(text.splitlines(), delimiter=delim):
+        if not any(str(c).strip() for c in rec):
+            continue
+        rows.append([c.strip() for c in rec])
+    return rows or None
+
+
 def _xls_iter_sheets(
     file_bytes: bytes, ext: str
 ) -> List[Tuple[str, List[List[Any]], List[List[Optional[str]]], bool]]:
@@ -11785,6 +11821,17 @@ def _xls_iter_sheets(
     # Real BIFF .xls files stay on xlrd.
     ooxml = bool(file_bytes) and file_bytes[:2] == b"PK"
     ole = bool(file_bytes) and file_bytes[:8].startswith(b"\xd0\xcf\x11\xe0")
+    if ext == ".xls" and not ooxml and not ole:
+        delimited = _xls_delimited_text_rows(file_bytes)
+        if delimited is not None:
+            logger.info(
+                "XLS_DELIMITED_TEXT_FALLBACK rows=%s (non-BIFF .xls content)",
+                len(delimited),
+            )
+            sheets.append(
+                ("Sheet1", delimited, [[None] * len(r) for r in delimited], False)
+            )
+            return sheets
     if not ooxml and (
         ext == ".xls" or (ole and ext not in {".xlsx", ".xlsm"})
     ):
@@ -14923,12 +14970,22 @@ def _xls_fill_from_rows(
                         result["totals"]["sales_value"] = _to_float(texts[i + 1][1])
                         break
             continue
-        if re.search(
-            r"Manufacturer|Item\b|Pack\b|Item Name|Op\.?\s*Stock|Cl\s*Stock|"
-            r"Mat Name|Mat Code|Product Name|Secondary Qty",
-            joined,
-            re.I,
-        ) and header_idx is not None:
+        _hdr_hits = {
+            m_.group(0).lower()
+            for m_ in re.finditer(
+                r"Manufacturer|Item\b|Pack\b|Item Name|Op\.?\s*Stock|Cl\s*Stock|"
+                r"Mat Name|Mat Code|Product Name|Secondary Qty",
+                joined,
+                re.I,
+            )
+        }
+        # "Pack" alone inside a product name (e.g. "KIT (COMBI PACK )") on a
+        # row with many printed numbers is a data row, not a repeated header.
+        if _hdr_hits == {"pack"} and sum(
+            1 for _, c in texts if _xls_cell_has_qty(c)
+        ) >= 5:
+            _hdr_hits = set()
+        if _hdr_hits and header_idx is not None:
             continue
         if re.search(
             r"^(VALUE OF|Company\s*:|Desc\s*:|From\s*:|To\s*:|Report Generated|Prepared By|Page\s+\d)",
@@ -14982,10 +15039,15 @@ def _xls_fill_from_rows(
         if re.search(
             r"^(Total Of|TOTAL\b|Grand Total|Sub\s*Total|Net\s*Total|SUMMARY\b|"
             r"Opening Stock|Closing Stock|Report Generated|Prepared By)\b",
-            product_name,
+            # Decorated footer such as "----Total----->>" is a total row.
+            re.sub(r"^[-=*_]{2,}\s*", "", product_name),
             re.I,
         ):
-            if re.match(r"^(?:grand\s+|net\s+)?total\b", product_name.strip(), re.I):
+            if re.match(
+                r"^(?:grand\s+|net\s+)?total\b",
+                re.sub(r"^[-=*_]{2,}\s*", "", product_name).strip(),
+                re.I,
+            ):
                 sv = _col("sval", "secondary value")
                 bv = _col("bval")
                 if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
@@ -28133,8 +28195,31 @@ def _medica_opstk_items_from_words(words: List[Any]) -> List[Dict[str, Any]]:
         item["sales_value"] = _cell("sales_value")
         item["closing_qty"] = _cell("closing_qty")
         item["closing_value"] = _cell("closing_value")
+        if _medica_in_ot_as_free_in_enabled():
+            # Printed IN/OT (signed) joins the identity as free_in; never receipts_qty.
+            in_ot = _cell("in_ot")
+            extra = item.setdefault("extra", {})
+            extra["free_in_qty"] = in_ot
+            fs = extra.setdefault("field_source", {})
+            fs["free_in_qty"] = "printed"
+            logger.debug(
+                "MEDICA_IN_OT_FREE_IN row product=%r free_in_qty=%s printed_cell=%s",
+                name,
+                in_ot,
+                bool(cells.get("in_ot")),
+            )
         items.append(item)
     return items
+
+
+def _medica_in_ot_as_free_in_enabled() -> bool:
+    """STOCK_MEDICA_IN_OT_AS_FREE_IN — default OFF."""
+    return os.getenv("STOCK_MEDICA_IN_OT_AS_FREE_IN", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _parse_medica_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
@@ -28152,6 +28237,19 @@ def _parse_medica_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]
         items.extend(_medica_opstk_items_from_words(page.get_text("words") or []))
     if not items:
         return None
+    if _medica_in_ot_as_free_in_enabled():
+        n_free = sum(
+            1
+            for it in items
+            if (it.get("extra") or {}).get("field_source", {}).get("free_in_qty")
+            == "printed"
+        )
+        logger.info(
+            "MEDICA_IN_OT_FREE_IN applied free_in_qty to %s/%s product rows file=%r",
+            n_free,
+            len(items),
+            filename,
+        )
     result = empty_result(filename, "pdf")
     blob = "\n".join(page_texts)
     result["report_title"] = "STOCK STATEMENT"
