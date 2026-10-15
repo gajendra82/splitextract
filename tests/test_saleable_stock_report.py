@@ -7,6 +7,7 @@ from pathlib import Path
 
 from services.sales_statement_extractor import (
     _is_saleable_stock_report_text,
+    _parse_saleable_stock_report,
     extract_sales_statement,
 )
 
@@ -36,6 +37,31 @@ class TestSaleableStockReportDetection(unittest.TestCase):
         self.assertFalse(_is_saleable_stock_report_text(OTHER))
         self.assertFalse(_is_saleable_stock_report_text("Product Stock Report"))
         self.assertFalse(_is_saleable_stock_report_text(""))
+
+    def test_grand_total_is_not_a_product_line(self):
+        """Printed Grand Total qty/value rows stay in totals, never line_items."""
+        text = (
+            HEADER
+            + "AACTARIL SOAP             |75 GM  | |      21.00|         —|       5.00|      16.00\n"
+            + "Grand Total               |       | |    7092.00|     591.00|    2665.00|    5018.00\n"
+            + "                          |       |A|  176496.51|    7435.70|   39498.46|  663700.61\n"
+        )
+        result = _parse_saleable_stock_report(text, "rad3DF82.pdf", "pdf")
+        self.assertIsNotNone(result)
+        names = [str(i.get("product_name") or "").upper() for i in result["line_items"]]
+        self.assertEqual(names, ["AACTARIL SOAP"])
+        self.assertFalse(any("TOTAL" in n for n in names))
+        extra = (result.get("totals") or {}).get("extra") or {}
+        self.assertEqual(extra.get("extraction_method"), "saleable_stock_report")
+        self.assertEqual(extra.get("total_row_source"), "saleable_grand_total")
+        self.assertEqual(extra.get("opening_qty"), 7092.0)
+        self.assertEqual(extra.get("receipts_qty"), 591.0)
+        self.assertEqual(extra.get("sales_qty"), 2665.0)
+        self.assertEqual(extra.get("closing_qty"), 5018.0)
+        self.assertEqual(extra.get("opening_value"), 176496.51)
+        self.assertEqual(extra.get("receipts_value"), 7435.70)
+        self.assertEqual(extra.get("printed_sales_value"), 39498.46)
+        self.assertEqual(extra.get("printed_closing_value"), 663700.61)
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Paras Medicos fixture")
@@ -68,6 +94,7 @@ class TestSaleableStockReportFixture(unittest.TestCase):
         self.assertNotIn("PARTICULAR", joined)
         self.assertNotIn("COMPANY TOTAL", joined)
         self.assertNotIn("FIRM TOTAL", joined)
+        self.assertNotIn("GRAND TOTAL", joined)
         self.assertFalse(any(name.strip().startswith("(") for name in self.names))
 
     def test_sample_rows_qty_not_shifted(self):

@@ -23665,7 +23665,7 @@ _SALEABLE_PACK_RE = re.compile(
     re.I,
 )
 _SALEABLE_SKIP_NAME_RE = re.compile(
-    r"^(?:Particular|COMPANY(?:\s+Total)?|Firm\s+Total|Saleable|"
+    r"^(?:Particular|COMPANY(?:\s+Total)?|Firm\s+Total|Grand\s+Total|Saleable|"
     r"Page\s+No|\(From|\(Q\+F\)|Tel\.|EMail|A\b)",
     re.I,
 )
@@ -23875,7 +23875,7 @@ def _parse_saleable_stock_report(
             result["company_name"] = _clean_name(company)
             continue
 
-        if re.search(r"^(?:COMPANY|Firm)\s+Total\b", raw, re.I):
+        if re.search(r"^(?:COMPANY|Firm|Grand)\s+Total\b", raw, re.I):
             nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
             moved = _saleable_movement_from_nums(nums)
             if moved:
@@ -23884,7 +23884,10 @@ def _parse_saleable_stock_report(
                 extra["receipts_qty"] = moved["receipts"]
                 extra["sales_qty"] = moved["sales"]
                 extra["closing_qty"] = moved["closing"]
-                extra["total_row_source"] = "saleable_company_total"
+                if re.search(r"^Grand\s+Total\b", raw, re.I):
+                    extra["total_row_source"] = "saleable_grand_total"
+                else:
+                    extra["total_row_source"] = "saleable_company_total"
             continue
         if re.search(r"(?:\|A\||^\s*A\b)", raw) and re.search(
             r"\d+\.\d{2}", raw
