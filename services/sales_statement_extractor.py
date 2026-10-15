@@ -43261,19 +43261,20 @@ Critical:
 - Do not put STK VAL into closing_value when it belongs in JUL, and do not put STOCK into closing_value.
 - Do not put IN/OT into closing_qty.
 
-Skip the division banner (HIMALAYA-ZEAL) and the Division Total row.
+Skip the division banner (HIMALAYA-ZEAL / HIMALAYA WELLNESS ZEAL DIV) and the
+Division Total / Total rows.
 Ignore the phone status bar and the PDF viewer toolbar.
-stockist_name is the left-side distributor (example: SHREE DISTRIBUTORS), not the
-software footer "Medica Ultimate", and not the TO: customer line.
-company_name is the TO: party (example: HIMALAYA-ZEAL).
+stockist_name is the left-side distributor, not the software footer
+"Medica Ultimate", and not the TO: customer line.
+company_name is the TO: party.
 
-Examples on one row each:
-- AACTARIL SOAP, packing 75 GM, opening_qty 2, receipts_qty 0, sales_qty 2, sales_value 176, in_ot_qty 0, closing_qty 0, closing_value 0
-- ABANA TAB, packing 60 TAB, opening_qty 0, receipts_qty 3, sales_qty 0, sales_value 0, in_ot_qty 0, closing_qty 3, closing_value 455, jul_qty 3, jun_qty 6
-- CONFIDO TAB, packing 60 TAB, opening_qty 37, receipts_qty 0, sales_qty 28, sales_value 5184, in_ot_qty 2, closing_qty 11, closing_value 1805, jul_qty 10, jun_qty 10
-- LIV 52 SYRUP BIG, packing 200 ML, opening_qty 187, receipts_qty 0, sales_qty 137, sales_value 24424, in_ot_qty 0, closing_qty 50, closing_value 7903, jul_qty 96, jun_qty 70
+Include EVERY product row printed in this crop. Copy printed cells only —
+do not invent products from memory or other statements.
+Blank SALE/PURCH/IN/OT cells are 0. Never borrow numbers from the next row.
 
-Return ONLY JSON with stockist_name, company_name, period_from, period_to, report_title "STOCK STATEMENT", and line_items using the fields above (put in_ot_qty / jul_qty / jun_qty under each item's extra object when present).
+Return ONLY JSON with stockist_name, company_name, period_from, period_to,
+report_title "STOCK STATEMENT", and line_items using the fields above
+(put in_ot_qty / jul_qty / jun_qty under each item's extra object when present).
 """.strip()
 
 
@@ -43457,41 +43458,165 @@ def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
     extra["medica_column_shift_repaired"] = True
 
 
+def _medica_brighten_rgb(image: Any) -> Any:
+    """Lift dark phone-screen STOCK STATEMENT photos for Vision."""
+    try:
+        from PIL import ImageEnhance, ImageOps
+    except ImportError:
+        return image
+    try:
+        image = ImageOps.exif_transpose(image)
+    except Exception:
+        pass
+    image = ImageEnhance.Brightness(image).enhance(1.35)
+    image = ImageEnhance.Contrast(image).enhance(1.45)
+    return image
+
+
+def _medica_red_header_plausible(file_bytes: bytes) -> bool:
+    """True when a brightened frame still shows Medica-style red/maroon rule lines."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    try:
+        image = _medica_brighten_rgb(Image.open(io.BytesIO(file_bytes)).convert("RGB"))
+    except Exception:
+        return False
+    width, height = image.size
+    pixels = image.load()
+    red_rows = 0
+    for y in range(0, height, 2):
+        reds = 0
+        for x in range(0, width, 6):
+            red, green, blue = pixels[x, y]
+            # Pure red rules OR maroon/burgundy table chrome after brighten.
+            if (red > 110 and green < 110 and blue < 110 and red > green + 15) or (
+                red > 90 and green < 70 and blue < 80 and red >= green
+            ):
+                reds += 1
+        if reds > 12:
+            red_rows += 1
+            if red_rows >= 2:
+                return True
+    return False
+
+
+def _medica_result_looks_usable(result: Optional[Dict[str, Any]]) -> bool:
+    """Gate hollow Medica shells so Vision-table can still run.
+
+    Opening-only shells (STOCK/STK VAL left at 0) must not lock the path —
+    that is the IN/OT-vs-STOCK collapse failure mode.
+    """
+    if not isinstance(result, dict):
+        return False
+    rows = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(rows) < 5:
+        return False
+    closing_hits = 0
+    opening_hits = 0
+    sales_hits = 0
+    for item in rows:
+        try:
+            if abs(float(item.get("closing_qty") or 0)) > 0 or abs(
+                float(item.get("closing_value") or 0)
+            ) > 0:
+                closing_hits += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("opening_qty") or 0)) > 0:
+                opening_hits += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("sales_qty") or 0)) > 0 or abs(
+                float(item.get("sales_value") or 0)
+            ) > 0:
+                sales_hits += 1
+        except (TypeError, ValueError):
+            pass
+    # OPSTK read but STOCK/STK VAL all zero → reject (not a usable Medica read).
+    if opening_hits >= 3 and closing_hits == 0:
+        return False
+    return closing_hits >= 3 or (sales_hits >= 3 and closing_hits >= 2)
+
+
 def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
-    """Header plus short table bands so one product's STK VAL cannot slide onto the next."""
+    """Header plus short table bands so one product's STK VAL cannot slide onto the next.
+
+    Caps at 2 Gemini-budget strips. Dark phone screenshots without red rule
+    lines fall back to overlapping top/bottom bands (still 2 calls max).
+    """
     try:
         from PIL import Image
     except ImportError:
         return [file_bytes]
-    image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    image = _medica_brighten_rgb(Image.open(io.BytesIO(file_bytes)).convert("RGB"))
     width, height = image.size
     pixels = image.load()
     red_rows = []
     for y in range(height):
-        reds = 0
+        red_xs: List[int] = []
         for x in range(0, width, 4):
             red, green, blue = pixels[x, y]
-            if red > 140 and green < 80 and blue < 80:
-                reds += 1
-        if reds > 40:
+            if (red > 110 and green < 110 and blue < 110 and red > green + 15) or (
+                red > 90 and green < 70 and blue < 80 and red >= green
+            ):
+                red_xs.append(x)
+        # Horizontal table rules span the page; pink letterhead / vertical
+        # chrome is clustered and must not define the crop window.
+        if len(red_xs) <= 18:
+            continue
+        span = (red_xs[-1] - red_xs[0]) / float(max(width, 1))
+        if span >= 0.45:
             red_rows.append(y)
-    if len(red_rows) < 2:
-        return [file_bytes]
-    gap_at = max(range(len(red_rows) - 1), key=lambda i: red_rows[i + 1] - red_rows[i])
-    header_y, footer_y = red_rows[gap_at], red_rows[gap_at + 1]
-    header = image.crop((0, max(0, header_y - 6), width, header_y + 36))
     strips: List[bytes] = []
-    top = header_y + 36
-    while top < footer_y - 8:
-        band = image.crop((0, top, width, min(footer_y, top + 150)))
-        canvas = Image.new("RGB", (width, header.height + band.height), "white")
-        canvas.paste(header, (0, 0))
-        canvas.paste(band, (0, header.height))
+
+    def _jpeg(img: Any) -> bytes:
         buf = io.BytesIO()
-        canvas.save(buf, format="JPEG", quality=90)
-        strips.append(buf.getvalue())
-        top += 120
-    return strips or [file_bytes]
+        img.save(buf, format="JPEG", quality=92)
+        return buf.getvalue()
+
+    if len(red_rows) >= 2:
+        gap_at = max(
+            range(len(red_rows) - 1), key=lambda i: red_rows[i + 1] - red_rows[i]
+        )
+        header_y, footer_y = red_rows[gap_at], red_rows[gap_at + 1]
+        body_h = max(1, footer_y - (header_y + 36))
+        # Pink watermark / letterhead chrome can yield a tiny "body" between
+        # two nearby red lines — reject and use half-page bands instead.
+        if body_h >= int(height * 0.28):
+            header = image.crop((0, max(0, header_y - 6), width, header_y + 36))
+            mid = header_y + 36 + body_h // 2
+            overlap = max(40, int(body_h * 0.12))
+            bands = (
+                (header_y + 36, min(footer_y, mid + overlap)),
+                (max(header_y + 36, mid - overlap), footer_y),
+            )
+            for y0, y1 in bands:
+                if y1 - y0 < 40:
+                    continue
+                band = image.crop((0, y0, width, y1))
+                canvas = Image.new(
+                    "RGB", (width, header.height + band.height), "white"
+                )
+                canvas.paste(header, (0, 0))
+                canvas.paste(band, (0, header.height))
+                strips.append(_jpeg(canvas))
+                if len(strips) >= 2:
+                    break
+    if strips:
+        return strips
+    # No usable red table rules (common on dark / pink-chrome phone photos):
+    # overlapping half-page bands so product STOCK/STK VAL stay in view.
+    overlap = int(height * 0.18)
+    mid = height // 2
+    for y0, y1 in ((0, mid + overlap), (max(0, mid - overlap), height)):
+        strips.append(_jpeg(image.crop((0, y0, width, y1))))
+        if len(strips) >= 2:
+            break
+    return strips or [_jpeg(image)]
 
 
 def _medica_clean_stockist_name(value: Any) -> Optional[str]:
@@ -43692,7 +43817,7 @@ def _extract_medica_stock_statement_vision(
                     ],
                 }
             ],
-            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
         }
         parsed = None
         for attempt in range(2):
@@ -43719,10 +43844,20 @@ def _extract_medica_stock_statement_vision(
                 r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b", name, re.I
             ):
                 continue
-            key = name.upper()
-            if key in seen:
+            # Crop overlap often re-reads the same row with OCR name noise
+            # (DIABECON/DEARECON). Collapse on qty fingerprint + name prefix.
+            name_key = re.sub(r"[^A-Z0-9]+", "", name.upper())[:18]
+            try:
+                op_k = round(float(raw.get("opening_qty") or 0), 1)
+                cl_k = round(float(raw.get("closing_qty") or 0), 1)
+                sale_k = round(float(raw.get("sales_qty") or 0), 1)
+            except (TypeError, ValueError):
+                op_k = cl_k = sale_k = 0.0
+            key = (name_key, op_k, cl_k, sale_k)
+            if key in seen or name.upper() in seen:
                 continue
             seen.add(key)
+            seen.add(name.upper())
             raw["product_name"] = name
             merged.append(raw)
     if not merged:
@@ -51393,9 +51528,33 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # Op_Stk|Rcpts|Cl_Stk STOCK & SALES photos: vision_table burns the Gemini
         # budget then falls back with shifted columns. Prefer the dedicated
         # Op_Stk reader (early vision) which keeps opening/closing on the row.
+        # Medica OPSTK|PURCH|SALE|SALE VAL|IN/OT|STOCK|STK VAL: vision_table often
+        # drops SALE/STOCK, maps SALE VAL→sales_qty, and derives closing — prefer
+        # the dedicated Medica strip reader (early vision / stock_direct_vision).
         _op_stk_peek = ""
         try:
-            _op_stk_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+            # Dark phone screenshots OCR as noise unless brightened first.
+            _peek_src = file_bytes
+            try:
+                from PIL import Image as _PilPeek
+
+                _peek_img = _medica_brighten_rgb(
+                    _PilPeek.open(io.BytesIO(file_bytes)).convert("RGB")
+                )
+                _peek_buf = io.BytesIO()
+                _peek_img.save(_peek_buf, format="JPEG", quality=90)
+                _peek_src = _peek_buf.getvalue()
+            except Exception:
+                _peek_src = file_bytes
+            _op_stk_peek = (
+                _ocr_image_to_text(_peek_src, psm=6, enhance=True) or ""
+            )
+            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I):
+                _op_stk_peek = (
+                    (_op_stk_peek or "")
+                    + "\n"
+                    + (_ocr_image_to_text(file_bytes, psm=6, enhance=False) or "")
+                )
         except Exception:
             _op_stk_peek = ""
         _skip_vt_for_op_stk = (
@@ -51413,13 +51572,74 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
             )
         )
+        _skip_vt_for_medica = bool(
+            _is_medica_opstk_statement(_op_stk_peek)
+            or (
+                re.search(r"\bOPSTK\b", _op_stk_peek, re.I)
+                and re.search(r"\bPURCH\b", _op_stk_peek, re.I)
+                and (
+                    re.search(r"\bIN/OT\b", _op_stk_peek, re.I)
+                    or re.search(r"\bSTK\s*VAL\b", _op_stk_peek, re.I)
+                    or re.search(r"STOCK\s+STATEMENT", _op_stk_peek, re.I)
+                )
+            )
+        )
         if _skip_vt_for_op_stk:
             logger.info(
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=op_stk_rcpts_grid",
                 filename,
             )
+        _peek_unreadable = len(re.findall(r"[A-Za-z]{3,}", _op_stk_peek or "")) < 12
+        _try_medica_before_vt = _skip_vt_for_medica or (
+            not _skip_vt_for_op_stk
+            and vision_table_active_for("image")
+            and (
+                _medica_red_header_plausible(file_bytes)
+                # Dark phone shots: OCR is noise and VT burns both Gemini calls
+                # before Medica can run — probe Medica first when peek is unreadable.
+                or _peek_unreadable
+            )
+        )
+        if _skip_vt_for_medica:
+            logger.info(
+                "[SalesStatement] file=%s VISION_TABLE skipped reason=medica_opstk",
+                filename,
+            )
+        if _try_medica_before_vt:
+            logger.info(
+                "[SalesStatement] file=%s medica probe before VT "
+                "skip_medica=%s peek_unreadable=%s",
+                filename,
+                _skip_vt_for_medica,
+                _peek_unreadable,
+            )
+            try:
+                medica_first = _extract_medica_stock_statement_vision(
+                    file_bytes, filename, ext
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s medica-before-VT failed: %s",
+                    filename,
+                    exc,
+                )
+                medica_first = None
+            if _medica_result_looks_usable(medica_first):
+                extra_m = medica_first.setdefault("totals", {}).setdefault("extra", {})
+                extra_m["early_vision_reason"] = (
+                    "medica_before_vision_table"
+                    if _skip_vt_for_medica
+                    else "medica_before_vt_dark_phone"
+                )
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=medica_before_vt "
+                    "file=%s line_items=%s",
+                    filename,
+                    len(medica_first.get("line_items") or []),
+                )
+                return medica_first
 
-        if vision_table_active_for("image") and not _skip_vt_for_op_stk:
+        if vision_table_active_for("image") and not _skip_vt_for_op_stk and not _skip_vt_for_medica:
             request_id = "-"
             try:
                 from services.sales_extraction_runtime import resolve_request_id
@@ -51435,61 +51655,111 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
             if outcome.get("status") == "ok" and isinstance(outcome.get("result"), dict):
                 result = outcome["result"]
-                _diag["selected_path"] = "VISION_TABLE"
-                extra = result.setdefault("totals", {}).setdefault("extra", {})
-                if isinstance(extra, dict):
-                    # Diagnostic markers only — not shown in customer UI.
-                    extra.setdefault("extraction_method", "vision_table")
-                    extra["extraction_engine"] = "vision_table"
-                    extra["geometry_version"] = None
-                    extra["geometry_called"] = bool(_diag.get("geometry_called"))
-                    extra["vision_called"] = True
-                    extra["geometry_result_returned"] = bool(
-                        _diag.get("geometry_result_returned")
-                    )
-                    if _diag.get("vision_fallback_reason"):
-                        extra["geometry_fallback_reason"] = _diag[
-                            "vision_fallback_reason"
-                        ]
-                # Vision often omits company_name or confuses Company: with stockist.
-                _hdr_ocr = ""
+                # VT often collapses Medica SALE/STOCK on dark phone shots even
+                # when OCR peek failed — rescue with the dedicated strip reader.
                 try:
-                    _hdr_ocr = _op_stk_peek or _ocr_image_to_text(
-                        file_bytes, psm=6, enhance=False
-                    ) or ""
-                    _enrich_stock_statement_header_from_ocr(result, _hdr_ocr)
-                except Exception:
-                    pass
-                try:
-                    _repair_ssa_analysis_result_from_physical_cells(
-                        result, ocr_text=_hdr_ocr or ""
+                    from services.stock_vision_table import (
+                        _vision_result_medica_columns_collapsed,
                     )
-                except Exception:
-                    logger.exception(
-                        "SSA_PHYSICAL_REMAP failed after vision file=%s", filename
-                    )
-                try:
-                    from services.stock_reconciliation import apply_stock_reconciliation
 
-                    result = apply_stock_reconciliation(
-                        result, request_id=request_id, page=1
-                    )
+                    _medica_collapsed = _vision_result_medica_columns_collapsed(result)
                 except Exception:
-                    pass
-                logger.info(
-                    "[STOCK_EXTRACTION_PATH] stage=vision_ok "
-                    "geometry_called=%s vision_called=true "
-                    "geometry_result_returned=%s geometry_flag=%s "
-                    "request_id=%s line_items=%s stockist=%r company=%r",
-                    _diag.get("geometry_called"),
-                    _diag.get("geometry_result_returned"),
-                    _diag.get("geometry_flag_effective"),
-                    request_id,
-                    len(result.get("line_items") or []),
-                    result.get("stockist_name"),
-                    result.get("company_name"),
-                )
-                return result
+                    _medica_collapsed = False
+                if _medica_collapsed:
+                    logger.info(
+                        "[SalesStatement] file=%s VISION_TABLE medica_columns_collapsed "
+                        "rescue=medica_strip",
+                        filename,
+                    )
+                    try:
+                        medica_rescue = _extract_medica_stock_statement_vision(
+                            file_bytes, filename, ext
+                        )
+                    except Exception as exc:
+                        logger.info(
+                            "[SalesStatement] file=%s medica rescue failed: %s",
+                            filename,
+                            exc,
+                        )
+                        medica_rescue = None
+                    if _medica_result_looks_usable(medica_rescue):
+                        extra_r = medica_rescue.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        extra_r["early_vision_reason"] = "medica_after_vt_collapse"
+                        extra_r["vision_table_medica_rescue"] = True
+                        return medica_rescue
+                    # Hollow VT with glued IN/OT STOCK must not lock zero closing.
+                    logger.info(
+                        "[SalesStatement] file=%s VISION_TABLE discarded "
+                        "reason=medica_columns_collapsed continuing",
+                        filename,
+                    )
+                    outcome = {
+                        "status": "fallback",
+                        "reason": "medica_columns_collapsed",
+                        "result": result,
+                        "gemini_calls": outcome.get("gemini_calls") or 0,
+                        "gemini_budget": outcome.get("gemini_budget") or 2,
+                    }
+                else:
+                    _diag["selected_path"] = "VISION_TABLE"
+                    extra = result.setdefault("totals", {}).setdefault("extra", {})
+                    if isinstance(extra, dict):
+                        # Diagnostic markers only — not shown in customer UI.
+                        extra.setdefault("extraction_method", "vision_table")
+                        extra["extraction_engine"] = "vision_table"
+                        extra["geometry_version"] = None
+                        extra["geometry_called"] = bool(_diag.get("geometry_called"))
+                        extra["vision_called"] = True
+                        extra["geometry_result_returned"] = bool(
+                            _diag.get("geometry_result_returned")
+                        )
+                        if _diag.get("vision_fallback_reason"):
+                            extra["geometry_fallback_reason"] = _diag[
+                                "vision_fallback_reason"
+                            ]
+                    # Vision often omits company_name or confuses Company: with stockist.
+                    _hdr_ocr = ""
+                    try:
+                        _hdr_ocr = _op_stk_peek or _ocr_image_to_text(
+                            file_bytes, psm=6, enhance=False
+                        ) or ""
+                        _enrich_stock_statement_header_from_ocr(result, _hdr_ocr)
+                    except Exception:
+                        pass
+                    try:
+                        _repair_ssa_analysis_result_from_physical_cells(
+                            result, ocr_text=_hdr_ocr or ""
+                        )
+                    except Exception:
+                        logger.exception(
+                            "SSA_PHYSICAL_REMAP failed after vision file=%s", filename
+                        )
+                    try:
+                        from services.stock_reconciliation import (
+                            apply_stock_reconciliation,
+                        )
+
+                        result = apply_stock_reconciliation(
+                            result, request_id=request_id, page=1
+                        )
+                    except Exception:
+                        pass
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=vision_ok "
+                        "geometry_called=%s vision_called=true "
+                        "geometry_result_returned=%s geometry_flag=%s "
+                        "request_id=%s line_items=%s stockist=%r company=%r",
+                        _diag.get("geometry_called"),
+                        _diag.get("geometry_result_returned"),
+                        _diag.get("geometry_flag_effective"),
+                        request_id,
+                        len(result.get("line_items") or []),
+                        result.get("stockist_name"),
+                        result.get("company_name"),
+                    )
+                    return result
             _vt_meta: Dict[str, Any] = {
                 "gemini_calls": int(outcome.get("gemini_calls") or 0),
                 "gemini_budget": int(outcome.get("gemini_budget") or 2),
@@ -51520,6 +51790,22 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 request_id,
                 outcome.get("reason"),
             )
+            if str(outcome.get("reason") or "") == "medica_columns_collapsed":
+                try:
+                    medica_fb = _extract_medica_stock_statement_vision(
+                        file_bytes, filename, ext
+                    )
+                except Exception as exc:
+                    logger.info(
+                        "[SalesStatement] file=%s medica after VT fallback failed: %s",
+                        filename,
+                        exc,
+                    )
+                    medica_fb = None
+                if _medica_result_looks_usable(medica_fb):
+                    extra_fb = medica_fb.setdefault("totals", {}).setdefault("extra", {})
+                    extra_fb["early_vision_reason"] = "medica_after_vt_fallback"
+                    return medica_fb
             # Sparse Vision (names + null qtys) → try Saleable OCR before legacy
             # Gemini, matching the server path that returns real Opn/Rec/Issue/Bal.
             try:

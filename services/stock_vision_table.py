@@ -5600,6 +5600,118 @@ def _pages_for_flagged(
     return [page_images[p] for p in sorted(pages_needed) if 0 <= p < len(page_images)]
 
 
+def _vision_result_medica_columns_collapsed(result: Dict[str, Any]) -> bool:
+    """True when Vision dropped Medica SALE/STOCK and misfiled SALE VAL / STK VAL.
+
+    Printed Medica order is OPSTK|PURCH|SALE|SALE VAL|IN/OT|STOCK|STK VAL.
+    Collapsed headers look like OPSTK|PURCH|SALE VAL|IN/OT|STK VAL with no
+    closing_qty column — sales/closing go missing and closing is derived.
+    """
+    extra = (result.get("totals") or {}).get("extra") or {}
+    cmap = extra.get("column_map") or []
+    headers: List[str] = []
+    canons: List[str] = []
+    for col in cmap:
+        if not isinstance(col, dict):
+            continue
+        headers.append(str(col.get("header_text") or ""))
+        canons.append(str(col.get("canonical") or ""))
+    if not headers:
+        items = result.get("line_items") or []
+        first = items[0] if items and isinstance(items[0], dict) else {}
+        headers = list(
+            ((first.get("extra") or {}).get("vision_column_headers") or [])
+            if isinstance(first, dict)
+            else []
+        )
+    blob = " ".join(headers).upper()
+    if "OPSTK" not in blob or "PURCH" not in blob:
+        return False
+    if "IN/OT" not in blob and "IN / OT" not in blob and "INOT" not in re.sub(
+        r"\s+", "", blob
+    ):
+        return False
+    # Vision often glues IN/OT + STOCK into one header and truncates STK VAL →
+    # "STK V". That looks like closing_qty is mapped, but cells are IN/OT zeros.
+    merged_in_ot_stock = any(
+        re.search(r"IN\s*/\s*OT\s+STOCK|INOT\s*STOCK", h, re.I) for h in headers
+    )
+    has_separate_stock = any(
+        re.fullmatch(r"\s*STOCK\s*", h or "", re.I) for h in headers
+    )
+    sale_val_as_qty = False
+    stk_val_ignored = False
+    for col in cmap:
+        if not isinstance(col, dict):
+            continue
+        ht = re.sub(r"\s+", " ", str(col.get("header_text") or "").strip().lower())
+        canon = str(col.get("canonical") or "")
+        if ht in {"sale val", "sale value", "sales value", "sval"} and canon == "sales_qty":
+            sale_val_as_qty = True
+        if ht in {
+            "stk val",
+            "stkval",
+            "stock value",
+            "stk value",
+            "stk v",
+            "stkv",
+        } and canon in {
+            "ignore",
+            "value_marker",
+        }:
+            stk_val_ignored = True
+    if sale_val_as_qty:
+        return True
+    if merged_in_ot_stock and not has_separate_stock:
+        return True
+    has_closing_qty = "closing_qty" in canons
+    if has_closing_qty and not stk_val_ignored:
+        return False
+    # OPSTK+PURCH+IN/OT without a closing_qty column = collapsed Medica grid.
+    if stk_val_ignored or re.search(r"\bSTK\s*VA?L?\b", blob, re.I):
+        if not has_closing_qty or stk_val_ignored:
+            return True
+    # Closing derived on most rows while sales money/qty were never printed-read.
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    derived = 0
+    sales_money = 0
+    opening_nonzero = 0
+    closing_nonzero = 0
+    for item in items:
+        fs = (item.get("extra") or {}).get("field_source") or {}
+        if str(fs.get("closing_qty") or "") == "derived":
+            derived += 1
+        try:
+            if abs(float(item.get("sales_value") or 0)) > 0:
+                sales_money += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("opening_qty") or 0)) > 0:
+                opening_nonzero += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("closing_qty") or 0)) > 0 or abs(
+                float(item.get("closing_value") or 0)
+            ) > 0:
+                closing_nonzero += 1
+        except (TypeError, ValueError):
+            pass
+    if derived >= max(3, int(len(items) * 0.5)) and sales_money == 0:
+        return True
+    # Opening printed but closing left all-zero on Medica OPSTK/PURCH grids.
+    if (
+        opening_nonzero >= max(3, int(len(items) * 0.2))
+        and closing_nonzero == 0
+        and sales_money == 0
+    ):
+        return True
+    return False
+
+
 def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[str]:
     """When Vision returns names but almost no printed qtys, hand back to OCR/Gemini.
 
@@ -5616,6 +5728,12 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
     items = result.get("line_items") or []
     if not items:
         return "empty_line_items"
+    if _vision_result_medica_columns_collapsed(result):
+        logger.info(
+            "VISION_TABLE quality_fallback reason=medica_columns_collapsed rows=%s",
+            len(items),
+        )
+        return "medica_columns_collapsed"
     extra = (result.get("totals") or {}).get("extra") or {}
     try:
         valid_ratio = float(extra.get("valid_ratio") or 0.0)
