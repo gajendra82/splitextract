@@ -1100,6 +1100,14 @@ def build_table_prompt() -> str:
         "invent SKUs); L.M.S is last-month sale — map to ignore / extra.lms, "
         "never opening_qty or sales_qty. Closing Stock QTY and VALUE are "
         "separate cells — never put the VALUE money into the QTY cell. "
+        "LstSL|Open|Recd.|Sales|Close|Order|Pend|LstMove|Stk.Value sheets: "
+        "Sales and Close are TWO separate columns — never merge them into one "
+        "'Sales Close' header or one cell. LstSL maps to ignore/lms, Open to "
+        "opening_qty, Recd to purchase_qty, Sales to sales_qty, Close to "
+        "closing_qty, Order/Pend/LstMove to ignore/order, Stk.Value to "
+        "closing_value (not opening_value). Footer lines labeled "
+        "'Last Month Sales', 'Open. Value', 'Receipt Value', 'Sales Value', "
+        "'Closing Value' are totals — set is_total_row=true, never product rows. "
         "Emit every printed product row top-to-bottom before TOTAL. "
         "Saleable Stock Report (Particular|Packing|Opn|Rec|Issue|Bal): put "
         "Opn/Rec/Issue/Bal (or Opening/Receipt/Issue/Balance) as the header "
@@ -2097,8 +2105,8 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
             header_norm = normalize_header(col.get("header_text"))
-            # LMS must never be remapped to opening/purchase by the model.
-            if header_norm == "lms" or resolver_canon == "lms":
+            # LMS / LstSL must never be remapped to opening/purchase by the model.
+            if header_norm in {"lms", "lstsl", "lst sl"} or resolver_canon == "lms":
                 if model_canon in {
                     "opening_qty",
                     "opening_value",
@@ -2107,6 +2115,22 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
                     errors.append(f"LMS_MODEL_BLOCK col={idx}")
+            # Stk. Value / stock value is closing stock money, never opening_value.
+            if header_norm in {
+                "stk value",
+                "stk val",
+                "stkval",
+                "stock value",
+                "stock-value",
+            } or resolver_canon == "closing_value":
+                if model_canon == "opening_value":
+                    header_ok = False
+                    errors.append(f"STK_VALUE_NOT_OPENING col={idx}")
+                    logger.info(
+                        "STOCK_VISION_STK_VALUE_NOT_OPENING col=%s text=%r",
+                        idx,
+                        col.get("header_text"),
+                    )
             # Rate / NRV / Age must never become opening (or other movement qty).
             # Check ALIASES directly so NRV is blocked even when
             # STOCK_HEADER_IGNORE_NON_QTY is off (resolver skips that group).
@@ -2517,6 +2541,106 @@ def _pack_qty_realign_enabled() -> bool:
     }
 
 
+def _lstsl_close_in_order_enabled() -> bool:
+    """STOCK_VISION_LSTSL_CLOSE_IN_ORDER — recover Close when Sales+Close merged."""
+    return os.getenv(
+        "STOCK_VISION_LSTSL_CLOSE_IN_ORDER", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _vision_headers_look_like_lstsl_open_recd(item: Dict[str, Any]) -> bool:
+    """True for Product|Pack|LstSL|Open|Recd|Sales|Close|Order sheets."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)) or not headers:
+        return False
+    blob = " ".join(str(h or "") for h in headers)
+    if not re.search(r"(?i)\bLstSL\b|\bLMS\b", blob):
+        return False
+    if not re.search(r"(?i)\bOpen(?:ing)?\b", blob):
+        return False
+    if not re.search(r"(?i)\bRecd\.?\b|\bRec(?:eipt)?s?\b", blob):
+        return False
+    return bool(re.search(r"(?i)\bSales?\b", blob))
+
+
+def _repair_lstsl_close_parked_in_order(item: Dict[str, Any]) -> bool:
+    """When Vision merges Sales+Close, printed Close often sits in order_qty.
+
+    Re-slot only when opening+receipts-sales equals the printed order cell
+    (positive). Blank-Recd rows that PACK_QTY_REALIGN already fixed are skipped
+    because closing_qty is already printed.
+    """
+    if not _lstsl_close_in_order_enabled():
+        return False
+    if not _vision_headers_look_like_lstsl_open_recd(item):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if fs.get("closing_qty") == "printed" and item.get("closing_qty") not in (
+        None,
+        "",
+    ):
+        try:
+            if abs(float(item.get("closing_qty"))) > 0.001:
+                return False
+        except (TypeError, ValueError):
+            return False
+    order_raw = extra.get("order_qty")
+    if order_raw in (None, ""):
+        return False
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        receipts = float(item.get("receipts_qty") or 0)
+        sales = float(item.get("sales_qty") or 0)
+        order = float(order_raw)
+    except (TypeError, ValueError):
+        return False
+    if order < -0.001:
+        return False
+    if abs((opening + receipts - sales) - order) > 0.51:
+        return False
+    # Pend often holds the real Order qty after the Close→Order shift.
+    pend = None
+    headers = list(extra.get("vision_column_headers") or [])
+    physical = extra.get("physical_cells") if isinstance(extra.get("physical_cells"), dict) else {}
+    for idx, ht in enumerate(headers):
+        if re.search(r"(?i)^\s*Pend", str(ht or "")):
+            pend = physical.get(str(idx))
+            break
+    pend_val = parse_number(pend, allow_internal_spaces=True) if pend not in (None, "") else None
+    logger.info(
+        "VISION_TABLE LSTSL_CLOSE_IN_ORDER product=%s open=%s rec=%s sale=%s "
+        "order_as_close=%s pend_as_order=%s",
+        str(item.get("product_name") or "")[:60],
+        opening,
+        receipts,
+        sales,
+        order,
+        pend_val,
+    )
+    item["closing_qty"] = order
+    fs["closing_qty"] = "printed"
+    if pend_val is not None:
+        extra["order_qty"] = float(pend_val)
+        fs["order_qty"] = "printed"
+    else:
+        extra["order_qty"] = None
+        fs["order_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "LSTSL_CLOSE_IN_ORDER" not in flags:
+        flags.append("LSTSL_CLOSE_IN_ORDER")
+    extra["flags"] = flags
+    return True
+
+
 def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
     """After unlabeled pack extract: receipt holds issue, sales holds closing.
 
@@ -2764,6 +2888,96 @@ def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _iter_vision_row_cell_texts(row: Dict[str, Any]) -> List[str]:
+    """Flatten printed cell texts from a Vision line/total row."""
+    texts: List[str] = []
+    extra = row.get("extra") if isinstance(row.get("extra"), dict) else {}
+    raw = extra.get("vision_raw_cells") if isinstance(extra, dict) else None
+    if isinstance(raw, (list, tuple)):
+        for cell in raw:
+            if cell is None:
+                continue
+            s = str(cell).strip()
+            if s:
+                texts.append(s)
+    physical = extra.get("physical_cells") if isinstance(extra, dict) else None
+    if isinstance(physical, dict) and not texts:
+        for key in sorted(physical.keys(), key=lambda k: int(k) if str(k).isdigit() else 0):
+            cell = physical.get(key)
+            if cell is None:
+                continue
+            s = str(cell).strip()
+            if s:
+                texts.append(s)
+    name = str(row.get("product_name") or "").strip()
+    if name and name not in texts:
+        texts.insert(0, name)
+    return texts
+
+
+def _extract_lstsl_footer_money(
+    totals_rows: Sequence[Dict[str, Any]],
+) -> Dict[str, float]:
+    """Pull labeled footer money (Last Month Sales / Open. Value / …) from cells."""
+    label_map = (
+        (r"last\s*month\s*sales", "last_month_sales_value"),
+        (r"open\.?\s*value|opening\s*value", "opening_value"),
+        (r"receipt\s*value", "receipts_value"),
+        (r"sales\s*value", "sales_value"),
+        (r"closing\s*value", "closing_value"),
+    )
+    found: Dict[str, float] = {}
+    money_re = re.compile(r"^[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.\d+)?$|^[0-9]+\.\d+$")
+    for row in totals_rows or []:
+        if not isinstance(row, dict):
+            continue
+        texts = _iter_vision_row_cell_texts(row)
+        for i, tok in enumerate(texts):
+            norm = re.sub(r"\s+", " ", tok).strip()
+            for pat, key in label_map:
+                if key in found:
+                    continue
+                if not re.search(rf"(?i)^{pat}$", norm):
+                    continue
+                # Value may be the next numeric cell, or on the same token after the label.
+                candidates: List[str] = []
+                trail = re.split(rf"(?i){pat}", tok, maxsplit=1)
+                if len(trail) == 2 and trail[1].strip():
+                    candidates.append(trail[1].strip(" :\t"))
+                if i + 1 < len(texts):
+                    candidates.append(texts[i + 1])
+                for cand in candidates:
+                    cleaned = str(cand).strip().replace(" ", "")
+                    if not money_re.match(cleaned.replace(",", "")) and not money_re.match(
+                        cleaned
+                    ):
+                        # Allow Indian grouping 2,23,657.39
+                        if not re.match(
+                            r"^[0-9][0-9,]*(?:\.\d+)?$", cleaned
+                        ):
+                            continue
+                    parsed = parse_number(cleaned, allow_internal_spaces=True)
+                    if parsed is None:
+                        continue
+                    found[key] = float(parsed)
+                    break
+    return found
+
+
+def _filter_lstsl_footer_total_rows(
+    totals_rows: Optional[List[Dict[str, Any]]],
+) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
+    """Drop footer label rows from total_rows and return extracted money."""
+    rows = [r for r in (totals_rows or []) if isinstance(r, dict)]
+    money = _extract_lstsl_footer_money(rows)
+    kept = [
+        r
+        for r in rows
+        if not _is_lstsl_footer_label_name(str(r.get("product_name") or ""))
+    ]
+    return kept, money
+
+
 def _compare_line_sums_to_printed_total(
     line_items: Sequence[Dict[str, Any]],
     totals_rows: Sequence[Dict[str, Any]],
@@ -2798,14 +3012,20 @@ def _compare_line_sums_to_printed_total(
         except (TypeError, ValueError):
             return 0.0
 
+    # Prefer a real TOTAL row — never treat LstSL footer money labels as TOTAL.
+    usable = [
+        t
+        for t in (totals_rows or [])
+        if isinstance(t, dict)
+        and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
+    ]
     printed = next(
         (
             t
-            for t in totals_rows
-            if isinstance(t, dict)
-            and re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
+            for t in usable
+            if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
         ),
-        totals_rows[0] if totals_rows else None,
+        usable[0] if usable else None,
     )
     if not isinstance(printed, dict):
         return {"compared": False, "reason": "no_printed_total"}
@@ -3205,6 +3425,19 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
     r"\bhimalaya\b\s*\("
 )
 
+# LstSL / Open / Recd footer money labels — never SKUs.
+_LSTSL_FOOTER_LABEL_NAME = re.compile(
+    r"(?ix)^\s*(?:"
+    r"last\s*month\s*sales|"
+    r"receipt\s*value|"
+    r"sales\s*value|"
+    r"closing\s*value|"
+    r"open\.?\s*value|"
+    r"opening\s*value|"
+    r"order\s*value"
+    r")\b"
+)
+
 # Company / stockist letterhead when the row has no real movement quantities.
 _COMPANY_LETTERHEAD = re.compile(
     r"(?ix)\b(?:medicals?|pharma(?:ceuticals?)?|distributors?|agency|"
@@ -3219,6 +3452,10 @@ _LIQUID_FORM_NAME = re.compile(
 )
 
 
+def _is_lstsl_footer_label_name(name: str) -> bool:
+    return bool(_LSTSL_FOOTER_LABEL_NAME.search(str(name or "").strip()))
+
+
 def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
     """True for letterhead/address/period/section-banner rows, not products."""
     if not isinstance(item, dict):
@@ -3229,6 +3466,8 @@ def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
     if _NON_PRODUCT_ROW_NAME.search(name):
         return True
     if _ALWAYS_NON_PRODUCT_NAME.search(name):
+        return True
+    if _is_lstsl_footer_label_name(name):
         return True
 
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -4037,7 +4276,9 @@ def _map_single_table(
                 item.setdefault("extra", {})["y_center"] = float(row.get("y_center"))
             except (TypeError, ValueError):
                 pass
-        if row.get("is_total_row"):
+        if row.get("is_total_row") or _is_lstsl_footer_label_name(
+            str(item.get("product_name") or "")
+        ):
             totals_rows.append(item)
         else:
             if _is_non_product_vision_row(item):
@@ -4051,6 +4292,7 @@ def _map_single_table(
             seen_product_row = True
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
             _repair_pack_shifted_open_issue_close(item)
+            _repair_lstsl_close_parked_in_order(item)
             _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
             _repair_closing_money_parked_in_qty(item)
@@ -5306,15 +5548,37 @@ def _stamp_vision_result(
             len(line_items or []),
         )
     if totals_rows:
-        extra["vision_table_total_rows"] = totals_rows
-        try:
-            extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
-                line_items, totals_rows
+        kept_totals, footer_money = _filter_lstsl_footer_total_rows(list(totals_rows))
+        if footer_money:
+            extra["lstsl_footer_values"] = dict(footer_money)
+            if footer_money.get("sales_value") is not None:
+                result["totals"]["sales_value"] = footer_money["sales_value"]
+            if footer_money.get("closing_value") is not None:
+                result["totals"]["closing_value"] = footer_money["closing_value"]
+            for key in ("opening_value", "receipts_value", "last_month_sales_value"):
+                if footer_money.get(key) is not None:
+                    extra[key] = footer_money[key]
+            if footer_money.get("receipts_value") is not None:
+                extra["purchase_value"] = footer_money["receipts_value"]
+            logger.info(
+                "VISION_TABLE LSTSL_FOOTER_MONEY keys=%s",
+                sorted(footer_money.keys()),
             )
-        except Exception as exc:
+        if kept_totals:
+            extra["vision_table_total_rows"] = kept_totals
+            try:
+                extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
+                    line_items, kept_totals
+                )
+            except Exception as exc:
+                extra["printed_total_validation"] = {
+                    "compared": False,
+                    "reason": f"error:{type(exc).__name__}",
+                }
+        elif footer_money:
             extra["printed_total_validation"] = {
                 "compared": False,
-                "reason": f"error:{type(exc).__name__}",
+                "reason": "lstsl_footer_only",
             }
     # Skip post-pipeline Gemini gates.
     extra["stock_image_vision_decided"] = True

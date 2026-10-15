@@ -25711,9 +25711,36 @@ def _text_has_medivision_nm60d(text: str) -> bool:
     return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
 
 
+def _medivision_nm90d_compact_enabled() -> bool:
+    """STOCK_MEDIVISION_NM90D_COMPACT — Op/Purc/Sale/Sa val/Cl when only NM90D prints."""
+    return os.getenv("STOCK_MEDIVISION_NM90D_COMPACT", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_has_medivision_nm90d_only(text: str) -> bool:
+    """True when sheet prints NM90D near-expiry but not NM60D (compact Op/Purc/Sale stack)."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if re.search(r"NM\s*60\s*D|NM60D", text, re.I):
+        return False
+    if not re.search(r"NM\s*90\s*D|NM90D", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
+
+
 def _is_medivision_op_purc_nm60d_text(text: str) -> bool:
-    """Supekar-style MediVision: Op/Purc/Sale/Cl qty/NM60D (stacked PDF text)."""
-    if not _text_has_medivision_nm60d(text):
+    """MediVision Op/Purc/Sale/Cl stacked PDF: NM60D (Supekar) or NM90D-only compact."""
+    has_nm60 = _text_has_medivision_nm60d(text)
+    has_nm90_compact = (
+        _medivision_nm90d_compact_enabled() and _text_has_medivision_nm90d_only(text)
+    )
+    if not (has_nm60 or has_nm90_compact):
         return False
     if not re.search(r"\bOp\b", text, re.I):
         return False
@@ -25756,7 +25783,7 @@ def _repair_medivision_nm60_closing(item: Dict[str, Any]) -> None:
 def _parse_medivision_op_purc_nm60d_text(
     text: str, filename: str, source_format: str = "pdf"
 ) -> Optional[Dict[str, Any]]:
-    """Parse stacked MediVision Op/Purc/Sale/Cl qty/NM60D PDF text (Supekar etc.)."""
+    """Parse stacked MediVision Op/Purc/Sale/Cl PDF text (NM60D wide or NM90D compact)."""
     if not _is_medivision_op_purc_nm60d_text(text):
         return None
     lines = [re.sub(r"[ \t]+", " ", ln).strip() for ln in (text or "").splitlines()]
@@ -25764,11 +25791,21 @@ def _parse_medivision_op_purc_nm60d_text(
     if len(lines) < 20:
         return None
 
+    # Compact = NM90D near-expiry only (no NM60D / Scm / Jul / Jun side columns).
+    compact = _text_has_medivision_nm90d_only(text) and _medivision_nm90d_compact_enabled()
+    layout_key = (
+        "medivision_op_purc_nm90d_compact" if compact else "medivision_op_purc_nm60d"
+    )
+    min_nums = 6 if compact else 10
+
+    # Word-bound short labels (Op/Sale/NE/qty) so product names like OPHTHACARE are kept.
     skip_name = re.compile(
-        r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No|"
-        r"Product\s*Name|Unit|Comp|Op|Purc|Scm|Sale|Jul\s*sale|Jun\s*sale|"
-        r"Sa\s*val|Cl\s*qty|Cl\s*val|NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|"
-        r"NM\s*val|qty|Continued|Phone|Tel\.|HIMALAYA\s+WELLNESS)"
+        r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No\.?|"
+        r"Product\s*Name|\bUnit\b|\bComp\b|\bOp\b|\bPurc\b|\bScm\b|\bSale\b|"
+        r"Jul\s*sale|Jun\s*sale|Sa\s*val|Cl\s*qty|Cl\s*val|"
+        r"NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|NM\s*val|\bqty\b|\bNE\b|"
+        r"Continued|Phone|Tel\.|HIMALAYA\s+WELLNESS|"
+        r".*\bAGENCIES?\b$|.*\bDISTRIBUT)"
     )
     num_line = re.compile(r"^-?\d+(?:\.\d+)?$")
 
@@ -25795,11 +25832,18 @@ def _parse_medivision_op_purc_nm60d_text(
             continue
         name = ln
         i += 1
-        packing = lines[i] if i < len(lines) else ""
-        if i < len(lines) and not num_line.match(lines[i].replace(",", "")):
-            i += 1
-        else:
-            packing = ""
+        packing = ""
+        if i < len(lines):
+            cand = lines[i]
+            cand_num = num_line.match(cand.replace(",", ""))
+            next_ln = lines[i + 1] if i + 1 < len(lines) else ""
+            # Unit may be a bare digit (e.g. pack "1") immediately before Comp/HIMAL.
+            if not cand_num:
+                packing = cand
+                i += 1
+            elif next_ln and re.match(r"(?i)^HIMAL", next_ln):
+                packing = cand
+                i += 1
         # Comp (HIMAL) — skip non-numeric token
         if i < len(lines) and not num_line.match(lines[i].replace(",", "")):
             if re.match(r"(?i)^HIMAL", lines[i]) or lines[i] in {"-----", "-"}:
@@ -25815,20 +25859,40 @@ def _parse_medivision_op_purc_nm60d_text(
         while i < len(lines) and num_line.match(lines[i].replace(",", "")):
             nums.append(_to_float(lines[i].replace(",", "")))
             i += 1
-        # Op Purc Scm Sale Scm Jul Jun SaVal ClQty ClVal NM60 NM90 NMVal
-        if len(nums) < 10:
+        if len(nums) < min_nums:
             continue
-        if re.match(r"(?i)^(TOTAL|SHOP|PAGE|TEL)", name):
+        if re.match(r"(?i)^(TOTAL|SHOP|PAGE|TEL|HIMAL$)", name):
             continue
-        opening = nums[0]
-        receipts = nums[1]
-        sales = nums[3]
-        sales_value = nums[7]
-        closing = nums[8]
-        closing_value = nums[9]
-        nm60 = nums[10] if len(nums) > 10 else None
-        nm90 = nums[11] if len(nums) > 11 else None
-        nm_val = nums[12] if len(nums) > 12 else None
+        if compact:
+            # Op Purc Sale SaVal ClQty ClVal [NM90 NMVal NE]
+            opening = nums[0]
+            receipts = nums[1]
+            sales = nums[2]
+            sales_value = nums[3]
+            closing = nums[4]
+            closing_value = nums[5]
+            nm60 = None
+            nm90 = nums[6] if len(nums) > 6 else None
+            nm_val = nums[7] if len(nums) > 7 else None
+            extra: Dict[str, Any] = {"layout": layout_key}
+        else:
+            # Op Purc Scm Sale Scm Jul Jun SaVal ClQty ClVal NM60 NM90 NMVal
+            opening = nums[0]
+            receipts = nums[1]
+            sales = nums[3]
+            sales_value = nums[7]
+            closing = nums[8]
+            closing_value = nums[9]
+            nm60 = nums[10] if len(nums) > 10 else None
+            nm90 = nums[11] if len(nums) > 11 else None
+            nm_val = nums[12] if len(nums) > 12 else None
+            extra = {
+                "layout": layout_key,
+                "scheme_qty": nums[2],
+                "sale_scheme_qty": nums[4],
+                "july_sale_qty": nums[5],
+                "june_sale_qty": nums[6],
+            }
         item = empty_line_item()
         item["product_name"] = _clean_name(name)
         pack = packing.strip()
@@ -25839,13 +25903,6 @@ def _parse_medivision_op_purc_nm60d_text(
         item["sales_value"] = sales_value
         item["closing_qty"] = closing
         item["closing_value"] = closing_value
-        extra: Dict[str, Any] = {
-            "layout": "medivision_op_purc_nm60d",
-            "scheme_qty": nums[2],
-            "sale_scheme_qty": nums[4],
-            "july_sale_qty": nums[5],
-            "june_sale_qty": nums[6],
-        }
         if nm60 is not None:
             extra["nm60_qty"] = nm60
         if nm90 is not None:
@@ -25857,6 +25914,34 @@ def _parse_medivision_op_purc_nm60d_text(
 
     if len(items) < 3:
         return None
+
+    if compact:
+        balanced = sum(
+            1
+            for it in items
+            if _medivision_qty_balances(
+                _to_float(it.get("opening_qty")),
+                _to_float(it.get("receipts_qty")),
+                _to_float(it.get("sales_qty")),
+                _to_float(it.get("closing_qty")),
+            )
+        )
+        need = max(3, int(0.6 * len(items)))
+        if balanced < need:
+            logger.info(
+                "medivision_nm90d_compact: reject identity_fail balanced=%s need=%s total=%s file=%s",
+                balanced,
+                need,
+                len(items),
+                filename,
+            )
+            return None
+        logger.info(
+            "medivision_nm90d_compact: accepted rows=%s balanced=%s file=%s",
+            len(items),
+            balanced,
+            filename,
+        )
 
     result = empty_result(filename, source_format)
     result["report_title"] = "Stock and Sales Statement"
@@ -25887,8 +25972,8 @@ def _parse_medivision_op_purc_nm60d_text(
     result["totals"]["sales_value"] = sales_value if sales_value > 0 else None
     result["totals"]["closing_value"] = closing_value if closing_value > 0 else None
     extra = result["totals"]["extra"]
-    extra["extraction_method"] = "medivision_op_purc_nm60d"
-    extra["layout"] = "medivision_op_purc_nm60d"
+    extra["extraction_method"] = layout_key
+    extra["layout"] = layout_key
     extra["closing_qty"] = round(sum(_to_float(i.get("closing_qty")) for i in items), 2)
     extra["sales_qty"] = round(sum(_to_float(i.get("sales_qty")) for i in items), 2)
     return result

@@ -103,6 +103,10 @@ ALIASES: Dict[str, List[str]] = {
         "last month sale",
         "last month sales",
         "last month sale qty",
+        "lstsl",
+        "lst sl",
+        "lst sale",
+        "last sl",
     ],
     # Descriptive / commercial columns that can sit before Opening in stock
     # statements. They must never claim movement qty semantics.
@@ -126,6 +130,7 @@ ALIASES: Dict[str, List[str]] = {
         "op",
         "opn",
         "opg",
+        "open",  # LstSL / Open / Recd / Sales / Close sheets
         "opening",
         "opstk",
         "op stk",
@@ -474,6 +479,8 @@ _DIRECT_VALUE_FIELDS = {
     "cival": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
+    "stk value": "closing_value",
+    "stk. value": "closing_value",
     "stock value": "closing_value",
     "stock-value": "closing_value",
     "sval": "sales_value",
@@ -484,6 +491,8 @@ _DIRECT_VALUE_FIELDS = {
     "sales value": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
+    "open value": "opening_value",
+    "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
     "purchase value": "purchase_value",
@@ -513,6 +522,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
 
     if _is_rate(norm) and not _has_value_marker(norm):
         return "rate", 0.95, "rate_alias"
+
+    # Vision sometimes glues Sales+Close into one header; keep sales_qty and
+    # recover Close from the following Order column in the Vision table path.
+    if norm in {"sales close", "sale close", "sales/close", "sale/close"}:
+        return "sales", 0.75, "sales_close_merged"
 
     # Prefer sales_return over sales when both could match ("sale ret").
     # Prefer purchase_return over purchase when "pur" + "ret".
