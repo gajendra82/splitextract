@@ -43256,10 +43256,13 @@ Map:
 
 Critical:
 - IN/OT is never the closing quantity. STOCK is closing_qty.
-- STK VAL is the money column immediately after STOCK.
+- STK VAL is the money column immediately after STOCK → closing_value.
 - JUL is the next column after STK VAL. JUL is usually a small monthly qty.
 - Do not put STK VAL into closing_value when it belongs in JUL, and do not put STOCK into closing_value.
 - Do not put IN/OT into closing_qty.
+- Never leave closing_qty/closing_value at 0 when STOCK/STK VAL cells show numbers.
+  Example: OPSTK 34, SALE 4, IN/OT 0, STOCK 30, STK VAL 1822 →
+  opening_qty=34, sales_qty=4, closing_qty=30, closing_value=1822.
 
 Skip the division banner (HIMALAYA-ZEAL / HIMALAYA WELLNESS ZEAL DIV) and the
 Division Total / Total rows.
@@ -43427,6 +43430,30 @@ def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
     closing = _to_float(item.get("closing_qty"))
     closing_value = _to_float(item.get("closing_value"))
     jul = _to_float(extra.get("jul_qty"))
+    in_ot = _to_float(extra.get("in_ot_qty"))
+    implied = round(opening + receipts - sales + in_ot, 2)
+    # STOCK parked in closing_value while closing_qty is IN/OT (often 0).
+    if (
+        closing <= 0
+        and closing_value > 0
+        and abs(closing_value - round(closing_value)) <= 0.05
+        and closing_value <= 5000
+        and abs(implied - closing_value) <= 0.05
+    ):
+        money = jul if jul >= max(50.0, closing_value * 5.0) else None
+        item["closing_qty"] = closing_value
+        if money is not None:
+            item["closing_value"] = money
+            extra["jul_qty"] = None
+        else:
+            item["closing_value"] = None
+            fs = extra.get("field_source")
+            if not isinstance(fs, dict):
+                fs = {}
+                extra["field_source"] = fs
+            fs["closing_value"] = "missing"
+        extra["medica_column_shift_repaired"] = True
+        return
     if jul <= 0 or closing_value <= 0:
         return
     # STK VAL is usually much larger than the STOCK qty cell.
@@ -43435,7 +43462,6 @@ def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
     # closing_value should look like a qty (STOCK), not rupees.
     if abs(closing_value - round(closing_value)) > 0.05 or closing_value > 5000:
         return
-    implied = round(opening + receipts - sales, 2)
     candidate_stock = closing_value
     # Prefer the repair when STOCK matches identity, or current closing looks like IN/OT.
     identity_ok = abs(implied - candidate_stock) <= 0.05
