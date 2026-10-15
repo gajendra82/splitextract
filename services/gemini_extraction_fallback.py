@@ -907,6 +907,13 @@ def maybe_apply_gemini_fallback(
         return result
 
     if _allowlist_skip(
+        "opbal_issue_closing_photo",
+        str(extra.get("extraction_method") or "") == "opbal_issue_closing_photo"
+        or str(extra.get("layout") or "") == "opbal_issue_closing",
+    ):
+        return result
+
+    if _allowlist_skip(
         "header_driven_stock_photo",
         str(extra.get("extraction_method") or "") == "header_driven_stock_photo"
         or str(extra.get("layout") or "") == "header_driven_stock_photo",
