@@ -4127,6 +4127,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "product_wise_stock_statement_footer",
                 "docx_header_resolved_footer",
                 "ssa_value_footer",
+                "chopada_zandra_footer",
             }
         )
     )
@@ -4180,6 +4181,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "free_return_total_value",
             "op_pur_sale_bal_qnty_footer",
             "ssa_value_footer",
+            "chopada_zandra_footer",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -24049,6 +24051,60 @@ def _try_saleable_stock_report_image(
     return None
 
 
+def _try_lstsl_open_recd_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """OCR a photo of a Stock & Sales Report with LstSL/Open/Recd/Sales/Close columns.
+
+    Terminal-style printouts (e.g. GUNWANT MEDICALS SEPTEMBER report) include a
+    LstMove date + Stk.Value tail that generic vision parsers misread.
+    """
+    # psm 4 (single column of text) handles the fixed-width terminal grid best;
+    # psm 6 is a cheap second pass only if the header isn't detected.
+    texts: List[str] = []
+    for psm, enhance in ((4, True), (6, False)):
+        try:
+            t = _ocr_image_to_text(file_bytes, psm=psm, enhance=enhance) or ""
+        except Exception:
+            t = ""
+        if not t.strip():
+            continue
+        texts.append(t)
+        if re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", t, re.I):
+            break
+    for text in texts:
+        if not re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", text, re.I):
+            continue
+        parsed = _parse_lstsl_open_recd_statement(
+            text, filename, (ext or "jpg").lstrip(".")
+        )
+        if not parsed or not parsed.get("line_items"):
+            continue
+        items = parsed["line_items"]
+        nonzero = any(
+            abs(float(it.get("opening_qty") or 0))
+            + abs(float(it.get("receipts_qty") or 0))
+            + abs(float(it.get("sales_qty") or 0))
+            + abs(float(it.get("closing_qty") or 0))
+            > 0
+            for it in items
+        )
+        if len(items) < 5 or not nonzero:
+            continue
+        extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+        extra["extraction_method"] = "lstsl_open_recd_image"
+        extra["lstsl_image_ocr"] = True
+        extra["vision_table_final"] = True
+        extra["stock_vision_locked"] = True
+        logger.info(
+            "lstsl_open_recd_image file=%s rows=%s",
+            filename,
+            len(items),
+        )
+        return parsed
+    return None
+
+
 _ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
 
 
@@ -31710,6 +31766,229 @@ def _parse_balaji_himalaya_zeal_vertical_pdf(
     return result
 
 
+_CHOPADA_ZANDRA_STOP_RE = re.compile(
+    r"^\s*(?:CLOSINGVALUE|SALEVALUE|Company\s*Name\s*:|Product\s*$|"
+    r"Opening\s*$|Receipt\s*$|Sales\s*$|Closing\s*$|Total\s*$|"
+    r"FROM\s*$|TO\s*$|ZANDRA\s*$|THE\s+HIMALAYA\s+DRUG|Page\s*No|"
+    r"\d{1,2}-[A-Za-z]{3}-\d{2,4}\s*$)",
+    re.I,
+)
+
+
+def _is_zandra_opening_receipt_vertical_format(text: str) -> bool:
+    """CHOPADA-style ZANDRA Stock Report: Opening/Receipt/Total/Sales/Closing per page."""
+    if not text:
+        return False
+    if not re.search(r"THE\s+HIMALAYA\s+DRUG", text, re.I):
+        return False
+    hits = 0
+    for pat in (
+        r"\bCompany\s*Name\s*:",
+        r"\bOpening\b",
+        r"\bReceipt\b",
+        r"\bSales\b",
+        r"\bClosing\b",
+        r"\bTotal\b",
+        r"\bZANDRA\b",
+    ):
+        if re.search(pat, text, re.I):
+            hits += 1
+    if hits < 6:
+        return False
+    # Must have a stockist footer line pattern (name, address with pincode)
+    return bool(
+        re.search(
+            r"[A-Z][A-Z &.'-]{3,}\s*,\s*.+?\d{5,6}",
+            text,
+        )
+    )
+
+
+def _parse_chopada_zandra_vertical_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """CHOPADA-style ZANDRA Stock Report where each cell is on its own PDF-text line.
+
+    Columns per product row (5 numeric cells after the name):
+        Opening | Receipt | Total | Sales | Closing
+    Stockist name sits in the footer (e.g. ``CHOPADA AGENCIES, 2,3 Laxmi Plaza…``).
+    Pages share the header; they are one statement, not many.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    full_text = "\n".join(page_texts)
+    if not _is_zandra_opening_receipt_vertical_format(full_text):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sales Report"
+
+    m_period = re.search(
+        r"(\d{1,2}-[A-Za-z]{3}-\d{2,4}).{0,80}?(\d{1,2}-[A-Za-z]{3}-\d{2,4})",
+        full_text,
+        re.S,
+    )
+    if m_period:
+        result["period_from"] = _normalize_date(m_period.group(1))
+        result["period_to"] = _normalize_date(m_period.group(2))
+
+    m_company = re.search(
+        r"Company\s*Name\s*:\s*\n+\s*(?:[A-Za-z]+\s*\n+\s*)?([A-Z][A-Z0-9 &.()'-]{4,})",
+        full_text,
+    )
+    if not m_company:
+        m_company = re.search(
+            r"(THE\s+HIMALAYA\s+DRUG\s+CO\.?)",
+            full_text,
+            re.I,
+        )
+    if m_company:
+        name = _clean_name(m_company.group(1).strip())
+        division = None
+        m_div = re.search(r"\bZANDRA\b", full_text)
+        if m_div:
+            division = "ZANDRA"
+        result["company_name"] = f"{name} ({division})" if division else name
+
+    footer_re = re.compile(
+        r"^([A-Z][A-Z0-9 &.'-]{3,})\s*,\s*(.+?\d{5,6}[^\n]*)$",
+        re.M,
+    )
+    footer_match = None
+    for m in footer_re.finditer(full_text):
+        footer_match = m
+    if footer_match:
+        result["stockist_name"] = _clean_stockist_label(footer_match.group(1))
+        result["stockist_address"] = _clean_name(footer_match.group(2))
+
+    _NUM_RE = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$")
+    _INT_RE = re.compile(r"^-?\d+$")
+
+    items: List[Dict[str, Any]] = []
+    seen: set = set()
+    totals_sales_val: Optional[float] = None
+    totals_closing_val: Optional[float] = None
+
+    for text in page_texts:
+        lines = [ln.rstrip() for ln in text.splitlines()]
+        header_idx: Optional[int] = None
+        for i, ln in enumerate(lines):
+            stripped = ln.strip()
+            if re.fullmatch(r"\d{1,2}-[A-Za-z]{3}-\d{2,4}", stripped):
+                # The last "TO" date appears right before product rows begin.
+                if (
+                    i > 0
+                    and re.fullmatch(r"Total", lines[i - 1].strip(), re.I)
+                ):
+                    header_idx = i
+                    break
+        if header_idx is None:
+            # Fallback: start just after the last header word on the page.
+            for i, ln in enumerate(lines):
+                if re.fullmatch(r"Total|30-[A-Za-z]{3}-\d{2,4}", ln.strip(), re.I):
+                    header_idx = i
+        if header_idx is None:
+            continue
+
+        i = header_idx + 1
+        while i < len(lines):
+            name_line = lines[i].strip()
+            if not name_line:
+                i += 1
+                continue
+            if re.match(r"^(CLOSINGVALUE|SALEVALUE)\b", name_line, re.I):
+                # Totals block
+                nums = []
+                j = i
+                while j < len(lines) and len(nums) < 4:
+                    tok = lines[j].strip()
+                    if _NUM_RE.fullmatch(tok):
+                        nums.append(tok)
+                    j += 1
+                # Walk labels + values pairwise
+                k = i
+                while k < len(lines):
+                    label = lines[k].strip().upper()
+                    if label.startswith("CLOSINGVALUE"):
+                        for v in range(k + 1, min(k + 4, len(lines))):
+                            tok = lines[v].strip()
+                            if _NUM_RE.fullmatch(tok):
+                                totals_closing_val = _to_float(tok)
+                                break
+                    elif label.startswith("SALEVALUE") or label.startswith("SALESVALUE"):
+                        for v in range(k + 1, min(k + 4, len(lines))):
+                            tok = lines[v].strip()
+                            if _NUM_RE.fullmatch(tok):
+                                totals_sales_val = _to_float(tok)
+                                break
+                    k += 1
+                break
+            if _CHOPADA_ZANDRA_STOP_RE.match(name_line):
+                i += 1
+                continue
+            if footer_match and name_line in footer_match.group(0):
+                break
+            # A product block = name followed by 5 numeric cells
+            cells = []
+            j = i + 1
+            while j < len(lines) and len(cells) < 5:
+                tok = lines[j].strip()
+                if not tok:
+                    j += 1
+                    continue
+                if _INT_RE.fullmatch(tok):
+                    cells.append(_to_float(tok))
+                    j += 1
+                    continue
+                # Non-numeric: not a cell. Break out.
+                break
+            if len(cells) < 5:
+                # Not a product block; advance past this line only.
+                i += 1
+                continue
+            opening, receipts, total, sales, closing = cells
+            if abs((opening + receipts) - total) > 0.5 and total != 0:
+                # Mismatch: this row probably isn't a 5-col product grid.
+                i = j
+                continue
+            key = name_line.upper()
+            if key in seen:
+                i = j
+                continue
+            seen.add(key)
+            item = empty_line_item()
+            item["product_name"] = _clean_name(name_line)
+            item["opening_qty"] = float(opening)
+            item["receipts_qty"] = float(receipts)
+            item["sales_qty"] = float(sales)
+            item["closing_qty"] = float(closing)
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["extra"]["total_qty_printed"] = float(total)
+            item["extra"]["layout"] = "chopada_zandra_vertical"
+            items.append(item)
+            i = j
+
+    if not items:
+        return None
+
+    if totals_sales_val is not None:
+        result["totals"]["sales_value"] = totals_sales_val
+    if totals_closing_val is not None:
+        result["totals"]["closing_value"] = totals_closing_val
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "chopada_zandra_vertical_pdf"
+    result["totals"]["extra"]["total_row_source"] = "chopada_zandra_footer"
+    result["totals"]["extra"]["qty_only"] = True
+    result["totals"]["extra"]["column_roles"] = [
+        "opening_qty",
+        "receipts_qty",
+        "total_qty",
+        "sales_qty",
+        "closing_qty",
+    ]
+    return result
+
+
 def _parse_packing_opstk_sps_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Word positions for the Packing / Op Stk / Sp S Qty / Cl Stk text grid."""
     page_texts = [(page.get_text("text") or "") for page in doc]
@@ -33647,6 +33926,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if balaji_hz and balaji_hz.get("line_items"):
             balaji_hz["totals"]["extra"]["statement_count"] = 1
             return balaji_hz
+
+        # CHOPADA-style ZANDRA report: Opening/Receipt/Total/Sales/Closing with
+        # the stockist in the footer. Must run before per-page splitting (which
+        # otherwise reads two different "stockists" from the per-page header).
+        chopada_hz = _parse_chopada_zandra_vertical_pdf(doc, filename)
+        if chopada_hz and chopada_hz.get("line_items"):
+            chopada_hz["totals"]["extra"]["statement_count"] = 1
+            return chopada_hz
 
         packing_opstk = _parse_packing_opstk_sps_statement(doc, filename)
         if packing_opstk and packing_opstk.get("line_items"):
@@ -36891,10 +37178,32 @@ def _parse_lstsl_open_recd_statement(
         return None
     result = empty_result(filename, source_format)
     lines = [re.sub(r"\s+", " ", ln).strip() for ln in text.splitlines()]
-    lines = [ln for ln in lines if ln]
-    if lines:
-        result["stockist_name"] = _clean_name(lines[0])
-    header = next((ln for ln in lines if re.search(r"Stock\s*&\s*Sales\s+from", ln, re.I)), "")
+    lines = [
+        ln
+        for ln in lines
+        if ln and not re.fullmatch(r"[\|\s/_\-=.*']+", ln)
+    ]
+    header = next(
+        (
+            ln
+            for ln in lines
+            if re.search(r"Stock\s*&\s*Sales\s+(?:from|Report)", ln, re.I)
+        ),
+        "",
+    )
+    # Pick stockist from the first non-empty line that comes before the header
+    # and does not look like a column heading or the report banner itself.
+    for ln in lines[:6]:
+        if re.search(
+            r"Stock\s*&\s*Sales|Product\s*Name|Page\s*No|HIMALAYA",
+            ln,
+            re.I,
+        ):
+            break
+        candidate = _clean_name(re.sub(r"^[\|\s]+", "", ln))
+        if candidate and len(re.sub(r"[^A-Za-z]", "", candidate)) >= 4:
+            result["stockist_name"] = candidate
+            break
     period = re.search(
         r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
         header,
@@ -36903,6 +37212,28 @@ def _parse_lstsl_open_recd_statement(
     if period:
         result["period_from"] = _normalize_date(period.group(1))
         result["period_to"] = _normalize_date(period.group(2))
+    else:
+        month_period = re.search(
+            r"for\s+the\s+month\s+([A-Za-z]+)[\s\-]+(\d{4})",
+            header,
+            re.I,
+        )
+        if month_period:
+            import calendar as _cal
+            try:
+                month_name = month_period.group(1).strip().capitalize()
+                month_num = {
+                    name.lower(): idx
+                    for idx, name in enumerate(_cal.month_name)
+                    if name
+                }.get(month_name.lower())
+                if month_num:
+                    year = int(month_period.group(2))
+                    _, last_day = _cal.monthrange(year, month_num)
+                    result["period_from"] = f"{year:04d}-{month_num:02d}-01"
+                    result["period_to"] = f"{year:04d}-{month_num:02d}-{last_day:02d}"
+            except Exception:
+                pass
     company = re.search(
         r"\bfor\s*:\s*(.+?)(?:\s{2,}Page|\s+Page\s*:|$)",
         header,
@@ -36911,9 +37242,23 @@ def _parse_lstsl_open_recd_statement(
     if company:
         result["company_name"] = _clean_name(company.group(1))
     result["report_title"] = "Stock & Sales"
+    _date_tok = re.compile(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}")
+    _money_tok = re.compile(r"-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+\.\d+")
     items: List[Dict[str, Any]] = []
     for line in lines:
         parts = line.split()
+        # 9-column variant: … LstSL Open Recd Sales Close Order Pend LstMove Stk.Value
+        last_move: Optional[str] = None
+        stock_value: Optional[float] = None
+        trailing = parts[-2:] if len(parts) >= 2 else []
+        if (
+            len(trailing) == 2
+            and _date_tok.fullmatch(trailing[0])
+            and _money_tok.fullmatch(trailing[1])
+        ):
+            last_move = trailing[0]
+            stock_value = _to_float(trailing[1])
+            parts = parts[:-2]
         if len(parts) < 8 or not all(_lstsl_qty_token(tok) for tok in parts[-7:]):
             continue
         left = parts[:-7]
@@ -36928,7 +37273,7 @@ def _parse_lstsl_open_recd_statement(
         name = _clean_name(name)
         if not name or re.search(r"product\s*name|last\s+month|receipt\s+value", name, re.I):
             continue
-        lstsl, opening, received, sales, close, _order, _pend = parts[-7:]
+        lstsl, opening, received, sales, close, order, pend = parts[-7:]
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = packing
@@ -36936,7 +37281,16 @@ def _parse_lstsl_open_recd_statement(
         item["receipts_qty"] = _to_float(received)
         item["sales_qty"] = _to_float(sales)
         item["closing_qty"] = _to_float(close)
-        item["extra"] = {"last_sales_qty": _to_float(lstsl), "layout": "lstsl_open_recd_sales"}
+        extra = {"last_sales_qty": _to_float(lstsl), "layout": "lstsl_open_recd_sales"}
+        if order != "-":
+            extra["order_qty"] = _to_float(order)
+        if pend != "-":
+            extra["pending_qty"] = _to_float(pend)
+        if last_move:
+            extra["last_move_date"] = _normalize_date(last_move) or last_move
+        if stock_value is not None:
+            item["closing_value"] = stock_value
+        item["extra"] = extra
         items.append(item)
     if len(items) < 5:
         return None
@@ -51476,6 +51830,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s saleable image OCR skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
+    # Terminal-style Stock & Sales Report photos with LstSL/Open/Recd/Sales/Close
+    # + LstMove date + Stk.Value tail (GUNWANT etc.). Vision was shifting LstSL
+    # into opening_qty and Close into sales_value, so handle via OCR + grid parser.
+    try:
+        lstsl_img = _try_lstsl_open_recd_image(file_bytes, filename, ext)
+        if lstsl_img and lstsl_img.get("line_items"):
+            return lstsl_img
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s lstsl image OCR skipped: %s",
             filename,
             type(exc).__name__,
         )
