@@ -287,6 +287,33 @@ class CropDedupeTests(unittest.TestCase):
         ]
         self.assertTrue(all("CROP_OVERLAP_CONFLICT" in (f or []) for f in b_flags))
 
+    def test_hollow_zero_twin_dropped(self):
+        """Bottom-half all-zero duplicate loses to a non-zero top-half row."""
+        from services.stock_vision_table import dedupe_crop_overlap_rows
+
+        items = [
+            {
+                "product_name": "MENTAT SYRUP 200ML",
+                "opening_qty": 19.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 3.0,
+                "closing_qty": 16.0,
+                "extra": {},
+            },
+            {
+                "product_name": "MENTAT SYRUP 200ML",
+                "opening_qty": 0.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 0.0,
+                "extra": {},
+            },
+        ]
+        out, errs = dedupe_crop_overlap_rows(items)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["opening_qty"], 19.0)
+        self.assertEqual(errs, [])
+
 
 class RereadBandTests(unittest.TestCase):
     def setUp(self):

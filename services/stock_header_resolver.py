@@ -139,6 +139,11 @@ ALIASES: Dict[str, List[str]] = {
         "ob",
         "opbal",
         "op bal",
+        # OpenBalQty — must beat closing "bal qty" infix inside openbalqty.
+        "openbalqty",
+        "open bal qty",
+        "opening bal qty",
+        "openbal qty",
         "opening stock",
         "opening qty",
         "opening quantity",
@@ -176,6 +181,9 @@ ALIASES: Dict[str, List[str]] = {
         "purchase qty",
         "purchased",
         "purchased qty",
+        "purchbillqty",
+        "purch bill qty",
+        "purchase bill qty",
     ],
     "sales": [
         "sale",
@@ -183,6 +191,9 @@ ALIASES: Dict[str, List[str]] = {
         "sl",
         "issue",
         "iss",
+        "issu",  # OCR truncate of ISSUE
+        "issur",
+        "isue",
         "issues",
         "out",
         "outward",
@@ -191,6 +202,9 @@ ALIASES: Dict[str, List[str]] = {
         "issue/sales",
         "sales qty",
         "sale qty",
+        "sales bill qty",
+        "sale bill qty",
+        "salesbillqty",
     ],
     "sales_return": [
         "saleret",
@@ -244,6 +258,9 @@ ALIASES: Dict[str, List[str]] = {
     "closing": [
         "cls",
         "clos",
+        "close",  # LstSL Close column (exact; "clos" alone also hits via compact)
+        "closin",  # OCR truncate of CLOSING
+        "closi",
         "closing",
         "clos stock",
         "closstock",
@@ -260,6 +277,11 @@ ALIASES: Dict[str, List[str]] = {
         "closing qty",
         "closing balance",
         "closing bal",
+        # CloseBalQty — distinct from OpenBalQty / ClosingBalAmt.
+        "closebalqty",
+        "close bal qty",
+        "closing bal qty",
+        "closebal qty",
         "cl bal",
         "cl balance",
         "cl qty",
@@ -444,11 +466,16 @@ def _has_value_marker(norm: str) -> bool:
     compact = re.sub(r"\s+", "", norm)
     for marker in _VALUE_MARKERS:
         m = normalize_header(marker)
+        m_compact = re.sub(r"\s+", "", m)
         if len(m) <= 3:
+            # Token match, or camelCase / glued BillAmt-style suffix.
+            # Only amt/rs for endswith — bare "val" would false-hit *val words.
             if m in tokens:
                 return True
+            if m_compact in {"amt", "rs"} and compact.endswith(m_compact):
+                return True
         else:
-            if m in norm or re.sub(r"\s+", "", m) in compact:
+            if m in norm or m_compact in compact:
                 return True
     return False
 
@@ -477,6 +504,14 @@ _DIRECT_VALUE_FIELDS = {
     "clval": "closing_value",
     "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
     "cival": "closing_value",
+    "closing bal amt": "closing_value",
+    "closingbalamt": "closing_value",
+    "close bal amt": "closing_value",
+    "closebalamt": "closing_value",
+    # OCR of ClosingBalAmt → "ClosingBal tQty" / "ClosingBal aqty".
+    "closingbal tqty": "closing_value",
+    "closing baltqty": "closing_value",
+    "closingbal aqty": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
     "stk value": "closing_value",
@@ -488,7 +523,9 @@ _DIRECT_VALUE_FIELDS = {
     "sa val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
-    "sales value": "sales_value",
+    "sales bill amt": "sales_value",
+    "sale bill amt": "sales_value",
+    "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
     "open value": "opening_value",
@@ -496,6 +533,9 @@ _DIRECT_VALUE_FIELDS = {
     "opening value": "opening_value",
     "pur val": "purchase_value",
     "purchase value": "purchase_value",
+    "purch bill amt": "purchase_value",
+    "purchbillamt": "purchase_value",
+    "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
     "issue value": "sales_value",
 }
@@ -540,6 +580,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # Special: "return" alone is sales_return only when no pur token.
     tokens = _tokens(norm)
     filtered: List[Tuple[str, str, float]] = []
+    compact_norm = re.sub(r"\s+", "", norm)
     for group, alias, conf in hits:
         if group == "sales_return" and alias == "return":
             if any(t.startswith("pur") for t in tokens) or "purchase" in norm:
@@ -556,6 +597,20 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         # Short "op" must not beat a multi-token total alias like "op rec".
         if group == "opening" and alias in {"op", "opn"} and len(tokens) > 1:
             continue
+        # OpenBalQty must not match closing via infix "bal qty" inside openbalqty.
+        if group == "closing" and alias in {
+            "bal qty",
+            "bal",
+            "balance",
+            "balance qty",
+            "bal.",
+        }:
+            if (
+                compact_norm.startswith("open")
+                or "openbal" in compact_norm
+                or "opening" in compact_norm
+            ):
+                continue
         # "Receipt Free" is free-in, not purchase.
         if group == "purchase" and "free" in tokens:
             continue
@@ -706,6 +761,93 @@ def _group_wise_sales_sequence_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _lstsl_close_after_sales_enabled() -> bool:
+    """STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES — default ON.
+
+    Vision often misreads printed Close as Open. / Open (footer Open. Value
+    bleed) right after Sales on LstSL|Open|Recd|Sales|Close sheets.
+    """
+    return os.getenv(
+        "STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_lstsl_open_recd_headers(prelim: List[Dict[str, Any]]) -> bool:
+    blob = " ".join(
+        normalize_header(c.get("header_text")) for c in prelim if isinstance(c, dict)
+    )
+    if not re.search(r"\blstsl\b|\blst\s*sl\b|\blms\b", blob):
+        return False
+    canons = {c.get("canonical") for c in prelim if isinstance(c, dict)}
+    return {"opening_qty", "purchase_qty", "sales_qty"}.issubset(canons)
+
+
+def _apply_lstsl_close_after_sales(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map the column immediately after Sales → closing_qty on LstSL sheets.
+
+    Only when Close is missing. Accepts duplicate Open / Open. / ignore / a
+    wrongly valued Sales label — never invents a column index.
+    """
+    if not _lstsl_close_after_sales_enabled():
+        return False
+    if not _looks_like_lstsl_open_recd_headers(prelim):
+        return False
+    if any(c.get("canonical") == "closing_qty" for c in prelim):
+        return False
+    sales_i = next(
+        (
+            i
+            for i, c in enumerate(prelim)
+            if c.get("canonical") == "sales_qty" and not c.get("is_value")
+        ),
+        None,
+    )
+    if sales_i is None or sales_i + 1 >= len(prelim):
+        return False
+    nxt = prelim[sales_i + 1]
+    nxt_norm = normalize_header(nxt.get("header_text"))
+    nxt_canon = nxt.get("canonical")
+    # Typical misreads of Close: second Open / Open. / bare Sales (Order) /
+    # Value / already-ignored duplicate.
+    open_like = bool(re.match(r"^open(?:ing)?\.?$", nxt_norm or ""))
+    allow = (
+        nxt_canon in {"ignore", "opening_qty", "sales_qty", "sales_value", None}
+        or open_like
+        or nxt_norm in {"value", "order", "ord"}
+    )
+    if not allow:
+        return False
+    nxt["canonical"] = "closing_qty"
+    nxt["group"] = "closing"
+    nxt["is_value"] = False
+    nxt["confidence"] = max(float(nxt.get("confidence") or 0.0), 0.9)
+    nxt["reason"] = "lstsl_close_after_sales"
+    logger.info(
+        "STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES col=%s text=%r",
+        nxt.get("col_index"),
+        nxt.get("header_text"),
+    )
+    errors.append(
+        {
+            "code": "LSTSL_CLOSE_AFTER_SALES",
+            "message": (
+                f"Mapped col_index={nxt.get('col_index')} "
+                f"({nxt.get('header_text')!r}) to closing_qty after Sales"
+            ),
+            "col_index": nxt.get("col_index"),
+        }
+    )
+    return True
 
 
 # Between Op.Stock and Cl.Stock on Group Wise Sales (qty columns only).
@@ -1782,6 +1924,8 @@ def resolve_columns(
     _apply_qf_qty_sequence(prelim, errors)
     # Group Wise Sales: Op/Purchase/Free/Ret/Sales Qty/Cl.Stock (before dedup).
     _apply_group_wise_sales_sequence(prelim, errors)
+    # LstSL|Open|Recd|Sales|Close: Close misread as Open. after Sales.
+    _apply_lstsl_close_after_sales(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

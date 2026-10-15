@@ -206,17 +206,30 @@ def _classify_layout_cell(text: Any) -> str:
         except Exception:
             return "number"
     # Pack tokens printed beside product (SSA qty-only / dump layouts).
-    # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 100ML.
-    if re.fullmatch(
-        r"(?:"
+    # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 30', 100ML.
+    # Bare "30'" / "60'" (apostrophe-only tablet pack) must peel so OPENING
+    # is not shifted and CLOSING is not filled with ISSUE VALUE money.
+    # STOCK_VISION_RATE_PACK_PEEL (default ON) also matches RATE-column packs
+    # like 30,S CAP / 1PACK / L SIZE / JAR that otherwise shift OPENING left.
+    pack_core = (
         r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
+        r"|\d+\s*'"  # 30' / 60' tablet pack (OCR of 60'S without S)
         r"|\d+\s*[,']?\s*[Ss]\.?"
         r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?"
         r"|\d+\s*\+\s*\d+"
-        r")",
-        s,
-        re.I,
-    ):
+    )
+    if _rate_pack_peel_enabled():
+        pack_core = (
+            r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G|L|LTR|LITRE)\.?"
+            r"|\d+\s*'"  # 30' / 60' tablet pack
+            r"|\d+\s*[,']?\s*[Ss]\.?(?:\s*(?:CAP|CAPS|TAB|TABS|TABLETS?))?"
+            r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?(?:\s*(?:TAB|TABS|CAP|CAPS|ML|GM|G))?"
+            r"|\d+\s*\+\s*\d+"
+            r"|\d+\s*PACKS?"
+            r"|(?:XXL|XL|L|M|S)\s*SIZE"
+            r"|(?:JAR|BOX|TUBE|BOTTLE|SACHET|AMP(?:OULE)?|VIAL)"
+        )
+    if re.fullmatch(rf"(?:{pack_core})", s, re.I):
         return "pack"
     if re.search(r"[A-Za-z]{3,}", s):
         return "product"
@@ -1750,15 +1763,120 @@ def _image_dimensions(img: bytes) -> Tuple[int, int]:
         return 0, 0
 
 
+def _exif_orient_enabled() -> bool:
+    """STOCK_VISION_EXIF_TRANSPOSE — default ON.
+
+    Phone JPEGs often store landscape pixel buffers with Orientation=6; without
+    transpose Gemini reads the grid sideways and invents Open/Recd/Sales/Close.
+    """
+    return os.getenv("STOCK_VISION_EXIF_TRANSPOSE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _exif_orient_image_bytes(img: bytes) -> bytes:
+    """Re-encode upright pixels when EXIF Orientation is set (no-op otherwise)."""
+    if not img or not _exif_orient_enabled():
+        return img
+    try:
+        from PIL import Image, ImageOps
+        import io
+
+        with Image.open(io.BytesIO(img)) as im:
+            ori = int(im.getexif().get(274) or 1)
+            if ori in (0, 1):
+                return img
+            oriented = ImageOps.exif_transpose(im)
+            if oriented is None:
+                return img
+            buf = io.BytesIO()
+            fmt = "JPEG" if img[:2] == b"\xff\xd8" else "PNG"
+            save_kw: Dict[str, Any] = {}
+            if fmt == "JPEG":
+                save_kw["quality"] = 92
+                if oriented.mode not in ("RGB", "L"):
+                    oriented = oriented.convert("RGB")
+            oriented.save(buf, format=fmt, **save_kw)
+            out = buf.getvalue()
+            logger.info(
+                "VISION_TABLE_EXIF_TRANSPOSE orientation=%s size=%sx%s -> %sx%s",
+                ori,
+                im.size[0],
+                im.size[1],
+                oriented.size[0],
+                oriented.size[1],
+            )
+            return out or img
+    except Exception as exc:
+        logger.info(
+            "VISION_TABLE_EXIF_TRANSPOSE skipped err=%s", type(exc).__name__
+        )
+        return img
+
+
+def _phone_portrait_skip_split_enabled() -> bool:
+    """STOCK_VISION_SKIP_SPLIT_PHONE_PORTRAIT — default ON.
+
+    After EXIF transpose, phone LstSL photos are ~2448x3264. Eager top/bottom
+    split loses Close on the bottom half (no header band) and invents hollow
+    rows. One full-frame Vision call fits these grids under the token budget.
+    """
+    return os.getenv(
+        "STOCK_VISION_SKIP_SPLIT_PHONE_PORTRAIT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _phone_portrait_split_min_height() -> int:
+    """Taller than this, even narrow phone portraits may split (token budget)."""
+    try:
+        return max(
+            _split_min_height(),
+            int(os.getenv("STOCK_VISION_PHONE_SPLIT_MIN_HEIGHT", "4000")),
+        )
+    except (TypeError, ValueError):
+        return max(_split_min_height(), 4000)
+
+
 def _needs_vertical_split(img: bytes) -> bool:
-    """Tall / high-res single pages often exceed output token budget."""
+    """Tall / high-res single pages often exceed output token budget.
+
+    Call after ``_exif_orient_image_bytes`` so Orientation=6 phone photos are
+    measured upright. Landscape buffers (w >= h) must stay as one image:
+    top/bottom halves glue phone chrome and footer labels into headers and
+    shift Open/Recd/Sales/Close cells across rows.
+    """
     w, h = _image_dimensions(img)
     if h <= 0:
         return False
     if h >= _split_min_height():
+        # Narrow upright phone frames: prefer one shot unless extremely tall.
+        if (
+            _phone_portrait_skip_split_enabled()
+            and w < h
+            and w < 2800
+            and h < _phone_portrait_split_min_height()
+        ):
+            logger.info(
+                "VISION_TABLE skip_vertical_split phone_portrait w=%s h=%s "
+                "phone_min_h=%s",
+                w,
+                h,
+                _phone_portrait_split_min_height(),
+            )
+            return False
         return True
-    # Wide phone-photo sheets that are also tall enough to pack many rows.
-    return w >= 3000 and h >= 2200
+    # Portrait-leaning wide sheets only — not landscape desk photos.
+    if w < h and w >= 3000 and h >= 2200:
+        return True
+    return False
 
 
 def _vertical_halves(img: bytes) -> List[bytes]:
@@ -2177,6 +2295,32 @@ def _merge_proposed_mapping(
                     idx,
                     col.get("header_text"),
                 )
+            # OCR truncations: ISSU→sales, CLOSIN→closing. Model must not
+            # remap them to purchase/opening_value (drops printed closing).
+            header_compact = re.sub(r"\s+", "", header_norm)
+            header_group, _, _ = _pick_group(header_norm)
+            if header_group == "sales" or header_compact.startswith("iss"):
+                if model_canon in {
+                    "purchase_qty",
+                    "purchase_value",
+                    "opening_qty",
+                    "opening_value",
+                    "closing_qty",
+                    "closing_value",
+                }:
+                    header_ok = False
+                    errors.append(f"ISSUE_NOT_PURCHASE_MODEL_BLOCK col={idx}")
+            if header_group == "closing" or header_compact.startswith("clos"):
+                if model_canon in {
+                    "opening_qty",
+                    "opening_value",
+                    "purchase_qty",
+                    "purchase_value",
+                    "sales_qty",
+                    "sales_value",
+                }:
+                    header_ok = False
+                    errors.append(f"CLOSING_NOT_OPENING_MODEL_BLOCK col={idx}")
             if (
                 resolver_canon == "ignore"
                 and resolver_conf < 0.5
@@ -2195,8 +2339,71 @@ def _merge_proposed_mapping(
                 and model_canon != resolver_canon
             ):
                 errors.append(f"MAPPING_DISAGREE col={idx}")
+            elif (
+                resolver_canon != "ignore"
+                and resolver_conf >= 0.5
+                and model_canon in CANONICAL_FIELDS
+                and model_canon != "ignore"
+                and model_canon != resolver_canon
+            ):
+                # Keep resolver when it already matched a movement header
+                # (e.g. CLOSIN→closing_qty at 0.75); do not let model win.
+                errors.append(f"MAPPING_DISAGREE col={idx}")
         out.append(item)
+    # After model fills an ignore qty, re-attach orphan VALUE to its left qty.
+    _reinherit_orphan_value_columns(out)
     return out
+
+
+def _reinherit_orphan_value_columns(columns: List[Dict[str, Any]]) -> None:
+    """Bare VALUE right of a newly mapped qty → that group's value field.
+
+    Only touches VALUE-marker orphans — never unknown headers like ZZZ.
+    """
+    from services.stock_header_resolver import (
+        _GROUP_TO_VALUE,
+        normalize_header,
+    )
+
+    _QTY_TO_GROUP = {
+        "opening_qty": "opening",
+        "purchase_qty": "purchase",
+        "sales_qty": "sales",
+        "closing_qty": "closing",
+    }
+    for i, col in enumerate(columns):
+        if not isinstance(col, dict):
+            continue
+        if str(col.get("canonical") or "") != "ignore":
+            continue
+        hdr = normalize_header(col.get("header_text"))
+        is_value_header = bool(col.get("is_value")) or hdr in {
+            "value",
+            "val",
+            "amt",
+            "amount",
+            "rs",
+        }
+        if str(col.get("reason") or "") != "orphan_value" and not is_value_header:
+            continue
+        if i == 0:
+            continue
+        left = columns[i - 1]
+        left_canon = str(left.get("canonical") or "")
+        group = _QTY_TO_GROUP.get(left_canon)
+        if not group or group not in _GROUP_TO_VALUE:
+            continue
+        col["canonical"] = _GROUP_TO_VALUE[group]
+        col["is_value"] = True
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.8)
+        col["reason"] = "inherit_left_qty_after_merge"
+        col["source"] = col.get("source") or "resolver"
+        logger.info(
+            "STOCK_VISION_VALUE_REINHERIT col=%s -> %s left=%s",
+            col.get("col_index"),
+            col["canonical"],
+            left_canon,
+        )
 
 
 _GARBAGE_QTY_TOKEN = re.compile(r"^[pP]\d{1,4}$")
@@ -2534,6 +2741,20 @@ def _pack_qty_realign_enabled() -> bool:
     return os.getenv(
         "STOCK_VISION_PACK_QTY_REALIGN", "true"
     ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _rate_pack_peel_enabled() -> bool:
+    """STOCK_VISION_RATE_PACK_PEEL — default ON.
+
+    Treat pack-like tokens in the RATE cell (30,S CAP / 1PACK / JAR) as pack so
+    unlabeled-pack peel restores OPENING qty/value instead of swapping rate↔open.
+    """
+    return os.getenv("STOCK_VISION_RATE_PACK_PEEL", "true").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -3217,6 +3438,40 @@ def _extract_unlabeled_pack_token(
                 product_name[:60],
                 raw_pack,
                 normalized,
+            )
+    # RATE|OPENING sheets: Vision parks "HIMALAY 1*60" / free-text pack in RATE
+    # while the real unit rate sits in the next cell — peel even when classify
+    # calls the token "product".
+    if not pack_token and _rate_pack_peel_enabled() and raw_pack:
+        rate_col = next(
+            (
+                int(c["col_index"])
+                for c in columns
+                if isinstance(c, dict) and c.get("canonical") == "rate"
+            ),
+            None,
+        )
+        kind = _classify_layout_cell(cells[pack_idx])
+        nxt = cells[pack_idx + 1] if pack_idx + 1 < len(cells) else None
+        nxt_kind = (
+            _classify_layout_cell(nxt) if nxt not in (None, "") else "empty"
+        )
+        if (
+            rate_col is not None
+            and pack_idx == rate_col
+            and kind not in {"number", "serial_or_small_int", "empty", "total"}
+            and nxt_kind in {"number", "serial_or_small_int"}
+            and (
+                _looks_money(nxt, raw_text=str(nxt))
+                or ("." in str(nxt) and nxt_kind == "number")
+            )
+        ):
+            pack_token = raw_pack
+            logger.info(
+                "VISION_TABLE RATE_PACK_PEEL product=%r pack=%r next=%r",
+                product_name[:60],
+                raw_pack[:40],
+                str(nxt)[:20],
             )
     if not pack_token:
         return cells, None
@@ -4531,6 +4786,17 @@ def _item_stock_identity_ok(item: Dict[str, Any]) -> bool:
         return False
 
 
+def _item_has_nonzero_qty(item: Dict[str, Any]) -> bool:
+    """True when any movement/closing qty is a non-zero printed-looking number."""
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        try:
+            if abs(float(item.get(key) or 0.0)) > 1e-9:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 def dedupe_crop_overlap_rows(
     items: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -4538,6 +4804,8 @@ def dedupe_crop_overlap_rows(
 
     Same name but different numbers → keep both, flag CROP_OVERLAP_CONFLICT,
     unless prefer-identity is on and exactly one side balances — then keep that.
+    Hollow all-zero rows from a bad bottom half lose to a non-zero twin (0=0=0
+    would otherwise look identity-ok and keep both).
     """
     errors: List[str] = []
     out: List[Dict[str, Any]] = []
@@ -4560,6 +4828,26 @@ def dedupe_crop_overlap_rows(
                 break
             conflict = True
             if _crop_overlap_prefer_identity_enabled():
+                prev_nz = _item_has_nonzero_qty(prev)
+                item_nz = _item_has_nonzero_qty(item)
+                # Bottom-half hollow twins (all zeros) vs real top-half row.
+                if item_nz and not prev_nz:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_NONEMPTY "
+                        "keep_new product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    out[idx] = item
+                    replaced = True
+                    break
+                if prev_nz and not item_nz:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_NONEMPTY "
+                        "keep_prev product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    matched_exact = True  # drop hollow new
+                    break
                 prev_ok = _item_stock_identity_ok(prev)
                 item_ok = _item_stock_identity_ok(item)
                 if item_ok and not prev_ok:
@@ -5600,6 +5888,118 @@ def _pages_for_flagged(
     return [page_images[p] for p in sorted(pages_needed) if 0 <= p < len(page_images)]
 
 
+def _vision_result_medica_columns_collapsed(result: Dict[str, Any]) -> bool:
+    """True when Vision dropped Medica SALE/STOCK and misfiled SALE VAL / STK VAL.
+
+    Printed Medica order is OPSTK|PURCH|SALE|SALE VAL|IN/OT|STOCK|STK VAL.
+    Collapsed headers look like OPSTK|PURCH|SALE VAL|IN/OT|STK VAL with no
+    closing_qty column — sales/closing go missing and closing is derived.
+    """
+    extra = (result.get("totals") or {}).get("extra") or {}
+    cmap = extra.get("column_map") or []
+    headers: List[str] = []
+    canons: List[str] = []
+    for col in cmap:
+        if not isinstance(col, dict):
+            continue
+        headers.append(str(col.get("header_text") or ""))
+        canons.append(str(col.get("canonical") or ""))
+    if not headers:
+        items = result.get("line_items") or []
+        first = items[0] if items and isinstance(items[0], dict) else {}
+        headers = list(
+            ((first.get("extra") or {}).get("vision_column_headers") or [])
+            if isinstance(first, dict)
+            else []
+        )
+    blob = " ".join(headers).upper()
+    if "OPSTK" not in blob or "PURCH" not in blob:
+        return False
+    if "IN/OT" not in blob and "IN / OT" not in blob and "INOT" not in re.sub(
+        r"\s+", "", blob
+    ):
+        return False
+    # Vision often glues IN/OT + STOCK into one header and truncates STK VAL →
+    # "STK V". That looks like closing_qty is mapped, but cells are IN/OT zeros.
+    merged_in_ot_stock = any(
+        re.search(r"IN\s*/\s*OT\s+STOCK|INOT\s*STOCK", h, re.I) for h in headers
+    )
+    has_separate_stock = any(
+        re.fullmatch(r"\s*STOCK\s*", h or "", re.I) for h in headers
+    )
+    sale_val_as_qty = False
+    stk_val_ignored = False
+    for col in cmap:
+        if not isinstance(col, dict):
+            continue
+        ht = re.sub(r"\s+", " ", str(col.get("header_text") or "").strip().lower())
+        canon = str(col.get("canonical") or "")
+        if ht in {"sale val", "sale value", "sales value", "sval"} and canon == "sales_qty":
+            sale_val_as_qty = True
+        if ht in {
+            "stk val",
+            "stkval",
+            "stock value",
+            "stk value",
+            "stk v",
+            "stkv",
+        } and canon in {
+            "ignore",
+            "value_marker",
+        }:
+            stk_val_ignored = True
+    if sale_val_as_qty:
+        return True
+    if merged_in_ot_stock and not has_separate_stock:
+        return True
+    has_closing_qty = "closing_qty" in canons
+    if has_closing_qty and not stk_val_ignored:
+        return False
+    # OPSTK+PURCH+IN/OT without a closing_qty column = collapsed Medica grid.
+    if stk_val_ignored or re.search(r"\bSTK\s*VA?L?\b", blob, re.I):
+        if not has_closing_qty or stk_val_ignored:
+            return True
+    # Closing derived on most rows while sales money/qty were never printed-read.
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 3:
+        return False
+    derived = 0
+    sales_money = 0
+    opening_nonzero = 0
+    closing_nonzero = 0
+    for item in items:
+        fs = (item.get("extra") or {}).get("field_source") or {}
+        if str(fs.get("closing_qty") or "") == "derived":
+            derived += 1
+        try:
+            if abs(float(item.get("sales_value") or 0)) > 0:
+                sales_money += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("opening_qty") or 0)) > 0:
+                opening_nonzero += 1
+        except (TypeError, ValueError):
+            pass
+        try:
+            if abs(float(item.get("closing_qty") or 0)) > 0 or abs(
+                float(item.get("closing_value") or 0)
+            ) > 0:
+                closing_nonzero += 1
+        except (TypeError, ValueError):
+            pass
+    if derived >= max(3, int(len(items) * 0.5)) and sales_money == 0:
+        return True
+    # Opening printed but closing left all-zero on Medica OPSTK/PURCH grids.
+    if (
+        opening_nonzero >= max(3, int(len(items) * 0.2))
+        and closing_nonzero == 0
+        and sales_money == 0
+    ):
+        return True
+    return False
+
+
 def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[str]:
     """When Vision returns names but almost no printed qtys, hand back to OCR/Gemini.
 
@@ -5616,7 +6016,55 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
     items = result.get("line_items") or []
     if not items:
         return "empty_line_items"
+    if _vision_result_medica_columns_collapsed(result):
+        logger.info(
+            "VISION_TABLE quality_fallback reason=medica_columns_collapsed rows=%s",
+            len(items),
+        )
+        return "medica_columns_collapsed"
     extra = (result.get("totals") or {}).get("extra") or {}
+    # LstSL sheets always print Close; deriving every closing_qty means Vision
+    # lost the column (phone chrome / footer Open. Value bleed).
+    column_map = extra.get("column_map") or []
+    header_blob = " ".join(
+        str(c.get("header_text") or "")
+        for c in column_map
+        if isinstance(c, dict)
+    )
+    if re.search(r"(?i)\bLstSL\b|\bLMS\b", header_blob) and re.search(
+        r"(?i)\bOpen(?:ing)?\b", header_blob
+    ):
+        has_close = any(
+            isinstance(c, dict) and c.get("canonical") == "closing_qty"
+            for c in column_map
+        )
+        if not has_close:
+            logger.info(
+                "VISION_TABLE quality_fallback reason=lstsl_missing_close rows=%s",
+                len(items),
+            )
+            return "lstsl_missing_close"
+        # Close mapped (or repaired from Open.) but cells empty — sideways /
+        # chrome-bleed reads leave almost every closing derived/missing.
+        product_items = [
+            it
+            for it in items
+            if isinstance(it, dict) and str(it.get("product_name") or "").strip()
+        ]
+        if len(product_items) >= 3:
+            printed_close = 0
+            for it in product_items:
+                fs = (it.get("extra") or {}).get("field_source") or {}
+                if fs.get("closing_qty") == "printed":
+                    printed_close += 1
+            if printed_close < max(1, len(product_items) // 4):
+                logger.info(
+                    "VISION_TABLE quality_fallback reason=lstsl_close_unpopulated "
+                    "printed_close=%s rows=%s",
+                    printed_close,
+                    len(product_items),
+                )
+                return "lstsl_close_unpopulated"
     try:
         valid_ratio = float(extra.get("valid_ratio") or 0.0)
     except (TypeError, ValueError):
@@ -5705,17 +6153,30 @@ def run_vision_table_path(
         )
 
         page_images: List[bytes]
+        image_bytes_for_vision: bytes = file_bytes
         if kind == "image":
+            # Upright pixels before crop/split/Gemini (Orientation=6 phone JPEGs).
+            image_bytes_for_vision = _exif_orient_image_bytes(file_bytes)
+            ow, oh = _image_dimensions(file_bytes)
+            nw, nh = _image_dimensions(image_bytes_for_vision)
+            if (nw, nh) != (ow, oh) and nw > 0 and nh > 0:
+                _log(
+                    "exif_transpose",
+                    from_w=ow,
+                    from_h=oh,
+                    to_w=nw,
+                    to_h=nh,
+                )
             cropped = None
             try:
                 from services.sales_statement_extractor import (
                     _crop_bright_spreadsheet_region,
                 )
 
-                cropped = _crop_bright_spreadsheet_region(file_bytes)
+                cropped = _crop_bright_spreadsheet_region(image_bytes_for_vision)
             except Exception:
                 cropped = None
-            page_images = [cropped or file_bytes]
+            page_images = [cropped or image_bytes_for_vision]
             if cropped:
                 _log("table_crop_applied", bytes=len(cropped))
             gemini_budget = 2
@@ -5752,7 +6213,7 @@ def run_vision_table_path(
         deferred_vertical_split = False
         eager_vertical_split = False
         original_image_for_reread: Optional[bytes] = (
-            file_bytes if kind == "image" else None
+            image_bytes_for_vision if kind == "image" else None
         )
         if (
             kind == "image"
@@ -5767,7 +6228,7 @@ def run_vision_table_path(
                 _log(
                     "vertical_split_eager",
                     halves=len(page_images),
-                    height=_image_dimensions(file_bytes)[1],
+                    height=_image_dimensions(image_bytes_for_vision)[1],
                     min_height=_split_min_height(),
                     gemini_budget=gemini_budget,
                 )
@@ -5776,7 +6237,7 @@ def run_vision_table_path(
                 _log(
                     "vertical_split_deferred",
                     reason="recon_priority",
-                    height=_image_dimensions(file_bytes)[1],
+                    height=_image_dimensions(image_bytes_for_vision)[1],
                     min_height=_split_min_height(),
                 )
 

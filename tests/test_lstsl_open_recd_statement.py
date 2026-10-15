@@ -26,6 +26,21 @@ Receipt Value       2,73,994.52  Sales Value     2,59,377.27
 Closing Value       4,47,392.83
 """
 
+SAMPLE_LSTMOVE_STKVAL = """
+KIRAN AGENCIES,AKOLA
+Stock & Sales Report for the month SEPTEMBER-2026 for : HIMALAYA WELLNESS COMPANY (DIV.: HIMALAYA OTX)    Page :   1
+Product Name              Pack   LstSL  Open Recd. Sales Close  Order  Pend  LstMove Stk.Value
+ASHVAGANDHA TAB           60'S      20    36     -     6    30    -27     - 17/09/26   5866.80
+ASHWAGANDHA ORGANIC CAP   30'S      13    20     -     2    18    -17     - 12/09/26   6650.10
+AYURSLIM CAP              60'S      19     -    24     2    22    -21     - 24/09/26   5330.16
+BRAHMI                    60'S       -    61     -     1    60    -60     - 22/09/26  11863.90
+GASEX SYP ELAICHI FLAVOUR 200ML     68    48     -    11    37    -32    28 11/09/26   4228.36
+GASEX SYP GINGER LEMON    200ML      8   151     -     1   150   -150     - 18/09/26  16286.94
+Last Month Sales    2,28,014.92  Open. Value     1,00,000.00
+Receipt Value         50,000.00  Sales Value       80,000.00
+Closing Value       1,20,000.00
+"""
+
 
 class TestLstslOpenRecdStatement(unittest.TestCase):
     def test_lstsl_is_not_opening_and_order_is_not_closing(self):
@@ -53,6 +68,32 @@ class TestLstslOpenRecdStatement(unittest.TestCase):
                 "pdf",
             )
         )
+
+    def test_lstmove_stk_value_not_shifted_into_qty(self):
+        result = _parse_lstsl_open_recd_statement(
+            SAMPLE_LSTMOVE_STKVAL, "kiransept.pdf", "pdf"
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["stockist_name"], "KIRAN AGENCIES,AKOLA")
+        self.assertEqual(result["period_from"], "2026-09-01")
+        self.assertEqual(result["period_to"], "2026-09-30")
+        self.assertIn("HIMALAYA", result["company_name"] or "")
+        rows = {item["product_name"]: item for item in result["line_items"]}
+        ash = rows["ASHVAGANDHA TAB"]
+        self.assertEqual(ash["packing"], "60'S")
+        self.assertEqual(ash["opening_qty"], 36.0)
+        self.assertEqual(ash["receipts_qty"], 0.0)
+        self.assertEqual(ash["sales_qty"], 6.0)
+        self.assertEqual(ash["closing_qty"], 30.0)
+        self.assertEqual(ash["closing_value"], 5866.80)
+        self.assertEqual(ash["extra"]["last_sales_qty"], 20.0)
+        self.assertEqual(rows["BRAHMI"]["opening_qty"], 61.0)
+        self.assertEqual(rows["BRAHMI"]["closing_qty"], 60.0)
+        names = [i["product_name"] for i in result["line_items"]]
+        self.assertNotIn("Last Month Sales", names)
+        self.assertNotIn("Closing Value", names)
+        self.assertEqual(result["totals"]["sales_value"], 80000.0)
+        self.assertEqual(result["totals"]["closing_value"], 120000.0)
 
     @unittest.skipUnless(PDF.is_file(), "missing Jain Pharma PDF")
     def test_jain_pharma_pdf_keeps_open_and_close(self):

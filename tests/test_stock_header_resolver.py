@@ -528,6 +528,66 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(normalize_header("Stock-Value"), "stock value")
 
 
+class OpenBalCloseBalBillAmtTests(unittest.TestCase):
+    """OpenBalQty must not become closing via infix 'bal qty'; Amt cols are values."""
+
+    _HDR = (
+        "ITEM NAME",
+        "OpenBalQty",
+        "PurchBillQty",
+        "PurchBillAmt",
+        "Sales BillQty",
+        "Sales BillAmt",
+        "CloseBalQty",
+        "ClosingBal tQty",
+        "atestSales Rate",
+    )
+
+    def test_openbalqty_is_opening_not_closing(self):
+        cols = resolve_columns(_cells(*self._HDR))["columns"]
+        by_text = {c["header_text"]: c["canonical"] for c in cols}
+        self.assertEqual(by_text["OpenBalQty"], "opening_qty")
+        self.assertEqual(by_text["CloseBalQty"], "closing_qty")
+        self.assertEqual(by_text["PurchBillAmt"], "purchase_value")
+        self.assertEqual(by_text["Sales BillAmt"], "sales_value")
+        self.assertEqual(by_text["ClosingBal tQty"], "closing_value")
+        self.assertEqual(
+            _canons(resolve_columns(_cells(*self._HDR))),
+            [
+                "product_name",
+                "opening_qty",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+                "rate",
+            ],
+        )
+
+    def test_assign_cells_maps_open_sale_close(self):
+        resolved = resolve_columns(_cells(*self._HDR))
+        # BONNISAN DROPS: open 58, sale 6, close 52, sale amt 447.96, close amt 3882.32
+        tokens = [
+            {"col_index": 0, "text": "BONNISAN DROPS"},
+            {"col_index": 1, "text": "58.000"},
+            {"col_index": 4, "text": "6.000"},
+            {"col_index": 5, "text": "447.96"},
+            {"col_index": 6, "text": "52.000"},
+            {"col_index": 7, "text": "3882.320"},
+        ]
+        out = assign_cells(tokens, resolved["columns"])
+        fields = out["fields"]
+        self.assertEqual(fields["product_name"], "BONNISAN DROPS")
+        self.assertEqual(fields["opening_qty"], "58.000")
+        self.assertEqual(fields["sales_qty"], "6.000")
+        self.assertEqual(fields["closing_qty"], "52.000")
+        self.assertEqual(fields["sales_value"], "447.96")
+        self.assertEqual(fields["closing_value"], "3882.320")
+        self.assertIsNone(fields.get("purchase_qty"))
+
+
 class MedicaInOtFreeInTests(unittest.TestCase):
     _HDR = ("OPSTK", "PURCH", "SALE", "SALE VAL", "IN/OT", "STOCK", "STK VAL")
 
