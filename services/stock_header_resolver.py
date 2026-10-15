@@ -139,6 +139,11 @@ ALIASES: Dict[str, List[str]] = {
         "ob",
         "opbal",
         "op bal",
+        # OpenBalQty — must beat closing "bal qty" infix inside openbalqty.
+        "openbalqty",
+        "open bal qty",
+        "opening bal qty",
+        "openbal qty",
         "opening stock",
         "opening qty",
         "opening quantity",
@@ -176,6 +181,9 @@ ALIASES: Dict[str, List[str]] = {
         "purchase qty",
         "purchased",
         "purchased qty",
+        "purchbillqty",
+        "purch bill qty",
+        "purchase bill qty",
     ],
     "sales": [
         "sale",
@@ -194,6 +202,9 @@ ALIASES: Dict[str, List[str]] = {
         "issue/sales",
         "sales qty",
         "sale qty",
+        "sales bill qty",
+        "sale bill qty",
+        "salesbillqty",
     ],
     "sales_return": [
         "saleret",
@@ -266,6 +277,11 @@ ALIASES: Dict[str, List[str]] = {
         "closing qty",
         "closing balance",
         "closing bal",
+        # CloseBalQty — distinct from OpenBalQty / ClosingBalAmt.
+        "closebalqty",
+        "close bal qty",
+        "closing bal qty",
+        "closebal qty",
         "cl bal",
         "cl balance",
         "cl qty",
@@ -450,11 +466,16 @@ def _has_value_marker(norm: str) -> bool:
     compact = re.sub(r"\s+", "", norm)
     for marker in _VALUE_MARKERS:
         m = normalize_header(marker)
+        m_compact = re.sub(r"\s+", "", m)
         if len(m) <= 3:
+            # Token match, or camelCase / glued BillAmt-style suffix.
+            # Only amt/rs for endswith — bare "val" would false-hit *val words.
             if m in tokens:
                 return True
+            if m_compact in {"amt", "rs"} and compact.endswith(m_compact):
+                return True
         else:
-            if m in norm or re.sub(r"\s+", "", m) in compact:
+            if m in norm or m_compact in compact:
                 return True
     return False
 
@@ -483,6 +504,14 @@ _DIRECT_VALUE_FIELDS = {
     "clval": "closing_value",
     "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
     "cival": "closing_value",
+    "closing bal amt": "closing_value",
+    "closingbalamt": "closing_value",
+    "close bal amt": "closing_value",
+    "closebalamt": "closing_value",
+    # OCR of ClosingBalAmt → "ClosingBal tQty" / "ClosingBal aqty".
+    "closingbal tqty": "closing_value",
+    "closing baltqty": "closing_value",
+    "closingbal aqty": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
     "stk value": "closing_value",
@@ -494,7 +523,9 @@ _DIRECT_VALUE_FIELDS = {
     "sa val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
-    "sales value": "sales_value",
+    "sales bill amt": "sales_value",
+    "sale bill amt": "sales_value",
+    "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
     "open value": "opening_value",
@@ -502,6 +533,9 @@ _DIRECT_VALUE_FIELDS = {
     "opening value": "opening_value",
     "pur val": "purchase_value",
     "purchase value": "purchase_value",
+    "purch bill amt": "purchase_value",
+    "purchbillamt": "purchase_value",
+    "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
     "issue value": "sales_value",
 }
@@ -546,6 +580,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # Special: "return" alone is sales_return only when no pur token.
     tokens = _tokens(norm)
     filtered: List[Tuple[str, str, float]] = []
+    compact_norm = re.sub(r"\s+", "", norm)
     for group, alias, conf in hits:
         if group == "sales_return" and alias == "return":
             if any(t.startswith("pur") for t in tokens) or "purchase" in norm:
@@ -562,6 +597,20 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         # Short "op" must not beat a multi-token total alias like "op rec".
         if group == "opening" and alias in {"op", "opn"} and len(tokens) > 1:
             continue
+        # OpenBalQty must not match closing via infix "bal qty" inside openbalqty.
+        if group == "closing" and alias in {
+            "bal qty",
+            "bal",
+            "balance",
+            "balance qty",
+            "bal.",
+        }:
+            if (
+                compact_norm.startswith("open")
+                or "openbal" in compact_norm
+                or "opening" in compact_norm
+            ):
+                continue
         # "Receipt Free" is free-in, not purchase.
         if group == "purchase" and "free" in tokens:
             continue
