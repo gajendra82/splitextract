@@ -244,6 +244,7 @@ ALIASES: Dict[str, List[str]] = {
     "closing": [
         "cls",
         "clos",
+        "close",  # LstSL Close column (exact; "clos" alone also hits via compact)
         "closing",
         "clos stock",
         "closstock",
@@ -696,6 +697,93 @@ def _group_wise_sales_sequence_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _lstsl_close_after_sales_enabled() -> bool:
+    """STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES — default ON.
+
+    Vision often misreads printed Close as Open. / Open (footer Open. Value
+    bleed) right after Sales on LstSL|Open|Recd|Sales|Close sheets.
+    """
+    return os.getenv(
+        "STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_lstsl_open_recd_headers(prelim: List[Dict[str, Any]]) -> bool:
+    blob = " ".join(
+        normalize_header(c.get("header_text")) for c in prelim if isinstance(c, dict)
+    )
+    if not re.search(r"\blstsl\b|\blst\s*sl\b|\blms\b", blob):
+        return False
+    canons = {c.get("canonical") for c in prelim if isinstance(c, dict)}
+    return {"opening_qty", "purchase_qty", "sales_qty"}.issubset(canons)
+
+
+def _apply_lstsl_close_after_sales(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map the column immediately after Sales → closing_qty on LstSL sheets.
+
+    Only when Close is missing. Accepts duplicate Open / Open. / ignore / a
+    wrongly valued Sales label — never invents a column index.
+    """
+    if not _lstsl_close_after_sales_enabled():
+        return False
+    if not _looks_like_lstsl_open_recd_headers(prelim):
+        return False
+    if any(c.get("canonical") == "closing_qty" for c in prelim):
+        return False
+    sales_i = next(
+        (
+            i
+            for i, c in enumerate(prelim)
+            if c.get("canonical") == "sales_qty" and not c.get("is_value")
+        ),
+        None,
+    )
+    if sales_i is None or sales_i + 1 >= len(prelim):
+        return False
+    nxt = prelim[sales_i + 1]
+    nxt_norm = normalize_header(nxt.get("header_text"))
+    nxt_canon = nxt.get("canonical")
+    # Typical misreads of Close: second Open / Open. / bare Sales (Order) /
+    # Value / already-ignored duplicate.
+    open_like = bool(re.match(r"^open(?:ing)?\.?$", nxt_norm or ""))
+    allow = (
+        nxt_canon in {"ignore", "opening_qty", "sales_qty", "sales_value", None}
+        or open_like
+        or nxt_norm in {"value", "order", "ord"}
+    )
+    if not allow:
+        return False
+    nxt["canonical"] = "closing_qty"
+    nxt["group"] = "closing"
+    nxt["is_value"] = False
+    nxt["confidence"] = max(float(nxt.get("confidence") or 0.0), 0.9)
+    nxt["reason"] = "lstsl_close_after_sales"
+    logger.info(
+        "STOCK_HEADER_LSTSL_CLOSE_AFTER_SALES col=%s text=%r",
+        nxt.get("col_index"),
+        nxt.get("header_text"),
+    )
+    errors.append(
+        {
+            "code": "LSTSL_CLOSE_AFTER_SALES",
+            "message": (
+                f"Mapped col_index={nxt.get('col_index')} "
+                f"({nxt.get('header_text')!r}) to closing_qty after Sales"
+            ),
+            "col_index": nxt.get("col_index"),
+        }
+    )
+    return True
 
 
 # Between Op.Stock and Cl.Stock on Group Wise Sales (qty columns only).
@@ -1738,6 +1826,8 @@ def resolve_columns(
     _apply_qf_qty_sequence(prelim, errors)
     # Group Wise Sales: Op/Purchase/Free/Ret/Sales Qty/Cl.Stock (before dedup).
     _apply_group_wise_sales_sequence(prelim, errors)
+    # LstSL|Open|Recd|Sales|Close: Close misread as Open. after Sales.
+    _apply_lstsl_close_after_sales(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

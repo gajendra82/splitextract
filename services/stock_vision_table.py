@@ -1750,15 +1750,120 @@ def _image_dimensions(img: bytes) -> Tuple[int, int]:
         return 0, 0
 
 
+def _exif_orient_enabled() -> bool:
+    """STOCK_VISION_EXIF_TRANSPOSE — default ON.
+
+    Phone JPEGs often store landscape pixel buffers with Orientation=6; without
+    transpose Gemini reads the grid sideways and invents Open/Recd/Sales/Close.
+    """
+    return os.getenv("STOCK_VISION_EXIF_TRANSPOSE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _exif_orient_image_bytes(img: bytes) -> bytes:
+    """Re-encode upright pixels when EXIF Orientation is set (no-op otherwise)."""
+    if not img or not _exif_orient_enabled():
+        return img
+    try:
+        from PIL import Image, ImageOps
+        import io
+
+        with Image.open(io.BytesIO(img)) as im:
+            ori = int(im.getexif().get(274) or 1)
+            if ori in (0, 1):
+                return img
+            oriented = ImageOps.exif_transpose(im)
+            if oriented is None:
+                return img
+            buf = io.BytesIO()
+            fmt = "JPEG" if img[:2] == b"\xff\xd8" else "PNG"
+            save_kw: Dict[str, Any] = {}
+            if fmt == "JPEG":
+                save_kw["quality"] = 92
+                if oriented.mode not in ("RGB", "L"):
+                    oriented = oriented.convert("RGB")
+            oriented.save(buf, format=fmt, **save_kw)
+            out = buf.getvalue()
+            logger.info(
+                "VISION_TABLE_EXIF_TRANSPOSE orientation=%s size=%sx%s -> %sx%s",
+                ori,
+                im.size[0],
+                im.size[1],
+                oriented.size[0],
+                oriented.size[1],
+            )
+            return out or img
+    except Exception as exc:
+        logger.info(
+            "VISION_TABLE_EXIF_TRANSPOSE skipped err=%s", type(exc).__name__
+        )
+        return img
+
+
+def _phone_portrait_skip_split_enabled() -> bool:
+    """STOCK_VISION_SKIP_SPLIT_PHONE_PORTRAIT — default ON.
+
+    After EXIF transpose, phone LstSL photos are ~2448x3264. Eager top/bottom
+    split loses Close on the bottom half (no header band) and invents hollow
+    rows. One full-frame Vision call fits these grids under the token budget.
+    """
+    return os.getenv(
+        "STOCK_VISION_SKIP_SPLIT_PHONE_PORTRAIT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _phone_portrait_split_min_height() -> int:
+    """Taller than this, even narrow phone portraits may split (token budget)."""
+    try:
+        return max(
+            _split_min_height(),
+            int(os.getenv("STOCK_VISION_PHONE_SPLIT_MIN_HEIGHT", "4000")),
+        )
+    except (TypeError, ValueError):
+        return max(_split_min_height(), 4000)
+
+
 def _needs_vertical_split(img: bytes) -> bool:
-    """Tall / high-res single pages often exceed output token budget."""
+    """Tall / high-res single pages often exceed output token budget.
+
+    Call after ``_exif_orient_image_bytes`` so Orientation=6 phone photos are
+    measured upright. Landscape buffers (w >= h) must stay as one image:
+    top/bottom halves glue phone chrome and footer labels into headers and
+    shift Open/Recd/Sales/Close cells across rows.
+    """
     w, h = _image_dimensions(img)
     if h <= 0:
         return False
     if h >= _split_min_height():
+        # Narrow upright phone frames: prefer one shot unless extremely tall.
+        if (
+            _phone_portrait_skip_split_enabled()
+            and w < h
+            and w < 2800
+            and h < _phone_portrait_split_min_height()
+        ):
+            logger.info(
+                "VISION_TABLE skip_vertical_split phone_portrait w=%s h=%s "
+                "phone_min_h=%s",
+                w,
+                h,
+                _phone_portrait_split_min_height(),
+            )
+            return False
         return True
-    # Wide phone-photo sheets that are also tall enough to pack many rows.
-    return w >= 3000 and h >= 2200
+    # Portrait-leaning wide sheets only — not landscape desk photos.
+    if w < h and w >= 3000 and h >= 2200:
+        return True
+    return False
 
 
 def _vertical_halves(img: bytes) -> List[bytes]:
@@ -4531,6 +4636,17 @@ def _item_stock_identity_ok(item: Dict[str, Any]) -> bool:
         return False
 
 
+def _item_has_nonzero_qty(item: Dict[str, Any]) -> bool:
+    """True when any movement/closing qty is a non-zero printed-looking number."""
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        try:
+            if abs(float(item.get(key) or 0.0)) > 1e-9:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 def dedupe_crop_overlap_rows(
     items: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -4538,6 +4654,8 @@ def dedupe_crop_overlap_rows(
 
     Same name but different numbers → keep both, flag CROP_OVERLAP_CONFLICT,
     unless prefer-identity is on and exactly one side balances — then keep that.
+    Hollow all-zero rows from a bad bottom half lose to a non-zero twin (0=0=0
+    would otherwise look identity-ok and keep both).
     """
     errors: List[str] = []
     out: List[Dict[str, Any]] = []
@@ -4560,6 +4678,26 @@ def dedupe_crop_overlap_rows(
                 break
             conflict = True
             if _crop_overlap_prefer_identity_enabled():
+                prev_nz = _item_has_nonzero_qty(prev)
+                item_nz = _item_has_nonzero_qty(item)
+                # Bottom-half hollow twins (all zeros) vs real top-half row.
+                if item_nz and not prev_nz:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_NONEMPTY "
+                        "keep_new product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    out[idx] = item
+                    replaced = True
+                    break
+                if prev_nz and not item_nz:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_NONEMPTY "
+                        "keep_prev product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    matched_exact = True  # drop hollow new
+                    break
                 prev_ok = _item_stock_identity_ok(prev)
                 item_ok = _item_stock_identity_ok(item)
                 if item_ok and not prev_ok:
@@ -5735,6 +5873,48 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
         )
         return "medica_columns_collapsed"
     extra = (result.get("totals") or {}).get("extra") or {}
+    # LstSL sheets always print Close; deriving every closing_qty means Vision
+    # lost the column (phone chrome / footer Open. Value bleed).
+    column_map = extra.get("column_map") or []
+    header_blob = " ".join(
+        str(c.get("header_text") or "")
+        for c in column_map
+        if isinstance(c, dict)
+    )
+    if re.search(r"(?i)\bLstSL\b|\bLMS\b", header_blob) and re.search(
+        r"(?i)\bOpen(?:ing)?\b", header_blob
+    ):
+        has_close = any(
+            isinstance(c, dict) and c.get("canonical") == "closing_qty"
+            for c in column_map
+        )
+        if not has_close:
+            logger.info(
+                "VISION_TABLE quality_fallback reason=lstsl_missing_close rows=%s",
+                len(items),
+            )
+            return "lstsl_missing_close"
+        # Close mapped (or repaired from Open.) but cells empty — sideways /
+        # chrome-bleed reads leave almost every closing derived/missing.
+        product_items = [
+            it
+            for it in items
+            if isinstance(it, dict) and str(it.get("product_name") or "").strip()
+        ]
+        if len(product_items) >= 3:
+            printed_close = 0
+            for it in product_items:
+                fs = (it.get("extra") or {}).get("field_source") or {}
+                if fs.get("closing_qty") == "printed":
+                    printed_close += 1
+            if printed_close < max(1, len(product_items) // 4):
+                logger.info(
+                    "VISION_TABLE quality_fallback reason=lstsl_close_unpopulated "
+                    "printed_close=%s rows=%s",
+                    printed_close,
+                    len(product_items),
+                )
+                return "lstsl_close_unpopulated"
     try:
         valid_ratio = float(extra.get("valid_ratio") or 0.0)
     except (TypeError, ValueError):
@@ -5823,17 +6003,30 @@ def run_vision_table_path(
         )
 
         page_images: List[bytes]
+        image_bytes_for_vision: bytes = file_bytes
         if kind == "image":
+            # Upright pixels before crop/split/Gemini (Orientation=6 phone JPEGs).
+            image_bytes_for_vision = _exif_orient_image_bytes(file_bytes)
+            ow, oh = _image_dimensions(file_bytes)
+            nw, nh = _image_dimensions(image_bytes_for_vision)
+            if (nw, nh) != (ow, oh) and nw > 0 and nh > 0:
+                _log(
+                    "exif_transpose",
+                    from_w=ow,
+                    from_h=oh,
+                    to_w=nw,
+                    to_h=nh,
+                )
             cropped = None
             try:
                 from services.sales_statement_extractor import (
                     _crop_bright_spreadsheet_region,
                 )
 
-                cropped = _crop_bright_spreadsheet_region(file_bytes)
+                cropped = _crop_bright_spreadsheet_region(image_bytes_for_vision)
             except Exception:
                 cropped = None
-            page_images = [cropped or file_bytes]
+            page_images = [cropped or image_bytes_for_vision]
             if cropped:
                 _log("table_crop_applied", bytes=len(cropped))
             gemini_budget = 2
@@ -5870,7 +6063,7 @@ def run_vision_table_path(
         deferred_vertical_split = False
         eager_vertical_split = False
         original_image_for_reread: Optional[bytes] = (
-            file_bytes if kind == "image" else None
+            image_bytes_for_vision if kind == "image" else None
         )
         if (
             kind == "image"
@@ -5885,7 +6078,7 @@ def run_vision_table_path(
                 _log(
                     "vertical_split_eager",
                     halves=len(page_images),
-                    height=_image_dimensions(file_bytes)[1],
+                    height=_image_dimensions(image_bytes_for_vision)[1],
                     min_height=_split_min_height(),
                     gemini_budget=gemini_budget,
                 )
@@ -5894,7 +6087,7 @@ def run_vision_table_path(
                 _log(
                     "vertical_split_deferred",
                     reason="recon_priority",
-                    height=_image_dimensions(file_bytes)[1],
+                    height=_image_dimensions(image_bytes_for_vision)[1],
                     min_height=_split_min_height(),
                 )
 
