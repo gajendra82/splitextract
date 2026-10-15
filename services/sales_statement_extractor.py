@@ -31374,6 +31374,244 @@ def _packing_opstk_column_rights(words: List[Any]) -> Optional[Dict[str, float]]
     }
 
 
+_BALAJI_HZ_STOP_RE = re.compile(
+    r"^\s*(?:Summary|Non\s*Moving\s*Product|Short\s*Expiry\s*List|"
+    r"User\s*Name\s*:|Print\s*Datetime\s*:|Product\s*Name|Pack\s*$|"
+    r"LM\s*Qty|BLM\s*Qty|Op\.\s*Stock|Pur\.\s*Qty|Sales\s*Qty|SR\s*Qty|"
+    r"PR\s*Qty|Cl\.?\s*Stock|Stock\s*Value|Sal\.\s*Val|Page\s*No|"
+    r"Stock\s+And\s+Sales\s+Statement|HIMALAYA-ZEAL)\b",
+    re.I,
+)
+
+
+def _is_balaji_himalaya_zeal_vertical_format(text: str) -> bool:
+    """Detect the HIMALAYA-ZEAL Stock and Sales Statement with LM/BLM/Op.Stock columns."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s+And\s+Sales\s+Statement", text, re.I):
+        return False
+    # Distinct column headers for this layout, in either glued or spaced form
+    hits = 0
+    for pat in (
+        r"\bLM\s*Qty",
+        r"\bBLM\s*Qty",
+        r"Op\.\s*Stock",
+        r"Pur\.\s*Qty",
+        r"Sales\s*Qty",
+        r"Cl\.?\s*Stock",
+        r"Sal\.\s*Val",
+    ):
+        if re.search(pat, text, re.I):
+            hits += 1
+    return hits >= 5
+
+
+def _parse_balaji_himalaya_zeal_vertical_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """HIMALAYA-ZEAL style Stock & Sales Statement where PyMuPDF emits one cell per line.
+
+    Columns per product block (12 numeric cells after name + pack):
+        LM Qty | BLM Qty | Op.Stock | Pur.Qty | Pur.Free |
+        Sales Qty | Sales Free | SR Qty | PR Qty |
+        Cl.Stock | Stock Value | Sal.Val
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    full_text = "\n".join(page_texts)
+    if not _is_balaji_himalaya_zeal_vertical_format(full_text):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sale Statement"
+
+    m_period = re.search(
+        r"Period\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:To|-|–)\s*"
+        r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+        full_text,
+        re.I,
+    )
+    if m_period:
+        result["period_from"] = _normalize_date(m_period.group(1))
+        result["period_to"] = _normalize_date(m_period.group(2))
+
+    first_lines = (page_texts[0] if page_texts else "").splitlines()
+    for ln in first_lines[:6]:
+        s = ln.strip()
+        if not s:
+            continue
+        if re.search(
+            r"Stock\s+And\s+Sales|Page\s*No|HIMALAYA|Product\s*Name|Pack\b",
+            s,
+            re.I,
+        ):
+            if re.search(r"HIMALAYA", s, re.I) and not result.get("company_name"):
+                result["company_name"] = _clean_name(s)
+            continue
+        if not result.get("stockist_name"):
+            result["stockist_name"] = _clean_name(s)
+
+    def _cell_val(raw: str) -> Optional[float]:
+        s = (raw or "").strip()
+        if not s:
+            return None
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", s):
+            return _to_float(s)
+        return False  # type: ignore[return-value]
+
+    items: List[Dict[str, Any]] = []
+    seen_products: set = set()
+    for text in page_texts:
+        lines = text.splitlines()
+        header_idx: Optional[int] = None
+        for i, ln in enumerate(lines):
+            if re.match(r"\s*Sal\.\s*Val\s*$", ln, re.I):
+                header_idx = i
+                break
+        if header_idx is None:
+            continue
+        i = header_idx + 1
+        while i + 13 < len(lines):
+            name_line = lines[i].strip()
+            if not name_line:
+                i += 1
+                continue
+            if _BALAJI_HZ_STOP_RE.match(name_line):
+                break
+            if re.fullmatch(r"-?\d+(?:\.\d+)?", name_line):
+                # Stray numeric line (defensive): skip
+                i += 1
+                continue
+            metric_cells = [lines[i + 2 + j] for j in range(12)]
+            parsed: List[Optional[float]] = []
+            ok = True
+            for cell in metric_cells:
+                v = _cell_val(cell)
+                if v is False:
+                    ok = False
+                    break
+                parsed.append(v)
+            if not ok:
+                # Likely hit a boundary mid-way; stop scanning this page
+                break
+            pack_line = lines[i + 1].strip() or None
+            (
+                lm_qty,
+                blm_qty,
+                op_stk,
+                pur_qty,
+                pur_free,
+                sales_qty,
+                sales_free,
+                sr_qty,
+                pr_qty,
+                cl_stk,
+                stk_val,
+                sal_val,
+            ) = parsed
+            item = empty_line_item()
+            item["product_name"] = _clean_name(name_line)
+            item["packing"] = pack_line
+            item["opening_qty"] = float(op_stk or 0.0)
+            item["receipts_qty"] = float(pur_qty or 0.0)
+            item["sales_qty"] = float(sales_qty or 0.0)
+            item["closing_qty"] = float(cl_stk or 0.0)
+            item["sales_value"] = sal_val
+            item["closing_value"] = stk_val
+            extra = item["extra"]
+            if lm_qty is not None:
+                extra["lm_qty"] = lm_qty
+            if blm_qty is not None:
+                extra["blm_qty"] = blm_qty
+            if pur_free is not None:
+                extra["purchase_scheme_qty"] = pur_free
+            if sales_free is not None:
+                extra["sales_scheme_qty"] = sales_free
+            if sr_qty is not None:
+                extra["sales_return_qty"] = sr_qty
+            if pr_qty is not None:
+                extra["purchase_return_qty"] = pr_qty
+            extra["layout"] = "balaji_himalaya_zeal_vertical"
+            key = (item["product_name"] or "").upper() + "|" + (pack_line or "").upper()
+            if key in seen_products:
+                i += 14
+                continue
+            seen_products.add(key)
+            items.append(item)
+            i += 14
+
+    if not items:
+        return None
+
+    # Summary table: labels listed first, then values, both on separate lines.
+    # OpStockValue, Purchase, SR, Sales, PR, ClStockValue, LM SalValue, Goods Value
+    summary_labels = [
+        "OpStockValue",
+        "Purchase",
+        "SR",
+        "Sales",
+        "PR",
+        "ClStockValue",
+        "LM SalValue",
+        "Goods Value",
+    ]
+    label_pat = re.compile(
+        r"OpStockValue\s*\n+Purchase\s*\n+SR\s*\n+Sales\s*\n+PR\s*\n+"
+        r"ClStockValue\s*\n+LM\s*SalValue\s*\n+Goods\s*Value",
+        re.I,
+    )
+    m_lab = label_pat.search(full_text)
+    if m_lab:
+        tail = full_text[m_lab.end():]
+        stop = re.search(
+            r"Non\s*Moving\s*Product|Short\s*Expiry\s*List|User\s*Name\s*:",
+            tail,
+            re.I,
+        )
+        tail_window = tail[: stop.start()] if stop else tail[:400]
+        nums = re.findall(r"-?\d+(?:\.\d+)?", tail_window)
+        if len(nums) >= 6:
+            totals_extra = result["totals"]["extra"]
+            vals = [float(n) for n in nums[: len(summary_labels)]]
+            mapping = dict(zip(summary_labels, vals))
+            if "OpStockValue" in mapping:
+                totals_extra["opening_value"] = mapping["OpStockValue"]
+            if "Purchase" in mapping:
+                totals_extra["receipts_value"] = mapping["Purchase"]
+                totals_extra["purchase_value"] = mapping["Purchase"]
+            if "SR" in mapping:
+                totals_extra["sales_return_value"] = mapping["SR"]
+            if "Sales" in mapping:
+                result["totals"]["sales_value"] = mapping["Sales"]
+            if "PR" in mapping:
+                totals_extra["purchase_return_value"] = mapping["PR"]
+            if "ClStockValue" in mapping:
+                result["totals"]["closing_value"] = mapping["ClStockValue"]
+            if "LM SalValue" in mapping:
+                totals_extra["lm_sales_value"] = mapping["LM SalValue"]
+            if "Goods Value" in mapping:
+                totals_extra["goods_value"] = mapping["Goods Value"]
+
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = (
+        "balaji_himalaya_zeal_vertical_pdf"
+    )
+    result["totals"]["extra"]["column_roles"] = [
+        "lm_qty",
+        "blm_qty",
+        "opening_qty",
+        "receipts_qty",
+        "purchase_scheme_qty",
+        "sales_qty",
+        "sales_scheme_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "closing_qty",
+        "closing_value",
+        "sales_value",
+    ]
+    return result
+
+
 def _parse_packing_opstk_sps_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Word positions for the Packing / Op Stk / Sp S Qty / Cl Stk text grid."""
     page_texts = [(page.get_text("text") or "") for page in doc]
@@ -33303,6 +33541,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 filename,
                 type(exc).__name__,
             )
+
+        # HIMALAYA-ZEAL Stock & Sales Statement where PyMuPDF emits each cell on
+        # its own line. Op.Stock / Pur.Qty / Sales Qty / Cl.Stock / Stock Value /
+        # Sal.Val sit at fixed positions 2/3/5/9/10/11 of a 12-cell block.
+        balaji_hz = _parse_balaji_himalaya_zeal_vertical_pdf(doc, filename)
+        if balaji_hz and balaji_hz.get("line_items"):
+            balaji_hz["totals"]["extra"]["statement_count"] = 1
+            return balaji_hz
 
         packing_opstk = _parse_packing_opstk_sps_statement(doc, filename)
         if packing_opstk and packing_opstk.get("line_items"):
@@ -49714,6 +49960,71 @@ def _header_driven_rows_ok(items: List[Dict[str, Any]], roles: set) -> bool:
     return matched / checked >= 0.6 and matched >= 5
 
 
+def _header_driven_stock_qty_blank(result: Optional[Dict[str, Any]]) -> bool:
+    """Header-driven kept the names and wrote 0 in every stock column.
+
+    A real zero-movement sheet is left alone when fewer than 90% of rows are blank.
+    """
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if str(extra.get("extraction_method") or "") != "header_driven_stock_photo":
+        return False
+    roles = set(extra.get("column_roles") or [])
+    if not {"opening_qty", "sales_qty", "closing_qty"} <= roles:
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 12:
+        return False
+    blank = 0
+    for item in items:
+        if all(
+            _to_float(item.get(key)) == 0
+            for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        ):
+            blank += 1
+    return blank / len(items) >= 0.9
+
+
+def _opbal_issue_closing_photo_usable(result: Optional[Dict[str, Any]]) -> bool:
+    """Op.Bal + Receipt - Issue = Closing, with real quantities on the page."""
+    if not isinstance(result, dict):
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 12:
+        return False
+    moving = 0
+    balanced = 0
+    for item in items:
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        if any(value != 0 for value in (opening, receipts, sales, closing)):
+            moving += 1
+        if abs(opening + receipts - sales - closing) <= 0.05:
+            balanced += 1
+    return moving >= 8 and balanced / len(items) >= 0.7
+
+
+def _enlarge_stock_photo(file_bytes: bytes) -> bytes:
+    """Enlarge a small phone photo. Other sizes are returned unchanged."""
+    from PIL import Image, ImageOps
+
+    try:
+        image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+    except Exception:
+        return file_bytes
+    width, height = image.size
+    if width >= 1400:
+        return file_bytes
+    image = image.resize((width * 3, height * 3), Image.Resampling.LANCZOS)
+    image = ImageOps.autocontrast(image)
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=90)
+    return buf.getvalue()
+
+
 def _apply_header_driven_stock_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     """Closing uses the columns that were actually printed. Totals are not rewritten."""
     items = result.get("line_items") or []
@@ -51379,6 +51690,25 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             logger.warning("Header-driven stock photo skipped: %s", exc)
             driven = None
         if driven and driven.get("line_items"):
+            if _header_driven_stock_qty_blank(driven):
+                try:
+                    opbal = _parse_swilerp_sales_stock_image(
+                        _enlarge_stock_photo(file_bytes), filename, ext
+                    )
+                except Exception as exc:
+                    logger.warning("Op.Bal Issue photo reread skipped: %s", exc)
+                    opbal = None
+                if _opbal_issue_closing_photo_usable(opbal):
+                    driven_company = str(driven.get("company_name") or "")
+                    read_company = str(opbal.get("company_name") or "")
+                    if re.search(r"ZERA|ZANDRA|:", driven_company, re.I) and not re.search(
+                        r"ZERA|ZANDRA", read_company, re.I
+                    ):
+                        opbal["company_name"] = driven.get("company_name")
+                    extra_op = opbal.setdefault("totals", {}).setdefault("extra", {})
+                    extra_op["extraction_method"] = "opbal_issue_closing_photo"
+                    extra_op["layout"] = "opbal_issue_closing"
+                    return opbal
             driven_roles = set(
                 ((driven.get("totals") or {}).get("extra") or {}).get("column_roles")
                 or []
