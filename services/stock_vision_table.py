@@ -207,16 +207,25 @@ def _classify_layout_cell(text: Any) -> str:
             return "number"
     # Pack tokens printed beside product (SSA qty-only / dump layouts).
     # Includes 100G, 200 GM, 20,S, 65+10, 3*10, 60'S, 100ML.
-    if re.fullmatch(
-        r"(?:"
+    # STOCK_VISION_RATE_PACK_PEEL (default ON) also matches RATE-column packs
+    # like 30,S CAP / 1PACK / L SIZE / JAR that otherwise shift OPENING left.
+    pack_core = (
         r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
         r"|\d+\s*[,']?\s*[Ss]\.?"
         r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?"
         r"|\d+\s*\+\s*\d+"
-        r")",
-        s,
-        re.I,
-    ):
+    )
+    if _rate_pack_peel_enabled():
+        pack_core = (
+            r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G|L|LTR|LITRE)\.?"
+            r"|\d+\s*[,']?\s*[Ss]\.?(?:\s*(?:CAP|CAPS|TAB|TABS|TABLETS?))?"
+            r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?(?:\s*(?:TAB|TABS|CAP|CAPS|ML|GM|G))?"
+            r"|\d+\s*\+\s*\d+"
+            r"|\d+\s*PACKS?"
+            r"|(?:XXL|XL|L|M|S)\s*SIZE"
+            r"|(?:JAR|BOX|TUBE|BOTTLE|SACHET|AMP(?:OULE)?|VIAL)"
+        )
+    if re.fullmatch(rf"(?:{pack_core})", s, re.I):
         return "pack"
     if re.search(r"[A-Za-z]{3,}", s):
         return "product"
@@ -2646,6 +2655,20 @@ def _pack_qty_realign_enabled() -> bool:
     }
 
 
+def _rate_pack_peel_enabled() -> bool:
+    """STOCK_VISION_RATE_PACK_PEEL — default ON.
+
+    Treat pack-like tokens in the RATE cell (30,S CAP / 1PACK / JAR) as pack so
+    unlabeled-pack peel restores OPENING qty/value instead of swapping rate↔open.
+    """
+    return os.getenv("STOCK_VISION_RATE_PACK_PEEL", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _lstsl_close_in_order_enabled() -> bool:
     """STOCK_VISION_LSTSL_CLOSE_IN_ORDER — recover Close when Sales+Close merged."""
     return os.getenv(
@@ -3322,6 +3345,40 @@ def _extract_unlabeled_pack_token(
                 product_name[:60],
                 raw_pack,
                 normalized,
+            )
+    # RATE|OPENING sheets: Vision parks "HIMALAY 1*60" / free-text pack in RATE
+    # while the real unit rate sits in the next cell — peel even when classify
+    # calls the token "product".
+    if not pack_token and _rate_pack_peel_enabled() and raw_pack:
+        rate_col = next(
+            (
+                int(c["col_index"])
+                for c in columns
+                if isinstance(c, dict) and c.get("canonical") == "rate"
+            ),
+            None,
+        )
+        kind = _classify_layout_cell(cells[pack_idx])
+        nxt = cells[pack_idx + 1] if pack_idx + 1 < len(cells) else None
+        nxt_kind = (
+            _classify_layout_cell(nxt) if nxt not in (None, "") else "empty"
+        )
+        if (
+            rate_col is not None
+            and pack_idx == rate_col
+            and kind not in {"number", "serial_or_small_int", "empty", "total"}
+            and nxt_kind in {"number", "serial_or_small_int"}
+            and (
+                _looks_money(nxt, raw_text=str(nxt))
+                or ("." in str(nxt) and nxt_kind == "number")
+            )
+        ):
+            pack_token = raw_pack
+            logger.info(
+                "VISION_TABLE RATE_PACK_PEEL product=%r pack=%r next=%r",
+                product_name[:60],
+                raw_pack[:40],
+                str(nxt)[:20],
             )
     if not pack_token:
         return cells, None
