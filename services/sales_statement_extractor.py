@@ -36779,10 +36779,28 @@ def _parse_text_lms_opstock_rcpts(
     return result
 
 
+def _lstsl_strip_trailing_move_value(parts: List[str]) -> Tuple[List[str], Optional[float]]:
+    """Drop optional LstMove date + Stk.Value money so [-7:] is LstSL..Pend."""
+    tokens = list(parts)
+    while tokens and tokens[-1] in {"*", "#"}:
+        tokens.pop()
+    stk_value: Optional[float] = None
+    if tokens and re.fullmatch(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+\.\d+", tokens[-1]):
+        # Prefer money (has decimals) over a bare qty that belongs in Pend/Order.
+        if "." in tokens[-1] or (
+            len(tokens) >= 8
+            and re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", tokens[-2] or "")
+        ):
+            stk_value = _to_float(tokens.pop())
+    if tokens and re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", tokens[-1] or ""):
+        tokens.pop()
+    return tokens, stk_value
+
+
 def _parse_lstsl_open_recd_statement(
     text: str, filename: str, source_format: str
 ) -> Optional[Dict[str, Any]]:
-    """Product, Pack, LstSL, Open, Recd, Sales, Close, Order, Pend.
+    """Product, Pack, LstSL, Open, Recd, Sales, Close, Order, Pend[, LstMove, Stk.Value].
 
     LstSL is last-month sales quantity. Order and Pend are not stock columns.
     Other statement layouts do not have this header.
@@ -36796,7 +36814,14 @@ def _parse_lstsl_open_recd_statement(
     lines = [ln for ln in lines if ln]
     if lines:
         result["stockist_name"] = _clean_name(lines[0])
-    header = next((ln for ln in lines if re.search(r"Stock\s*&\s*Sales\s+from", ln, re.I)), "")
+    header = next(
+        (
+            ln
+            for ln in lines
+            if re.search(r"Stock\s*&\s*Sales\s+(?:from|Report)", ln, re.I)
+        ),
+        "",
+    )
     period = re.search(
         r"from\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+to\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
         header,
@@ -36805,6 +36830,22 @@ def _parse_lstsl_open_recd_statement(
     if period:
         result["period_from"] = _normalize_date(period.group(1))
         result["period_to"] = _normalize_date(period.group(2))
+    else:
+        month_period = re.search(
+            r"for\s+the\s+month\s+([A-Za-z]+)\s*[-/]\s*(\d{4})",
+            header,
+            re.I,
+        )
+        if month_period:
+            try:
+                pf, pt = _month_period(
+                    month_period.group(1).strip(), int(month_period.group(2))
+                )
+                if pf and pt:
+                    result["period_from"] = pf
+                    result["period_to"] = pt
+            except Exception:
+                pass
     company = re.search(
         r"\bfor\s*:\s*(.+?)(?:\s{2,}Page|\s+Page\s*:|$)",
         header,
@@ -36816,6 +36857,7 @@ def _parse_lstsl_open_recd_statement(
     items: List[Dict[str, Any]] = []
     for line in lines:
         parts = line.split()
+        parts, stk_value = _lstsl_strip_trailing_move_value(parts)
         if len(parts) < 8 or not all(_lstsl_qty_token(tok) for tok in parts[-7:]):
             continue
         left = parts[:-7]
@@ -36828,7 +36870,12 @@ def _parse_lstsl_open_recd_statement(
             packing = left[-1]
             name = " ".join(left[:-1])
         name = _clean_name(name)
-        if not name or re.search(r"product\s*name|last\s+month|receipt\s+value", name, re.I):
+        if not name or re.search(
+            r"product\s*name|last\s+month|receipt\s+value|closing\s+value|"
+            r"open\.?\s*value|sales\s+value|^total\b",
+            name,
+            re.I,
+        ):
             continue
         lstsl, opening, received, sales, close, _order, _pend = parts[-7:]
         item = empty_line_item()
@@ -36838,7 +36885,12 @@ def _parse_lstsl_open_recd_statement(
         item["receipts_qty"] = _to_float(received)
         item["sales_qty"] = _to_float(sales)
         item["closing_qty"] = _to_float(close)
-        item["extra"] = {"last_sales_qty": _to_float(lstsl), "layout": "lstsl_open_recd_sales"}
+        if stk_value is not None:
+            item["closing_value"] = stk_value
+        item["extra"] = {
+            "last_sales_qty": _to_float(lstsl),
+            "layout": "lstsl_open_recd_sales",
+        }
         items.append(item)
     if len(items) < 5:
         return None
@@ -36856,6 +36908,15 @@ def _parse_lstsl_open_recd_statement(
 
     result["totals"]["sales_value"] = _labeled_money(r"Sales\s+Value")
     result["totals"]["closing_value"] = _labeled_money(r"Closing\s+Value")
+    # Prefer printed footer totals; else sum per-row Stk.Value when present.
+    if result["totals"]["closing_value"] is None:
+        row_vals = [
+            float(i.get("closing_value") or 0)
+            for i in items
+            if i.get("closing_value") not in (None, "")
+        ]
+        if row_vals:
+            result["totals"]["closing_value"] = round(sum(row_vals), 2)
     result["totals"]["extra"] = {
         "extraction_method": "lstsl_open_recd_sales",
         "layout": "lstsl_open_recd_sales",
