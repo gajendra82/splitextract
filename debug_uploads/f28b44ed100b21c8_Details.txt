@@ -1,0 +1,82 @@
+
+                      PANCHAGANGA PHARMA
+                       SHOP NO 04 SHRI KRISHNA APPARTMENT
+                           GOLE COLONY NASHIK 422003
+                           2232454,2232493 9823321293
+                           Stock and Sales Statement
+                            Company : HIMALAYA ZEAL
+                            01/09/2026 to 30/09/2026
+                                                                      Page No. 1
+                             From :01/09/2026 To :30/09/2026
+-----------------------------------------------------------------------------------------
+Product Name                  |Unit        |  Op.St|  St-In| St-Out|    Bal|       Value|
+-----------------------------------------------------------------------------------------
+AACTARIL SOAP 75G              75G                0       0       0       0         0.00
+ABANA TAB                      60s                0       0       0       0         0.00
+ALTHEA CREAM 60GM              60GM               0       0       0       0         0.00
+AMALAKI TAB                    60T                0       0       0       0         0.00
+ANTI HAIR LOSS CREAM 50ML      50ml               0       0       0       0         0.00
+BLEMINOR ANTI-BLEMISH CREAM 30 30ML               0       0       0       0         0.00
+BLEMNOR ANTI BLEMIS CREAM      0                  0       0       0       0         0.00
+CLARINA ANTI ACNE CREAM 30     0                  0       0       0       0         0.00
+CLARINA ANTI ACNE FACE MASK 75 75ML               0       0       0       0         0.00
+CLARINA ANTI ACNE FACE WAS 60M 60ML               1       0       0       1        89.07
+CLEARVITAL GEL                 30 ML              0       0       0       0         0.00
+CONFIDO TAB                    60S               36       0      36       0         0.00
+DIABECAON DS                   60`S               0       0       0       0         0.00
+DIABECON TAB                   60s                0       0       0       0         0.00
+DIAREX 100ML SYP               100ML              0       0       0       0         0.00
+DIAREX TAB                     30s                0       0       0       0         0.00
+HADJOD TAB 60T                 60S                0       0       0       0         0.00
+HAIR ZONE SOLUTION             0                  0       0       0       0         0.00
+HERBOLAX 100 TAB               100 `S             0       0       0       0         0.00
+HERBOLEX CUP.                  10`s               0       0       0       0         0.00
+HIMCOLIN GEL.                  30GM               0       0       0       0         0.00
+HIOWNA VANILLA F200 GM(ADULT)  200 GM             0       0       0       0         0.00
+KAPIKACHHU CAP                 60S                0       0       0       0         0.00
+LIV 52 HB TAB                  10 `S              0       0       0       0         0.00
+LIV 52 SYP 100ML               100ML             81       0      14      67      6315.41
+LIV 52 SYP 200ML               200 ML            32       0       8      24      3863.49
+LIV 52 TAB                     100`S             33       0       8      25      3944.78
+MUSCLE&JOINT RUB               20GM               0       0       0       0         0.00
+OPHTHACARE EYE 10ML DROP.      10ML               0       0       0       0         0.00
+ORO-T ORAL RINSE 200ML         200ml              0       0       0       0         0.00
+OXITARD TAB                    10`S               0       0       0       0         0.00
+PAIN BALM STRONG 10GM          10gm               0       0       0       0         0.00
+PAIN RELIFE OIL 100ML          100ml              0       0       0       0         0.00
+PILEX OINT30GM                 30 GM             12     100       8     104     10460.75
+PILEX TAB                      60`S              19     100       7     112     18822.16
+PURE HANDS 100ML               100ml              0       0       0       0         0.00
+PURE HANDS 50ML GREEN APPLE    50ml               0       0       0       0         0.00
+PURE HANDS STRAWBERRY          50ml               0       0       0       0         0.00
+PURIM TAB 60S                  60S                0       0       0       0         0.00
+QUISTA PRO 1 KG(CHOCOLETE FLAV 1kg                0       0       0       0         0.00
+SHALLAKI TAB 60T               60S                0       0       0       0         0.00
+SHIGRU TAB                     60S                0       0       0       0         0.00
+STRESS RELIFE MASSAGE OIL      200ml              0       0       0       0         0.00
+TAGARA (VALERIAN) TAB          60S                0       0       0       0         0.00
+TALEKT CAP                     60`S               0       0       0       0         0.00
+TALEKT SYP120ML                120 ML             0       0       0       0         0.00
+TRIKATU TAB 60T                60S                0       0       0       0         0.00
+TRIPHALA SYP 200ML             200ml              0       0       0       0         0.00
+TRIPHALA TAB 60S               60S                0       0       0       0         0.00
+VRIKSHAMLA TAB 60              60s                0       0       0       0         0.00
+YASHTIMADHU TAB 60S            60S                0       0       0       0         0.00
+-----------------------------------------------------------------------------------------
+Total Opening :     26485.12
+Total St-In   :     26959.00
+Total St-Out  :      9948.46
+Total Closing :     43495.66
+-----------------------------------------------------------------------------------------
+                                                                             Continued...
+PANCHAGANGA PHARMA                                                             Page No. 2
+Stock and Sales Statement : Company : HIMALAYA ZEAL : 01/09/2026 to 30/09/2026 
+                                 From :01/09/2026 To :30/09/2026
+--------------------------------------------------------------------------------------------------
+Product Name                  |Unit        |  Op.St|  St-In| St-Out|    Bal|       Value|
+--------------------------------------------------------------------------------------------------
+ 
+Total Purchase Value       :     26959.00
+Total Sale Value(At Cost)  :      5746.54
+Total Sale Value(At S.Rate):      6148.70
+==================================================================================================

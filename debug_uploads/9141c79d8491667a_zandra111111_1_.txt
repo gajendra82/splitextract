@@ -1,0 +1,144 @@
+SREE PHARMA [BRANCH]
+STOCK & SALES  REPORT                                      PAGE NO : 1
+SALES FROM 01-09-2026 TO 30-09-2026 STOCK [P] AS ON 03-10-2026
+HIMALAYA(ZANDRA)
+------------------------------------------------------------------------------------------------------
+ITEMCODE  ITEMNAME                   CLSTOCK     CLVALUE     SALES          SALESVALUE    LM 1    LM 2
+------------------------------------------------------------------------------------------------------
+ABANA 60TAB              M                 0        0.00        3               502.86       0       3 
+ARJUNA TAB 60            M                 2      460.56        1               247.62       0       0 
+BONNISAN DROPS 30ML      0                42     2779.98        0                 0.00       2       1 
+BONNISAN LIQUID 100ML    M                48     2571.21        2               135.60       4       1 
+BONNISAN LIQUID 200ML    0                 0        0.00        0                 0.00       0       0 
+BONNISPAZ DROPS 15ML     0                 0        0.00        0                 0.00       0       0 
+BRESOL 60TAB             M                 3      502.53       10              1889.60       6       6 
+BRESOL SYP 100ML         M                 0        0.00        0                 0.00       0       0 
+BRESOL-NS SALINE NASAL   0                11      557.15       15               857.10       7      13 
+CYSTONE 60TAB            M                 0        0.00       41              7590.74      23      26 
+CYSTONE FORTE TAB 2*30S  0                28     6013.84       24              5814.72       1      33 
+CYSTONE SF LIQUID 200ML  0                 0        0.00        0                 0.00       0       0 
+CYSTONE SYP 100ML        M                 0        0.00        0                 0.00       0       0 
+DIAKOF SYP 100ML         M                 0        0.00        0                 0.00       0       0 
+EVECARE CAP 30CAP        M                33     4323.99        5               767.85       0       3 
+EVECARE FORTE LIQUID 20  0                 0        0.00        0                 0.00       0       0 
+EVECARE FORTE TAB 3*10   0                 4      146.96        0                 0.00       0       0 
+EVECARE SY 400ML         0                 0        0.00        0                 0.00       0       0 
+EVECARE SYP 200ML        M                14     1535.80        0                 0.00       0       0 
+EVEGEL 30GM(HIM ZANDRA)  0                 0        0.00        0                 0.00       0       0 
+FLORASANTE CAP 10 S BOT  0                16     2884.80        0                 0.00       0       0 
+GERIFORTE SYP 200ML      M                 0        0.00        0                 0.00       0       0 
+GERIFORTE TAB 100        M                 0        0.00        0                 0.00       0       0 
+GERIFORTE TAB 60S        0                15     1545.51        3               375.00       2       5 
+HARIDRA 60CAP            M                49     6904.09        3               548.55       0       0 
+HIMCOSPAZ CAP 10NOS      M                 0        0.00        0                 0.00       0       0 
+HIMPLASIA 30TAB*2        M                 9     1528.97        4               746.68       0       1 
+HIMPLASIA TAB 30*2 STR   0                 0        0.00        4              1493.36       7       6 
+HIORA GA GEL 15ML        0                 0        0.00        0                 0.00       0       0 
+HIORA K MOUTH WASH 150M  0                 0        0.00        0                 0.00       0       0 
+HIORA K TOOTH PASTE 100  0                 0        0.00        0                 0.00       0       0 
+HIORA K TOOTH PASTE 50G  0                26     1847.60        0                 0.00       0       2 
+HIOWANA CHOCOLATE FLAVO  0                 0        0.00        0                 0.00       0       0 
+HIOWNA VANILAFLAVOUR(MO  0                 0        0.00        0                 0.00       0       0 
+IMMUSANTE TAB 3N*20TAB   0               159    11629.26        0                 0.00       0       0 
+KARELA 60CAP             M                 0        0.00        0                 0.00       0       0 
+LASUNA CAP 60 CAP        O                 1      230.29        0                 0.00       1       1 
+LIV 52 DROPS 100ML       0                 0        0.00        0                 0.00       0       0 
+LIV 52 DROPS 60ML        0                 0        0.00        0                 0.00       0       0 
+LIV -52 DS 60TAB         M               104    19170.20       17              3639.70      26      29 
+LIV- 52 DS SYP 100ML     0                 0        0.00        0                 0.00       0       0 
+LIV 52 DS SYP 200ML      0                 0        0.00        0                 0.00       0       0 
+LIV-52 DS 100ML          M                 0        0.00        0                 0.00       0       0 
+LUKOL 60TAB              M                 4      717.04        2               385.52       0       5 
+LUKOL SY 200ML           0                 0        0.00        0                 0.00       0       0 
+MENOSAN 30TAB            0                28     4595.64        2               370.28      12       4 
+MENOSAN 60TAB            M                 0        0.00        0                 0.00       0       0 
+MENTAT 60TAB             M                 8     1113.12        9              1412.64       4       6 
+MENTAT DS 60TAB          M                 0        0.00        0                 0.00       0       0 
+MENTAT DS SY 100ML       M                 0        0.00        0                 0.00       0       0 
+MENTAT SYP 200ML         M                15     1965.45        0                 0.00       0       0 
+MESHA SHRINGI 60TAB      M                 0        0.00        0                 0.00       0       0 
+
+
+
+
+
+
+
+
+
+
+
+
+
+SREE PHARMA [BRANCH]
+STOCK & SALES  REPORT                                      PAGE NO : 2
+SALES FROM 01-09-2026 TO 30-09-2026 STOCK [P] AS ON 03-10-2026
+HIMALAYA(ZANDRA)
+------------------------------------------------------------------------------------------------------
+ITEMCODE  ITEMNAME                   CLSTOCK     CLVALUE     SALES          SALESVALUE    LM 1    LM 2
+------------------------------------------------------------------------------------------------------
+METHI TAB 60/S           0                 0        0.00        0                 0.00       0       0 
+PLATENZA SYR 100 ML      0                 0        0.00        0                 0.00       0       0 
+PLATENZA TAB 3*20 S      0                 9     1281.78        3               491.43       9      12 
+PUNARNAVA TAB60          M                10     2302.80       10              2476.20      12      14 
+PURE HANDS 100ML (LEMON  0                 0        0.00        0                 0.00       0       0 
+PURE HANDS 100ML (ORANG  0                 0        0.00        0                 0.00       0       0 
+PURE HANDS 100ML(ORANGE  0                 0        0.00        0                 0.00       0       0 
+PURE HANDS ADVANCED 2*5  0                 0        0.00        0                 0.00       0       0 
+PURE HANDS(LEM0N) 5LTR   0                 0        0.00        0                 0.00       0       0 
+PUREHANDS 500 ML BLUE (  0                 0        0.00        0                 0.00       0       0 
+RENALKA SYP 100ML        M                 0        0.00        0                 0.00       0       0 
+RENALKA SYP 200ML        0                 2      283.68        3               480.00       6       7 
+REOSTO 60CAP             M                24     8040.48        5              1889.60       3       6 
+SEPTILIN 60TAB           M                94    16248.90       35              6853.00      44      46 
+SEPTILIN SYP 200ML       M                12     1798.20       37              6342.54      16      15 
+SERPINA TAB 100          M                 1       99.64        3               411.42       0       2 
+SHATAVARI 60 TAB         M                59    11174.60        4               914.32       0       3 
+SHATHAVARI SYRUP200ML    0                 0        0.00        0                 0.00       0       0 
+SHUDHHA GULGULU 60CAP    M                 0        0.00        0                 0.00       0       0 
+SPEMAN 60TAB             M                 5      639.95        0                 0.00       0       2 
+STYPLON TAB 30S          M                 1      119.00        7               896.00       3       1 
+TVAK TAB 60 S            0                 0        0.00        0                 0.00       0       0 
+V-GEL 30GM               M                 5      504.13        3               331.44       6       4 
+                                             ===========                   =========== ===============
+                                               115517.15                      47863.77  36799   50043
+                                             ===========                   =========== ===============
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

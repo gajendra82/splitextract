@@ -664,6 +664,28 @@ def _headers_look_like_ssa_purchase_qty_grid(columns: Sequence[Dict[str, Any]]) 
     return markers >= 4
 
 
+def _headers_look_like_ssa_oric_qty_grid(columns: Sequence[Dict[str, Any]]) -> bool:
+    """Qty-only OPENING / RECEIPT|ISSUE|SALE / CLOSING (dashes common)."""
+    from services.stock_header_resolver import normalize_header
+
+    texts = [
+        normalize_header(c.get("header_text") or "")
+        for c in (columns or [])
+        if isinstance(c, dict)
+    ]
+    if not texts:
+        return False
+    has_open = any("opening" in t or t in {"op", "opn", "opstk"} for t in texts)
+    has_close = any("closing" in t or t in {"close", "cl", "bal"} for t in texts)
+    has_mid = any(
+        any(token in t for token in ("receipt", "issue", "sale", "purch"))
+        for t in texts
+    )
+    # Exclude VALUE bands — those use the purchase-grid / pair path.
+    if any("val" in t for t in texts):
+        return False
+    return bool(has_open and has_close and has_mid)
+
 def _shift_pack_out_of_qty_headers(
     columns: List[Dict[str, Any]],
     rows: Sequence[Dict[str, Any]],
@@ -1071,6 +1093,12 @@ def build_table_prompt() -> str:
         "or invent columns that are not printed — if there is no Closing "
         "header, do not map any column to closing_qty. "
         "Dash-only cells (—, ----) are empty/null. "
+        "Qty-only OPENING|RECEIPT|ISSUE|CLOSING sheets: a printed dash or blank "
+        "under RECEIPT or ISSUE is null — never copy the next product's OPENING "
+        "(or any digit from another row) into this row's RECEIPT/ISSUE, and never "
+        "invent matching RECEIPT=ISSUE digits just to make opening+receipt-sales "
+        "equal closing. When a pack token like 1X1/10S sits between the name and "
+        "OPENING, emit a PACK column for it. "
         "Balance/Closing/Stock quantity cells must be plain numeric digits "
         "(e.g. 63 or 0). Never invent placeholders like p2, p3, p19, or page "
         "markers for quantity cells — if the Balance digit is unclear, set "
@@ -2862,6 +2890,89 @@ def _repair_lstsl_close_parked_in_order(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _oric_open_close_realign_enabled() -> bool:
+    """STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN — re-slot open=close dash rows after pack peel.
+
+    Default OFF. When Vision drops a blank RECEIPT/ISSUE cell after peeling 1X1
+    pack, the remaining digits park in the wrong ORIC columns; re-slot only.
+    """
+    return os.getenv(
+        "STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_oric_open_close_dash_pair(item: Dict[str, Any]) -> bool:
+    """Qty-only ORIC: open=close with blank mid, after pack peel left-shifted digits.
+
+    Two printed-safe patterns (never invent digits):
+      1) opening printed, receipts missing, sales≈opening, closing missing
+         → sales was CLOSING; clear ISSUE.
+      2) opening+closing missing, receipts==sales≥1
+         → both digits are OPENING and CLOSING (blank RECEIPT/ISSUE).
+    """
+    if not _oric_open_close_realign_enabled():
+        return False
+    if not _vision_headers_qty_only_oric(item):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+
+    def _missing(field: str) -> bool:
+        if fs.get(field) == "missing":
+            return True
+        val = item.get(field)
+        if val in (None, ""):
+            return True
+        try:
+            return abs(float(val)) < 0.001
+        except (TypeError, ValueError):
+            return True
+
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        sales = float(item.get("sales_qty") or 0)
+    except (TypeError, ValueError):
+        return False
+
+    # Open printed, mid blank, sales holds closing (== open). Do not treat
+    # receipt==sales with blank open/close as open=close — that is the normal
+    # "- / R / R / -" RECEIPT=ISSUE pattern (e.g. RENALKA).
+    if (
+        fs.get("opening_qty") == "printed"
+        and opening >= 0.01
+        and _missing("receipts_qty")
+        and fs.get("sales_qty") == "printed"
+        and abs(opening - sales) <= 0.51
+        and _missing("closing_qty")
+    ):
+        logger.info(
+            "VISION_TABLE ORIC_OPEN_CLOSE_REALIGN kind=sales_is_closing "
+            "product=%s open=%s sales_as_close=%s",
+            str(item.get("product_name") or "")[:60],
+            opening,
+            sales,
+        )
+        item["closing_qty"] = sales
+        item["sales_qty"] = None
+        item["receipts_qty"] = None
+        fs["closing_qty"] = "printed"
+        fs["sales_qty"] = "missing"
+        fs["purchase_qty"] = "missing"
+        flags = list(extra.get("flags") or [])
+        if "ORIC_OPEN_CLOSE_REALIGN" not in flags:
+            flags.append("ORIC_OPEN_CLOSE_REALIGN")
+        extra["flags"] = flags
+        return True
+    return False
+
+
 def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
     """After unlabeled pack extract: receipt holds issue, sales holds closing.
 
@@ -4547,6 +4658,7 @@ def _map_single_table(
             seen_product_row = True
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
             _repair_pack_shifted_open_issue_close(item)
+            _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)
             _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
@@ -5016,8 +5128,52 @@ def detect_ssa_neighbor_contamination_indices(
                 ca_f,
                 b_exp,
             )
-    return sorted(set(out))
+            continue
 
+        # Pattern 3: sparse ORIC dash hallucination — Vision fills RECEIPT=ISSUE
+        # with a borrowed digit so opening+receipt-sales still equals closing
+        # (a_err≈0), while the next row is emptied or uniformly overwritten.
+        try:
+            ra = float(a.get("receipts_qty") or 0)
+        except (TypeError, ValueError):
+            ra = 0.0
+        b_receipts = 0.0
+        try:
+            b_receipts = float(b.get("receipts_qty") or 0)
+        except (TypeError, ValueError):
+            b_receipts = 0.0
+        a_sparse_fill = (
+            abs(ra - sa) < 0.01
+            and sa >= 1.0
+            and sa > oa + 0.51
+            and ca_f is not None
+            and abs(oa - ca_f) < 0.01
+            and oa >= 0.01
+            and (a_err is None or a_err <= 1.01)
+        )
+        b_uniform = (
+            ob >= 1.0
+            and abs(ob - b_receipts) < 0.01
+            and abs(ob - sb) < 0.01
+            and cb_f is not None
+            and abs(ob - cb_f) < 0.01
+        )
+        b_emptied = (
+            abs(b_receipts) < 0.01
+            and abs(sb) < 0.01
+            and (cb_f is None or abs(cb_f) < 0.01)
+        )
+        if a_sparse_fill and (b_uniform or b_emptied) and abs(sa - ob) > 0.51:
+            out.extend([i, i + 1])
+            logger.info(
+                "STOCK_VISION_SSA_CONTAMINATION kind=oric_receipt_issue_steal "
+                "prev=%r next=%r receipt_sales=%s next_opening=%s",
+                str(a.get("product_name") or "")[:40],
+                str(b.get("product_name") or "")[:40],
+                sa,
+                ob,
+            )
+    return sorted(set(out))
 
 def _estimate_y_center_fraction(list_index: int, n_items: int) -> float:
     """Fallback y_center when Vision emits unusable coordinates."""
@@ -5136,6 +5292,57 @@ def clear_persistent_ssa_contamination_qty(
                 cleared += 1
             logger.info(
                 "STOCK_VISION_SSA_CONTAMINATION_CLEARED kind=closing "
+                "prev=%r next=%r",
+                str(a.get("product_name") or "")[:40],
+                str(b.get("product_name") or "")[:40],
+            )
+            continue
+
+        # Pattern 3 clear: drop disputed RECEIPT/ISSUE rather than keep borrows.
+        try:
+            ra = float(a.get("receipts_qty") or 0)
+        except (TypeError, ValueError):
+            ra = 0.0
+        try:
+            oa = float(a.get("opening_qty") or 0)
+        except (TypeError, ValueError):
+            oa = 0.0
+        try:
+            b_receipts = float(b.get("receipts_qty") or 0)
+        except (TypeError, ValueError):
+            b_receipts = 0.0
+        try:
+            ob = float(b.get("opening_qty") or 0)
+        except (TypeError, ValueError):
+            ob = 0.0
+        a_sparse_fill = (
+            abs(ra - sa) < 0.01
+            and sa >= 1.0
+            and sa > oa + 0.51
+            and ca_f is not None
+            and abs(oa - ca_f) < 0.01
+            and oa >= 0.01
+            and (a_err is None or a_err <= 1.01)
+        )
+        b_uniform = (
+            ob >= 1.0
+            and abs(ob - b_receipts) < 0.01
+            and abs(ob - sb) < 0.01
+            and cb_f is not None
+            and abs(ob - cb_f) < 0.01
+        )
+        b_emptied = (
+            abs(b_receipts) < 0.01
+            and abs(sb) < 0.01
+            and (cb_f is None or abs(cb_f) < 0.01)
+        )
+        if a_sparse_fill and (b_uniform or b_emptied) and abs(sa - ob) > 0.51:
+            if _ssa_clear_item_fields(a, ("receipts_qty", "sales_qty")):
+                cleared += 1
+            if _ssa_clear_item_fields(b, ("receipts_qty", "sales_qty", "closing_qty")):
+                cleared += 1
+            logger.info(
+                "STOCK_VISION_SSA_CONTAMINATION_CLEARED kind=oric_receipt_issue "
                 "prev=%r next=%r",
                 str(a.get("product_name") or "")[:40],
                 str(b.get("product_name") or "")[:40],
@@ -5452,6 +5659,8 @@ def build_reconciliation_recovery_prompt(flagged: List[Dict[str, Any]]) -> str:
         "CLOSING — if digits are printed there, copy them; do not emit 0 for a "
         "visible digit and do not move those digits onto the prior row. "
         "When two consecutive products are listed, read each row independently.\n"
+        "Qty-only OPENING|RECEIPT|ISSUE|CLOSING: printed dashes are null. Never "
+        "copy the next row's OPENING into this row's RECEIPT or ISSUE.\n"
         "Empty/unreadable cells are null, never guessed and never forced to 0.\n\n"
         f"{body}\n\n"
         "Return the same JSON shape (tables array) containing only these rows, "
@@ -6470,7 +6679,9 @@ def run_vision_table_path(
                 contamination_idxs = detect_ssa_neighbor_contamination_indices(
                     line_items_now
                 )
-                ssa_like = _headers_look_like_ssa_purchase_qty_grid(column_map)
+                ssa_like = _headers_look_like_ssa_purchase_qty_grid(
+                    column_map
+                ) or _headers_look_like_ssa_oric_qty_grid(column_map)
                 if not ssa_like:
                     # Continuation pages often lack headers; detect SSA-like
                     # physical grids from line items instead.
