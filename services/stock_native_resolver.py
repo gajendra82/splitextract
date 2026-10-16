@@ -972,6 +972,436 @@ def items_from_receipt_issue_pages(
     }
 
 
+_LMS_QTY_LAYOUT = frozenset(
+    {
+        "opening_qty",
+        "purchase_qty",
+        "lms",
+        "sales_qty",
+        "closing_qty",
+    }
+)
+_DASH_CELL = {"-", "--", "—", "–"}
+
+
+def _lms_qty_layout(columns: List[Dict[str, Any]]) -> bool:
+    canons = {str(c.get("canonical") or "") for c in columns}
+    if not _LMS_QTY_LAYOUT <= canons:
+        return False
+    if canons & {"closing_value", "sales_value", "free_in_qty", "free_out_qty"}:
+        return False
+    return True
+
+
+def items_from_lms_qty_rows(
+    header_cells: List[Dict[str, Any]],
+    data_rows: List[List[Dict[str, Any]]],
+) -> Optional[Dict[str, Any]]:
+    """PRODUCT / OPENING / PURCHASE / LMS / SALES / CLOSING, qty only.
+
+    LMS is last-month sales and stays out of sales_qty. The unlabeled pack
+    sits left of the opening header. A row of money with no product name is
+    the statement total.
+    """
+    from services.stock_header_resolver import parse_number
+    from services.stock_native_tables import resolver_ready
+
+    ready = resolver_ready(header_cells)
+    columns = list(ready.get("columns") or [])
+    if not ready.get("resolved") or not _lms_qty_layout(columns):
+        return None
+    by_idx = {int(c.get("col_index") or 0): c for c in columns}
+    bands: List[Dict[str, Any]] = []
+    for cell in header_cells:
+        col = by_idx.get(int(cell.get("col_index") or 0))
+        if not col or cell.get("x_center") is None:
+            continue
+        bands.append(
+            {
+                "canonical": str(col.get("canonical") or ""),
+                "x_center": float(cell.get("x_center") or 0),
+                "x0": float(cell.get("x0") or 0),
+                "x1": float(cell.get("x1") or 0),
+            }
+        )
+    opening = next((b for b in bands if b["canonical"] == "opening_qty"), None)
+    if not opening or float(opening["x_center"]) <= 0:
+        return None
+    width = ((float(opening["x0"]) + float(opening["x1"])) / 2.0) / float(
+        opening["x_center"]
+    )
+    open_left = float(opening["x0"]) / width if width else float(opening["x_center"])
+
+    def _nearest(x: float) -> Dict[str, Any]:
+        return min(bands, key=lambda b: abs(float(b["x_center"]) - x))
+
+    qty_canons = {"opening_qty", "purchase_qty", "sales_qty", "closing_qty", "lms"}
+    items: List[Dict[str, Any]] = []
+    sales_total: Optional[float] = None
+    closing_total: Optional[float] = None
+    for raw in data_rows or []:
+        tokens = [t for t in (raw or []) if str(t.get("text") or "").strip()]
+        if not tokens:
+            continue
+        texts = [str(t.get("text") or "").strip() for t in tokens]
+        if not any(re.search(r"[A-Za-z]", text) for text in texts):
+            for tok in tokens:
+                text = str(tok.get("text") or "").strip().replace(",", "")
+                if tok.get("x") is None or not re.fullmatch(r"-?\d+\.\d+", text):
+                    continue
+                canon = str(_nearest(float(tok["x"])).get("canonical") or "")
+                number = parse_number(text)
+                if number is None:
+                    continue
+                if canon == "sales_qty":
+                    sales_total = number
+                elif canon == "closing_qty":
+                    closing_total = number
+            continue
+        left: List[Tuple[float, str]] = []
+        nums: Dict[str, float] = {}
+        for tok in tokens:
+            text = str(tok.get("text") or "").strip()
+            if tok.get("x") is None:
+                continue
+            xf = float(tok["x"])
+            if xf < open_left - 0.01:
+                left.append((xf, text))
+                continue
+            canon = str(_nearest(xf).get("canonical") or "")
+            if canon not in qty_canons:
+                continue
+            if text in _DASH_CELL:
+                nums[canon] = 0.0
+                continue
+            number = parse_number(text.replace(",", ""))
+            if number is not None:
+                nums[canon] = number
+        if "opening_qty" not in nums or not left:
+            continue
+        left.sort()
+        if len(left) >= 2:
+            pack = left[-1][1]
+            name = " ".join(part for _, part in left[:-1])
+        else:
+            pack = None
+            name = left[0][1]
+        name = re.sub(r"\s+", " ", name).strip()
+        if not re.search(r"[A-Za-z]{3,}", name):
+            continue
+        if re.search(r"(?i)^(sales\s+amount|stock\s+value|last\s+period)\b", name):
+            continue
+        item = _empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = nums.get("opening_qty")
+        item["receipts_qty"] = nums.get("purchase_qty")
+        item["sales_qty"] = nums.get("sales_qty")
+        item["closing_qty"] = nums.get("closing_qty")
+        if "lms" in nums:
+            item["extra"]["lms_qty"] = nums["lms"]
+        items.append(item)
+    if len(items) < 3:
+        return None
+    logger.info(
+        "STOCK_PDF_WORDS_LMS_QTY items=%s sales_value=%s closing_value=%s",
+        len(items),
+        sales_total,
+        closing_total,
+    )
+    return {
+        "line_items": items,
+        "closing_value": closing_total,
+        "sales_value": sales_total,
+        "letterhead_is_stockist_only": True,
+    }
+
+
+_OPEN_RCVD_LAYOUT = frozenset(
+    {
+        "opening_qty",
+        "purchase_qty",
+        "free_in_qty",
+        "sales_qty",
+        "free_out_qty",
+        "closing_qty",
+    }
+)
+_PACK_TAIL = re.compile(r"(?i)^(?P<name>.*?)\s+(?P<pack>\d+\s*X\s*\S+)\s*$")
+_SKIP_WORD_LINE = re.compile(
+    r"(?i)^(generated\b|page\b|company\b|from\b|sale\s+and\s+stock|phone\b|stock\s+value|code$)"
+)
+
+
+def _open_rcvd_layout(columns: List[Dict[str, Any]]) -> bool:
+    canons = {str(c.get("canonical") or "") for c in columns}
+    if not _OPEN_RCVD_LAYOUT <= canons:
+        return False
+    if canons & {"closing_value", "sales_value", "lms"}:
+        return False
+    return True
+
+
+def _header_bands(header_cells: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    from services.stock_native_tables import resolver_ready
+
+    ready = resolver_ready(header_cells)
+    columns = list(ready.get("columns") or [])
+    if not ready.get("resolved"):
+        return []
+    by_idx = {int(c.get("col_index") or 0): c for c in columns}
+    bands: List[Dict[str, Any]] = []
+    for cell in header_cells:
+        col = by_idx.get(int(cell.get("col_index") or 0))
+        if not col or cell.get("x0") is None:
+            continue
+        bands.append(
+            {
+                "canonical": str(col.get("canonical") or ""),
+                "header": str(cell.get("text") or ""),
+                "x0": float(cell.get("x0") or 0),
+                "x1": float(cell.get("x1") or 0),
+            }
+        )
+    return bands
+
+
+def _band_at(x: float, bands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not bands:
+        return None
+    inside = [b for b in bands if float(b["x0"]) - 2.0 <= x <= float(b["x1"]) + 2.0]
+    pool = inside or bands
+
+    def _center(band: Dict[str, Any]) -> float:
+        return (float(band["x0"]) + float(band["x1"])) / 2.0
+
+    return min(pool, key=lambda b: abs(_center(b) - x))
+
+
+def _value_summary_from_pages(
+    page_results: List[Dict[str, Any]],
+) -> Dict[str, Optional[float]]:
+    """Opening / receive / sold / closing value block on a summary page."""
+    summary: Dict[str, Optional[float]] = {}
+    for page in page_results or []:
+        header = page.get("header_cells") or []
+        blob = " ".join(str(c.get("text") or "") for c in header).lower()
+        if "opening" not in blob or "closing" not in blob or "value" not in blob:
+            continue
+        bands = []
+        for cell in header:
+            text = str(cell.get("text") or "")
+            if cell.get("x_center") is None:
+                continue
+            bands.append(
+                {
+                    "header": text.lower(),
+                    "x_center": float(cell.get("x_center") or 0),
+                    "x0": float(cell.get("x0") or 0),
+                    "x1": float(cell.get("x1") or 0),
+                }
+            )
+        if not bands:
+            continue
+        width = 0.0
+        for band in bands:
+            xc = float(band["x_center"] or 0)
+            if xc:
+                width = ((float(band["x0"]) + float(band["x1"])) / 2.0) / xc
+                break
+        chosen: Dict[str, Tuple[float, float, str]] = {}
+        for row in page.get("data_rows") or []:
+            for tok in row:
+                raw = str(tok.get("text") or "").strip()
+                if tok.get("x") is None:
+                    continue
+                number = _leading_number(raw)
+                if number is None:
+                    continue
+                xf = float(tok["x"])
+                abs_x = xf * width if width else xf
+                inside = [
+                    b
+                    for b in bands
+                    if float(b["x0"]) - 3.0 <= abs_x <= float(b["x1"]) + 3.0
+                ]
+                pool = inside or bands
+                band = min(
+                    pool,
+                    key=lambda b: abs(
+                        ((float(b["x0"]) + float(b["x1"])) / 2.0) - abs_x
+                    ),
+                )
+                header = str(band["header"])
+                if "opening" in header:
+                    key = "opening_value"
+                elif "receive" in header or "rcvd" in header:
+                    key = "receipts_value"
+                elif "sold" in header or header.startswith("sale"):
+                    key = "sales_value" if "ret" not in header and "rtn" not in header else "sale_return_value"
+                elif "prch" in header or "purchase" in header:
+                    key = "purchase_return_value"
+                elif "expir" in header:
+                    key = "expiry_value"
+                elif "closing" in header or "clos" in header:
+                    key = "closing_value"
+                else:
+                    continue
+                dist = abs(float(band["x_center"]) - xf)
+                prev = chosen.get(key)
+                prefer = "ptr" in raw.lower()
+                if prev is None or prefer or (dist < prev[0] and "ptr" not in prev[2].lower()):
+                    chosen[key] = (dist, number, raw)
+        for key, (_dist, number, _raw) in chosen.items():
+            summary[key] = number
+        if summary.get("closing_value") is not None:
+            break
+    return summary
+
+
+def items_from_open_rcvd_sold_pages(
+    pdf: Any, page_results: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """HSN / product / Open / Rcvd / Free / Sold / Clos qty columns.
+
+    Total Rcvd and Total Sold are subtotals and are not copied into a second
+    qty. An empty qty cell stays missing. HSN is the product code.
+    """
+    bands: List[Dict[str, Any]] = []
+    qty_pages = set()
+    for index, page in enumerate(page_results or []):
+        header = page.get("header_cells") or []
+        built = _header_bands(header)
+        canons = [b["canonical"] for b in built]
+        if not _open_rcvd_layout([{"canonical": c} for c in canons]):
+            continue
+        if not bands:
+            bands = built
+        qty_pages.add(index)
+    if not bands:
+        return None
+    opening = next((b for b in bands if b["canonical"] == "opening_qty"), None)
+    if not opening:
+        return None
+    open_left = float(opening["x0"])
+    qty_canons = {
+        "opening_qty": "opening_qty",
+        "purchase_qty": "receipts_qty",
+        "sales_qty": "sales_qty",
+        "closing_qty": "closing_qty",
+    }
+    extra_canons = {
+        "free_in_qty": "free_in_qty",
+        "free_out_qty": "free_out_qty",
+        "sales_return_qty": "sale_return",
+        "purchase_return_qty": "purchase_return",
+        "expiry_damage_qty": "exp_damage",
+    }
+
+    lines: List[Dict[str, Any]] = []
+    for page_index, page in enumerate(getattr(pdf, "pages", []) or []):
+        if page_index not in qty_pages:
+            continue
+        try:
+            words = page.extract_words(x_tolerance=1, y_tolerance=2, keep_blank_chars=False) or []
+        except Exception:
+            words = []
+        ordered = sorted(words, key=lambda w: (float(w.get("top") or 0), float(w.get("x0") or 0)))
+        for word in ordered:
+            top = float(word.get("top") or 0)
+            if lines and lines[-1]["page"] == page_index and abs(top - float(lines[-1]["top"])) <= 2.2:
+                lines[-1]["words"].append(word)
+            else:
+                lines.append({"top": top, "page": page_index, "words": [word]})
+
+    items: List[Dict[str, Any]] = []
+    pending_parts: List[str] = []
+
+    def _finish() -> None:
+        if not items or not pending_parts:
+            return
+        text = re.sub(r"\s+", " ", " ".join(pending_parts)).strip()
+        pending_parts.clear()
+        match = _PACK_TAIL.match(text)
+        if match and re.search(r"[A-Za-z]{3,}", match.group("name") or ""):
+            items[-1]["product_name"] = re.sub(r"\s+", " ", match.group("name")).strip()
+            items[-1]["packing"] = re.sub(r"\s+", " ", match.group("pack")).strip()
+        else:
+            items[-1]["product_name"] = text
+
+    for line in lines:
+        words = line["words"]
+        blob = " ".join(str(w.get("text") or "") for w in words).strip()
+        if not blob or _SKIP_WORD_LINE.match(blob):
+            continue
+        if re.search(r"(?i)\b(openqty|productname|closqty|hsn)\b", blob):
+            continue
+        hsn = next(
+            (
+                str(w.get("text") or "").strip()
+                for w in words
+                if re.fullmatch(r"\d{6,8}", str(w.get("text") or "").strip())
+                and float(w.get("x0") or 0) < open_left
+            ),
+            None,
+        )
+        name_bits: List[str] = []
+        nums: Dict[str, float] = {}
+        extras: Dict[str, float] = {}
+        for word in words:
+            text = str(word.get("text") or "").strip()
+            if not text or text == hsn:
+                continue
+            x = (float(word.get("x0") or 0) + float(word.get("x1") or 0)) / 2.0
+            if x < open_left:
+                name_bits.append(text)
+                continue
+            band = _band_at(x, bands)
+            if not band:
+                continue
+            canon = str(band.get("canonical") or "")
+            number = _leading_number(text)
+            if number is None:
+                continue
+            if canon in qty_canons:
+                nums[qty_canons[canon]] = number
+            elif canon in extra_canons:
+                extras[extra_canons[canon]] = number
+        if hsn and (name_bits or nums):
+            _finish()
+            item = _empty_line_item()
+            item["product_code"] = hsn
+            item["opening_qty"] = nums.get("opening_qty")
+            item["receipts_qty"] = nums.get("receipts_qty")
+            item["sales_qty"] = nums.get("sales_qty")
+            item["closing_qty"] = nums.get("closing_qty")
+            for key, value in extras.items():
+                item["extra"][key] = value
+            items.append(item)
+            pending_parts = name_bits
+            continue
+        if items and name_bits and not nums:
+            pending_parts.extend(name_bits)
+    _finish()
+    items = [i for i in items if re.search(r"[A-Za-z]{3,}", str(i.get("product_name") or ""))]
+    if len(items) < 3:
+        return None
+    summary = _value_summary_from_pages(page_results)
+    logger.info(
+        "STOCK_PDF_WORDS_OPEN_RCVD items=%s sales_value=%s closing_value=%s",
+        len(items),
+        summary.get("sales_value"),
+        summary.get("closing_value"),
+    )
+    return {
+        "line_items": items,
+        "sales_value": summary.get("sales_value"),
+        "closing_value": summary.get("closing_value"),
+        "value_summary": summary,
+        "letterhead_is_stockist_only": True,
+    }
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -999,6 +1429,21 @@ def parse_pdf_free_column_statement(
                 parsed = items_from_receipt_issue_pages(
                     pdf, built.get("page_results") or []
                 )
+            if not parsed or not parsed.get("line_items"):
+                parsed = items_from_lms_qty_rows(
+                    built.get("header_cells") or [],
+                    built.get("data_rows") or [],
+                )
+            if not parsed or not parsed.get("line_items"):
+                parsed = items_from_open_rcvd_sold_pages(
+                    pdf, built.get("page_results") or []
+                )
+            if (
+                parsed
+                and parsed.get("letterhead_is_stockist_only")
+                and pdf.pages
+            ):
+                peek = pdf.pages[0].extract_text(x_tolerance=1, y_tolerance=3) or peek
     except Exception as exc:
         logger.info(
             "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
@@ -1010,7 +1455,9 @@ def parse_pdf_free_column_statement(
         return None
     result = empty_result(filename, "pdf")
     result["line_items"] = parsed["line_items"]
-    if re.search(r"Stock\s+Statement", peek, re.I):
+    if re.search(r"Sale\s+And\s+Stock\s+Statement", peek, re.I):
+        result["report_title"] = "Sale And Stock Statement"
+    elif re.search(r"Stock\s+Statement", peek, re.I):
         result["report_title"] = "Stock Statement Report"
     elif re.search(r"Statements\s+of", peek, re.I):
         result["report_title"] = "Statements of"
@@ -1025,7 +1472,8 @@ def parse_pdf_free_column_statement(
         result["stockist_name"] = stated.group(1).strip()
     elif first and re.search(r"[A-Za-z]", first) and not re.search(r"\d{2,}", first):
         result["stockist_name"] = first
-        result["company_name"] = first
+        if not parsed.get("letterhead_is_stockist_only"):
+            result["company_name"] = first
     if company:
         result["company_name"] = company.group(1).strip()
     period = re.search(
@@ -1041,6 +1489,31 @@ def parse_pdf_free_column_statement(
 
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    if not result.get("period_from"):
+        compact = re.search(
+            r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})\s*[-–]\s*"
+            r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})",
+            peek,
+        )
+        if compact:
+            def _iso_compact(day: str, month: str, year: str) -> str:
+                return f"{year}-{int(month):02d}-{int(day):02d}"
+
+            result["period_from"] = _iso_compact(
+                compact.group(1), compact.group(2), compact.group(3)
+            )
+            result["period_to"] = _iso_compact(
+                compact.group(4), compact.group(5), compact.group(6)
+            )
+    if parsed.get("letterhead_is_stockist_only"):
+        lines = [ln.strip() for ln in peek.splitlines() if ln.strip()]
+        if (
+            len(lines) >= 2
+            and re.search(r"[A-Za-z]", lines[1])
+            and not re.search(r"\d{1,2}[./-]\d{1,2}[./-]\d{4}", lines[1])
+            and "PRODUCT" not in lines[1].upper()
+        ):
+            result["stockist_address"] = lines[1]
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1
@@ -1048,6 +1521,10 @@ def parse_pdf_free_column_statement(
         result["totals"]["closing_value"] = parsed["closing_value"]
     if parsed.get("sales_value") is not None:
         result["totals"]["sales_value"] = parsed["sales_value"]
+    for key, value in (parsed.get("value_summary") or {}).items():
+        if key in {"sales_value", "closing_value"} or value is None:
+            continue
+        extra[key] = value
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,

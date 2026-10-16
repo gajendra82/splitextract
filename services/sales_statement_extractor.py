@@ -15565,9 +15565,9 @@ def _page_has_op_qty_val_table_headers(text: str) -> bool:
     """True when page text shows Op.Qty/Op.Val … Cls.Qty stock table headers."""
     blob = text or ""
     return bool(
-        re.search(r"\bOp\.?\s*Qty\b", blob, re.I)
+        re.search(r"\bOp\.?\s*Qt(?:y)?\b", blob, re.I)
         and re.search(r"\bOp\.?\s*Val\b", blob, re.I)
-        and re.search(r"\bCls?\.?\s*Qty\b", blob, re.I)
+        and re.search(r"\bCls?\.?\s*Qt(?:y)?\b", blob, re.I)
     )
 
 
@@ -26969,11 +26969,11 @@ def _is_stock_sales_op_qty_val_words_text(text: str) -> bool:
         return False
     if re.search(r"\bOp\s*Stk\b", blob, re.I) and re.search(r"\bP\s*S\s*Qty\b", blob, re.I):
         return False
-    has_op = bool(re.search(r"\bOp\.?\s*Qty\b", blob, re.I))
+    has_op = bool(re.search(r"\bOp\.?\s*Qt(?:y)?\b", blob, re.I))
     has_op_val = bool(re.search(r"\bOp\.?\s*Val\b", blob, re.I))
     has_p = bool(re.search(r"\bP\.?\s*Qty\b", blob, re.I))
     has_s = bool(re.search(r"\bS\.?\s*Qty\b", blob, re.I))
-    has_cls = bool(re.search(r"\bCls?\.?\s*Qty\b", blob, re.I))
+    has_cls = bool(re.search(r"\bCls?\.?\s*Qt(?:y)?\b", blob, re.I))
     return has_op and has_op_val and has_p and has_s and has_cls
 
 
@@ -27019,16 +27019,18 @@ def _op_qty_val_header_centres(
 ) -> Optional[Dict[str, float]]:
     """Map canonical column → x-centre from a header word row."""
     joined = " ".join(str(w[4]) for w in row)
-    if not re.search(r"Op\.?\s*Qty", joined, re.I):
+    if not re.search(r"Op\.?\s*Qt(?:y)?", joined, re.I):
         return None
-    if not re.search(r"Cls?\.?\s*Qty", joined, re.I):
+    if not re.search(r"Cls?\.?\s*Qt(?:y)?", joined, re.I):
         return None
     centres: Dict[str, float] = {}
     # Only merge split fragments like "Br." + "Trf." — never glue complete
     # headers (Op.Qty + Op.Val) which also prefix-match Op\.?\s*Qty.
     _COMPLETE_HDR = re.compile(
-        r"(?i)^(Item|Pack(?:ing)?|Op\.?\s*Qty|Op\.?\s*Val|P\.?\s*Qty|P\.?\s*Val|"
-        r"S\.?\s*Qty|S\.?\s*Val|Cls?\.?\s*Qty|Cls?\.?\s*Val|Br\.?\s*Trf\.?)$"
+        r"(?i)^(Item(?:\s*Cod(?:e)?)?|Pack(?:ing)?|Op\.?\s*Qt(?:y)?|Op\.?\s*Val|"
+        r"P\.?\s*Qty|PF\.?\s*Qty|P\.?\s*F\.?\s*Qty|P\.?\s*Val|"
+        r"S\.?\s*Qty|SF\.?\s*Qty|S\.?\s*F\.?\s*Qty|S\.?\s*Val|"
+        r"Cls?\.?\s*Qt(?:y)?|Cls?\.?\s*Val|Br\.?\s*Trf\.?|Others?)$"
     )
     i = 0
     labels: List[Tuple[str, float]] = []
@@ -27050,15 +27052,18 @@ def _op_qty_val_header_centres(
         i += 1
 
     alias_map = (
+        (r"(?i)^Item\s*Cod(?:e)?$", "product_code"),
         (r"(?i)^Item$|^Product$", "product_name"),
         (r"(?i)^Pack(?:ing)?$", "packing"),
-        (r"(?i)^Op\.?\s*Qty$", "opening_qty"),
+        (r"(?i)^Op\.?\s*Qt(?:y)?$", "opening_qty"),
         (r"(?i)^Op\.?\s*Val$", "opening_value"),
         (r"(?i)^P\.?\s*Qty$", "receipts_qty"),
+        (r"(?i)^PF\.?\s*Qty$|^P\.?\s*F\.?\s*Qty$", "free_in_qty"),
         (r"(?i)^P\.?\s*Val$", "receipts_value"),
         (r"(?i)^S\.?\s*Qty$", "sales_qty"),
+        (r"(?i)^SF\.?\s*Qty$|^S\.?\s*F\.?\s*Qty$", "free_out_qty"),
         (r"(?i)^S\.?\s*Val$", "sales_value"),
-        (r"(?i)^Cls?\.?\s*Qty$", "closing_qty"),
+        (r"(?i)^Cls?\.?\s*Qt(?:y)?$", "closing_qty"),
         (r"(?i)^Cls?\.?\s*Val$", "closing_value"),
         (r"(?i)^Br\.?\s*Trf\.?$", "br_trf"),
     )
@@ -27101,17 +27106,29 @@ def _assign_op_qty_val_row(
     name_right = (pack_x - 40.0) if pack_x is not None else (open_x - 40.0)
     name_parts: List[str] = []
     pack_parts: List[str] = []
+    product_code: Optional[str] = None
+    code_x = centres.get("product_code")
     # (cx, value, was_blank_dash)
     numeric_tokens: List[Tuple[float, float, bool]] = []
     for w in row:
         tok = str(w[4]).strip()
         cx = (float(w[0]) + float(w[2])) / 2.0
+        if (
+            code_x is not None
+            and abs(cx - code_x) <= 45.0
+            and re.fullmatch(r"\d{2,8}", tok)
+        ):
+            product_code = tok
+            continue
         if cx < name_right:
             name_parts.append(tok)
             continue
-        if pack_x is not None and abs(cx - pack_x) <= 40.0 and _op_qty_val_cell(tok) is None:
-            pack_parts.append(tok)
-            continue
+        open_x = centres.get("opening_qty")
+        if pack_x is not None and abs(cx - pack_x) <= 40.0:
+            nearer_pack = open_x is None or abs(cx - pack_x) <= abs(cx - open_x)
+            if _op_qty_val_cell(tok) is None or nearer_pack:
+                pack_parts.append(tok)
+                continue
         val = _op_qty_val_cell(tok)
         if val is None:
             continue
@@ -27167,6 +27184,7 @@ def _assign_op_qty_val_row(
 
     item = empty_line_item()
     item["product_name"] = name
+    item["product_code"] = product_code
     item["packing"] = _clean_name(" ".join(pack_parts)) or None
     item["opening_qty"] = _qty("opening_qty")
     item["opening_value"] = _val_or_none("opening_value")
@@ -27196,6 +27214,11 @@ def _assign_op_qty_val_row(
         # Adaptive reconcile decides whether Br.Trf. is an outward.
         if br > 0:
             extra["other_outward_qty"] = br
+    for free_field in ("free_in_qty", "free_out_qty"):
+        if free_field in fields and free_field not in blank_fields:
+            extra[free_field] = float(fields[free_field])
+        elif free_field in blank_fields:
+            extra[free_field] = 0.0
     item["extra"] = extra
     return item
 
@@ -27265,7 +27288,12 @@ def _parse_stock_sales_op_qty_val_words_pages(
         return None
 
     result = empty_result(filename, "pdf")
-    result["report_title"] = "STOCK AND SALES (CONSOLIDATED)"
+    if re.search(r"STOCK\s+AND\s+SALES\s*\(\s*CONSOLIDATED\s*\)", combined, re.I):
+        result["report_title"] = "STOCK AND SALES (CONSOLIDATED)"
+    elif re.search(r"STOCK\s+AND\s+SALES", combined, re.I):
+        result["report_title"] = "STOCK AND SALES"
+    else:
+        result["report_title"] = "STOCK AND SALES (CONSOLIDATED)"
     result["line_items"] = items
     stockist = _stockist_from_op_qty_val_letterhead(combined) or _detect_stockist_from_page_text(
         combined
@@ -43833,6 +43861,12 @@ Include EVERY product row printed in this crop. Copy printed cells only —
 do not invent products from memory or other statements.
 Blank SALE/PURCH/IN/OT cells are 0. Never borrow numbers from the next row.
 
+Shorter grid (no SALE VAL, IN/OT, STK VAL, JUL, or JUN headers):
+ITEM DESCRIPTION | OPENING | RECEIPT | ISSUE | CLOSING | optional trailing numbers.
+Map OPENING -> opening_qty, RECEIPT -> receipts_qty, ISSUE -> sales_qty,
+CLOSING -> closing_qty. Numbers to the right of CLOSING stay in extra
+(jun_qty / in_ot_qty). Do not put CLOSING into jul_qty or sales_value.
+
 Return ONLY JSON with stockist_name, company_name, period_from, period_to,
 report_title "STOCK STATEMENT", and line_items using the fields above
 (put in_ot_qty / jul_qty / jun_qty under each item's extra object when present).
@@ -43987,9 +44021,51 @@ def _repair_medica_vision_column_shift(item: Dict[str, Any]) -> None:
     sales = _to_float(item.get("sales_qty"))
     closing = _to_float(item.get("closing_qty"))
     closing_value = _to_float(item.get("closing_value"))
+    sales_value = _to_float(item.get("sales_value"))
     jul = _to_float(extra.get("jul_qty"))
     in_ot = _to_float(extra.get("in_ot_qty"))
     implied = round(opening + receipts - sales + in_ot, 2)
+    # Shorter OPENING|RECEIPT|ISSUE|CLOSING grid: Vision files CLOSING as JUL
+    # (trailing stays in JUN) or as sales_value (trailing stays in IN/OT).
+    # Move the printed cell only when it is the identity closing.
+    oric = round(opening + receipts - sales, 2)
+    if abs(closing) <= 0.05 and abs(closing_value) <= 0.05:
+        jul_present = extra.get("jul_qty") not in (None, "")
+        if (
+            jul_present
+            and abs(sales_value) <= 0.05
+            and abs(jul) > 0.05
+            and abs(oric - jul) <= 0.05
+        ):
+            item["closing_qty"] = jul
+            extra["jul_qty"] = None
+            extra["medica_closing_from_jul"] = True
+            logger.info(
+                "MEDICA_CLOSING_COLUMN product=%r closing_qty from jul_qty=%s",
+                item.get("product_name"),
+                jul,
+            )
+            return
+        in_ot_present = extra.get("in_ot_qty") not in (None, "")
+        qty_like = abs(sales_value - round(sales_value)) <= 0.05 and abs(
+            sales_value
+        ) <= 5000
+        if (
+            in_ot_present
+            and not jul_present
+            and qty_like
+            and abs(sales_value) > 0.05
+            and abs(oric - sales_value) <= 0.05
+        ):
+            item["closing_qty"] = sales_value
+            item["sales_value"] = 0.0
+            extra["medica_closing_from_sales_value"] = True
+            logger.info(
+                "MEDICA_CLOSING_COLUMN product=%r closing_qty from sales_value=%s",
+                item.get("product_name"),
+                sales_value,
+            )
+            return
     # STOCK parked in closing_value while closing_qty is IN/OT (often 0).
     if (
         closing <= 0

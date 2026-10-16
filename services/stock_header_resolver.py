@@ -184,6 +184,8 @@ ALIASES: Dict[str, List[str]] = {
         "purchase qty",
         "purchased",
         "purchased qty",
+        "rcvd",
+        "rcvd qty",
         "purchbillqty",
         "purch bill qty",
         "purchase bill qty",
@@ -219,6 +221,7 @@ ALIASES: Dict[str, List[str]] = {
         "sr",
         "sales return",
         "sale return",
+        "sale rtn",
         "goods ret",
         "goods return",
         "goods ret qty",
@@ -239,6 +242,8 @@ ALIASES: Dict[str, List[str]] = {
         "purchase return",
         "purchase ret",
         "purchase rtn",
+        "prch rtn",
+        "prch ret",
         "pur rtn",
         "purchase rtn qty",
         "purc ret qty",
@@ -257,6 +262,8 @@ ALIASES: Dict[str, List[str]] = {
         "expdmg",
         "exp damage",
         "expiry damage",
+        "expired",
+        "expired qty",
     ],
     "closing": [
         "cls",
@@ -588,13 +595,25 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         if group == "sales_return" and alias == "return":
             if any(t.startswith("pur") for t in tokens) or "purchase" in norm:
                 continue
-        if group == "purchase" and ("return" in tokens or "ret" in tokens):
+        if group == "purchase" and (
+            "return" in tokens
+            or "ret" in tokens
+            or "rtn" in tokens
+            or compact_norm.endswith("rtn")
+        ):
             # Let purchase_return win.
             continue
         if group == "sales" and (
             "ret" in tokens
             or "return" in tokens
-            or "saleret" in re.sub(r"\s+", "", norm)
+            or "rtn" in tokens
+            or compact_norm.endswith("rtn")
+            or "salertn" in compact_norm
+        ):
+            continue
+        # "Total Sold" / "Total Rcvd" is a movement subtotal, not stock total.
+        if group == "total" and any(
+            k in compact_norm for k in ("sold", "sale", "rcvd", "receipt", "recv")
         ):
             continue
         # Short "op" must not beat a multi-token total alias like "op rec".
@@ -1668,7 +1687,7 @@ def resolve_columns(
 
         # M.EXP / Expiry / Expiry Date columns are dates, not expiry_damage qty.
         # Qty damage columns use Exp/Dmg, Exp Dmg, Breakage, Shortage, etc.
-        if compact_hdr in {"mexp", "mexpiry", "shexp", "nearexpiry", "expirydate", "expdate", "expdt"} or norm in {
+        if compact_hdr in {"mexp", "mexpiry", "shexp", "nearexpiry", "nearexp", "expirydate", "expdate", "expdt"} or norm in {
             "m exp",
             "sh exp",
             "near expiry",
