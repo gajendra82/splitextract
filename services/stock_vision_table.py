@@ -3047,6 +3047,293 @@ def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _qty_value_pair_shift_enabled() -> bool:
+    """Re-slot ISSUE/CLOSING when a blank receipt-value cell slid the pairs left.
+
+    Default ON — fires only when printed digits already satisfy
+    opening + receipt − sales = closing. Never invents a number.
+    """
+    return os.getenv(
+        "STOCK_VISION_QTY_VALUE_PAIR_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _printed_float(item: Dict[str, Any], field: str) -> Optional[float]:
+    """Printed number for a canonical field, or None when the cell was empty."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    if fs.get(field) != "printed":
+        return None
+    key = _TOP_LEVEL_QTY.get(field) or _EXTRA_FIELDS.get(field) or field
+    raw = item.get(key)
+    if raw is None:
+        raw = extra.get(key)
+    if raw is None and key != field:
+        raw = item.get(field)
+        if raw is None:
+            raw = extra.get(field)
+    try:
+        if raw is None or raw == "":
+            return None
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _has_paisa(val: Optional[float]) -> bool:
+    if val is None:
+        return False
+    return abs(val) >= 1.0 and abs(val - int(val)) > 0.001
+
+
+def _is_whole_qty(val: Optional[float]) -> bool:
+    if val is None:
+        return False
+    return val >= -0.001 and abs(val - int(val)) <= 0.001
+
+
+def _repair_qty_value_pair_left_shift(item: Dict[str, Any]) -> bool:
+    """Re-slot qty/value when receipt VALUE absorbed the next qty column.
+
+    Layout OPENING|VALUE|RECEIPT|VALUE|ISSUE|VALUE|CLOSING|VALUE. A blank
+    receipt-value cell makes Vision place:
+      receipt value ← issue qty, issue qty ← issue value,
+      issue value ← closing qty, closing qty ← closing value.
+    Zero-sale rows instead park closing qty in sales_value and closing value
+    in closing_qty. Move printed numbers only when
+    opening + receipt − sales = closing. Never invents a digit.
+    """
+    if not _qty_value_pair_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    if oq is None:
+        return False
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty") or 0.0
+    pv = _printed_float(item, "purchase_value")
+    sq = _printed_float(item, "sales_qty")
+    sv = _printed_float(item, "sales_value")
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+
+    # Current assignment already balances — do not reshuffle.
+    if (
+        sq is not None
+        and cq is not None
+        and abs((oq + rq - sq) - cq) <= 0.51
+    ):
+        return False
+
+    new_sales: Optional[float] = None
+    new_sales_value: Optional[float] = None
+    new_close: Optional[float] = None
+    new_close_value: Optional[float] = None
+    clear_purchase_value = False
+    dump: Optional[float] = None
+
+    # Receipt VALUE holds issue qty; following cells are each one slot left.
+    if (
+        pv is not None
+        and _is_whole_qty(pv)
+        and pv > 0.001
+        and _has_paisa(sq)
+        and _is_whole_qty(sv)
+        and sv is not None
+        and abs((oq + rq - pv) - sv) <= 0.51
+        and _has_paisa(cq)
+    ):
+        new_sales = pv
+        new_sales_value = sq
+        new_close = sv
+        new_close_value = cq
+        clear_purchase_value = True
+        if _is_whole_qty(cv):
+            dump = cv
+    elif (
+        pv is not None
+        and _is_whole_qty(pv)
+        and pv > 0.001
+        and _has_paisa(sq)
+        and sv is None
+        and _is_whole_qty(cq)
+        and abs((oq + rq - pv) - float(cq)) <= 0.51
+    ):
+        # Closing qty stayed put (often 0); issue value slid into sales qty.
+        new_sales = pv
+        new_sales_value = sq
+        new_close = cq
+        new_close_value = None
+        clear_purchase_value = True
+    elif (
+        (sq is None or abs(sq) <= 0.001)
+        and _is_whole_qty(sv)
+        and _has_paisa(cq)
+        and abs((oq + rq) - float(sv)) <= 0.51
+        and (cv is None or _is_whole_qty(cv))
+    ):
+        # Blank issue value: closing qty sits in sales_value, money in closing_qty.
+        new_sales = 0.0 if sq is not None else None
+        new_sales_value = None
+        new_close = sv
+        new_close_value = cq
+        if _is_whole_qty(cv):
+            dump = cv
+    else:
+        return False
+
+    logger.info(
+        "VISION_TABLE QTY_VALUE_PAIR_SHIFT product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        new_sales,
+        new_sales_value,
+        new_close,
+        new_close_value,
+    )
+    if new_sales is None:
+        item["sales_qty"] = None
+        fs["sales_qty"] = "missing"
+    else:
+        item["sales_qty"] = float(new_sales)
+        fs["sales_qty"] = "printed"
+    if new_sales_value is None:
+        item["sales_value"] = None
+        fs["sales_value"] = "missing"
+    else:
+        item["sales_value"] = float(new_sales_value)
+        fs["sales_value"] = "printed"
+    if new_close is None:
+        item["closing_qty"] = None
+        fs["closing_qty"] = "missing"
+    else:
+        item["closing_qty"] = float(new_close)
+        fs["closing_qty"] = "printed"
+    if new_close_value is None:
+        item["closing_value"] = None
+        fs["closing_value"] = "missing"
+    else:
+        item["closing_value"] = float(new_close_value)
+        fs["closing_value"] = "printed"
+    if clear_purchase_value:
+        extra["purchase_value"] = None
+        extra["receipts_value"] = None
+        item["receipts_value"] = None
+        fs["purchase_value"] = "missing"
+        fs["receipts_value"] = "missing"
+    if dump is not None:
+        extra["dump_qty"] = float(dump)
+        fs["dump_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "QTY_VALUE_PAIR_SHIFT" not in flags:
+        flags.append("QTY_VALUE_PAIR_SHIFT")
+    extra["flags"] = flags
+    return True
+
+
+def _closing_pair_unswap_enabled() -> bool:
+    """Put a whole qty back in closing_qty when it landed in closing_value.
+
+    Default ON. Moves the two printed closing numbers only; never invents one.
+    """
+    return os.getenv(
+        "STOCK_VISION_CLOSING_PAIR_UNSWAP", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_closing_pair_interchanged(item: Dict[str, Any]) -> bool:
+    """Swap closing_qty and closing_value when those two cells are reversed.
+
+    Fires when closing_qty is a rupee amount and closing_value is a whole
+    quantity that is the printed closing qty (opening + receipt − sales, or
+    the same rate as opening). Does not touch other columns.
+    """
+    if not _closing_pair_unswap_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+    if cq is None or cv is None:
+        return False
+    if not _has_paisa(cq) or not _is_whole_qty(cv) or abs(cv) < 0.001:
+        return False
+    oq = _printed_float(item, "opening_qty")
+    if oq is None:
+        oq = 0.0
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty") or 0.0
+    sq = _printed_float(item, "sales_qty")
+    if sq is None:
+        sq = 0.0
+    # Fractional closing that already balances stays put.
+    if abs((oq + rq - sq) - cq) <= 0.51:
+        return False
+    identity = abs((oq + rq - sq) - cv) <= 0.51
+    rate_ok = False
+    ov = _printed_float(item, "opening_value")
+    if ov is None:
+        try:
+            raw_ov = item.get("opening_value")
+            if raw_ov is None:
+                raw_ov = extra.get("opening_value")
+            ov = float(raw_ov) if raw_ov not in (None, "") else None
+        except (TypeError, ValueError):
+            ov = None
+    if ov is not None and abs(oq) > 0.001:
+        expected_money = (ov / oq) * cv
+        tol = max(0.51, abs(cq) * 0.02)
+        if abs(expected_money - cq) <= tol:
+            rate_ok = True
+    if not identity and not rate_ok:
+        return False
+    logger.info(
+        "VISION_TABLE CLOSING_PAIR_UNSWAP product=%s "
+        "closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        cv,
+        cq,
+    )
+    item["closing_qty"] = float(cv)
+    item["closing_value"] = float(cq)
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_PAIR_UNSWAP" not in flags:
+        flags.append("CLOSING_PAIR_UNSWAP")
+    extra["flags"] = flags
+    return True
+
+
+def _apply_closing_pair_unswap_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_closing_pair_interchanged(item):
+            fixed += 1
+    if fixed:
+        logger.info("VISION_TABLE CLOSING_PAIR_UNSWAP_PASS fixed=%s", fixed)
+    return fixed
+
+
 def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
     """Reassign trailing fields when a blank ISSUE/VALUE cell was dropped.
 
@@ -4550,8 +4837,10 @@ def _map_single_table(
             _repair_lstsl_close_parked_in_order(item)
             _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
+            _repair_qty_value_pair_left_shift(item)
             _repair_closing_money_parked_in_qty(item)
             _repair_closing_qty_parked_in_value(item)
+            _repair_closing_pair_interchanged(item)
             _flag_qty_value_geometry_suspicion(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
@@ -4560,6 +4849,7 @@ def _map_single_table(
             _repair_closing_money_parked_in_qty(item)
             # Inverse: qty-only ORIC closing parked in value after money pass.
             _repair_closing_qty_parked_in_value(item)
+            _repair_closing_pair_interchanged(item)
             line_items.append(item)
 
     if leading_banner_items:
@@ -4726,6 +5016,7 @@ def map_vision_table(
 
     _apply_closing_money_parked_in_qty_pass(all_items)
     _apply_closing_qty_parked_in_value_pass(all_items)
+    _apply_closing_pair_unswap_pass(all_items)
 
     return {
         "line_items": all_items,
@@ -6365,6 +6656,7 @@ def run_vision_table_path(
         # Final pass before stamp/classify — catches money still parked in qty.
         _apply_closing_money_parked_in_qty_pass(all_items)
         _apply_closing_qty_parked_in_value_pass(all_items)
+        _apply_closing_pair_unswap_pass(all_items)
 
         result = _stamp_vision_result(
             filename=filename,
@@ -6702,6 +6994,7 @@ def run_vision_table_path(
         # After recon/reread merges: money must not remain in closing_qty.
         _apply_closing_money_parked_in_qty_pass(result.get("line_items") or [])
         _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
+        _apply_closing_pair_unswap_pass(result.get("line_items") or [])
 
         classified = classify_result(result)
         result["totals"]["extra"]["row_status_counts"] = (
