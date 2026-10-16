@@ -559,3 +559,245 @@ def run_native_pass_from_text(
         token_rows=built.get("data_rows") or [],
         request_id=request_id,
     )
+
+
+_NUM_TOKEN = re.compile(r"^-?\d[\d,]*(?:\.\d+)?$")
+_AMOUNT_GRAND = re.compile(r"(?i)amount\s+grand\s+total")
+_TOTAL_LABEL = re.compile(
+    r"(?i)^(qty|amount|amt)\s+(grand\s+)?total\b"
+)
+_SKIP_CONTINUATION = re.compile(
+    r"(?i)^(for\b|authorised\b|authorized\b|page\b|\d+\s*/\s*\d+$)"
+)
+
+
+def _free_column_layout(columns: List[Dict[str, Any]]) -> bool:
+    canons = {str(c.get("canonical") or "") for c in columns}
+    return {
+        "purchase_qty",
+        "free_in_qty",
+        "sales_qty",
+        "free_out_qty",
+        "closing_qty",
+        "closing_value",
+    } <= canons
+
+
+def _expand_glued_numbers(tokens: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for tok in tokens:
+        if not isinstance(tok, dict):
+            continue
+        text = str(tok.get("text") or "").strip()
+        parts = text.split()
+        if (
+            len(parts) == 2
+            and _NUM_TOKEN.match(parts[0].replace(" ", ""))
+            and _NUM_TOKEN.match(parts[1].replace(" ", ""))
+        ):
+            for part in parts:
+                nxt = dict(tok)
+                nxt["text"] = part
+                nxt.pop("x", None)
+                out.append(nxt)
+        else:
+            out.append(dict(tok))
+    return out
+
+
+def _align_token_indexes(
+    tokens: List[Dict[str, Any]], width: int
+) -> List[Dict[str, Any]]:
+    if width <= 0 or len(tokens) != width:
+        return tokens
+    aligned: List[Dict[str, Any]] = []
+    for idx, tok in enumerate(tokens):
+        nxt = dict(tok)
+        nxt.pop("x", None)
+        nxt["col_index"] = idx
+        aligned.append(nxt)
+    return aligned
+
+
+def _align_by_header_x(
+    tokens: List[Dict[str, Any]], header_cells: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Use column order when each token's x sits on header column i.
+
+    Trailing Rate / Amt cells are often blank. Nearest-centre assignment then
+    spills the last printed qty into closing because an ignored Shortage column
+    is not a band. Left-align only when x already agrees with column order.
+    """
+    width = len(header_cells)
+    if not tokens or not width or len(tokens) > width:
+        return tokens
+    if len(tokens) == width:
+        return _align_token_indexes(tokens, width)
+    centers: List[Optional[float]] = []
+    for cell in header_cells:
+        raw = cell.get("x_center")
+        if raw is None:
+            return tokens
+        centers.append(float(raw))
+    if any(tok.get("x") is None for tok in tokens):
+        return tokens
+    for idx, tok in enumerate(tokens):
+        x = float(tok.get("x"))
+        nearest = min(range(width), key=lambda j: abs(float(centers[j]) - x))
+        if nearest != idx:
+            return tokens
+    aligned: List[Dict[str, Any]] = []
+    for idx, tok in enumerate(tokens):
+        nxt = dict(tok)
+        nxt.pop("x", None)
+        nxt["col_index"] = idx
+        aligned.append(nxt)
+    return aligned
+
+
+def _row_label(tokens: List[Dict[str, Any]]) -> str:
+    parts: List[str] = []
+    for tok in tokens:
+        text = str(tok.get("text") or "").strip()
+        if not text:
+            continue
+        if _NUM_TOKEN.match(text.replace(",", "")):
+            break
+        parts.append(text)
+    return " ".join(parts).strip()
+
+
+def _row_numbers(tokens: List[Dict[str, Any]]) -> List[str]:
+    nums: List[str] = []
+    for tok in tokens:
+        text = str(tok.get("text") or "").strip().replace(",", "")
+        if _NUM_TOKEN.match(text):
+            nums.append(text)
+    return nums
+
+
+def items_from_free_column_rows(
+    header_cells: List[Dict[str, Any]],
+    data_rows: List[List[Dict[str, Any]]],
+) -> Optional[Dict[str, Any]]:
+    """Map word rows whose header has Purchase Free and Sales Free.
+
+    Returns None when that column set is not printed. Does not invent qtys.
+    """
+    from services.stock_native_tables import resolver_ready
+
+    ready = resolver_ready(header_cells)
+    columns = list(ready.get("columns") or [])
+    if not ready.get("resolved") or not _free_column_layout(columns):
+        return None
+    width = len(header_cells)
+    items: List[Dict[str, Any]] = []
+    closing_total: Optional[float] = None
+    for raw in data_rows or []:
+        tokens = _expand_glued_numbers(list(raw or []))
+        if not tokens:
+            continue
+        label = _row_label(tokens)
+        numbers = _row_numbers(tokens)
+        if label and _TOTAL_LABEL.search(label):
+            if _AMOUNT_GRAND.search(label) and numbers:
+                from services.stock_header_resolver import parse_number
+
+                closing_total = parse_number(numbers[-1])
+            continue
+        if not numbers:
+            if (
+                items
+                and label
+                and not _SKIP_CONTINUATION.search(label)
+                and "opening" not in label.lower()
+            ):
+                prev = str(items[-1].get("product_name") or "").strip()
+                items[-1]["product_name"] = (prev + " " + label).strip()
+            continue
+        aligned = _align_by_header_x(tokens, header_cells)
+        built = build_line_items_from_tokens(columns, [aligned])
+        if not built:
+            continue
+        item = built[0]
+        name = str(item.get("product_name") or "").strip()
+        if not name or _TOTAL_LABEL.search(name):
+            continue
+        items.append(item)
+    if len(items) < 3:
+        return None
+    return {"line_items": items, "closing_value": closing_total}
+
+
+def parse_pdf_free_column_statement(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Text PDF whose words print Purchase Free and Sales Free as their own columns."""
+    import io
+
+    try:
+        import pdfplumber
+    except Exception:
+        return None
+    from services.sales_statement_extractor import empty_result
+    from services.stock_native_tables import from_pdf_words
+
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            built = from_pdf_words(pdf)
+            peek = ""
+            if pdf.pages:
+                peek = pdf.pages[0].extract_text() or ""
+    except Exception as exc:
+        logger.info(
+            "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    parsed = items_from_free_column_rows(
+        built.get("header_cells") or [],
+        built.get("data_rows") or [],
+    )
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, "pdf")
+    result["line_items"] = parsed["line_items"]
+    result["report_title"] = "Stock Statement Report" if re.search(
+        r"Stock\s+Statement", peek, re.I
+    ) else None
+    first = ""
+    for line in peek.splitlines():
+        if line.strip():
+            first = line.strip()
+            break
+    if first and re.search(r"[A-Za-z]", first) and not re.search(
+        r"\d{2,}", first
+    ):
+        result["stockist_name"] = first
+        result["company_name"] = first
+    period = re.search(
+        r"From\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+        r"To\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+        peek,
+        re.I,
+    )
+    if period:
+        def _iso(day: str, month: str, year: str) -> str:
+            yr = year if len(year) == 4 else ("20" + year)
+            return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+        result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
+        result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "pdf_words_free_columns"
+    extra["statement_count"] = 1
+    if parsed.get("closing_value") is not None:
+        result["totals"]["closing_value"] = parsed["closing_value"]
+    logger.info(
+        "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
+        filename,
+        len(result["line_items"]),
+        result["totals"].get("closing_value"),
+    )
+    return result

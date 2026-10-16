@@ -6,9 +6,12 @@ row tokens. No I/O beyond structures passed in. No Gemini.
 
 from __future__ import annotations
 
+import logging
 import re
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+logger = logging.getLogger(__name__)
 
 from services.stock_header_resolver import (
     ALIASES,
@@ -269,6 +272,71 @@ def from_text_header(lines: Sequence[str]) -> Dict[str, Any]:
     return {"header_cells": header_cells, "data_rows": data_rows}
 
 
+_QUALIFIER_WORDS = frozenset(
+    {
+        "free",
+        "stock",
+        "rate",
+        "amt",
+        "amount",
+        "qty",
+        "value",
+        "val",
+        "quantity",
+    }
+)
+
+
+def _is_qualifier_text(text: Any) -> bool:
+    tokens = [t for t in normalize_header(text).split() if t]
+    return bool(tokens) and all(t in _QUALIFIER_WORDS for t in tokens)
+
+
+def _merge_qualifier_subheader(
+    header: List[Dict[str, Any]], next_cells: List[Dict[str, Any]]
+) -> bool:
+    """Glue a second header line (Free / Stock / Rate / Amt) onto the parent column.
+
+    Only when every word on that line is a qualifier. Does not invent columns.
+    """
+    if not header or not next_cells or len(next_cells) > len(header):
+        return False
+    if not all(_is_qualifier_text(c.get("text")) for c in next_cells):
+        return False
+    assignments: List[Tuple[Dict[str, Any], str]] = []
+    for cell in next_cells:
+        x0 = float(cell.get("x0") or 0)
+        x1 = float(cell.get("x1") or x0)
+        xc = (x0 + x1) / 2.0
+        chosen: Optional[Dict[str, Any]] = None
+        for h in header:
+            h0 = float(h.get("x0") or 0)
+            h1 = float(h.get("x1") or h0)
+            if h0 - 2 <= xc <= h1 + 2:
+                chosen = h
+                break
+        if chosen is None:
+            best_d: Optional[float] = None
+            for h in header:
+                h0 = float(h.get("x0") or 0)
+                h1 = float(h.get("x1") or h0)
+                dist = abs(xc - ((h0 + h1) / 2.0))
+                if best_d is None or dist < best_d:
+                    best_d = dist
+                    chosen = h
+            if chosen is None or best_d is None or best_d > 36:
+                return False
+        assignments.append((chosen, str(cell.get("text") or "").strip()))
+    for host, word in assignments:
+        if word and word.lower() not in str(host.get("text") or "").lower():
+            host["text"] = (str(host.get("text") or "") + " " + word).strip()
+    logger.info(
+        "STOCK_PDF_WORDS_SUBHEADER merged=%s",
+        [c.get("text") for c in header],
+    )
+    return True
+
+
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     texts = [str(t.get("text") or "").strip() for t in tokens if isinstance(t, dict)]
     if not texts:
@@ -430,6 +498,11 @@ def _extract_pdf_page_rows(
             best_i = i
             best_header = cells
 
+    skip_row_indexes: List[int] = []
+    if best_i >= 0 and best_i + 1 < len(clustered):
+        if _merge_qualifier_subheader(best_header, clustered[best_i + 1]):
+            skip_row_indexes.append(best_i + 1)
+
     all_token_rows: List[List[Dict[str, Any]]] = []
     for cells in clustered:
         tokens = [
@@ -447,6 +520,7 @@ def _extract_pdf_page_rows(
         "header_cells": best_header,
         "header_row_index": best_i,
         "all_rows": all_token_rows,
+        "skip_row_indexes": skip_row_indexes,
         "clustered_headers": clustered,
     }
 
@@ -493,7 +567,14 @@ def from_pdf_words(
         header_idx = int(extracted.get("header_row_index") or -1)
         all_rows = list(extracted.get("all_rows") or [])
         data_start = header_idx + 1 if header_idx >= 0 else 0
-        candidate_rows = all_rows[data_start:] if header_idx >= 0 else all_rows
+        skip_rows = {
+            int(i) for i in (extracted.get("skip_row_indexes") or [])
+        }
+        candidate_rows = [
+            row
+            for i, row in enumerate(all_rows)
+            if i not in skip_rows and (header_idx < 0 or i >= data_start)
+        ]
 
         page_header: List[Dict[str, Any]] = []
         resolved = False

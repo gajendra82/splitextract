@@ -34395,6 +34395,29 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             qty_value["totals"]["extra"]["statement_count"] = 1
             return qty_value
 
+        # Text PDFs that print Purchase Free and Sales Free as their own columns.
+        # Word positions, no Gemini. Runs only after the named parsers miss.
+        if os.getenv("STOCK_PDF_WORDS_FREE_COLUMNS", "true").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            try:
+                from services.stock_native_resolver import (
+                    parse_pdf_free_column_statement,
+                )
+
+                free_cols = parse_pdf_free_column_statement(file_bytes, filename)
+                if free_cols and free_cols.get("line_items"):
+                    return free_cols
+            except Exception as exc:
+                logger.info(
+                    "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
+                    filename,
+                    type(exc).__name__,
+                )
+
         # Image-only / empty-text PDFs: quality-gate a cheap OCR sample before
         # the slow 300 DPI OCR + per-page Gemini loop. Known OCR-native formats
         # (Group Wise / Swil scan / SSA) keep the existing path. Bad OCR goes

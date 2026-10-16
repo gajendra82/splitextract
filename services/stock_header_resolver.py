@@ -614,8 +614,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 or "opening" in compact_norm
             ):
                 continue
-        # "Receipt Free" is free-in, not purchase.
+        # "Receipt Free" / "Purchase Free" is free-in, not purchase.
         if group == "purchase" and "free" in tokens:
+            continue
+        # "Sales Free" is free-out, not sales qty.
+        if group == "sales" and "free" in tokens:
             continue
         filtered.append((group, alias, conf))
     if not filtered:
