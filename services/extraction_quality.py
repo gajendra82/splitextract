@@ -491,6 +491,11 @@ def evaluate_extraction_quality(
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
+    # Purchase Free / Sales Free / Exp text PDFs: printed closing often does
+    # not subtract Exp/Dmg. Keep the word-aligned rows; do not Gemini-overwrite.
+    _keep_pdf_words = method == "pdf_words_free_columns" and os.getenv(
+        "STOCK_PDF_WORDS_FREE_COLUMNS_KEEP", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
     if (
         protected
         and items
@@ -505,7 +510,7 @@ def evaluate_extraction_quality(
                     reasons.append("stock_identity_failure")
                 hard_fail = True
         elif fail_pct > identity_gate:
-            if _keep_on_identity:
+            if _keep_on_identity or _keep_pdf_words:
                 logger.info(
                     "STOCK_OP_QTY_VAL_KEEP method=%s fail_pct=%.1f "
                     "reason=keep_native_skip_gemini_identity_fallback",

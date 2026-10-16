@@ -130,6 +130,72 @@ class MedicaVisionColumnRepairTests(unittest.TestCase):
         self.assertNotIn("nrv", item["extra"])
         self.assertFalse(item["extra"].get("medica_nrv_column_shift_repaired"))
 
+    def test_short_grid_closing_parked_in_jul(self):
+        """OPENING|RECEIPT|ISSUE|CLOSING|trail: CLOSING filed as jul, trail stays jun."""
+        item = {
+            "product_name": "ARJUNA TAB",
+            "opening_qty": 44.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 3.0,
+            "sales_value": 0.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {"jul_qty": 41, "jun_qty": 2},
+        }
+        _repair_medica_vision_column_shift(item)
+        self.assertEqual(item["closing_qty"], 41.0)
+        self.assertIsNone(item["extra"]["jul_qty"])
+        self.assertEqual(item["extra"]["jun_qty"], 2)
+        self.assertTrue(item["extra"].get("medica_closing_from_jul"))
+
+    def test_short_grid_negative_closing_in_jul(self):
+        item = {
+            "product_name": "BRESOL TAB",
+            "opening_qty": 48.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 57.0,
+            "sales_value": 0.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {"jul_qty": -9, "jun_qty": 29},
+        }
+        _repair_medica_vision_column_shift(item)
+        self.assertEqual(item["closing_qty"], -9.0)
+        self.assertIsNone(item["extra"]["jul_qty"])
+        self.assertEqual(item["extra"]["jun_qty"], 29)
+
+    def test_short_grid_closing_parked_in_sales_value(self):
+        item = {
+            "product_name": "LUKOL SYP",
+            "opening_qty": 25.0,
+            "receipts_qty": 28.0,
+            "sales_qty": 65.0,
+            "sales_value": -12.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {"in_ot_qty": 40, "jul_qty": None, "jun_qty": None},
+        }
+        _repair_medica_vision_column_shift(item)
+        self.assertEqual(item["closing_qty"], -12.0)
+        self.assertEqual(item["sales_value"], 0.0)
+        self.assertEqual(item["extra"]["in_ot_qty"], 40)
+        self.assertTrue(item["extra"].get("medica_closing_from_sales_value"))
+
+    def test_does_not_steal_jul_when_identity_differs(self):
+        item = {
+            "product_name": "HIORA SG",
+            "opening_qty": 1.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 1.0,
+            "sales_value": 0.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {"jul_qty": 1, "jun_qty": 1},
+        }
+        _repair_medica_vision_column_shift(item)
+        self.assertEqual(item["closing_qty"], 0.0)
+        self.assertEqual(item["extra"]["jul_qty"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -518,6 +518,55 @@ class TestExcelLayoutVariations(unittest.TestCase):
         self.assertEqual(liv["closing_qty"], 4.0)
         self.assertNotEqual(liv["sales_qty"], liv["closing_qty"])
 
+    def test_curstk_stkval_salval_and_footer_labels(self):
+        self.assertEqual(_xls_norm_header("CurStk"), "bal")
+        self.assertEqual(_xls_norm_header("StkVal"), "bval")
+        self.assertEqual(_xls_norm_header("SalVal"), "sval")
+        self.assertEqual(_xls_norm_header("Cl Stock"), "bal")
+        data = self._xlsx(
+            [
+                ["S.R.S AGENCIES"],
+                [
+                    "Stock and Sales Statement For Company : HIMALAYA (ZEAL)",
+                ],
+                [
+                    "Product Name",
+                    "Pack",
+                    "Opstk",
+                    "Pur",
+                    "Sale",
+                    "CurStk",
+                    "StkVal",
+                    "SalVal",
+                    "Rate",
+                ],
+                ["LIV 52 SYRUP", "200ML", 14, 0, 5, 9, 1604.52, 891.4, 178.28],
+                ["LIV 52 SYRUP", "100ML", 38, 0, 14, 24, 2559.84, 1493.24, 106.66],
+                ["Opg.Stk Val:", 23813.86],
+                ["Cl.Stk Val:", 17071.1],
+                ["Aug Sal:", 6469, None, 8194],
+                ["Oth.SalVal:"],
+            ]
+        )
+        result = extract_sales_statement(data, "SRS.xls")
+        names = [i["product_name"] for i in result["line_items"]]
+        self.assertEqual(names, ["LIV 52 SYRUP", "LIV 52 SYRUP"])
+        liv200 = result["line_items"][0]
+        self.assertEqual(liv200["opening_qty"], 14.0)
+        self.assertEqual(liv200["sales_qty"], 5.0)
+        self.assertEqual(liv200["closing_qty"], 9.0)
+        self.assertEqual(liv200["closing_value"], 1604.52)
+        self.assertEqual(liv200["sales_value"], 891.4)
+        liv100 = result["line_items"][1]
+        self.assertEqual(liv100["closing_qty"], 24.0)
+        self.assertEqual(liv100["sales_value"], 1493.24)
+        mapping = result["totals"]["extra"]["column_mapping"]
+        self.assertEqual(mapping["closing_qty"]["header"], "CurStk")
+        self.assertEqual(mapping["closing_value"]["header"], "StkVal")
+        self.assertEqual(mapping["sales_value"]["header"], "SalVal")
+        self.assertEqual(result["totals"]["extra"]["opening_value"], 23813.86)
+        self.assertEqual(result["totals"]["closing_value"], 17071.1)
+
 
 class TestScannedPdfRouting(unittest.TestCase):
     def test_image_only_pages_detected(self):

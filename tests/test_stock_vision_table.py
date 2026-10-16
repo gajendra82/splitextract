@@ -350,6 +350,20 @@ class MergeRereadTests(unittest.TestCase):
         self.assertEqual(out[0]["closing_qty"], 12.0)
         self.assertFalse((out[0].get("extra") or {}).get("candidates"))
 
+    def test_spaced_name_reread_does_not_clone_sibling(self):
+        from services.stock_vision_table import merge_reread
+
+        paste = self._item("HIORA K TOOTH PASTE", 84, 0, 60, 24, 19)
+        toothpaste = self._item("HIORA K TOOTHPASTE", 52, 0, 12, 40, 20)
+        reread = [self._item("HIORA K TOOTH PASTE", 84, 0, 60, 24, 5)]
+        out = merge_reread([paste, toothpaste], reread)
+        self.assertEqual(out[1]["product_name"], "HIORA K TOOTHPASTE")
+        self.assertEqual(out[1]["opening_qty"], 52.0)
+        self.assertEqual(out[1]["sales_qty"], 12.0)
+        self.assertEqual(out[1]["closing_qty"], 40.0)
+        self.assertEqual(out[0]["opening_qty"], 84.0)
+        self.assertEqual(out[0]["closing_qty"], 24.0)
+
     def test_invalid_reread_becomes_candidate(self):
         from services.stock_vision_table import merge_reread
 

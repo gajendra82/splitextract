@@ -149,7 +149,22 @@ def _vision_header_cells_look_like_data(
             texts.append(str(cell.get("text") or cell.get("header_text") or "").strip())
         else:
             texts.append(str(cell or "").strip())
+    # Keep blanks: a continuation crop often copies only
+    # "PRODUCT" | "60'T" | "" | "" | "" into header_rows.
+    raw_texts = list(texts)
     texts = [t for t in texts if t]
+    if (
+        len(raw_texts) >= 4
+        and 1 <= len(texts) <= 3
+        and sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t)) <= 1
+        and any(_classify_layout_cell(t) == "product" for t in texts)
+        and any(_loose_pack_token(t) for t in texts)
+        and not any(
+            _classify_layout_cell(t) in {"number", "serial_or_small_int"}
+            for t in texts
+        )
+    ):
+        return True
     if len(texts) < 4:
         return False
     hint_hits = sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t))
@@ -185,6 +200,26 @@ def _vision_header_cells_look_like_data(
     ):
         return True
     return False
+
+
+def _loose_pack_token(text: Any) -> bool:
+    """Pack token including OCR forms like 60'T / 10'C / 100 'T.
+
+    Used only to spot a data row copied into headers. The qty-column peel
+    still uses ``_classify_layout_cell`` so a pack sitting in OPENING does
+    not shift ISSUE/CLOSING on a header-aligned row.
+    """
+    s = str(text or "").strip()
+    if not s:
+        return False
+    if _classify_layout_cell(s) == "pack":
+        return True
+    return bool(
+        re.fullmatch(
+            r"\d+\s*'+\s*[TtCcSs]?|\d+\s*'?\s*[TtCc]",
+            s,
+        )
+    )
 
 
 def _classify_layout_cell(text: Any) -> str:
@@ -1567,10 +1602,52 @@ def _normalize_proposed_mapping(
     return out
 
 
+def _sequential_row_texts(cells_raw: Any) -> List[Optional[str]]:
+    """Flat cell texts when Vision sent a plain list (no col_index dicts)."""
+    if not isinstance(cells_raw, list):
+        return []
+    texts: List[Optional[str]] = []
+    for c in cells_raw:
+        if isinstance(c, dict) and c.get("col_index") is not None:
+            return []
+        if isinstance(c, dict):
+            texts.append(_cell_text(c))
+        else:
+            texts.append(None if c is None else str(c))
+    return texts
+
+
+def _rows_keep_numeric_pack_overflow(rows: Sequence[Any], column_count: int) -> bool:
+    """True when several rows already insert a pack token before the qty grid.
+
+    Bare 60/30 in that same slot are packs whose apostrophe was dropped.
+    """
+    try:
+        width = int(column_count or 0)
+    except (TypeError, ValueError):
+        return False
+    if width < 2:
+        return False
+    pack_rows = 0
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        texts = _sequential_row_texts(row.get("cells") or [])
+        if len(texts) != width + 1 or len(texts) < 2:
+            continue
+        if _classify_layout_cell(texts[1]) == "pack":
+            pack_rows += 1
+        if pack_rows >= 2:
+            return True
+    return False
+
+
 def _normalize_row_cells(
     cells_raw: Any,
     column_count: int,
     coercions: Dict[str, int],
+    *,
+    keep_numeric_pack_overflow: bool = False,
 ) -> List[Optional[str]]:
     """Build a dense cell array that preserves physical column positions.
 
@@ -1630,14 +1707,41 @@ def _normalize_row_cells(
             # Keep pack+qty overflow for `_extract_unlabeled_pack_token`.
             # Truncating here drops CLOSING when Vision emits
             # ITEM|PACK|OPEN|RECEIPT|ISSUE|CLOSE into a 5-col ORIC header.
+            pack_kind = _classify_layout_cell(cells[1]) if len(cells) > 1 else ""
+            lead_kind = _classify_layout_cell(cells[0]) if cells else ""
+            tail_kind = _classify_layout_cell(cells[-1])
             pack_overflow = (
                 width >= 2
                 and len(cells) == width + 1
-                and _classify_layout_cell(cells[1]) == "pack"
-                and _classify_layout_cell(cells[-1])
-                in {"number", "serial_or_small_int"}
+                and pack_kind == "pack"
+                and tail_kind in {"number", "serial_or_small_int"}
             )
-            if not pack_overflow:
+            # Bare 60 / 30 (apostrophe dropped from 60') in the same slot as
+            # 30ML packs. Only when sibling rows already kept a pack overflow.
+            numeric_pack_overflow = (
+                keep_numeric_pack_overflow
+                and width >= 2
+                and len(cells) == width + 1
+                and pack_kind == "serial_or_small_int"
+                and lead_kind == "product"
+                and tail_kind in {"number", "serial_or_small_int"}
+            )
+            # Pack slot left blank (pack is in the product name, or a TOTAL
+            # line). Drop that empty cell so the qty/value tail stays aligned.
+            blank_pack_slot = (
+                keep_numeric_pack_overflow
+                and width >= 2
+                and len(cells) == width + 1
+                and lead_kind in {"total", "product"}
+                and pack_kind == "empty"
+                and tail_kind in {"number", "serial_or_small_int"}
+            )
+            if blank_pack_slot:
+                cells = [cells[0]] + list(cells[2:])
+                coercions["total_blank_pack_dropped"] = (
+                    coercions.get("total_blank_pack_dropped", 0) + 1
+                )
+            elif not pack_overflow and not numeric_pack_overflow:
                 cells = cells[:width]
             else:
                 coercions["pack_qty_overflow_kept"] = (
@@ -1660,11 +1764,19 @@ def _normalize_one_table(
     except (TypeError, ValueError):
         column_count = 0
     rows_out: List[Dict[str, Any]] = []
+    keep_numeric_pack = _rows_keep_numeric_pack_overflow(
+        table.get("rows") or [], column_count
+    )
     for row in table.get("rows") or []:
         if not isinstance(row, dict):
             continue
         cells_raw = row.get("cells") or []
-        cells = _normalize_row_cells(cells_raw, column_count, coercions)
+        cells = _normalize_row_cells(
+            cells_raw,
+            column_count,
+            coercions,
+            keep_numeric_pack_overflow=keep_numeric_pack,
+        )
         item = dict(row)
         item["cells"] = cells
         if item.get("y_center") is None:
@@ -2349,6 +2461,15 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
                     errors.append(f"CLOSING_NOT_OPENING_MODEL_BLOCK col={idx}")
+            # Truncated RECEIPT (RECEI) is purchase, never a second opening.
+            if header_compact.startswith("rece") and model_canon in {
+                "opening_qty",
+                "opening_value",
+                "sales_qty",
+                "closing_qty",
+            }:
+                header_ok = False
+                errors.append(f"RECEIPT_NOT_OPENING_MODEL_BLOCK col={idx}")
             if (
                 resolver_canon == "ignore"
                 and resolver_conf < 0.5
@@ -3158,6 +3279,380 @@ def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _qty_value_pair_shift_enabled() -> bool:
+    """Re-slot ISSUE/CLOSING when a blank receipt-value cell slid the pairs left.
+
+    Default ON — fires only when printed digits already satisfy
+    opening + receipt − sales = closing. Never invents a number.
+    """
+    return os.getenv(
+        "STOCK_VISION_QTY_VALUE_PAIR_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _printed_float(item: Dict[str, Any], field: str) -> Optional[float]:
+    """Printed number for a canonical field, or None when the cell was empty."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    if fs.get(field) != "printed":
+        return None
+    key = _TOP_LEVEL_QTY.get(field) or _EXTRA_FIELDS.get(field) or field
+    raw = item.get(key)
+    if raw is None:
+        raw = extra.get(key)
+    if raw is None and key != field:
+        raw = item.get(field)
+        if raw is None:
+            raw = extra.get(field)
+    try:
+        if raw is None or raw == "":
+            return None
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _has_paisa(val: Optional[float]) -> bool:
+    if val is None:
+        return False
+    return abs(val) >= 1.0 and abs(val - int(val)) > 0.001
+
+
+def _is_whole_qty(val: Optional[float]) -> bool:
+    if val is None:
+        return False
+    return val >= -0.001 and abs(val - int(val)) <= 0.001
+
+
+def _repair_qty_value_pair_left_shift(item: Dict[str, Any]) -> bool:
+    """Re-slot qty/value when receipt VALUE absorbed the next qty column.
+
+    Layout OPENING|VALUE|RECEIPT|VALUE|ISSUE|VALUE|CLOSING|VALUE. A blank
+    receipt-value cell makes Vision place:
+      receipt value ← issue qty, issue qty ← issue value,
+      issue value ← closing qty, closing qty ← closing value.
+    Zero-sale rows instead park closing qty in sales_value and closing value
+    in closing_qty. Move printed numbers only when
+    opening + receipt − sales = closing. Never invents a digit.
+    """
+    if not _qty_value_pair_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    if oq is None:
+        return False
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty") or 0.0
+    pv = _printed_float(item, "purchase_value")
+    sq = _printed_float(item, "sales_qty")
+    sv = _printed_float(item, "sales_value")
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+
+    # Current assignment already balances — do not reshuffle.
+    if (
+        sq is not None
+        and cq is not None
+        and abs((oq + rq - sq) - cq) <= 0.51
+    ):
+        return False
+
+    new_sales: Optional[float] = None
+    new_sales_value: Optional[float] = None
+    new_close: Optional[float] = None
+    new_close_value: Optional[float] = None
+    clear_purchase_value = False
+    dump: Optional[float] = None
+
+    # Receipt VALUE holds issue qty; following cells are each one slot left.
+    if (
+        pv is not None
+        and _is_whole_qty(pv)
+        and pv > 0.001
+        and _has_paisa(sq)
+        and _is_whole_qty(sv)
+        and sv is not None
+        and abs((oq + rq - pv) - sv) <= 0.51
+        and _has_paisa(cq)
+    ):
+        new_sales = pv
+        new_sales_value = sq
+        new_close = sv
+        new_close_value = cq
+        clear_purchase_value = True
+        if _is_whole_qty(cv):
+            dump = cv
+    elif (
+        pv is not None
+        and _is_whole_qty(pv)
+        and pv > 0.001
+        and _has_paisa(sq)
+        and sv is None
+        and _is_whole_qty(cq)
+        and abs((oq + rq - pv) - float(cq)) <= 0.51
+    ):
+        # Closing qty stayed put (often 0); issue value slid into sales qty.
+        new_sales = pv
+        new_sales_value = sq
+        new_close = cq
+        new_close_value = None
+        clear_purchase_value = True
+    elif (
+        (sq is None or abs(sq) <= 0.001)
+        and _is_whole_qty(sv)
+        and _has_paisa(cq)
+        and abs((oq + rq) - float(sv)) <= 0.51
+        and (cv is None or _is_whole_qty(cv))
+    ):
+        # Blank issue value: closing qty sits in sales_value, money in closing_qty.
+        new_sales = 0.0 if sq is not None else None
+        new_sales_value = None
+        new_close = sv
+        new_close_value = cq
+        if _is_whole_qty(cv):
+            dump = cv
+    else:
+        return False
+
+    logger.info(
+        "VISION_TABLE QTY_VALUE_PAIR_SHIFT product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        new_sales,
+        new_sales_value,
+        new_close,
+        new_close_value,
+    )
+    if new_sales is None:
+        item["sales_qty"] = None
+        fs["sales_qty"] = "missing"
+    else:
+        item["sales_qty"] = float(new_sales)
+        fs["sales_qty"] = "printed"
+    if new_sales_value is None:
+        item["sales_value"] = None
+        fs["sales_value"] = "missing"
+    else:
+        item["sales_value"] = float(new_sales_value)
+        fs["sales_value"] = "printed"
+    if new_close is None:
+        item["closing_qty"] = None
+        fs["closing_qty"] = "missing"
+    else:
+        item["closing_qty"] = float(new_close)
+        fs["closing_qty"] = "printed"
+    if new_close_value is None:
+        item["closing_value"] = None
+        fs["closing_value"] = "missing"
+    else:
+        item["closing_value"] = float(new_close_value)
+        fs["closing_value"] = "printed"
+    if clear_purchase_value:
+        extra["purchase_value"] = None
+        extra["receipts_value"] = None
+        item["receipts_value"] = None
+        fs["purchase_value"] = "missing"
+        fs["receipts_value"] = "missing"
+    if dump is not None:
+        extra["dump_qty"] = float(dump)
+        fs["dump_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "QTY_VALUE_PAIR_SHIFT" not in flags:
+        flags.append("QTY_VALUE_PAIR_SHIFT")
+    extra["flags"] = flags
+    return True
+
+
+def _issue_value_left_shift_enabled() -> bool:
+    """Re-slot ISSUE value / CLOSING qty / CLOSING value after a dropped issue qty.
+
+    Default ON. Moves printed numbers only. Does not fill the missing issue qty.
+    """
+    return os.getenv(
+        "STOCK_VISION_ISSUE_VALUE_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_issue_value_left_shift(item: Dict[str, Any]) -> bool:
+    """Issue qty cell was dropped, so the next three numbers sit one column left.
+
+    ISSUE holds the sales value (paisa), VALUE holds the closing qty (whole),
+    CLOSING holds the closing value (paisa), and the last VALUE cell is empty.
+    Move those printed numbers back. The missing issue qty stays missing.
+    """
+    if not _issue_value_left_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    sq = _printed_float(item, "sales_qty")
+    sv = _printed_float(item, "sales_value")
+    if not _has_paisa(sq) or not _is_whole_qty(sv) or sv is None or sv < -0.001:
+        return False
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+    if _has_paisa(cq):
+        close_money = cq
+    elif cq is None and _has_paisa(cv):
+        close_money = cv
+    else:
+        return False
+    oq = _printed_float(item, "opening_qty")
+    if oq is None:
+        oq = 0.0
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty") or 0.0
+    # A real issue qty cannot exceed opening + receipt.
+    if (oq + rq - float(sq)) >= -0.51:
+        return False
+    # The whole number parked in sales value must fit as a closing qty.
+    if float(sv) - (oq + rq) > 0.51:
+        return False
+    logger.info(
+        "VISION_TABLE ISSUE_VALUE_LEFT_SHIFT product=%s "
+        "sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        sq,
+        sv,
+        close_money,
+    )
+    item["sales_qty"] = None
+    fs["sales_qty"] = "missing"
+    item["sales_value"] = float(sq)
+    fs["sales_value"] = "printed"
+    item["closing_qty"] = float(sv)
+    fs["closing_qty"] = "printed"
+    item["closing_value"] = float(close_money)
+    fs["closing_value"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "ISSUE_VALUE_LEFT_SHIFT" not in flags:
+        flags.append("ISSUE_VALUE_LEFT_SHIFT")
+    extra["flags"] = flags
+    return True
+
+
+def _apply_issue_value_left_shift_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_issue_value_left_shift(item):
+            fixed += 1
+    if fixed:
+        logger.info("VISION_TABLE ISSUE_VALUE_LEFT_SHIFT_PASS fixed=%s", fixed)
+    return fixed
+
+
+def _closing_pair_unswap_enabled() -> bool:
+    """Put a whole qty back in closing_qty when it landed in closing_value.
+
+    Default ON. Moves the two printed closing numbers only; never invents one.
+    """
+    return os.getenv(
+        "STOCK_VISION_CLOSING_PAIR_UNSWAP", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_closing_pair_interchanged(item: Dict[str, Any]) -> bool:
+    """Swap closing_qty and closing_value when those two cells are reversed.
+
+    Fires when closing_qty is a rupee amount and closing_value is a whole
+    quantity that is the printed closing qty (opening + receipt − sales, or
+    the same rate as opening). Does not touch other columns.
+    """
+    if not _closing_pair_unswap_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+    if cq is None or cv is None:
+        return False
+    if not _has_paisa(cq) or not _is_whole_qty(cv) or abs(cv) < 0.001:
+        return False
+    oq = _printed_float(item, "opening_qty")
+    if oq is None:
+        oq = 0.0
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty") or 0.0
+    sq = _printed_float(item, "sales_qty")
+    if sq is None:
+        sq = 0.0
+    # Fractional closing that already balances stays put.
+    if abs((oq + rq - sq) - cq) <= 0.51:
+        return False
+    identity = abs((oq + rq - sq) - cv) <= 0.51
+    rate_ok = False
+    ov = _printed_float(item, "opening_value")
+    if ov is None:
+        try:
+            raw_ov = item.get("opening_value")
+            if raw_ov is None:
+                raw_ov = extra.get("opening_value")
+            ov = float(raw_ov) if raw_ov not in (None, "") else None
+        except (TypeError, ValueError):
+            ov = None
+    if ov is not None and abs(oq) > 0.001:
+        expected_money = (ov / oq) * cv
+        tol = max(0.51, abs(cq) * 0.02)
+        if abs(expected_money - cq) <= tol:
+            rate_ok = True
+    if not identity and not rate_ok:
+        return False
+    logger.info(
+        "VISION_TABLE CLOSING_PAIR_UNSWAP product=%s "
+        "closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        cv,
+        cq,
+    )
+    item["closing_qty"] = float(cv)
+    item["closing_value"] = float(cq)
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_PAIR_UNSWAP" not in flags:
+        flags.append("CLOSING_PAIR_UNSWAP")
+    extra["flags"] = flags
+    return True
+
+
+def _apply_closing_pair_unswap_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_closing_pair_interchanged(item):
+            fixed += 1
+    if fixed:
+        logger.info("VISION_TABLE CLOSING_PAIR_UNSWAP_PASS fixed=%s", fixed)
+    return fixed
+
+
 def _repair_missing_pair_null_shift(item: Dict[str, Any]) -> bool:
     """Reassign trailing fields when a blank ISSUE/VALUE cell was dropped.
 
@@ -3498,6 +3993,8 @@ def _extract_unlabeled_pack_token(
     cells: List[Any],
     columns: Sequence[Dict[str, Any]],
     column_count: int,
+    *,
+    inplace: bool = False,
 ) -> Tuple[List[Any], Optional[str]]:
     """Pull a pack token that Vision put between product and SALE when PACK is not a header.
 
@@ -3531,8 +4028,22 @@ def _extract_unlabeled_pack_token(
         str(cells[product_idx] or "").strip() if product_idx < len(cells) else ""
     )
     pack_token: Optional[str] = None
-    if _classify_layout_cell(cells[pack_idx]) == "pack":
+    pack_kind = _classify_layout_cell(cells[pack_idx])
+    if pack_kind == "pack":
         pack_token = raw_pack or None
+    elif (
+        pack_kind == "serial_or_small_int"
+        and column_count > 0
+        and len(cells) > column_count
+        and raw_pack
+    ):
+        # 60 / 30 left in the unlabeled pack slot after 60' lost its apostrophe.
+        pack_token = raw_pack
+        logger.info(
+            "VISION_TABLE NUMERIC_PACK_PEEL product=%r pack=%r",
+            product_name[:60],
+            raw_pack,
+        )
     elif (
         _ssa_garbled_pack_repair_enabled()
         and raw_pack
@@ -3584,8 +4095,26 @@ def _extract_unlabeled_pack_token(
                 raw_pack[:40],
                 str(nxt)[:20],
             )
+    if (
+        not pack_token
+        and inplace
+        and _loose_pack_token(raw_pack)
+    ):
+        pack_token = raw_pack
     if not pack_token:
         return cells, None
+    # Continuation carry: the pack token occupies the OPENING slot of a
+    # header-aligned row. Clearing it keeps RECEIPT/ISSUE/CLOSING in place.
+    # Shifting would move the printed closing into ISSUE.
+    if inplace and column_count > 0 and len(cells) <= column_count:
+        out = list(cells)
+        out[pack_idx] = None
+        logger.info(
+            "VISION_TABLE PACK_IN_OPENING_KEPT_COLUMNS product=%r pack=%r",
+            product_name[:60],
+            str(pack_token)[:40],
+        )
+        return out, pack_token
     out = list(cells[:pack_idx]) + list(cells[pack_idx + 1 :])
     # After removing pack, pad/truncate to the header column_count.
     if column_count > 0:
@@ -4362,13 +4891,13 @@ def _map_single_table(
     header_used: Optional[Dict[str, Any]] = None
     columns: List[Dict[str, Any]] = []
     data_as_headers = False
+    use_carry = False
 
     if header_rows:
         header_cells = _flatten_header_cells(header_rows, column_count)
         data_as_headers = _vision_header_cells_look_like_data(header_cells)
         # Continuation page: Vision copied a data row into headers — prefer
         # prior-page carry when column counts match (never invent columns).
-        use_carry = False
         if (
             data_as_headers
             and _prefer_carry_on_data_headers_enabled()
@@ -4530,7 +5059,7 @@ def _map_single_table(
         cells = list(row.get("cells") or [])
         unlabeled_pack: Optional[str] = None
         cells, unlabeled_pack = _extract_unlabeled_pack_token(
-            cells, columns, column_count
+            cells, columns, column_count, inplace=use_carry
         )
         if len(cells) < column_count:
             cells = cells + [None] * (column_count - len(cells))
@@ -4662,8 +5191,11 @@ def _map_single_table(
             _repair_lstsl_close_parked_in_order(item)
             _repair_free_in_issue_closing_shift(item)
             _repair_missing_pair_null_shift(item)
+            _repair_qty_value_pair_left_shift(item)
+            _repair_issue_value_left_shift(item)
             _repair_closing_money_parked_in_qty(item)
             _repair_closing_qty_parked_in_value(item)
+            _repair_closing_pair_interchanged(item)
             _flag_qty_value_geometry_suspicion(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
@@ -4672,6 +5204,8 @@ def _map_single_table(
             _repair_closing_money_parked_in_qty(item)
             # Inverse: qty-only ORIC closing parked in value after money pass.
             _repair_closing_qty_parked_in_value(item)
+            _repair_issue_value_left_shift(item)
+            _repair_closing_pair_interchanged(item)
             line_items.append(item)
 
     if leading_banner_items:
@@ -4838,6 +5372,8 @@ def map_vision_table(
 
     _apply_closing_money_parked_in_qty_pass(all_items)
     _apply_closing_qty_parked_in_value_pass(all_items)
+    _apply_issue_value_left_shift_pass(all_items)
+    _apply_closing_pair_unswap_pass(all_items)
 
     return {
         "line_items": all_items,
@@ -5747,6 +6283,34 @@ def merge_reread(
                 candidate = None
         if candidate is None and first_key:
             candidate = reread_by_name.get(first_key)
+            # "TOOTH PASTE" and "TOOTHPASTE" share one key. A single re-read
+            # row must not replace every sibling that collapsed to that key.
+            if candidate is not None:
+                siblings = [
+                    other
+                    for other in (first_items or [])
+                    if isinstance(other, dict)
+                    and _normalize_product_key(other.get("product_name")) == first_key
+                ]
+                if len(siblings) > 1:
+                    raw_item = re.sub(
+                        r"\s+", " ", str(item.get("product_name") or "")
+                    ).strip().lower()
+                    raw_cand = re.sub(
+                        r"\s+", " ", str(candidate.get("product_name") or "")
+                    ).strip().lower()
+                    this_fp = _vision_physical_qty_fingerprint(item)
+                    cand_fp = _vision_physical_qty_fingerprint(candidate)
+                    if raw_item != raw_cand and (
+                        this_fp is None or cand_fp is None or this_fp != cand_fp
+                    ):
+                        logger.info(
+                            "VISION_REREAD_SAME_KEY_DIFFERENT_ROW kept=%r "
+                            "candidate=%r",
+                            item.get("product_name"),
+                            candidate.get("product_name"),
+                        )
+                        candidate = None
         if candidate is None:
             out.append(item)
             continue
@@ -6574,6 +7138,8 @@ def run_vision_table_path(
         # Final pass before stamp/classify — catches money still parked in qty.
         _apply_closing_money_parked_in_qty_pass(all_items)
         _apply_closing_qty_parked_in_value_pass(all_items)
+        _apply_issue_value_left_shift_pass(all_items)
+        _apply_closing_pair_unswap_pass(all_items)
 
         result = _stamp_vision_result(
             filename=filename,
@@ -6913,6 +7479,8 @@ def run_vision_table_path(
         # After recon/reread merges: money must not remain in closing_qty.
         _apply_closing_money_parked_in_qty_pass(result.get("line_items") or [])
         _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
+        _apply_issue_value_left_shift_pass(result.get("line_items") or [])
+        _apply_closing_pair_unswap_pass(result.get("line_items") or [])
 
         classified = classify_result(result)
         result["totals"]["extra"]["row_status_counts"] = (
