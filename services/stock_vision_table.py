@@ -149,7 +149,22 @@ def _vision_header_cells_look_like_data(
             texts.append(str(cell.get("text") or cell.get("header_text") or "").strip())
         else:
             texts.append(str(cell or "").strip())
+    # Keep blanks: a continuation crop often copies only
+    # "PRODUCT" | "60'T" | "" | "" | "" into header_rows.
+    raw_texts = list(texts)
     texts = [t for t in texts if t]
+    if (
+        len(raw_texts) >= 4
+        and 1 <= len(texts) <= 3
+        and sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t)) <= 1
+        and any(_classify_layout_cell(t) == "product" for t in texts)
+        and any(_loose_pack_token(t) for t in texts)
+        and not any(
+            _classify_layout_cell(t) in {"number", "serial_or_small_int"}
+            for t in texts
+        )
+    ):
+        return True
     if len(texts) < 4:
         return False
     hint_hits = sum(1 for t in texts if _STOCK_HEADER_HINT_RE.search(t))
@@ -185,6 +200,26 @@ def _vision_header_cells_look_like_data(
     ):
         return True
     return False
+
+
+def _loose_pack_token(text: Any) -> bool:
+    """Pack token including OCR forms like 60'T / 10'C / 100 'T.
+
+    Used only to spot a data row copied into headers. The qty-column peel
+    still uses ``_classify_layout_cell`` so a pack sitting in OPENING does
+    not shift ISSUE/CLOSING on a header-aligned row.
+    """
+    s = str(text or "").strip()
+    if not s:
+        return False
+    if _classify_layout_cell(s) == "pack":
+        return True
+    return bool(
+        re.fullmatch(
+            r"\d+\s*'+\s*[TtCcSs]?|\d+\s*'?\s*[TtCc]",
+            s,
+        )
+    )
 
 
 def _classify_layout_cell(text: Any) -> str:
@@ -3847,6 +3882,8 @@ def _extract_unlabeled_pack_token(
     cells: List[Any],
     columns: Sequence[Dict[str, Any]],
     column_count: int,
+    *,
+    inplace: bool = False,
 ) -> Tuple[List[Any], Optional[str]]:
     """Pull a pack token that Vision put between product and SALE when PACK is not a header.
 
@@ -3947,8 +3984,26 @@ def _extract_unlabeled_pack_token(
                 raw_pack[:40],
                 str(nxt)[:20],
             )
+    if (
+        not pack_token
+        and inplace
+        and _loose_pack_token(raw_pack)
+    ):
+        pack_token = raw_pack
     if not pack_token:
         return cells, None
+    # Continuation carry: the pack token occupies the OPENING slot of a
+    # header-aligned row. Clearing it keeps RECEIPT/ISSUE/CLOSING in place.
+    # Shifting would move the printed closing into ISSUE.
+    if inplace and column_count > 0 and len(cells) <= column_count:
+        out = list(cells)
+        out[pack_idx] = None
+        logger.info(
+            "VISION_TABLE PACK_IN_OPENING_KEPT_COLUMNS product=%r pack=%r",
+            product_name[:60],
+            str(pack_token)[:40],
+        )
+        return out, pack_token
     out = list(cells[:pack_idx]) + list(cells[pack_idx + 1 :])
     # After removing pack, pad/truncate to the header column_count.
     if column_count > 0:
@@ -4725,13 +4780,13 @@ def _map_single_table(
     header_used: Optional[Dict[str, Any]] = None
     columns: List[Dict[str, Any]] = []
     data_as_headers = False
+    use_carry = False
 
     if header_rows:
         header_cells = _flatten_header_cells(header_rows, column_count)
         data_as_headers = _vision_header_cells_look_like_data(header_cells)
         # Continuation page: Vision copied a data row into headers — prefer
         # prior-page carry when column counts match (never invent columns).
-        use_carry = False
         if (
             data_as_headers
             and _prefer_carry_on_data_headers_enabled()
@@ -4893,7 +4948,7 @@ def _map_single_table(
         cells = list(row.get("cells") or [])
         unlabeled_pack: Optional[str] = None
         cells, unlabeled_pack = _extract_unlabeled_pack_token(
-            cells, columns, column_count
+            cells, columns, column_count, inplace=use_carry
         )
         if len(cells) < column_count:
             cells = cells + [None] * (column_count - len(cells))
