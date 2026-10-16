@@ -168,6 +168,9 @@ ALIASES: Dict[str, List[str]] = {
         "recpt",
         "receipt",
         "receipts",
+        # OCR cut off the end of RECEIPT (RECEI / RECEIP).
+        "recei",
+        "receip",
         "receive",
         "received",
         "in",
