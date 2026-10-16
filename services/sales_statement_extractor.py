@@ -11247,6 +11247,11 @@ _XLS_HEADER_ALIASES = {
     "closingbal": "bal",
     "clbal": "bal",
     "clbalqty": "bal",
+    # CurStk is the printed current/closing qty (Opstk / Sale / CurStk sheets).
+    "curstk": "bal",
+    "curstock": "bal",
+    "currentstk": "bal",
+    "currentstock": "bal",
     "date": "date",
     "statementdate": "date",
     "stockdate": "date",
@@ -11264,6 +11269,8 @@ _XLS_HEADER_ALIASES = {
     "cl.val": "bval",
     "cl.val.": "bval",
     "clval": "bval",
+    "stkval": "bval",
+    "stockval": "bval",
     # ClosingBal ActualValBySale — money under closing, not qty.
     "actualvalbysale": "bval",
     "closingbalactualvalbysale": "bval",
@@ -11281,6 +11288,7 @@ _XLS_HEADER_ALIASES = {
     "salesamount": "sval",
     "secondarysalesvalue": "sval",
     "valueofsales": "sval",
+    "salval": "sval",
     "openingvalue": "opval",
     "openingval": "opval",
     "opvalue": "opval",
@@ -15082,6 +15090,23 @@ def _xls_fill_from_rows(
                         product_name = s
                         break
         if not product_name:
+            continue
+        if re.search(
+            r"^(?:Opg\.?\s*Stk\s*Val|Cl\.?\s*Stk\s*Val|Aug\.?\s*Sal|"
+            r"Oth\.?\s*Sal\s*Val|Purc\.?\s*Value|Pur\.?\s*Ret\s*Val|"
+            r"Sal\s*Ret\s*Val)\b",
+            product_name,
+            re.I,
+        ):
+            nums = [_to_float(c) for _, c in texts if _xls_cell_has_qty(c)]
+            if nums and re.search(r"^Opg", product_name, re.I):
+                result["totals"]["extra"]["opening_value"] = nums[0]
+            elif nums and re.search(r"^Cl", product_name, re.I):
+                result["totals"]["closing_value"] = nums[0]
+            logger.info(
+                "XLS_FOOTER_ROW skipped label=%r",
+                product_name,
+            )
             continue
         if _xls_norm_header(product_name) in {"item", "product_code", "op", "sale", "bal", "pur"}:
             continue
