@@ -292,6 +292,126 @@ def _is_qualifier_text(text: Any) -> bool:
     return bool(tokens) and all(t in _QUALIFIER_WORDS for t in tokens)
 
 
+_HEADER_LEXICON = frozenset(
+    {
+        "product",
+        "pack",
+        "packing",
+        "opening",
+        "open",
+        "receipt",
+        "issue",
+        "free",
+        "i",
+        "sales",
+        "sale",
+        "closing",
+        "close",
+        "amount",
+        "amt",
+        "qty",
+        "quantity",
+        "value",
+        "val",
+        "stock",
+        "rate",
+        "division",
+        "div",
+    }
+) | _QUALIFIER_WORDS
+
+
+def _cell_is_header_lexicon(text: Any) -> bool:
+    tokens = [t for t in normalize_header(text).split() if t]
+    return bool(tokens) and all(t in _HEADER_LEXICON for t in tokens)
+
+
+def _place_header_word(
+    header: List[Dict[str, Any]], cell: Dict[str, Any], *, prepend: bool
+) -> None:
+    """Overlap an existing header cell, or insert a column that sits in a gap."""
+    x0 = float(cell.get("x0") or 0)
+    x1 = float(cell.get("x1") or x0)
+    word = str(cell.get("text") or "").strip()
+    if not word:
+        return
+    for host in header:
+        h0 = float(host.get("x0") or 0)
+        h1 = float(host.get("x1") or h0)
+        if min(h1, x1) >= max(h0, x0) - 2:
+            if word.lower() not in str(host.get("text") or "").lower():
+                host["text"] = (
+                    (word + " " + str(host.get("text") or "")).strip()
+                    if prepend
+                    else (str(host.get("text") or "") + " " + word).strip()
+                )
+            host["x0"] = min(h0, x0)
+            host["x1"] = max(h1, x1)
+            return
+    header.append(
+        {
+            "text": word,
+            "col_index": len(header),
+            "x_center": None,
+            "subheader_text": None,
+            "x0": x0,
+            "x1": x1,
+        }
+    )
+
+
+def _absorb_nearby_header_rows(
+    header: List[Dict[str, Any]],
+    clustered: List[List[Dict[str, Any]]],
+    rows: List[List[Dict[str, Any]]],
+    best_i: int,
+    med_h: float,
+) -> List[int]:
+    """Pull Sales/Amount/Closing words on the lines just above and below the header.
+
+    A word that overlaps a header cell is glued onto it. A word that sits in
+    the gap between cells becomes its own column (Sales Amount, Closing Amount).
+    """
+    if best_i < 0 or not header or best_i >= len(rows):
+        return []
+    header_top = float((rows[best_i][0] or {}).get("top") or 0)
+    limit = max(8.0, 1.25 * float(med_h or 8.0))
+    consumed: List[int] = []
+    for idx in (best_i - 1, best_i + 1):
+        if idx < 0 or idx >= len(clustered) or idx >= len(rows) or not rows[idx]:
+            continue
+        top = float((rows[idx][0] or {}).get("top") or 0)
+        if abs(top - header_top) > limit:
+            continue
+        cells = clustered[idx]
+        if not cells or not all(_cell_is_header_lexicon(c.get("text")) for c in cells):
+            continue
+        for cell in cells:
+            _place_header_word(header, cell, prepend=idx < best_i)
+        consumed.append(idx)
+    if not consumed:
+        return []
+    width = None
+    for host in header:
+        xc = host.get("x_center")
+        if xc:
+            mid = (float(host.get("x0") or 0) + float(host.get("x1") or 0)) / 2.0
+            if mid:
+                width = mid / float(xc)
+                break
+    header.sort(key=lambda c: float(c.get("x0") or 0))
+    for idx, host in enumerate(header):
+        host["col_index"] = idx
+        mid = (float(host.get("x0") or 0) + float(host.get("x1") or 0)) / 2.0
+        if width:
+            host["x_center"] = mid / width
+    logger.info(
+        "STOCK_PDF_WORDS_HEADER_ABSORB cols=%s",
+        [c.get("text") for c in header],
+    )
+    return consumed
+
+
 def _merge_qualifier_subheader(
     header: List[Dict[str, Any]], next_cells: List[Dict[str, Any]]
 ) -> bool:
@@ -499,9 +619,17 @@ def _extract_pdf_page_rows(
             best_header = cells
 
     skip_row_indexes: List[int] = []
-    if best_i >= 0 and best_i + 1 < len(clustered):
-        if _merge_qualifier_subheader(best_header, clustered[best_i + 1]):
-            skip_row_indexes.append(best_i + 1)
+    absorbed = _absorb_nearby_header_rows(
+        best_header, clustered, rows, best_i, med_h
+    )
+    skip_row_indexes.extend(absorbed)
+    if (
+        not absorbed
+        and best_i >= 0
+        and best_i + 1 < len(clustered)
+        and _merge_qualifier_subheader(best_header, clustered[best_i + 1])
+    ):
+        skip_row_indexes.append(best_i + 1)
 
     all_token_rows: List[List[Dict[str, Any]]] = []
     for cells in clustered:

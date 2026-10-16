@@ -729,6 +729,249 @@ def items_from_free_column_rows(
     return {"line_items": items, "closing_value": closing_total}
 
 
+_ISSUE_LAYOUT = frozenset(
+    {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }
+)
+_HEADER_TOKEN = re.compile(
+    r"(?i)^(product|pack|packing|opening|receipt|issue|i/?free|sales|amount|"
+    r"closing|division|qty|value|rate|stock)$"
+)
+
+
+def _join_wrapped_name(parts: List[str]) -> str:
+    """Join a product name split across lines without inventing words.
+
+    A broken token such as ``60TA`` + ``B)`` or ``20`` + ``0ML)`` is glued.
+    Separate words stay separated.
+    """
+    out = ""
+    for part in parts:
+        piece = str(part or "").strip()
+        if not piece:
+            continue
+        if not out:
+            out = piece
+            continue
+        glue = False
+        if piece in {")", ")"} or re.fullmatch(r"[A-Za-z]\)?", piece):
+            glue = True
+        elif out.endswith("(") or piece.startswith(")"):
+            glue = True
+        elif out[-1:].isdigit() and piece[:1].isdigit():
+            glue = True
+        elif "(" in out and out.count("(") > out.count(")") and piece.endswith(")"):
+            glue = True
+        out = out + piece if glue else out + " " + piece
+    return re.sub(r"\s+", " ", out).strip()
+
+
+def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
+    canons = {str(c.get("canonical") or "") for c in columns}
+    return _ISSUE_LAYOUT <= canons
+
+
+def _band_for_x(x: float, bands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not bands:
+        return None
+    centers = [
+        (float(b.get("x0") or 0) + float(b.get("x1") or 0)) / 2.0 for b in bands
+    ]
+    idx = 0
+    for i in range(len(centers) - 1):
+        edge = (centers[i] + centers[i + 1]) / 2.0
+        if x >= edge:
+            idx = i + 1
+        else:
+            break
+    return bands[idx]
+
+
+def _leading_number(text: str) -> Optional[float]:
+    from services.stock_header_resolver import parse_number
+
+    raw = str(text or "").strip()
+    number = parse_number(raw)
+    if number is not None:
+        return number
+    match = re.match(r"^(-?\d[\d,]*(?:\.\d+)?)\b", raw)
+    if not match:
+        return None
+    return parse_number(match.group(1))
+
+
+def _line_band_texts(
+    words: List[Dict[str, Any]], bands: List[Dict[str, Any]]
+) -> Dict[str, List[str]]:
+    grouped: Dict[str, List[str]] = {}
+    ordered = sorted(words, key=lambda w: float(w.get("x0") or 0))
+    for word in ordered:
+        text = str(word.get("text") or "").strip()
+        if not text:
+            continue
+        x = (float(word.get("x0") or 0) + float(word.get("x1") or 0)) / 2.0
+        band = _band_for_x(x, bands)
+        if not band:
+            continue
+        canon = str(band.get("canonical") or "")
+        if not canon or canon == "ignore":
+            continue
+        grouped.setdefault(canon, []).append(text)
+    return grouped
+
+
+def items_from_receipt_issue_pages(
+    pdf: Any, page_results: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """Opening / Receipt / Issue / Sales Amount / Closing Amount word columns.
+
+    Wrapped product names are joined from the product column. Division text
+    is not part of the name. Printed negatives stay printed.
+    """
+    from services.stock_native_tables import resolver_ready
+
+    bands: List[Dict[str, Any]] = []
+    for page in page_results or []:
+        header = page.get("header_cells") or []
+        ready = resolver_ready(header)
+        columns = list(ready.get("columns") or [])
+        if not ready.get("resolved") or not _issue_column_layout(columns):
+            continue
+        by_idx = {int(c.get("col_index") or 0): c for c in columns}
+        built: List[Dict[str, Any]] = []
+        for cell in header:
+            col = by_idx.get(int(cell.get("col_index") or 0))
+            if not col or cell.get("x0") is None:
+                continue
+            built.append(
+                {
+                    "canonical": col.get("canonical"),
+                    "x0": float(cell.get("x0") or 0),
+                    "x1": float(cell.get("x1") or 0),
+                }
+            )
+        if built:
+            built.sort(key=lambda b: (b["x0"] + b["x1"]) / 2.0)
+            bands = built
+            break
+    if not bands:
+        return None
+
+    lines: List[Dict[str, Any]] = []
+    for page_index, page in enumerate(getattr(pdf, "pages", []) or []):
+        try:
+            words = page.extract_words(keep_blank_chars=False, use_text_flow=False) or []
+        except Exception:
+            words = []
+        ordered = sorted(words, key=lambda w: (float(w.get("top") or 0), float(w.get("x0") or 0)))
+        for word in ordered:
+            top = float(word.get("top") or 0)
+            if lines and abs(top - float(lines[-1]["top"])) <= 2.2:
+                lines[-1]["words"].append(word)
+            else:
+                lines.append({"top": top, "page": page_index, "words": [word]})
+
+    header_tops = []
+    for line in lines:
+        blob = " ".join(str(w.get("text") or "") for w in line["words"])
+        if re.search(r"\bOpening\b", blob) and re.search(r"\bProduct\b", blob):
+            header_tops.append(float(line["top"]))
+
+    anchors: List[Dict[str, Any]] = []
+    for line in lines:
+        grouped = _line_band_texts(line["words"], bands)
+        opening_bits = grouped.get("opening_qty") or []
+        opening = next(
+            (n for n in (_leading_number(bit) for bit in opening_bits) if n is not None),
+            None,
+        )
+        if opening is None:
+            continue
+        anchors.append({"top": float(line["top"]), "page": line["page"], "grouped": grouped, "opening": opening})
+
+    if len(anchors) < 3:
+        return None
+
+    items: List[Dict[str, Any]] = []
+    closing_total: Optional[float] = None
+    sales_total: Optional[float] = None
+    for index, anchor in enumerate(anchors):
+        prev_top = (
+            float(anchors[index - 1]["top"])
+            if index and anchors[index - 1]["page"] == anchor["page"]
+            else float(anchor["top"]) - 28.0
+        )
+        next_top = (
+            float(anchors[index + 1]["top"])
+            if index + 1 < len(anchors) and anchors[index + 1]["page"] == anchor["page"]
+            else float(anchor["top"]) + 28.0
+        )
+        if index == 0 or anchors[index - 1]["page"] != anchor["page"]:
+            page_headers = [t for t in header_tops if t < float(anchor["top"])]
+            if page_headers:
+                prev_top = max(page_headers)
+        lo = (prev_top + float(anchor["top"])) / 2.0
+        hi = (float(anchor["top"]) + next_top) / 2.0
+        name_parts: List[str] = []
+        pack_parts: List[str] = []
+        for line in lines:
+            if line["page"] != anchor["page"]:
+                continue
+            top = float(line["top"])
+            if top < lo or top > hi:
+                continue
+            grouped = _line_band_texts(line["words"], bands)
+            for text in grouped.get("product_name") or []:
+                if _HEADER_TOKEN.match(text.strip()):
+                    continue
+                name_parts.append(text)
+            for text in grouped.get("pack") or []:
+                if _HEADER_TOKEN.match(text.strip()):
+                    continue
+                pack_parts.append(text)
+        name = _join_wrapped_name(name_parts)
+        pack = re.sub(r"\s+", " ", " ".join(pack_parts)).strip()
+        grouped = anchor["grouped"]
+
+        def _band_number(canon: str) -> Optional[float]:
+            for bit in grouped.get(canon) or []:
+                number = _leading_number(bit)
+                if number is not None:
+                    return number
+            return None
+
+        if not re.search(r"[A-Za-z]", name):
+            closing_total = _band_number("closing_value")
+            sales_total = _band_number("sales_value")
+            continue
+        item = _empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack or None
+        item["opening_qty"] = anchor["opening"]
+        item["receipts_qty"] = _band_number("purchase_qty")
+        item["sales_qty"] = _band_number("sales_qty")
+        item["sales_value"] = _band_number("sales_value")
+        item["closing_qty"] = _band_number("closing_qty")
+        item["closing_value"] = _band_number("closing_value")
+        free_out = _band_number("free_out_qty")
+        if free_out is not None:
+            item["extra"]["free_out_qty"] = free_out
+        items.append(item)
+    if len(items) < 3:
+        return None
+    return {
+        "line_items": items,
+        "closing_value": closing_total,
+        "sales_value": sales_total,
+    }
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -748,6 +991,14 @@ def parse_pdf_free_column_statement(
             peek = ""
             if pdf.pages:
                 peek = pdf.pages[0].extract_text() or ""
+            parsed = items_from_free_column_rows(
+                built.get("header_cells") or [],
+                built.get("data_rows") or [],
+            )
+            if not parsed or not parsed.get("line_items"):
+                parsed = items_from_receipt_issue_pages(
+                    pdf, built.get("page_results") or []
+                )
     except Exception as exc:
         logger.info(
             "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
@@ -755,30 +1006,31 @@ def parse_pdf_free_column_statement(
             type(exc).__name__,
         )
         return None
-    parsed = items_from_free_column_rows(
-        built.get("header_cells") or [],
-        built.get("data_rows") or [],
-    )
     if not parsed or not parsed.get("line_items"):
         return None
     result = empty_result(filename, "pdf")
     result["line_items"] = parsed["line_items"]
-    result["report_title"] = "Stock Statement Report" if re.search(
-        r"Stock\s+Statement", peek, re.I
-    ) else None
+    if re.search(r"Stock\s+Statement", peek, re.I):
+        result["report_title"] = "Stock Statement Report"
+    elif re.search(r"Statements\s+of", peek, re.I):
+        result["report_title"] = "Statements of"
     first = ""
     for line in peek.splitlines():
         if line.strip():
             first = line.strip()
             break
-    if first and re.search(r"[A-Za-z]", first) and not re.search(
-        r"\d{2,}", first
-    ):
+    stated = re.search(r"Statements\s+of\s+(.+)", peek, re.I)
+    company = re.search(r"Company\s*:\s*(.+)", peek, re.I)
+    if stated:
+        result["stockist_name"] = stated.group(1).strip()
+    elif first and re.search(r"[A-Za-z]", first) and not re.search(r"\d{2,}", first):
         result["stockist_name"] = first
         result["company_name"] = first
+    if company:
+        result["company_name"] = company.group(1).strip()
     period = re.search(
-        r"From\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
-        r"To\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+        r"(?:From|Duration)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+        r"(?:To|to)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
         peek,
         re.I,
     )
@@ -794,6 +1046,8 @@ def parse_pdf_free_column_statement(
     extra["statement_count"] = 1
     if parsed.get("closing_value") is not None:
         result["totals"]["closing_value"] = parsed["closing_value"]
+    if parsed.get("sales_value") is not None:
+        result["totals"]["sales_value"] = parsed["sales_value"]
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,

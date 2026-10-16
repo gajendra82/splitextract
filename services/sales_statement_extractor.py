@@ -3992,6 +3992,8 @@ def _allow_negative_stock_money(extraction_method: Any) -> bool:
         # STOCK & SALES ANALYSIS RATE/QTY/VALUE: printed negatives must stay.
         "rate_qty_value_columns",
         "rate_qty_value_vision",
+        # Word-read statements can print a negative closing amount.
+        "pdf_words_free_columns",
     }
 
 
