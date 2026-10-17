@@ -1419,6 +1419,131 @@ class EvergreenFocusedRereadTests(unittest.TestCase):
         # TAB balances; not a steal onto the next row.
         self.assertEqual(detect_ssa_neighbor_contamination_indices(items), [])
 
+    def test_detect_oric_receipt_issue_steal_when_identity_still_balances(self):
+        """Sparse ORIC: borrowed RECEIPT=ISSUE keeps a balanced; next row uniform."""
+        from services.stock_vision_table import detect_ssa_neighbor_contamination_indices
+
+        items = [
+            {
+                "product_name": "EVECARE SYP 200 ML",
+                "opening_qty": 3.0,
+                "receipts_qty": 34.0,
+                "sales_qty": 34.0,
+                "closing_qty": 3.0,
+                "extra": {},
+            },
+            {
+                "product_name": "LIV.52 DROP 100ML",
+                "opening_qty": 10.0,
+                "receipts_qty": 10.0,
+                "sales_qty": 10.0,
+                "closing_qty": 10.0,
+                "extra": {},
+            },
+        ]
+        self.assertEqual(detect_ssa_neighbor_contamination_indices(items), [0, 1])
+
+    def test_legitimate_equal_receipt_sales_not_flagged_as_oric_steal(self):
+        from services.stock_vision_table import detect_ssa_neighbor_contamination_indices
+
+        items = [
+            {
+                "product_name": "MENTAT SYP",
+                "opening_qty": 0.0,
+                "receipts_qty": 10.0,
+                "sales_qty": 10.0,
+                "closing_qty": 0.0,
+                "extra": {},
+            },
+            {
+                "product_name": "RENALKA SYP",
+                "opening_qty": 0.0,
+                "receipts_qty": 5.0,
+                "sales_qty": 5.0,
+                "closing_qty": 0.0,
+                "extra": {},
+            },
+        ]
+        self.assertEqual(detect_ssa_neighbor_contamination_indices(items), [])
+
+    def test_oric_headers_enable_ssa_focused_path(self):
+        from services.stock_vision_table import _headers_look_like_ssa_oric_qty_grid
+
+        cols = [
+            {"header_text": "ITEM DESCRIPTION"},
+            {"header_text": "OPENING"},
+            {"header_text": "RECEIPT"},
+            {"header_text": "ISSUE"},
+            {"header_text": "CLOSING"},
+        ]
+        self.assertTrue(_headers_look_like_ssa_oric_qty_grid(cols))
+
+    def test_oric_open_close_realign_sales_is_closing(self):
+        import os
+        from unittest.mock import patch
+        from services.stock_vision_table import _repair_oric_open_close_dash_pair
+
+        item = {
+            "product_name": "EVECARE SYP 200 ML",
+            "opening_qty": 3.0,
+            "receipts_qty": None,
+            "sales_qty": 3.0,
+            "closing_qty": None,
+            "extra": {
+                "vision_column_headers": [
+                    "ITEM DESCRIPTION",
+                    "OPENING",
+                    "RECEIPT",
+                    "ISSUE",
+                    "CLOSING",
+                ],
+                "field_source": {
+                    "opening_qty": "printed",
+                    "purchase_qty": "missing",
+                    "sales_qty": "printed",
+                    "closing_qty": "missing",
+                },
+            },
+        }
+        with patch.dict(os.environ, {"STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN": "true"}):
+            self.assertTrue(_repair_oric_open_close_dash_pair(item))
+        self.assertEqual(item["closing_qty"], 3.0)
+        self.assertIsNone(item["sales_qty"])
+        self.assertEqual(item["extra"]["field_source"]["sales_qty"], "missing")
+
+    def test_oric_open_close_realign_skips_receipt_sales_equal_pair(self):
+        """Do not remap RENALKA-style '- / 5 / 5 / -' into open=close."""
+        import os
+        from unittest.mock import patch
+        from services.stock_vision_table import _repair_oric_open_close_dash_pair
+
+        item = {
+            "product_name": "RENALKA SYP 200 ML",
+            "opening_qty": None,
+            "receipts_qty": 5.0,
+            "sales_qty": 5.0,
+            "closing_qty": None,
+            "extra": {
+                "vision_column_headers": [
+                    "ITEM DESCRIPTION",
+                    "OPENING",
+                    "RECEIPT",
+                    "ISSUE",
+                    "CLOSING",
+                ],
+                "field_source": {
+                    "opening_qty": "missing",
+                    "purchase_qty": "printed",
+                    "sales_qty": "printed",
+                    "closing_qty": "missing",
+                },
+            },
+        }
+        with patch.dict(os.environ, {"STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN": "true"}):
+            self.assertFalse(_repair_oric_open_close_dash_pair(item))
+        self.assertEqual(item["receipts_qty"], 5.0)
+        self.assertEqual(item["sales_qty"], 5.0)
+
     def test_clear_sales_closing_steal_marks_missing(self):
         from services.stock_vision_table import clear_persistent_ssa_contamination_qty
 

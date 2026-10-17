@@ -1,0 +1,102 @@
+CHM
+                    PS GLOBAL
+E                                    Stock & Sales StatementF
+From 01/09/2026 To 30/09/2026                                                        Page : 1
+------------------------------------------------------------------------------------------------
+Product Name                 Packing  O.Stk    Purc      Tot    Sale     Qoh        Value  Age
+------------------------------------------------------------------------------------------------
+Company :HIMALYA ZANDRA       
+-----------------------
+ARJUNA TABLETS               60S          0      60       60       0      60     13899.69    2 
+BONNISAN DROPS               30ML         0       0        0       0       0         0.00  126 
+BONNISAN SYP                 100ML       19      56       75      18      57      3416.78    2 
+BONNISAN SYP                 200ML       11      56       67      11      56      5659.19    2 
+BONNISPAZ DROPS              15ML        71       0       71       0      71      4229.97   63 
+BRESOL SYRUP                 200 ml      20      28       48      20      28      4269.17    2 
+BRESOL TAB                   60`S         1       0        1       1       0         0.00  308 
+BRESOL-NS SALINE NASAL 10ML  10ML        58       0       58      10      48      2427.76   63 
+CYSTONE FORTE TAB            30S          4      56       60       4      56      5998.83    2 
+CYSTONE SF  SYP              200 ML       0       0        0       0       0         0.00  191 
+CYSTONE SYP 200ML            200ML        2       0        2       1       1       177.78   93 
+CYSTONE TABS                 60`S        90     100      190      90     100     16716.60    2 
+EVECARE CAPS                 30`S        35       0       35       7      28      4584.16   63 
+EVECARE FORTE SYP            200ML       25       0       25      25       0         0.00   63 
+EVECARE FORTE TAB            3X10        86       0       86       1      85      5496.25   32 
+EVECARE SYP 400ML            400ML        0      12       12       0      12      2651.83    2 
+EVECARE SYRUP                200ML        0      28       28       0      28      4055.72    2 
+EVEGEL 30GM                  3GM          0       0        0       0       0         0.00 2711 
+FLORASANTE CAPS              10S          0       0        0       0       0         0.00  155 
+GALACTOSURE GRANULES ELAICHI 200G        10       0       10       5       5      1397.18   93 
+GERIFORTE SYP                200ML       11       0       11       0      11      1452.29  126 
+GERIFORTE TABS               60S         50      50      100      50      50      5815.95    2 
+HARIDRA TABS                 60S          0       0        0       0       0         0.00  189 
+HIMCOSPAZ SOFT CAP           10S          0       0        0       0       0         0.00 1835 
+HIMPLASIA - TAB              30          39       0       39      12      27      4449.63   63 
+HIORA DIABETICS TOOTHPASTE   100GM        8       0        8       0       8       728.87  406 
+HIORA K MOUTH WASH 150ML     150ML        0       0        0       0       0         0.00  126 
+HIORA K TOOTHPASTE 100GM     100GM       21       0       21       7      14      1588.48   93 
+HIORA K TOOTHPASTE 50GM      50GM         0       0        0       0       0         0.00 1014 
+HIORA MOUTH WASH REGULAR     150ML        0       0        0       0       0         0.00  668 
+HIORA TOOTH PASTE            50GM         0       0        0       0       0         0.00 2711 
+HIORA TOOTH PASTE            100G         0       0        0       0       0         0.00 1047 
+HIORA-GA  GEL                15ML        50       0       50       2      48      3506.33   32 
+HIORA-SG  GEL                10GM         8       0        8       2       6       476.60   93 
+HIOWNA  VANILLA FLAVOR       200GM        0       0        0       0       0         0.00 2711 
+IMMUSANTE TAB                20S          0       0        0       0       0         0.00  827 
+INTIMA WASH                  100ML       12      24       36      12      24      2908.46    2 
+KARELA TAB                   60S         40       0       40      40       0         0.00  191 
+KOFLET SF LOZ BASIL HONEY FL 6S           0       0        0       0       0         0.00 2677 
+KOFLET SF LOZ LMN LIME FLAVE 6S           0       0        0       0       0         0.00 2677 
+LASUNA TABLETS               60S          0       0        0       0       0         0.00  155 
+LIV 52 DROPS                 100ML        0      56       56       0      56      7069.52    2 
+LIV 52 DS  SYRUP             100ML       42       0       42      23      19      2940.65  126 
+LIV 52 DS  SYRUP SUGAR FREE  100ML        0       0        0       0       0         0.00  290 
+LIV.52 DROPS                 60ML       100       0      100      13      87      8946.82   32 
+LIV.52 DS SYP 200ML          200ML       14       0       14       9       5      1244.62   93 
+LIV.52 DS TABS               60`S       100     100      200     100     100     19929.00    2 
+LUKOL SYP                    200ML        0       0        0       0       0         0.00  277 
+LUKOL TABS                   60`S         8       0        8       8       0         0.00  191 
+MENOSAN TAB                  30`S        69      56      125      65      60     10340.19    2 
+MENTAT DS SF SYP             100 ML      54       0       54      21      33      5265.41   63 
+MENTAT GUMMIES               30`S         0       0        0       0       0         0.00  610 
+MENTAT SYP                   200ML       56      28       84      56      28      5103.25    2 
+MENTAT TABS                  60`S        59       0       59      59       0         0.00   93 
+MESHASHRINGI TAB             60S          0       0        0       0       0         0.00  155 
+METHI TAB                    60s          0       0        0       0       0         0.00  967 
+PILEX KIT COMBI PACK         1PACK        0      50       50       0      50     13931.05    2 
+PLATENZA SYRUP               100ML        0      56       56       0      56      9885.01    2 
+PLATENZA TAB                 20 S        21       0       21      21       0         0.00   63 
+PUNARNAVA TABLET             60S         60      60      120      60      60     13899.69    2 
+
+                                                                                     Page : 2
+------------------------------------------------------------------------------------------------
+Product Name                 Packing  O.Stk    Purc      Tot    Sale     Qoh        Value  Age
+------------------------------------------------------------------------------------------------
+PURE HANDS ADVANCED          500 ML       0       0        0       0       0         0.00 1539 
+PURE HANDS LEMON             100ml        0       0        0       0       0         0.00 2233 
+PURE HANDS LITCHI            200ML        0       0        0       0       0         0.00 2095 
+PURE HANDS ORANGE            100ML        0       0        0       0       0         0.00 2255 
+PURE HANDS ORANGE            500ML        0       0        0       0       0         0.00 1961 
+PURE HANDS STRAWBERRY        200ML        0       0        0       0       0         0.00 2267 
+PURE HANDS STRAWBERRY        100ML        0       0        0       0       0         0.00 2274 
+PURE HANDS STRAWBERRY        500ml        0       0        0       0       0         0.00 2222 
+QUISTA KIDZ  VANILAFLAVER    200 gr       0       0        0       0       0         0.00  216 
+QUISTA KIDZ CHOCOLATE FLAVER 200 gr       1       0        1       0       1       280.97  216 
+RENALKA SYP                  200 ml      17       0       17       2      15      2233.98  349 
+RENALKA SYP                  100ML        0       0        0       0       0         0.00  645 
+RENOSANTE TABS               60S         25       0       25      10      15      5106.31   32 
+REOSTO TAB                   30`S        22       0       22       3      19      3341.82   63 
+SEPTILIN GUMMES              30s          0       0        0       0       0         0.00  610 
+SEPTILIN SYP                 200ML       34      84      118      34      84     12732.72    2 
+SEPTILIN TABS                60`S         0     100      100       0     100     17679.10    2 
+SERPINA TAB                  100s        48       0       48       4      44      5242.31   63 
+SHATAVARI TABS               60S         60       0       60      60       0         0.00   32 
+SHILAJIT CAPS                60S          0       0        0       0       0         0.00  699 
+SPEMAN TABS                  60`S        52      50      102       9      93     16357.35    2 
+STYPLON TAB                  30`S        20       0       20      20       0         0.00   93 
+V-GEL                        30G         22       0       22       1      21      2159.58   63 
+------------------------------------------------------------------------------------------------
+Opening Value  :        0.00 Sale Value    :   145768.29 
+Purchase Value :   174939.69 Closing Value :   259596.87 
+------------------------------------------------------------------------------------------------
+P

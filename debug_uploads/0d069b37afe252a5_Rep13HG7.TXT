@@ -1,0 +1,41 @@
+
+            PUSHPA MEDICAL AGENCIES            
+From : 01/09/2026                  STOCK AND  SALES STATEMENT                 Date : 01/10/2026
+To   : 30/09/2026                                                             Time : 18:25:06
+Company Name : HIMALAYA WELLNESS (R)                                          Page :   1
+------------------------------------------------------------------------------------------------
+Code   Product Name             Packing  Opening  Receipts    Total    Sales  Closing    Closing
+                                          Stock                                Stock      Value
+------------------------------------------------------------------------------------------------
+606852  LIV-52 DS SYP 200ML     200ML         0          0        0        0        0       0.00
+600642 BONNISAN DROPS           30ML          0          0        0        0        0       0.00
+600619 BONNISAN LIQUID          100ML        32          0       32       15       17    1210.23
+606930 BRESOL SYRUP 200ML       200ML        28          0       28        1       27    4644.00
+600554 BRESOL TABLETS           60'S          0          0        0        0        0       0.00
+600662 CYSTONE SYRUP 200ML      BOT.         23          0       23        2       21    4552.80
+600629 CYSTONE TABLETS          60'S         18         40       58       57        1     194.40
+600645 EVECARE CAPSULES         30'S          9          0        9        0        9    1586.16
+600643 EVECARE SYRUP 200ML      200ML        29          0       29        6       23    3955.77
+600620 GERIFORTE SYRUP          200ML        28          0       28        0       28    4816.00
+600639 GERIFORTE TABS           100'S         0          0        0        0        0       0.00
+606131 HIORA MOUTH WASH         150ML         0          0        0        0        0       0.00
+601013 HIORA PASTE-100GR        100GR         0          0        0        0        0       0.00
+600674 HIORA-GA GEL             15ML         28          0       28        0       28    1832.32
+601011 HIORA-K MOUTH WASH       150ML         6          0        6        6        0       0.00
+601012 HIORA-K-PASTE-100GR      100GR        12          0       12        2       10    1280.00
+600675 HIORA-SG GEL             10GR          0          0        0        0        0       0.00
+600626 LIV-52 DROPS 60ML        60ML         67          0       67       42       25    2900.00
+600644 LIV-52 DS SYP 100ML      100ML        11          0       11        3        8    1201.12
+600650 LIV-52 DS TABLETS        60'S         50          0       50       23       27    6028.81
+600962 LUKOL SYRUP 200ML        200ML         0          0        0        0        0       0.00
+600647 LUKOL TABLETS            60'S          9          0        9        0        9    1821.60
+600622 MENTAT SYRUP             200ML        18          0       18        6       12    2467.08
+600637 MENTAT TABLETS           60'S         10          0       10        5        5     824.25
+606557 PLATENZA TABLETS         20'S          9          0        9        9        0       0.00
+600631 SEPTILIN SYRUP           200ML        28          0       28       28        0       0.00
+600633 SEPTILIN TABLETS         60'S          0          0        0        0        0       0.00
+600656 SPEMAN TABLETS           60'S         20          0       20        9       11    2182.40
+------------------------------------------------------------------------------------------------
+ Opening Value Rs.       68,998.40   Sales Value   Rs.       35,277.46
+ Receipt Value Rs.        7,776.00   Closing Value Rs.       41,496.94
+------------------------------------------------------------------------------------------------
