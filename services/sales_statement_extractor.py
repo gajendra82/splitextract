@@ -11169,6 +11169,7 @@ _XLS_HEADER_ALIASES = {
     "packingsize": "pack",
     "size": "pack",
     "op": "op",
+    "open": "op",
     "op.": "op",
     "opstock": "op",
     "op.stock": "op",
@@ -11176,6 +11177,8 @@ _XLS_HEADER_ALIASES = {
     "op.stk": "op",
     "opening": "op",
     "openingstock": "op",
+    "openingstk": "op",
+    "openstk": "op",
     "openingqty": "op",
     "obqty": "op",
     "ob(qty)": "op",
@@ -11203,6 +11206,8 @@ _XLS_HEADER_ALIASES = {
     "purchaseqty": "pur",
     "receipt": "pur",
     "receipts": "pur",
+    "recp": "pur",
+    "recpqty": "pur",
     "receiptqty": "pur",
     "receiptsqty": "pur",
     "rcpt": "pur",
@@ -11234,7 +11239,10 @@ _XLS_HEADER_ALIASES = {
     "clstk": "bal",
     "cl.stk": "bal",
     "closing": "bal",
+    "clsg": "bal",
     "closingstock": "bal",
+    "closingstk": "bal",
+    "clsgstk": "bal",
     "closingqty": "bal",
     "closingquantity": "bal",
     "cbqty": "bal",
@@ -11635,8 +11643,11 @@ _XLS_MOVEMENT_HEADER_PARENTS = {
     "closing",
     "receipt",
     "receipts",
+    "recp",
     "receive",
     "issue",
+    "open",
+    "clsg",
 }
 
 _XLS_QTY_VALUE_HEADER_CHILDREN = {
@@ -11647,6 +11658,8 @@ _XLS_QTY_VALUE_HEADER_CHILDREN = {
     "amount",
     "amounts",
     "val",
+    "stk",
+    "stock",
 }
 
 # Weaker names stay only when a more specific column for the same field is absent.
@@ -11661,9 +11674,10 @@ _XLS_WEAK_LABELS = {
         "purchase",
         "purchases",
         "pur",
+        "recp",
     },
-    "op": {"opening", "op"},
-    "bal": {"closing", "bal", "closingbal"},
+    "op": {"opening", "op", "open"},
+    "bal": {"closing", "bal", "closingbal", "clsg"},
 }
 
 
