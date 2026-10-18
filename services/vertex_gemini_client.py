@@ -40,6 +40,7 @@ _VERTEX_HTTP_TIMEOUT_CAP = int(
 
 _vertex_client: Optional[genai.Client] = None
 _vertex_client_initialized = False
+_api_key_client: Optional[genai.Client] = None
 
 
 def _env_flag(name: str, default: bool = True) -> bool:
@@ -56,6 +57,33 @@ def _bounded_timeout_seconds(timeout: int) -> int:
         base = 1
     cap = max(1, int(_VERTEX_HTTP_TIMEOUT_CAP or 180))
     return max(1, min(base, cap))
+
+
+def _api_key_fallback_enabled() -> bool:
+    """Flagged local recovery when Vertex credentials are misconfigured."""
+    return _env_flag("GEMINI_API_KEY_FALLBACK_ON_VERTEX_CREDENTIAL_ERROR", False)
+
+
+def _vertex_credentials_missing() -> bool:
+    if not GOOGLE_APPLICATION_CREDENTIALS:
+        return False
+    return not os.path.exists(GOOGLE_APPLICATION_CREDENTIALS)
+
+
+def _get_api_key_gemini_client() -> genai.Client:
+    global _api_key_client
+    if _api_key_client is not None:
+        return _api_key_client
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise FileNotFoundError(
+            "Vertex credentials are missing and GEMINI_API_KEY is not set"
+        )
+    _api_key_client = genai.Client(api_key=api_key, vertexai=False)
+    logger.warning(
+        "GEMINI_API_KEY_FALLBACK provider=ai_studio reason=missing_vertex_credentials"
+    )
+    return _api_key_client
 
 
 def _attach_http_timeout(
@@ -435,7 +463,15 @@ def generate_content_via_vertex(
     timeout: int,
 ) -> GeminiRestResponse:
     """Invoke Vertex AI generate_content and return REST-shaped response."""
-    client = get_vertex_gemini_client()
+    use_api_key_fallback = (
+        _api_key_fallback_enabled()
+        and _vertex_credentials_missing()
+        and bool(os.getenv("GEMINI_API_KEY", "").strip())
+    )
+    if use_api_key_fallback:
+        client = _get_api_key_gemini_client()
+    else:
+        client = get_vertex_gemini_client()
     contents = payload_to_contents(payload)
     eff_timeout = _bounded_timeout_seconds(timeout)
     config = _attach_http_timeout(
@@ -459,7 +495,7 @@ def generate_content_via_vertex(
     response = run_callable_with_timeout(
         _invoke,
         eff_timeout,
-        label="vertex_gemini",
+        label="gemini_api_key" if use_api_key_fallback else "vertex_gemini",
     )
 
     return GeminiRestResponse(
