@@ -30092,7 +30092,7 @@ async def extract_sales_statement_submit(
             content_type.startswith("text/")
             or content_type.startswith("image/")
             or content_type == "application/pdf"
-            or word_mime
+            or word_mimegg
             or content_type in {
                 "application/vnd.ms-excel",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

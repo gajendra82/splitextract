@@ -15597,7 +15597,7 @@ def _page_has_op_qty_val_table_headers(text: str) -> bool:
 
 
 def _stockist_from_op_qty_val_letterhead(text: str) -> Optional[str]:
-    """Prefer PRIVATE LIMITED / MEDISALES letterhead over first product row.
+    """Prefer PRIVATE LIMITED / MEDISALES / …PHARMA letterhead over first product row.
 
     Op.Qty CONSOLIDATED text streams often list Item/Pack then products before
     the stockist line appears in reading order (letterhead is visual-top but
@@ -15606,6 +15606,28 @@ def _stockist_from_op_qty_val_letterhead(text: str) -> Optional[str]:
     """
     if not _page_has_op_qty_val_table_headers(text):
         return None
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    # Line immediately above STOCK AND SALES (RAMESH PHARMA / …).
+    for index, stripped in enumerate(lines):
+        if not re.match(r"(?i)^STOCK\s+AND\s+SALES\b", stripped):
+            continue
+        if index < 1:
+            break
+        previous = lines[index - 1]
+        if re.search(r"\bHIMALAYA\b", previous, re.I):
+            break
+        if _looks_like_stockist_header(previous) or _STRONG_STOCKIST_HINT.search(
+            previous
+        ):
+            name = _clean_stockist_label(previous)
+            if name:
+                logger.info(
+                    "[STOCKIST_MATCH] matching_method=op_qty_val_above_title "
+                    "final_stockist_name=%r",
+                    name[:120],
+                )
+                return name
+        break
     # Full-line PRIVATE LIMITED / PVT LTD banners.
     m = re.search(
         r"(?m)^\s*([A-Z][A-Z0-9 &./'\-]{3,60}?(?:PRIVATE\s+LIMITED|PVT\.?\s*LTD\.?|"
@@ -15622,15 +15644,18 @@ def _stockist_from_op_qty_val_letterhead(text: str) -> Optional[str]:
                 name[:120],
             )
             return name
-    # MEDISALES / DISTRIBUTORS anywhere (single line).
-    for ln in (text or "").splitlines():
+    # MEDISALES / DISTRIBUTORS / PHARMA / MEDICAL STORES anywhere (single line).
+    for ln in lines:
         s = ln.strip()
         if not s or len(s) > 90:
             continue
         if re.search(r"\bHIMALAYA\b", s, re.I):
             continue
+        if re.match(r"(?i)^STOCK\s+AND\s+SALES\b", s):
+            continue
         if re.search(
-            r"(?i)\b(?:MEDISALES|DISTRIBUTORS?|DISTRIBUTION|MEDICAL\s+STORES?)\b",
+            r"(?i)\b(?:MEDISALES|DISTRIBUTORS?|DISTRIBUTION|MEDICAL\s+STORES?|"
+            r"PHARMA(?:CEUTICALS?)?)\b",
             s,
         ):
             if _looks_like_stockist_header(s) or _STRONG_STOCKIST_HINT.search(s):
@@ -26984,11 +27009,18 @@ def stock_op_qty_val_consolidated_native_enabled() -> bool:
 
 
 def _is_stock_sales_op_qty_val_words_text(text: str) -> bool:
-    """STOCK AND SALES Op.Qty/Op.Val/P.Qty/S.Qty/Cls.Qty (not Meher ItemCode)."""
+    """STOCK AND SALES Op.Qty/Op.Val/P.Qty/S.Qty/Cls.Qty words layout.
+
+    Meher CONSOLIDATED+ItemCode stays on the line parser. ItemCode sheets titled
+    only ``STOCK AND SALES`` (e.g. RAMESH PHARMA) use this words path — they were
+    previously excluded and fell through to OCR garbage.
+    """
     blob = text or ""
     if not blob.strip():
         return False
-    if re.search(r"ItemCode|Item\s*Code", blob, re.I):
+    if re.search(r"ItemCode|Item\s*Code", blob, re.I) and re.search(
+        r"STOCK\s+AND\s+SALES\s*\(\s*CONSOLIDATED\s*\)", blob, re.I
+    ):
         return False
     if re.search(r"Stock\s+and\s+Sales\s+Detail", blob, re.I):
         return False

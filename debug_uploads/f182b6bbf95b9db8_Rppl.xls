@@ -1,0 +1,2578 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Worksheet</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>
+                                        <thead>
+                                            <tr>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Name</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Code</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Product</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Packing</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">LMS</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">OP.Stock</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Rcpts</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">Sales</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">HOS.SALES</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">CL.Stk</th>
+                                                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-white">CL.Value</th>
+
+
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    Himalaya Drug Co Zandra
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125003
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Arjuna Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125025
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bonnisan Drops(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    14
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    35
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    31
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    2314.46
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125026
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bonnisan Liquid (3)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    22
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    80
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    14
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    66
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    4474.80
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125028
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bonnisan Liquid(2)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    10
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    27
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    10
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    17
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1942.76
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125029
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bonnispaz Drops
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    15ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125176
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bresol NS Solution
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    10ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    10
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    10
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    515.70
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125168
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bresol Syrup (B)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    25
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    9
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    16
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    2620.80
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125032
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Bresol Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    175131
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Cystone Forte Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    29
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    25
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    56
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    12
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    69
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    8358.66
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125202
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Cystone SF Syrup
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125041
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Cystone Syrup(B)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    21
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    28
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    25
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    5162.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125042
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Cystone Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    20
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    97
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    24
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    73
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    13515.22
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125050
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Evecare   Caps(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125051
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Evecare  Syrup (IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    24
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    28
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    19
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    33
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    5405.40
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125179
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Evecare Forte Liq
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    2
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    12
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    2
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    10
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1958.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125187
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Evecare Forte Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    10s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125052
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Evecare Syrup (2)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    400ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125215
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Flora Sante Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    20s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125250
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Galactosure Granules (Elaichi)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200grm
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    12
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    12
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3602.40
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125066
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Geriforte Syrup(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125248
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Geriforte Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    29
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    29
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3623.84
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125076
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Himcospaz Soft Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    10s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125077
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Himplasia Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    3
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    54
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    3
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    51
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    8327.79
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125078
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora - GA
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    15ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    5
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    50
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    50
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3924.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125079
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora - K M/W
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    150ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    25
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    8
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    17
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1613.64
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125080
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora - SG
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    10gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    15
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    27
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    26
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    2218.84
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125081
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora Mouthwash
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    150ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125226
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora Pain Gel
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    6*10gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125084
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora Toothpaste
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    50gm
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125085
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora-K  Toothpaste
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    50gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    50
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    33
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    17
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1372.92
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125086
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiora-K Toothpaste
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    32
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    50
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    5
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    45
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    5485.50
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125170
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiowna Momz Chocolate
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125169
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Hiowna Momz Vanilla
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125180
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Immusante Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    20s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125094
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Karela Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125102
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Lasuna Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125103
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Liv 52  DS Syrup (B)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125104
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Liv.52    Drops(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125105
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Liv.52   Drops(B)(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    29
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    6
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    23
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3522.22
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125109
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Liv.52 DS  Syrup(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125110
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Liv.52 DS Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    22
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    123
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    26
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    97
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    20767.70
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125112
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Lukol Syrup
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    21
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    21
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3360.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125113
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Lukol Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    18
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    14
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    2698.64
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125114
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Menosan Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125115
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Mentat Syrup(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    15
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    15
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    2937.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125116
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Mentat Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    74
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    2
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    72
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    11301.12
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125117
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Mentat-DS Syrup(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125225
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Methi Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125230
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Platenza Syrup
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125196
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Platenza Tabs
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    20s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125132
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hand (2)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125131
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    500ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125195
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands (1)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    50ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125231
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands (Lemon )
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    500ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125216
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands (Lemon)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    100ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125219
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands (Lemon)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    250ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125207
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Pure Hands Advanced 500ml
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    500ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125191
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Quista Kidz Choc
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    13
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    13
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    13
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    4243.72
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125192
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Quista Kidz Vanilla 
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125138
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Reosto Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    19
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    18
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    3401.28
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125171
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Rumalaya Gel (Blister Pack)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    10gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    175132
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Rumalaya Gel Jar (30+3)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    1s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125247
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Septilin Gummies
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125144
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Septilin Syrup(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    200ml
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    18
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    30
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    4
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    26
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    4456.92
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125145
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Septilin Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    23
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    92
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    11
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    81
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    15859.80
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125148
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Shatavari Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125149
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Shudda Guggulu Caps
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    0.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125150
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Speman Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    60s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    14
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    13
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1876.94
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125151
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Styplon Tabs(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30s
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    16
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    18
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    11
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    1408.00
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    125162
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    V-Gel(IT)
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    30gms
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    2
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    7
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    1
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    6
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    662.88
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList --><tr ng-repeat="stockstmnt in StockList" class="ng-scope">
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                    
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                     
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-3 ng-binding">
+                                                    Total
+                                                </td>
+                                                <td style="font-size:14px;color:black;" class="ps-4 ng-binding">
+                                                     
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align:center;" class="ng-binding">
+                                                    46322.51
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center;" class="ng-binding">
+                                                    135730.42
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    212.00
+                                                </td>
+                                                <td style="font-size: 14px; color: black; text-align: center" class="ng-binding">
+                                                    30827.61
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                    0
+                                                </td>
+
+                                                <td style="font-size: 14px; color: black;text-align:center" class="ng-binding">
+                                                     
+                                                </td>
+                                                <td style="font-size: 14px; color: black;text-align:right" class="ng-binding">
+                                                    152932.95
+                                                </td>
+
+                                            </tr><!-- end ngRepeat: stockstmnt in StockList -->
+                                        </tbody>
+                                    </table></body></html>
