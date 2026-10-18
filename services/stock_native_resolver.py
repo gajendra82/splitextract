@@ -1402,6 +1402,144 @@ def items_from_open_rcvd_sold_pages(
     }
 
 
+def _grouped_qty_value_enabled() -> bool:
+    return os.getenv("STOCK_PDF_GROUP_QTY_VALUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
+    name = str(item.get("product_name") or "").strip()
+    if not name:
+        return True
+    if re.match(r"^(?:GRAND\s+)?TOTAL\b", name, re.I):
+        return True
+    if re.search(
+        r"stock\s+statement|^\s*date\b|^\s*page\b|wellness\s+company|"
+        r"\bopening\b.*\bpurchase\b|\bqty\b.*\bvalue\b",
+        name,
+        re.I,
+    ):
+        return True
+    return False
+
+
+def parse_grouped_qty_value_pdf(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Product | Rate | Opening/Purchase/Sales/Free/Closing Qty+value by word x.
+
+    The group label sits above a Qty/value pair. Reading the group row alone
+    shifts Rate into opening_qty. Returns None unless that two-row header is present.
+    """
+    import io
+
+    if not _grouped_qty_value_enabled():
+        return None
+    try:
+        import pdfplumber
+    except Exception:
+        return None
+    from services.sales_statement_extractor import empty_result
+    from services.stock_native_tables import from_pdf_words
+
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            if not pdf.pages:
+                return None
+            built = from_pdf_words(pdf)
+            peek = ""
+            if pdf.pages:
+                peek = pdf.pages[0].extract_text() or ""
+    except Exception as exc:
+        logger.info(
+            "STOCK_PDF_GROUP_QTY_VALUE file=%s status=skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    pages = built.get("page_results") or []
+    if not any(p.get("group_qty_value_header") for p in pages):
+        return None
+    items = [
+        item
+        for item in build_items_from_pdf_page_results(pages)
+        if isinstance(item, dict) and not _drop_grouped_banner_item(item)
+    ]
+    deduped: List[Dict[str, Any]] = []
+    seen = set()
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if item.get("receipts_value") in (None, "") and extra.get("receipts_value") not in (
+            None,
+            "",
+        ):
+            item["receipts_value"] = extra.get("receipts_value")
+        key = (
+            _norm_name(item.get("product_name")),
+            item.get("opening_qty"),
+            item.get("receipts_qty"),
+            item.get("sales_qty"),
+            item.get("closing_qty"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    if len(deduped) < 3:
+        logger.info(
+            "STOCK_PDF_GROUP_QTY_VALUE file=%s status=too_few items=%s",
+            filename,
+            len(deduped),
+        )
+        return None
+    result = empty_result(filename, "pdf")
+    result["line_items"] = deduped
+    result["report_title"] = "Stock Statement"
+    first = ""
+    for line in peek.splitlines():
+        if line.strip():
+            first = line.strip()
+            break
+    if first and re.search(r"[A-Za-z]", first) and not re.search(
+        r"stock\s+statement", first, re.I
+    ):
+        result["stockist_name"] = first
+    company = re.search(
+        r"((?:[A-Z][A-Z&. ]{2,})\s+COMPANY(?:\s+[A-Z][A-Z]+)?)",
+        peek,
+    )
+    if company:
+        result["company_name"] = re.sub(r"\s+", " ", company.group(1)).strip()
+    period = re.search(
+        r"(?:From|Duration)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+        r"(?:To|to)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+        peek,
+        re.I,
+    )
+    if period:
+        def _iso(day: str, month: str, year: str) -> str:
+            yr = year if len(year) == 4 else ("20" + year)
+            return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+        result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
+        result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "pdf_group_qty_value"
+    extra["statement_count"] = 1
+    logger.info(
+        "STOCK_PDF_GROUP_QTY_VALUE file=%s items=%s period=%s..%s",
+        filename,
+        len(deduped),
+        result.get("period_from"),
+        result.get("period_to"),
+    )
+    return result
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:

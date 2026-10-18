@@ -567,6 +567,70 @@ class TestExcelLayoutVariations(unittest.TestCase):
         self.assertEqual(result["totals"]["extra"]["opening_value"], 23813.86)
         self.assertEqual(result["totals"]["closing_value"], 17071.1)
 
+    def test_open_stk_recp_qty_beats_empty_opening_closing(self):
+        """Group headers Open/Recp/Clsg plus Stk/Qty children are the qty columns.
+
+        A later bare Opening / Purchase / Closing block must not win when it
+        has no printed numbers.
+        """
+        group = [None] * 43
+        group[3] = "Open"
+        group[4] = "Recp"
+        group[6] = "Sales"
+        group[7] = "Clsg"
+        group[13] = "<Open Stk>"
+        group[15] = "<Purchase>"
+        group[31] = "Opening"
+        group[32] = "Purchase"
+        group[33] = "Sales"
+        group[34] = "Closing"
+        child = [None] * 43
+        child[0] = "Sr."
+        child[1] = "Product Name"
+        child[2] = "Pack"
+        child[3] = "Stk"
+        child[4] = "Qty"
+        child[5] = "Total"
+        child[6] = "Qty"
+        child[7] = "Stk"
+        data = self._xlsx(
+            [
+                ["PARSHAVA PHARMA"],
+                ["Normal Stock Statement From 01/09/26 To 30/09/26"],
+                group,
+                child,
+                ["1", "AACTARIL SOAP 75 GM", "1*75 GM", 44, 0, 44, 3, 41],
+                ["2", "ABANA TABLET", "1*60 TAB", 3, 397, 400, 400, 0],
+                ["3", "CLARINA CREAM 30GM", "1*30 gm", 0, -1, -1, -1, 0],
+                ["4", "TENTEX FORTE TABLET", "1*10TAB", 76, 3000, 3076, 3000, 76],
+            ]
+        )
+        result = extract_sales_statement(data, "open-stk-group.xlsx")
+        mapping = result["totals"]["extra"]["column_mapping"]
+        self.assertEqual(mapping["opening_qty"]["column"], "D")
+        self.assertEqual(mapping["receipts_qty"]["column"], "E")
+        self.assertEqual(mapping["sales_qty"]["column"], "G")
+        self.assertEqual(mapping["closing_qty"]["column"], "H")
+        by_name = {item["product_name"]: item for item in result["line_items"]}
+        soap = by_name["AACTARIL SOAP 75 GM"]
+        self.assertEqual(soap["opening_qty"], 44.0)
+        self.assertEqual(soap["receipts_qty"], 0.0)
+        self.assertEqual(soap["sales_qty"], 3.0)
+        self.assertEqual(soap["closing_qty"], 41.0)
+        abana = by_name["ABANA TABLET"]
+        self.assertEqual(abana["opening_qty"], 3.0)
+        self.assertEqual(abana["receipts_qty"], 397.0)
+        self.assertEqual(abana["sales_qty"], 400.0)
+        self.assertEqual(abana["closing_qty"], 0.0)
+        clarina = by_name["CLARINA CREAM 30GM"]
+        self.assertEqual(clarina["receipts_qty"], -1.0)
+        self.assertEqual(clarina["sales_qty"], -1.0)
+        self.assertEqual(clarina["closing_qty"], 0.0)
+        tentex = by_name["TENTEX FORTE TABLET"]
+        self.assertEqual(tentex["opening_qty"], 76.0)
+        self.assertEqual(tentex["receipts_qty"], 3000.0)
+        self.assertEqual(tentex["closing_qty"], 76.0)
+
 
 class TestScannedPdfRouting(unittest.TestCase):
     def test_image_only_pages_detected(self):

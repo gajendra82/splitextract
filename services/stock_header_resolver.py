@@ -222,6 +222,9 @@ ALIASES: Dict[str, List[str]] = {
         "sales return",
         "sale return",
         "sale rtn",
+        "free retn",
+        "free/retn",
+        "retn",
         "goods ret",
         "goods return",
         "goods ret qty",
@@ -1292,6 +1295,10 @@ def _assign_cells_by_column_bands(
             fields.setdefault(canon, None)
         elif len(texts) == 1:
             fields[canon] = texts[0]
+        elif canon == "product_name":
+            # A product name is several words in one column. Qty columns stay
+            # collisions so two numbers are not glued into one cell.
+            fields[canon] = " ".join(t for t in texts if t).strip() or None
         else:
             fields[canon] = None
             errors.append(
