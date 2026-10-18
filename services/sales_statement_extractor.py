@@ -34464,6 +34464,27 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             qty_value["totals"]["extra"]["statement_count"] = 1
             return qty_value
 
+        # Opening/Purchase/Sales/Free/Closing above Qty/value. Word x, no Gemini.
+        if os.getenv("STOCK_PDF_GROUP_QTY_VALUE", "true").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            try:
+                from services.stock_native_resolver import parse_grouped_qty_value_pdf
+
+                grouped = parse_grouped_qty_value_pdf(file_bytes, filename)
+                if grouped and grouped.get("line_items"):
+                    grouped["totals"]["extra"]["statement_count"] = 1
+                    return grouped
+            except Exception as exc:
+                logger.info(
+                    "STOCK_PDF_GROUP_QTY_VALUE file=%s status=skipped error=%s",
+                    filename,
+                    type(exc).__name__,
+                )
+
         # Text PDFs that print Purchase Free and Sales Free as their own columns.
         # Word positions, no Gemini. Runs only after the named parsers miss.
         if os.getenv("STOCK_PDF_WORDS_FREE_COLUMNS", "true").strip().lower() in {

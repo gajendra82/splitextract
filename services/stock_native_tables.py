@@ -7,6 +7,7 @@ row tokens. No I/O beyond structures passed in. No Gemini.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -535,6 +536,204 @@ def _tokens_align_to_header(
     return matched >= max(2, int(0.6 * len(xs_t)))
 
 
+_QTY_VALUE_CHILD_WORDS = frozenset(
+    {"qty", "quantity", "qnty", "value", "val", "amt", "amount"}
+)
+_GROUP_LABELS = frozenset(
+    {
+        "opening",
+        "purchase",
+        "sales",
+        "closing",
+        "free",
+        "sales_return",
+        "purchase_return",
+    }
+)
+
+
+def _group_qty_value_header_enabled() -> bool:
+    """STOCK_PDF_GROUP_QTY_VALUE — pair Opening/Purchase/… with Qty/value children.
+
+    Default ON. Set false to keep the group-label row as the only header.
+    """
+    return os.getenv("STOCK_PDF_GROUP_QTY_VALUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _header_group_name(text: Any) -> Optional[str]:
+    from services.stock_header_resolver import _pick_group
+
+    group, _conf, _reason = _pick_group(normalize_header(text))
+    if group in _GROUP_LABELS:
+        return group
+    if isinstance(group, str) and group.startswith("direct:"):
+        field = group.split(":", 1)[1]
+        if field.startswith("opening"):
+            return "opening"
+        if field.startswith("purchase"):
+            return "purchase"
+        if field.startswith("sales"):
+            return "sales"
+        if field.startswith("closing"):
+            return "closing"
+    return None
+
+
+def _row_is_qty_value_children(cells: List[Dict[str, Any]]) -> bool:
+    """Product/Rate plus repeated Qty/value, with no data numbers."""
+    if not cells or len(cells) < 6:
+        return False
+    qty_value = 0
+    for cell in cells:
+        text = cell.get("text")
+        if not _cell_is_header_lexicon(text):
+            return False
+        if normalize_header(text) in _QTY_VALUE_CHILD_WORDS:
+            qty_value += 1
+    return qty_value >= 4
+
+
+def _row_is_group_labels(cells: List[Dict[str, Any]]) -> bool:
+    if not cells:
+        return False
+    groups = 0
+    for cell in cells:
+        if _header_group_name(cell.get("text")):
+            groups += 1
+    return groups >= 2
+
+
+def _parent_covering_x(
+    x_center: float, parents: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """Parent whose midpoint band contains this child column."""
+    if not parents:
+        return None
+    centers = [
+        (float(p.get("x0") or 0) + float(p.get("x1") or 0)) / 2.0 for p in parents
+    ]
+    for index, parent in enumerate(parents):
+        left = float("-inf") if index == 0 else (centers[index - 1] + centers[index]) / 2.0
+        right = (
+            float("inf")
+            if index == len(parents) - 1
+            else (centers[index] + centers[index + 1]) / 2.0
+        )
+        if left <= x_center < right or (
+            index == len(parents) - 1 and x_center >= left
+        ):
+            return parent
+    return parents[-1]
+
+
+def _left_align_text_column_centers(cells: List[Dict[str, Any]]) -> None:
+    """Product is printed at the left of a wide column, not on the word centre.
+
+    Qty/value headers sit on their numbers. A short left-aligned Product label
+    would otherwise steal only the first word and drop the rest into Rate.
+    """
+    for index, cell in enumerate(cells[:-1]):
+        if cell.get("subheader_text"):
+            continue
+        if normalize_header(cell.get("text")) not in {
+            "product",
+            "product name",
+            "item",
+            "item name",
+            "description",
+            "particular",
+            "particulars",
+        }:
+            continue
+        nxt = cells[index + 1]
+        x0 = float(cell.get("x0") or 0)
+        word_mid = (x0 + float(cell.get("x1") or x0)) / 2.0
+        nxt_x0 = float(nxt.get("x0") or 0)
+        if nxt_x0 <= x0 or word_mid <= 0:
+            continue
+        gap_mid = (x0 + nxt_x0) / 2.0
+        if word_mid + 1 >= gap_mid:
+            continue
+        old = float(cell.get("x_center") or 0)
+        if old <= 0:
+            continue
+        cell["x_center"] = old * (gap_mid / word_mid)
+
+
+def _pair_group_labels_with_children(
+    parents: List[Dict[str, Any]], children: List[Dict[str, Any]]
+) -> Optional[List[Dict[str, Any]]]:
+    """One header cell per child column, labelled by the group above it."""
+    group_parents = [
+        p for p in parents if _header_group_name(p.get("text"))
+    ]
+    group_parents.sort(
+        key=lambda p: (float(p.get("x0") or 0) + float(p.get("x1") or 0)) / 2.0
+    )
+    if len(group_parents) < 2 or not _row_is_qty_value_children(children):
+        return None
+    paired: List[Dict[str, Any]] = []
+    for cell in sorted(children, key=lambda c: float(c.get("x0") or 0)):
+        entry = dict(cell)
+        norm = normalize_header(cell.get("text"))
+        if norm in _QTY_VALUE_CHILD_WORDS:
+            xc = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+            parent = _parent_covering_x(xc, group_parents)
+            if parent is None:
+                continue
+            entry["text"] = str(parent.get("text") or "")
+            entry["subheader_text"] = str(cell.get("text") or "")
+        else:
+            entry["subheader_text"] = None
+        entry["_group_qty_value"] = True
+        paired.append(entry)
+    if len(paired) < 6:
+        return None
+    for index, cell in enumerate(paired):
+        cell["col_index"] = index
+    _left_align_text_column_centers(paired)
+    logger.info(
+        "STOCK_PDF_GROUP_QTY_VALUE cols=%s",
+        [
+            (
+                (str(c.get("text") or "") + " " + str(c.get("subheader_text") or "")).strip()
+            )
+            for c in paired
+        ],
+    )
+    return paired
+
+
+def _expand_group_qty_value_header(
+    header: List[Dict[str, Any]],
+    clustered: List[List[Dict[str, Any]]],
+    best_i: int,
+    already_skipped: Sequence[int],
+) -> Optional[Tuple[List[Dict[str, Any]], List[int]]]:
+    """Opening | Purchase | Sales above Qty | value is not one column per group."""
+    if not _group_qty_value_header_enabled():
+        return None
+    if best_i < 0 or not header or best_i >= len(clustered):
+        return None
+    skipped = {int(i) for i in already_skipped}
+    # Group words on this row, Qty/value on the next row.
+    if best_i + 1 < len(clustered) and (best_i + 1) not in skipped:
+        paired = _pair_group_labels_with_children(header, clustered[best_i + 1])
+        if paired:
+            return paired, [best_i + 1]
+    # Qty/value won header scoring; group words are the row above.
+    if best_i - 1 >= 0 and (best_i - 1) not in skipped:
+        paired = _pair_group_labels_with_children(clustered[best_i - 1], header)
+        if paired:
+            return paired, [best_i - 1]
+    return None
+
+
 def _extract_pdf_page_rows(
     page: Any,
     *,
@@ -631,6 +830,15 @@ def _extract_pdf_page_rows(
     ):
         skip_row_indexes.append(best_i + 1)
 
+    group_qty_value = False
+    expanded = _expand_group_qty_value_header(
+        best_header, clustered, best_i, skip_row_indexes
+    )
+    if expanded:
+        best_header, extra_skips = expanded
+        skip_row_indexes.extend(extra_skips)
+        group_qty_value = True
+
     all_token_rows: List[List[Dict[str, Any]]] = []
     for cells in clustered:
         tokens = [
@@ -650,6 +858,7 @@ def _extract_pdf_page_rows(
         "all_rows": all_token_rows,
         "skip_row_indexes": skip_row_indexes,
         "clustered_headers": clustered,
+        "group_qty_value_header": group_qty_value,
     }
 
 
@@ -692,6 +901,7 @@ def from_pdf_words(
     for page_index, page in enumerate(pages):
         extracted = _extract_pdf_page_rows(page, page_width=page_width)
         local_header = extracted.get("header_cells") or []
+        local_group_header = bool(extracted.get("group_qty_value_header"))
         header_idx = int(extracted.get("header_row_index") or -1)
         all_rows = list(extracted.get("all_rows") or [])
         data_start = header_idx + 1 if header_idx >= 0 else 0
@@ -771,6 +981,13 @@ def from_pdf_words(
                 "data_rows": page_data,
                 "resolved": resolved,
                 "structural": structural,
+                "group_qty_value_header": bool(
+                    local_group_header
+                    or any(
+                        isinstance(c, dict) and c.get("_group_qty_value")
+                        for c in page_header
+                    )
+                ),
             }
         )
 
