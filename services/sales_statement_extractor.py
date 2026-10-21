@@ -10704,7 +10704,12 @@ def _find_marg_erp_xls_header(
     """
     for ri, row in enumerate(rows[:40]):
         labels = [_norm_xls_header_label(c) for c in row]
-        if not any(lab == "PRODUCT DESCRIPTION" for lab in labels):
+        if not any(
+            lab == "PRODUCT DESCRIPTION"
+            or lab.startswith("PRODUCT DESC")
+            or lab == "ITEM DESCRIPTION"
+            for lab in labels
+        ):
             continue
         if not any("OPENING" in lab for lab in labels):
             continue
@@ -10716,7 +10721,11 @@ def _find_marg_erp_xls_header(
         for ci, lab in enumerate(labels):
             if not lab:
                 continue
-            if lab == "PRODUCT DESCRIPTION" or lab.startswith("PRODUCT DESC"):
+            if (
+                lab == "PRODUCT DESCRIPTION"
+                or lab.startswith("PRODUCT DESC")
+                or lab == "ITEM DESCRIPTION"
+            ):
                 roles["product_name"] = ci
             elif lab in {"OPENING STOCK", "OPENING"}:
                 roles.setdefault("opening_qty", ci)
@@ -11166,6 +11175,9 @@ _XLS_HEADER_ALIASES = {
     "productdescription": "item",
     "productdesc": "item",
     "productdesc.": "item",
+    "itemdescription": "item",
+    "itemdesc": "item",
+    "itemdesc.": "item",
     "skudescription": "item",
     "skudesc": "item",
     "medicinename": "item",
@@ -11178,6 +11190,8 @@ _XLS_HEADER_ALIASES = {
     "packsize": "pack",
     "packingsize": "pack",
     "size": "pack",
+    "itemunit": "pack",
+    "itemuom": "pack",
     "op": "op",
     "open": "op",
     "op.": "op",
@@ -11218,6 +11232,7 @@ _XLS_HEADER_ALIASES = {
     "receipts": "pur",
     "recp": "pur",
     "recpqty": "pur",
+    "recqty": "pur",
     "receiptqty": "pur",
     "receiptsqty": "pur",
     "rcpt": "pur",
@@ -11241,6 +11256,7 @@ _XLS_HEADER_ALIASES = {
     "secondarysales": "sale",
     "issue": "sale",
     "issueqty": "sale",
+    "issqty": "sale",
     "sold": "sale",
     "bal": "bal",
     "bal.": "bal",
@@ -11254,6 +11270,8 @@ _XLS_HEADER_ALIASES = {
     "closingstk": "bal",
     "clsgstk": "bal",
     "closingqty": "bal",
+    "closqty": "bal",
+    "clsqty": "bal",
     "closingquantity": "bal",
     "cbqty": "bal",
     "cb(qty)": "bal",
@@ -13964,6 +13982,32 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         )
         if html_opstock and html_opstock.get("line_items"):
             return _xls_finalize_result(html_opstock)
+        # Keep empty cells so RATE / free / return stay in their printed columns.
+        html_rows = _html_excel_table_rows(file_bytes)
+        if html_rows:
+            marg_header = _find_marg_erp_xls_header(html_rows)
+            if marg_header is not None:
+                logger.info(
+                    "SECONDARY_SALES_READER file=%s engine=html_excel method=marg_erp_xls",
+                    filename,
+                )
+                return _xls_finalize_result(
+                    _parse_marg_erp_xls(html_rows, filename, ext, marg_header)
+                )
+            part = empty_result(filename, ext.lstrip(".") or "xls")
+            formats = [[None] * len(row) for row in html_rows]
+            part = _xls_fill_from_rows(part, html_rows, formats, "html")
+            if part.get("line_items"):
+                extra_h = part.setdefault("totals", {}).setdefault("extra", {})
+                extra_h.setdefault("extraction_method", "html_excel_header_grid")
+                extra_h["layout"] = extra_h.get("layout") or "html_excel_header_grid"
+                logger.info(
+                    "SECONDARY_SALES_READER file=%s engine=html_excel "
+                    "method=html_excel_header_grid items=%s",
+                    filename,
+                    len(part.get("line_items") or []),
+                )
+                return _xls_finalize_result(part)
         # Fall through to HTML table reader only when this gated layout misses.
         htm = _parse_htm(file_bytes, filename)
         if htm and htm.get("line_items"):
@@ -14877,6 +14921,8 @@ def _xls_fill_from_rows(
     formats: List[List[Optional[str]]],
     sheet_name: str = "Sheet1",
 ) -> Dict[str, Any]:
+    filename = str(result.get("source_file") or "upload")
+    ext = "." + str(result.get("source_format") or "xls").lstrip(".")
 
     # ZL secondary tabular export (Customer_name / Material_* / *_bal_qty)
     zl_header = _find_zl_secondary_xlsx_header(rows)

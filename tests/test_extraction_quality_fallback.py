@@ -273,6 +273,20 @@ class FallbackDispatchTests(unittest.TestCase):
         caller.assert_not_called()
         self.assertEqual(kept["totals"]["extra"]["gemini_fallback"], "unavailable_text_only")
 
+    def test_xls_does_not_call_vision(self):
+        result = {
+            "line_items": [],
+            "totals": {"sales_value": None, "closing_value": None, "extra": {}},
+        }
+        with mock.patch(
+            "services.gemini_extraction_fallback._call_gemini"
+        ) as caller:
+            kept = maybe_apply_gemini_fallback(result, b"PK", "a.xls", ".xls")
+        caller.assert_not_called()
+        self.assertEqual(
+            kept["totals"]["extra"]["gemini_fallback"], "unavailable_spreadsheet"
+        )
+
     def test_early_vision_extract_validates_items(self):
         parsed = {
             "stockist_name": "TEST",
