@@ -44363,8 +44363,8 @@ Critical:
   Example: OPSTK 34, SALE 4, IN/OT 0, STOCK 30, STK VAL 1822 →
   opening_qty=34, sales_qty=4, closing_qty=30, closing_value=1822.
 
-Skip the division banner (HIMALAYA-ZEAL / HIMALAYA WELLNESS ZEAL DIV) and the
-Division Total / Total rows.
+Skip the division banner (HIMALAYA-ZEAL / HIMALAYA ZANDRA /
+HIMALAYA WELLNESS ZEAL DIV) and the Division Total / Total rows.
 Ignore the phone status bar and the PDF viewer toolbar.
 stockist_name is the left-side distributor, not the software footer
 "Medica Ultimate", and not the TO: customer line.
@@ -44372,6 +44372,7 @@ company_name is the TO: party.
 
 Include EVERY product row printed in this crop. Copy printed cells only —
 do not invent products from memory or other statements.
+Do not emit a second copy of the table. Each printed product appears once.
 Blank SALE/PURCH/IN/OT cells are 0. Never borrow numbers from the next row.
 
 Shorter grid (no SALE VAL, IN/OT, STK VAL, JUL, or JUN headers):
@@ -44379,6 +44380,8 @@ ITEM DESCRIPTION | OPENING | RECEIPT | ISSUE | CLOSING | optional trailing numbe
 Map OPENING -> opening_qty, RECEIPT -> receipts_qty, ISSUE -> sales_qty,
 CLOSING -> closing_qty. Numbers to the right of CLOSING stay in extra
 (jun_qty / in_ot_qty). Do not put CLOSING into jul_qty or sales_value.
+CLOSING is the last quantity on the row (may be negative). Never leave
+closing_qty at 0 when the CLOSING cell shows a number. A printed dash is 0.
 
 Return ONLY JSON with stockist_name, company_name, period_from, period_to,
 report_title "STOCK STATEMENT", and line_items using the fields above
@@ -44712,6 +44715,22 @@ def _medica_result_looks_usable(result: Optional[Dict[str, Any]]) -> bool:
     # OPSTK read but STOCK/STK VAL all zero → reject (not a usable Medica read).
     if opening_hits >= 3 and closing_hits == 0:
         return False
+    # Overlapping half-page strips often re-read the same products with
+    # CLOSING left at 0. That tail must not lock the Medica path.
+    hollow_close = 0
+    for item in rows:
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        implied = opening + receipts - sales
+        if abs(opening) > 0.05 and abs(closing) <= 0.05 and abs(implied) > 0.05:
+            hollow_close += 1
+    if hollow_close >= max(5, int(len(rows) * 0.18)):
+        return False
     return closing_hits >= 3 or (sales_hits >= 3 and closing_hits >= 2)
 
 
@@ -44725,7 +44744,21 @@ def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
         from PIL import Image
     except ImportError:
         return [file_bytes]
-    image = _medica_brighten_rgb(Image.open(io.BytesIO(file_bytes)).convert("RGB"))
+    source_bytes = file_bytes
+    phone_crop = None
+    try:
+        phone_crop = _phone_pdf_viewer_statement_jpeg(file_bytes)
+    except Exception:
+        phone_crop = None
+    if not phone_crop:
+        try:
+            phone_crop = _phone_document_viewer_content_jpeg(file_bytes)
+        except Exception:
+            phone_crop = None
+    if phone_crop:
+        source_bytes = phone_crop
+        logger.info("MEDICA_PHONE_CONTENT_CROP used_for_strips bytes=%s", len(phone_crop))
+    image = _medica_brighten_rgb(Image.open(io.BytesIO(source_bytes)).convert("RGB"))
     width, height = image.size
     pixels = image.load()
     red_rows = []
@@ -44781,8 +44814,12 @@ def _medica_statement_strips(file_bytes: bytes) -> List[bytes]:
                     break
     if strips:
         return strips
-    # No usable red table rules (common on dark / pink-chrome phone photos):
-    # overlapping half-page bands so product STOCK/STK VAL stay in view.
+    # No usable red table rules (common on dark / pink-chrome phone photos).
+    # After a toolbar crop the whole qty grid is often already in view — one
+    # strip avoids a second Gemini pass that re-reads the middle with CLOSING
+    # cut off / zeroed. Taller pages still use overlapping halves.
+    if phone_crop and height <= int(width * 2.4):
+        return [_jpeg(image)]
     overlap = int(height * 0.18)
     mid = height // 2
     for y0, y1 in ((0, mid + overlap), (max(0, mid - overlap), height)):
@@ -44963,6 +45000,126 @@ def _medica_fill_header_from_image(
             result["period_to"] = _normalize_date(str(parsed.get("period_to")))
 
 
+_MEDICA_BANNER_OR_TOTAL = re.compile(
+    r"HIMALAYA\s*-?\s*ZEAL|HIMALAYA\s+ZANDRA|HIMALAYA\s+WELLNESS|"
+    r"Division\s*Total|^Total\b",
+    re.I,
+)
+
+
+def _medica_alnum_key(text: Any) -> str:
+    return re.sub(r"[^A-Z0-9]+", "", str(text or "").upper())
+
+
+def _medica_qty_cell(raw: Any) -> float:
+    try:
+        return round(float(raw or 0), 1)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _medica_name_stems_close(left: str, right: str) -> bool:
+    """True when OCR re-read the same product name (EYESTONE/CYCTONE, HIJRA/HIDRA)."""
+    if not left or not right:
+        return False
+    if left == right or (len(left) >= 10 and left[:12] == right[:12]):
+        return True
+    shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
+    if len(shorter) >= 8 and shorter in longer:
+        return True
+    from difflib import SequenceMatcher
+
+    return SequenceMatcher(None, left, right).ratio() >= 0.72
+
+
+def _medica_is_strip_overlap_duplicate(
+    kept: Dict[str, Any], incoming: Dict[str, Any]
+) -> bool:
+    """Overlapping table bands re-read the same SKU with OCR-noisy names."""
+    if not _medica_name_stems_close(
+        _medica_alnum_key(kept.get("product_name")),
+        _medica_alnum_key(incoming.get("product_name")),
+    ):
+        return False
+    pack_kept = _medica_alnum_key(kept.get("packing"))
+    pack_in = _medica_alnum_key(incoming.get("packing"))
+    if pack_kept and pack_in and pack_kept != pack_in:
+        return False
+    o1 = _medica_qty_cell(kept.get("opening_qty"))
+    o2 = _medica_qty_cell(incoming.get("opening_qty"))
+    r1 = _medica_qty_cell(kept.get("receipts_qty"))
+    r2 = _medica_qty_cell(incoming.get("receipts_qty"))
+    s1 = _medica_qty_cell(kept.get("sales_qty"))
+    s2 = _medica_qty_cell(incoming.get("sales_qty"))
+    if abs(o1 - o2) <= 2.0:
+        return True
+    # Same packing + same ISSUE qty: opening often OCR-slips (62 vs 196).
+    if (
+        pack_kept
+        and pack_in
+        and abs(s1 - s2) <= 2.0
+        and max(abs(s1), abs(s2)) > 0.05
+    ):
+        return True
+    movement_close = abs(r1 - r2) <= 2.0 and abs(s1 - s2) <= 2.0
+    opening_near = abs(o1 - o2) <= max(4.0, 0.12 * max(abs(o1), abs(o2), 1.0))
+    return bool(movement_close and opening_near)
+
+
+def _medica_prefer_strip_row(
+    kept: Dict[str, Any], incoming: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Keep the overlapping read that captured a printed CLOSING cell."""
+    kept_close = abs(_medica_qty_cell(kept.get("closing_qty"))) > 0.05
+    in_close = abs(_medica_qty_cell(incoming.get("closing_qty"))) > 0.05
+    if in_close and not kept_close:
+        return incoming
+    return kept
+
+
+def _medica_merge_strip_item(
+    merged: List[Dict[str, Any]], seen: set, raw: Dict[str, Any]
+) -> None:
+    """Append or collapse one Vision row from a table strip."""
+    name = _clean_name(str(raw.get("product_name") or ""))
+    if not name or _MEDICA_BANNER_OR_TOTAL.search(name):
+        return
+    raw = dict(raw)
+    raw["product_name"] = name
+    name_key = _medica_alnum_key(name)[:18]
+    op_k = _medica_qty_cell(raw.get("opening_qty"))
+    cl_k = _medica_qty_cell(raw.get("closing_qty"))
+    sale_k = _medica_qty_cell(raw.get("sales_qty"))
+    key = (name_key, op_k, cl_k, sale_k)
+    if key in seen or name.upper() in seen:
+        return
+    for index, existing in enumerate(merged):
+        if not _medica_is_strip_overlap_duplicate(existing, raw):
+            continue
+        chosen = _medica_prefer_strip_row(existing, raw)
+        if chosen is raw:
+            logger.info(
+                "MEDICA_STRIP_OVERLAP_REPLACE from=%r to=%r closing=%s",
+                existing.get("product_name"),
+                name,
+                cl_k,
+            )
+            merged[index] = raw
+            seen.add(key)
+            seen.add(name.upper())
+        else:
+            logger.info(
+                "MEDICA_STRIP_OVERLAP_DROP name=%r opening=%s closing=%s",
+                name,
+                op_k,
+                cl_k,
+            )
+        return
+    seen.add(key)
+    seen.add(name.upper())
+    merged.append(raw)
+
+
 def _extract_medica_stock_statement_vision(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -45012,27 +45169,7 @@ def _extract_medica_stock_statement_vision(
         for raw in parsed.get("line_items") or []:
             if not isinstance(raw, dict):
                 continue
-            name = _clean_name(str(raw.get("product_name") or ""))
-            if not name or re.search(
-                r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b", name, re.I
-            ):
-                continue
-            # Crop overlap often re-reads the same row with OCR name noise
-            # (DIABECON/DEARECON). Collapse on qty fingerprint + name prefix.
-            name_key = re.sub(r"[^A-Z0-9]+", "", name.upper())[:18]
-            try:
-                op_k = round(float(raw.get("opening_qty") or 0), 1)
-                cl_k = round(float(raw.get("closing_qty") or 0), 1)
-                sale_k = round(float(raw.get("sales_qty") or 0), 1)
-            except (TypeError, ValueError):
-                op_k = cl_k = sale_k = 0.0
-            key = (name_key, op_k, cl_k, sale_k)
-            if key in seen or name.upper() in seen:
-                continue
-            seen.add(key)
-            seen.add(name.upper())
-            raw["product_name"] = name
-            merged.append(raw)
+            _medica_merge_strip_item(merged, seen, raw)
     if not merged:
         return None
     parsed_meta["report_title"] = "STOCK STATEMENT"
@@ -45044,7 +45181,7 @@ def _extract_medica_stock_statement_vision(
         if not isinstance(item, dict):
             continue
         name = str(item.get("product_name") or "")
-        if re.search(r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b", name, re.I):
+        if _MEDICA_BANNER_OR_TOTAL.search(name):
             continue
         extra = item.get("extra")
         if not isinstance(extra, dict):
