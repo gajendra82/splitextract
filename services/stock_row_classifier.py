@@ -312,6 +312,7 @@ _PRINTED_CLOSING_KINDS = frozenset(
         "medica_opstk",
         "medica_opstk_columns",
         "medivision_op_purc_nm60d",
+        "medivision_op_val_sr_nm60d",
         "summary_rtl",
         "batchwise",
         "stock_valuation",

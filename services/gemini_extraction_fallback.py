@@ -832,8 +832,10 @@ def maybe_apply_gemini_fallback(
 
     if _allowlist_skip(
         "medivision_op_purc_nm60d",
-        str(extra.get("extraction_method") or "") == "medivision_op_purc_nm60d"
-        or str(extra.get("layout") or "") == "medivision_op_purc_nm60d",
+        str(extra.get("extraction_method") or "")
+        in {"medivision_op_purc_nm60d", "medivision_op_val_sr_nm60d"}
+        or str(extra.get("layout") or "")
+        in {"medivision_op_purc_nm60d", "medivision_op_val_sr_nm60d"},
     ):
         return result
 

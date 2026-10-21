@@ -7,7 +7,11 @@ from pathlib import Path
 
 from services.sales_statement_extractor import (
     _is_product_wise_stock_statement_format,
+    _parse_product_wise_stock_statement_pdf,
+    _pwss_pdf_is_vacuous,
     _pwss_qty_band,
+    empty_line_item,
+    empty_result,
     extract_sales_statement,
 )
 
@@ -29,6 +33,60 @@ class TestProductWiseStockStatementHelpers(unittest.TestCase):
             _is_product_wise_stock_statement_format(
                 "OpBal Receipt Total Issue Closing Dump"
             )
+        )
+
+    def test_opening_receipt_issues_without_jul_jun_is_not_bindal_bands(self):
+        text = (
+            "SRI MADHABA AGENCIES, ASKA\n"
+            "Product wise stock statement from 01/09/2026 to 30/09/2026\n"
+            "Product Name Packing Opening Receipt Issues Closing Sh.Exp Sale amount\n"
+        )
+        self.assertFalse(_is_product_wise_stock_statement_format(text))
+
+    def test_all_zero_rows_with_footer_money_are_vacuous(self):
+        item = empty_line_item()
+        item["product_name"] = "PUREHANDS ADV"
+        item["packing"] = "2X500ML"
+        result = empty_result("Madhab agency.pdf", "pdf")
+        result["totals"]["sales_value"] = 20755.0
+        result["totals"]["closing_value"] = 1412.0
+        self.assertTrue(_pwss_pdf_is_vacuous([item], result))
+        item["opening_qty"] = 12.0
+        self.assertFalse(_pwss_pdf_is_vacuous([item], result))
+
+
+class _FakePage:
+    def __init__(self, text: str, words=None):
+        self._text = text
+        self._words = words or []
+
+    def get_text(self, kind: str = "text"):
+        if kind == "words":
+            return self._words
+        return self._text
+
+
+class TestPwssPdfVacuousFallsThrough(unittest.TestCase):
+    def test_parser_returns_none_when_numbers_miss_hardcoded_bands(self):
+        text = (
+            "SRI MADHABA AGENCIES, ASKA\n"
+            "Product wise stock statement from 01/09/2026 to 30/09/2026\n"
+            "Total sales in this period : 20755.00\n"
+            "Total closing stock : 1412.00\n"
+        )
+        # Name+pack match Bindal windows; qty sits far right of the Bindal x-bands.
+        words = [
+            (20.0, 120.0, 90.0, 132.0, "PUREHANDS", 0, 0, 0),
+            (92.0, 120.0, 105.0, 132.0, "ADV", 0, 0, 1),
+            (112.0, 120.0, 144.0, 132.0, "2X500ML", 0, 0, 2),
+            (520.0, 120.0, 545.0, 132.0, "12", 0, 0, 3),
+            (560.0, 120.0, 590.0, 132.0, "9", 0, 0, 4),
+            (620.0, 120.0, 650.0, 132.0, "3", 0, 0, 5),
+            (700.0, 120.0, 740.0, 132.0, "18", 0, 0, 6),
+        ]
+        doc = [_FakePage(text, words)]
+        self.assertIsNone(
+            _parse_product_wise_stock_statement_pdf(doc, "Madhab agency.pdf")
         )
 
     def test_qty_bands(self):
