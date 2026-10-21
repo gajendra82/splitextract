@@ -4738,7 +4738,11 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
 
     # MediVision Op/Purc/Sale/Cl qty/NM60D: Cl qty is the printed closing column.
     # Near-expiry (NM60D) can leave Cl qty off Op+Purc-Sale; do not rewrite Cl.
-    if totals["extra"].get("extraction_method") == "medivision_op_purc_nm60d":
+    # Op-val/S.R. variant also prints Cl qty; do not rewrite from identity.
+    if totals["extra"].get("extraction_method") in {
+        "medivision_op_purc_nm60d",
+        "medivision_op_val_sr_nm60d",
+    }:
         opening_sum = sum(
             _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
         )
@@ -25975,6 +25979,32 @@ def _medivision_nm90d_compact_enabled() -> bool:
     }
 
 
+def _medivision_op_val_sr_enabled() -> bool:
+    """STOCK_MEDIVISION_OP_VAL_SR — Op/Op val/Purc/S.R./Sale/WSale/…/Cl (default off)."""
+    return os.getenv("STOCK_MEDIVISION_OP_VAL_SR", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_has_medivision_op_val_sr(text: str) -> bool:
+    """True when MediVision prints Op val and S.R. qty beside Purc/Sale (not Scm/Sa val)."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if not re.search(r"\bOp\s*val\b", text, re.I):
+        return False
+    if not re.search(r"S\.R\.|S\s*R\s*qty|Sales?\s*Ret", text, re.I):
+        return False
+    # Classic Scm / Sa val stack is a different column map.
+    if re.search(r"\bScm\b", text, re.I) and re.search(r"Sa\s*val", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
+
+
 def _text_has_medivision_nm90d_only(text: str) -> bool:
     """True when sheet prints NM90D near-expiry but not NM60D (compact Op/Purc/Sale stack)."""
     if not text:
@@ -26047,16 +26077,32 @@ def _parse_medivision_op_purc_nm60d_text(
 
     # Compact = NM90D near-expiry only (no NM60D / Scm / Jul / Jun side columns).
     compact = _text_has_medivision_nm90d_only(text) and _medivision_nm90d_compact_enabled()
-    layout_key = (
-        "medivision_op_purc_nm90d_compact" if compact else "medivision_op_purc_nm60d"
+    # Op / Op val / Purc / S.R. qty / Sale / WSale / Aug / Jul / Cl — not Scm/Sa val.
+    op_val_sr = (
+        not compact
+        and _medivision_op_val_sr_enabled()
+        and _text_has_medivision_op_val_sr(text)
     )
-    min_nums = 6 if compact else 10
+    if op_val_sr:
+        layout_key = "medivision_op_val_sr_nm60d"
+        min_nums = 10
+        logger.info(
+            "MEDIVISION_OP_VAL_SR layout=op_val_sr file=%s",
+            filename,
+        )
+    elif compact:
+        layout_key = "medivision_op_purc_nm90d_compact"
+        min_nums = 6
+    else:
+        layout_key = "medivision_op_purc_nm60d"
+        min_nums = 10
 
     # Word-bound short labels (Op/Sale/NE/qty) so product names like OPHTHACARE are kept.
     skip_name = re.compile(
         r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No\.?|"
-        r"Product\s*Name|\bUnit\b|\bComp\b|\bOp\b|\bPurc\b|\bScm\b|\bSale\b|"
-        r"Jul\s*sale|Jun\s*sale|Sa\s*val|Cl\s*qty|Cl\s*val|"
+        r"Product\s*Name|\bUnit\b|\bComp\b|\bOp\b|\bOp\s*val\b|\bPurc\b|"
+        r"Purc\s+S\.R\.|\bS\.R\.\b|\bScm\b|\bSale\b|\bW\s*Sale\b|"
+        r"Aug\s*sale|Jul\s*sale|Jun\s*sale|Sa\s*val|Cl\s*qty|Cl\s*val|"
         r"NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|NM\s*val|\bqty\b|\bNE\b|"
         r"Continued|Phone|Tel\.|HIMALAYA\s+WELLNESS|"
         r".*\bAGENCIES?\b$|.*\bDISTRIBUT)"
@@ -26117,7 +26163,34 @@ def _parse_medivision_op_purc_nm60d_text(
             continue
         if re.match(r"(?i)^(TOTAL|SHOP|PAGE|TEL|HIMAL$)", name):
             continue
-        if compact:
+        if op_val_sr:
+            # Op OpVal Purc SR Sale WSale Aug Jul ClQty ClVal [NM60 NM90 NMVal NE]
+            opening = nums[0]
+            receipts = nums[2]
+            sales = nums[4]
+            sales_value = None  # no Sa val column on this sheet
+            closing = nums[8]
+            closing_value = nums[9]
+            nm60 = nums[10] if len(nums) > 10 else None
+            nm90 = nums[11] if len(nums) > 11 else None
+            nm_val = nums[12] if len(nums) > 12 else None
+            sr_qty = nums[3]
+            extra: Dict[str, Any] = {
+                "layout": layout_key,
+                "opening_value": nums[1],
+                "sales_return_qty": sr_qty,
+                "sale_return": sr_qty,
+                "wholesale_qty": nums[5],
+                "aug_sale_qty": nums[6],
+                "july_sale_qty": nums[7],
+                "field_source": {
+                    "sales_value": "missing",
+                    "sales_qty": "printed",
+                    "receipts_qty": "printed",
+                    "sales_return_qty": "printed",
+                },
+            }
+        elif compact:
             # Op Purc Sale SaVal ClQty ClVal [NM90 NMVal NE]
             opening = nums[0]
             receipts = nums[1]
@@ -26128,7 +26201,7 @@ def _parse_medivision_op_purc_nm60d_text(
             nm60 = None
             nm90 = nums[6] if len(nums) > 6 else None
             nm_val = nums[7] if len(nums) > 7 else None
-            extra: Dict[str, Any] = {"layout": layout_key}
+            extra = {"layout": layout_key}
         else:
             # Op Purc Scm Sale Scm Jul Jun SaVal ClQty ClVal NM60 NM90 NMVal
             opening = nums[0]
@@ -26196,6 +26269,44 @@ def _parse_medivision_op_purc_nm60d_text(
             balanced,
             filename,
         )
+    elif op_val_sr:
+        # Printed identity: Op + Purc + S.R. - Sale = Cl qty.
+        balanced = 0
+        for it in items:
+            sr = _to_float(
+                ((it.get("extra") or {}).get("sales_return_qty"))
+                if isinstance(it.get("extra"), dict)
+                else 0
+            )
+            if (
+                abs(
+                    (
+                        _to_float(it.get("opening_qty"))
+                        + _to_float(it.get("receipts_qty"))
+                        + sr
+                        - _to_float(it.get("sales_qty"))
+                    )
+                    - _to_float(it.get("closing_qty"))
+                )
+                < 0.05
+            ):
+                balanced += 1
+        need = max(3, int(0.6 * len(items)))
+        if balanced < need:
+            logger.info(
+                "MEDIVISION_OP_VAL_SR reject identity_fail balanced=%s need=%s total=%s file=%s",
+                balanced,
+                need,
+                len(items),
+                filename,
+            )
+            return None
+        logger.info(
+            "MEDIVISION_OP_VAL_SR accepted rows=%s balanced=%s file=%s",
+            len(items),
+            balanced,
+            filename,
+        )
 
     result = empty_result(filename, source_format)
     result["report_title"] = "Stock and Sales Statement"
@@ -26221,7 +26332,10 @@ def _parse_medivision_op_purc_nm60d_text(
     if period:
         result["period_from"] = _normalize_date(period.group(1))
         result["period_to"] = _normalize_date(period.group(2))
-    sales_value = round(sum(_to_float(i.get("sales_value")) for i in items), 2)
+    sales_value = round(
+        sum(_to_float(i.get("sales_value")) for i in items if i.get("sales_value") is not None),
+        2,
+    )
     closing_value = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
     result["totals"]["sales_value"] = sales_value if sales_value > 0 else None
     result["totals"]["closing_value"] = closing_value if closing_value > 0 else None

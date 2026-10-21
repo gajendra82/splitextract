@@ -30099,7 +30099,7 @@ async def extract_sales_statement_submit(
             }
         ):
             raise HTTPException(
-                status_code=400,
+                status_code=400,    
                 detail=(
                     f"Unsupported format '{ext}'. "
                     f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
