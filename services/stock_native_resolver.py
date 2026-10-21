@@ -721,7 +721,8 @@ def items_from_free_column_rows(
             continue
         item = built[0]
         name = str(item.get("product_name") or "").strip()
-        if not name or _TOTAL_LABEL.search(name):
+        if not name or _TOTAL_LABEL.search(name) or _is_total_row_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name or label)
             continue
         items.append(item)
     if len(items) < 3:
@@ -741,7 +742,7 @@ _ISSUE_LAYOUT = frozenset(
 )
 _HEADER_TOKEN = re.compile(
     r"(?i)^(product|pack|packing|opening|receipt|issue|i/?free|sales|amount|"
-    r"closing|division|qty|value|rate|stock)$"
+    r"closing|division|qty|value|rate|stock|name)$"
 )
 
 
@@ -880,7 +881,9 @@ def items_from_receipt_issue_pages(
     header_tops = []
     for line in lines:
         blob = " ".join(str(w.get("text") or "") for w in line["words"])
-        if re.search(r"\bOpening\b", blob) and re.search(r"\bProduct\b", blob):
+        if re.search(r"\bOpening\b", blob) and re.search(
+            r"\b(?:Product|Name)\b", blob
+        ):
             header_tops.append(float(line["top"]))
 
     anchors: List[Dict[str, Any]] = []
@@ -946,9 +949,14 @@ def items_from_receipt_issue_pages(
                     return number
             return None
 
-        if not re.search(r"[A-Za-z]", name):
+        if (
+            not re.search(r"[A-Za-z]", name)
+            or _is_total_row_name(name)
+            or _TOTAL_LABEL.search(name)
+        ):
             closing_total = _band_number("closing_value")
             sales_total = _band_number("sales_value")
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name)
             continue
         item = _empty_line_item()
         item["product_name"] = name
@@ -1285,6 +1293,9 @@ def items_from_lms_qty_rows(
             continue
         if re.search(r"(?i)^(sales\s+amount|stock\s+value|last\s+period)\b", name):
             continue
+        if _is_total_row_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name)
+            continue
         item = _empty_line_item()
         item["product_name"] = name
         item["packing"] = pack
@@ -1584,7 +1595,12 @@ def items_from_open_rcvd_sold_pages(
         if items and name_bits and not nums:
             pending_parts.extend(name_bits)
     _finish()
-    items = [i for i in items if re.search(r"[A-Za-z]{3,}", str(i.get("product_name") or ""))]
+    items = [
+        i
+        for i in items
+        if re.search(r"[A-Za-z]{3,}", str(i.get("product_name") or ""))
+        and not _is_total_row_name(i.get("product_name"))
+    ]
     if len(items) < 3:
         return None
     summary = _value_summary_from_pages(page_results)
