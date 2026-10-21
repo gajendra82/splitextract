@@ -37207,6 +37207,165 @@ def _lstsl_qty_token(token: str) -> bool:
     return bool(re.fullmatch(r"-?\d+|-", (token or "").strip()))
 
 
+def _lstsl_ocr_unglue_enabled() -> bool:
+    """STOCK_LSTSL_OCR_UNGLUE — split glued qty tokens; default ON.
+
+    Phone OCR of LstSL/Open/Recd grids drops the space before a minus
+    (40-20) and concatenates neighbouring qtys (2819, 4157). Identity
+    only classifies which split is the printed columns; digits stay printed.
+    """
+    return os.getenv("STOCK_LSTSL_OCR_UNGLUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _lstsl_expand_ocr_token(tok: str) -> List[str]:
+    """Turn OCR junk in one word into qty tokens without inventing digits."""
+    t = str(tok or "").strip()
+    if not t:
+        return []
+    t = (
+        t.replace("\ufffd", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("−", "-")
+        .replace("~", "-")
+    )
+    if t in {"=", "_"}:
+        return ["-"]
+    # 27,031 is 27 and 31 (leading zero), not 27 thousand.
+    m = re.fullmatch(r"(\d{1,3}),0(\d{1,2})", t)
+    if m:
+        return [m.group(1), str(int(m.group(2), 10))]
+    # 40-20 / 117-86: Close glued to Order.
+    m = re.fullmatch(r"(\d+)-(\d+)", t)
+    if m:
+        return [m.group(1), "-" + m.group(2)]
+    return [t]
+
+
+def _lstsl_qty_identity_ok(tokens: List[str]) -> bool:
+    if len(tokens) != 7 or not all(_lstsl_qty_token(t) for t in tokens):
+        return False
+    opening = _to_float(tokens[1])
+    received = _to_float(tokens[2])
+    sales = _to_float(tokens[3])
+    close = _to_float(tokens[4])
+    return abs((opening + received - sales) - close) <= 0.51
+
+
+def _lstsl_digit_splits(token: str) -> List[Tuple[str, str]]:
+    if not re.fullmatch(r"\d{3,6}", token or ""):
+        return []
+    out: List[Tuple[str, str]] = []
+    for i in range(1, len(token)):
+        a, b = token[:i], token[i:]
+        if len(a) > 4 or len(b) > 4:
+            continue
+        if (a.startswith("0") and a != "0") or (b.startswith("0") and b != "0"):
+            continue
+        out.append((a, b))
+    return out
+
+
+def _lstsl_repair_qty_tokens(qty: List[str]) -> Optional[List[str]]:
+    """Recover 7 qty cells from glued OCR. Unique identity match only."""
+    if len(qty) == 7 and _lstsl_qty_identity_ok(qty):
+        return qty
+    if len(qty) == 7:
+        hits: List[List[str]] = []
+        for i, tok in enumerate(qty):
+            if not re.fullmatch(r"[1-9]\d*0+", tok) or len(tok) < 2:
+                continue
+            trimmed = tok
+            while trimmed.endswith("0") and len(trimmed) > 1:
+                trimmed = trimmed[:-1]
+                cand = list(qty)
+                cand[i] = trimmed
+                if _lstsl_qty_identity_ok(cand):
+                    hits.append(cand)
+        uniq = [h for i, h in enumerate(hits) if h not in hits[:i]]
+        if len(uniq) == 1:
+            return uniq[0]
+        return qty
+    if len(qty) not in {5, 6}:
+        return None
+
+    def _split_once(tokens: List[str]) -> List[List[str]]:
+        found: List[List[str]] = []
+        for i, tok in enumerate(tokens):
+            for a, b in _lstsl_digit_splits(tok):
+                cand = tokens[:i] + [a, b] + tokens[i + 1 :]
+                found.append(cand)
+        return found
+
+    if len(qty) == 6:
+        hits = [c for c in _split_once(qty) if _lstsl_qty_identity_ok(c)]
+        if len(hits) == 1:
+            return hits[0]
+        return None
+    hits: List[List[str]] = []
+    for mid in _split_once(qty):
+        if len(mid) != 6:
+            continue
+        for cand in _split_once(mid):
+            if _lstsl_qty_identity_ok(cand):
+                hits.append(cand)
+    uniq = [h for i, h in enumerate(hits) if h not in hits[:i]]
+    if len(uniq) == 1:
+        return uniq[0]
+    return None
+
+
+def _lstsl_take_qty_tail(
+    parts: List[str],
+) -> Optional[Tuple[List[str], List[str]]]:
+    """Split name/pack tokens from the trailing LstSL..Pend qty cells."""
+    qty: List[str] = []
+    i = len(parts)
+    while i > 0 and _lstsl_qty_token(parts[i - 1]):
+        i -= 1
+        qty.insert(0, parts[i])
+        if len(qty) >= 9:
+            break
+    left = parts[:i]
+    if len(qty) >= 7:
+        windows: List[Tuple[int, List[str]]] = []
+        for start in range(0, len(qty) - 6):
+            window = qty[start : start + 7]
+            if _lstsl_qty_identity_ok(window):
+                windows.append((start, window))
+        chosen: Optional[Tuple[int, List[str]]] = None
+        if windows and windows[0][0] == 0:
+            chosen = windows[0]
+        elif len(windows) == 1:
+            chosen = windows[0]
+        if chosen:
+            start, window = chosen
+            if start:
+                left = left + qty[:start]
+            if window != qty[:7] or len(qty) != 7:
+                logger.info(
+                    "STOCK_LSTSL_OCR_UNGLUE from=%s to=%s",
+                    qty,
+                    window,
+                )
+            return left, window
+    repaired = _lstsl_repair_qty_tokens(qty if len(qty) <= 7 else qty[-7:])
+    if repaired:
+        if repaired != qty:
+            logger.info(
+                "STOCK_LSTSL_OCR_UNGLUE from=%s to=%s",
+                qty,
+                repaired,
+            )
+        return left, repaired
+    return None
+
+
 def _text_has_lms_opstock_rcpts_headers(text: str) -> bool:
     """True when LMS and OP.Stock/Rcpts/CL.Stk are all printed (header-driven)."""
     if not text:
@@ -37493,6 +37652,14 @@ def _lstsl_strip_trailing_move_value(parts: List[str]) -> Tuple[List[str], Optio
     while tokens and tokens[-1] in {"*", "#"}:
         tokens.pop()
     stk_value: Optional[float] = None
+    if (
+        len(tokens) >= 3
+        and re.fullmatch(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+\.\d+", tokens[-1] or "")
+        and "." in tokens[-1]
+        and tokens[-2] in {"\ufffd", "�"}
+        and _lstsl_qty_token(tokens[-3])
+    ):
+        tokens.pop(-2)
     if tokens and re.fullmatch(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+\.\d+", tokens[-1]):
         # Prefer money (has decimals) over a bare qty that belongs in Pend/Order.
         if "." in tokens[-1] or (
@@ -37534,13 +37701,17 @@ def _parse_lstsl_open_recd_statement(
     )
     # Pick stockist from the first non-empty line that comes before the header
     # and does not look like a column heading or the report banner itself.
-    for ln in lines[:6]:
+    for ln in lines[:8]:
         if re.search(
             r"Stock\s*&\s*Sales|Product\s*Name|Page\s*No|HIMALAYA",
             ln,
             re.I,
         ):
             break
+        if re.match(r"^\d{1,2}:\d{2}\b", ln) or re.search(
+            r"PDF\s*reader|\.PDF\b", ln, re.I
+        ):
+            continue
         candidate = _clean_name(re.sub(r"^[\|\s]+", "", ln))
         if candidate and len(re.sub(r"[^A-Za-z]", "", candidate)) >= 4:
             result["stockist_name"] = candidate
@@ -37581,9 +37752,24 @@ def _parse_lstsl_open_recd_statement(
     for line in lines:
         parts = line.split()
         parts, stk_value = _lstsl_strip_trailing_move_value(parts)
-        if len(parts) < 8 or not all(_lstsl_qty_token(tok) for tok in parts[-7:]):
+        if _lstsl_ocr_unglue_enabled():
+            expanded: List[str] = []
+            for tok in parts:
+                expanded.extend(_lstsl_expand_ocr_token(tok))
+            parts = expanded
+            taken = _lstsl_take_qty_tail(parts)
+            if not taken:
+                continue
+            left, qty7 = taken
+        else:
+            if len(parts) < 8 or not all(
+                _lstsl_qty_token(tok) for tok in parts[-7:]
+            ):
+                continue
+            left = parts[:-7]
+            qty7 = parts[-7:]
+        if not left:
             continue
-        left = parts[:-7]
         if len(left) >= 2 and re.fullmatch(r"\d+", left[-2]) and re.fullmatch(
             r"(?:CAP|CAPS|TAB|ML|GR|G|T|S|'S)", left[-1], re.I
         ):
@@ -37593,6 +37779,7 @@ def _parse_lstsl_open_recd_statement(
             packing = left[-1]
             name = " ".join(left[:-1])
         name = _clean_name(name)
+        name = re.sub(r"[\s\-]+$", "", name).strip()
         if not name or re.search(
             r"product\s*name|last\s+month|receipt\s+value|closing\s+value|"
             r"open\.?\s*value|sales\s+value|^total\b",
@@ -37600,7 +37787,7 @@ def _parse_lstsl_open_recd_statement(
             re.I,
         ):
             continue
-        lstsl, opening, received, sales, close, order, pend = parts[-7:]
+        lstsl, opening, received, sales, close, order, pend = qty7
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = packing
