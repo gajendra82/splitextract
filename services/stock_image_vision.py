@@ -122,6 +122,7 @@ _TRUSTED_METHODS = frozenset(
         "op_pur_sp_sale_bal_val_photo",
         "op_pur_sp_sale_bal_val",
         "medivision_op_purc_nm60d",
+        "medivision_op_val_sr_nm60d",
         "product_wise_stock_statement_image",
         "medica_opstk_columns",
         "medica_stock_statement_vision",
@@ -143,6 +144,7 @@ _TRUSTED_LAYOUTS = frozenset(
         "pack_op_pur_bal_stock_sale",
         "op_pur_sp_sale_bal_val",
         "medivision_op_purc_nm60d",
+        "medivision_op_val_sr_nm60d",
         "product_wise_stock_statement_photo",
         "medica_stock_statement",
     }

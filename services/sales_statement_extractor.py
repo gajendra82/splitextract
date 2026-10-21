@@ -1252,7 +1252,7 @@ def _is_product_wise_stock_statement_text(text: str) -> bool:
     )
     # Sales amount is required. Closing amount may be split across lines
     # ("Closing" / "amount") or abbreviated in the text layer.
-    has_money = re.search(r"Sales\s+amount", text, re.I)
+    has_money = re.search(r"Sales?\s+amount", text, re.I)
     return bool(has_qty and has_money)
 
 
@@ -1292,7 +1292,7 @@ def _pws_header_bounds(rows: List[Dict[str, Any]]) -> Optional[Dict[str, float]]
                 found["closing_qty"] = (left, right)
             elif token in {"shexp", "shexpliquidation"}:
                 found["shexp"] = (left, right)
-            elif token == "sales":
+            elif token in {"sales", "sale"}:
                 found["sales"] = (left, right)
             elif token == "amount":
                 # Rightmost "amount" is Closing amount; left one is Sales amount.
@@ -4781,10 +4781,16 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["closing_qty"] = closing_sum
         totals["extra"]["line_sales_value_sum"] = sales_value_sum
         totals["extra"]["line_closing_value_sum"] = closing_value_sum
-        totals["extra"]["stock_identity_kind"] = "medivision_op_purc_nm60d"
-        totals["extra"]["stock_identity_formula"] = (
-            "closing_qty=Cl qty; nm60_qty=NM60D; printed Cl may differ from Op+Purc-Sale"
-        )
+        method = totals["extra"].get("extraction_method")
+        totals["extra"]["stock_identity_kind"] = method
+        if method == "medivision_op_val_sr_nm60d":
+            totals["extra"]["stock_identity_formula"] = (
+                "closing_qty=Cl qty; Op+Purc+S.R.-Sale; Op val printed"
+            )
+        else:
+            totals["extra"]["stock_identity_formula"] = (
+                "closing_qty=Cl qty; nm60_qty=NM60D; printed Cl may differ from Op+Purc-Sale"
+            )
         if _allow_force_zero_fail:
             totals["extra"]["stock_identity_fail_count"] = 0
         totals["extra"]["stock_validation"] = {
@@ -26036,6 +26042,26 @@ def _is_medivision_op_purc_nm60d_text(text: str) -> bool:
     return True
 
 
+def _text_has_medivision_op_val_header(text: str) -> bool:
+    """True when stacked headers print Op val between Op and Purc (no Sa/Cl val).
+
+    Column plan: Op, Op val, Purc, S.R. qty, Sale, WSale, Aug/Jul sale, Cl qty, NM*.
+    Distinct from Scm/Sa-val wide sheets that lack an Op-val money column.
+    """
+    if not text:
+        return False
+    if not re.search(r"(?i)\bOp\s*val\b", text):
+        return False
+    if not re.search(r"(?i)\bPurc\b", text):
+        return False
+    # Prefer S.R. qty as a second signal when present.
+    return bool(
+        re.search(r"(?i)\bS\.?\s*R\.?\s*qty\b", text)
+        or re.search(r"(?i)\bWSale\b", text)
+        or re.search(r"(?i)\bAug\s*sale\b", text)
+    )
+
+
 def _repair_medivision_nm60_closing(item: Dict[str, Any]) -> None:
     """If closing_qty was filled from NM60D, restore Cl qty = Op+Purc-Sale.
 
@@ -26075,19 +26101,28 @@ def _parse_medivision_op_purc_nm60d_text(
     if len(lines) < 20:
         return None
 
-    # Compact = NM90D near-expiry only (no NM60D / Scm / Jul / Jun side columns).
+    # Compact = NM90D near-expiry only (no NM60D / Scm / Jul / jun side columns).
     compact = _text_has_medivision_nm90d_only(text) and _medivision_nm90d_compact_enabled()
-    # Op / Op val / Purc / S.R. qty / Sale / WSale / Aug / Jul / Cl — not Scm/Sa val.
+    # Cl val printed: Op OpVal Purc S.R. Sale WSale Aug Jul ClQty ClVal NM*.
     op_val_sr = (
         not compact
         and _medivision_op_val_sr_enabled()
         and _text_has_medivision_op_val_sr(text)
+        and bool(re.search(r"Cl\s*val", text or "", re.I))
     )
-    if op_val_sr:
+    # No Cl val: Op OpVal Purc S.R. Sale WSale Aug Jul ClQty NM*.
+    op_val = (
+        not compact
+        and not op_val_sr
+        and _text_has_medivision_op_val_header(text)
+        and not re.search(r"Cl\s*val", text or "", re.I)
+    )
+    if op_val_sr or op_val:
         layout_key = "medivision_op_val_sr_nm60d"
-        min_nums = 10
+        min_nums = 10 if op_val_sr else 9
         logger.info(
-            "MEDIVISION_OP_VAL_SR layout=op_val_sr file=%s",
+            "MEDIVISION_OP_VAL_SR layout=%s file=%s",
+            "op_val_sr_cl_val" if op_val_sr else "op_val_no_cl_val",
             filename,
         )
     elif compact:
@@ -26101,7 +26136,8 @@ def _parse_medivision_op_purc_nm60d_text(
     skip_name = re.compile(
         r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No\.?|"
         r"Product\s*Name|\bUnit\b|\bComp\b|\bOp\b|\bOp\s*val\b|\bPurc\b|"
-        r"Purc\s+S\.R\.|\bS\.R\.\b|\bScm\b|\bSale\b|\bW\s*Sale\b|"
+        r"Purc\s+S\.R\.|\bS\.R\.\b|\bS\.?\s*R\.?\s*qty\b|\bScm\b|\bSale\b|"
+        r"\bW\s*Sale\b|\bWSale\b|"
         r"Aug\s*sale|Jul\s*sale|Jun\s*sale|Sa\s*val|Cl\s*qty|Cl\s*val|"
         r"NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|NM\s*val|\bqty\b|\bNE\b|"
         r"Continued|Phone|Tel\.|HIMALAYA\s+WELLNESS|"
@@ -26163,10 +26199,14 @@ def _parse_medivision_op_purc_nm60d_text(
             continue
         if re.match(r"(?i)^(TOTAL|SHOP|PAGE|TEL|HIMAL$)", name):
             continue
+        opening_value = None
+        sales_return = None
         if op_val_sr:
             # Op OpVal Purc SR Sale WSale Aug Jul ClQty ClVal [NM60 NM90 NMVal NE]
             opening = nums[0]
+            opening_value = nums[1]
             receipts = nums[2]
+            sales_return = nums[3]
             sales = nums[4]
             sales_value = None  # no Sa val column on this sheet
             closing = nums[8]
@@ -26174,12 +26214,11 @@ def _parse_medivision_op_purc_nm60d_text(
             nm60 = nums[10] if len(nums) > 10 else None
             nm90 = nums[11] if len(nums) > 11 else None
             nm_val = nums[12] if len(nums) > 12 else None
-            sr_qty = nums[3]
             extra: Dict[str, Any] = {
                 "layout": layout_key,
-                "opening_value": nums[1],
-                "sales_return_qty": sr_qty,
-                "sale_return": sr_qty,
+                "opening_value": opening_value,
+                "sales_return_qty": sales_return,
+                "sale_return": sales_return,
                 "wholesale_qty": nums[5],
                 "aug_sale_qty": nums[6],
                 "july_sale_qty": nums[7],
@@ -26202,8 +26241,38 @@ def _parse_medivision_op_purc_nm60d_text(
             nm90 = nums[6] if len(nums) > 6 else None
             nm_val = nums[7] if len(nums) > 7 else None
             extra = {"layout": layout_key}
+        elif op_val:
+            # Op OpVal Purc S.R. Sale WSale Aug Jul ClQty NM60 NM90 NMVal [NE]
+            # Sa val / Cl val are not printed on this sheet.
+            opening = nums[0]
+            opening_value = nums[1]
+            receipts = nums[2]
+            sales_return = nums[3]
+            sales = nums[4]
+            sales_value = None
+            closing = nums[8]
+            closing_value = None
+            nm60 = nums[9] if len(nums) > 9 else None
+            nm90 = nums[10] if len(nums) > 10 else None
+            nm_val = nums[11] if len(nums) > 11 else None
+            extra = {
+                "layout": layout_key,
+                "opening_value": opening_value,
+                "sales_return_qty": sales_return,
+                "sale_return": sales_return,
+                "wholesale_qty": nums[5],
+                "aug_sale_qty": nums[6],
+                "july_sale_qty": nums[7],
+                "field_source": {
+                    "sales_value": "missing",
+                    "closing_value": "missing",
+                    "sales_qty": "printed",
+                    "receipts_qty": "printed",
+                    "sales_return_qty": "printed",
+                },
+            }
         else:
-            # Op Purc Scm Sale Scm Jul Jun SaVal ClQty ClVal NM60 NM90 NMVal
+            # Op Purc Scm Sale Scm Jul jun SaVal ClQty ClVal NM60 NM90 NMVal
             opening = nums[0]
             receipts = nums[1]
             sales = nums[3]
@@ -26230,6 +26299,10 @@ def _parse_medivision_op_purc_nm60d_text(
         item["sales_value"] = sales_value
         item["closing_qty"] = closing
         item["closing_value"] = closing_value
+        if opening_value is not None:
+            item["opening_value"] = opening_value
+        if sales_return is not None:
+            item["sales_return_qty"] = sales_return
         if nm60 is not None:
             extra["nm60_qty"] = nm60
         if nm90 is not None:
@@ -26241,6 +26314,13 @@ def _parse_medivision_op_purc_nm60d_text(
 
     if len(items) < 3:
         return None
+
+    if op_val:
+        logger.info(
+            "medivision_op_val_sr: accepted rows=%s file=%s",
+            len(items),
+            filename,
+        )
 
     if compact:
         balanced = sum(
@@ -32585,7 +32665,37 @@ def _is_product_wise_stock_statement_format(text: str) -> bool:
     has_groups = bool(
         re.search(r"\bReceipt\b", text, re.I) and re.search(r"\bIssues\b", text, re.I)
     )
-    return has_groups and (has_liq or has_sh)
+    # Jul/Jun are the Bindal x-band columns. Opening/Receipt/Issues/Closing
+    # sheets that only share the title must not use those hardcoded bands.
+    has_jul_jun = bool(
+        re.search(r"\bJul\b", text, re.I) and re.search(r"\bJun\b", text, re.I)
+    )
+    return has_groups and (has_liq or has_sh) and has_jul_jun
+
+
+def _pwss_pdf_is_vacuous(items: List[Dict[str, Any]], result: Dict[str, Any]) -> bool:
+    """True when name/pack rows have no printed qty but footer money is present."""
+    if not items:
+        return True
+    any_qty = False
+    for item in items:
+        for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            try:
+                if abs(float(item.get(key) or 0.0)) > 0.001:
+                    any_qty = True
+                    break
+            except (TypeError, ValueError):
+                continue
+        if any_qty:
+            return False
+    totals = (result or {}).get("totals") or {}
+    for key in ("sales_value", "closing_value"):
+        try:
+            if abs(float(totals.get(key) or 0.0)) > 0.001:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
 
 
 def _pwss_qty_band(x1: float) -> str:
@@ -32877,6 +32987,16 @@ def _parse_product_wise_stock_statement_pdf(
                         result["totals"]["closing_value"] = money_lines[1]
                     elif len(money_lines) == 1:
                         result["totals"]["closing_value"] = money_lines[0]
+
+    if _pwss_pdf_is_vacuous(items, result):
+        logger.info(
+            "STOCK_PWSS_PDF_VACUOUS file=%s items=%s sales_value=%s closing_value=%s",
+            filename,
+            len(items),
+            (result.get("totals") or {}).get("sales_value"),
+            (result.get("totals") or {}).get("closing_value"),
+        )
+        return None
 
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "product_wise_stock_statement_pdf"
@@ -37213,6 +37333,165 @@ def _lstsl_qty_token(token: str) -> bool:
     return bool(re.fullmatch(r"-?\d+|-", (token or "").strip()))
 
 
+def _lstsl_ocr_unglue_enabled() -> bool:
+    """STOCK_LSTSL_OCR_UNGLUE — split glued qty tokens; default ON.
+
+    Phone OCR of LstSL/Open/Recd grids drops the space before a minus
+    (40-20) and concatenates neighbouring qtys (2819, 4157). Identity
+    only classifies which split is the printed columns; digits stay printed.
+    """
+    return os.getenv("STOCK_LSTSL_OCR_UNGLUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _lstsl_expand_ocr_token(tok: str) -> List[str]:
+    """Turn OCR junk in one word into qty tokens without inventing digits."""
+    t = str(tok or "").strip()
+    if not t:
+        return []
+    t = (
+        t.replace("\ufffd", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("−", "-")
+        .replace("~", "-")
+    )
+    if t in {"=", "_"}:
+        return ["-"]
+    # 27,031 is 27 and 31 (leading zero), not 27 thousand.
+    m = re.fullmatch(r"(\d{1,3}),0(\d{1,2})", t)
+    if m:
+        return [m.group(1), str(int(m.group(2), 10))]
+    # 40-20 / 117-86: Close glued to Order.
+    m = re.fullmatch(r"(\d+)-(\d+)", t)
+    if m:
+        return [m.group(1), "-" + m.group(2)]
+    return [t]
+
+
+def _lstsl_qty_identity_ok(tokens: List[str]) -> bool:
+    if len(tokens) != 7 or not all(_lstsl_qty_token(t) for t in tokens):
+        return False
+    opening = _to_float(tokens[1])
+    received = _to_float(tokens[2])
+    sales = _to_float(tokens[3])
+    close = _to_float(tokens[4])
+    return abs((opening + received - sales) - close) <= 0.51
+
+
+def _lstsl_digit_splits(token: str) -> List[Tuple[str, str]]:
+    if not re.fullmatch(r"\d{3,6}", token or ""):
+        return []
+    out: List[Tuple[str, str]] = []
+    for i in range(1, len(token)):
+        a, b = token[:i], token[i:]
+        if len(a) > 4 or len(b) > 4:
+            continue
+        if (a.startswith("0") and a != "0") or (b.startswith("0") and b != "0"):
+            continue
+        out.append((a, b))
+    return out
+
+
+def _lstsl_repair_qty_tokens(qty: List[str]) -> Optional[List[str]]:
+    """Recover 7 qty cells from glued OCR. Unique identity match only."""
+    if len(qty) == 7 and _lstsl_qty_identity_ok(qty):
+        return qty
+    if len(qty) == 7:
+        hits: List[List[str]] = []
+        for i, tok in enumerate(qty):
+            if not re.fullmatch(r"[1-9]\d*0+", tok) or len(tok) < 2:
+                continue
+            trimmed = tok
+            while trimmed.endswith("0") and len(trimmed) > 1:
+                trimmed = trimmed[:-1]
+                cand = list(qty)
+                cand[i] = trimmed
+                if _lstsl_qty_identity_ok(cand):
+                    hits.append(cand)
+        uniq = [h for i, h in enumerate(hits) if h not in hits[:i]]
+        if len(uniq) == 1:
+            return uniq[0]
+        return qty
+    if len(qty) not in {5, 6}:
+        return None
+
+    def _split_once(tokens: List[str]) -> List[List[str]]:
+        found: List[List[str]] = []
+        for i, tok in enumerate(tokens):
+            for a, b in _lstsl_digit_splits(tok):
+                cand = tokens[:i] + [a, b] + tokens[i + 1 :]
+                found.append(cand)
+        return found
+
+    if len(qty) == 6:
+        hits = [c for c in _split_once(qty) if _lstsl_qty_identity_ok(c)]
+        if len(hits) == 1:
+            return hits[0]
+        return None
+    hits: List[List[str]] = []
+    for mid in _split_once(qty):
+        if len(mid) != 6:
+            continue
+        for cand in _split_once(mid):
+            if _lstsl_qty_identity_ok(cand):
+                hits.append(cand)
+    uniq = [h for i, h in enumerate(hits) if h not in hits[:i]]
+    if len(uniq) == 1:
+        return uniq[0]
+    return None
+
+
+def _lstsl_take_qty_tail(
+    parts: List[str],
+) -> Optional[Tuple[List[str], List[str]]]:
+    """Split name/pack tokens from the trailing LstSL..Pend qty cells."""
+    qty: List[str] = []
+    i = len(parts)
+    while i > 0 and _lstsl_qty_token(parts[i - 1]):
+        i -= 1
+        qty.insert(0, parts[i])
+        if len(qty) >= 9:
+            break
+    left = parts[:i]
+    if len(qty) >= 7:
+        windows: List[Tuple[int, List[str]]] = []
+        for start in range(0, len(qty) - 6):
+            window = qty[start : start + 7]
+            if _lstsl_qty_identity_ok(window):
+                windows.append((start, window))
+        chosen: Optional[Tuple[int, List[str]]] = None
+        if windows and windows[0][0] == 0:
+            chosen = windows[0]
+        elif len(windows) == 1:
+            chosen = windows[0]
+        if chosen:
+            start, window = chosen
+            if start:
+                left = left + qty[:start]
+            if window != qty[:7] or len(qty) != 7:
+                logger.info(
+                    "STOCK_LSTSL_OCR_UNGLUE from=%s to=%s",
+                    qty,
+                    window,
+                )
+            return left, window
+    repaired = _lstsl_repair_qty_tokens(qty if len(qty) <= 7 else qty[-7:])
+    if repaired:
+        if repaired != qty:
+            logger.info(
+                "STOCK_LSTSL_OCR_UNGLUE from=%s to=%s",
+                qty,
+                repaired,
+            )
+        return left, repaired
+    return None
+
+
 def _text_has_lms_opstock_rcpts_headers(text: str) -> bool:
     """True when LMS and OP.Stock/Rcpts/CL.Stk are all printed (header-driven)."""
     if not text:
@@ -37499,6 +37778,14 @@ def _lstsl_strip_trailing_move_value(parts: List[str]) -> Tuple[List[str], Optio
     while tokens and tokens[-1] in {"*", "#"}:
         tokens.pop()
     stk_value: Optional[float] = None
+    if (
+        len(tokens) >= 3
+        and re.fullmatch(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+\.\d+", tokens[-1] or "")
+        and "." in tokens[-1]
+        and tokens[-2] in {"\ufffd", "�"}
+        and _lstsl_qty_token(tokens[-3])
+    ):
+        tokens.pop(-2)
     if tokens and re.fullmatch(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+\.\d+", tokens[-1]):
         # Prefer money (has decimals) over a bare qty that belongs in Pend/Order.
         if "." in tokens[-1] or (
@@ -37540,13 +37827,17 @@ def _parse_lstsl_open_recd_statement(
     )
     # Pick stockist from the first non-empty line that comes before the header
     # and does not look like a column heading or the report banner itself.
-    for ln in lines[:6]:
+    for ln in lines[:8]:
         if re.search(
             r"Stock\s*&\s*Sales|Product\s*Name|Page\s*No|HIMALAYA",
             ln,
             re.I,
         ):
             break
+        if re.match(r"^\d{1,2}:\d{2}\b", ln) or re.search(
+            r"PDF\s*reader|\.PDF\b", ln, re.I
+        ):
+            continue
         candidate = _clean_name(re.sub(r"^[\|\s]+", "", ln))
         if candidate and len(re.sub(r"[^A-Za-z]", "", candidate)) >= 4:
             result["stockist_name"] = candidate
@@ -37587,9 +37878,24 @@ def _parse_lstsl_open_recd_statement(
     for line in lines:
         parts = line.split()
         parts, stk_value = _lstsl_strip_trailing_move_value(parts)
-        if len(parts) < 8 or not all(_lstsl_qty_token(tok) for tok in parts[-7:]):
+        if _lstsl_ocr_unglue_enabled():
+            expanded: List[str] = []
+            for tok in parts:
+                expanded.extend(_lstsl_expand_ocr_token(tok))
+            parts = expanded
+            taken = _lstsl_take_qty_tail(parts)
+            if not taken:
+                continue
+            left, qty7 = taken
+        else:
+            if len(parts) < 8 or not all(
+                _lstsl_qty_token(tok) for tok in parts[-7:]
+            ):
+                continue
+            left = parts[:-7]
+            qty7 = parts[-7:]
+        if not left:
             continue
-        left = parts[:-7]
         if len(left) >= 2 and re.fullmatch(r"\d+", left[-2]) and re.fullmatch(
             r"(?:CAP|CAPS|TAB|ML|GR|G|T|S|'S)", left[-1], re.I
         ):
@@ -37599,6 +37905,7 @@ def _parse_lstsl_open_recd_statement(
             packing = left[-1]
             name = " ".join(left[:-1])
         name = _clean_name(name)
+        name = re.sub(r"[\s\-]+$", "", name).strip()
         if not name or re.search(
             r"product\s*name|last\s+month|receipt\s+value|closing\s+value|"
             r"open\.?\s*value|sales\s+value|^total\b",
@@ -37606,7 +37913,7 @@ def _parse_lstsl_open_recd_statement(
             re.I,
         ):
             continue
-        lstsl, opening, received, sales, close, order, pend = parts[-7:]
+        lstsl, opening, received, sales, close, order, pend = qty7
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = packing

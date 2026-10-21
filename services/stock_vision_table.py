@@ -1173,8 +1173,13 @@ def build_table_prompt() -> str:
         "itself and never the HIMALAYA (ZENITH) division in parentheses. "
         "When headers include PRODUCT NAME & PACKING and L.M.S / LMS: keep the "
         "full product name+packing text in the product cell (do not truncate or "
-        "invent SKUs); L.M.S is last-month sale — map to ignore / extra.lms, "
-        "never opening_qty or sales_qty. Closing Stock QTY and VALUE are "
+        "invent SKUs); L.M.S / Prev Sale / Previous Sale is last-month sale — "
+        "map to extra.lms, never this period's sales_qty. Tot Sales is "
+        "sales_qty; Tot Closing is closing_qty (quantity); Stock Value is "
+        "closing_value (money) — never put Stock Value into Tot Closing. "
+        "Do not invent a branch column (Pharmacy, city names) that is not "
+        "printed. stockist_name is the letterhead, never a column header. "
+        "Closing Stock QTY and VALUE are "
         "separate cells — never put the VALUE money into the QTY cell. "
         "LstSL|Open|Recd.|Sales|Close|Order|Pend|LstMove|Stk.Value sheets: "
         "Sales and Close are TWO separate columns — never merge them into one "
@@ -2363,13 +2368,25 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
             header_norm = normalize_header(col.get("header_text"))
-            # LMS / LstSL must never be remapped to opening/purchase by the model.
-            if header_norm in {"lms", "lstsl", "lst sl"} or resolver_canon == "lms":
+            # LMS / LstSL / Prev Sale must never be remapped to opening/purchase
+            # or this-period sales by the model.
+            if header_norm in {
+                "lms",
+                "lstsl",
+                "lst sl",
+                "prev sale",
+                "prev sales",
+                "prev. sale",
+                "previous sale",
+                "previous sales",
+            } or resolver_canon == "lms":
                 if model_canon in {
                     "opening_qty",
                     "opening_value",
                     "purchase_qty",
                     "purchase_value",
+                    "sales_qty",
+                    "sales_value",
                 }:
                     header_ok = False
                     errors.append(f"LMS_MODEL_BLOCK col={idx}")
@@ -3650,6 +3667,181 @@ def _apply_closing_pair_unswap_pass(
             fixed += 1
     if fixed:
         logger.info("VISION_TABLE CLOSING_PAIR_UNSWAP_PASS fixed=%s", fixed)
+    return fixed
+
+
+def _tot_qty_value_header_shift_enabled() -> bool:
+    """Re-slot Tot Sales/Tot Closing when a phantom branch header shifted money.
+
+    Default ON — only moves printed cells under Tot Sales / Tot Closing /
+    Stock Value headers. Never invents a digit.
+    """
+    return os.getenv(
+        "STOCK_VISION_TOT_QTY_VALUE_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _physical_cell_list(item: Dict[str, Any]) -> List[Any]:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    phys = extra.get("physical_cells")
+    if isinstance(phys, dict) and phys:
+        idxs: List[int] = []
+        for k in phys:
+            try:
+                idxs.append(int(k))
+            except (TypeError, ValueError):
+                continue
+        if not idxs:
+            return []
+        n = max(idxs) + 1
+        return [phys.get(str(i), phys.get(i)) for i in range(n)]
+    raw = extra.get("vision_raw_cells")
+    if isinstance(raw, (list, tuple)):
+        return list(raw)
+    return []
+
+
+def _header_index_matching(
+    headers: Sequence[Any],
+    *needles: str,
+) -> Optional[int]:
+    want = {normalize_header(n) for n in needles if n}
+    for i, h in enumerate(headers or []):
+        if normalize_header(h) in want:
+            return i
+    return None
+
+
+def _cell_looks_empty_or_zero(raw: Any) -> bool:
+    if raw is None:
+        return True
+    text = str(raw).strip()
+    if text in {"", "-", "—", "–", "null"}:
+        return True
+    parsed = parse_number(raw)
+    return parsed is not None and abs(parsed) <= 0.001
+
+
+def _repair_tot_qty_value_header_shift(item: Dict[str, Any]) -> bool:
+    """When Tot Closing/Tot Sales cells hold money, take the previous qty cell.
+
+    Wide branch-sales sheets print Tot Sales then Sales Value, Tot Closing
+    then Stock Value. An extra branch header (Pharmacy, a city) shifts those
+    pairs one slot left so Stock Value lands in Tot Closing. Re-slot the
+    printed cells only — never compute a replacement.
+    """
+    if not _tot_qty_value_header_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)) or not headers:
+        return False
+    cells = _physical_cell_list(item)
+    if not cells:
+        return False
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+
+    changed = False
+
+    tot_sales_i = _header_index_matching(
+        headers, "tot sales", "total sales", "tot sale", "total sale"
+    )
+    if tot_sales_i is not None and 0 < tot_sales_i < len(cells):
+        tot_raw = cells[tot_sales_i]
+        prev_raw = cells[tot_sales_i - 1]
+        if _looks_money(tot_raw, raw_text=str(tot_raw) if tot_raw is not None else None):
+            prev_n = parse_number(prev_raw)
+            tot_n = parse_number(tot_raw)
+            if (
+                prev_n is not None
+                and tot_n is not None
+                and _looks_small_qty(prev_n)
+            ):
+                item["sales_qty"] = float(prev_n)
+                item["sales_value"] = float(tot_n)
+                fs["sales_qty"] = "printed"
+                fs["sales_value"] = "printed"
+                changed = True
+                logger.info(
+                    "VISION_TABLE TOT_QTY_VALUE_HEADER_SHIFT product=%s "
+                    "sales_qty=%s sales_value=%s",
+                    str(item.get("product_name") or "")[:60],
+                    item["sales_qty"],
+                    item["sales_value"],
+                )
+
+    tot_close_i = _header_index_matching(
+        headers,
+        "tot closing",
+        "total closing",
+        "tot close",
+        "total close",
+        "tot cl",
+    )
+    stock_val_i = _header_index_matching(
+        headers, "stock value", "stk value", "stk val", "stock val"
+    )
+    if tot_close_i is not None and 0 < tot_close_i < len(cells):
+        tot_raw = cells[tot_close_i]
+        prev_raw = cells[tot_close_i - 1]
+        stock_raw = (
+            cells[stock_val_i]
+            if stock_val_i is not None and 0 <= stock_val_i < len(cells)
+            else None
+        )
+        if _looks_money(
+            tot_raw, raw_text=str(tot_raw) if tot_raw is not None else None
+        ) and (
+            stock_val_i is None
+            or _cell_looks_empty_or_zero(stock_raw)
+        ):
+            prev_n = parse_number(prev_raw)
+            tot_n = parse_number(tot_raw)
+            if (
+                prev_n is not None
+                and tot_n is not None
+                and _looks_small_qty(prev_n)
+            ):
+                item["closing_qty"] = float(prev_n)
+                item["closing_value"] = float(tot_n)
+                fs["closing_qty"] = "printed"
+                fs["closing_value"] = "printed"
+                changed = True
+                logger.info(
+                    "VISION_TABLE TOT_QTY_VALUE_HEADER_SHIFT product=%s "
+                    "closing_qty=%s closing_value=%s",
+                    str(item.get("product_name") or "")[:60],
+                    item["closing_qty"],
+                    item["closing_value"],
+                )
+
+    if changed:
+        flags = list(extra.get("flags") or [])
+        if "TOT_QTY_VALUE_HEADER_SHIFT" not in flags:
+            flags.append("TOT_QTY_VALUE_HEADER_SHIFT")
+        extra["flags"] = flags
+    return changed
+
+
+def _apply_tot_qty_value_header_shift_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _repair_tot_qty_value_header_shift(item):
+            fixed += 1
+    if fixed:
+        logger.info(
+            "VISION_TABLE TOT_QTY_VALUE_HEADER_SHIFT_PASS fixed=%s",
+            fixed,
+        )
     return fixed
 
 
@@ -5196,6 +5388,7 @@ def _map_single_table(
             _repair_closing_money_parked_in_qty(item)
             _repair_closing_qty_parked_in_value(item)
             _repair_closing_pair_interchanged(item)
+            _repair_tot_qty_value_header_shift(item)
             _flag_qty_value_geometry_suspicion(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
@@ -5206,6 +5399,7 @@ def _map_single_table(
             _repair_closing_qty_parked_in_value(item)
             _repair_issue_value_left_shift(item)
             _repair_closing_pair_interchanged(item)
+            _repair_tot_qty_value_header_shift(item)
             line_items.append(item)
 
     if leading_banner_items:
@@ -5374,6 +5568,7 @@ def map_vision_table(
     _apply_closing_qty_parked_in_value_pass(all_items)
     _apply_issue_value_left_shift_pass(all_items)
     _apply_closing_pair_unswap_pass(all_items)
+    _apply_tot_qty_value_header_shift_pass(all_items)
 
     return {
         "line_items": all_items,
@@ -7140,6 +7335,7 @@ def run_vision_table_path(
         _apply_closing_qty_parked_in_value_pass(all_items)
         _apply_issue_value_left_shift_pass(all_items)
         _apply_closing_pair_unswap_pass(all_items)
+        _apply_tot_qty_value_header_shift_pass(all_items)
 
         result = _stamp_vision_result(
             filename=filename,
@@ -7481,6 +7677,7 @@ def run_vision_table_path(
         _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
         _apply_issue_value_left_shift_pass(result.get("line_items") or [])
         _apply_closing_pair_unswap_pass(result.get("line_items") or [])
+        _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
 
         classified = classify_result(result)
         result["totals"]["extra"]["row_status_counts"] = (

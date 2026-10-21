@@ -225,6 +225,23 @@ class TestGroupPagesByStockistPeriod(unittest.TestCase):
         self.assertEqual(len(groups), 2)
         self.assertEqual(groups[0]["stockist_key"] != groups[1]["stockist_key"], True)
 
+    def test_column_header_stockist_does_not_split_group(self):
+        page1 = _page_entry(1, period_from="2026-09-01", stockist="DROGARIA ANANTA")
+        page2 = _page_entry(2, period_from="2026-09-01", stockist="Pharmacy")
+        page2["rows"][0]["extra"]["vision_column_headers"] = [
+            "Product Name",
+            "Pack",
+            "Opening",
+            "Prev Sale",
+            "Pharmacy",
+            "Tot Sales",
+            "Tot Closing",
+            "Stock Value",
+        ]
+        groups = group_pages_by_stockist_period([page1, page2], request_id="t11")
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["page_numbers"], [1, 2])
+
 
 class TestExtractMultipagePeriodGrouping(unittest.TestCase):
     def test_same_month_pages_remain_one_statement(self):

@@ -468,6 +468,9 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     first = texts[0]
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I):
         return True
+    alpha = next((t for t in texts if re.search(r"[A-Za-z]", t)), "")
+    if re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I):
+        return True
     return False
 
 

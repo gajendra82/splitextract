@@ -721,7 +721,8 @@ def items_from_free_column_rows(
             continue
         item = built[0]
         name = str(item.get("product_name") or "").strip()
-        if not name or _TOTAL_LABEL.search(name):
+        if not name or _TOTAL_LABEL.search(name) or _is_total_row_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name or label)
             continue
         items.append(item)
     if len(items) < 3:
@@ -741,7 +742,7 @@ _ISSUE_LAYOUT = frozenset(
 )
 _HEADER_TOKEN = re.compile(
     r"(?i)^(product|pack|packing|opening|receipt|issue|i/?free|sales|amount|"
-    r"closing|division|qty|value|rate|stock)$"
+    r"closing|division|qty|value|rate|stock|name)$"
 )
 
 
@@ -880,7 +881,9 @@ def items_from_receipt_issue_pages(
     header_tops = []
     for line in lines:
         blob = " ".join(str(w.get("text") or "") for w in line["words"])
-        if re.search(r"\bOpening\b", blob) and re.search(r"\bProduct\b", blob):
+        if re.search(r"\bOpening\b", blob) and re.search(
+            r"\b(?:Product|Name)\b", blob
+        ):
             header_tops.append(float(line["top"]))
 
     anchors: List[Dict[str, Any]] = []
@@ -946,9 +949,14 @@ def items_from_receipt_issue_pages(
                     return number
             return None
 
-        if not re.search(r"[A-Za-z]", name):
+        if (
+            not re.search(r"[A-Za-z]", name)
+            or _is_total_row_name(name)
+            or _TOTAL_LABEL.search(name)
+        ):
             closing_total = _band_number("closing_value")
             sales_total = _band_number("sales_value")
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name)
             continue
         item = _empty_line_item()
         item["product_name"] = name
@@ -988,9 +996,147 @@ def _lms_qty_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
     if not _LMS_QTY_LAYOUT <= canons:
         return False
-    if canons & {"closing_value", "sales_value", "free_in_qty", "free_out_qty"}:
+    if canons & {"free_in_qty", "free_out_qty"}:
         return False
     return True
+
+
+def _lms_qty_value_guard_on() -> bool:
+    return os.getenv("STOCK_PDF_WORDS_LMS_QTY_VALUE_GUARD", "true").strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+    }
+
+
+def _lms_whole_qty(number: float) -> bool:
+    return number >= -0.001 and abs(number - int(number)) <= 0.001
+
+
+def _lms_money_token(number: float, text: str) -> bool:
+    raw = str(text or "").strip()
+    if re.search(r",\d{3}", raw):
+        return True
+    if abs(number - int(number)) > 0.001 and abs(number) >= 1.0:
+        return True
+    return abs(number) >= 500.0
+
+
+def _lms_rate_not_pack(text: str) -> bool:
+    """True when the token left of Opening is a unit rate (87.62 / 160), not 75GM."""
+    raw = str(text or "").strip()
+    if not raw or re.search(r"[A-Za-z]", raw):
+        return False
+    from services.stock_header_resolver import parse_number
+
+    number = parse_number(raw.replace(",", ""))
+    if number is None:
+        return False
+    return abs(number) >= 1.0
+
+
+def _lms_small_qty(number: float) -> bool:
+    return _lms_whole_qty(number) and 0 <= abs(number) < 500.0
+
+
+def _lms_band_x(bands: List[Dict[str, Any]], canon: str) -> Optional[float]:
+    for band in bands:
+        if str(band.get("canonical") or "") == canon:
+            return float(band["x_center"])
+    return None
+
+
+def _lms_rightmost_small(
+    side: List[Tuple[float, float]], left_x: float, right_x: float
+) -> Optional[float]:
+    cands = [
+        (x, n) for x, n in side if left_x < x < right_x and _lms_small_qty(n)
+    ]
+    if not cands:
+        return None
+    return max(cands, key=lambda item: item[0])[1]
+
+
+def _lms_steal_tot_from_ignore(
+    nums: Dict[str, float],
+    side: List[Tuple[float, float]],
+    bands: List[Dict[str, Any]],
+) -> None:
+    """Pharmacy / Cl-city sit left of Tot Sales / Tot Closing and eat the tot qty.
+
+    Re-slot the rightmost printed small qty in that ignore band onto the tot
+    column; money already on the tot column moves to the paired value field.
+    """
+    if not side or not _lms_qty_value_guard_on():
+        return
+    sales_x = _lms_band_x(bands, "sales_qty") or _lms_band_x(bands, "sales_value")
+    if sales_x is not None:
+        prev_xs = [
+            x
+            for x in (
+                _lms_band_x(bands, "purchase_qty"),
+                _lms_band_x(bands, "lms"),
+                _lms_band_x(bands, "opening_qty"),
+            )
+            if x is not None and x < sales_x
+        ]
+        prev_x = max(prev_xs) if prev_xs else 0.0
+        sq = nums.get("sales_qty")
+        sv = nums.get("sales_value")
+        sq_missing = sq is None or abs(float(sq)) < 0.001
+        sq_money = sq is not None and _lms_money_token(float(sq), str(sq))
+        sv_money = sv is not None and _lms_money_token(float(sv), str(sv))
+        if (sq_missing and sv_money) or sq_money:
+            stolen = _lms_rightmost_small(side, prev_x, sales_x)
+            if stolen is not None:
+                if sq_money and "sales_value" not in nums:
+                    nums["sales_value"] = float(sq)
+                nums["sales_qty"] = stolen
+                logger.info(
+                    "STOCK_PDF_WORDS_LMS_IGNORE_STEAL sales_qty=%s "
+                    "sales_value=%s",
+                    stolen,
+                    nums.get("sales_value"),
+                )
+    closing_x = _lms_band_x(bands, "closing_qty")
+    if closing_x is not None:
+        prev_xs = [
+            x
+            for x in (
+                _lms_band_x(bands, "sales_value"),
+                _lms_band_x(bands, "sales_qty"),
+            )
+            if x is not None and x < closing_x
+        ]
+        prev_x = max(prev_xs) if prev_xs else sales_x or 0.0
+        cq = nums.get("closing_qty")
+        cq_missing = cq is None
+        cq_money = cq is not None and _lms_money_token(float(cq), str(cq))
+        if cq_missing or cq_money:
+            stolen = _lms_rightmost_small(side, prev_x, closing_x)
+            if stolen is not None:
+                if cq_money and "closing_value" not in nums:
+                    nums["closing_value"] = float(cq)
+                nums["closing_qty"] = stolen
+                logger.info(
+                    "STOCK_PDF_WORDS_LMS_IGNORE_STEAL closing_qty=%s "
+                    "closing_value=%s",
+                    stolen,
+                    nums.get("closing_value"),
+                )
+
+
+_PACK_WORD = re.compile(r"(?i)^\d[\w.'/-]*[A-Za-z][\w.'/-]*$")
+
+
+def _lms_split_pack_from_name(name: str, pack: Optional[str]) -> Tuple[str, Optional[str]]:
+    if pack or not name:
+        return name, pack
+    parts = name.split()
+    if len(parts) >= 2 and _PACK_WORD.match(parts[-1]):
+        return " ".join(parts[:-1]), parts[-1]
+    return name, pack
 
 
 def items_from_lms_qty_rows(
@@ -1036,6 +1182,19 @@ def items_from_lms_qty_rows(
         return min(bands, key=lambda b: abs(float(b["x_center"]) - x))
 
     qty_canons = {"opening_qty", "purchase_qty", "sales_qty", "closing_qty", "lms"}
+    value_canons = {
+        "sales_value",
+        "closing_value",
+        "opening_value",
+        "purchase_value",
+        "rate",
+    }
+    qty_to_value = {
+        "sales_qty": "sales_value",
+        "closing_qty": "closing_value",
+        "opening_qty": "opening_value",
+        "purchase_qty": "purchase_value",
+    }
     items: List[Dict[str, Any]] = []
     sales_total: Optional[float] = None
     closing_total: Optional[float] = None
@@ -1060,6 +1219,7 @@ def items_from_lms_qty_rows(
             continue
         left: List[Tuple[float, str]] = []
         nums: Dict[str, float] = {}
+        side: List[Tuple[float, float]] = []
         for tok in tokens:
             text = str(tok.get("text") or "").strip()
             if tok.get("x") is None:
@@ -1069,27 +1229,72 @@ def items_from_lms_qty_rows(
                 left.append((xf, text))
                 continue
             canon = str(_nearest(xf).get("canonical") or "")
-            if canon not in qty_canons:
+            if canon not in qty_canons and canon not in value_canons:
+                if text not in _DASH_CELL:
+                    number = parse_number(text.replace(",", ""))
+                    if number is not None:
+                        side.append((xf, float(number)))
                 continue
             if text in _DASH_CELL:
-                nums[canon] = 0.0
+                if canon in qty_canons and canon not in nums:
+                    nums[canon] = 0.0
                 continue
             number = parse_number(text.replace(",", ""))
-            if number is not None:
+            if number is None:
+                continue
+            if canon in value_canons:
                 nums[canon] = number
+                continue
+            existing = nums.get(canon)
+            # Qty column: Sales Value / Stock Value sit right of Tot Sales /
+            # Tot Closing. Keep the first printed whole qty; later tokens are value.
+            if _lms_qty_value_guard_on() and (
+                existing is not None or _lms_money_token(number, text)
+            ):
+                if existing is None and _lms_whole_qty(number) and not re.search(
+                    r",\d{3}", str(text or "")
+                ):
+                    nums[canon] = number
+                    continue
+                paired = qty_to_value.get(canon)
+                if paired and paired not in nums:
+                    nums[paired] = number
+                    logger.info(
+                        "STOCK_PDF_WORDS_LMS_QTY_VALUE_GUARD canon=%s "
+                        "qty=%s value=%s",
+                        canon,
+                        existing,
+                        number,
+                    )
+                continue
+            nums[canon] = number
+        _lms_steal_tot_from_ignore(nums, side, bands)
         if "opening_qty" not in nums or not left:
             continue
         left.sort()
+        rate_from_pack = None
         if len(left) >= 2:
             pack = left[-1][1]
-            name = " ".join(part for _, part in left[:-1])
+            name_parts = left[:-1]
+            if _lms_qty_value_guard_on() and _lms_rate_not_pack(pack):
+                rate_from_pack = pack
+                if len(left) >= 3:
+                    pack = left[-2][1]
+                    name_parts = left[:-2]
+                else:
+                    pack = None
+            name = " ".join(part for _, part in name_parts)
         else:
             pack = None
             name = left[0][1]
         name = re.sub(r"\s+", " ", name).strip()
+        name, pack = _lms_split_pack_from_name(name, pack)
         if not re.search(r"[A-Za-z]{3,}", name):
             continue
         if re.search(r"(?i)^(sales\s+amount|stock\s+value|last\s+period)\b", name):
+            continue
+        if _is_total_row_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name)
             continue
         item = _empty_line_item()
         item["product_name"] = name
@@ -1097,9 +1302,16 @@ def items_from_lms_qty_rows(
         item["opening_qty"] = nums.get("opening_qty")
         item["receipts_qty"] = nums.get("purchase_qty")
         item["sales_qty"] = nums.get("sales_qty")
+        item["sales_value"] = nums.get("sales_value")
         item["closing_qty"] = nums.get("closing_qty")
+        item["closing_value"] = nums.get("closing_value")
         if "lms" in nums:
             item["extra"]["lms_qty"] = nums["lms"]
+        rate_n = nums.get("rate")
+        if rate_n is None and rate_from_pack is not None:
+            rate_n = parse_number(str(rate_from_pack).replace(",", ""))
+        if rate_n is not None:
+            item["extra"]["unit_rate"] = rate_n
         items.append(item)
     if len(items) < 3:
         return None
@@ -1383,7 +1595,12 @@ def items_from_open_rcvd_sold_pages(
         if items and name_bits and not nums:
             pending_parts.extend(name_bits)
     _finish()
-    items = [i for i in items if re.search(r"[A-Za-z]{3,}", str(i.get("product_name") or ""))]
+    items = [
+        i
+        for i in items
+        if re.search(r"[A-Za-z]{3,}", str(i.get("product_name") or ""))
+        and not _is_total_row_name(i.get("product_name"))
+    ]
     if len(items) < 3:
         return None
     summary = _value_summary_from_pages(page_results)

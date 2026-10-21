@@ -964,11 +964,36 @@ def normalize_page_period_yyyy_mm(page: Dict[str, Any]) -> Optional[str]:
     return _statement_month_key(page if isinstance(page, dict) else {})
 
 
+def _page_column_header_norms(page: Dict[str, Any]) -> set:
+    """Normalised Vision column headers on this page (empty when absent)."""
+    from services.stock_header_resolver import normalize_header
+
+    norms = set()
+    rows = []
+    if isinstance(page, dict):
+        rows = page.get("rows") or page.get("line_items") or []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        headers = extra.get("vision_column_headers") or []
+        if not isinstance(headers, (list, tuple)):
+            continue
+        for h in headers:
+            n = normalize_header(h)
+            if n:
+                norms.add(n)
+        if norms:
+            break
+    return norms
+
+
 def _page_stockist_group_key(page: Dict[str, Any]) -> str:
     from services.sales_statement_extractor import (
         _grouping_stockist_key,
         _is_statement_division_banner,
     )
+    from services.stock_header_resolver import normalize_header
 
     key = _grouping_stockist_key(page if isinstance(page, dict) else {})
     # Himalaya division banners are not stockist boundaries — continuation.
@@ -977,6 +1002,16 @@ def _page_stockist_group_key(page: Dict[str, Any]) -> str:
     raw_name = str((page or {}).get("stockist_name") or "")
     if raw_name and _is_statement_division_banner(raw_name):
         return ""
+    # Vision sometimes copies a branch/column header (Pharmacy, Tot Sales)
+    # into stockist_name. That is not a stockist boundary.
+    if key:
+        nk = normalize_header(key)
+        if nk and nk in _page_column_header_norms(page if isinstance(page, dict) else {}):
+            logger.info(
+                "MULTI_PAGE_STOCKIST_SKIP_COLUMN_HEADER stockist=%s",
+                key,
+            )
+            return ""
     return key
 
 

@@ -107,6 +107,12 @@ ALIASES: Dict[str, List[str]] = {
         "lst sl",
         "lst sale",
         "last sl",
+        # Printed "Prev Sale" / "Previous Sale" is last-month sale, not this period.
+        "prev sale",
+        "prev sales",
+        "prev. sale",
+        "previous sale",
+        "previous sales",
     ],
     # Descriptive / commercial columns that can sit before Opening in stock
     # statements. They must never claim movement qty semantics.
@@ -575,6 +581,28 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
 
     if _is_rate(norm) and not _has_value_marker(norm):
         return "rate", 0.95, "rate_alias"
+
+    # "Cl Panaji" / "Cl Mapusa" are branch closing splits, not statement closing.
+    # Keep real closing aliases (Cl Qty / Cl Stock / Cl Val).
+    cl_tokens = _tokens(norm)
+    if (
+        len(cl_tokens) == 2
+        and cl_tokens[0] == "cl"
+        and cl_tokens[1]
+        not in {
+            "qty",
+            "qoh",
+            "stock",
+            "stk",
+            "bal",
+            "balance",
+            "val",
+            "value",
+            "amt",
+            "q",
+        }
+    ):
+        return "non_stock_qty", 0.9, "branch_split_header"
 
     # Vision sometimes glues Sales+Close into one header; keep sales_qty and
     # recover Close from the following Order column in the Vision table path.
