@@ -133,6 +133,8 @@ ALIASES: Dict[str, List[str]] = {
         "tax",
         "gst",
         "hsn",
+        "dump",
+        "dump qty",
     ],
     "opening": [
         "op",
@@ -734,6 +736,77 @@ def _qty_value_sequence_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _adjacent_qty_value_pair_enabled() -> bool:
+    """Op.+Opening Bal / Receipt+Receipt/Pur / Closing+Closing Bala → qty|value.
+
+    Default ON. The right column of a same-group qty pair is that group's
+    value, not a DUPLICATE_CANONICAL ignore. Qty-only Receipt/Pur (no qty
+    column to the left) stays purchase_qty.
+    """
+    return os.getenv(
+        "STOCK_HEADER_ADJACENT_QTY_VALUE_PAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _promote_adjacent_same_group_qty_to_value(
+    prelim: List[Dict[str, Any]],
+) -> bool:
+    """When two consecutive columns share a movement group and both are qty.
+
+    Sales & Stock: Receipt | Receipt/Pur, Closing | Closing Bala, Op. | Opening Bal.
+    Promotes the right column to the group's value field. Never invents digits.
+    """
+    if not _adjacent_qty_value_pair_enabled() or len(prelim) < 2:
+        return False
+    changed = False
+    for i in range(1, len(prelim)):
+        left = prelim[i - 1]
+        right = prelim[i]
+        if not isinstance(left, dict) or not isinstance(right, dict):
+            continue
+        group = left.get("group")
+        if not group or group != right.get("group") or group not in _GROUP_TO_VALUE:
+            continue
+        qty_field = _GROUP_TO_QTY.get(group)
+        val_field = _GROUP_TO_VALUE.get(group)
+        if not qty_field or not val_field:
+            continue
+        if left.get("canonical") != qty_field:
+            continue
+        if right.get("canonical") != qty_field:
+            continue
+        if left.get("is_value") or right.get("is_value"):
+            continue
+        raw_right = str(right.get("header_text") or "")
+        norm_right = normalize_header(raw_right)
+        # Bare repeated Sales/Purchase (Group Wise) stay qty. Only pair
+        # headers (Receipt/Pur, Opening Bal, Closing Bala, Issue/Sales).
+        if (
+            "/" not in raw_right
+            and not re.search(r"(?i)\bbal", norm_right)
+            and not _has_value_marker(norm_right)
+        ):
+            continue
+        right["canonical"] = val_field
+        right["is_value"] = True
+        right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
+        right["reason"] = "adjacent_qty_value_pair"
+        logger.info(
+            "STOCK_HEADER_ADJACENT_QTY_VALUE_PAIR col=%s %r -> %s left=%s",
+            right.get("col_index"),
+            right.get("header_text"),
+            val_field,
+            left.get("header_text"),
+        )
+        changed = True
+    return changed
 
 
 def _qf_qty_sequence_enabled() -> bool:
@@ -1992,6 +2065,9 @@ def resolve_columns(
     _apply_group_wise_sales_sequence(prelim, errors)
     # LstSL|Open|Recd|Sales|Close: Close misread as Open. after Sales.
     _apply_lstsl_close_after_sales(prelim, errors)
+
+    # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
+    _promote_adjacent_same_group_qty_to_value(prelim)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

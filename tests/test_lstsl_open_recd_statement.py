@@ -92,6 +92,20 @@ class TestLstslOpenRecdStatement(unittest.TestCase):
             )
         )
 
+    def test_txt_close_qty_is_not_order_qty(self):
+        result = extract_sales_statement(SAMPLE.encode("utf-8"), "stmt.txt")
+        extra = (result.get("totals") or {}).get("extra") or {}
+        self.assertEqual(extra.get("extraction_method"), "lstsl_open_recd_sales")
+        rows = {item["product_name"]: item for item in result["line_items"]}
+        abana = rows["ABANA TAB"]
+        self.assertEqual(abana["opening_qty"], 89)
+        self.assertEqual(abana["sales_qty"], 22)
+        self.assertEqual(abana["closing_qty"], 167)
+        self.assertEqual(abana["extra"]["order_qty"], -167)
+        soap = rows["ACTARIL SOAP-75G"]
+        self.assertEqual(soap["closing_qty"], 30)
+        self.assertEqual(soap["extra"]["order_qty"], -30)
+
     def test_lstmove_stk_value_not_shifted_into_qty(self):
         result = _parse_lstsl_open_recd_statement(
             SAMPLE_LSTMOVE_STKVAL, "kiransept.pdf", "pdf"

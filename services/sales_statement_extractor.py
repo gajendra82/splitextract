@@ -6728,6 +6728,22 @@ def _text_stock_families():
             False,
         ),
         (
+            # Must beat pipe_opn_recd: Recd + Product would last-N park Order in closing_qty.
+            "lstsl_open_recd",
+            r"Product\s*Name",
+            r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close",
+            (
+                "last_sales_qty",
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "order_qty",
+                "pending_qty",
+            ),
+            False,
+        ),
+        (
             "pipe_opn_recd",
             r"\bPRODUCT\b",
             r"\bOPN\.|\bRECD\b",
@@ -7269,6 +7285,13 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         or (daily.get("multi_statement") and daily.get("statements"))
     ):
         return _finalize_statement_period_fields(daily, content_text=text)
+
+    # Product|Pack|LstSL|Open|Recd|Sales|Close|Order|Pend — Close is closing_qty.
+    lstsl = _parse_lstsl_open_recd_statement(
+        _strip_printer_controls(text), filename, "txt"
+    )
+    if lstsl and lstsl.get("line_items"):
+        return _finalize_statement_period_fields(lstsl, content_text=text)
 
     # OPENING / RECEIPT / ISSUE / CLOSING qty grid (STOCK & SALES ANALYSIS).
     # Must run before the Kaveri-only path so report periods in the title are kept.
