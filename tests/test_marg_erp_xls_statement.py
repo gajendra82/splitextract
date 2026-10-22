@@ -48,6 +48,69 @@ class TestMargErpHeaderDetect(unittest.TestCase):
         self.assertEqual(roles["replace_out_qty"], 8)
         self.assertNotIn("last_month_sale", roles)
 
+    def test_item_description_and_bare_sale_map_to_qty_not_rate(self):
+        rows = [
+            ["SANTOSH MEDICAL STORE"],
+            [
+                "ITEM DESCRIPTION",
+                "OPENING STOCK",
+                "PURCHASE QUANTITY",
+                "SALE RETURN QUANTITY",
+                "REPLACE+\nOTHERS",
+                "TOTAL RECEIVE",
+                "SALE QUANTITY",
+                "P/R QUANTITY",
+                "REPLACE+\nOTHERS",
+                "CLOSING STOCK",
+                "RATE",
+            ],
+            [
+                "PILEX TAB 60 S",
+                1405.0,
+                400.0,
+                0.0,
+                0.0,
+                1805.0,
+                286.0,
+                0.0,
+                0.0,
+                1519.0,
+                148.05,
+            ],
+            [
+                "TENTEX FORTE TAB 10 S",
+                251.0,
+                0.0,
+                0.0,
+                0.0,
+                251.0,
+                0.0,
+                0.0,
+                0.0,
+                251.0,
+                25.1,
+            ],
+        ]
+        found = _find_marg_erp_xls_header(rows)
+        self.assertIsNotNone(found)
+        result = _parse_marg_erp_xls(rows, "gasex.xls", ".xls", found)
+        pilex = next(
+            item for item in result["line_items"] if item["product_name"] == "PILEX TAB 60 S"
+        )
+        self.assertEqual(pilex["opening_qty"], 1405.0)
+        self.assertEqual(pilex["receipts_qty"], 400.0)
+        self.assertEqual(pilex["sales_qty"], 286.0)
+        self.assertEqual(pilex["closing_qty"], 1519.0)
+        self.assertEqual(pilex["extra"]["rate"], 148.05)
+        tentex = next(
+            item
+            for item in result["line_items"]
+            if "TENTEX FORTE" in item["product_name"].upper()
+        )
+        self.assertEqual(tentex["opening_qty"], 251.0)
+        self.assertEqual(tentex["closing_qty"], 251.0)
+        self.assertEqual(tentex["extra"]["rate"], 25.1)
+
     def test_legacy_item_op_header_not_detected_as_marg(self):
         rows = [
             ["Item", "Pack", "Op.", "Pur", "Sale", "Bal.", "BVal", "SVal"],

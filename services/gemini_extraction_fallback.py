@@ -934,6 +934,19 @@ def maybe_apply_gemini_fallback(
         )
         return result
 
+    # Spreadsheets are cell-addressable. Never render them as a JPEG for Gemini
+    # (RATE / free / return columns get shifted into closing_qty).
+    if (ext or "").lower() in {".xls", ".xlsx", ".xlsm"}:
+        _stamp(result, quality, "unavailable_spreadsheet")
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=spreadsheet",
+            filename,
+        )
+        _log_fallback_decision_current(
+            filename, "spreadsheet", "UNAVAILABLE", parser, result=result
+        )
+        return result
+
     if get_gemini_calls(result) >= gemini_call_budget(result):
         bag = result.setdefault("totals", {}).setdefault("extra", {})
         if isinstance(bag, dict):
