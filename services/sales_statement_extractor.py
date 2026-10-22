@@ -24484,6 +24484,82 @@ def _ssa_ori_number(token: str) -> float:
     return _to_float(raw)
 
 
+def _ssa_ori_qty_value_tail_enabled() -> bool:
+    """STOCK_SSA_ORI_QTY_VALUE_TAIL — drop an extra unlabeled column after DUMP.
+
+    Default ON. Native SSA prints QTY without a decimal and VALUE with one
+    (including 0.00). An extra days/M.EXP token after DUMP QTY shifts last-9
+    so VALUE lands in opening_qty/closing_qty. Flag false restores last-9.
+    """
+    return os.getenv("STOCK_SSA_ORI_QTY_VALUE_TAIL", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_ori_token_is_qty(token: str) -> bool:
+    """QTY cell: blank dash or a whole count. Printed qty has no decimal point."""
+    raw = str(token or "").strip()
+    if raw in {"", "-", "—", "–", "--"}:
+        return True
+    return bool(re.fullmatch(r"-?\d+", raw))
+
+
+def _ssa_ori_token_is_value(token: str) -> bool:
+    """VALUE cell: rupees printed with a decimal (paisa or .00), never a dash."""
+    raw = str(token or "").strip()
+    if raw in {"", "-", "—", "–", "--"}:
+        return False
+    return bool(re.fullmatch(r"-?\d+\.\d+", raw))
+
+
+def _ssa_ori_is_qty_value_dump_tail(tail: Sequence[str]) -> bool:
+    """True when 9 tokens are QTY,VALUE × 4 then DUMP QTY."""
+    if len(tail) != 9:
+        return False
+    for i, tok in enumerate(tail):
+        if i % 2 == 1:
+            if not _ssa_ori_token_is_value(tok):
+                return False
+        elif not _ssa_ori_token_is_qty(tok):
+            return False
+    return True
+
+
+def _ssa_ori_select_qty_value_tail(
+    tokens: Sequence[str],
+) -> Optional[Tuple[List[str], int]]:
+    """Return (9 Opening..DUMP tokens, how many trailing tokens they consumed).
+
+    Native SSA: OPENING/RECEIPT/ISSUE/CLOSING each QTY+VALUE, then DUMP QTY.
+    Some sheets print an extra unlabeled column after DUMP. When last-9 starts
+    on a VALUE cell and last-10 pairs as qty/value, drop that extra. Never
+    invents a digit — only re-windows printed tokens.
+    """
+    if len(tokens) < 9:
+        return None
+    tail9 = [str(t) for t in tokens[-9:]]
+    if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail9):
+        return None
+    if not _ssa_ori_qty_value_tail_enabled():
+        return tail9, 9
+    if _ssa_ori_is_qty_value_dump_tail(tail9):
+        return tail9, 9
+    if len(tokens) >= 10:
+        tail10 = [str(t) for t in tokens[-10:]]
+        if all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail10):
+            candidate = tail10[:9]
+            if _ssa_ori_is_qty_value_dump_tail(candidate):
+                logger.info(
+                    "STOCK_SSA_ORI_QTY_VALUE_TAIL dropped extra col token=%r",
+                    tail10[-1],
+                )
+                return candidate, 10
+    return tail9, 9
+
+
 def _ssa_ori_split_pack(name: str) -> Tuple[str, Optional[str]]:
     parts = _clean_name(name).split()
     if len(parts) >= 2 and parts[-1].upper() in {"ML", "GM", "GMS"} and re.fullmatch(
@@ -24634,10 +24710,11 @@ def _parse_ssa_opening_receipt_issue_value(
             ):
                 result["company_name"] = _clean_name(stripped)
             continue
-        tail = tokens[-9:]
-        if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail):
+        selected = _ssa_ori_select_qty_value_tail(tokens)
+        if not selected:
             continue
-        name = " ".join(tokens[:-9]).strip()
+        tail, drop_n = selected
+        name = " ".join(tokens[:-drop_n]).strip()
         if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
             continue
         name, pack = _ssa_ori_split_pack(name)
@@ -24807,10 +24884,11 @@ def _parse_ssa_mexp_stock_sales(
             ):
                 result["company_name"] = _clean_name(stripped)
             continue
-        tail = tokens[-9:]
-        if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail):
+        selected = _ssa_ori_select_qty_value_tail(tokens)
+        if not selected:
             continue
-        name = " ".join(tokens[:-9]).strip()
+        tail, drop_n = selected
+        name = " ".join(tokens[:-drop_n]).strip()
         if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
             continue
         name, pack = _ssa_ori_split_pack(name)
