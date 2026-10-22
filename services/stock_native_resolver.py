@@ -1757,6 +1757,57 @@ def parse_grouped_qty_value_pdf(
     return result
 
 
+def _items_from_resolved_word_columns(
+    page_results: List[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """Use header-resolved word columns when the specialised word builders miss.
+
+    Requires opening, purchase, sales, sales return, and closing together so a
+    partial header does not replace a later parser.
+    """
+    from services.stock_native_tables import resolver_ready
+
+    needed = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "sales_return_qty",
+        "closing_qty",
+        "closing_value",
+    }
+    ready_pages = []
+    for page in page_results or []:
+        ready = resolver_ready(page.get("header_cells") or [])
+        if not ready.get("resolved"):
+            continue
+        canons = {
+            str(c.get("canonical") or "") for c in (ready.get("columns") or [])
+        }
+        if needed <= canons:
+            ready_pages.append(page)
+    if not ready_pages:
+        return None
+    items = build_items_from_pdf_page_results(ready_pages)
+    kept: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if not name or _is_total_row_name(name):
+            continue
+        if name.startswith("[") or re.search(
+            r"software by|end of report|stock qt|total amount|total quantity",
+            name,
+            re.I,
+        ):
+            continue
+        kept.append(item)
+    if len(kept) < 3:
+        return None
+    logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s", len(kept))
+    return {"line_items": kept, "prefer_letterhead_stockist": True}
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -1792,6 +1843,10 @@ def parse_pdf_free_column_statement(
             if not parsed or not parsed.get("line_items"):
                 parsed = items_from_open_rcvd_sold_pages(
                     pdf, built.get("page_results") or []
+                )
+            if not parsed or not parsed.get("line_items"):
+                parsed = _items_from_resolved_word_columns(
+                    built.get("page_results") or []
                 )
             if (
                 parsed
@@ -1831,6 +1886,20 @@ def parse_pdf_free_column_statement(
             result["company_name"] = first
     if company:
         result["company_name"] = company.group(1).strip()
+    if parsed.get("prefer_letterhead_stockist") and not result.get("stockist_name"):
+        for line in peek.splitlines():
+            stripped = line.strip()
+            if not stripped or re.search(r"\d{2,}", stripped):
+                continue
+            if re.search(
+                r"stock\s+statement|company\s*:|item type|product name|page\s*:",
+                stripped,
+                re.I,
+            ):
+                continue
+            if re.search(r"[A-Za-z]{3,}", stripped):
+                result["stockist_name"] = stripped
+                break
     period = re.search(
         r"(?:From|Duration)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
         r"(?:To|to)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",

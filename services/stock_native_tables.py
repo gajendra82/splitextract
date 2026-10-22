@@ -284,6 +284,11 @@ _QUALIFIER_WORDS = frozenset(
         "value",
         "val",
         "quantity",
+        # Second line under Opening/Purchase/Sale/Total/Closing:
+        # Stock, Quantity, Return, Receipt, Cost, Value.
+        "return",
+        "receipt",
+        "cost",
     }
 )
 

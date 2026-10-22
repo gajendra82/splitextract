@@ -94,6 +94,8 @@ ALIASES: Dict[str, List[str]] = {
         "unit rate",
         "sales rate",
         "price",
+        "purchase cost",
+        "stock cost",
     ],
     # Last-month-sale (LMS) is its own column — never opening/receipts.
     "lms": [
@@ -348,6 +350,8 @@ ALIASES: Dict[str, List[str]] = {
         "tot in",
         "tot in qty",
         "in qty",
+        "total receipt",
+        "total receipts",
         "op+rec",
         "op + rec",
         "op rec",
@@ -643,10 +647,12 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         ):
             continue
         # "Total Sold" / "Total Rcvd" is a movement subtotal, not stock total.
+        # "Total Receipt" is opening + purchase (available stock), not a second purchase.
         if group == "total" and any(
             k in compact_norm for k in ("sold", "sale", "rcvd", "receipt", "recv")
         ):
-            continue
+            if norm not in {"total receipt", "total receipts"}:
+                continue
         # Short "op" must not beat a multi-token total alias like "op rec".
         if group == "opening" and alias in {"op", "opn"} and len(tokens) > 1:
             continue
