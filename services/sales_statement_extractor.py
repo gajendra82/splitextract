@@ -2317,6 +2317,20 @@ def _parse_swil_stacked_opbal_expiry_near_statement(
 # stacked parser (that path turns Packing into product_name).
 # ---------------------------------------------------------------------------
 
+def _swil_tax_pack_msr_enabled() -> bool:
+    """Claim Tax Rate + PACKING + Closing + MSR sheets that omit Dump/Near.
+
+    Flag default OFF. ON uses the existing word-x-centre Swil builder so
+    MSR Price is not treated as Dump/Closing by last-N qty slicing.
+    """
+    return os.getenv("STOCK_SWIL_TAX_PACK_MSR", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_swil_tax_pack_dump_near_text(text: str) -> bool:
     """SwilERP Sales & Stock with Tax Rate, Packing, and Closing/Dump/Near."""
     if not text:
@@ -2332,14 +2346,25 @@ def _is_swil_tax_pack_dump_near_text(text: str) -> bool:
         and re.search(r"\bClosing\b", header, re.I)
     ):
         return False
-    if not re.search(r"Closing.{0,40}\bDump\b", header, re.I | re.S):
-        return False
-    if not re.search(r"\bNear\b", header, re.I):
-        return False
-    # Tax Rate / Shelf Tax distinguishes this from plain Dump OpBal sheets.
-    return bool(
-        re.search(r"Tax\s*Rate|Shelf\s*Tax|\bPACKING\b", header, re.I)
+    has_tax = bool(re.search(r"Tax\s*Rate|Shelf\s*Tax", header, re.I))
+    has_pack = bool(re.search(r"\bPACKING\b", header, re.I))
+    has_dump_near = bool(
+        re.search(r"Closing.{0,40}\bDump\b", header, re.I | re.S)
+        and re.search(r"\bNear\b", header, re.I)
     )
+    # Tax Rate / Shelf Tax / PACKING distinguishes Dump OpBal from qty-only.
+    if has_dump_near and (has_tax or has_pack):
+        return True
+    # Same word-x-centre builder: Tax + PACKING + MSR, Dump/Near not printed.
+    if (
+        _swil_tax_pack_msr_enabled()
+        and has_tax
+        and has_pack
+        and re.search(r"\bMSR\b", header, re.I)
+    ):
+        logger.info("SWIL_TAX_PACK_MSR decision=claim dump_near=0")
+        return True
+    return False
 
 
 def _swil_tax_pack_dump_near_centers(words: List) -> Optional[Dict[str, float]]:
@@ -2591,6 +2616,10 @@ def _parse_swil_tax_pack_dump_near_pdf(
                     extra["dump_qty"] = _num("dump_qty")
                 if cells.get("near_expiry_qty"):
                     extra["near_expiry_qty"] = _num("near_expiry_qty")
+                if cells.get("msr_price"):
+                    extra["msr_price"] = _num("msr_price")
+                if cells.get("tax_rate"):
+                    extra["tax_rate"] = _num("tax_rate")
             items.append(item)
 
     if len(items) < 3:
@@ -2600,6 +2629,16 @@ def _parse_swil_tax_pack_dump_near_pdf(
     result["totals"]["extra"]["statement_count"] = 1
     result["totals"]["sales_value"] = None
     result["totals"]["closing_value"] = None
+    has_dump = any(
+        isinstance((i or {}).get("extra"), dict) and "dump_qty" in i["extra"]
+        for i in items
+    )
+    if not has_dump:
+        logger.info(
+            "SWIL_TAX_PACK_MSR file=%s items=%s dump_near=0",
+            filename,
+            len(items),
+        )
     return result
 
 
