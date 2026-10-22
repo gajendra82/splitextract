@@ -1151,6 +1151,12 @@ def build_table_prompt() -> str:
         "STOCK & SALES ANALYSIS / qty+value grids: emit TWO header rows — "
         "parent bands OPENING, RECEIPT/RECEIPTS, ISSUE/SALES, CLOSING (and "
         "DUMP if printed) on row 1, and QTY/VALUE sub-headers on row 2. "
+        "When RATE sits between ITEM DESCRIPTION and OPENING: cells are "
+        "ITEM, RATE, OPENING QTY, OPENING VALUE, RECEIPT QTY, RECEIPT VALUE, "
+        "ISSUE QTY, ISSUE VALUE, CLOSING QTY, CLOSING VALUE, then DUMP QTY "
+        "if printed. Never skip OPENING QTY after RATE — a small integer "
+        "after the rate is opening quantity, not a value. Never emit 0 for "
+        "a visible qty digit (unread/empty is null). DUMP is not closing. "
         "STOCK & SALES ANALYSIS purchase grids (ITEM DESCRIPTION | OPENING STOCK | "
         "PURCHASES | SALE RETURN | REPL./OTHERS | TOTAL STOCK | SALES | "
         "PURCHASE RETURN | REPL./OTHERS | CLOSING STOCK | RE-ORDER | AVG N/EXP): "
@@ -1188,7 +1194,8 @@ def build_table_prompt() -> str:
         "closing_qty, Order/Pend/LstMove to ignore/order, Stk.Value to "
         "closing_value (not opening_value). Footer lines labeled "
         "'Last Month Sales', 'Open. Value', 'Receipt Value', 'Sales Value', "
-        "'Closing Value' are totals — set is_total_row=true, never product rows. "
+        "'Closing Value', 'TOTAL', 'Total:', 'Amount:', or 'Total Value (...)' "
+        "are totals — set is_total_row=true, never product rows. "
         "Emit every printed product row top-to-bottom before TOTAL. "
         "Saleable Stock Report (Particular|Packing|Opn|Rec|Issue|Bal): put "
         "Opn/Rec/Issue/Bal (or Opening/Receipt/Issue/Balance) as the header "
@@ -3139,6 +3146,13 @@ def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
             return False
     if fs.get("opening_qty") != "printed":
         return False
+    # Qty+value grids (Issue/Sales Value printed) are not pack-shifted ORIC.
+    # Full sell-through (open=issue, close=0) must not steal issue into closing.
+    if fs.get("sales_value") == "printed" and _looks_money(
+        item.get("sales_value"),
+        raw_text=str(item.get("sales_value") or ""),
+    ):
+        return False
     # Need the middle+right numbers that were parked in receipt/sales.
     if fs.get("purchase_qty") != "printed" or fs.get("sales_qty") != "printed":
         return False
@@ -3292,6 +3306,373 @@ def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
         item.get("sales_value"),
         item.get("closing_qty"),
         item.get("closing_value"),
+    )
+    return True
+
+
+def _rate_parked_in_opening_enabled() -> bool:
+    """RATE cell empty, unit rate parked in OPENING — default ON.
+
+    STOCK & SALES ANALYSIS: ITEM|RATE|OPENING QTY/VALUE|RECEIPT|ISSUE|CLOSING.
+    Vision often leaves RATE null and puts 133.99 / 79.24 in opening_qty.
+    Re-slot printed cells only. Never invents a digit.
+    """
+    return os.getenv(
+        "STOCK_VISION_RATE_IN_OPENING_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _vision_cell_is_empty(val: Any) -> bool:
+    if val is None:
+        return True
+    s = str(val).strip()
+    return s == "" or s in {"-", "—", "–", "None", "null"}
+
+
+def _vision_cell_is_zero(val: Any) -> bool:
+    try:
+        return abs(float(str(val).replace(",", "").strip())) < 0.001
+    except (TypeError, ValueError):
+        return False
+
+
+def _pair_qty_value_tokens(
+    tokens: Sequence[Any],
+) -> List[Tuple[Optional[float], Optional[float]]]:
+    """Walk remaining RATE-row numbers into (qty, value) pairs. No invented digits."""
+    pairs: List[Tuple[Optional[float], Optional[float]]] = []
+    i = 0
+    while i < len(tokens) and len(pairs) < 4:
+        a = tokens[i]
+        b = tokens[i + 1] if i + 1 < len(tokens) else None
+        a_qty = _looks_small_qty(a) or _vision_cell_is_zero(a)
+        b_is_value = False
+        if b is not None:
+            if _looks_money(b, raw_text=str(b)):
+                b_is_value = True
+            elif a_qty and _vision_cell_is_zero(b):
+                b_is_value = True
+        if a_qty and b_is_value:
+            pairs.append((parse_number(a), parse_number(b)))
+            i += 2
+        else:
+            pairs.append((parse_number(a), None))
+            i += 1
+    return pairs
+
+
+def _repair_rate_parked_in_opening_qty(item: Dict[str, Any]) -> bool:
+    """Move a unit rate that landed in OPENING back to RATE.
+
+    When the RATE cell is blank, Vision assigns the rate (paisa money) to
+    opening_qty and slides the qty/value pairs. TOTAL rows keep integer
+    opening qty (64) and are not touched.
+    """
+    if not _rate_parked_in_opening_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)):
+        return False
+    if not any(re.search(r"(?i)\bRATE\b", str(h or "")) for h in headers):
+        return False
+    rate_now = extra.get("unit_rate")
+    try:
+        if rate_now not in (None, "") and abs(float(rate_now)) > 0.001:
+            return False
+    except (TypeError, ValueError):
+        return False
+    cells = extra.get("vision_raw_cells")
+    if not isinstance(cells, (list, tuple)) or len(cells) < 8:
+        return False
+    if not _vision_cell_is_empty(cells[1]):
+        return False
+    parked = cells[2]
+    if _vision_cell_is_empty(parked):
+        return False
+    if not _looks_money(parked, raw_text=str(parked)):
+        return False
+    rate = parse_number(parked)
+    if rate is None:
+        return False
+    body = [c for c in list(cells[3:]) if not _vision_cell_is_empty(c)]
+    pairs = _pair_qty_value_tokens(body)
+    if not pairs:
+        return False
+    keys = (
+        ("opening_qty", "opening_value"),
+        ("receipts_qty", "receipts_value"),
+        ("sales_qty", "sales_value"),
+        ("closing_qty", "closing_value"),
+    )
+    extra["unit_rate"] = float(rate)
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["rate"] = "printed"
+    for idx, (qty_key, val_key) in enumerate(keys):
+        qty, val = pairs[idx] if idx < len(pairs) else (None, None)
+        item[qty_key] = None if qty is None else float(qty)
+        if val_key == "opening_value":
+            extra["opening_value"] = None if val is None else float(val)
+            item["opening_value"] = extra["opening_value"]
+        elif val_key == "receipts_value":
+            extra["receipts_value"] = None if val is None else float(val)
+            extra["purchase_value"] = extra["receipts_value"]
+            item["receipts_value"] = extra["receipts_value"]
+        else:
+            item[val_key] = None if val is None else float(val)
+        if isinstance(fs, dict):
+            fs[qty_key] = "printed" if qty is not None else "missing"
+            fs_val = (
+                "purchase_value" if val_key == "receipts_value" else val_key
+            )
+            fs[fs_val] = "printed" if val is not None else "missing"
+            if val_key == "receipts_value":
+                fs["receipts_value"] = fs[fs_val]
+    flags = list(extra.get("flags") or [])
+    if "RATE_PARKED_IN_OPENING" not in flags:
+        flags.append("RATE_PARKED_IN_OPENING")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE RATE_PARKED_IN_OPENING product=%s rate=%s "
+        "opening_qty=%s opening_value=%s receipts_qty=%s sales_qty=%s "
+        "closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        rate,
+        item.get("opening_qty"),
+        extra.get("opening_value"),
+        item.get("receipts_qty"),
+        item.get("sales_qty"),
+        item.get("closing_qty"),
+        item.get("closing_value"),
+    )
+    return True
+
+
+def _repair_rate_taken_as_opening_qty(item: Dict[str, Any]) -> bool:
+    """Rate landed in opening_qty; the next whole number is the real opening.
+
+    Printed: rate | open | [blank rec] | sales | close.
+    Vision: opening=rate, purchase=open, sales, closing.
+    Re-slot only when current identity fails and purchase − sales = closing.
+    Never invents a digit. Flag: STOCK_VISION_RATE_IN_OPENING_REPAIR.
+    """
+    if not _rate_parked_in_opening_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    try:
+        rate_now = extra.get("unit_rate")
+        if rate_now not in (None, "") and abs(float(rate_now)) > 0.001:
+            return False
+    except (TypeError, ValueError):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty")
+    sq = _printed_float(item, "sales_qty")
+    cq = _printed_float(item, "closing_qty")
+    if oq is None or rq is None or sq is None or cq is None:
+        return False
+    if abs((oq + rq - sq) - cq) <= 0.51:
+        return False
+    if not _is_whole_qty(rq) or not _is_whole_qty(sq) or not _is_whole_qty(cq):
+        return False
+    if abs((rq - sq) - cq) > 0.51:
+        return False
+    headers = extra.get("vision_column_headers") or []
+    has_rate_header = isinstance(headers, (list, tuple)) and any(
+        re.search(r"(?i)\bRATE\b", str(h or "")) for h in headers
+    )
+    max_move = max(abs(rq), abs(sq), abs(cq), 1.0)
+    looks_like_rate = (
+        _has_paisa(oq)
+        or has_rate_header
+        or (oq >= 50.0 and oq > 2.0 * max_move)
+    )
+    if not looks_like_rate:
+        return False
+    logger.info(
+        "VISION_TABLE RATE_TAKEN_AS_OPENING product=%s rate=%s "
+        "opening_qty=%s receipts_qty=0 sales_qty=%s closing_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        oq,
+        rq,
+        sq,
+        cq,
+    )
+    extra["unit_rate"] = float(oq)
+    item["opening_qty"] = float(rq)
+    item["receipts_qty"] = 0.0
+    fs["rate"] = "printed"
+    fs["opening_qty"] = "printed"
+    fs["purchase_qty"] = "missing"
+    fs["receipts_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "RATE_TAKEN_AS_OPENING" not in flags:
+        flags.append("RATE_TAKEN_AS_OPENING")
+    extra["flags"] = flags
+    return True
+
+
+def _repair_paisa_parked_in_qty_fields(item: Dict[str, Any]) -> bool:
+    """When two or more qty slots hold rupees, move them to value/rate.
+
+    Does not invent the missing qty — those fields become missing.
+    Reuses STOCK_VISION_CLOSING_MONEY_IN_QTY_REPAIR.
+    """
+    if not _closing_money_in_qty_repair_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty")
+    sq = _printed_float(item, "sales_qty")
+    cq = _printed_float(item, "closing_qty")
+    money_open = _has_paisa(oq)
+    money_rec = _has_paisa(rq)
+    money_sale = _has_paisa(sq)
+    money_close = _has_paisa(cq)
+    money_n = sum(bool(x) for x in (money_open, money_rec, money_sale, money_close))
+    if money_n < 2:
+        return False
+    moved = False
+    if money_open and oq is not None:
+        if oq < 500.0:
+            extra["unit_rate"] = float(oq)
+            fs["rate"] = "printed"
+        else:
+            extra["opening_value"] = float(oq)
+            item["opening_value"] = float(oq)
+            fs["opening_value"] = "printed"
+        item["opening_qty"] = None
+        fs["opening_qty"] = "missing"
+        moved = True
+    if money_rec and rq is not None:
+        extra["purchase_value"] = float(rq)
+        extra["receipts_value"] = float(rq)
+        item["receipts_value"] = float(rq)
+        item["receipts_qty"] = None
+        fs["purchase_value"] = "printed"
+        fs["receipts_value"] = "printed"
+        fs["purchase_qty"] = "missing"
+        fs["receipts_qty"] = "missing"
+        moved = True
+    if money_sale and sq is not None:
+        item["sales_value"] = float(sq)
+        item["sales_qty"] = None
+        fs["sales_value"] = "printed"
+        fs["sales_qty"] = "missing"
+        moved = True
+    if money_close and cq is not None:
+        item["closing_value"] = float(cq)
+        item["closing_qty"] = None
+        fs["closing_value"] = "printed"
+        fs["closing_qty"] = "missing"
+        moved = True
+    if not moved:
+        return False
+    flags = list(extra.get("flags") or [])
+    if "PAISA_PARKED_IN_QTY" not in flags:
+        flags.append("PAISA_PARKED_IN_QTY")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PAISA_PARKED_IN_QTY product=%s rate=%s "
+        "opening_qty=missing closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        extra.get("unit_rate"),
+        item.get("closing_value"),
+    )
+    return True
+
+
+def _rate_truncated_zero_enabled() -> bool:
+    """Unread OPENING/CLOSING after RATE peel emitted 0 — default ON."""
+    return os.getenv(
+        "STOCK_VISION_RATE_TRUNCATED_ZERO", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _qty_is_blank_zero(val: Any) -> bool:
+    if val is None or val == "":
+        return True
+    try:
+        return abs(float(str(val).replace(",", "").strip())) < 0.001
+    except (TypeError, ValueError):
+        return False
+
+
+def _repair_rate_truncated_zero_row(item: Dict[str, Any]) -> bool:
+    """RATE grid: opening VALUE printed but every qty cell is 0 → unread.
+
+    Vision often emits 0 for unread OPENING/ISSUE/CLOSING after peeling RATE,
+    which makes identity 0=0 and skips reread. Mark those qty cells missing
+    so reconciliation recovery re-reads the printed digits. Never invents a qty.
+    """
+    if not _rate_truncated_zero_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)):
+        return False
+    if not any(re.search(r"(?i)\bRATE\b", str(h or "")) for h in headers):
+        return False
+    try:
+        rate = extra.get("unit_rate")
+        if rate in (None, "") or abs(float(rate)) < 0.001:
+            return False
+    except (TypeError, ValueError):
+        return False
+    ov = extra.get("opening_value")
+    if ov is None:
+        ov = item.get("opening_value")
+    try:
+        ov_f = float(ov) if ov not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        ov_f = 0.0
+    if ov_f < 1.0:
+        return False
+    if not _qty_is_blank_zero(item.get("opening_qty")):
+        return False
+    if not _qty_is_blank_zero(item.get("receipts_qty")):
+        return False
+    if not _qty_is_blank_zero(item.get("sales_qty")):
+        return False
+    if not _qty_is_blank_zero(item.get("closing_qty")):
+        return False
+    fs = extra.setdefault("field_source", {})
+    item["opening_qty"] = None
+    item["closing_qty"] = None
+    if isinstance(fs, dict):
+        fs["opening_qty"] = "missing"
+        fs["closing_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "RATE_TRUNCATED_ZERO_ROW" not in flags:
+        flags.append("RATE_TRUNCATED_ZERO_ROW")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE RATE_TRUNCATED_ZERO_ROW product=%s rate=%s "
+        "opening_value=%s",
+        str(item.get("product_name") or "")[:60],
+        rate,
+        ov_f,
     )
     return True
 
@@ -4515,7 +4896,7 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
 # LstSL / Open / Recd footer money labels — never SKUs.
 _LSTSL_FOOTER_LABEL_NAME = re.compile(
     r"(?ix)^\s*(?:"
-    r"last\s*month\s*sales|"
+        r"last\s*month\s*sales?|"
     r"receipt\s*value|"
     r"sales\s*value|"
     r"closing\s*value|"
@@ -4523,6 +4904,25 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
     r"opening\s*value|"
     r"order\s*value"
     r")\b"
+)
+
+# Printed TOTAL / GRAND TOTAL footer, including "TOTAL (Value IN Rs.)",
+# "Total:", and category "Total Value (GEL)" rows.
+# Does not match product names that merely start with Total (e.g. TOTAL CARE).
+_VISION_TOTAL_ROW_NAME = re.compile(
+    r"(?ix)^\s*(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
+    r"(?:[:.\-–—]*)\s*"
+    r"(?:"
+    r"\(.*\)"
+    r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
+    r")?"
+    r"\s*$"
+)
+
+# Datewise / PROMPT footer labels printed as their own row: "Amount:" / "Bills:".
+_VISION_FOOTER_LABEL_NAME = re.compile(
+    r"(?ix)^\s*(?:amounts?|amts?|bills?|bill\s*nos?|"
+    r"quantity|qty|values?)\s*[:.\-–—]*\s*$"
 )
 
 # Company / stockist letterhead when the row has no real movement quantities.
@@ -4543,6 +4943,30 @@ def _is_lstsl_footer_label_name(name: str) -> bool:
     return bool(_LSTSL_FOOTER_LABEL_NAME.search(str(name or "").strip()))
 
 
+def _is_vision_total_row_name(name: Any) -> bool:
+    """True for TOTAL / GRAND TOTAL / Amount: footer labels, not product SKUs."""
+    text = str(name or "").strip()
+    return bool(
+        _VISION_TOTAL_ROW_NAME.match(text) or _VISION_FOOTER_LABEL_NAME.match(text)
+    )
+
+
+def _peel_vision_total_named_items(
+    items: Optional[Sequence[Dict[str, Any]]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Split TOTAL footer rows out of a product list."""
+    products: List[Dict[str, Any]] = []
+    totals: List[Dict[str, Any]] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        if _is_vision_total_row_name(item.get("product_name")):
+            totals.append(item)
+        else:
+            products.append(item)
+    return products, totals
+
+
 def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
     """True for letterhead/address/period/section-banner rows, not products."""
     if not isinstance(item, dict):
@@ -4555,6 +4979,8 @@ def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
     if _ALWAYS_NON_PRODUCT_NAME.search(name):
         return True
     if _is_lstsl_footer_label_name(name):
+        return True
+    if _is_vision_total_row_name(name):
         return True
 
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -5363,8 +5789,10 @@ def _map_single_table(
                 item.setdefault("extra", {})["y_center"] = float(row.get("y_center"))
             except (TypeError, ValueError):
                 pass
-        if row.get("is_total_row") or _is_lstsl_footer_label_name(
-            str(item.get("product_name") or "")
+        if (
+            row.get("is_total_row")
+            or _is_lstsl_footer_label_name(str(item.get("product_name") or ""))
+            or _is_vision_total_row_name(item.get("product_name"))
         ):
             totals_rows.append(item)
         else:
@@ -5378,6 +5806,9 @@ def _map_single_table(
                 continue
             seen_product_row = True
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
+            _repair_rate_parked_in_opening_qty(item)
+            _repair_rate_taken_as_opening_qty(item)
+            _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)
@@ -5400,7 +5831,20 @@ def _map_single_table(
             _repair_issue_value_left_shift(item)
             _repair_closing_pair_interchanged(item)
             _repair_tot_qty_value_header_shift(item)
+            # After derive: unread RATE-row zeros must not stay as printed 0
+            # (identity 0=0 skips reread). Closing column is printed, so derive
+            # would refill 0 if this ran earlier.
+            _repair_rate_truncated_zero_row(item)
             line_items.append(item)
+
+    line_items, peeled_totals = _peel_vision_total_named_items(line_items)
+    if peeled_totals:
+        totals_rows.extend(peeled_totals)
+        logger.info(
+            "VISION_TABLE TOTAL_ROW_NAME peeled=%s names=%s",
+            len(peeled_totals),
+            [str(i.get("product_name") or "")[:48] for i in peeled_totals],
+        )
 
     if leading_banner_items:
         _repair_leading_banner_qty_shift(leading_banner_items, line_items)
@@ -6342,6 +6786,9 @@ def build_reread_prompt(flagged: List[Dict[str, Any]]) -> str:
         "You are re-reading specific rows from a pharmaceutical stock statement. "
         "These rows may have misread digits. Read every digit of every cell again "
         "from the image. Do not calculate or balance anything.\n"
+        "When RATE sits before OPENING: RATE is a unit price. The next cell is "
+        "OPENING QTY (often a small integer), then OPENING VALUE. Never emit 0 "
+        "for a visible qty digit; unread/empty is null.\n"
         f"Re-read ONLY these rows: {listed}.\n"
         "Return the same JSON shape (tables array) containing only these rows, "
         "with all columns. Copy numbers exactly as printed. Empty cells are null, "
@@ -6392,7 +6839,10 @@ def build_reconciliation_recovery_prompt(flagged: List[Dict[str, Any]]) -> str:
         "When two consecutive products are listed, read each row independently.\n"
         "Qty-only OPENING|RECEIPT|ISSUE|CLOSING: printed dashes are null. Never "
         "copy the next row's OPENING into this row's RECEIPT or ISSUE.\n"
-        "Empty/unreadable cells are null, never guessed and never forced to 0.\n\n"
+        "Empty/unreadable cells are null, never guessed and never forced to 0.\n"
+        "When RATE sits before OPENING: RATE is a unit price. The next cell is "
+        "OPENING QTY (often a small integer), then OPENING VALUE. Never emit 0 "
+        "for a visible qty digit.\n\n"
         f"{body}\n\n"
         "Return the same JSON shape (tables array) containing only these rows, "
         "with all columns. Copy numbers exactly as printed. Empty cells are null, "
@@ -6420,6 +6870,89 @@ def _vision_physical_qty_fingerprint(item: Dict[str, Any]) -> Optional[Tuple[Any
     return tuple(nums)
 
 
+def _reread_fill_zero_enabled() -> bool:
+    """Copy non-zero reread digits onto unread 0/null qty cells — default ON."""
+    return os.getenv(
+        "STOCK_VISION_REREAD_FILL_ZERO", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _fill_zero_fields_from_reread(
+    item: Dict[str, Any], candidate: Dict[str, Any]
+) -> bool:
+    """On a failing first row, copy printed non-zero reread qty/value into blanks.
+
+    Does not overwrite a non-zero first-pass field and never copies reread 0.
+    Identity is not used to invent a missing opening qty.
+    """
+    if not _reread_fill_zero_enabled():
+        return False
+    if not isinstance(item, dict) or not isinstance(candidate, dict):
+        return False
+    status, _info = classify_row(read_row_fields(item))
+    if status in {
+        RowStatus.VALID,
+        RowStatus.MINOR_DISCREPANCY,
+        RowStatus.CLOSING_DERIVED,
+    }:
+        return False
+    extra = item.setdefault("extra", {})
+    cand_extra = (
+        candidate.get("extra") if isinstance(candidate.get("extra"), dict) else {}
+    )
+    fs = extra.setdefault("field_source", {})
+    filled: List[str] = []
+    top_keys = (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+        "opening_value",
+    )
+    for key in top_keys:
+        src = candidate.get(key)
+        if src is None and key == "opening_value":
+            src = cand_extra.get("opening_value")
+        try:
+            src_f = float(src) if src not in (None, "") else None
+        except (TypeError, ValueError):
+            src_f = None
+        if src_f is None or abs(src_f) < 0.001:
+            continue
+        dst = item.get(key)
+        if key == "opening_value":
+            dst = extra.get("opening_value", dst)
+        if not _qty_is_blank_zero(dst):
+            continue
+        if key == "opening_value":
+            extra["opening_value"] = src_f
+            item["opening_value"] = src_f
+        else:
+            item[key] = src_f
+        if isinstance(fs, dict):
+            fs[key] = "printed"
+        filled.append(key)
+    if not filled:
+        return False
+    flags = list(extra.get("flags") or [])
+    if "REREAD_FILL_ZERO" not in flags:
+        flags.append("REREAD_FILL_ZERO")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE REREAD_FILL_ZERO product=%s fields=%s",
+        str(item.get("product_name") or "")[:60],
+        ",".join(filled),
+    )
+    return True
+
+
 def merge_reread(
     first_items: List[Dict[str, Any]],
     reread_items: List[Dict[str, Any]],
@@ -6428,7 +6961,9 @@ def merge_reread(
 ) -> List[Dict[str, Any]]:
     """Replace a row only when the re-read classifies as VALID/MINOR.
 
-    Never mix cells from two readings in one row.
+    Never mix two complete readings into one row. On a failing first row,
+    unread 0/null qty cells may take a printed non-zero digit from the
+    re-read (see ``_fill_zero_fields_from_reread``).
     When ``prefer_reconciled`` is True (recon recovery), also accept a
     candidate that passes stock reconciliation while the first reading fails.
     """
@@ -6576,6 +7111,9 @@ def merge_reread(
         else:
             kept = dict(item)
             keptextra = dict(kept.get("extra") or {})
+            kept["extra"] = keptextra
+            _fill_zero_fields_from_reread(kept, candidate)
+            keptextra = dict(kept.get("extra") or {})
             candidates = list(keptextra.get("candidates") or [])
             candidates.append(
                 {
@@ -6590,6 +7128,7 @@ def merge_reread(
                             "closing_qty",
                             "sales_value",
                             "closing_value",
+                            "opening_value",
                         )
                     },
                     "status": status.value,
@@ -6751,7 +7290,11 @@ def _stamp_vision_result(
     totals_rows: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     result = _empty_result(filename, ext)
-    result["line_items"] = line_items
+    products, peeled_totals = _peel_vision_total_named_items(line_items)
+    extra_totals: List[Dict[str, Any]] = list(totals_rows or [])
+    extra_totals.extend(peeled_totals)
+    result["line_items"] = products
+    totals_rows = extra_totals
     if stockist_name:
         result["stockist_name"] = stockist_name
     if company_name:
@@ -6824,7 +7367,7 @@ def _stamp_vision_result(
             extra["vision_table_total_rows"] = kept_totals
             try:
                 extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
-                    line_items, kept_totals
+                    products, kept_totals
                 )
             except Exception as exc:
                 extra["printed_total_validation"] = {
@@ -7337,6 +7880,9 @@ def run_vision_table_path(
         _apply_closing_pair_unswap_pass(all_items)
         _apply_tot_qty_value_header_shift_pass(all_items)
 
+        all_items, peeled_totals = _peel_vision_total_named_items(all_items)
+        all_totals.extend(peeled_totals)
+
         result = _stamp_vision_result(
             filename=filename,
             ext=ext,
@@ -7678,6 +8224,18 @@ def run_vision_table_path(
         _apply_issue_value_left_shift_pass(result.get("line_items") or [])
         _apply_closing_pair_unswap_pass(result.get("line_items") or [])
         _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
+
+        products, peeled = _peel_vision_total_named_items(result.get("line_items"))
+        result["line_items"] = products
+        if peeled:
+            extra = result["totals"]["extra"]
+            extra["vision_table_total_rows"] = list(
+                extra.get("vision_table_total_rows") or []
+            ) + peeled
+            logger.info(
+                "VISION_TABLE TOTAL_ROW_NAME post_merge_peeled=%s",
+                len(peeled),
+            )
 
         classified = classify_result(result)
         result["totals"]["extra"]["row_status_counts"] = (

@@ -30,6 +30,11 @@ class TestPhoneSsaHelpers(unittest.TestCase):
             _peek_suggests_ssa_qty_value("STOCK & SALES ANALYSIS OPENING QTY")
         )
         self.assertFalse(_peek_suggests_ssa_qty_value("Product Stock Report"))
+        self.assertFalse(
+            _peek_suggests_ssa_qty_value(
+                "STOCK STATEMENT OPSTK PURCH SALE VAL IN/OT STK VAL"
+            )
+        )
 
     def test_tall_phone_aspect_detected(self):
         self.assertTrue(_is_phone_tall_document_screenshot(_tall_phone_jpeg()))
