@@ -1194,7 +1194,8 @@ def build_table_prompt() -> str:
         "closing_qty, Order/Pend/LstMove to ignore/order, Stk.Value to "
         "closing_value (not opening_value). Footer lines labeled "
         "'Last Month Sales', 'Open. Value', 'Receipt Value', 'Sales Value', "
-        "'Closing Value' are totals — set is_total_row=true, never product rows. "
+        "'Closing Value', 'TOTAL', 'Total:', 'Amount:', or 'Total Value (...)' "
+        "are totals — set is_total_row=true, never product rows. "
         "Emit every printed product row top-to-bottom before TOTAL. "
         "Saleable Stock Report (Particular|Packing|Opn|Rec|Issue|Bal): put "
         "Opn/Rec/Issue/Bal (or Opening/Receipt/Issue/Balance) as the header "
@@ -3453,6 +3454,150 @@ def _repair_rate_parked_in_opening_qty(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _repair_rate_taken_as_opening_qty(item: Dict[str, Any]) -> bool:
+    """Rate landed in opening_qty; the next whole number is the real opening.
+
+    Printed: rate | open | [blank rec] | sales | close.
+    Vision: opening=rate, purchase=open, sales, closing.
+    Re-slot only when current identity fails and purchase − sales = closing.
+    Never invents a digit. Flag: STOCK_VISION_RATE_IN_OPENING_REPAIR.
+    """
+    if not _rate_parked_in_opening_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    try:
+        rate_now = extra.get("unit_rate")
+        if rate_now not in (None, "") and abs(float(rate_now)) > 0.001:
+            return False
+    except (TypeError, ValueError):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty")
+    sq = _printed_float(item, "sales_qty")
+    cq = _printed_float(item, "closing_qty")
+    if oq is None or rq is None or sq is None or cq is None:
+        return False
+    if abs((oq + rq - sq) - cq) <= 0.51:
+        return False
+    if not _is_whole_qty(rq) or not _is_whole_qty(sq) or not _is_whole_qty(cq):
+        return False
+    if abs((rq - sq) - cq) > 0.51:
+        return False
+    headers = extra.get("vision_column_headers") or []
+    has_rate_header = isinstance(headers, (list, tuple)) and any(
+        re.search(r"(?i)\bRATE\b", str(h or "")) for h in headers
+    )
+    max_move = max(abs(rq), abs(sq), abs(cq), 1.0)
+    looks_like_rate = (
+        _has_paisa(oq)
+        or has_rate_header
+        or (oq >= 50.0 and oq > 2.0 * max_move)
+    )
+    if not looks_like_rate:
+        return False
+    logger.info(
+        "VISION_TABLE RATE_TAKEN_AS_OPENING product=%s rate=%s "
+        "opening_qty=%s receipts_qty=0 sales_qty=%s closing_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        oq,
+        rq,
+        sq,
+        cq,
+    )
+    extra["unit_rate"] = float(oq)
+    item["opening_qty"] = float(rq)
+    item["receipts_qty"] = 0.0
+    fs["rate"] = "printed"
+    fs["opening_qty"] = "printed"
+    fs["purchase_qty"] = "missing"
+    fs["receipts_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "RATE_TAKEN_AS_OPENING" not in flags:
+        flags.append("RATE_TAKEN_AS_OPENING")
+    extra["flags"] = flags
+    return True
+
+
+def _repair_paisa_parked_in_qty_fields(item: Dict[str, Any]) -> bool:
+    """When two or more qty slots hold rupees, move them to value/rate.
+
+    Does not invent the missing qty — those fields become missing.
+    Reuses STOCK_VISION_CLOSING_MONEY_IN_QTY_REPAIR.
+    """
+    if not _closing_money_in_qty_repair_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty")
+    sq = _printed_float(item, "sales_qty")
+    cq = _printed_float(item, "closing_qty")
+    money_open = _has_paisa(oq)
+    money_rec = _has_paisa(rq)
+    money_sale = _has_paisa(sq)
+    money_close = _has_paisa(cq)
+    money_n = sum(bool(x) for x in (money_open, money_rec, money_sale, money_close))
+    if money_n < 2:
+        return False
+    moved = False
+    if money_open and oq is not None:
+        if oq < 500.0:
+            extra["unit_rate"] = float(oq)
+            fs["rate"] = "printed"
+        else:
+            extra["opening_value"] = float(oq)
+            item["opening_value"] = float(oq)
+            fs["opening_value"] = "printed"
+        item["opening_qty"] = None
+        fs["opening_qty"] = "missing"
+        moved = True
+    if money_rec and rq is not None:
+        extra["purchase_value"] = float(rq)
+        extra["receipts_value"] = float(rq)
+        item["receipts_value"] = float(rq)
+        item["receipts_qty"] = None
+        fs["purchase_value"] = "printed"
+        fs["receipts_value"] = "printed"
+        fs["purchase_qty"] = "missing"
+        fs["receipts_qty"] = "missing"
+        moved = True
+    if money_sale and sq is not None:
+        item["sales_value"] = float(sq)
+        item["sales_qty"] = None
+        fs["sales_value"] = "printed"
+        fs["sales_qty"] = "missing"
+        moved = True
+    if money_close and cq is not None:
+        item["closing_value"] = float(cq)
+        item["closing_qty"] = None
+        fs["closing_value"] = "printed"
+        fs["closing_qty"] = "missing"
+        moved = True
+    if not moved:
+        return False
+    flags = list(extra.get("flags") or [])
+    if "PAISA_PARKED_IN_QTY" not in flags:
+        flags.append("PAISA_PARKED_IN_QTY")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PAISA_PARKED_IN_QTY product=%s rate=%s "
+        "opening_qty=missing closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        extra.get("unit_rate"),
+        item.get("closing_value"),
+    )
+    return True
+
+
 def _rate_truncated_zero_enabled() -> bool:
     """Unread OPENING/CLOSING after RATE peel emitted 0 — default ON."""
     return os.getenv(
@@ -4751,7 +4896,7 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
 # LstSL / Open / Recd footer money labels — never SKUs.
 _LSTSL_FOOTER_LABEL_NAME = re.compile(
     r"(?ix)^\s*(?:"
-    r"last\s*month\s*sales|"
+        r"last\s*month\s*sales?|"
     r"receipt\s*value|"
     r"sales\s*value|"
     r"closing\s*value|"
@@ -4761,11 +4906,23 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
     r")\b"
 )
 
-# Printed TOTAL / GRAND TOTAL footer, including "TOTAL (Value IN Rs.)".
+# Printed TOTAL / GRAND TOTAL footer, including "TOTAL (Value IN Rs.)",
+# "Total:", and category "Total Value (GEL)" rows.
 # Does not match product names that merely start with Total (e.g. TOTAL CARE).
 _VISION_TOTAL_ROW_NAME = re.compile(
-    r"(?ix)^\s*(?:grand\s+|page\s+|sub\s+)?totals?\s*"
-    r"(?:\(.*\)|qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)?\s*$"
+    r"(?ix)^\s*(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
+    r"(?:[:.\-–—]*)\s*"
+    r"(?:"
+    r"\(.*\)"
+    r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
+    r")?"
+    r"\s*$"
+)
+
+# Datewise / PROMPT footer labels printed as their own row: "Amount:" / "Bills:".
+_VISION_FOOTER_LABEL_NAME = re.compile(
+    r"(?ix)^\s*(?:amounts?|amts?|bills?|bill\s*nos?|"
+    r"quantity|qty|values?)\s*[:.\-–—]*\s*$"
 )
 
 # Company / stockist letterhead when the row has no real movement quantities.
@@ -4787,8 +4944,11 @@ def _is_lstsl_footer_label_name(name: str) -> bool:
 
 
 def _is_vision_total_row_name(name: Any) -> bool:
-    """True for TOTAL / GRAND TOTAL footer labels, not product SKUs."""
-    return bool(_VISION_TOTAL_ROW_NAME.match(str(name or "").strip()))
+    """True for TOTAL / GRAND TOTAL / Amount: footer labels, not product SKUs."""
+    text = str(name or "").strip()
+    return bool(
+        _VISION_TOTAL_ROW_NAME.match(text) or _VISION_FOOTER_LABEL_NAME.match(text)
+    )
 
 
 def _peel_vision_total_named_items(
@@ -5647,6 +5807,8 @@ def _map_single_table(
             seen_product_row = True
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
             _repair_rate_parked_in_opening_qty(item)
+            _repair_rate_taken_as_opening_qty(item)
+            _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)

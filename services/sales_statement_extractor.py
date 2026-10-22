@@ -17529,6 +17529,12 @@ def _is_non_product_line_name(name: str) -> bool:
         re.I,
     ):
         return True
+    if re.fullmatch(r"(?:amounts?|amts?|bills?)\s*[:.]?", text, re.I):
+        return True
+    if re.match(r"^last\s*month\s*sales?\b", text, re.I):
+        return True
+    if re.fullmatch(r"(?:quantity|qty|values?)\s*[:.]?", text, re.I):
+        return True
     if re.fullmatch(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text):
         return True
     if re.fullmatch(r"\d{1,2}/\d{1,2}/\d{2,4}", text):
