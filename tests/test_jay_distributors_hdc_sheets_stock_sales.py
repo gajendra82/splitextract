@@ -49,6 +49,14 @@ class TestJayDistributorsSheetsStockSales(unittest.TestCase):
                 "MAIN STOCK & SALES STATEMENT\nPRODUCT DESCRIPTION OPENING STOCK"
             )
         )
+        # Phone photo of Marg ANALYSIS in Sheets (gold frame, Sheet2 tab).
+        self.assertTrue(
+            _is_excel_sheets_stock_sales_screenshot(
+                "MARG ERP AI+\nSheet2  Sheet\n"
+                "STOCK & SALES ANALYSIS (HIMALAYA(ZANDRA)) 01-09-2026 30-09-2026\n"
+                "ABANA TABLET 1X60 40 5944.00"
+            )
+        )
 
     def test_ocr_ui_contamination(self):
         bad = empty_result("x.png", "png")

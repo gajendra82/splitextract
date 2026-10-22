@@ -39423,17 +39423,18 @@ def _ssa_qty_value_vision_bytes(file_bytes: bytes) -> bytes:
 
 
 def _peek_suggests_ssa_qty_value(text: str) -> bool:
-    if not text:
+    """STOCK & SALES ANALYSIS qty/value grids — not Medica OPSTK / SALE VAL."""
+    if not (text or "").strip():
         return False
-    if not re.search(r"STOCK", text, re.I):
+    if re.search(r"\bOPSTK\b", text, re.I) and (
+        re.search(r"\bPURCH\b", text, re.I) or re.search(r"\bSALE\s*VAL\b", text, re.I)
+    ):
         return False
-    return bool(
-        re.search(
-            r"ANALYSIS|STATEMENT|OPENING|RECEIPT|ISSUE|CLOSING|ITEM\s+DESC",
-            text,
-            re.I,
-        )
-    )
+    if re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
+        return True
+    if re.search(r"MARG\s*ERP", text, re.I) and re.search(r"\bSheet\s*\d", text, re.I):
+        return True
+    return False
 
 
 def _extract_ssa_qty_value_vision(
@@ -45274,19 +45275,20 @@ def _extract_medica_stock_statement_vision(
 
 
 _MAIN_STOCK_SALES_PROMPT = """
-This image is a STOCK & SALES STATEMENT (or MAIN STOCK & SALES STATEMENT) print/photo.
+This image is a STOCK & SALES STATEMENT or STOCK & SALES ANALYSIS print/photo/screenshot.
 Use it only for this header, left to right:
-PRODUCT DESCRIPTION | OPENING STOCK | OPENING VALUE | RECEIVE QUANTITY | RECEIVE VALUE | ISSUE QUANTITY | ISSUE VALUE | CLOSING STOCK | CLOSING VALUE | EXPIRY STOCK (optional)
+PRODUCT DESCRIPTION (or ITEM DESCRIPTION) | PACK (optional) | OPENING STOCK/QTY | OPENING VALUE | RECEIVE/RECEIPT QTY | RECEIVE/RECEIPT VALUE | ISSUE QTY | ISSUE VALUE | CLOSING STOCK/QTY | CLOSING VALUE | EXPIRY STOCK (optional)
 
 Column mapping:
-- PRODUCT DESCRIPTION -> product_name
-- OPENING STOCK -> opening_qty
+- PRODUCT DESCRIPTION / ITEM DESCRIPTION -> product_name
+- PACK -> packing
+- OPENING STOCK or OPENING QTY -> opening_qty
 - OPENING VALUE -> extra.opening_value
-- RECEIVE QUANTITY -> receipts_qty
-- RECEIVE VALUE -> extra.receipts_value
-- ISSUE QUANTITY -> sales_qty
+- RECEIVE QUANTITY / RECEIPT QTY -> receipts_qty
+- RECEIVE VALUE / RECEIPT VALUE -> extra.receipts_value
+- ISSUE QUANTITY / ISSUE QTY -> sales_qty
 - ISSUE VALUE -> sales_value
-- CLOSING STOCK -> closing_qty
+- CLOSING STOCK or CLOSING QTY -> closing_qty
 - CLOSING VALUE -> closing_value
 - EXPIRY STOCK -> extra.expiry_stock (date string or null; "--" is null)
 
@@ -45325,13 +45327,15 @@ Return ONLY JSON:
 
 _MAIN_STOCK_SHEETS_PROMPT_ADDENDUM = """
 This capture is a Google Sheets / Excel mobile screenshot (not a paper Marg print).
-Ignore UI chrome: filename bar, "Not saved yet", column letters A-J, sheet tab, + button.
+Ignore UI chrome: filename bar, "Not saved yet", column letters A-J, MARG ERP, SheetN tabs, + button.
 stockist_name is the distributor company printed in the sheet body (e.g. JAY DISTRIBUTORS), never the filename.
 company_name and period come from the title line like
-"HDC HIMALAYA(ZANDRA) STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026".
-PRODUCT DESCRIPTION may be clipped on the LEFT — when the fragment is clearly a Himalaya
+"HDC HIMALAYA(ZANDRA) STOCK & SALES STATEMENT 01-08-2026 - 31-08-2026"
+or "STOCK & SALES ANALYSIS (HIMALAYA(ZANDRA)) 01-09-2026 30-09-2026".
+PRODUCT DESCRIPTION / ITEM DESCRIPTION may be clipped on the LEFT — when the fragment is clearly a Himalaya
 product, reconstruct the full name (BONNISAN, BRESOL, GERIFORTE, LIV.52 DS, SEPTILIN, MENTAT, CYSTONE, etc.).
 If unsure, keep the visible fragment. Keep every qty/value on its own product row.
+OPENING VALUE and RECEIPT/RECEIVE VALUE are printed money columns — copy them; never leave them null when the cell has a number.
 """.strip()
 
 
@@ -46695,7 +46699,7 @@ def _extract_main_stock_sales_vision(
         or fallback.get("report_title")
         or "STOCK & SALES STATEMENT"
     )
-    if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", title, re.I):
+    if not re.search(r"STOCK\s*&\s*SALES\s+(STATEMENT|ANALYSIS)", title, re.I):
         title = "STOCK & SALES STATEMENT"
     parsed_meta["report_title"] = title
     parsed_meta["line_items"] = merged
@@ -46729,7 +46733,7 @@ def _is_excel_sheets_stock_sales_screenshot(text: str) -> bool:
     """
     if not (text or "").strip():
         return False
-    if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text, re.I):
+    if not re.search(r"STOCK\s*&\s*SALES\s+(STATEMENT|ANALYSIS)", text, re.I):
         return False
     chrome = 0
     # Strong UI / filename signals — required for this capture class.
@@ -46739,6 +46743,10 @@ def _is_excel_sheets_stock_sales_screenshot(text: str) -> bool:
         chrome += 2
     if re.search(r"Stock\s*&\s*Sales\s+Statement\s*v\s*\+?", text, re.I):
         chrome += 2
+    if re.search(r"MARG\s*ERP", text, re.I):
+        chrome += 2
+    if re.search(r"\bSheet\s*\d", text, re.I):
+        chrome += 1
     # Spreadsheet column letters across the top (A … J).
     if re.search(
         r"(?:^|\n)\s*[A-Ja-j](?:\s+[A-Ja-j]){5,}",
@@ -46751,7 +46759,11 @@ def _is_excel_sheets_stock_sales_screenshot(text: str) -> bool:
         chrome += 1
     # Need at least one strong UI signal (score contribution ≥ 2).
     strong = bool(
-        re.search(r"Not\s+saved\s+yet|HDC_HIMAL|Stock\s*&\s*Sales\s+Statement\s*v", text, re.I)
+        re.search(
+            r"Not\s+saved\s+yet|HDC_HIMAL|Stock\s*&\s*Sales\s+Statement\s*v|MARG\s*ERP",
+            text,
+            re.I,
+        )
     )
     return strong and chrome >= 3
 
@@ -46989,58 +47001,68 @@ def _extract_opening_receive_issue_closing_photo(
 
     if not _is_opening_receive_issue_closing_stock_text(text):
         # Gray/blue header strips alone are not enough; require statement title.
-        if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text or "", re.I):
-            return None
-        # Title alone + strips is unsafe when headers look like Op_Stk grids.
-        if _looks_like_op_stk_rcpts_grid_text(probe):
-            return None
-        # O.Stk/Purc/Tot/Sale/Qoh/Value/Age must not use Op_Stk|Rcpts Vision
-        # (that reader maps Value→sales_value and Age→closing_value).
-        if _looks_like_ostk_qoh_stock_sales_text(probe):
-            logger.info(
-                "MAIN_STOCK_SKIP file=%s reason=ostk_qoh_not_op_stk_rcpts",
-                filename,
-            )
-            return None
-        # Title without Marg OPENING/RECEIVE QUANTITY headers: try Op_Stk grid
-        # first. Desk photos often OCR only "STOCK & SALES STATEMENT" + packs.
+        # Sheets ANALYSIS screenshots use the same OPENING/RECEIVE/ISSUE/CLOSING
+        # qty+value columns as STATEMENT; Medica OPSTK must not own them.
         if not re.search(
-            r"OPENING\s+STOCK|RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC",
-            probe,
-            re.I,
+            r"STOCK\s*&\s*SALES\s+(STATEMENT|ANALYSIS)", text or "", re.I
         ):
-            has_op_stk_cols = bool(
-                re.search(
-                    r"\bOp[_\s.]*Stk\b|\bRcpts?\b|\bCl[_\s.]*Stk\b",
-                    probe,
-                    re.I,
-                )
-            )
-            if has_op_stk_cols:
-                op_stk = _extract_op_stk_rcpts_stock_sale_vision(
-                    file_bytes, filename, ext, ocr_hint=probe
-                )
-                if (
-                    op_stk
-                    and op_stk.get("line_items")
-                    and not _main_stock_result_is_all_zero_shell(op_stk)
-                ):
-                    logger.info(
-                        "MAIN_STOCK_SKIP file=%s reason=title_only_try_op_stk rows=%s",
-                        filename,
-                        len(op_stk.get("line_items") or []),
-                    )
-                    return op_stk
-            # Do not fall through into Marg OCR/vision on title alone — that
-            # path invents OPENING VALUE columns and zeroes opening qty.
+            return None
+        if spreadsheet_shot:
             logger.info(
-                "MAIN_STOCK_SKIP file=%s reason=title_only_no_marg_headers",
+                "MAIN_STOCK spreadsheet qty/value screenshot file=%s",
                 filename,
             )
-            return None
-        strips = _main_stock_sales_strips(file_bytes)
-        if len(strips) < 2:
-            return None
+        else:
+            # Title alone + strips is unsafe when headers look like Op_Stk grids.
+            if _looks_like_op_stk_rcpts_grid_text(probe):
+                return None
+            # O.Stk/Purc/Tot/Sale/Qoh/Value/Age must not use Op_Stk|Rcpts Vision
+            # (that reader maps Value→sales_value and Age→closing_value).
+            if _looks_like_ostk_qoh_stock_sales_text(probe):
+                logger.info(
+                    "MAIN_STOCK_SKIP file=%s reason=ostk_qoh_not_op_stk_rcpts",
+                    filename,
+                )
+                return None
+            # Title without Marg OPENING/RECEIVE QUANTITY headers: try Op_Stk grid
+            # first. Desk photos often OCR only "STOCK & SALES STATEMENT" + packs.
+            if not re.search(
+                r"OPENING\s+STOCK|RECEIVE\s+QUANTITY|ISSUE\s+QUANTITY|PRODUCT\s+DESC",
+                probe,
+                re.I,
+            ):
+                has_op_stk_cols = bool(
+                    re.search(
+                        r"\bOp[_\s.]*Stk\b|\bRcpts?\b|\bCl[_\s.]*Stk\b",
+                        probe,
+                        re.I,
+                    )
+                )
+                if has_op_stk_cols:
+                    op_stk = _extract_op_stk_rcpts_stock_sale_vision(
+                        file_bytes, filename, ext, ocr_hint=probe
+                    )
+                    if (
+                        op_stk
+                        and op_stk.get("line_items")
+                        and not _main_stock_result_is_all_zero_shell(op_stk)
+                    ):
+                        logger.info(
+                            "MAIN_STOCK_SKIP file=%s reason=title_only_try_op_stk rows=%s",
+                            filename,
+                            len(op_stk.get("line_items") or []),
+                        )
+                        return op_stk
+                # Do not fall through into Marg OCR/vision on title alone — that
+                # path invents OPENING VALUE columns and zeroes opening qty.
+                logger.info(
+                    "MAIN_STOCK_SKIP file=%s reason=title_only_no_marg_headers",
+                    filename,
+                )
+                return None
+            strips = _main_stock_sales_strips(file_bytes)
+            if len(strips) < 2:
+                return None
 
     ocr_result = None
     # Spreadsheet screenshots: skip expensive OCR bands — Vision owns the grid.
@@ -52960,19 +52982,42 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 filename,
             )
         _peek_unreadable = len(re.findall(r"[A-Za-z]{3,}", _op_stk_peek or "")) < 12
+        _ssa_sheets_qty_value = bool(
+            _peek_suggests_ssa_qty_value(_op_stk_peek)
+            or _is_excel_sheets_stock_sales_screenshot(_op_stk_peek)
+        )
+        _peek_has_opstk = bool(
+            re.search(r"\bOPSTK\b", _op_stk_peek or "", re.I)
+            or _is_medica_opstk_statement(_op_stk_peek)
+        )
+        # Gold phone frames trip the red-header probe. That is not Medica
+        # unless OPSTK is actually in the peek. ANALYSIS qty/value sheets
+        # must not lock medica_stock_statement (drops opening/receipt values
+        # and shifts ISSUE/CLOSING onto the next product).
         _try_medica_before_vt = _skip_vt_for_medica or (
             not _skip_vt_for_op_stk
             and vision_table_active_for("image")
+            and not _ssa_sheets_qty_value
             and (
-                _medica_red_header_plausible(file_bytes)
-                # Dark phone shots: OCR is noise and VT burns both Gemini calls
-                # before Medica can run — probe Medica first when peek is unreadable.
+                (_medica_red_header_plausible(file_bytes) and _peek_has_opstk)
                 or _peek_unreadable
             )
         )
+        if _ssa_sheets_qty_value:
+            logger.info(
+                "[SalesStatement] file=%s medica probe skipped reason=ssa_qty_value_grid",
+                filename,
+            )
+            _try_medica_before_vt = False
+            _skip_vt_for_medica = False
         if _skip_vt_for_medica:
             logger.info(
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=medica_opstk",
+                filename,
+            )
+        if _ssa_sheets_qty_value:
+            logger.info(
+                "[SalesStatement] file=%s VISION_TABLE skipped reason=ssa_qty_value_sheets",
                 filename,
             )
         if _try_medica_before_vt:
@@ -52995,21 +53040,35 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 medica_first = None
             if _medica_result_looks_usable(medica_first):
-                extra_m = medica_first.setdefault("totals", {}).setdefault("extra", {})
-                extra_m["early_vision_reason"] = (
-                    "medica_before_vision_table"
-                    if _skip_vt_for_medica
-                    else "medica_before_vt_dark_phone"
-                )
-                logger.info(
-                    "[STOCK_EXTRACTION_PATH] stage=medica_before_vt "
-                    "file=%s line_items=%s",
-                    filename,
-                    len(medica_first.get("line_items") or []),
-                )
-                return medica_first
+                if _ssa_sheets_qty_value or (
+                    not _peek_has_opstk and not _peek_unreadable
+                ):
+                    logger.info(
+                        "[SalesStatement] file=%s medica-before-VT discarded "
+                        "reason=not_opstk_qty_value_grid",
+                        filename,
+                    )
+                else:
+                    extra_m = medica_first.setdefault("totals", {}).setdefault("extra", {})
+                    extra_m["early_vision_reason"] = (
+                        "medica_before_vision_table"
+                        if _skip_vt_for_medica
+                        else "medica_before_vt_dark_phone"
+                    )
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=medica_before_vt "
+                        "file=%s line_items=%s",
+                        filename,
+                        len(medica_first.get("line_items") or []),
+                    )
+                    return medica_first
 
-        if vision_table_active_for("image") and not _skip_vt_for_op_stk and not _skip_vt_for_medica:
+        if (
+            vision_table_active_for("image")
+            and not _skip_vt_for_op_stk
+            and not _skip_vt_for_medica
+            and not _ssa_sheets_qty_value
+        ):
             request_id = "-"
             try:
                 from services.sales_extraction_runtime import resolve_request_id
