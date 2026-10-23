@@ -284,6 +284,8 @@ ALIASES: Dict[str, List[str]] = {
         "close",  # LstSL Close column (exact; "clos" alone also hits via compact)
         "closin",  # OCR truncate of CLOSING
         "closi",
+        "clacing",  # OCR of Closing (c/o swap)
+        "clsoing",
         "closing",
         "clos stock",
         "closstock",
@@ -786,6 +788,10 @@ def _promote_adjacent_same_group_qty_to_value(
             continue
         raw_right = str(right.get("header_text") or "")
         norm_right = normalize_header(raw_right)
+        # A header that already says Qty stays a quantity. Issue/Sales Qty
+        # next to Issue Qty is a second qty, not the value column.
+        if re.search(r"(?i)\b(?:qty|quantity|qnty)\b", norm_right):
+            continue
         # Bare repeated Sales/Purchase (Group Wise) stay qty. Only pair
         # headers (Receipt/Pur, Opening Bal, Closing Bala, Issue/Sales).
         if (

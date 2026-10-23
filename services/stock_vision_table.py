@@ -331,6 +331,95 @@ def _num_idxs_look_qty_value_paired(
     return moneyish > qtyish and moneyish >= 2
 
 
+def _layout_numeric_role(rows: Sequence[Dict[str, Any]], col_idx: int) -> str:
+    """'v' when the column is mostly rupees, 'q' when it is mostly whole qty."""
+    money = 0
+    qty = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if col_idx >= len(cells):
+            continue
+        raw = cells[col_idx]
+        if raw is None:
+            continue
+        text = str(raw).strip()
+        if text in {"", "-", "—", "–", "0", "0.0", "0.00"}:
+            continue
+        if _looks_money(raw, raw_text=text):
+            money += 1
+        else:
+            parsed = parse_number(raw, allow_internal_spaces=True)
+            if parsed is not None and _looks_small_qty(parsed):
+                qty += 1
+    if money > qty and money >= 1:
+        return "v"
+    if qty > money and qty >= 1:
+        return "q"
+    return "?"
+
+
+def _total_qty_between_pairs_index(
+    rows: Sequence[Dict[str, Any]],
+    num_idxs: Sequence[int],
+) -> Optional[int]:
+    """Index of a Total qty sitting between receipt value and issue qty.
+
+    Nine numeric columns laid out as qty, value, qty, value, qty, qty, value,
+    qty, value. The first of the two adjacent qty columns is Total when it
+    equals opening + receipt and the next qty is the issue that closes.
+    """
+    if not _closing_qty_from_header_enabled():
+        return None
+    if len(num_idxs) != 9:
+        return None
+    roles = [_layout_numeric_role(rows, int(i)) for i in num_idxs]
+    if roles != ["q", "v", "q", "v", "q", "q", "v", "q", "v"]:
+        return None
+    checked = 0
+    total_hits = 0
+    close_hits = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+
+        def _cell(pos: int) -> Optional[float]:
+            idx = int(num_idxs[pos])
+            if idx >= len(cells):
+                return None
+            parsed = parse_number(cells[idx], allow_internal_spaces=True)
+            if parsed is None:
+                return None
+            return float(parsed)
+
+        opening = _cell(0)
+        receipt = _cell(2)
+        total = _cell(4)
+        issue = _cell(5)
+        closing = _cell(7)
+        if None in (opening, receipt, total, issue, closing):
+            continue
+        checked += 1
+        if abs((opening + receipt) - total) <= 0.51:
+            total_hits += 1
+        if abs((opening + receipt - issue) - closing) <= 0.51:
+            close_hits += 1
+    if checked < 2:
+        return None
+    need = max(2, int(0.6 * checked))
+    if total_hits < need or close_hits < need:
+        return None
+    logger.info(
+        "VISION_TABLE cell_layout_skip_total_qty col=%s hits=%s/%s",
+        int(num_idxs[4]),
+        total_hits,
+        checked,
+    )
+    return int(num_idxs[4])
+
+
 def _infer_qty_value_canons_from_rows(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
@@ -452,6 +541,11 @@ def _infer_qty_value_canons_from_rows(
         else:
             if len(num_idxs) >= 8:
                 break
+
+    total_between = _total_qty_between_pairs_index(rows, num_idxs)
+    if total_between is not None:
+        canons[total_between] = "total_qty"
+        num_idxs = [i for i in num_idxs if i != total_between]
 
     # Four numeric columns: either qty/value SALE+CLOSING or qty-only ORIC.
     if len(num_idxs) == 4:
@@ -986,6 +1080,17 @@ def _apply_cell_layout_qty_value_repair(
         for c in columns
         if isinstance(c, dict) and c.get("canonical") not in {None, "ignore"}
     }
+    # Op.|Opening Bal, Receipt|Receipt/Pur, Issue|Issue/Sales, Closing|Closing Bala
+    # already paired qty with value. Cell geometry would park Total under sales_qty.
+    if any(
+        isinstance(c, dict) and c.get("reason") == "adjacent_qty_value_pair"
+        for c in columns
+    ) and {"opening_qty", "closing_qty"}.issubset(core):
+        logger.info(
+            "VISION_TABLE cell_layout_qty_value_repair skipped "
+            "reason=adjacent_qty_value_pair"
+        )
+        return columns
     # DUPLICATE_CANONICAL alone must not force qty/value inference when Op/Cl
     # (or Op/Sales) already resolved — Group Wise grids repeat bare Sales/
     # Purchase labels and cell_layout would park Sales Qty under sales_value.
@@ -2807,6 +2912,260 @@ def _apply_closing_qty_parked_in_value_pass(
             "VISION_TABLE CLOSING_QTY_PARKED_IN_VALUE_PASS fixed=%s",
             fixed,
         )
+    return fixed
+
+
+def _closing_qty_from_header_enabled() -> bool:
+    """Put the Closing header's printed cell back into closing_qty.
+
+    Default ON. Used when that slot holds Issue/Sales money, or is 0 while
+    the Closing cell is a different whole qty that matches
+    opening + receipt − sales. Never invents a digit.
+    """
+    return os.getenv(
+        "STOCK_VISION_CLOSING_QTY_FROM_HEADER", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_closing_qty_header_text(text: str) -> bool:
+    """Closing / Clacing, not Closing Bala or Closing Value."""
+    norm = normalize_header(text or "")
+    if not norm:
+        return False
+    if re.search(r"(?i)\bbala\b|\bval(?:ue)?\b|\bamount\b|\bamt\b", norm):
+        return False
+    compact = re.sub(r"[^a-z]", "", norm)
+    if compact in {
+        "clacing",
+        "closing",
+        "close",
+        "clos",
+        "cls",
+        "closin",
+        "closi",
+        "clsoing",
+        "clqty",
+        "closingqty",
+    }:
+        return True
+    return bool(re.fullmatch(r"(?i)(?:closing|close|cls)\.?", norm.strip()))
+
+
+def _is_issue_qty_header_text(text: str) -> bool:
+    """Issue / Sales qty, not Issue/Sales value."""
+    raw = str(text or "")
+    norm = normalize_header(raw)
+    if not norm or "/" in raw:
+        return False
+    if re.search(r"(?i)\bval(?:ue)?\b|\bbala\b|\bamount\b", norm):
+        return False
+    compact = re.sub(r"[^a-z]", "", norm)
+    return compact in {"issue", "issueqty", "sale", "sales", "salesqty"}
+
+
+def _is_total_qty_header_text(text: str) -> bool:
+    norm = normalize_header(text or "")
+    compact = re.sub(r"[^a-z]", "", norm)
+    return compact in {"total", "totalqty", "tot"}
+
+
+def _physical_cell_at(item: Dict[str, Any], col_index: int) -> Any:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    phys = extra.get("physical_cells") if isinstance(extra, dict) else None
+    if not isinstance(phys, dict):
+        return None
+    if str(col_index) in phys:
+        return phys.get(str(col_index))
+    return phys.get(col_index)
+
+
+def _restore_closing_qty_from_header(
+    item: Dict[str, Any],
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """Re-slot closing_qty from the Closing header cell.
+
+    Cell geometry can park Issue/Sales money in closing_qty, or leave closing
+    at 0 while the Closing column still holds the printed qty. Copies that
+    printed cell only.
+    """
+    if not _closing_qty_from_header_enabled():
+        return False
+    if not isinstance(item, dict) or not columns:
+        return False
+    close_idx = None
+    issue_idx = None
+    total_idx = None
+    for col in columns:
+        if not isinstance(col, dict):
+            continue
+        try:
+            idx = int(col.get("col_index"))
+        except (TypeError, ValueError):
+            continue
+        header = str(col.get("header_text") or "")
+        if close_idx is None and _is_closing_qty_header_text(header):
+            close_idx = idx
+        elif issue_idx is None and _is_issue_qty_header_text(header):
+            issue_idx = idx
+        elif total_idx is None and _is_total_qty_header_text(header):
+            total_idx = idx
+    if close_idx is None:
+        return False
+    printed_close = parse_number(
+        _physical_cell_at(item, close_idx), allow_internal_spaces=True
+    )
+    if printed_close is None or not _looks_small_qty(printed_close):
+        if printed_close is not None and abs(float(printed_close)) > 0.001:
+            return False
+        if printed_close is None:
+            return False
+    printed_close_f = float(printed_close)
+    current = item.get("closing_qty")
+    try:
+        current_f = float(current) if current not in (None, "") else None
+    except (TypeError, ValueError):
+        current_f = None
+    if current_f is not None and abs(current_f - printed_close_f) <= 0.51:
+        return False
+
+    opening = _printed_float(item, "opening_qty") or 0.0
+    receipt = _printed_float(item, "purchase_qty")
+    if receipt is None:
+        receipt = _printed_float(item, "receipts_qty") or 0.0
+    sales = _printed_float(item, "sales_qty") or 0.0
+    money_in_closing = current_f is not None and _looks_money(current_f)
+    blank_closing = current_f is None or abs(current_f) <= 0.001
+    identity_ok = abs((opening + receipt - sales) - printed_close_f) <= 0.51
+
+    printed_issue = None
+    if issue_idx is not None:
+        printed_issue = parse_number(
+            _physical_cell_at(item, issue_idx), allow_internal_spaces=True
+        )
+    printed_total = None
+    if total_idx is not None:
+        printed_total = parse_number(
+            _physical_cell_at(item, total_idx), allow_internal_spaces=True
+        )
+    sales_is_total = (
+        printed_issue is not None
+        and printed_total is not None
+        and _looks_small_qty(printed_issue)
+        and abs(float(sales) - float(printed_total)) <= 0.51
+        and abs(float(printed_issue) - float(printed_total)) > 0.51
+    )
+    if sales_is_total:
+        identity_ok = (
+            abs((opening + receipt - float(printed_issue)) - printed_close_f) <= 0.51
+        )
+
+    if money_in_closing:
+        pass
+    elif blank_closing and identity_ok and printed_close_f > 0.001:
+        pass
+    else:
+        return False
+
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    logger.info(
+        "VISION_TABLE CLOSING_QTY_FROM_HEADER product=%s "
+        "closing_qty=%s previous=%s sales_from_issue=%s",
+        str(item.get("product_name") or "")[:60],
+        printed_close_f,
+        current_f,
+        float(printed_issue) if sales_is_total and printed_issue is not None else None,
+    )
+    sv_now = item.get("sales_value")
+    sv_needs_money = sv_now in (None, "", 0, 0.0)
+    if money_in_closing and not sv_needs_money:
+        try:
+            sv_needs_money = _looks_small_qty(float(sv_now)) and not _looks_money(
+                sv_now, raw_text=str(sv_now)
+            )
+        except (TypeError, ValueError):
+            sv_needs_money = False
+    if money_in_closing and sv_needs_money and current_f is not None:
+        for col in columns:
+            if not isinstance(col, dict):
+                continue
+            header = str(col.get("header_text") or "")
+            if not re.search(r"(?i)issue|sale", header):
+                continue
+            if "/" not in header and "val" not in normalize_header(header):
+                continue
+            try:
+                val_idx = int(col.get("col_index"))
+            except (TypeError, ValueError):
+                continue
+            cell = parse_number(
+                _physical_cell_at(item, val_idx), allow_internal_spaces=True
+            )
+            if cell is not None and abs(float(cell) - float(current_f)) <= 0.02:
+                item["sales_value"] = float(current_f)
+                fs["sales_value"] = "printed"
+                break
+        cv_now = item.get("closing_value")
+        try:
+            cv_f = float(cv_now) if cv_now not in (None, "") else None
+        except (TypeError, ValueError):
+            cv_f = None
+        if (
+            cv_f is not None
+            and _looks_small_qty(cv_f)
+            and abs(cv_f - printed_close_f) <= 0.51
+        ):
+            for col in columns:
+                if not isinstance(col, dict):
+                    continue
+                header = str(col.get("header_text") or "")
+                norm = normalize_header(header)
+                if not re.search(r"(?i)clos", norm):
+                    continue
+                if not re.search(r"(?i)\bbala\b|\bval(?:ue)?\b|\bamount\b", norm):
+                    continue
+                try:
+                    val_idx = int(col.get("col_index"))
+                except (TypeError, ValueError):
+                    continue
+                cell = parse_number(
+                    _physical_cell_at(item, val_idx), allow_internal_spaces=True
+                )
+                if cell is not None and _looks_money(cell, raw_text=str(cell)):
+                    item["closing_value"] = float(cell)
+                    fs["closing_value"] = "printed"
+                    break
+    item["closing_qty"] = printed_close_f
+    fs["closing_qty"] = "printed"
+    if sales_is_total and printed_issue is not None:
+        item["sales_qty"] = float(printed_issue)
+        fs["sales_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_QTY_FROM_HEADER" not in flags:
+        flags.append("CLOSING_QTY_FROM_HEADER")
+    extra["flags"] = flags
+    return True
+
+
+def _apply_closing_qty_from_header_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+    columns: Sequence[Dict[str, Any]],
+) -> int:
+    """Last pass: sales value must not remain in closing_qty."""
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _restore_closing_qty_from_header(item, columns):
+            fixed += 1
+    if fixed:
+        logger.info("VISION_TABLE CLOSING_QTY_FROM_HEADER_PASS fixed=%s", fixed)
     return fixed
 
 
@@ -5835,6 +6194,7 @@ def _map_single_table(
             # (identity 0=0 skips reread). Closing column is printed, so derive
             # would refill 0 if this ran earlier.
             _repair_rate_truncated_zero_row(item)
+            _restore_closing_qty_from_header(item, columns)
             line_items.append(item)
 
     line_items, peeled_totals = _peel_vision_total_named_items(line_items)
@@ -6013,6 +6373,7 @@ def map_vision_table(
     _apply_issue_value_left_shift_pass(all_items)
     _apply_closing_pair_unswap_pass(all_items)
     _apply_tot_qty_value_header_shift_pass(all_items)
+    _apply_closing_qty_from_header_pass(all_items, column_map or [])
 
     return {
         "line_items": all_items,
@@ -7879,6 +8240,7 @@ def run_vision_table_path(
         _apply_issue_value_left_shift_pass(all_items)
         _apply_closing_pair_unswap_pass(all_items)
         _apply_tot_qty_value_header_shift_pass(all_items)
+        _apply_closing_qty_from_header_pass(all_items, column_map or [])
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
         all_totals.extend(peeled_totals)
@@ -8224,6 +8586,20 @@ def run_vision_table_path(
         _apply_issue_value_left_shift_pass(result.get("line_items") or [])
         _apply_closing_pair_unswap_pass(result.get("line_items") or [])
         _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
+        _post_cols = (
+            ((result.get("totals") or {}).get("extra") or {}).get("column_map")
+            or []
+        )
+        if not _post_cols:
+            _post_cols = []
+            for _it in result.get("line_items") or []:
+                _ex = _it.get("extra") if isinstance(_it, dict) else None
+                if isinstance(_ex, dict) and _ex.get("column_map"):
+                    _post_cols = _ex.get("column_map") or []
+                    break
+        _apply_closing_qty_from_header_pass(
+            result.get("line_items") or [], _post_cols
+        )
 
         products, peeled = _peel_vision_total_named_items(result.get("line_items"))
         result["line_items"] = products
