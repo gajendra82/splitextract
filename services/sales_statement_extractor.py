@@ -4169,6 +4169,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "docx_header_resolved_footer",
                 "ssa_value_footer",
                 "chopada_zandra_footer",
+                "stock_sales_detail_total",
             }
         )
     )
@@ -4223,6 +4224,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "op_pur_sale_bal_qnty_footer",
             "ssa_value_footer",
             "chopada_zandra_footer",
+            "stock_sales_detail_total",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -27825,6 +27827,95 @@ def _parse_stock_sales_op_qty_val_words_from_doc(
     return _parse_stock_sales_op_qty_val_words_pages(page_infos, filename)
 
 
+def stock_detail_opval_page_rotation_enabled() -> bool:
+    """Read Stock and Sales Detail words in the page's displayed rotation.
+
+    A 90-degree page stores Op.Qty / Cl.Qty down one unrotated column, so the
+    horizontal header match misses and closing qty is left at 0.
+    """
+    return os.getenv("STOCK_DETAIL_OPVAL_PAGE_ROTATION", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _detail_opval_visual_words(page: Any, apply_rotation: bool) -> List[Tuple[float, float, float, str]]:
+    """Return (x0, x1, y0, token) in displayed page space."""
+    raw = page.get_text("words") or []
+    rot = int(getattr(page, "rotation", 0) or 0) % 360
+    if not apply_rotation or rot == 0:
+        out: List[Tuple[float, float, float, str]] = []
+        for w in raw:
+            token = str(w[4]).strip()
+            if token:
+                out.append((float(w[0]), float(w[2]), float(w[1]), token))
+        return out
+    import fitz
+
+    matrix = page.rotation_matrix
+    out = []
+    for w in raw:
+        token = str(w[4]).strip()
+        if not token:
+            continue
+        p0 = fitz.Point(float(w[0]), float(w[1])) * matrix
+        p1 = fitz.Point(float(w[2]), float(w[3])) * matrix
+        x0, x1 = (p0.x, p1.x) if p0.x <= p1.x else (p1.x, p0.x)
+        y0 = p0.y if p0.y <= p1.y else p1.y
+        out.append((x0, x1, y0, token))
+    return out
+
+
+def stock_detail_opval_printed_totals_enabled() -> bool:
+    """Keep the printed Total-row S.Val / Cl.Val instead of leaving them blank."""
+    return os.getenv("STOCK_DETAIL_OPVAL_PRINTED_TOTALS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _detail_opval_merge_wrapped_decimals(
+    rows: List[Dict[str, Any]], y_gap: float = 10.0
+) -> List[Dict[str, Any]]:
+    """Join wrapped cents onto the parent number that shares the same right edge.
+
+    Landscape PDFs split ``1089356.`` / ``39`` across two visual rows. Matching
+    by x1 keeps the fragment in the printed column.
+    """
+    if len(rows) < 2:
+        return rows
+    for index, row in enumerate(rows):
+        if index == 0:
+            continue
+        prev = rows[index - 1]
+        if float(row["y"]) - float(prev["y"]) > y_gap:
+            continue
+        prev_words = prev["words"]
+        kept: List[Tuple[float, float, str]] = []
+        for x0, x1, tok in row["words"]:
+            if x0 > 140 and re.fullmatch(r"\d{1,3}", tok):
+                best_i = None
+                best_d = 1.5
+                for j, (_px0, px1, ptok) in enumerate(prev_words):
+                    if not re.fullmatch(r"-?\d+\.?\d*", str(ptok).replace(",", "")):
+                        continue
+                    dist = abs(float(px1) - float(x1))
+                    if dist <= best_d:
+                        best_d = dist
+                        best_i = j
+                if best_i is not None:
+                    px0, px1, ptok = prev_words[best_i]
+                    prev_words[best_i] = (px0, px1, str(ptok) + tok)
+                    continue
+            kept.append((x0, x1, tok))
+        row["words"] = kept
+    return [row for row in rows if row.get("words")]
+
+
 def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Landscape Stock and Sales Detail with a printed Op.Val column.
 
@@ -27841,14 +27932,17 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
     result = empty_result(filename, "pdf")
     result["report_title"] = "Stock and Sales Detail Report"
     items: List[Dict[str, Any]] = []
+    use_rotation = stock_detail_opval_page_rotation_enabled()
+    columns: Optional[List[Tuple[Optional[str], float]]] = None
 
-    for page, text in zip(doc, page_texts):
+    for page_index, (page, text) in enumerate(zip(doc, page_texts)):
         seller = re.search(r"Seller\s*:\s*(.+)", text, re.I)
         if seller and not result.get("stockist_name"):
             result["stockist_name"] = _clean_name(seller.group(1).split("From")[0])
         if result["period_from"] is None:
+            date_tok = r"\d{1,2}[-/](?:\d{1,2}|[A-Za-z]{3,9})[-/]\d{2,4}"
             m = re.search(
-                r"From\s+(\d{1,2}-\d{1,2}-\d{4})\s+to\s+(\d{1,2}-\d{1,2}-\d{4})",
+                rf"From\s+({date_tok})\s+to\s+({date_tok})",
                 text,
                 re.I,
             )
@@ -27856,21 +27950,31 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                 result["period_from"] = _normalize_date(m.group(1))
                 result["period_to"] = _normalize_date(m.group(2))
 
-        words = sorted(page.get_text("words") or [], key=lambda w: (round(w[1], 1), w[0]))
+        rot = int(getattr(page, "rotation", 0) or 0) % 360
+        apply_rot = use_rotation and rot != 0
+        if apply_rot:
+            logger.info(
+                "DETAIL_OPVAL_ROTATION file=%s page=%s rotation=%s",
+                filename,
+                page_index + 1,
+                rot,
+            )
+        visual = _detail_opval_visual_words(page, apply_rot)
+        visual.sort(key=lambda w: (round(w[2], 1), w[0]))
         rows: List[Dict[str, Any]] = []
-        for w in words:
-            x0, x1, y0, token = float(w[0]), float(w[2]), float(w[1]), str(w[4]).strip()
-            if not token:
-                continue
+        for x0, x1, y0, token in visual:
             if rows and abs(y0 - rows[-1]["y"]) <= 2.0:
                 row = rows[-1]
             else:
                 row = {"y": y0, "words": []}
                 rows.append(row)
             row["words"].append((x0, x1, token))
+        rows = _detail_opval_merge_wrapped_decimals(rows)
 
-        columns: Optional[List[Tuple[str, float]]] = None
+        if not apply_rot:
+            columns = None
         header_i = None
+        found_header = False
         for i, row in enumerate(rows):
             blob = " ".join(tok for _a, _b, tok in row["words"])
             if re.search(r"Op\.Qty", blob) and re.search(r"Op\.Val", blob) and re.search(r"Cl\.Qty", blob):
@@ -27884,8 +27988,17 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                 ):
                     columns = starts
                     header_i = i
+                    found_header = True
         if not columns:
             continue
+        if apply_rot and not found_header:
+            header_i = None
+            logger.info(
+                "DETAIL_OPVAL_HEADER_CARRY file=%s page=%s columns=%s",
+                filename,
+                page_index + 1,
+                len(columns),
+            )
         op_qty_x = next(x for name, x in columns if name == "opening_qty")
 
         spans: List[Tuple[Optional[str], float, float]] = []
@@ -27921,17 +28034,20 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
         for n, i in enumerate(serial_at):
             names: List[str] = []
             prev_y = rows[i]["y"]
-            j = i - 1
-            while j > (header_i or 0):
-                if rows[j]["y"] < prev_y - 16:
-                    break
-                if j in serial_at:
-                    break
-                part = item_words(rows[j])
-                if part:
-                    names = part + names
-                prev_y = rows[j]["y"]
-                j -= 1
+            # Rotated detail grids print the product name on the qty row and
+            # wrap downward. Walking upward pulls the previous product's wrap.
+            if not apply_rot:
+                j = i - 1
+                while j > (header_i or 0):
+                    if rows[j]["y"] < prev_y - 16:
+                        break
+                    if j in serial_at:
+                        break
+                    part = item_words(rows[j])
+                    if part:
+                        names = part + names
+                    prev_y = rows[j]["y"]
+                    j -= 1
             names.extend(item_words(rows[i]))
             prev_y = rows[i]["y"]
             j = i + 1
@@ -27945,6 +28061,8 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                 names.extend(part)
                 prev_y = rows[j]["y"]
                 j += 1
+            if apply_rot:
+                names = [tok for tok in names if not re.fullmatch(r"[~\u00b7.\-]+", tok)]
 
             cells: Dict[str, List[str]] = {}
             for _x0, x1, token in rows[i]["words"]:
@@ -27987,9 +28105,28 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
                 field = field_for(x1)
                 if field:
                     cells.setdefault(field, []).append(token)
+            extra_t = result["totals"].setdefault("extra", {})
             op_val = _detail_opval_number(cells.get("opening_value") or [])
             if op_val is not None:
                 result["totals"]["opening_value"] = op_val
+                extra_t["opening_value"] = op_val
+            if stock_detail_opval_printed_totals_enabled():
+                sales_tot = _detail_opval_number(cells.get("sales_value") or [])
+                closing_tot = _detail_opval_number(cells.get("closing_value") or [])
+                if sales_tot is not None:
+                    result["totals"]["sales_value"] = sales_tot
+                if closing_tot is not None:
+                    result["totals"]["closing_value"] = closing_tot
+                purchase_tot = _detail_opval_number(cells.get("purchase_value") or [])
+                if purchase_tot is not None:
+                    extra_t["purchase_value"] = purchase_tot
+                extra_t["total_row_source"] = "stock_sales_detail_total"
+                logger.info(
+                    "DETAIL_OPVAL_PRINTED_TOTALS file=%s sales_value=%s closing_value=%s",
+                    filename,
+                    sales_tot,
+                    closing_tot,
+                )
             if not result.get("company_name"):
                 for prev in rows:
                     if prev["y"] >= row["y"]:
