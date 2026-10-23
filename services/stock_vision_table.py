@@ -25,6 +25,7 @@ from services.stock_row_classifier import (
     RowStatus,
     apply_closing_derived,
     classify_row,
+    expected_closing,
     read_row_fields,
 )
 
@@ -1216,12 +1217,18 @@ def build_table_prompt() -> str:
         f"[{fields}], with key \"canonical\" and confidence 0..1.\n"
         "- unreadable_cells: [{{table_index, row_index, col_index}}].\n"
         "- stockist_name: distributor/agency name printed ABOVE the report title "
-        "(not the red Company: line).\n"
+        "(not the red Company: line). If only a letterhead is printed and there "
+        "is no \"Company :\" line, put that letterhead in stockist_name and "
+        "leave company_name null — never put the letterhead into company_name.\n"
         "- company_name: the printed \"Company :\" / division line when present.\n"
         "- statement_period if printed.\n"
         "Rules: copy every number exactly as printed, including decimals and "
         "commas. An empty cell is null, never 0 — do not invent 0 for an unread "
-        "digit. Distinguish visually similar characters carefully (0 vs O, 1 vs 7, "
+        "digit. A leading minus on Opening/Purchase/Receipt/Sales/Closing is a "
+        "printed dash: emit null, never a negative quantity (returns have their "
+        "own columns). Right-edge ClosStock/Closing/Balance: copy the printed "
+        "digit; empty or dash is null, never 0. "
+        "Distinguish visually similar characters carefully (0 vs O, 1 vs 7, "
         "4 vs 9). Keep one entry per column even if empty so columns never shift. "
         "Do not add, balance or correct numbers. If a digit is unclear, put the "
         "cell in unreadable_cells and set that cell to null (do not guess). "
@@ -3978,6 +3985,367 @@ def _qty_is_blank_zero(val: Any) -> bool:
         return False
 
 
+def _letterhead_stockist_enabled() -> bool:
+    """STOCK_VISION_LETTERHEAD_STOCKIST — default OFF.
+
+    When Vision puts the only printed org name into company_name and leaves
+    stockist_name empty, move letterhead to stockist. Does not invent company.
+    """
+    return os.getenv(
+        "STOCK_VISION_LETTERHEAD_STOCKIST", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _reject_negative_qty_enabled() -> bool:
+    """STOCK_VISION_REJECT_NEGATIVE_QTY — default OFF.
+
+    Opening/purchase/sales/closing are not printed negative on stock sheets.
+    A leading minus is an unread dash — mark missing, never keep -3 as purchase.
+    """
+    return os.getenv(
+        "STOCK_VISION_REJECT_NEGATIVE_QTY", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _unread_zero_opening_enabled() -> bool:
+    """STOCK_VISION_UNREAD_ZERO_OPENING — default OFF.
+
+    When opening is 0/blank but a printed digit is parked in sales==closing
+    (no-movement row), re-slot that digit into opening. Never invents a qty.
+    """
+    return os.getenv(
+        "STOCK_VISION_UNREAD_ZERO_OPENING", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _unread_zero_closing_enabled() -> bool:
+    """STOCK_VISION_UNREAD_ZERO_CLOSING — default OFF.
+
+    When opening is printed and closing is 0 but identity fails, the 0 is an
+    unread ClosStock cell — mark missing. Never fill closing from arithmetic.
+    """
+    return os.getenv(
+        "STOCK_VISION_UNREAD_ZERO_CLOSING", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_HIMALAYA_COMPANY_LINE = re.compile(
+    r"(?i)\bHIMALAYA\b|WELLNESS\s*CO|\bZANDRA\b|\bZENITH\b|\b(?:HIM-?)?ZEAL\b"
+)
+
+
+def _correct_letterhead_stockist(result: Dict[str, Any]) -> bool:
+    """Move a lone letterhead out of company_name into stockist_name.
+
+    Also swaps Himalaya-in-stockist / distributor-in-company so Vision-table
+    does not skip that correction. Never invents a company name.
+    """
+    if not _letterhead_stockist_enabled() or not isinstance(result, dict):
+        return False
+    stockist = str(result.get("stockist_name") or "").strip()
+    company = str(result.get("company_name") or "").strip()
+    if not company:
+        return False
+    stockist_u = stockist.upper()
+    company_u = company.upper()
+    if stockist and re.search(r"\bHIMALAYA\b", stockist_u) and not re.search(
+        r"\bHIMALAYA\b", company_u
+    ) and re.search(
+        r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|PVT\.?\s*LTD|"
+        r"PHARMA(?:CEUTICALS?)?",
+        company_u,
+    ):
+        result["stockist_name"], result["company_name"] = company, stockist
+        logger.info(
+            "STOCK_VISION_LETTERHEAD_STOCKIST swapped stockist=%r company=%r",
+            result.get("stockist_name"),
+            result.get("company_name"),
+        )
+        return True
+    if stockist:
+        return False
+    if _HIMALAYA_COMPANY_LINE.search(company):
+        return False
+    result["stockist_name"] = company
+    result["company_name"] = None
+    logger.info(
+        "STOCK_VISION_LETTERHEAD_STOCKIST moved company_name=%r -> stockist_name",
+        company,
+    )
+    return True
+
+
+def _repair_negative_core_qty(item: Dict[str, Any]) -> bool:
+    """Treat negative opening/purchase/sales/closing as unread (not printed)."""
+    if not _reject_negative_qty_enabled() or not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        fs = {}
+        extra["field_source"] = fs
+    pairs = (
+        ("opening_qty", "opening_qty"),
+        ("receipts_qty", "purchase_qty"),
+        ("sales_qty", "sales_qty"),
+        ("closing_qty", "closing_qty"),
+    )
+    changed = False
+    for item_key, fs_key in pairs:
+        raw = item.get(item_key)
+        if raw in (None, ""):
+            continue
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if value >= -0.001:
+            continue
+        item[item_key] = None
+        fs[fs_key] = "missing"
+        if fs_key == "purchase_qty":
+            fs["receipts_qty"] = "missing"
+        changed = True
+        logger.info(
+            "VISION_TABLE NEGATIVE_QTY_UNREAD product=%s field=%s value=%s",
+            str(item.get("product_name") or "")[:60],
+            item_key,
+            value,
+        )
+    if changed:
+        flags = list(extra.get("flags") or [])
+        if "NEGATIVE_QTY_UNREAD" not in flags:
+            flags.append("NEGATIVE_QTY_UNREAD")
+        extra["flags"] = flags
+    return changed
+
+
+def _repair_unread_zero_closing(item: Dict[str, Any]) -> bool:
+    """Printed closing 0 that cannot be the identity remainder is unread.
+
+    Does not write expected closing onto the row (no arithmetic rewrite).
+    """
+    if not _unread_zero_closing_enabled() or not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        fs = {}
+        extra["field_source"] = fs
+    if fs.get("closing_qty") == "missing":
+        return False
+    if not _qty_is_blank_zero(item.get("closing_qty")):
+        return False
+    try:
+        opening = float(item.get("opening_qty") or 0)
+    except (TypeError, ValueError):
+        return False
+    if opening < 0.01:
+        return False
+    fields = read_row_fields(item)
+    fields["closing"] = 0.0
+    expected = expected_closing(fields)
+    if expected is None:
+        return False
+    # Negative remainder means sales exceeded opening — closing 0 may be
+    # printed; do not treat it as unread ClosStock.
+    if float(expected) <= 0.001:
+        return False
+    # Small remainder (OCR on another column) is not a blank right-edge cell.
+    min_remain = max(1.0, 0.25 * abs(opening))
+    if float(expected) + 1e-9 < min_remain:
+        return False
+    item["closing_qty"] = None
+    fs["closing_qty"] = "missing"
+    extra["calculated_closing_qty"] = float(expected)
+    flags = list(extra.get("flags") or [])
+    if "UNREAD_ZERO_CLOSING" not in flags:
+        flags.append("UNREAD_ZERO_CLOSING")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE UNREAD_ZERO_CLOSING product=%s opening=%s expected_close=%s",
+        str(item.get("product_name") or "")[:60],
+        opening,
+        expected,
+    )
+    return True
+
+
+def _physical_opening_qty(item: Dict[str, Any]) -> Optional[float]:
+    """Printed digit under an OPENING header in physical/raw cells, if any."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)):
+        return None
+    physical = extra.get("physical_cells") if isinstance(extra.get("physical_cells"), dict) else {}
+    raw_cells = extra.get("vision_raw_cells") if isinstance(extra.get("vision_raw_cells"), (list, tuple)) else []
+    for idx, ht in enumerate(headers):
+        text = str(ht or "")
+        if not re.search(r"(?i)\bop(?:en(?:ing)?|n|stk)?\b|\bopening\b", text):
+            continue
+        if re.search(r"(?i)value|val\b|amt|amount|rate", text):
+            continue
+        raw = physical.get(str(idx))
+        if raw in (None, "") and idx < len(raw_cells):
+            raw = raw_cells[idx]
+        parsed = parse_number(raw, allow_internal_spaces=True)
+        if parsed is not None and abs(float(parsed)) >= 0.01:
+            return float(parsed)
+    return None
+
+
+def _repair_unread_zero_opening(item: Dict[str, Any]) -> bool:
+    """Restore unread opening from a printed cell; never invent a digit.
+
+    1) Nonzero under the OPENING header in physical/raw cells.
+    2) No-movement shift: opening blank, receipts blank, sales==closing>0
+       → that digit is opening, sales was the blank mid column.
+    3) Printed opening 0 that cannot identity-match → mark missing only.
+    """
+    if not _unread_zero_opening_enabled() or not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        fs = {}
+        extra["field_source"] = fs
+    opening_blank = _qty_is_blank_zero(item.get("opening_qty")) or fs.get(
+        "opening_qty"
+    ) == "missing"
+    if not opening_blank:
+        return False
+
+    phys = _physical_opening_qty(item)
+    if phys is not None:
+        try:
+            current = float(item.get("opening_qty") or 0)
+        except (TypeError, ValueError):
+            current = 0.0
+        if abs(phys - current) > 0.51:
+            item["opening_qty"] = phys
+            fs["opening_qty"] = "printed"
+            flags = list(extra.get("flags") or [])
+            if "UNREAD_OPENING_FROM_PHYSICAL" not in flags:
+                flags.append("UNREAD_OPENING_FROM_PHYSICAL")
+            extra["flags"] = flags
+            logger.info(
+                "VISION_TABLE UNREAD_OPENING_FROM_PHYSICAL product=%s opening=%s",
+                str(item.get("product_name") or "")[:60],
+                phys,
+            )
+            return True
+
+    receipts_blank = _qty_is_blank_zero(item.get("receipts_qty"))
+    try:
+        sales = float(item.get("sales_qty") or 0) if item.get("sales_qty") not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        sales = 0.0
+    try:
+        closing = (
+            float(item.get("closing_qty"))
+            if item.get("closing_qty") not in (None, "")
+            else None
+        )
+    except (TypeError, ValueError):
+        closing = None
+    if (
+        receipts_blank
+        and closing is not None
+        and sales >= 0.01
+        and abs(sales - float(closing)) <= 0.51
+        and abs(sales - round(sales)) <= 0.001
+    ):
+        item["opening_qty"] = sales
+        fs["opening_qty"] = "printed"
+        item["sales_qty"] = None
+        fs["sales_qty"] = "missing"
+        flags = list(extra.get("flags") or [])
+        if "UNREAD_OPENING_FROM_SALES_CLOSE" not in flags:
+            flags.append("UNREAD_OPENING_FROM_SALES_CLOSE")
+        extra["flags"] = flags
+        logger.info(
+            "VISION_TABLE UNREAD_OPENING_FROM_SALES_CLOSE product=%s "
+            "sales_as_open=%s closing=%s",
+            str(item.get("product_name") or "")[:60],
+            sales,
+            closing,
+        )
+        return True
+
+    if fs.get("opening_qty") == "missing":
+        return False
+    if closing is None:
+        return False
+    try:
+        receipts = float(item.get("receipts_qty") or 0)
+    except (TypeError, ValueError):
+        receipts = 0.0
+    expected_close = receipts - sales
+    tol = max(1.0, 0.005 * max(abs(float(closing)), abs(sales)))
+    if abs(expected_close - float(closing)) <= tol:
+        return False
+    item["opening_qty"] = None
+    fs["opening_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "UNREAD_ZERO_OPENING" not in flags:
+        flags.append("UNREAD_ZERO_OPENING")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE UNREAD_ZERO_OPENING product=%s sales=%s closing=%s",
+        str(item.get("product_name") or "")[:60],
+        sales,
+        closing,
+    )
+    return True
+
+
+def _apply_unread_zero_opening_pass(items: Sequence[Dict[str, Any]]) -> None:
+    for item in items or []:
+        if isinstance(item, dict):
+            _repair_unread_zero_opening(item)
+
+
+def _apply_negative_qty_unread_pass(items: Sequence[Dict[str, Any]]) -> None:
+    for item in items or []:
+        if isinstance(item, dict):
+            _repair_negative_core_qty(item)
+
+
+def _apply_unread_zero_closing_pass(items: Sequence[Dict[str, Any]]) -> None:
+    for item in items or []:
+        if isinstance(item, dict):
+            _repair_unread_zero_closing(item)
+
+
 def _repair_rate_truncated_zero_row(item: Dict[str, Any]) -> bool:
     """RATE grid: opening VALUE printed but every qty cell is 0 → unread.
 
@@ -6180,6 +6548,9 @@ def _map_single_table(
             _repair_closing_pair_interchanged(item)
             _repair_tot_qty_value_header_shift(item)
             _flag_qty_value_geometry_suspicion(item)
+            _repair_negative_core_qty(item)
+            _repair_unread_zero_opening(item)
+            _repair_unread_zero_closing(item)
             apply_closing_derived(
                 item, printed_fields=printed_fields, request_id=request_id
             )
@@ -6373,6 +6744,9 @@ def map_vision_table(
     _apply_issue_value_left_shift_pass(all_items)
     _apply_closing_pair_unswap_pass(all_items)
     _apply_tot_qty_value_header_shift_pass(all_items)
+    _apply_negative_qty_unread_pass(all_items)
+    _apply_unread_zero_opening_pass(all_items)
+    _apply_unread_zero_closing_pass(all_items)
     _apply_closing_qty_from_header_pass(all_items, column_map or [])
 
     return {
@@ -7660,6 +8034,7 @@ def _stamp_vision_result(
         result["stockist_name"] = stockist_name
     if company_name:
         result["company_name"] = company_name
+    _correct_letterhead_stockist(result)
     period = str(statement_period or "").strip()
     if period:
         # Accept only a clear printed report range — never a guessed single date.
@@ -8240,6 +8615,9 @@ def run_vision_table_path(
         _apply_issue_value_left_shift_pass(all_items)
         _apply_closing_pair_unswap_pass(all_items)
         _apply_tot_qty_value_header_shift_pass(all_items)
+        _apply_negative_qty_unread_pass(all_items)
+        _apply_unread_zero_opening_pass(all_items)
+        _apply_unread_zero_closing_pass(all_items)
         _apply_closing_qty_from_header_pass(all_items, column_map or [])
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
@@ -8586,6 +8964,9 @@ def run_vision_table_path(
         _apply_issue_value_left_shift_pass(result.get("line_items") or [])
         _apply_closing_pair_unswap_pass(result.get("line_items") or [])
         _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
+        _apply_negative_qty_unread_pass(result.get("line_items") or [])
+        _apply_unread_zero_opening_pass(result.get("line_items") or [])
+        _apply_unread_zero_closing_pass(result.get("line_items") or [])
         _post_cols = (
             ((result.get("totals") or {}).get("extra") or {}).get("column_map")
             or []
