@@ -7,6 +7,7 @@ from pathlib import Path
 
 from services.sales_statement_extractor import (
     _find_marg_erp_xls_header,
+    _is_xls_statement_footer_name,
     _parse_marg_erp_xls,
     extract_sales_statement,
 )
@@ -110,6 +111,41 @@ class TestMargErpHeaderDetect(unittest.TestCase):
         self.assertEqual(tentex["opening_qty"], 251.0)
         self.assertEqual(tentex["closing_qty"], 251.0)
         self.assertEqual(tentex["extra"]["rate"], 25.1)
+
+    def test_footer_and_company_rows_are_not_products(self):
+        rows = [
+            ["RENUKA TRADERS"],
+            ["157 N S ROAD, ASANSOL W.B."],
+            [
+                "PRODUCT DESCRIPTION",
+                "OPENING STOCK",
+                "CLOSING STOCK",
+            ],
+            ["CYSTONE SYP. 200ML", 19.0, 19.0],
+            ["HIORA K MOUTH WASH 150M 150ML", 1.0, 1.0],
+            ["THE HIMALAYA HOSPITAL DIVN", 0.0, 0.0],
+            ["LAST MONTH SALE AUGUST", 0.0, 0.0],
+            ["QUANTITY 267", 0.0, 0.0],
+            ["VALUE 43623.16", 0.0, 0.0],
+            ["THE HIMALAYA DRUG COMPANY. CDNB00009", 0.0, 0.0],
+            ["THE HIMALAYA DRUG COMPANY. CDNB00032", 0.0, 0.0],
+        ]
+        found = _find_marg_erp_xls_header(rows)
+        self.assertIsNotNone(found)
+        result = _parse_marg_erp_xls(rows, "HIMALAY ASEP.XLS", ".xls", found)
+        names = [item["product_name"] for item in result["line_items"]]
+        self.assertEqual(names, ["CYSTONE SYP. 200ML", "HIORA K MOUTH WASH 150M 150ML"])
+        self.assertFalse(_is_xls_statement_footer_name("CYSTONE SYP. 200ML"))
+        self.assertFalse(_is_xls_statement_footer_name("HIORA K MOUTH WASH 150M 150ML"))
+        for junk in (
+            "LAST MONTH SALE AUGUST",
+            "QUANTITY 267",
+            "VALUE 43623.16",
+            "THE HIMALAYA HOSPITAL DIVN",
+            "THE HIMALAYA DRUG COMPANY. CDNB00009",
+            "THE HIMALAYA DRUG COMPANY. CDNB00032",
+        ):
+            self.assertTrue(_is_xls_statement_footer_name(junk), junk)
 
     def test_legacy_item_op_header_not_detected_as_marg(self):
         rows = [

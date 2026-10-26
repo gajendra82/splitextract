@@ -10973,6 +10973,44 @@ def _row_cell_at(row: List[Any], idx: Optional[int]) -> Any:
     return row[idx]
 
 
+_XLS_FOOTER_SKU_TOKEN = re.compile(
+    r"(?i)\b(?:TAB|TABS|TABLETS?|SYP|SYRUP|GEL|CREAM|DROP|DROPS|"
+    r"OIN|OINT|CAP|CAPS|ML|GM|GRM|WASH)\b"
+)
+_XLS_FOOTER_LABEL_NAME = re.compile(
+    r"(?ix)^\s*(?:"
+    r"last\s*month\s*sales?\b"
+    r"|(?:quantity|qty|values?|amounts?)\s*[:.\-]?\s*[\d,]"
+    r")"
+)
+_XLS_FOOTER_DIVISION_NAME = re.compile(
+    r"(?i)\b(?:divn|division)\b"
+)
+_XLS_FOOTER_COMPANY_HINT = re.compile(
+    r"(?i)\b(?:himalaya|hospital|drug|wellness)\b"
+)
+_XLS_FOOTER_SUPPLIER_NAME = re.compile(
+    r"(?i)\b(?:drug\s+co(?:mpany)?|pharma(?:ceuticals?)?)\b"
+)
+_XLS_FOOTER_DOC_CODE = re.compile(r"[A-Z]{2,8}\d{3,}")
+
+
+def _is_xls_statement_footer_name(name: Any) -> bool:
+    """True for printed sheet footers, never SKUs (last-month sale / qty / company)."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if _XLS_FOOTER_LABEL_NAME.match(text):
+        return True
+    if _XLS_FOOTER_SKU_TOKEN.search(text):
+        return False
+    if _XLS_FOOTER_DIVISION_NAME.search(text) and _XLS_FOOTER_COMPANY_HINT.search(text):
+        return True
+    if _XLS_FOOTER_SUPPLIER_NAME.search(text) and _XLS_FOOTER_DOC_CODE.search(text):
+        return True
+    return False
+
+
 def _parse_marg_erp_xls(
     rows: List[List[Any]],
     filename: str,
@@ -11130,6 +11168,9 @@ def _parse_marg_erp_xls(
             product_name,
             re.I,
         ):
+            continue
+        if _is_xls_statement_footer_name(product_name):
+            logger.info("XLS_FOOTER_ROW skipped label=%r", product_name)
             continue
 
         item = empty_line_item()
@@ -15398,6 +15439,9 @@ def _xls_fill_from_rows(
                     result["totals"]["sales_value"] = _to_float(row[sv])
                 if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
                     result["totals"]["closing_value"] = _to_float(row[bv])
+            continue
+        if _is_xls_statement_footer_name(product_name):
+            logger.info("XLS_FOOTER_ROW skipped label=%r", product_name)
             continue
         if header_idx is not None:
             qty_cells = [
