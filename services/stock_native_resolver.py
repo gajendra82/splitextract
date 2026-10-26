@@ -26,7 +26,9 @@ _CANON_TO_ITEM = {
     "closing_qty": ("closing_qty", False),
     "closing_value": ("closing_value", False),
     "sales_return_qty": ("sale_return", True),
+    "purchase_return_qty": ("purchase_return", True),
     "expiry_damage_qty": ("exp_damage", True),
+    "lms": ("lms_qty", True),
     "free_in_qty": ("free_in_qty", True),
     "free_out_qty": ("free_out_qty", True),
     "total_qty": ("total_stock", True),
@@ -775,7 +777,13 @@ def _join_wrapped_name(parts: List[str]) -> str:
 
 def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
-    return _ISSUE_LAYOUT <= canons
+    if not _ISSUE_LAYOUT <= canons:
+        return False
+    # Wide Op.Qty / Sale Qty / Balance grids print one product per row
+    # (blank qty stays blank). Do not join those rows as wrapped names.
+    if canons & {"sales_return_qty", "purchase_return_qty", "lms"}:
+        return False
+    return True
 
 
 def _band_for_x(x: float, bands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -1801,11 +1809,29 @@ def _items_from_resolved_word_columns(
             re.I,
         ):
             continue
+        has_qty = any(
+            item.get(field) is not None
+            for field in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+            )
+        )
+        packing = str(item.get("packing") or "").strip()
+        # Division banners (HIMALAYA-ZEAL) and expiry legends (@@ => ...).
+        if not has_qty and not packing:
+            if name.startswith("@@") or (" " not in name and not re.search(r"\d", name)):
+                continue
         kept.append(item)
     if len(kept) < 3:
         return None
     logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s", len(kept))
-    return {"line_items": kept, "prefer_letterhead_stockist": True}
+    return {
+        "line_items": kept,
+        "prefer_letterhead_stockist": True,
+        "letterhead_is_stockist_only": True,
+    }
 
 
 def parse_pdf_free_column_statement(

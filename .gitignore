@@ -2,6 +2,11 @@
 .env.*
 !.env.example
 
+# Local GCP / Azure credential files — never commit
+credentials/
+*.json.key
+*-a13495addaeb.json
+
 .venv/
 venv/
 __pycache__/

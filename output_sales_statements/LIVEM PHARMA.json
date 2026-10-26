@@ -1,0 +1,240 @@
+{
+  "source_file": "LIVEM PHARMA.htm",
+  "source_format": "htm",
+  "stockist_name": "LIVEM PHARMAA",
+  "stockist_address": null,
+  "company_name": "VERITAZ",
+  "period_from": "2026-07-01",
+  "period_to": "2026-07-31",
+  "report_title": "Stock and Sales Report For Month Of Jul 2026",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ANDIAL TAB",
+      "packing": "10*S",
+      "opening_qty": 46.0,
+      "receipts_qty": 223.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 269.0,
+      "closing_value": 4468.09,
+      "extra": {
+        "total_stock": 269.0,
+        "stock_value": 4468.09
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON LIQ",
+      "packing": "60ML",
+      "opening_qty": 112.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 112.0,
+      "closing_value": 6742.4,
+      "extra": {
+        "opening_value": 6742.4
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON LM SUP",
+      "packing": "60ML",
+      "opening_qty": 110.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 110.0,
+      "closing_value": 7000.4,
+      "extra": {
+        "opening_value": 7000.4
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON TAB",
+      "packing": "10*S",
+      "opening_qty": 13.0,
+      "receipts_qty": 72.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 85.0,
+      "closing_value": 3604.0,
+      "extra": {
+        "total_stock": 85.0,
+        "stock_value": 3604.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 120 SUP",
+      "packing": "60ML",
+      "opening_qty": 84.0,
+      "receipts_qty": 109.0,
+      "sales_qty": 6.0,
+      "sales_value": 147.35,
+      "closing_qty": 187.0,
+      "closing_value": 4959.24,
+      "extra": {
+        "total_stock": 193.0,
+        "stock_value": 5118.36
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 250 SUP",
+      "packing": "60ML",
+      "opening_qty": 342.0,
+      "receipts_qty": 27.0,
+      "sales_qty": 127.0,
+      "sales_value": 3457.72,
+      "closing_qty": 242.0,
+      "closing_value": 7109.96,
+      "extra": {
+        "total_stock": 369.0,
+        "stock_value": 10841.22
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 500MG SYP",
+      "packing": "60ML",
+      "opening_qty": 12.0,
+      "receipts_qty": 75.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 87.0,
+      "closing_value": 2636.97,
+      "extra": {
+        "total_stock": 87.0,
+        "stock_value": 2636.97
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 650MG TAB",
+      "packing": "10*S",
+      "opening_qty": 78.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 24.0,
+      "sales_value": 488.2,
+      "closing_qty": 154.0,
+      "closing_value": 3383.38,
+      "extra": {
+        "total_stock": 178.0,
+        "stock_value": 3910.66
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL TAB",
+      "packing": "15*S",
+      "opening_qty": 36.0,
+      "receipts_qty": 70.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 106.0,
+      "closing_value": 1035.62,
+      "extra": {
+        "total_stock": 106.0,
+        "stock_value": 1035.62
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL-MEF DS SUP",
+      "packing": "60ML",
+      "opening_qty": 17.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 17.0,
+      "closing_value": 632.74,
+      "extra": {
+        "opening_value": 632.74
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FERCEL-XT TAB",
+      "packing": "10*S",
+      "opening_qty": 65.0,
+      "receipts_qty": 130.0,
+      "sales_qty": 130.0,
+      "sales_value": 12224.0,
+      "closing_qty": 65.0,
+      "closing_value": 7151.3,
+      "extra": {
+        "total_stock": 195.0,
+        "stock_value": 21453.9
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LYSATONE PLUS SUP",
+      "packing": "300ML",
+      "opening_qty": 21.0,
+      "receipts_qty": 31.0,
+      "sales_qty": 12.0,
+      "sales_value": 1510.7,
+      "closing_qty": 40.0,
+      "closing_value": 5438.4,
+      "extra": {
+        "total_stock": 52.0,
+        "stock_value": 7069.92
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSCLAV 228.5MG DRY SUP",
+      "packing": "30ML",
+      "opening_qty": 78.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 78.0,
+      "closing_value": 3443.7,
+      "extra": {
+        "opening_value": 3443.7
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PROXTL CV 100 MG DRY SUP",
+      "packing": "30ML",
+      "opening_qty": 65.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 65.0,
+      "closing_value": 7949.5,
+      "extra": {
+        "opening_value": 7949.5
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "RXMEF SUP",
+      "packing": "60ML",
+      "opening_qty": 36.0,
+      "receipts_qty": 82.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 118.0,
+      "closing_value": 2901.62,
+      "extra": {
+        "total_stock": 118.0,
+        "stock_value": 2901.62
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 17827.97,
+    "closing_value": 68457.32,
+    "extra": {
+      "opening_value": 88809.1,
+      "purchase_return_value": 0.0
+    }
+  }
+}

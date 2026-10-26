@@ -249,16 +249,44 @@ def _pdf_images(file_bytes: bytes, *, max_pages: Optional[int] = None) -> List[b
     try:
         limit = _max_pages() if max_pages is None else max(1, int(max_pages))
         # Same page scale as the /split-and-extract vision render.
-        for page in doc[:limit]:
+        # #region agent log
+        try:
+            import json as _dbg_json, time as _dbg_time
+            _sliced = doc[:limit]
+            open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json.dumps({"sessionId":"4e9f84","hypothesisId":"A,B,C,D","location":"gemini_extraction_fallback.py:_pdf_images","message":"before iterate doc slice","data":{"fitz_compat":bool(getattr(fitz,"FITZ_COMPAT",False)),"doc_type":type(doc).__name__,"doc_mod":getattr(type(doc),"__module__",None),"limit":limit,"max_pages":max_pages,"page_count":getattr(doc,"page_count",None),"sliced_type":type(_sliced).__name__},"timestamp":int(_dbg_time.time()*1000),"runId":"pre-fix"})+"\n")
+        except Exception as _dbg_exc:
             try:
-                pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
-                images.append(pix.tobytes("png"))
-            except Exception as exc:
-                logger.info(
-                    "GEMINI_PDF_PAGE_UNREADABLE page=%s error=%s",
-                    getattr(page, "number", "?"),
-                    type(exc).__name__,
-                )
+                open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json.dumps({"sessionId":"4e9f84","hypothesisId":"C","location":"gemini_extraction_fallback.py:_pdf_images","message":"slice log failed","data":{"err":type(_dbg_exc).__name__,"err_msg":str(_dbg_exc)[:200]},"timestamp":int(_dbg_time.time()*1000),"runId":"pre-fix"})+"\n")
+            except Exception:
+                pass
+        # #endregion
+        try:
+            for page in doc[:limit]:
+                try:
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+                    images.append(pix.tobytes("png"))
+                except Exception as exc:
+                    logger.info(
+                        "GEMINI_PDF_PAGE_UNREADABLE page=%s error=%s",
+                        getattr(page, "number", "?"),
+                        type(exc).__name__,
+                    )
+        except Exception as _iter_exc:
+            # #region agent log
+            try:
+                import json as _dbg_json2, time as _dbg_time2
+                open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json2.dumps({"sessionId":"4e9f84","hypothesisId":"B,E","location":"gemini_extraction_fallback.py:_pdf_images","message":"doc slice iterate failed","data":{"err":type(_iter_exc).__name__,"err_msg":str(_iter_exc)[:200]},"timestamp":int(_dbg_time2.time()*1000),"runId":"pre-fix"})+"\n")
+            except Exception:
+                pass
+            # #endregion
+            raise
+        # #region agent log
+        try:
+            import json as _dbg_json3, time as _dbg_time3
+            open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json3.dumps({"sessionId":"4e9f84","hypothesisId":"B,E","location":"gemini_extraction_fallback.py:_pdf_images","message":"doc slice iterate ok","data":{"n_images":len(images)},"timestamp":int(_dbg_time3.time()*1000),"runId":"post-fix"})+"\n")
+        except Exception:
+            pass
+        # #endregion
     finally:
         try:
             doc.close()
@@ -902,9 +930,14 @@ def maybe_apply_gemini_fallback(
             "swil_receipt_pur_value_vision",
             "swil_opening_receipt_value",
             "swil_landscape_qty_value",
+            "swil_qty_value_pair",
         }
         or str(extra.get("layout") or "")
-        in {"swil_receipt_pur_value", "swil_landscape_qty_value"},
+        in {
+            "swil_receipt_pur_value",
+            "swil_landscape_qty_value",
+            "swil_qty_value_pair",
+        },
     ):
         return result
 
@@ -1073,6 +1106,17 @@ def maybe_apply_gemini_fallback(
             filename,
             native_nz,
             gemini_nz,
+        )
+    native_n = len(result.get("line_items") or [])
+    gemini_n = len(gemini_items)
+    if gemini_ok and native_n >= 10 and gemini_n < native_n * 0.7:
+        gemini_ok = False
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK rejected "
+            "reason=fewer_products_than_native native_n=%s gemini_n=%s",
+            filename,
+            native_n,
+            gemini_n,
         )
 
     # Phase 1: keep whichever reading balances better under the classifier.

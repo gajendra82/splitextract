@@ -92,6 +92,11 @@ class TestPdfPageContinuationGrouping(unittest.TestCase):
                 "SHRI RAM MEDICAL AGENCY", "NEW ERA PHARMACEUTICALS"
             )
         )
+        self.assertTrue(
+            _stockist_keys_compatible(
+                "SATARA DRUG HOUSE", "SATARA DRUG HOUSE PHARMA DIST"
+            )
+        )
 
     def test_image_only_pages_merge_as_one_statement(self):
         pages = [

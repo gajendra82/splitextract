@@ -1,0 +1,440 @@
+{
+  "source_file": "VICTORY MEDICAL STORES.xls",
+  "source_format": "xls",
+  "stockist_name": "VICTORY MEDICAL STORES",
+  "stockist_address": "AVICOT HOUSE, KRIPA NAGAR, KIZHAKKEKARA, Phone - 0474-2654000, 6625555,9809007861,KOTTARAKARA-691506",
+  "company_name": "AUROBINDO",
+  "period_from": "2026-06-01",
+  "period_to": "2026-06-30",
+  "report_title": "Stock and Sale Report ----- From date 01-Jun-26 to 30-Jun-26",
+  "line_items": [
+    {
+      "product_code": null,
+      "product_name": "ACINIL O LIQUID 120ML",
+      "packing": "120ML",
+      "opening_qty": 43.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "sales_value": 533.55,
+      "closing_qty": 38.0,
+      "closing_value": 4054.98,
+      "extra": {
+        "hist_may": 4.0,
+        "hist_apr": 1.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "ACINIL O LIQUID 200ML",
+      "packing": "200ML",
+      "opening_qty": 32.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 32.0,
+      "closing_value": 5058.24,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 6.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELBI 100DT TAB",
+      "packing": "10'S",
+      "opening_qty": 26.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 7.0,
+      "sales_value": 320.88,
+      "closing_qty": 18.0,
+      "closing_value": 825.12,
+      "extra": {
+        "hist_may": 15.0,
+        "hist_apr": 9.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELBI 200 DT TAB",
+      "packing": "10'S",
+      "opening_qty": 57.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "sales_value": 397.5,
+      "closing_qty": 51.0,
+      "closing_value": 4054.5,
+      "extra": {
+        "hist_may": 3.0,
+        "hist_apr": 18.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELBI 50 DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELBI FORTE DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELBI O TAB",
+      "packing": "10'S",
+      "opening_qty": 51.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 37.0,
+      "sales_value": 3370.33,
+      "closing_qty": 6.0,
+      "closing_value": 546.54,
+      "extra": {
+        "hist_may": 4.0,
+        "hist_apr": 16.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON DROPS 15ML",
+      "packing": "15ML",
+      "opening_qty": 7.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 13.0,
+      "sales_value": 958.75,
+      "closing_qty": 114.0,
+      "closing_value": 8407.5,
+      "extra": {
+        "hist_may": 9.0,
+        "hist_apr": 18.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON LIQUID 60ML",
+      "packing": "60 ML",
+      "opening_qty": 11.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 47.0,
+      "sales_value": 3143.83,
+      "closing_qty": 86.0,
+      "closing_value": 5752.54,
+      "extra": {
+        "hist_may": 33.0,
+        "hist_apr": 32.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON PLUS LIQUID 60ML",
+      "packing": "60 ML",
+      "opening_qty": 86.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 15.0,
+      "sales_value": 1067.1,
+      "closing_qty": 69.0,
+      "closing_value": 4908.66,
+      "extra": {
+        "hist_may": 9.0,
+        "hist_apr": 6.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "DELCON PLUS TAB",
+      "packing": "10'S",
+      "opening_qty": 23.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 13.0,
+      "sales_value": 654.68,
+      "closing_qty": 9.0,
+      "closing_value": 453.24,
+      "extra": {
+        "hist_may": 22.0,
+        "hist_apr": 7.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 125 LIQUID 60ML",
+      "packing": "60ML",
+      "opening_qty": 856.0,
+      "receipts_qty": 600.0,
+      "sales_qty": 701.0,
+      "sales_value": 12660.06,
+      "closing_qty": 757.0,
+      "closing_value": 13671.42,
+      "extra": {
+        "hist_may": 526.0,
+        "hist_apr": 422.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 250 LIQUID 60ML",
+      "packing": "60 ML",
+      "opening_qty": 3052.0,
+      "receipts_qty": 1000.0,
+      "sales_qty": 2703.0,
+      "sales_value": 88225.42,
+      "closing_qty": 1113.0,
+      "closing_value": 36328.32,
+      "extra": {
+        "hist_may": 1637.0,
+        "hist_apr": 1770.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 500 TAB",
+      "packing": "15'S",
+      "opening_qty": 121.0,
+      "receipts_qty": 200.0,
+      "sales_qty": 168.0,
+      "sales_value": 1824.48,
+      "closing_qty": 165.0,
+      "closing_value": 1791.9,
+      "extra": {
+        "hist_may": 86.0,
+        "hist_apr": 154.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 500MG SUSP 60ML",
+      "packing": "60 ML",
+      "opening_qty": 68.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 96.0,
+      "sales_value": 3233.28,
+      "closing_qty": 86.0,
+      "closing_value": 2896.48,
+      "extra": {
+        "hist_may": 98.0,
+        "hist_apr": 40.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL 650MG CAPTAB",
+      "packing": "15'S",
+      "opening_qty": 76.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 74.0,
+      "sales_value": 1806.34,
+      "closing_qty": 110.0,
+      "closing_value": 2685.1,
+      "extra": {
+        "hist_may": 12.0,
+        "hist_apr": 29.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "FEPANIL DROPS 15ML",
+      "packing": "15ML",
+      "opening_qty": 96.0,
+      "receipts_qty": 200.0,
+      "sales_qty": 177.0,
+      "sales_value": 3801.96,
+      "closing_qty": 134.0,
+      "closing_value": 2878.32,
+      "extra": {
+        "hist_may": 212.0,
+        "hist_apr": 130.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "LYSATONE PLUS LIQUID 300ML",
+      "packing": "300ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 46.0,
+      "sales_value": 6949.22,
+      "closing_qty": 7.0,
+      "closing_value": 1057.49,
+      "extra": {
+        "hist_may": 28.0,
+        "hist_apr": 37.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSCLAV 228.5 DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSCLAV 625 TAB",
+      "packing": "10'S",
+      "opening_qty": 32.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "sales_value": 1382.4,
+      "closing_qty": 21.0,
+      "closing_value": 3225.6,
+      "extra": {
+        "hist_may": 18.0,
+        "hist_apr": 18.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSCLAV FORTE DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 58.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 18.0,
+      "sales_value": 2496.78,
+      "closing_qty": 38.0,
+      "closing_value": 5270.98,
+      "extra": {
+        "hist_may": 7.0,
+        "hist_apr": 35.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSMOX 250MG TAB",
+      "packing": "10'S",
+      "opening_qty": 47.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 12.0,
+      "sales_value": 238.08,
+      "closing_qty": 34.0,
+      "closing_value": 674.56,
+      "extra": {
+        "hist_may": 5.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PRESSMOX 500 TAB",
+      "packing": "10'S",
+      "opening_qty": 23.0,
+      "receipts_qty": 27.0,
+      "sales_qty": 11.0,
+      "sales_value": 657.91,
+      "closing_qty": 41.0,
+      "closing_value": 2452.21,
+      "extra": {
+        "hist_may": 7.0,
+        "hist_apr": 12.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PROXTL 100 DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 60.0,
+      "closing_value": 9145.8,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PROXTL 100 DT TAB",
+      "packing": "10'S",
+      "opening_qty": 16.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 16.0,
+      "closing_value": 2104.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "PROXTL 50MG DRY SYRUP 30ML",
+      "packing": "30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VERIAZ 250 TAB",
+      "packing": "6'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "hist_may": 0.0,
+        "hist_apr": 0.0
+      }
+    },
+    {
+      "product_code": null,
+      "product_name": "VERISPORE AQUA 5ML",
+      "packing": "5ML",
+      "opening_qty": 60.0,
+      "receipts_qty": 120.0,
+      "sales_qty": 95.0,
+      "sales_value": 3942.65,
+      "closing_qty": 90.0,
+      "closing_value": 3921.3,
+      "extra": {
+        "hist_may": 45.0,
+        "hist_apr": 70.0
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 137665.2,
+    "closing_value": 122164.8,
+    "extra": {
+      "opening_value": 170893.13,
+      "purchase_value": 82653.31
+    }
+  }
+}
