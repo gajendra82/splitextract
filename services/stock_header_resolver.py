@@ -94,6 +94,8 @@ ALIASES: Dict[str, List[str]] = {
         "unit rate",
         "sales rate",
         "price",
+        "msr",
+        "msr price",
         "purchase cost",
         "stock cost",
     ],
@@ -105,6 +107,8 @@ ALIASES: Dict[str, List[str]] = {
         "last month sale",
         "last month sales",
         "last month sale qty",
+        "last month salesqty",
+        "last month saleqty",
         "lstsl",
         "lst sl",
         "lst sale",
@@ -135,6 +139,16 @@ ALIASES: Dict[str, List[str]] = {
         "hsn",
         "dump",
         "dump qty",
+        # Transfer-in/out (StkIn / StkOut) is not total-in or sales.
+        "stkin",
+        "stk in",
+        "stkin qty",
+        "stk in qty",
+        "stock in",
+        "stkout",
+        "stk out",
+        "stkout qty",
+        "stock out",
     ],
     "opening": [
         "op",
@@ -161,6 +175,9 @@ ALIASES: Dict[str, List[str]] = {
         "op.",
         "op.bal",
         "op.bal.",
+        # "Op.Bal. Qty." must beat closing infix "bal qty".
+        "op bal qty",
+        "opbalqty",
         "opening bal",
         "opening balance",
         "qty opening",
@@ -242,6 +259,9 @@ ALIASES: Dict[str, List[str]] = {
         "cn",
         "return",
         "retrn",
+        "retfromcust",
+        "ret from cust",
+        "ret from customer",
     ],
     "purchase_return": [
         "pret",
@@ -261,6 +281,10 @@ ALIASES: Dict[str, List[str]] = {
         "purchase rtn qty",
         "purc ret qty",
         "dn",
+        "returntocom",
+        "return to com",
+        "return to company",
+        "returntocompany",
     ],
     "expiry_damage": [
         "exp",
@@ -545,6 +569,10 @@ _DIRECT_VALUE_FIELDS = {
     "stk. value": "closing_value",
     "stock value": "closing_value",
     "stock-value": "closing_value",
+    # Wrapped "StockVa" / "StockVa lue" (StockValue).
+    "stockva": "closing_value",
+    "stockva lue": "closing_value",
+    "stockvalue": "closing_value",
     "sval": "sales_value",
     "sale val": "sales_value",
     "sa val": "sales_value",
@@ -660,7 +688,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         # Short "op" must not beat a multi-token total alias like "op rec".
         if group == "opening" and alias in {"op", "opn"} and len(tokens) > 1:
             continue
-        # OpenBalQty must not match closing via infix "bal qty" inside openbalqty.
+        # OpenBalQty / Op.Bal. Qty. must not match closing via infix "bal qty".
         if group == "closing" and alias in {
             "bal qty",
             "bal",
@@ -670,8 +698,15 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         }:
             if (
                 compact_norm.startswith("open")
+                or compact_norm.startswith("opbal")
+                or compact_norm.startswith("opba")
                 or "openbal" in compact_norm
                 or "opening" in compact_norm
+                or (
+                    tokens
+                    and tokens[0] in {"op", "opal"}
+                    and any(t.startswith("bal") for t in tokens[1:])
+                )
             ):
                 continue
         # "Receipt Free" / "Purchase Free" is free-in, not purchase.
@@ -707,6 +742,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         "batch": 94,
         "rate": 93,
         "lms": 92,
+        "non_stock_qty": 91,
         "order": 90,
         "sales_return": 85,
         "purchase_return": 84,
@@ -738,6 +774,66 @@ def _qty_value_sequence_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _stacked_closing_balance_enabled() -> bool:
+    """STOCK_HEADER_STACKED_CLOSING_BALANCE — Closing|Balance is one qty column.
+
+    Default ON. Two-line Closing / Balance is Closing Balance qty, not
+    Closing qty + Closing Bala value. Closing|Closing Bala still pairs.
+    Set false to restore adjacent-pair promotion of bare Balance.
+    """
+    return os.getenv(
+        "STOCK_HEADER_STACKED_CLOSING_BALANCE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_bare_balance_header(norm: str) -> bool:
+    """Second line of Closing Balance — not 'Closing Bala' / 'Opening Bal'."""
+    return bool(re.fullmatch(r"(?:bal|balance|bal\.)", (norm or "").strip()))
+
+
+def _glue_stacked_closing_balance(prelim: List[Dict[str, Any]]) -> bool:
+    """Keep Closing|Balance as one closing_qty; ignore the parent Closing cell."""
+    if not _stacked_closing_balance_enabled() or len(prelim) < 2:
+        return False
+    changed = False
+    for i in range(1, len(prelim)):
+        left = prelim[i - 1]
+        right = prelim[i]
+        if not isinstance(left, dict) or not isinstance(right, dict):
+            continue
+        if left.get("group") != "closing" or right.get("group") != "closing":
+            continue
+        if left.get("canonical") != "closing_qty":
+            continue
+        if right.get("canonical") != "closing_qty":
+            continue
+        if left.get("is_value") or right.get("is_value"):
+            continue
+        if not _is_bare_balance_header(
+            normalize_header(str(right.get("header_text") or ""))
+        ):
+            continue
+        left["canonical"] = "ignore"
+        left["group"] = None
+        left["is_value"] = False
+        left["confidence"] = 0.0
+        left["reason"] = "closing_balance_stacked_parent"
+        logger.info(
+            "STOCK_HEADER_STACKED_CLOSING_BALANCE col=%s %r kept as closing_qty "
+            "parent=%r",
+            right.get("col_index"),
+            right.get("header_text"),
+            left.get("header_text"),
+        )
+        changed = True
+    return changed
 
 
 def _adjacent_qty_value_pair_enabled() -> bool:
@@ -2073,6 +2169,9 @@ def resolve_columns(
     _apply_lstsl_close_after_sales(prelim, errors)
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
+    # Closing|Balance (stacked Closing Balance qty) must glue first so
+    # adjacent-pair does not promote bare Balance to closing_value.
+    _glue_stacked_closing_balance(prelim)
     _promote_adjacent_same_group_qty_to_value(prelim)
 
     # Deduplicate canonical fields: keep higher confidence.

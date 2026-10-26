@@ -73,6 +73,13 @@ except Exception as _fitz_exc:
     from services.fitz_compat import install as _install_fitz_compat
 
     fitz = _install_fitz_compat()
+    # #region agent log
+    try:
+        import json as _dbg_json, time as _dbg_time
+        open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json.dumps({"sessionId":"4e9f84","hypothesisId":"A","location":"app.py:fitz_install","message":"fitz backend after native import fail","data":{"fitz_compat":bool(getattr(fitz,"FITZ_COMPAT",False)),"fitz_mod":getattr(fitz,"__name__",None),"exc":type(_fitz_exc).__name__,"exc_msg":str(_fitz_exc)[:200]},"timestamp":int(_dbg_time.time()*1000),"runId":"pre-fix"})+"\n")
+    except Exception:
+        pass
+    # #endregion
 import requests
 import asyncio
 

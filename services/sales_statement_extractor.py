@@ -22654,13 +22654,16 @@ _SWIL_LAND_SKIP_RE = re.compile(
 _SWIL_LAND_GROUP_QTY_VALUE = {
     "op_group": ("opening_qty", "opening_value"),
     "rec_group": ("receipts_qty", "receipts_value"),
+    "ret_cust_group": ("sales_return_qty", "sales_return_value"),
     "total_group": ("total_qty", None),
     "issue_group": ("sales_qty", "sales_value"),
+    "ret_com_group": ("purchase_return_qty", "purchase_return_value"),
     "shortage_group": ("shortage_qty", "shortage_value"),
     "expiry_group": ("expiry_qty", "expiry_value"),
     "closing_group": ("closing_qty", "closing_value"),
     "dump_group": ("dump_qty", None),
     "ne_group": ("near_expiry", None),
+    "msr_group": (None, "msr_price"),
 }
 
 
@@ -22708,8 +22711,9 @@ def _is_swil_qty_value_pair_text(text: str) -> bool:
     )
 
 
-def _swil_land_header_field(token: str) -> Optional[str]:
+def _swil_land_header_field(token: str, next_token: str = "") -> Optional[str]:
     norm = re.sub(r"[^a-z0-9/]", "", (token or "").lower())
+    nxt = re.sub(r"[^a-z0-9/]", "", (next_token or "").lower())
     if norm == "code":
         return "code"
     if norm in {"product", "name"}:
@@ -22720,6 +22724,16 @@ def _swil_land_header_field(token: str) -> Optional[str]:
         return "op_group"
     if norm.startswith("receipt"):
         return "rec_group"
+    if norm in {"retfromcust", "retfromcustomer", "fromcust"}:
+        return "ret_cust_group"
+    if norm in {"returntocom", "returntocompany", "returntocomp"}:
+        return "ret_com_group"
+    if norm == "ret":
+        if nxt.startswith("retfrom") or nxt in {"fromcust", "fromcustomer"}:
+            return "ret_cust_group"
+        if nxt.startswith("returnto"):
+            return "ret_com_group"
+        return None
     if norm == "total":
         return "total_group"
     if norm.startswith("issue"):
@@ -22734,6 +22748,8 @@ def _swil_land_header_field(token: str) -> Optional[str]:
         return "dump_group"
     if norm in {"ne", "expi", "near"}:
         return "ne_group"
+    if norm == "msr":
+        return "msr_group"
     return None
 
 
@@ -22741,7 +22757,7 @@ def _swil_land_sub_role(token: str) -> Optional[str]:
     norm = re.sub(r"[^a-z]", "", (token or "").lower())
     if norm in {"qty", "breakage", "stock", "expi"}:
         return "qty"
-    if norm == "value":
+    if norm in {"value", "price"}:
         return "value"
     return None
 
@@ -22769,8 +22785,10 @@ def _swil_land_build_buckets(
 ) -> Optional[List[Tuple[str, float, float]]]:
     """Build x-ranges from this page's header + Qty/Value sub-row (not page-fixed)."""
     groups: List[Dict[str, Any]] = []
-    for x0, x1, xc, token in header_row.get("words") or []:
-        field = _swil_land_header_field(token)
+    header_words = header_row.get("words") or []
+    for idx, (x0, x1, xc, token) in enumerate(header_words):
+        next_tok = header_words[idx + 1][3] if idx + 1 < len(header_words) else ""
+        field = _swil_land_header_field(token, next_tok)
         if not field:
             continue
         if groups and groups[-1]["field"] == field:
@@ -22785,20 +22803,7 @@ def _swil_land_build_buckets(
         return None
 
     group_by = {g["field"]: g for g in groups}
-    assigned: Dict[str, List[Tuple[float, str]]] = {
-        g["field"]: [] for g in groups if g["field"] in _SWIL_LAND_GROUP_QTY_VALUE
-    }
-    for _x0, _x1, xc, token in sub_row.get("words") or []:
-        role = _swil_land_sub_role(token)
-        if not role or not assigned:
-            continue
-        nearest = min(
-            assigned.keys(),
-            key=lambda name: abs(
-                (group_by[name]["x0"] + group_by[name]["x1"]) / 2.0 - xc
-            ),
-        )
-        assigned[nearest].append((xc, role))
+    assigned = _swil_land_assign_qty_value_roles(groups, group_by, sub_row)
 
     centers: List[Tuple[str, float]] = []
     for group in groups:
@@ -22831,6 +22836,167 @@ def _swil_land_build_buckets(
     return buckets
 
 
+def _swil_land_assign_qty_value_roles(
+    groups: List[Dict[str, Any]],
+    group_by: Dict[str, Dict[str, Any]],
+    sub_row: Dict[str, Any],
+) -> Dict[str, List[Tuple[float, str]]]:
+    """Map Qty/Value sub-headers onto Opening/Receipt/Issue/Closing groups.
+
+    Prefer left-to-right zipper when the token count matches the printed
+    groups. Nearest-x alone parks Opening Value under opening_qty on cramped
+    portrait pages (Qty. sits closer to Receipt than to Op.).
+    """
+    assigned: Dict[str, List[Tuple[float, str]]] = {
+        g["field"]: [] for g in groups if g["field"] in _SWIL_LAND_GROUP_QTY_VALUE
+    }
+    sub_roles: List[Tuple[float, str]] = []
+    for _x0, _x1, xc, token in sub_row.get("words") or []:
+        role = _swil_land_sub_role(token)
+        if role:
+            sub_roles.append((xc, role))
+    sub_roles.sort(key=lambda item: item[0])
+
+    expected: List[Tuple[str, str]] = []
+    for group in groups:
+        field = group["field"]
+        qty_name, val_name = _SWIL_LAND_GROUP_QTY_VALUE.get(field, (None, None))
+        if qty_name:
+            expected.append((field, "qty"))
+        if val_name:
+            expected.append((field, "value"))
+
+    sequential_ok = (
+        bool(assigned)
+        and len(sub_roles) == len(expected)
+        and all(role == want for (_xc, role), (_field, want) in zip(sub_roles, expected))
+    )
+    if sequential_ok:
+        for (xc, role), (field, _want) in zip(sub_roles, expected):
+            assigned[field].append((xc, role))
+        logger.info(
+            "SWIL_LAND_SEQUENTIAL_BUCKETS groups=%s tokens=%s ret_cust=%s ret_com=%s",
+            len(expected),
+            len(sub_roles),
+            "ret_cust_group" in assigned,
+            "ret_com_group" in assigned,
+        )
+        return assigned
+
+    for xc, role in sub_roles:
+        if not assigned:
+            break
+        nearest = min(
+            assigned.keys(),
+            key=lambda name: abs(
+                (group_by[name]["x0"] + group_by[name]["x1"]) / 2.0 - xc
+            ),
+        )
+        assigned[nearest].append((xc, role))
+    return assigned
+
+
+def _swil_pair_item_identity_ok(item: Dict[str, Any]) -> bool:
+    return _swil_land_identity_fail_count([item]) == 0
+
+
+def _swil_pair_row_numbers(
+    row: Dict[str, Any], buckets: List[Tuple[str, float, float]]
+) -> List[float]:
+    """Printed numbers after Code/PRODUCT/PACKING, left to right."""
+    nums: List[float] = []
+    for _x0, _x1, xc, token in sorted(
+        row.get("words") or [], key=lambda item: item[2]
+    ):
+        bucket = _swil_land_bucket(xc, buckets)
+        if bucket in {"code", "product", "pack"}:
+            continue
+        if _SWIL_SCAN_PACK_RE.search(str(token) or ""):
+            continue
+        number = _prompt_cell_number([token])
+        if number is None:
+            continue
+        nums.append(number)
+    return nums
+
+
+def _swil_pair_cores_printed_only(
+    nums: List[float],
+) -> Optional[Tuple[float, ...]]:
+    """Nine printed Qty/Value cells. Does not infer a missing qty from identity."""
+    work = list(nums)
+    while (
+        len(work) >= 10
+        and work[-1] == int(work[-1])
+        and 0 <= work[-1] < 20
+    ):
+        work = work[:-1]
+    if len(work) < 9:
+        return None
+    for candidate in (work[:9], work[-9:]):
+        got = _swil_scan_pair_try_nine(candidate)
+        if got:
+            return got
+    return None
+
+
+def _swil_pair_apply_printed_cores(
+    item: Dict[str, Any], cores: Tuple[float, ...]
+) -> None:
+    (
+        opening_qty,
+        opening_value,
+        receipts_qty,
+        receipts_value,
+        total_qty,
+        sales_qty,
+        sales_value,
+        closing_qty,
+        closing_value,
+    ) = cores
+    item["opening_qty"] = opening_qty
+    item["receipts_qty"] = receipts_qty
+    item["sales_qty"] = sales_qty
+    item["sales_value"] = sales_value
+    item["closing_qty"] = closing_qty
+    item["closing_value"] = closing_value
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+    extra["opening_value"] = opening_value
+    extra["receipts_value"] = receipts_value
+    extra["purchase_value"] = receipts_value
+    extra["total_stock"] = total_qty
+    extra["swil_pair_ltr_reslot"] = True
+    if "opening_value" in item:
+        item["opening_value"] = opening_value
+    if "receipts_value" in item:
+        item["receipts_value"] = receipts_value
+
+
+def _swil_pair_maybe_reslot_item(
+    item: Dict[str, Any],
+    row: Dict[str, Any],
+    buckets: List[Tuple[str, float, float]],
+) -> bool:
+    """Re-slot printed Qty/Value pairs when x-buckets put money in qty columns."""
+    if _swil_pair_item_identity_ok(item):
+        return False
+    cores = _swil_pair_cores_printed_only(_swil_pair_row_numbers(row, buckets))
+    if not cores:
+        return False
+    _swil_pair_apply_printed_cores(item, cores)
+    logger.info(
+        "SWIL_PAIR_LTR_RESLOT product=%s opening_qty=%s sales_qty=%s closing_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        item.get("opening_qty"),
+        item.get("sales_qty"),
+        item.get("closing_qty"),
+    )
+    return True
+
+
 def _swil_land_bucket(x: float, buckets: List[Tuple[str, float, float]]) -> Optional[str]:
     for name, lo, hi in buckets:
         if lo <= x < hi:
@@ -22846,10 +23012,17 @@ def _swil_land_identity_fail_count(items: List[Dict[str, Any]]) -> int:
         sales = _to_float(item.get("sales_qty"))
         closing = _to_float(item.get("closing_qty"))
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        sales_return = _to_float(
+            item.get("sales_return_qty"), default=_to_float(extra.get("sales_return_qty"))
+        )
+        purchase_return = _to_float(
+            item.get("purchase_return_qty"),
+            default=_to_float(extra.get("purchase_return_qty")),
+        )
         total = _to_float(extra.get("total_stock"))
         if total <= 0:
-            total = opening + receipts
-        if abs(round(total - sales, 2) - round(closing, 2)) > 0.51:
+            total = opening + receipts + sales_return
+        if abs(round(total - sales - purchase_return, 2) - round(closing, 2)) > 0.51:
             fails += 1
     return fails
 
@@ -23033,6 +23206,12 @@ def _parse_swil_landscape_qty_value_statement(
             item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
             item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
             item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            sr_qty = _prompt_cell_number(cells.get("sales_return_qty") or [])
+            if sr_qty is not None:
+                item["sales_return_qty"] = sr_qty
+            pr_qty = _prompt_cell_number(cells.get("purchase_return_qty") or [])
+            if pr_qty is not None:
+                item["purchase_return_qty"] = pr_qty
             sale_val = _prompt_cell_number(cells.get("sales_value") or [])
             close_val = _prompt_cell_number(cells.get("closing_value") or [])
             if sale_val is not None:
@@ -23064,10 +23243,16 @@ def _parse_swil_landscape_qty_value_statement(
                 ("expiry_qty", "expiry_qty"),
                 ("dump_qty", "dump_qty"),
                 ("near_expiry_qty", "near_expiry"),
+                ("sales_return_qty", "sales_return_qty"),
+                ("sales_return_value", "sales_return_value"),
+                ("purchase_return_qty", "purchase_return_qty"),
+                ("purchase_return_value", "purchase_return_value"),
             ):
                 number = _prompt_cell_number(cells.get(cell_key) or [])
                 if number is not None:
                     extra[extra_key] = number
+            if allow_portrait_pair:
+                _swil_pair_maybe_reslot_item(item, row, buckets)
             items.append(item)
 
     if not items:

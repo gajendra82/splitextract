@@ -289,6 +289,10 @@ _QUALIFIER_WORDS = frozenset(
         "return",
         "receipt",
         "cost",
+        # Wrapped STOCK AND SALES: Last Month + SalesQty, StockVa + lue.
+        "salesqty",
+        "saleqty",
+        "lue",
     }
 )
 
@@ -794,7 +798,13 @@ def _extract_pdf_page_rows(
             text = str(w.get("text") or "").strip()
             if not text:
                 continue
-            if cells and x0 - float(cells[-1]["x1"]) <= gap:
+            prev = cells[-1]["text"] if cells else ""
+            both_numbers = bool(
+                cells
+                and re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", prev.replace(" ", ""))
+                and re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(" ", ""))
+            )
+            if cells and x0 - float(cells[-1]["x1"]) <= gap and not both_numbers:
                 cells[-1]["text"] = (cells[-1]["text"] + " " + text).strip()
                 cells[-1]["x1"] = max(float(cells[-1]["x1"]), x1)
             else:

@@ -1313,6 +1313,12 @@ def build_table_prompt() -> str:
         "Opn/Rec/Issue/Bal (or Opening/Receipt/Issue/Balance) as the header "
         "text for those columns — never replace them with only '(Q+F)'. Put "
         "(Q+F) on the sub-header row when printed. "
+        "Qty-only Sales & Stock (Op.Bal. Qty. | Receipt Qty. | Total Qty. | "
+        "Issue Qty. | Closing Balance | MSR Price): Op.Bal. Qty. is opening_qty, "
+        "never closing. Closing Balance is one closing_qty column — if Closing "
+        "and Balance are two stacked lines, emit one header cell 'Closing "
+        "Balance', not two columns. MSR Price is rate, never closing. Total Qty. "
+        "is not closing. There is no closing_value on these sheets. "
         "Keep a leading serial/Sr column and a packing column when printed. "
         "Never put the serial number into product_name. Never freely reorder "
         "numbers across columns — each cell stays under its printed column. "
@@ -2940,7 +2946,7 @@ def _closing_qty_from_header_enabled() -> bool:
 
 
 def _is_closing_qty_header_text(text: str) -> bool:
-    """Closing / Clacing, not Closing Bala or Closing Value."""
+    """Closing / Clacing / Balance, not Closing Bala or Closing Value."""
     norm = normalize_header(text or "")
     if not norm:
         return False
@@ -2958,6 +2964,10 @@ def _is_closing_qty_header_text(text: str) -> bool:
         "clsoing",
         "clqty",
         "closingqty",
+        "balance",
+        "bal",
+        "closingbalance",
+        "closingbal",
     }:
         return True
     return bool(re.fullmatch(r"(?i)(?:closing|close|cls)\.?", norm.strip()))
@@ -3008,6 +3018,7 @@ def _restore_closing_qty_from_header(
     close_idx = None
     issue_idx = None
     total_idx = None
+    close_fallback_idxs: List[int] = []
     for col in columns:
         if not isinstance(col, dict):
             continue
@@ -3016,8 +3027,12 @@ def _restore_closing_qty_from_header(
         except (TypeError, ValueError):
             continue
         header = str(col.get("header_text") or "")
+        if col.get("canonical") == "closing_value":
+            continue
         if close_idx is None and _is_closing_qty_header_text(header):
             close_idx = idx
+        elif _is_closing_qty_header_text(header):
+            close_fallback_idxs.append(idx)
         elif issue_idx is None and _is_issue_qty_header_text(header):
             issue_idx = idx
         elif total_idx is None and _is_total_qty_header_text(header):
@@ -3027,6 +3042,18 @@ def _restore_closing_qty_from_header(
     printed_close = parse_number(
         _physical_cell_at(item, close_idx), allow_internal_spaces=True
     )
+    if printed_close is None or abs(float(printed_close)) <= 0.001:
+        for fb_idx in close_fallback_idxs:
+            fb = parse_number(
+                _physical_cell_at(item, fb_idx), allow_internal_spaces=True
+            )
+            if fb is None or not _looks_small_qty(fb):
+                continue
+            if abs(float(fb)) <= 0.001:
+                continue
+            close_idx = fb_idx
+            printed_close = fb
+            break
     if printed_close is None or not _looks_small_qty(printed_close):
         if printed_close is not None and abs(float(printed_close)) > 0.001:
             return False
