@@ -1,0 +1,719 @@
+{
+  "source_file": "KAVERI MEDICAL AGENCIES.TXT",
+  "source_format": "txt",
+  "stockist_name": "KAVERI MEDICAL AGENCIES",
+  "stockist_address": "Door No.5-4-21,Shutter No.1&2,Gunj Road,JAGTIAL-505 327",
+  "company_name": "VERITAZ HEALTHCARE LTD",
+  "period_from": "2026-06-01",
+  "period_to": "2026-06-30",
+  "report_title": "MONTHLY STOCK & SALES STATEMENT FOR THE MONTH OF June '26",
+  "line_items": [
+    {
+      "product_code": "0201",
+      "product_name": "ACINIL LIQUID 170ML",
+      "packing": "1*170ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0202",
+      "product_name": "ACINIL-O LIQUID",
+      "packing": "1*120",
+      "opening_qty": 108.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 16.0,
+      "sales_value": 1451.26,
+      "closing_qty": 92.0,
+      "closing_value": 9817.32,
+      "extra": {
+        "total_stock": 108.0
+      }
+    },
+    {
+      "product_code": "0203",
+      "product_name": "ANDIAL TAB",
+      "packing": "1*10S",
+      "opening_qty": 70.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 60.0,
+      "sales_value": 923.0,
+      "closing_qty": 10.0,
+      "closing_value": 184.6,
+      "extra": {
+        "total_stock": 70.0
+      }
+    },
+    {
+      "product_code": "0204",
+      "product_name": "AXIFUR 250 MG TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0276",
+      "product_name": "AXIFUR 500MG TAB",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0272",
+      "product_name": "BRILIA DROPS",
+      "packing": "1*15ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0277",
+      "product_name": "BRILIA FORTE SYP",
+      "packing": "1*200M",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0265",
+      "product_name": "BRILIA TAB",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0211",
+      "product_name": "CEFEPRIME 1 GR VIAL",
+      "packing": "1*10",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0212",
+      "product_name": "CEFEPRIME 500 MG VIAL",
+      "packing": "1*10ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0275",
+      "product_name": "DELBI 100MGDT",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0219",
+      "product_name": "DELBI 200MG TAB",
+      "packing": "1*10'S",
+      "opening_qty": 104.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 104.0,
+      "closing_value": 8268.0,
+      "extra": {
+        "total_stock": 104.0
+      }
+    },
+    {
+      "product_code": "0255",
+      "product_name": "DELBI 50 DRYSYP",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0258",
+      "product_name": "DELBI CV TAB 10'S",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0278",
+      "product_name": "DELBI FORTE DRY SYP",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0259",
+      "product_name": "DELBI O TAB 10'S",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0256",
+      "product_name": "DELCON DROPS 15ML",
+      "packing": "1*15ML",
+      "opening_qty": 165.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 60.0,
+      "sales_value": 3747.5,
+      "closing_qty": 105.0,
+      "closing_value": 7743.75,
+      "extra": {
+        "total_stock": 165.0
+      }
+    },
+    {
+      "product_code": "0215",
+      "product_name": "DELCON LIQUID",
+      "packing": "1*60ML",
+      "opening_qty": 123.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 123.0,
+      "closing_value": 8227.47,
+      "extra": {
+        "total_stock": 123.0
+      }
+    },
+    {
+      "product_code": "0271",
+      "product_name": "DELCON LM SYRP",
+      "packing": "1*60ML",
+      "opening_qty": 160.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 160.0,
+      "closing_value": 11313.6,
+      "extra": {
+        "total_stock": 160.0
+      }
+    },
+    {
+      "product_code": "0281",
+      "product_name": "DELCON LM TAB",
+      "packing": "1*10'S",
+      "opening_qty": 39.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 39.0,
+      "closing_value": 3064.23,
+      "extra": {
+        "total_stock": 39.0
+      }
+    },
+    {
+      "product_code": "0282",
+      "product_name": "DELCON LS SYP",
+      "packing": "1*100M",
+      "opening_qty": 200.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 200.0,
+      "closing_value": 20572.0,
+      "extra": {
+        "total_stock": 200.0
+      }
+    },
+    {
+      "product_code": "0263",
+      "product_name": "DELCON PLUS DS SYP",
+      "packing": "1*60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0217",
+      "product_name": "DELCON PLUS LIQUID",
+      "packing": "1*60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0218",
+      "product_name": "DELCON PLUS TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0216",
+      "product_name": "DELCON TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0220",
+      "product_name": "FEPANIL 120 SYP 60ML",
+      "packing": "1*60ML",
+      "opening_qty": 361.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "sales_value": 73.23,
+      "closing_qty": 358.0,
+      "closing_value": 10485.82,
+      "extra": {
+        "total_stock": 361.0
+      }
+    },
+    {
+      "product_code": "0269",
+      "product_name": "FEPANIL 156.25 SYRP",
+      "packing": "1*60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0221",
+      "product_name": "FEPANIL 250 MG LIQ 60M",
+      "packing": "1*60ML",
+      "opening_qty": 1337.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 338.0,
+      "sales_value": 8569.5,
+      "closing_qty": 999.0,
+      "closing_value": 32607.36,
+      "extra": {
+        "total_stock": 1337.0
+      }
+    },
+    {
+      "product_code": "0268",
+      "product_name": "FEPANIL 500 SYRP",
+      "packing": "1*60ML",
+      "opening_qty": 756.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 48.0,
+      "sales_value": 1347.2,
+      "closing_qty": 708.0,
+      "closing_value": 23845.44,
+      "extra": {
+        "total_stock": 756.0
+      }
+    },
+    {
+      "product_code": "0222",
+      "product_name": "FEPANIL 500MG TAB",
+      "packing": "1*15'S",
+      "opening_qty": 854.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 268.0,
+      "sales_value": 2338.3,
+      "closing_qty": 586.0,
+      "closing_value": 6360.04,
+      "extra": {
+        "total_stock": 854.0
+      }
+    },
+    {
+      "product_code": "0223",
+      "product_name": "FEPANIL 650 CAPTAB",
+      "packing": "1*15'S",
+      "opening_qty": 1601.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 166.0,
+      "sales_value": 3173.3,
+      "closing_qty": 1435.0,
+      "closing_value": 35028.35,
+      "extra": {
+        "total_stock": 1601.0
+      }
+    },
+    {
+      "product_code": "0250",
+      "product_name": "FEPANIL DROPS",
+      "packing": "1*15ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0270",
+      "product_name": "FEPANIL MEF SYP",
+      "packing": "1*60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0267",
+      "product_name": "FEPANIL-MEF DS",
+      "packing": "1*60ML",
+      "opening_qty": 329.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 94.0,
+      "sales_value": 4034.6,
+      "closing_qty": 235.0,
+      "closing_value": 12915.6,
+      "extra": {
+        "total_stock": 329.0
+      }
+    },
+    {
+      "product_code": "0224",
+      "product_name": "FERCEL-300 CAP",
+      "packing": "1*15'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0225",
+      "product_name": "LYSATONE PLUS LIQUID",
+      "packing": "1*300ML",
+      "opening_qty": 230.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "sales_value": 377.68,
+      "closing_qty": 227.0,
+      "closing_value": 34292.89,
+      "extra": {
+        "total_stock": 230.0
+      }
+    },
+    {
+      "product_code": "0228",
+      "product_name": "NALGIS 100 MG TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0238",
+      "product_name": "PRESSCLAV 228.5 MG SYR",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0237",
+      "product_name": "PRESSCLAV 228.5 MG TAB",
+      "packing": "1*6'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0239",
+      "product_name": "PRESSCLAV 375 TABS",
+      "packing": "1*6'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0240",
+      "product_name": "PRESSCLAV 625 MG TABS",
+      "packing": "1*6'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0279",
+      "product_name": "PRESSCLAV ES DRY SYRP",
+      "packing": "1*50ML",
+      "opening_qty": 75.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 75.0,
+      "closing_value": 8035.5,
+      "extra": {
+        "total_stock": 75.0
+      }
+    },
+    {
+      "product_code": "0273",
+      "product_name": "PRESSCLAV FORTE DRY SY",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0319",
+      "product_name": "PROXTL 100 MG TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0274",
+      "product_name": "PROXTL 100MG DRY SYP",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0320",
+      "product_name": "PROXTL 200 MG TABS",
+      "packing": "1*10'S",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0321",
+      "product_name": "PROXTL 50 DRY SYP",
+      "packing": "1*30ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 0.0,
+      "closing_value": 0.0,
+      "extra": {
+        "total_stock": 0.0
+      }
+    },
+    {
+      "product_code": "0283",
+      "product_name": "PROXTL CV 100 SYP",
+      "packing": "1*30ML",
+      "opening_qty": 71.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "sales_value": 0.0,
+      "closing_qty": 71.0,
+      "closing_value": 9648.19,
+      "extra": {
+        "total_stock": 71.0
+      }
+    },
+    {
+      "product_code": "0280",
+      "product_name": "TREONAM FORTE SRYP",
+      "packing": "1*60ML",
+      "opening_qty": 30.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "sales_value": 2732.13,
+      "closing_qty": 20.0,
+      "closing_value": 6071.4,
+      "extra": {
+        "total_stock": 30.0
+      }
+    },
+    {
+      "product_code": "0266",
+      "product_name": "VERISPORE 30ML SYP",
+      "packing": "1*30ML",
+      "opening_qty": 240.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "sales_value": 291.56,
+      "closing_qty": 238.0,
+      "closing_value": 38551.24,
+      "extra": {
+        "total_stock": 240.0
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": 29059.25,
+    "closing_value": 287032.8,
+    "extra": {
+      "receipts_value": 0.0
+    }
+  }
+}

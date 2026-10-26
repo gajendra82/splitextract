@@ -97,3 +97,52 @@ def build_strict_text_prompt(ocr_text: str, detailed_prompt_body: str = "") -> s
         f"INVOICE TEXT:\n{prepared}\n\n"
         "Return ONLY JSON (do not include ocr_text):"
     )
+
+
+def build_excel_table_prompt(table_text: str) -> str:
+    """Multi-invoice GRN/POD spreadsheet prompt. Does not alter PDF invoice prompts."""
+    prepared = prepare_ocr_for_llm(table_text, max_chars=40000)
+    return f"""Extract EVERY sales / GRN / POD row from this spreadsheet as invoices.
+
+The grid may be:
+- one row per product with Invoice Number + Hospital Name / Card Name / Customer Name
+- a dispatch list (Customer Name, invoice Date, Item Name, Shipment Qty) with no invoice number
+- hospitals as column headers with quantities at the intersections
+
+Rules:
+- Return JSON only. No markdown.
+- Each distinct invoice number is one invoice. If invoice number is missing, group by hospital/customer name.
+- Hospital Name, Card Name, Customer Name, or a hospital-named column is the customer (hospital).
+- Shipped Unit / stockist / manufacturer is the vendor when present.
+- Skip stock-statement sheets (opening / purchases / closing only).
+- Do not invent hospitals or products. Drop rows with quantity 0 or blank.
+- invoice_date must be YYYY-MM-DD when parseable.
+
+JSON:
+{{
+  "invoices": [
+    {{
+      "invoice_no": null,
+      "invoice_date": null,
+      "vendor": null,
+      "customer": null,
+      "customer_address": null,
+      "total": null,
+      "line_items": [
+        {{
+          "product_description": null,
+          "quantity": null,
+          "unit_price": null,
+          "total_amount": null,
+          "sku_code": null,
+          "lot_batch_number": null,
+          "unit_of_measure": null
+        }}
+      ]
+    }}
+  ]
+}}
+
+SPREADSHEET:
+{prepared}
+"""
