@@ -10981,6 +10981,12 @@ _XLS_FOOTER_LABEL_NAME = re.compile(
     r"(?ix)^\s*(?:"
     r"last\s*month\s*sales?\b"
     r"|(?:quantity|qty|values?|amounts?)\s*[:.\-]?\s*[\d,]"
+    r"|opening\s*:"
+    r"|purchase\s*:"
+    r"|sales\s*:"
+    r"|uc\s*sale\b"
+    r"|cl\.?\s*stk"
+    r"|(?:opening|purchase|closing)\s+on\s+salerate"
     r")"
 )
 _XLS_FOOTER_DIVISION_NAME = re.compile(
@@ -11414,6 +11420,7 @@ _XLS_HEADER_ALIASES = {
     "matname": "item",
     "materialname": "item",
     "material": "item",
+    "name": "item",
     "pack": "pack",
     "packing": "pack",
     "packsize": "pack",
@@ -11433,6 +11440,13 @@ _XLS_HEADER_ALIASES = {
     "openingstk": "op",
     "openstk": "op",
     "openingqty": "op",
+    "purstk": "pur",
+    "salestk": "sale",
+    "closestk": "bal",
+    "crestk": "sret",
+    "openval": "opval",
+    "saleval": "sval",
+    "clsval": "bval",
     "obqty": "op",
     "ob(qty)": "op",
     "ob": "op",
@@ -15181,12 +15195,23 @@ def _xls_fill_from_rows(
         ):
             result["stockist_name"] = _clean_name(texts[0])
         if (
-            re.search(r"NAGAR|ROAD|HOUSE|COMPLEX|STREET|TEMPLE|NEAR|APT", joined, re.I)
+            re.search(
+                r"NAGAR|ROAD|HOUSE|COMPLEX|STREET|TEMPLE|NEAR|APT|SHOP|PETH|CHOWK",
+                joined,
+                re.I,
+            )
             and len(joined) > 20
             and not re.search(r"E-?Mail|Phone\s*:", joined, re.I)
         ):
             if not result["stockist_address"]:
-                result["stockist_address"] = _clean_name(joined)
+                addr = re.split(
+                    r"\s+(?:From|To)\s*:", joined, maxsplit=1, flags=re.I
+                )[0].strip(" ,")
+                if addr:
+                    result["stockist_address"] = _clean_name(addr)
+        m_company = re.search(r"Company\s*Name\s*:\s*(.+)$", joined, re.I)
+        if m_company and not result.get("company_name"):
+            result["company_name"] = _clean_name(m_company.group(1))
         if re.search(r"Stock and Sale|Stock & Sale|Sales Report", joined, re.I):
             result["report_title"] = _clean_name(joined)
             if not result.get("company_name"):
@@ -15536,6 +15561,7 @@ def _xls_fill_from_rows(
         _assign_number("sales_value", sval_i)
         _assign_number("opening_value", _col("opval"), into_extra=True)
         _assign_number("receipts_value", _col("purval"), into_extra=True)
+        _assign_number("sale_return", _col("sret"), into_extra=True)
         # LMS is last-month sale — never opening_qty (OP.Stock / Op.Stk is opening).
         lms_i = _col("lms")
         if lms_i is not None:
@@ -15687,9 +15713,36 @@ def _xls_fill_from_rows(
 _STOCKIST_NAME_HINT = re.compile(
     r"PHARMACEUTICAL|PHARMAC(?:Y|IES)|AGENC|MEDICOSE|MEDICOS|"
     r"MEDICAL\s+(?:STORES|AGENC)|ASSOCIATES|DISTRIBUT|ENTERPRISES|"
-    r"TRADERS?|AGENCIES",
+    r"TRADERS?|AGENCIES|DRUG\s+HOUSE",
     re.I,
 )
+# Master names often add a legal form (PHARMA DIST / PVT LTD) that is not
+# printed on the statement. Dice on raw tokens then falls below 80.
+_STOCKIST_LEGAL_SUFFIX_TOKENS = frozenset(
+    {
+        "AND",
+        "THE",
+        "OF",
+        "CO",
+        "COMPANY",
+        "PVT",
+        "LTD",
+        "LIMITED",
+        "PRIVATE",
+        "LLC",
+        "INC",
+        "MS",
+        "PHARMA",
+        "PHARMACEUTICAL",
+        "PHARMACEUTICALS",
+        "DIST",
+        "DISTR",
+        "DISTRIBUTOR",
+        "DISTRIBUTORS",
+        "DISTRIBUTION",
+    }
+)
+_STOCKIST_NAME_MATCH_CUTOFF = 80
 _STATEMENT_TITLE_HINT = re.compile(
     r"STOCK\s*&\s*SALES|STOCK\s+AND\s+SALES|SALES\s*&\s*STOCK|"
     r"Sales\s*&\s*Stock\s+Statement|STOCK\s+REPORT|Stock\s+and\s+Sale",
@@ -15719,6 +15772,55 @@ def _normalize_stockist_key(name: str) -> str:
     return text
 
 
+def _stockist_token_list(name: str) -> List[str]:
+    key = _normalize_stockist_key(name)
+    return key.split() if key else []
+
+
+def _strip_trailing_legal_suffixes(tokens: Sequence[str]) -> List[str]:
+    out = [str(tok) for tok in tokens if tok]
+    while out and out[-1] in _STOCKIST_LEGAL_SUFFIX_TOKENS:
+        out.pop()
+    return out
+
+
+def _stockist_name_match_score(left: str, right: str) -> int:
+    """0-100 token score. Extra legal suffixes on the master do not drop it.
+
+    Raw Dice of SATARA DRUG HOUSE vs SATARA DRUG HOUSE PHARMA DIST is 75,
+    below the 80 cutoff. Trailing PHARMA/DIST/PVT LTD are form words, not
+    a different party.
+    """
+    a = _stockist_token_list(left)
+    b = _stockist_token_list(right)
+    if not a or not b:
+        return 0
+    if a == b:
+        return 100
+    core_a = _strip_trailing_legal_suffixes(a)
+    core_b = _strip_trailing_legal_suffixes(b)
+    if core_a and core_b and core_a == core_b:
+        logger.info(
+            "[STOCKIST_MATCH] matching_method=legal_suffix_core score=100 "
+            "left=%r right=%r",
+            (left or "")[:80],
+            (right or "")[:80],
+        )
+        return 100
+    sa = set(core_a) - _STOCKIST_LEGAL_SUFFIX_TOKENS
+    sb = set(core_b) - _STOCKIST_LEGAL_SUFFIX_TOKENS
+    if not sa or not sb:
+        na = " ".join(a)
+        nb = " ".join(b)
+        if len(na) >= 8 and len(nb) >= 8 and (na in nb or nb in na):
+            return 100
+        return 0
+    if sa == sb:
+        return 100
+    inter = sa & sb
+    return int(round(200.0 * len(inter) / float(len(sa) + len(sb))))
+
+
 def _stockist_keys_compatible(left: str, right: str) -> bool:
     """True when two stockist labels are the same party despite OCR noise."""
     a = _normalize_stockist_key(left)
@@ -15729,13 +15831,15 @@ def _stockist_keys_compatible(left: str, right: str) -> bool:
         return True
     if len(a) >= 8 and len(b) >= 8 and (a in b or b in a):
         return True
+    score = _stockist_name_match_score(left, right)
+    if score >= _STOCKIST_NAME_MATCH_CUTOFF:
+        return True
     ta, tb = set(a.split()), set(b.split())
     if not ta or not tb:
         return False
     # Drop ultra-common tokens so "MEDICAL STORES" alone does not match everything.
-    stop = {"AND", "THE", "OF", "CO", "COMPANY", "PVT", "LTD", "LIMITED"}
-    ta -= stop
-    tb -= stop
+    ta -= _STOCKIST_LEGAL_SUFFIX_TOKENS
+    tb -= _STOCKIST_LEGAL_SUFFIX_TOKENS
     if not ta or not tb:
         return a == b
     inter = ta & tb
@@ -15850,7 +15954,7 @@ _PORTAL_UI_CHROME = re.compile(
 _STRONG_STOCKIST_HINT = re.compile(
     r"(?i)\b(?:distributors?|distribution|pharma(?:ceuticals?)?|"
     r"medical\s+stores?|medico(?:s|se)?|enterprises?|traders?|"
-    r"associates|agenc(?:y|ies))\b"
+    r"associates|agenc(?:y|ies)|drug\s+house)\b"
 )
 
 
@@ -29410,6 +29514,44 @@ def _medica_in_ot_as_free_in_enabled() -> bool:
     }
 
 
+_MEDICA_ADDRESS_STOP = re.compile(
+    r"^(?:Phone|Mobile|Tel|Email|E-Mail|Web\s*Site|GSTIN|DLNo|DL\s*No|"
+    r"FSSAI|HIML|PRODUCT\s+DESCRIPTION|OPSTK|PACKING)\b",
+    re.I,
+)
+
+
+def _medica_fill_letterhead_address(
+    result: Dict[str, Any], lines: Sequence[str]
+) -> None:
+    """Copy printed street/city lines under TO: — do not invent."""
+    if not isinstance(result, dict) or result.get("stockist_address"):
+        return
+    stockist = str(result.get("stockist_name") or "").strip()
+    if not stockist:
+        return
+    capture = False
+    parts: List[str] = []
+    for stripped in lines:
+        if capture:
+            if _MEDICA_ADDRESS_STOP.search(stripped):
+                break
+            if re.match(r"^[\d\s/+\-]{8,}$", stripped):
+                break
+            if re.match(r"^-?\d+\s*$", stripped):
+                continue
+            if _clean_name(stripped) == _clean_name(stockist):
+                continue
+            parts.append(stripped)
+            if len(parts) >= 4:
+                break
+            continue
+        if re.match(r"^TO\s*:", stripped, re.I):
+            capture = True
+    if parts:
+        result["stockist_address"] = _clean_name(" ".join(parts))
+
+
 def _parse_medica_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Parse Medica Ultimate OPSTK/PURCH/SALE/IN-OT/STOCK rows from word positions.
 
@@ -29459,6 +29601,7 @@ def _parse_medica_opstk_statement(doc, filename: str) -> Optional[Dict[str, Any]
         if dates:
             result["period_from"] = _normalize_date(dates.group(1))
             result["period_to"] = _normalize_date(dates.group(2))
+    _medica_fill_letterhead_address(result, lines)
     result["line_items"] = items
     result["totals"]["sales_value"] = round(
         sum(_to_float(item.get("sales_value")) for item in items), 2
@@ -45846,7 +45989,8 @@ def _medica_fill_header_from_image(
                 result["period_to"] = _normalize_date(dates.group(2))
                 need_period = False
             if need_stockist and re.search(
-                r"DISTRIBUTORS?|AGENC(?:Y|IES)|ENTERPRISES|MEDICALS?",
+                r"DISTRIBUTORS?|AGENC(?:Y|IES)|ENTERPRISES|MEDICALS?|"
+                r"DRUG\s+HOUSE",
                 stripped,
                 re.I,
             ):
