@@ -157,6 +157,7 @@ ALIASES: Dict[str, List[str]] = {
         "open",  # LstSL / Open / Recd / Sales / Close sheets
         "opening",
         "opstk",
+        "openstk",
         "op stk",
         "ostk",
         "o stk",  # O.Stk / O Stk (Profitmaker Stock & Sales)
@@ -216,6 +217,7 @@ ALIASES: Dict[str, List[str]] = {
         "purchbillqty",
         "purch bill qty",
         "purchase bill qty",
+        "purstk",
     ],
     "sales": [
         "sale",
@@ -237,6 +239,7 @@ ALIASES: Dict[str, List[str]] = {
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
+        "salestk",
     ],
     "sales_return": [
         "saleret",
@@ -262,6 +265,7 @@ ALIASES: Dict[str, List[str]] = {
         "retfromcust",
         "ret from cust",
         "ret from customer",
+        "crestk",
     ],
     "purchase_return": [
         "pret",
@@ -343,6 +347,7 @@ ALIASES: Dict[str, List[str]] = {
         "bal.",
         "clstock",
         "cl.stock",
+        "closestk",
     ],
     "free": [
         "free",
