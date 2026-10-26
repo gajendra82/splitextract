@@ -2655,6 +2655,20 @@ def _swil_rcpt_oth_qty_value_enabled() -> bool:
     }
 
 
+def _swil_rcpt_oth_inline_enabled() -> bool:
+    """Inline (one product per line) Swil Rcpt Oth + two Retrn qty columns.
+
+    Flag default ON — stacked 9-col collapse still runs first; this only
+    recovers sheets whose PDF text already prints name/tax/pack/qty on one line.
+    """
+    return os.getenv("STOCK_SWIL_RCPT_OTH_INLINE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_swil_stacked_opbal_rcpt_oth_format(text: str) -> bool:
     """SwilERP Sales & Stock with Op.Bal + Rcpt Oth / Issue Oth / Shortage.
 
@@ -2796,6 +2810,106 @@ def _collapse_stacked_swil_opbal_9_product_lines(text: str) -> List[Dict[str, An
         item["extra"]["surplus_qty"] = surplus
         item["extra"]["issue_oth_qty"] = issue_oth
         item["extra"]["shortage_qty"] = shortage
+        rows.append(item)
+    return rows
+
+
+def _peel_inline_swil_lead_name_pack(lead: str) -> Tuple[str, Optional[str]]:
+    """Split product name / optional tax / packing from the non-qty prefix."""
+    tokens = str(lead or "").split()
+    packing: Optional[str] = None
+    if len(tokens) >= 2 and _looks_like_packing_line(f"{tokens[-2]} {tokens[-1]}"):
+        packing = f"{tokens[-2]} {tokens[-1]}"
+        tokens = tokens[:-2]
+    elif tokens and (
+        _looks_like_packing_token(tokens[-1])
+        or _looks_like_packing_line(tokens[-1])
+    ):
+        packing = tokens[-1]
+        tokens = tokens[:-1]
+    name = _clean_name(_strip_swil_trailing_tax_rate(" ".join(tokens)))
+    return name, packing
+
+
+def _collapse_inline_swil_opbal_rcpt_oth_lines(text: str) -> List[Dict[str, Any]]:
+    """Parse one-line Swil rows: Name Tax Pack + 11 qty (Rcpt Oth + two Retrn).
+
+    Columns: Op.Bal Receipt RcptOth Retrn Surplus Total Issue IssueOth Retrn
+    Shortage Closing. Stacked 9-col collapse cannot see these rows.
+    """
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    if len(lines) < 4:
+        return []
+    header = "\n".join(lines[:60])
+    if len(re.findall(r"\bRetrn\b", header, re.I)) < 2:
+        return []
+
+    skip_line = re.compile(
+        r"PRODUCT\s*NAME|\bPACKING\b|Op\.?\s*Bal|\bReceipt\b|Rcpt\s*Oth|"
+        r"^\s*TOTAL\b|^\s*GRAND\s*TOTAL\b|Powered\s+By|SwilERP|Page\s*No|"
+        r"Sales\s*&\s*Stock|^\*{2,}|\bHIMALAYA\b|From\s+\d{1,2}[./-]|"
+        r"^\s*Rate\s*$|^\s*Qty\.?\s*$|^\s*Balance\s*$",
+        re.I,
+    )
+    trail_nums = re.compile(
+        r"^(?P<lead>.*?)(?P<nums>(?:\s+-?\d+(?:\.\d+)?)+)\s*$"
+    )
+
+    rows: List[Dict[str, Any]] = []
+    for ln in lines:
+        if skip_line.search(ln):
+            continue
+        m = trail_nums.match(ln)
+        if not m:
+            continue
+        lead = (m.group("lead") or "").strip()
+        raw_toks = re.findall(r"-?\d+(?:\.\d+)?", m.group("nums") or "")
+        if not lead or not raw_toks:
+            continue
+        if raw_toks and re.fullmatch(r"\d+\.\d{2}", raw_toks[0]):
+            raw_toks = raw_toks[1:]
+        nums = [_to_float(t) for t in raw_toks]
+        name, packing = _peel_inline_swil_lead_name_pack(lead)
+        if (
+            packing is None
+            and len(nums) == 12
+            and nums[0] == 0.0
+        ):
+            # Blank packing cell printed as 0 before the 11 qty columns.
+            nums = nums[1:]
+        if not name or len(name) < 3 or len(nums) != 11:
+            continue
+        if re.match(r"^\s*TOTAL\b", name, re.I):
+            continue
+        (
+            opening,
+            receipt,
+            rcpt_oth,
+            retrn_in,
+            surplus,
+            total,
+            issue,
+            issue_oth,
+            retrn_out,
+            shortage,
+            closing,
+        ) = nums
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipt + rcpt_oth + surplus
+        item["sales_qty"] = issue + issue_oth + shortage
+        item["sales_value"] = None
+        item["closing_qty"] = closing
+        item["closing_value"] = None
+        item["extra"]["total_stock"] = total
+        item["extra"]["rcpt_oth_qty"] = rcpt_oth
+        item["extra"]["surplus_qty"] = surplus
+        item["extra"]["issue_oth_qty"] = issue_oth
+        item["extra"]["shortage_qty"] = shortage
+        item["extra"]["purchase_return_qty"] = retrn_in
+        item["extra"]["sales_return_qty"] = retrn_out
         rows.append(item)
     return rows
 
@@ -2948,6 +3062,16 @@ def _parse_swil_stacked_opbal_rcpt_oth_statement(
     if len(items) < 3:
         items = _collapse_stacked_swil_opbal_9_product_lines(text)
         layout_tag = "rcpt_oth_issue_oth_shortage"
+    if len(items) < 3 and _swil_rcpt_oth_inline_enabled():
+        inline_items = _collapse_inline_swil_opbal_rcpt_oth_lines(text)
+        if len(inline_items) >= 3:
+            items = inline_items
+            layout_tag = "rcpt_oth_inline_retrn"
+            logger.info(
+                "SWIL_RCPT_OTH_INLINE accepted rows=%s file=%s",
+                len(items),
+                filename,
+            )
     if len(items) < 3:
         return None
 
@@ -2994,7 +3118,7 @@ def _parse_swil_stacked_opbal_rcpt_oth_statement(
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "swil_stacked_opbal_rcpt_oth"
     result["totals"]["extra"]["opbal_layout"] = layout_tag
-    result["totals"]["extra"]["opbal_stacked_lines"] = True
+    result["totals"]["extra"]["opbal_stacked_lines"] = layout_tag != "rcpt_oth_inline_retrn"
     result["totals"]["sales_value"] = None
     # Prefer sum of printed closing values when present.
     close_vals = [
@@ -34472,8 +34596,10 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     try:
         import fitz  # PyMuPDF
-    except ImportError as exc:
-        raise ValueError("PyMuPDF is required for PDF sales statements") from exc
+    except ImportError:
+        from services.fitz_compat import install as _install_fitz_compat
+
+        fitz = _install_fitz_compat()
 
     max_pages = int(os.getenv("SALES_PDF_MAX_PAGES", "20"))
     zoom = float(os.getenv("SALES_PDF_RENDER_ZOOM", "2.0"))

@@ -63,7 +63,16 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except Exception as _fitz_exc:
+    logging.getLogger(__name__).warning(
+        "FITZ_COMPAT native_pymupdf_blocked err=%s",
+        _fitz_exc,
+    )
+    from services.fitz_compat import install as _install_fitz_compat
+
+    fitz = _install_fitz_compat()
 import requests
 import asyncio
 
