@@ -157,5 +157,143 @@ class TestSaleableStockReportFixture(unittest.TestCase):
             self.assertFalse(item.get("closing_value"))
 
 
+PAIR_HEADER = (
+    "PRINCE PHARMA\n"
+    "(From 01/09/2026 To 30/09/2026)\n"
+    "Saleable Stock Report Of Transactional Item\n"
+    "Particular                 |      Opn|      Opn|      Rec|      Rec|      Issue|      Issue|        Bal|        Bal\n"
+    "                           |    (Q+F)| Amt(Q+F)|    (Q+F)|      Amt|      (Q+F)|        Amt|      (Q+F)|   Amt(Q+F)\n"
+)
+
+
+class TestSaleableQtyValuePairs(unittest.TestCase):
+    """Opn/Rec/Issue/Bal each have a (Q+F) column and a following Amt column."""
+
+    def _parse(self, body: str):
+        return _parse_saleable_stock_report(PAIR_HEADER + body, "statement.pdf", "pdf")
+
+    def test_receipt_and_sale_are_qty_columns_not_amounts(self):
+        text = (
+            "AACTARIL SOAP 75GM         |   201.00| 15194.18|       ——|       ——|      10.00|     933.86|     191.00|   14460.77\n"
+            "ASHVAGANDA CAP.            |    80.00| 14826.85|   120.00| 22238.90|     119.00|   21670.24|      81.00|   15012.19\n"
+            "CYSTONE TAB                |    99.00| 12833.36|  1800.00|295641.21|    1465.00|  243685.41|     434.00|   71001.58\n"
+            "GASEX TAB                  |  5663.50|710871.72|   300.00| 42516.00|    1928.00|  261263.55|    4035.50|  490799.98\n"
+        )
+        result = self._parse(text)
+        by_name = {
+            item["product_name"].upper(): item for item in result["line_items"]
+        }
+        soap = by_name["AACTARIL SOAP"]
+        self.assertEqual(soap["packing"], "75GM")
+        self.assertEqual(soap["opening_qty"], 201.0)
+        self.assertEqual(soap["receipts_qty"], 0.0)
+        self.assertEqual(soap["sales_qty"], 10.0)
+        self.assertEqual(soap["closing_qty"], 191.0)
+        self.assertEqual(soap["extra"]["opening_value"], 15194.18)
+        self.assertEqual(soap["sales_value"], 933.86)
+        self.assertNotEqual(soap["receipts_qty"], 15194.18)
+        self.assertNotEqual(soap["closing_qty"], 14460.77)
+
+        cap = by_name["ASHVAGANDA CAP."]
+        self.assertEqual(cap["opening_qty"], 80.0)
+        self.assertEqual(cap["receipts_qty"], 120.0)
+        self.assertEqual(cap["sales_qty"], 119.0)
+        self.assertEqual(cap["closing_qty"], 81.0)
+        self.assertEqual(cap["extra"]["receipts_value"], 22238.90)
+        self.assertNotEqual(cap["receipts_qty"], 14826.85)
+        self.assertNotEqual(cap["sales_qty"], 120.0)
+
+        cystone = by_name["CYSTONE TAB"]
+        self.assertEqual(cystone["receipts_qty"], 1800.0)
+        self.assertEqual(cystone["sales_qty"], 1465.0)
+        self.assertNotEqual(cystone["receipts_qty"], 295641.21)
+
+        gasex = by_name["GASEX TAB"]
+        self.assertEqual(gasex["opening_qty"], 5663.50)
+        self.assertEqual(gasex["sales_qty"], 1928.0)
+        self.assertEqual(gasex["closing_qty"], 4035.50)
+        self.assertTrue(gasex["extra"]["stock_identity_ok"])
+
+    def test_negative_receipt_stays_negative(self):
+        text = (
+            "CLARINA CREAM              |   457.00| 58802.99|   -25.00| -3210.23|      18.00|    2474.04|     414.00|   53315.42\n"
+        )
+        result = self._parse(text)
+        item = result["line_items"][0]
+        self.assertEqual(item["opening_qty"], 457.0)
+        self.assertEqual(item["receipts_qty"], -25.0)
+        self.assertEqual(item["sales_qty"], 18.0)
+        self.assertEqual(item["closing_qty"], 414.0)
+        self.assertTrue(item["extra"]["stock_identity_ok"])
+
+    def test_identity_mismatch_is_reported_not_rewritten(self):
+        text = (
+            "BONISHAN SYP 200ML         |    18.00|  1196.45|    -7.00|  -636.45|      14.00|    1408.09|      -2.00|      82.56\n"
+        )
+        result = self._parse(text)
+        item = result["line_items"][0]
+        self.assertEqual(item["receipts_qty"], -7.0)
+        self.assertEqual(item["sales_qty"], 14.0)
+        self.assertEqual(item["closing_qty"], -2.0)
+        self.assertFalse(item["extra"]["stock_identity_ok"])
+        self.assertEqual(item["extra"]["stock_identity_delta"], 1.0)
+
+    def test_date_like_cell_is_uncertain(self):
+        text = (
+            "SAMPLE ROW                 |    10.00|   100.00| 01/09/2026|   50.00|       2.00|     20.00|       8.00|     80.00\n"
+        )
+        result = self._parse(text)
+        item = result["line_items"][0]
+        self.assertIsNone(item["receipts_qty"])
+        self.assertEqual(item["extra"]["field_source"]["receipts_qty"], "uncertain")
+        self.assertEqual(item["sales_qty"], 2.0)
+        self.assertEqual(item["closing_qty"], 8.0)
+        self.assertIsNone(item["extra"]["stock_identity_ok"])
+
+    def test_broken_decimal_is_uncertain(self):
+        text = (
+            "SAMPLE ROW                 |    10.00|   100.00|    12.3.4|   50.00|       2.00|     20.00|       8.00|     80.00\n"
+        )
+        result = self._parse(text)
+        item = result["line_items"][0]
+        self.assertIsNone(item["receipts_qty"])
+        self.assertEqual(item["extra"]["field_source"]["receipts_qty"], "uncertain")
+        self.assertEqual(item["opening_qty"], 10.0)
+
+    def test_repeated_header_and_firm_total_are_not_products(self):
+        text = (
+            "Particular                 |      Opn|      Opn|      Rec|      Rec|      Issue|      Issue|        Bal|        Bal\n"
+            "                           |    (Q+F)| Amt(Q+F)|    (Q+F)|      Amt|      (Q+F)|        Amt|      (Q+F)|   Amt(Q+F)\n"
+            "PURIM TAB.                 |   102.00| 12953.61|    50.00|  5980.86|      22.00|    2832.51|     130.00|   16170.38\n"
+            "Firm Total                 | 39873.50|5169150.6| 31721.00|4429526.5|   32923.00| 4807873.35|   38690.50| 4886910.54\n"
+        )
+        result = self._parse(text)
+        names = [item["product_name"].upper() for item in result["line_items"]]
+        self.assertEqual(names, ["PURIM TAB."])
+        extra = result["totals"]["extra"]
+        self.assertEqual(extra["opening_qty"], 39873.50)
+        self.assertEqual(extra["receipts_qty"], 31721.0)
+        self.assertEqual(extra["sales_qty"], 32923.0)
+        self.assertEqual(extra["closing_qty"], 38690.50)
+        self.assertNotEqual(extra["receipts_qty"], 5169150.6)
+        self.assertEqual(extra["opening_value"], 5169150.6)
+        self.assertEqual(extra["printed_sales_value"], 4807873.35)
+
+    def test_four_column_report_is_unchanged(self):
+        text = (
+            HEADER
+            + "AACTARIL SOAP             |75 GM  | |      21.00|         —|       5.00|      16.00\n"
+        )
+        result = _parse_saleable_stock_report(text, "paras.pdf", "pdf")
+        item = result["line_items"][0]
+        self.assertEqual(item["opening_qty"], 21.0)
+        self.assertEqual(item["receipts_qty"], 0.0)
+        self.assertEqual(item["sales_qty"], 5.0)
+        self.assertEqual(item["closing_qty"], 16.0)
+        self.assertEqual(
+            result["totals"]["extra"]["layout"], "saleable_opn_rec_issue_bal"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -24135,6 +24135,131 @@ def _saleable_qty(token: str) -> float:
     return _to_float(raw)
 
 
+def _saleable_qty_value_pairs_enabled() -> bool:
+    """Read Opn/Rec/Issue/Bal (Q+F) separately from the Amt column beside each.
+
+    Default ON. Used only when the printed header repeats each group as
+    qty then amount. Four-column Opn|Rec|Issue|Bal reports are unchanged.
+    """
+    return os.getenv("STOCK_SALEABLE_QTY_VALUE_PAIRS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_SALEABLE_PAIR_GROUP = {
+    "opn": "opening",
+    "rec": "receipts",
+    "issue": "sales",
+    "sale": "sales",
+    "sample": "sample",
+    "expiry": "expiry",
+    "adj": "adjustment",
+    "bal": "closing",
+}
+
+
+def _saleable_header_group(cell: str) -> Optional[str]:
+    match = re.search(
+        r"\b(Opn|Rec|Issue|Sale|Sample|Expiry|Adj|Bal)\b", cell or "", re.I
+    )
+    return match.group(1).lower() if match else None
+
+
+def _saleable_header_kind(cell: str) -> Optional[str]:
+    """Qty vs amount for one header cell. Amt(Q+F) is the amount column."""
+    text = cell or ""
+    has_qty = bool(re.search(r"\(Q\s*\+\s*F\)", text, re.I))
+    has_amt = bool(re.search(r"\bAmt\b", text, re.I))
+    if has_amt:
+        return "value"
+    if has_qty:
+        return "qty"
+    return None
+
+
+def _saleable_pair_column_map(text: str) -> Optional[List[str]]:
+    """Canonical fields for a Saleable Stock Report whose header is qty|amount pairs.
+
+    Header example: Opn | Opn | Rec | Rec | Issue | Issue | Bal | Bal
+    over (Q+F) | Amt | (Q+F) | Amt | (Q+F) | Amt | (Q+F) | Amt.
+    Returns None when that header is not printed.
+    """
+    if not _saleable_qty_value_pairs_enabled() or not text:
+        return None
+    groups: Optional[List[str]] = None
+    kinds: Optional[List[str]] = None
+    for line in text.splitlines():
+        if "|" not in line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        found_groups = [
+            group for group in (_saleable_header_group(part) for part in parts) if group
+        ]
+        found_kinds = [
+            kind for kind in (_saleable_header_kind(part) for part in parts) if kind
+        ]
+        if (
+            len(found_groups) >= 8
+            and found_groups.count("opn") >= 2
+            and found_groups.count("rec") >= 2
+            and found_groups.count("bal") >= 2
+            and ("issue" in found_groups or "sale" in found_groups)
+        ):
+            groups = found_groups
+        if len(found_kinds) >= 8 and found_kinds[0] == "qty" and found_kinds[1] == "value":
+            kinds = found_kinds
+    if not groups or not kinds or len(groups) != len(kinds):
+        return None
+    fields: List[str] = []
+    for group, kind in zip(groups, kinds):
+        base = _SALEABLE_PAIR_GROUP.get(group)
+        if not base:
+            return None
+        fields.append(f"{base}_{'value' if kind == 'value' else 'qty'}")
+    if not fields or not fields[0].endswith("_qty"):
+        return None
+    logger.info("SALEABLE_QTY_VALUE_PAIR columns=%s", ",".join(fields))
+    return fields
+
+
+def _saleable_parse_qty_cell(token: str) -> Tuple[Optional[float], str]:
+    """Parse one printed qty/amount cell. Does not turn a bad token into a number.
+
+    Status is printed (including a dash used as zero), missing, or uncertain.
+    """
+    raw = str(token or "").strip()
+    if not raw:
+        return None, "missing"
+    if re.fullmatch(r"[—–\-\s]+", raw):
+        return 0.0, "printed"
+    compact = raw.replace(",", "").replace(" ", "")
+    if compact.count(".") > 1:
+        return None, "uncertain"
+    if re.fullmatch(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", compact):
+        return None, "uncertain"
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", compact):
+        return float(compact), "printed"
+    return None, "uncertain"
+
+
+def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]:
+    """Metric cells aligned to the pair header. Empty cells keep their column."""
+    if raw.count("|") < len(fields):
+        return None
+    parts = [part.strip() for part in raw.split("|")]
+    if not parts or not parts[0]:
+        return None
+    cells = parts[1:]
+    while cells and not cells[-1]:
+        cells.pop()
+    if len(cells) < len(fields):
+        return None
+    return cells[: len(fields)]
+
+
 def _saleable_split_packing(particular: str) -> Tuple[str, Optional[str]]:
     text = _clean_name(particular)
     glued = re.search(
@@ -24157,6 +24282,129 @@ def _saleable_split_packing(particular: str) -> Tuple[str, Optional[str]]:
     return name, pack or None
 
 
+_SALEABLE_TOP_LEVEL_FIELDS = {
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value",
+}
+
+
+def _saleable_pair_assignment(
+    cells: Sequence[str], fields: Sequence[str]
+) -> Tuple[Dict[str, Optional[float]], Dict[str, str]]:
+    values: Dict[str, Optional[float]] = {}
+    sources: Dict[str, str] = {}
+    for field, cell in zip(fields, cells):
+        value, status = _saleable_parse_qty_cell(cell)
+        values[field] = value
+        sources[field] = status
+    return values, sources
+
+
+def _saleable_note_identity(item: Dict[str, Any]) -> None:
+    """Record Closing vs Opening + Receipt − Sale. Does not change printed qty."""
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+
+    def _num(key: str) -> Optional[float]:
+        if fs.get(key) in {"uncertain", "missing"}:
+            return None
+        raw = item.get(key) if key in item else None
+        if raw is None:
+            raw = extra.get(key)
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    opening = _num("opening_qty")
+    receipt = _num("receipts_qty")
+    sales = _num("sales_qty")
+    closing = _num("closing_qty")
+    if None in (opening, receipt, sales, closing):
+        extra["stock_identity_ok"] = None
+        return
+    expected = opening + receipt - sales
+    for key in ("sample_qty", "expiry_qty", "adjustment_qty"):
+        if key not in fs:
+            continue
+        extra_qty = _num(key)
+        if extra_qty is None:
+            extra["stock_identity_ok"] = None
+            return
+        expected -= extra_qty
+    delta = round(float(closing) - expected, 2)
+    extra["stock_identity_delta"] = delta
+    extra["stock_identity_ok"] = abs(delta) <= 0.51
+
+
+def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, Any]]:
+    cells = _saleable_pair_cells(raw, fields)
+    if cells is None:
+        return None
+    name = _clean_name(raw.split("|", 1)[0])
+    if not name or _SALEABLE_SKIP_NAME_RE.search(name):
+        return None
+    values, sources = _saleable_pair_assignment(cells, fields)
+    pack = None
+    name, pack = _saleable_split_packing(name)
+    item = empty_line_item()
+    item["product_name"] = name
+    item["packing"] = pack
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    for field, value in values.items():
+        if field in _SALEABLE_TOP_LEVEL_FIELDS:
+            item[field] = value
+        else:
+            extra[field] = value
+        fs[field] = sources[field]
+        if sources[field] == "uncertain":
+            logger.info(
+                "SALEABLE_QTY_VALUE_PAIR uncertain field=%s product=%s cell=%r",
+                field,
+                name[:40],
+                cells[list(fields).index(field)],
+            )
+    _saleable_note_identity(item)
+    return item
+
+
+def _saleable_store_pair_totals(
+    extra: Dict[str, Any], raw: str, fields: Optional[Sequence[str]]
+) -> bool:
+    if not fields:
+        return False
+    cells = _saleable_pair_cells(raw, fields)
+    if cells is None:
+        return False
+    values, sources = _saleable_pair_assignment(cells, fields)
+    if any(status == "uncertain" for status in sources.values()):
+        logger.info("SALEABLE_QTY_VALUE_PAIR uncertain total row")
+        return False
+    key_map = {
+        "sales_value": "printed_sales_value",
+        "closing_value": "printed_closing_value",
+    }
+    for field, value in values.items():
+        extra[key_map.get(field, field)] = value
+    logger.info(
+        "SALEABLE_QTY_VALUE_PAIR totals opening=%s receipts=%s sales=%s closing=%s",
+        values.get("opening_qty"),
+        values.get("receipts_qty"),
+        values.get("sales_qty"),
+        values.get("closing_qty"),
+    )
+    return True
+
+
 def _parse_saleable_stock_report(
     text: str, filename: str, source_format: str = "pdf"
 ) -> Optional[Dict[str, Any]]:
@@ -24167,6 +24415,7 @@ def _parse_saleable_stock_report(
     result = empty_result(filename, source_format)
     result["report_title"] = "Saleable Stock Report"
     items: List[Dict[str, Any]] = []
+    pair_fields = _saleable_pair_column_map(text)
 
     for ln in text.splitlines():
         raw = ln.strip()
@@ -24199,21 +24448,26 @@ def _parse_saleable_stock_report(
             continue
 
         if re.search(r"^(?:COMPANY|Firm|Grand)\s+Total\b", raw, re.I):
-            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
-            moved = _saleable_movement_from_nums(nums)
-            if moved:
-                extra = result["totals"]["extra"]
-                extra["opening_qty"] = moved["opening"]
-                extra["receipts_qty"] = moved["receipts"]
-                extra["sales_qty"] = moved["sales"]
-                extra["closing_qty"] = moved["closing"]
+            extra = result["totals"]["extra"]
+            paired_total = _saleable_store_pair_totals(extra, raw, pair_fields)
+            if not paired_total:
+                nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+                moved = _saleable_movement_from_nums(nums)
+                if moved:
+                    extra["opening_qty"] = moved["opening"]
+                    extra["receipts_qty"] = moved["receipts"]
+                    extra["sales_qty"] = moved["sales"]
+                    extra["closing_qty"] = moved["closing"]
+            if extra.get("opening_qty") is not None or paired_total:
                 if re.search(r"^Grand\s+Total\b", raw, re.I):
                     extra["total_row_source"] = "saleable_grand_total"
                 else:
                     extra["total_row_source"] = "saleable_company_total"
             continue
-        if re.search(r"(?:\|A\||^\s*A\b)", raw) and re.search(
-            r"\d+\.\d{2}", raw
+        if (
+            not pair_fields
+            and re.search(r"(?:\|A\||^\s*A\b)", raw)
+            and re.search(r"\d+\.\d{2}", raw)
         ):
             nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
             moved = _saleable_movement_from_nums(nums)
@@ -24223,6 +24477,12 @@ def _parse_saleable_stock_report(
                 extra["receipts_value"] = moved["receipts"]
                 extra["printed_sales_value"] = moved["sales"]
                 extra["printed_closing_value"] = moved["closing"]
+            continue
+
+        if pair_fields:
+            paired = _saleable_pair_item(raw, pair_fields)
+            if paired:
+                items.append(paired)
             continue
 
         matched = _saleable_match_row(raw)
@@ -24248,7 +24508,11 @@ def _parse_saleable_stock_report(
     result["line_items"] = items
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "saleable_stock_report"
-    extra["layout"] = "saleable_opn_rec_issue_bal"
+    extra["layout"] = (
+        "saleable_opn_rec_issue_bal_qty_value"
+        if pair_fields
+        else "saleable_opn_rec_issue_bal"
+    )
     extra["rows_detected"] = len(items)
     extra["fallback_used"] = False
     return result
