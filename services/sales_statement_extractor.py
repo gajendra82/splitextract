@@ -33036,6 +33036,259 @@ def _parse_chopada_zandra_vertical_pdf(
     return result
 
 
+_SHARDA_OPSTK_CR_COLS = (
+    "jul_qty",
+    "aug_qty",
+    "opening_qty",
+    "receipts_qty",
+    "receipts_value",
+    "sales_qty",
+    "sales_value",
+    "credit_return_qty",
+    "closing_qty",
+    "closing_value",
+)
+_SHARDA_OPSTK_CR_HEADERS = (
+    "OpStk",
+    "P.Qty",
+    "P.Val",
+    "S.Qty",
+    "S.Val",
+    "CrQty",
+    "ClStk",
+    "ClVal",
+)
+
+
+def _is_sharda_opstk_crqty_format(text: str) -> bool:
+    """SHARDA-style Stock and Sale Statement with Jul/Aug + OpStk/P.Qty/.../ClVal."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sale\s+Statement", text, re.I):
+        return False
+    hits = 0
+    for h in _SHARDA_OPSTK_CR_HEADERS:
+        if re.search(re.escape(h), text):
+            hits += 1
+    return hits >= 7
+
+
+def _parse_sharda_opstk_crqty_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """SHARDA-style grid: Item | Jul 26 | Aug 26 | OpStk | P.Qty | P.Val | S.Qty |
+    S.Val | CrQty | ClStk | ClVal. Each number is positioned by column x; blanks
+    are dropped so a row has 1..10 values that must be mapped by nearest header x.
+    """
+    page_texts = [(page.get_text("text") or "") for page in doc]
+    if not any(_is_sharda_opstk_crqty_format(t) for t in page_texts):
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock and Sale Statement"
+
+    full_text = "\n".join(page_texts)
+    m_period = re.search(
+        r"From\s+(\d{1,2}-[A-Za-z]{3}-\d{2,4})\s+to\s+(\d{1,2}-[A-Za-z]{3}-\d{2,4})",
+        full_text,
+        re.I,
+    )
+    if m_period:
+        result["period_from"] = _normalize_date(m_period.group(1))
+        result["period_to"] = _normalize_date(m_period.group(2))
+
+    items: List[Dict[str, Any]] = []
+    totals_row: Optional[Dict[str, float]] = None
+    company_name: Optional[str] = None
+    stockist_name: Optional[str] = None
+    stockist_address: Optional[str] = None
+
+    _NUM_RE = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d*)?$")
+
+    def _parse_num(tok: str) -> Optional[float]:
+        s = tok.strip().rstrip(".")
+        if not s:
+            return None
+        s = s.replace(",", "")
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", s):
+            try:
+                return float(s)
+            except Exception:
+                return None
+        return None
+
+    name_cutoff_x = 145.0
+
+    for page in doc:
+        words = page.get_text("words") or []
+        if not words:
+            continue
+        rows: Dict[int, List[Tuple[float, str]]] = {}
+        for w in words:
+            x0, y0, _x1, _y1, text, _blk, _ln, _wn = w
+            key = int(round(float(y0)))
+            rows.setdefault(key, []).append((float(x0), str(text)))
+
+        # Locate header row (contains OpStk + ClVal); read column x positions.
+        header_centers: Dict[str, float] = {}
+        header_y: Optional[int] = None
+        for y, toks in rows.items():
+            flat = " ".join(t for _, t in sorted(toks))
+            if "OpStk" in flat and "ClVal" in flat:
+                header_y = y
+                for x, tok in toks:
+                    cleaned = tok.strip()
+                    if cleaned in _SHARDA_OPSTK_CR_HEADERS:
+                        header_centers[cleaned] = x
+                sorted_toks = sorted(toks)
+                for x, tok in sorted_toks:
+                    if tok.strip().lower() in {"jul", "aug", "sep", "jun"}:
+                        label = tok.strip().capitalize()
+                        header_centers.setdefault(label, x)
+                break
+        if not header_centers:
+            continue
+
+        # Build the ordered list of (field_name, header_x) with month columns.
+        ordered_cols: List[Tuple[str, float]] = []
+        month_fields = [
+            lab for lab in header_centers if lab in {"Jul", "Aug", "Sep", "Jun", "Oct", "May"}
+        ]
+        for lab in sorted(month_fields, key=lambda n: header_centers[n]):
+            ordered_cols.append((f"{lab.lower()}_qty", header_centers[lab]))
+        for lab, field in zip(_SHARDA_OPSTK_CR_HEADERS, (
+            "opening_qty",
+            "receipts_qty",
+            "receipts_value",
+            "sales_qty",
+            "sales_value",
+            "sales_return_qty",
+            "closing_qty",
+            "closing_value",
+        )):
+            if lab in header_centers:
+                ordered_cols.append((field, header_centers[lab]))
+
+        if len(ordered_cols) < 6:
+            continue
+
+        # Find the totals row (no name, numbers at every column) and use its
+        # token x-positions as the TRUE column anchors — headers are left-aligned
+        # labels while cells can be right-aligned numbers, so header_x is a poor
+        # distance origin for nearest-column assignment.
+        anchor_x: List[float] = [c[1] for c in ordered_cols]
+        for y in sorted(rows.keys()):
+            if y <= header_y:
+                continue
+            toks = sorted(rows[y])
+            has_name = any(x < name_cutoff_x for x, _ in toks)
+            data_toks = [(x, t) for x, t in toks if x >= name_cutoff_x]
+            if not has_name and len(data_toks) == len(ordered_cols):
+                values_all_numeric = all(_parse_num(t) is not None for _, t in data_toks)
+                if values_all_numeric:
+                    anchor_x = [x for x, _ in data_toks]
+                    break
+        anchors = list(zip([c[0] for c in ordered_cols], anchor_x))
+
+        # Build the stockist / company from top-of-page lines.
+        top_tokens = sorted(
+            (y, sorted(toks)) for y, toks in rows.items() if y < header_y
+        )
+        if not stockist_name and top_tokens:
+            first_line = " ".join(t for _, t in top_tokens[0][1])
+            stockist_name = _clean_stockist_label(first_line)
+        if not stockist_address and len(top_tokens) >= 2:
+            addr_line = " ".join(t for _, t in top_tokens[1][1])
+            addr_line = re.split(r"\s+Ph\s*:", addr_line, maxsplit=1, flags=re.I)[0]
+            stockist_address = _clean_name(addr_line)
+
+        for y in sorted(rows.keys()):
+            if y <= header_y:
+                continue
+            toks = sorted(rows[y])
+            name_tokens = [t for x, t in toks if x < name_cutoff_x]
+            data_tokens = [(x, t) for x, t in toks if x >= name_cutoff_x]
+
+            # Banner row (e.g. "HIMALAYA ZANDRA") — remember as company and skip.
+            if name_tokens and not data_tokens:
+                banner = " ".join(name_tokens)
+                if re.search(r"HIMALAYA", banner, re.I) and not company_name:
+                    company_name = _clean_name(banner)
+                continue
+
+            # Totals row — no name, numbers aligned with every column.
+            if not name_tokens and len(data_tokens) >= 6:
+                tot: Dict[str, float] = {}
+                for x, tok in data_tokens:
+                    val = _parse_num(tok)
+                    if val is None:
+                        continue
+                    nearest = min(anchors, key=lambda c: abs(c[1] - x))
+                    tot[nearest[0]] = val
+                totals_row = totals_row or tot
+                continue
+
+            name = _clean_name(" ".join(name_tokens))
+            if not name:
+                continue
+
+            values: Dict[str, float] = {}
+            for x, tok in data_tokens:
+                val = _parse_num(tok)
+                if val is None:
+                    continue
+                nearest = min(anchors, key=lambda c: abs(c[1] - x))
+                values[nearest[0]] = val
+
+            if not values:
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["opening_qty"] = float(values.get("opening_qty") or 0.0)
+            item["receipts_qty"] = float(values.get("receipts_qty") or 0.0)
+            item["sales_qty"] = float(values.get("sales_qty") or 0.0)
+            item["closing_qty"] = float(values.get("closing_qty") or 0.0)
+            item["sales_value"] = values.get("sales_value")
+            item["closing_value"] = values.get("closing_value")
+            extra = item["extra"]
+            if "receipts_value" in values:
+                extra["receipts_value"] = values["receipts_value"]
+                extra["purchase_value"] = values["receipts_value"]
+            if "sales_return_qty" in values:
+                item["sales_return_qty"] = values["sales_return_qty"]
+                extra["sales_return_qty"] = values["sales_return_qty"]
+                extra["credit_return_qty"] = values["sales_return_qty"]
+            for month_field in ("jul_qty", "aug_qty", "sep_qty", "jun_qty"):
+                if month_field in values:
+                    extra[month_field] = values[month_field]
+            extra["layout"] = "sharda_opstk_crqty_vertical"
+            items.append(item)
+
+    if not items:
+        return None
+
+    if stockist_name:
+        result["stockist_name"] = stockist_name
+    if stockist_address:
+        result["stockist_address"] = stockist_address
+    if company_name:
+        result["company_name"] = company_name
+
+    if totals_row:
+        result["totals"]["sales_value"] = totals_row.get("sales_value")
+        result["totals"]["closing_value"] = totals_row.get("closing_value")
+        tex = result["totals"]["extra"]
+        for k, v in totals_row.items():
+            tex[k] = v
+        tex["total_row_source"] = "sharda_opstk_crqty_footer"
+
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "sharda_opstk_crqty_pdf"
+    result["totals"]["extra"]["column_roles"] = [c[0] for c in ordered_cols]
+    return result
+
+
 def _parse_packing_opstk_sps_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Word positions for the Packing / Op Stk / Sp S Qty / Cl Stk text grid."""
     page_texts = [(page.get_text("text") or "") for page in doc]
@@ -35023,6 +35276,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if chopada_hz and chopada_hz.get("line_items"):
             chopada_hz["totals"]["extra"]["statement_count"] = 1
             return chopada_hz
+
+        # SHARDA-style Stock and Sale Statement: Jul/Aug/OpStk/P.Qty/P.Val/S.Qty/
+        # S.Val/CrQty/ClStk/ClVal with blank columns dropped — needs x-position
+        # mapping, otherwise Jul lands in opening_qty and S.Qty lands in sales_val.
+        sharda_grid = _parse_sharda_opstk_crqty_pdf(doc, filename)
+        if sharda_grid and sharda_grid.get("line_items"):
+            sharda_grid["totals"]["extra"]["statement_count"] = 1
+            return sharda_grid
 
         packing_opstk = _parse_packing_opstk_sps_statement(doc, filename)
         if packing_opstk and packing_opstk.get("line_items"):
