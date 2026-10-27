@@ -532,7 +532,8 @@ def _statement_period_content_only_enabled() -> bool:
 # Report-header period patterns only — not bare transaction/print dates.
 _REPORT_PERIOD_RANGE_RE = re.compile(
     r"(?:STOCK\s*&\s*SALES\s*(?:ANALYSIS)?|Sales\s*&\s*Stock\s*Statement|"
-    r"STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|Period\s*:?|FOR\s+THE\s+PERIOD|"
+    r"STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|Sales\s+and\s+Stock\s+Statement|"
+    r"Period\s*:?|FOR\s+THE\s+PERIOD|"
     r"Statement\s+Period|Report\s+Period|Monthly\s+Stock)"
     r"[^\n]{0,120}?"
     r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|upto|-|–|—)\s*"
@@ -542,6 +543,12 @@ _REPORT_PERIOD_RANGE_RE = re.compile(
 _REPORT_PERIOD_FROM_TO_RE = re.compile(
     r"(?:FROM|FORM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
     r"(?:TO|Upto|upto|and|to|-|–|—)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    re.I,
+)
+_REPORT_PERIOD_OF_RE = re.compile(
+    r"(?:for\s+the\s+)?period(?:\s+of)?\s*:?\s*"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|upto|-|–|—)\s*"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
     re.I,
 )
 _REPORT_PERIOD_INLINE_RE = re.compile(
@@ -566,6 +573,7 @@ def _extract_report_period_from_content(
     # Prefer the first ~40 lines (title/header band).
     header_band = "\n".join((text or "").splitlines()[:40])
     for pattern, source in (
+        (_REPORT_PERIOD_OF_RE, "report_period_of"),
         (_REPORT_PERIOD_INLINE_RE, "report_header"),
         (_REPORT_PERIOD_RANGE_RE, "report_period"),
         (_REPORT_PERIOD_FROM_TO_RE, "report_from_to"),
@@ -633,13 +641,27 @@ def _finalize_statement_period_fields(
     pt = _usable_period_date(result.get("period_to"))
     source = extra.get("statement_period_source")
 
-    if (pf is None or pt is None) and content_text:
+    if content_text:
         c_from, c_to, c_source = _extract_report_period_from_content(content_text)
-        if c_from and not pf:
+        # Printed report-header range is the statement period. Use it when
+        # Vision left the field empty or filed a different window.
+        if c_from and c_to:
+            if pf != c_from or pt != c_to:
+                result["period_from"] = c_from
+                result["period_to"] = c_to
+                pf, pt = c_from, c_to
+                source = c_source
+                logger.info(
+                    "STATEMENT_PERIOD source=%s period_from=%s period_to=%s",
+                    c_source,
+                    c_from,
+                    c_to,
+                )
+        elif c_from and not pf:
             result["period_from"] = c_from
             pf = c_from
             source = c_source
-        if c_to and not pt:
+        elif c_to and not pt:
             result["period_to"] = c_to
             pt = c_to
             source = source or c_source
@@ -678,23 +700,70 @@ def _finalize_statement_period_fields(
     return result
 
 
+def _rolling_period_to_month_enabled() -> bool:
+    """STOCK_ROLLING_PERIOD_TO_MONTH — 26-Aug to 26-Sep is the September cycle.
+
+    Default ON. Himalaya Sales and Stock Statement rolling windows start on
+    the previous month's 26th. period_from/period_to stay the printed dates;
+    statement_month (Laravel cycle) uses period_to.
+    """
+    return os.getenv("STOCK_ROLLING_PERIOD_TO_MONTH", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _statement_month_key(stmt: Dict[str, Any]) -> Optional[str]:
     """Calendar month of the printed period.
 
     period_from selects the month when it is usable. period_to is used only
-    when period_from is missing. Filename, upload, and run dates are not read.
+    when period_from is missing. A rolling mid-month window (day >= 20 in
+    adjacent months) uses period_to so 26-08-2026 to 26-09-2026 is 2026-09.
+    Filename, upload, and run dates are not read.
     """
     if not isinstance(stmt, dict):
         return None
-    chosen = _usable_period_date(stmt.get("period_from"))
-    if chosen is None:
-        chosen = _usable_period_date(stmt.get("period_to"))
-    if chosen is None:
+    pf = _usable_period_date(stmt.get("period_from"))
+    pt = _usable_period_date(stmt.get("period_to"))
+    pf_iso = _normalize_date(str(pf)) if pf is not None else None
+    pt_iso = _normalize_date(str(pt)) if pt is not None else None
+    if _rolling_period_to_month_enabled() and pf_iso and pt_iso:
+        try:
+            start = datetime.strptime(pf_iso, "%Y-%m-%d").date()
+            end = datetime.strptime(pt_iso, "%Y-%m-%d").date()
+        except ValueError:
+            start = end = None
+        if start and end and start.day >= 20 and end.day >= 20:
+            nxt_year = start.year + (1 if start.month == 12 else 0)
+            nxt_month = 1 if start.month == 12 else start.month + 1
+            if (end.year, end.month) == (nxt_year, nxt_month):
+                return pt_iso[:7]
+    chosen = pf_iso or pt_iso
+    if not chosen or len(chosen) < 7:
         return None
-    iso = _normalize_date(str(chosen))
-    if not iso or len(iso) < 7:
-        return None
-    return iso[:7]
+    return chosen[:7]
+
+
+def _fill_printed_report_period_from_ocr(
+    result: Dict[str, Any],
+    *,
+    image_bytes: Optional[bytes] = None,
+    ocr_text: str = "",
+) -> Dict[str, Any]:
+    """Fill/correct period_from/to from a printed report-header range in OCR."""
+    if not isinstance(result, dict):
+        return result
+    text = ocr_text or ""
+    if not text and image_bytes:
+        try:
+            text = _ocr_image_to_text(image_bytes, psm=6, enhance=False) or ""
+        except Exception:
+            text = ""
+    if not text.strip():
+        return result
+    return _finalize_statement_period_fields(result, content_text=text)
 
 
 def _grouping_stockist_key(stmt: Dict[str, Any]) -> str:
@@ -6141,6 +6210,9 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _parse_xls(file_bytes, name, ext)
     elif ext in IMAGE_EXTENSIONS:
         result = _parse_image(file_bytes, name, ext)
+        result = _fill_printed_report_period_from_ocr(
+            result, image_bytes=file_bytes
+        )
     else:
         raise ValueError(f"Unsupported format '{ext}'")
 
@@ -6330,6 +6402,7 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 type(exc).__name__,
             )
 
+    _clear_company_confused_stockist(result)
     _log_sales_reader(name, ext, result)
     try:
         from services.stock_row_classifier import (
@@ -11920,6 +11993,184 @@ def _xls_combine_header_pair(upper: List[Any], lower: List[Any]) -> List[Any]:
     return combined
 
 
+def _xls_movement_qty_value_fanout_enabled() -> bool:
+    """STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT — Opening/Purchase/Sales/Closing × Qty/Value.
+
+    Default ON. Index-joining those two header rows zeroes sales/closing when
+    the group row has 4 labels and the child row has 8 Qty/Value cells.
+    """
+    return os.getenv("STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_XLS_QTY_VALUE_PAIR_RE = re.compile(
+    r"^(qty|quantity|qnty)\s+(value|val|amt|amount)s?$",
+    re.I,
+)
+_XLS_FANOUT_CHILD_TOKS = {
+    "qty",
+    "quantity",
+    "qnty",
+    "value",
+    "values",
+    "val",
+    "amt",
+    "amount",
+    "amounts",
+}
+_XLS_FANOUT_NUMERIC_FIELDS = (
+    "op",
+    "opval",
+    "pur",
+    "purval",
+    "sale",
+    "sval",
+    "bal",
+    "bval",
+)
+
+
+def _xls_split_qty_value_cells(row: List[Any]) -> List[Any]:
+    """Turn a glued 'Qty Value' header cell into two cells."""
+    out: List[Any] = []
+    for cell in row:
+        text = str(cell).strip() if cell not in (None, "") else ""
+        matched = _XLS_QTY_VALUE_PAIR_RE.match(text) if text else None
+        if matched:
+            out.append(matched.group(1))
+            out.append(matched.group(2))
+        else:
+            out.append(cell)
+    return out
+
+
+def _xls_fanout_movement_qty_value(
+    parents_row: List[Any], children_row: List[Any]
+) -> Optional[List[Any]]:
+    """Pair each Opening/Purchase/Sales/Closing label with the next Qty and Value.
+
+    `_xls_combine_header_pair` joins by column index, so a 4-label group row
+    over an 8-cell Qty/Value row maps Purchase onto Opening Value and never
+    creates a sales or closing column.
+    """
+    if not _xls_movement_qty_value_fanout_enabled():
+        return None
+    if not isinstance(parents_row, list) or not isinstance(children_row, list):
+        return None
+    children = _xls_split_qty_value_cells(children_row)
+    if len(parents_row) == len(children):
+        return None
+    parent_cells = [
+        c
+        for c in parents_row
+        if c not in (None, "")
+        and str(c).strip()
+        and _xls_parent_token(c) in _XLS_MOVEMENT_HEADER_PARENTS
+    ]
+    child_cells = [
+        c
+        for c in children
+        if c not in (None, "")
+        and str(c).strip()
+        and _xls_parent_token(c) in _XLS_FANOUT_CHILD_TOKS
+    ]
+    if len(parent_cells) < 2 or len(child_cells) < 4:
+        return None
+    if len(child_cells) < (2 * len(parent_cells) - 1):
+        return None
+
+    def _lead(row: Sequence[Any], stop_toks: set) -> List[Any]:
+        lead: List[Any] = []
+        for cell in row:
+            if cell in (None, "") or not str(cell).strip():
+                continue
+            if _xls_parent_token(cell) in stop_toks:
+                break
+            lead.append(cell)
+        return lead
+
+    lead = _lead(parents_row, _XLS_MOVEMENT_HEADER_PARENTS)
+    child_lead = _lead(children, _XLS_FANOUT_CHILD_TOKS)
+
+    def _has_item(cells: Sequence[Any]) -> bool:
+        return any(_xls_norm_header(c) == "item" for c in cells)
+
+    if _has_item(child_lead) and not _has_item(lead):
+        lead = child_lead
+    elif not lead and child_lead:
+        lead = child_lead
+
+    combined: List[Any] = list(lead)
+    child_i = 0
+    for parent in parent_cells:
+        for _ in range(2):
+            if child_i >= len(child_cells):
+                break
+            combined.append(f"{parent} {child_cells[child_i]}")
+            child_i += 1
+    if child_i < 4:
+        return None
+    logger.info(
+        "STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT parents=%s children=%s cols=%s",
+        [str(p) for p in parent_cells],
+        [str(c) for c in child_cells],
+        [str(c) for c in combined],
+    )
+    return combined
+
+
+def _xls_peel_glued_numeric_row(
+    row: List[Any], colmap: Dict[str, int]
+) -> List[Any]:
+    """Split a single-cell 'NAME 10 20 30 40 …' row onto header numeric columns."""
+    if not _xls_movement_qty_value_fanout_enabled():
+        return row
+    if not row or not colmap:
+        return row
+    if "sale" not in colmap or "bal" not in colmap:
+        return row
+    idxs = sorted(
+        {colmap[key] for key in _XLS_FANOUT_NUMERIC_FIELDS if key in colmap}
+    )
+    if len(idxs) < 4:
+        return row
+    nonempty = [c for c in row if c not in (None, "") and str(c).strip()]
+    if len(nonempty) >= 1 + len(idxs):
+        return row
+    text = " ".join(str(c).strip() for c in nonempty)
+    tokens = text.split()
+    nums: List[str] = []
+    while tokens:
+        raw = tokens[-1].strip()
+        token = raw.replace(",", "").replace("₹", "")
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", token):
+            nums.append(tokens.pop())
+        else:
+            break
+    nums.reverse()
+    if len(nums) != len(idxs):
+        return row
+    name = " ".join(tokens).strip()
+    if not re.search(r"[A-Za-z]{3,}", name):
+        return row
+    width = max(max(idxs), int(colmap.get("item", 0))) + 1
+    out: List[Any] = [None] * width
+    name_idx = int(colmap.get("item", 0))
+    if 0 <= name_idx < width:
+        out[name_idx] = name
+    else:
+        out[0] = name
+    for idx, num in zip(idxs, nums):
+        if 0 <= idx < width:
+            out[idx] = num
+    logger.info("STOCK_XLS_GLUED_QTY_PEEL name=%r nums=%s", name, nums)
+    return out
+
+
 def _xls_best_header(
     rows: List[List[Any]], scan_rows: int = 40
 ) -> Tuple[Optional[int], Dict[str, int], int]:
@@ -11931,16 +12182,28 @@ def _xls_best_header(
     for ri, row in enumerate(limit):
         if not isinstance(row, list):
             continue
-        candidates = [row]
+        candidates: List[Tuple[List[Any], int]] = [(row, ri)]
         if ri > 0 and isinstance(limit[ri - 1], list):
-            candidates.append(_xls_combine_header_pair(limit[ri - 1], row))
-        for candidate in candidates:
+            candidates.append(
+                (_xls_combine_header_pair(limit[ri - 1], row), ri)
+            )
+            fan = _xls_fanout_movement_qty_value(limit[ri - 1], row)
+            if fan:
+                candidates.append((fan, ri))
+        if ri + 1 < len(limit) and isinstance(limit[ri + 1], list):
+            candidates.append(
+                (_xls_combine_header_pair(row, limit[ri + 1]), ri + 1)
+            )
+            fan = _xls_fanout_movement_qty_value(row, limit[ri + 1])
+            if fan:
+                candidates.append((fan, ri + 1))
+        for candidate, header_end in candidates:
             colmap = _xls_header_colmap(candidate)
             if not _xls_is_stock_header(colmap):
                 continue
             score = _xls_score_colmap(colmap)
             if score > best_score:
-                best_idx, best_map, best_score = ri, colmap, score
+                best_idx, best_map, best_score = header_end, colmap, score
     return best_idx, best_map, best_score
 
 
@@ -15349,10 +15612,12 @@ def _xls_fill_from_rows(
         if re.search(
             r"^(Item|Item Name|Mat Name|Mat Code|Pack|Manufacturer|Sales\s*:|"
             r"Opening|Closing|Product Name|Product|Description|Customer Name|"
-            r"Year|Month|Div)$",
+            r"Year|Month|Div|Quantity|VALUE|Value in Rs\.?)$",
             product_name,
             re.I,
         ):
+            continue
+        if re.fullmatch(r"[-_=.*\s]+", product_name or ""):
             continue
         if re.search(r"^(Sales|Opening Val|Closing Val|Purchase|Credit|Branch|Adj)\b", product_name, re.I):
             continue
@@ -15728,7 +15993,8 @@ def _looks_like_stockist_header(line: str) -> bool:
         return False
     # Division banners printed above the product grid are not stockists.
     if re.search(
-        r"(?i)^HIMALAYA(?:\s*\([^)]+\))?$|^HIMALAYA\s+(?:ZENITH|ZANDRA|ZEAL|OTX)\b",
+        r"(?i)^HIMALAYA(?:\s*\([^)]+\))?$|"
+        r"^HIMALAYA\s*[- ]\s*(?:ZENITH|ZANDRA|ZEAL|OTX)\b",
         s,
     ):
         return False
@@ -15805,6 +16071,8 @@ def _stockist_candidate_score(line: str) -> int:
         score -= 40
     if re.search(r"(?i)\bHIMALAYA\b|\bZENITH\b|\bZANDRA\b|\bWELLNESS\b", s):
         score -= 15
+    if _stockist_name_is_manufacturer_or_title(s):
+        score -= 40
     if _STRONG_STOCKIST_HINT.search(s):
         score += 20
     if re.search(r"(?i)\bdistributors?\b", s):
@@ -15818,6 +16086,82 @@ def _stockist_candidate_score(line: str) -> int:
     else:
         score -= 10
     return score
+
+
+def _reject_company_as_stockist_enabled() -> bool:
+    """STOCK_REJECT_COMPANY_AS_STOCKIST — Company:/title is not the stockist.
+
+    Default ON. Portal Stock & Sales screenshots print Company : HIMALAYA ZANDRA
+    and no distributor line; leaving that in stockist_name flags the selected
+    stockist as another entity.
+    """
+    return os.getenv(
+        "STOCK_REJECT_COMPANY_AS_STOCKIST", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _stockist_name_is_manufacturer_or_title(name: str) -> bool:
+    """True when the label is a company/division line or report title, not a party."""
+    s = re.sub(r"\s+", " ", (name or "").strip())
+    if not s:
+        return False
+    if re.search(
+        r"(?i)stock\s*[&©]\s*sales|stock\s+and\s+sales|sales\s*&\s*stock",
+        s,
+    ):
+        return True
+    if re.search(
+        r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|associates|"
+        r"enterprises|traders|private\s+limited|pvt\.?\s*ltd)\b",
+        s,
+    ):
+        return False
+    if re.search(
+        r"(?i)^\s*(?:company\s*:?\s*)?(?:the\s+)?himalaya"
+        r"(?:\s+(?:wellness|drug|drugs|herbal))?"
+        r"(?:\s*(?:co(?:mpany)?\.?|ltd\.?|limited))?"
+        r"(?:\s*[-:()\[\]]*\s*(?:zandra|zenith|zeal|otx|pureherbs|"
+        r"div(?:ision)?).*)?$",
+        s,
+    ):
+        return True
+    if re.search(
+        r"(?i)^\s*himalaya\s*[- ]\s*(?:zandra|zenith|zeal|otx)\b",
+        s,
+    ):
+        return True
+    return False
+
+
+def _clear_company_confused_stockist(result: Dict[str, Any]) -> bool:
+    """Move Company:/title out of stockist_name. Do not invent a distributor."""
+    if not _reject_company_as_stockist_enabled() or not isinstance(result, dict):
+        return False
+    stockist = str(result.get("stockist_name") or "").strip()
+    if not stockist or not _stockist_name_is_manufacturer_or_title(stockist):
+        return False
+    company = str(result.get("company_name") or "").strip()
+    is_title = bool(
+        re.search(
+            r"(?i)stock\s*[&©]\s*sales|stock\s+and\s+sales|sales\s*&\s*stock",
+            stockist,
+        )
+    )
+    if not company and not is_title:
+        result["company_name"] = stockist
+    result["stockist_name"] = None
+    logger.info(
+        "[STOCKIST_MATCH] matching_method=reject_company_as_stockist "
+        "cleared=%r company_name=%r",
+        stockist[:120],
+        result.get("company_name"),
+    )
+    return True
 
 
 def _page_has_op_qty_val_table_headers(text: str) -> bool:
@@ -18703,12 +19047,19 @@ def _enrich_stock_statement_header_from_ocr(
             if re.search(
                 r"Stock\s*&\s*Sales|Company\s*:|From\s+\d|Page\s*:|"
                 r"Generated\s+in|PROFITMAKER|Daxinsoft|Product\s+Name|"
-                r"^\d{1,2}:\d{2}",
+                r"^Run\s*Date\b|ITEM\s+NAME|^\d{1,2}:\d{2}",
                 cleaned,
                 re.I,
             ):
                 continue
             if re.search(r"HIMALAYA\s+WELLNESS|^HIMALAYA\b", cleaned, re.I):
+                continue
+            if _stockist_name_is_manufacturer_or_title(cleaned):
+                continue
+            # Product/qty rows are often ALL-CAPS; require an agency hint.
+            if not _STRONG_STOCKIST_HINT.search(cleaned):
+                continue
+            if not _looks_like_stockist_header(cleaned):
                 continue
             if re.search(r"[A-Za-z]{3,}", cleaned):
                 stockist = cleaned
@@ -18741,6 +19092,10 @@ def _enrich_stock_statement_header_from_ocr(
         or vision_looks_like_title
     ):
         result["stockist_name"] = stockist
+    elif (vision_looks_like_company or vision_looks_like_title) and not stockist:
+        if vision_looks_like_company and not str(result.get("company_name") or "").strip():
+            result["company_name"] = sn_norm
+        result["stockist_name"] = None
     elif sn_norm and "_" in sn:
         result["stockist_name"] = sn_norm
 
@@ -35336,6 +35691,9 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                         )
                     except Exception:
                         pass
+                    out = _fill_printed_report_period_from_ocr(
+                        out, ocr_text="\n".join(_pdf_ocr_parts)
+                    )
                     return out
                 stash_vision_table_fallback_meta(
                     {
@@ -38366,6 +38724,9 @@ def _parse_semantic_text_table(
     header_idx, colmap, score = _xls_best_header(rows)
     if header_idx is None or score < 6 or not colmap:
         return None
+    if header_idx is not None:
+        for i in range(header_idx + 1, len(rows)):
+            rows[i] = _xls_peel_glued_numeric_row(rows[i], colmap)
     result = empty_result(filename, source_format)
     formats: List[List[Optional[str]]] = [[None] * len(r) for r in rows]
     result = _xls_fill_from_rows(result, rows, formats, sheet_name="pdf_text")
@@ -45450,6 +45811,135 @@ def _ignore_non_qty_headers_enabled() -> bool:
     }
 
 
+def _branch_sales_closing_balance_enabled() -> bool:
+    """STOCK_BRANCH_SALES_CLOSING_BALANCE — Opening / Closing Balance columns.
+
+    Default ON. Branch Sales Statement sheets print Opening, Receipt,
+    Company C.Month Sales, then Closing Balance, with Month Sales and
+    Reorder after closing. The Medica OPSTK prompt treats the last number
+    as closing_qty, which files Month Sales / Reorder as closing.
+    """
+    return os.getenv(
+        "STOCK_BRANCH_SALES_CLOSING_BALANCE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_branch_opening_receipt_closing_balance(text: str) -> bool:
+    """Sales Statement: Opening, Receipt, Closing Balance, Month Sales.
+
+    Not a Medica OPSTK / STK VAL sheet.
+    """
+    blob = re.sub(r"\s+", " ", text or "")
+    if not blob.strip():
+        return False
+    if re.search(r"\bOPSTK\b|\bSTK\s*VAL\b|\bIN\s*/\s*O[TU]T?\b", blob, re.I):
+        return False
+    has_open = re.search(r"\b(?:open(?:ing)?|pening)\b", blob, re.I)
+    has_receipt = re.search(r"\breceipts?\b", blob, re.I)
+    has_grid = re.search(
+        r"receipts?.{0,80}month\s*sales.{0,40}repl",
+        blob,
+        re.I,
+    )
+    has_close_bal = re.search(r"closing\s*balance", blob, re.I)
+    # Header OCR often misses the word Opening; the footer still prints
+    # "Closing Balance" and the column line is Receipt … Month Sales … Repl.
+    if has_grid and has_close_bal:
+        return True
+    has_mid = re.search(
+        r"c\.?\s*month|goods\s*in|\brepl\.?\b",
+        blob,
+        re.I,
+    )
+    has_balance = re.search(r"\bbalance\b", blob, re.I)
+    has_close = re.search(r"clos|losing", blob, re.I)
+    return bool(has_open and has_receipt and has_mid and has_balance and has_close)
+
+
+_BRANCH_SALES_CLOSING_BALANCE_PROMPT = """
+This image is a branch Sales Statement, not a Medica OPSTK sheet.
+Headers left to right after the product name:
+Item Name, Pack, Opening, Receipt, Company C.Month Sales, Sales Return,
+Repl. Sale, Inst. Sale, Goods In Transit Qty, Closing Balance, Month Sales, Reorder.
+
+Map printed cells only:
+- Item Name -> product_name
+- Pack -> packing (60'S, 200ML, 30 ML). Pack is never opening_qty.
+- Opening -> opening_qty
+- Receipt -> receipts_qty
+- Company C.Month Sales -> sales_qty
+- Sales Return -> sales_return_qty
+- Repl. Sale -> extra.repl_sale_qty (not sales_qty, not opening_qty, not closing_qty)
+- Inst. Sale -> extra.inst_sale_qty
+- Goods In Transit Qty -> extra.goods_in_transit_qty
+- Closing Balance -> closing_qty
+- Month Sales -> extra.month_sales_qty (NOT closing_qty and NOT opening_qty)
+- Reorder -> extra.reorder_qty (NOT closing_qty). A negative reorder stays negative.
+
+Closing Balance is the closing quantity. Month Sales and Reorder are later
+columns. Never use the last number on the row as closing_qty.
+Never use Pack, Receipt, Month Sales, or Reorder as opening_qty.
+
+Example: Pack 200ML, Opening 33, Receipt 56, Company C.Month Sales 0,
+Sales Return 0, Repl. Sale 44, Inst. Sale 0, Goods In Transit 0,
+Closing Balance 45, Month Sales 12, Reorder 21
+-> opening_qty=33, receipts_qty=56, sales_qty=0, sales_return_qty=0,
+closing_qty=45, extra.repl_sale_qty=44, extra.month_sales_qty=12,
+extra.reorder_qty=21.
+
+Do not calculate closing. Copy the Closing Balance cell even when it
+disagrees with Opening + Receipt - Sales.
+Skip total rows and handwritten notes below the table.
+company_name is the drug company on the letterhead (for example
+THE HIMALAYA DRUG COMPANY). stockist_name is the distributor/branch
+party when printed; do not put the company name in stockist_name.
+report_title is the printed title (Sales Statement), not STOCK STATEMENT.
+
+Return ONLY JSON with stockist_name, company_name, period_from, period_to,
+report_title, and line_items. Put repl_sale_qty, inst_sale_qty,
+goods_in_transit_qty, month_sales_qty, and reorder_qty under extra.
+""".strip()
+
+
+def _exif_upright_jpeg_bytes(file_bytes: bytes) -> bytes:
+    """Honor JPEG Orientation so Tesseract reads the page the way it is displayed."""
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return file_bytes
+    image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes)))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=90)
+    return buf.getvalue()
+
+
+def _branch_sales_prompt_for_image(file_bytes: bytes) -> Optional[str]:
+    """Branch-statement prompt, or None so the Medica OPSTK prompt stays."""
+    if not _branch_sales_closing_balance_enabled():
+        return None
+    try:
+        peek = _ocr_image_to_text(
+            _exif_upright_jpeg_bytes(file_bytes), psm=6, enhance=True
+        )
+    except Exception as exc:
+        logger.info(
+            "BRANCH_SALES_CLOSING_BALANCE ocr_failed error=%s",
+            type(exc).__name__,
+        )
+        return None
+    if not _looks_like_branch_opening_receipt_closing_balance(peek):
+        return None
+    logger.info("BRANCH_SALES_CLOSING_BALANCE prompt=closing_balance")
+    return _BRANCH_SALES_CLOSING_BALANCE_PROMPT
+
+
 def _medica_stock_statement_prompt() -> str:
     if not _ignore_non_qty_headers_enabled():
         return _MEDICA_STOCK_STATEMENT_PROMPT
@@ -46180,6 +46670,8 @@ def _extract_medica_stock_statement_vision(
     from services.sales_extraction_runtime import sales_generate_content_via_vertex as generate_content_via_vertex
 
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    branch_prompt = _branch_sales_prompt_for_image(file_bytes)
+    vision_prompt = branch_prompt or _medica_stock_statement_prompt()
     merged: List[Dict[str, Any]] = []
     seen = set()
     parsed_meta: Dict[str, Any] = {}
@@ -46189,7 +46681,7 @@ def _extract_medica_stock_statement_vision(
                 {
                     "role": "user",
                     "parts": [
-                        {"text": _medica_stock_statement_prompt()},
+                        {"text": vision_prompt},
                         {
                             "inline_data": {
                                 "mime_type": "image/jpeg",
@@ -46224,7 +46716,11 @@ def _extract_medica_stock_statement_vision(
             _medica_merge_strip_item(merged, seen, raw)
     if not merged:
         return None
-    parsed_meta["report_title"] = "STOCK STATEMENT"
+    parsed_meta["report_title"] = (
+        parsed_meta.get("report_title") or "Sales Statement"
+        if branch_prompt
+        else "STOCK STATEMENT"
+    )
     parsed_meta["line_items"] = merged
     result = empty_result(filename, ext.lstrip(".") or "jpg")
     result = _apply_parsed_sales_json(result, parsed_meta)
@@ -46245,10 +46741,15 @@ def _extract_medica_stock_statement_vision(
             "",
         ):
             extra["in_ot_qty"] = _to_float(item.get("in_ot_qty"))
-        _repair_medica_vision_column_shift(item)
-        extra["layout"] = "medica_stock_statement"
+        if not branch_prompt:
+            _repair_medica_vision_column_shift(item)
+        extra["layout"] = (
+            "branch_opening_receipt_closing_balance"
+            if branch_prompt
+            else "medica_stock_statement"
+        )
         kept.append(item)
-    if _ignore_non_qty_headers_enabled() and kept:
+    if _ignore_non_qty_headers_enabled() and kept and not branch_prompt:
         evidence_count = sum(1 for item in kept if _medica_nrv_shift_evidence(item))
         if evidence_count >= max(2, int(len(kept) * 0.15)):
             logger.info(
@@ -46261,7 +46762,12 @@ def _extract_medica_stock_statement_vision(
                 if _medica_nrv_shift_evidence(item):
                     _repair_medica_nrv_column_shift(item)
     result["line_items"] = kept
-    result["report_title"] = "STOCK STATEMENT"
+    if branch_prompt:
+        result["report_title"] = (
+            str(result.get("report_title") or "").strip() or "Sales Statement"
+        )
+    else:
+        result["report_title"] = "STOCK STATEMENT"
     # Strip Vision often returns "'SHREE DISTRIBUTORS. Jo: HIMALAYA-ZEAL".
     cleaned_stockist = _medica_clean_stockist_name(result.get("stockist_name"))
     if cleaned_stockist:
@@ -46274,8 +46780,18 @@ def _extract_medica_stock_statement_vision(
     cleaned_stockist = _medica_clean_stockist_name(result.get("stockist_name"))
     result["stockist_name"] = cleaned_stockist
     result.setdefault("totals", {}).setdefault("extra", {})
-    result["totals"]["extra"]["extraction_method"] = "medica_stock_statement_vision"
-    result["totals"]["extra"]["layout"] = "medica_stock_statement"
+    if branch_prompt:
+        result["totals"]["extra"]["extraction_method"] = (
+            "branch_opening_receipt_closing_balance"
+        )
+        result["totals"]["extra"]["layout"] = (
+            "branch_opening_receipt_closing_balance"
+        )
+    else:
+        result["totals"]["extra"]["extraction_method"] = (
+            "medica_stock_statement_vision"
+        )
+        result["totals"]["extra"]["layout"] = "medica_stock_statement"
     return result
 
 

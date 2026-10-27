@@ -323,6 +323,16 @@ class TestStatementMonthGrouping(unittest.TestCase):
         self.assertEqual(result["statements"][0]["period_from"], "2026-08-01")
         self.assertEqual(result["statements"][1]["period_from"], "2026-09-01")
 
+    def test_rolling_26_to_26_uses_period_to_month(self):
+        from services.sales_statement_extractor import _statement_month_key
+
+        stmt = _section(
+            "PRAGATI MEDICAL AGENCY", "2026-08-26", "2026-09-26", ["ARJUNA TAB"]
+        )
+        self.assertEqual(_statement_month_key(stmt), "2026-09")
+        self.assertEqual(stmt["period_from"], "2026-08-26")
+        self.assertEqual(stmt["period_to"], "2026-09-26")
+
     def test_period_to_month_used_when_period_from_missing(self):
         result = _group_statements_by_stockist_month(
             _wrap(

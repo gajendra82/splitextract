@@ -126,6 +126,7 @@ _TRUSTED_METHODS = frozenset(
         "product_wise_stock_statement_image",
         "medica_opstk_columns",
         "medica_stock_statement_vision",
+        "branch_opening_receipt_closing_balance",
         "product_stock_report_vision",
         "psr_closstock_columns",
         "swilerp_page_split_vision",
@@ -147,6 +148,7 @@ _TRUSTED_LAYOUTS = frozenset(
         "medivision_op_val_sr_nm60d",
         "product_wise_stock_statement_photo",
         "medica_stock_statement",
+        "branch_opening_receipt_closing_balance",
     }
 )
 _WEAK_METHODS = frozenset(
