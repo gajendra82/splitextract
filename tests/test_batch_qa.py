@@ -381,6 +381,63 @@ class TestResumableBatches(unittest.TestCase):
         self.assertEqual(sleeps, [10, 30])
         self.assertFalse(qa_runner._gemini_rate_limit_exhausted())
 
+    def test_qa_image_fast_skips_probe_cascade(self):
+        import os
+        from unittest.mock import patch
+
+        from services.sales_statement_extractor import _parse_image
+
+        os.environ["QA_IMAGE_FAST"] = "1"
+        vision = {
+            "line_items": [{"product_name": "ABANA"}],
+            "totals": {"extra": {}},
+        }
+        try:
+            with patch(
+                "services.sales_statement_extractor._zeal_printed_order_form_anchor",
+                return_value=None,
+            ), patch(
+                "services.sales_statement_extractor._maybe_early_vision_for_image",
+                return_value=(None, False),
+            ), patch(
+                "services.sales_statement_extractor._jpeg_needs_quarter_turn",
+                return_value=False,
+            ), patch(
+                "services.sales_statement_extractor._pack_op_pur_bal_header_hint",
+                return_value="",
+            ), patch(
+                "services.sales_statement_extractor._should_try_pack_op_pur_bal_stock_sale",
+                return_value=False,
+            ), patch(
+                "services.gemini_extraction_fallback.try_gemini_vision_extract",
+                return_value=vision,
+            ) as vision_mock, patch(
+                "services.sales_statement_extractor._ocr_image_to_text",
+                side_effect=AssertionError("probe cascade OCR"),
+            ):
+                result = _parse_image(b"not-an-image", "photo.jpg", ".jpg")
+        finally:
+            os.environ.pop("QA_IMAGE_FAST", None)
+
+        self.assertEqual(result["line_items"][0]["product_name"], "ABANA")
+        vision_mock.assert_called_once()
+
+    def test_discover_images_skips_pdfs(self):
+        import tempfile
+        from pathlib import Path
+
+        from qa.runner import IMAGE_SUFFIXES, discover_pdfs
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a.pdf").write_bytes(b"%PDF")
+            (root / "b.jpg").write_bytes(b"jpg")
+            (root / "c.JPEG").write_bytes(b"jpeg")
+            (root / "nested").mkdir()
+            (root / "nested" / "d.png").write_bytes(b"png")
+            found = [path.name for path in discover_pdfs(root, suffixes=IMAGE_SUFFIXES)]
+            self.assertEqual(found, ["b.jpg", "c.JPEG", "d.png"])
+
     def test_batches_skip_completed_and_retry_rate_limited(self):
         import tempfile
         from pathlib import Path

@@ -74,7 +74,7 @@ class TestSsaDumpHeader(unittest.TestCase):
         self.assertEqual(old["opening_qty"], 800)
         self.assertEqual(old["sales_qty"], 800)
 
-    def test_infers_opening_qty_when_vision_drops_it(self):
+    def test_does_not_invent_opening_qty_from_stock_equation(self):
         items = _ssa_dump_repair_items(
             [
                 {
@@ -113,9 +113,18 @@ class TestSsaDumpHeader(unittest.TestCase):
         hundred = items[0]
         big = items[1]
         old = items[2]
-        self.assertEqual(hundred["opening_qty"], 2.0)
-        self.assertEqual(hundred["receipts_qty"], 8400)
-        self.assertEqual(hundred["closing_qty"], 1822)
+        # Missing openings stay unresolved — equation may be recorded as a
+        # candidate but must not become an accepted opening_qty.
+        self.assertEqual(hundred["opening_qty"], 0)
         self.assertEqual(big["opening_qty"], 0)
-        self.assertEqual(big["receipts_qty"], 0)
-        self.assertEqual(old["opening_qty"], 800.0)
+        self.assertEqual(old["opening_qty"], 0)
+        self.assertEqual(
+            (big.get("extra") or {}).get("field_sources", {}).get("opening_qty"),
+            "stock_equation",
+        )
+        self.assertTrue((big.get("extra") or {}).get("opening_qty_unresolved"))
+        self.assertEqual((big.get("extra") or {}).get("opening_qty_equation_candidate"), 2.0)
+        self.assertEqual(
+            (old.get("extra") or {}).get("field_sources", {}).get("opening_qty"),
+            "stock_equation",
+        )

@@ -95,6 +95,100 @@ def _max_attempts() -> int:
         return 1
 
 
+def _only_stock_identity(quality: Dict[str, Any]) -> bool:
+    reasons = {str(reason) for reason in (quality.get("reasons") or [])}
+    return bool(reasons) and reasons <= {"stock_identity_failure", "low_ocr_quality_score"}
+
+
+def _row_count(result: Dict[str, Any]) -> int:
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    for statement in result.get("statements") or []:
+        if isinstance(statement, dict):
+            items.extend(
+                item for item in (statement.get("line_items") or []) if isinstance(item, dict)
+            )
+    return len(items)
+
+
+def _keep_identity_rows(result: Dict[str, Any], quality: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep extracted rows. Stock-equation mismatches stay warnings."""
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra.pop("extraction_failed", None)
+    warnings = list(extra.get("validation_warnings") or [])
+    for reason in quality.get("reasons") or []:
+        if reason not in warnings:
+            warnings.append(reason)
+    extra["validation_warnings"] = warnings
+    if not extra.get("stock_identity_discrepancies"):
+        from services.excel_grid import discrepancies_for_items
+
+        findings = [
+            row
+            for row in discrepancies_for_items(result.get("line_items") or [])
+            if row.get("status") == "stock_identity_failure"
+        ]
+        if findings:
+            extra["stock_identity_discrepancies"] = findings
+    failed_names = {
+        row.get("product_name")
+        for row in (extra.get("stock_identity_discrepancies") or [])
+        if row.get("status") == "stock_identity_failure"
+    }
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if row_extra.get("stock_identity_ok") is False or item.get("product_name") in failed_names:
+            row_extra["validation_warning"] = "stock_identity_failure"
+            item["extra"] = row_extra
+    _stamp(result, quality, "validation_warning")
+    logger.info(
+        "[SalesStatement] file=%s decision=KEEP_EXTRACTED_ROWS reason=stock_identity_failure",
+        result.get("source_file") or "-",
+    )
+    return result
+
+
+def promote_identity_warning(result: Dict[str, Any]) -> bool:
+    """Return True when a stock-equation failure should be returned, not rejected."""
+    if not isinstance(result, dict) or _row_count(result) <= 0:
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if not extra.get("extraction_failed"):
+        return False
+    quality = extra.get("extraction_quality") if isinstance(extra.get("extraction_quality"), dict) else {}
+    reasons = list(quality.get("reasons") or extra.get("validation_warnings") or [])
+    if not _only_stock_identity({"reasons": reasons}):
+        return False
+    _keep_identity_rows(result, {"reasons": reasons, "quality": quality.get("quality"), "score": quality.get("score")})
+    return True
+
+
+def sales_statement_rejection(
+    result: Dict[str, Any], filename: str
+) -> Optional[Dict[str, Any]]:
+    """The HTTP 422 body. Stock-equation failure with extracted rows returns None."""
+    if not isinstance(result, dict):
+        return None
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if not extra.get("extraction_failed"):
+        return None
+    if promote_identity_warning(result):
+        return None
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    quality = extra.get("extraction_quality") if isinstance(extra.get("extraction_quality"), dict) else {}
+    return {
+        "error": "extraction_failed",
+        "message": (
+            "Could not reliably extract stock statement products. "
+            "OCR/parser and Gemini Vision fallback both failed validation."
+        ),
+        "reasons": list(quality.get("reasons") or []),
+        "gemini_fallback": extra.get("gemini_fallback"),
+        "source_file": filename,
+    }
+
+
 def _stamp(result: Dict[str, Any], quality: Dict[str, Any], status: str) -> None:
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_quality"] = {
@@ -296,8 +390,8 @@ def _document_parts(file_bytes: bytes, ext: str) -> List[Dict[str, Any]]:
     if ext == ".pdf":
         return [_image_part(image, "image/png") for image in _pdf_images(file_bytes)]
     if ext in {".xls", ".xlsx", ".xlsm"}:
-        image = _sheet_image(file_bytes, ext)
-        return [_image_part(image, "image/jpeg")] if image else []
+        # Native workbooks are read from cells. Do not photograph the sheet.
+        return []
     if ext in {".doc", ".docx"}:
         return _word_parts(file_bytes)
     if ext in {".txt", ".htm", ".html"}:
@@ -379,8 +473,20 @@ def _finish_gemini_result(
 
 
 def _controlled_failure(
-    filename: str, ext: str, quality: Dict[str, Any], reason: str
+    filename: str,
+    ext: str,
+    quality: Dict[str, Any],
+    reason: str,
+    *,
+    source: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    """Fail a genuine extract miss. A stock-equation miss keeps source rows."""
+    if (
+        source is not None
+        and _row_count(source) > 0
+        and _only_stock_identity(quality)
+    ):
+        return _keep_identity_rows(source, quality)
     from services.sales_statement_extractor import empty_result
 
     failed = empty_result(filename, (ext or "").lstrip("."))
@@ -496,6 +602,8 @@ def maybe_apply_gemini_fallback(
     if not quality.get("should_fallback"):
         _stamp(result, quality, "not_called")
         return result
+    if _row_count(result) and _only_stock_identity(quality):
+        return _keep_identity_rows(result, quality)
 
     # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos: Gemini shifts
     # neighboring rows. Keep the format-specific OCR/column reader.
@@ -557,6 +665,58 @@ def maybe_apply_gemini_fallback(
         )
         return result
 
+    if (ext or "").lower() in {".xls", ".xlsx", ".xlsm"} and (
+        _row_count(result) == 0 or ((result.get("totals") or {}).get("extra") or {}).get("mapping_ambiguous")
+    ):
+        try:
+            from services.excel_grid import extract_workbook, vertex_column_invoke
+
+            mapped = extract_workbook(
+                file_bytes, filename, ext, invoke=vertex_column_invoke
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s excel column mapping unavailable: %s",
+                filename,
+                exc,
+            )
+            mapped = None
+        if mapped and mapped.get("line_items"):
+            mapped_quality = evaluate_extraction_quality(mapped, meta)
+            if _only_stock_identity(mapped_quality):
+                return _keep_identity_rows(mapped, mapped_quality)
+            if not mapped_quality.get("should_fallback"):
+                _stamp(mapped, mapped_quality, "mapping_success")
+                return mapped
+            result = mapped
+            quality = mapped_quality
+
+    if (ext or "").lower() in {".xls", ".xlsx", ".xlsm"}:
+        if _row_count(result):
+            reasons = set(quality.get("reasons") or [])
+            if _only_stock_identity(quality) or "stock_identity_failure" in reasons:
+                return _keep_identity_rows(result, quality)
+            _stamp(
+                result,
+                quality,
+                "mapping_success" if not quality.get("should_fallback") else "not_called",
+            )
+            logger.info(
+                "[SalesStatement] file=%s GEMINI_VISION skipped reason=native_excel_cells",
+                filename,
+            )
+            return result
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_VISION skipped reason=native_excel_no_rows",
+            filename,
+        )
+        _stamp(result, quality, "unavailable")
+        if _result_is_weak(result, quality):
+            return _controlled_failure(
+                filename, ext, quality, "unavailable", source=result
+            )
+        return result
+
     document_parts = _document_parts(file_bytes, ext)
     if not document_parts:
         _stamp(result, quality, "unavailable")
@@ -565,7 +725,9 @@ def maybe_apply_gemini_fallback(
             filename,
         )
         if _result_is_weak(result, quality):
-            return _controlled_failure(filename, ext, quality, "unavailable")
+            return _controlled_failure(
+                filename, ext, quality, "unavailable", source=result
+            )
         return result
 
     started = time.time()
@@ -583,12 +745,18 @@ def maybe_apply_gemini_fallback(
         logger.warning("Gemini extraction fallback unavailable: %s", exc)
         _stamp(result, quality, "unavailable")
         if _result_is_weak(result, quality):
-            return _controlled_failure(filename, ext, quality, "unavailable")
+            return _controlled_failure(
+                filename, ext, quality, "unavailable", source=result
+            )
         return result
 
     if not parsed or not parsed.get("line_items"):
         if _result_is_weak(result, quality):
-            return _controlled_failure(filename, ext, quality, "validation_failed")
+            return _controlled_failure(
+                filename, ext, quality, "validation_failed", source=result
+            )
+        if _row_count(result) and "stock_identity_failure" in set(quality.get("reasons") or []):
+            return _keep_identity_rows(result, quality)
         _stamp(result, quality, "validation_failed")
         return result
 
@@ -617,14 +785,30 @@ def maybe_apply_gemini_fallback(
             "high_ocr_noise",
             "header_as_product_rows",
             "missing_product_names",
-            "stock_identity_failure",
         }
     )
     if shifted >= max(5, len(gemini_items) // 4):
         gemini_ok = False
+    if gemini_ok and "stock_identity_failure" in set(gemini_quality.get("reasons") or []):
+        return _keep_identity_rows(gemini_result, gemini_quality)
     if not gemini_ok:
+        if _row_count(gemini_result) and _only_stock_identity(gemini_quality):
+            return _keep_identity_rows(gemini_result, gemini_quality)
+        if _row_count(result) and _only_stock_identity(quality):
+            return _keep_identity_rows(result, quality)
         if _result_is_weak(result, quality):
-            return _controlled_failure(filename, ext, gemini_quality, "validation_failed")
+            # Report the Gemini quality, but do not drop parser rows when that
+            # quality is only the stock equation.
+            source = result if _row_count(result) else gemini_result
+            return _controlled_failure(
+                filename, ext, gemini_quality, "validation_failed", source=source
+            )
+        if _row_count(result) and (
+            "stock_identity_failure" in set(quality.get("reasons") or [])
+            or _only_stock_identity(gemini_quality)
+        ):
+            kept_quality = gemini_quality if _only_stock_identity(gemini_quality) else quality
+            return _keep_identity_rows(result, kept_quality)
         _stamp(result, quality, "validation_failed")
         return result
 

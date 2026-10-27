@@ -134,6 +134,13 @@ def payload_to_generate_config(payload: Dict[str, Any]) -> Optional[types.Genera
     max_tokens = gen_cfg.get("maxOutputTokens", gen_cfg.get("max_output_tokens"))
     if max_tokens is not None:
         kwargs["max_output_tokens"] = max_tokens
+    # Optional. Existing callers omit these and stay on free-text output.
+    mime = gen_cfg.get("responseMimeType", gen_cfg.get("response_mime_type"))
+    if mime:
+        kwargs["response_mime_type"] = mime
+    schema = gen_cfg.get("responseJsonSchema", gen_cfg.get("response_json_schema"))
+    if schema is not None:
+        kwargs["response_json_schema"] = schema
 
     return types.GenerateContentConfig(**kwargs) if kwargs else None
 
@@ -336,6 +343,15 @@ def generate_content_via_vertex(
     client = get_vertex_gemini_client()
     contents = payload_to_contents(payload)
     config = payload_to_generate_config(payload)
+    schema = getattr(config, "response_json_schema", None) if config is not None else None
+    schema_title = schema.get("title") if isinstance(schema, dict) else None
+    logger.info(
+        "VERTEX_GEMINI generate_content model=%s response_mime_type=%s schema_sent=%s schema_title=%s",
+        model,
+        getattr(config, "response_mime_type", None) if config is not None else None,
+        schema is not None,
+        schema_title,
+    )
 
     def _invoke():
         try:
@@ -357,7 +373,19 @@ def generate_content_via_vertex(
         except FuturesTimeoutError as exc:
             raise TimeoutError(f"Gemini request timed out after {timeout}s") from exc
 
+    rest = sdk_response_to_rest_dict(response)
+    text_length = len(
+        ((rest.get("candidates") or [{}])[0].get("content") or {})
+        .get("parts", [{}])[0]
+        .get("text")
+        or ""
+    )
+    logger.info(
+        "VERTEX_GEMINI generate_content_done model=%s status=200 text_length=%s",
+        model,
+        text_length,
+    )
     return GeminiRestResponse(
         status_code=200,
-        _data=sdk_response_to_rest_dict(response),
+        _data=rest,
     )

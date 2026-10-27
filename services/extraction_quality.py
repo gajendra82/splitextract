@@ -210,7 +210,7 @@ def _identity_applies(items: List[Dict[str, Any]], extra: Dict[str, Any]) -> boo
     if extra.get("stock_identity_fail_count") is None:
         return False
     kind = str(extra.get("stock_identity_kind") or "")
-    if kind not in {"", "opening_receipts_sales_closing"}:
+    if kind not in {"", "opening_receipts_sales_closing", "swil_receipt_issue"}:
         return False
     # Validator already counted failures for this formula — always score them when
     # the sheet actually uses opening/receipts/sales. Pure closing-only sheets
@@ -434,6 +434,10 @@ def evaluate_extraction_quality(
         or layout == "opening_receive_issue_closing"
     ):
         identity_gate = 0.0
+    validation = extra.get("stock_validation")
+    identity_invalid = (
+        isinstance(validation, dict) and validation.get("is_valid") is False
+    )
     if (
         protected
         and items
@@ -441,7 +445,9 @@ def evaluate_extraction_quality(
         and fail_count is not None
     ):
         fail_pct = 100.0 * float(fail_count) / len(items)
-        if fail_pct > identity_gate:
+        # A statement the validator already marked invalid is not a perfect
+        # extract, even when the failing rows are under the percent gate.
+        if fail_pct > identity_gate or (identity_invalid and float(fail_count) > 0):
             protected = False
             reasons.append("stock_identity_failure")
             hard_fail = True

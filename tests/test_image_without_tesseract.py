@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -39,7 +40,24 @@ class TestImageWithoutTesseract(unittest.TestCase):
         }
         from services.sales_statement_extractor import _parse_image
 
-        with patch(
+        with patch.dict(
+            os.environ,
+            {"ENABLE_GEMINI_EXTRACTION_FALLBACK": "false"},
+            clear=False,
+        ), patch(
+            "services.sales_statement_extractor._ocr_image_to_text",
+            return_value="",
+        ), patch(
+            "services.ocr.runtime.ocr_pil_image_text",
+            return_value=(
+                "",
+                {
+                    "engine": "paddleocr-vl-1.6",
+                    "status": "ocr_error",
+                    "unverified_fallback": False,
+                },
+            ),
+        ), patch(
             "services.vertex_gemini_client.generate_content_via_vertex",
             return_value=_VisionResponse(payload),
         ):

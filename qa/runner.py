@@ -43,12 +43,17 @@ class RateLimitSignal(Exception):
     """Gemini rejected this PDF with HTTP 429 or RESOURCE_EXHAUSTED."""
 
 
-def discover_pdfs(pdf_dir: Path) -> List[Path]:
+PDF_SUFFIXES = {".pdf"}
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def discover_pdfs(pdf_dir: Path, suffixes: Optional[Iterable[str]] = None) -> List[Path]:
+    allowed = {str(suffix).lower() for suffix in (suffixes or PDF_SUFFIXES)}
     found = []
     if not pdf_dir.exists():
         return found
     for path in pdf_dir.rglob("*"):
-        if path.is_file() and path.suffix.lower() == ".pdf":
+        if path.is_file() and path.suffix.lower() in allowed:
             found.append(path)
     return sorted(found, key=lambda p: str(p).lower())
 
@@ -277,6 +282,14 @@ def process_pdf(path: Path, root: Path, max_pages: int) -> dict:
     extracted = None
     extract_error = None
     _begin_gemini_pdf(path.name)
+    image_fast = (
+        os.getenv("QA_IMAGE_FAST", "").strip() == "1"
+        and path.suffix.lower() in IMAGE_SUFFIXES
+    )
+    if image_fast:
+        from services.sales_extraction_runtime import start_sales_deadline
+
+        start_sales_deadline(path.name, limit_seconds=180, file_size=len(file_bytes))
     try:
         extracted = extract_sales_statement(file_bytes, path.name)
     except RateLimitSignal as exc:
@@ -295,6 +308,11 @@ def process_pdf(path: Path, root: Path, max_pages: int) -> dict:
         extract_error = exc
         record["error"] = str(exc)
         record["traceback"] = traceback.format_exc()
+    finally:
+        if image_fast:
+            from services.sales_extraction_runtime import clear_sales_deadline
+
+            clear_sales_deadline()
 
     if _gemini_rate_limit_exhausted():
         return _rate_limited_record(
@@ -562,8 +580,9 @@ def run_batch(
     force: bool = False,
     processor: Optional[Callable[..., dict]] = None,
     sleep_fn: Callable[[float], None] = time.sleep,
+    suffixes: Optional[Iterable[str]] = None,
 ) -> dict:
-    pdfs = discover_pdfs(pdf_dir)
+    pdfs = discover_pdfs(pdf_dir, suffixes=suffixes)
     if name_contains:
         needles = [needle.lower() for needle in name_contains if needle]
         pdfs = [path for path in pdfs if any(needle in path.name.lower() for needle in needles)]
@@ -826,7 +845,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Reprocess selected PDFs even when a completed result already exists.",
     )
+    parser.add_argument(
+        "--images-only",
+        action="store_true",
+        help="Process jpg, jpeg, png, bmp, tif, tiff, and webp files instead of PDFs.",
+    )
     args = parser.parse_args(argv)
+    if args.images_only:
+        # One OCR sample plus one Vision call. Full layout probes stay on for normal uploads.
+        os.environ["QA_IMAGE_FAST"] = "1"
+        os.environ["QA_OCR_SINGLE_PSM"] = "1"
+        os.environ.setdefault("QA_OCR_ZOOM", "1.25")
+        os.environ["SALES_OCR_MAX_IMAGE_SIDE"] = "1600"
+        from services import sales_extraction_runtime as runtime
+
+        runtime.SALES_OCR_MAX_IMAGE_SIDE = 1600
     needles = [part.strip() for part in args.files.split(",") if part.strip()]
     report = run_batch(
         pdf_dir=Path(args.pdf_dir),
@@ -839,6 +872,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         max_retries=max(0, args.max_retries),
         gemini_delay=max(0.0, args.gemini_delay),
         force=args.force,
+        suffixes=IMAGE_SUFFIXES if args.images_only else PDF_SUFFIXES,
     )
     summary = report["summary"]
     stats = report.get("run_stats") or {}

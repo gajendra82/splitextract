@@ -107,5 +107,94 @@ class TestBindalProductWiseStockStatement(unittest.TestCase):
             )
 
 
+class TestProductWisePhotoAmounts(unittest.TestCase):
+    def test_sales_and_closing_amounts_stay_off_qty_columns(self):
+        from services.sales_statement_extractor import (
+            _parse_product_wise_stock_statement_photo_panel,
+            empty_result,
+        )
+
+        def word(x, y, text, w=40):
+            return (x, y, x + w, y + 12, text)
+
+        header = [
+            word(80, 10, "Packing"),
+            word(160, 10, "Opening"),
+            word(230, 10, "Receipt"),
+            word(300, 10, "Issues"),
+            word(370, 10, "Closing"),
+            word(450, 10, "Sh-Exp"),
+            word(520, 10, "Liquidation"),
+            word(620, 10, "Sales"),
+            word(670, 10, "Amount"),
+            word(760, 10, "Closing"),
+            word(820, 10, "Amount"),
+        ]
+        row = [
+            word(10, 40, "LIV"),
+            word(40, 40, "52"),
+            word(70, 40, "TAB", 30),
+            word(120, 40, "100'S"),
+            word(160, 40, "100"),
+            word(300, 40, "2"),
+            word(370, 40, "98"),
+            word(500, 40, "1372"),
+            word(560, 40, "Days"),
+            word(640, 40, "352.00"),
+            word(780, 40, "17,258.78", 70),
+        ]
+        result = empty_result("photo.png", "png")
+        items = _parse_product_wise_stock_statement_photo_panel(
+            header + row, "", result, set()
+        )
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        self.assertEqual(item["opening_qty"], 100)
+        self.assertIsNone(item["receipts_qty"])
+        self.assertEqual(item["sales_qty"], 2)
+        self.assertEqual(item["closing_qty"], 98)
+        self.assertEqual(item["sales_value"], 352)
+        self.assertEqual(item["closing_value"], 17258.78)
+        self.assertEqual(item["extra"].get("liquidation_days"), 1372)
+
+    def test_blank_value_columns_stay_null(self):
+        from services.sales_statement_extractor import (
+            _parse_product_wise_stock_statement_photo_panel,
+            empty_result,
+        )
+
+        def word(x, y, text, w=40):
+            return (x, y, x + w, y + 12, text)
+
+        header = [
+            word(80, 10, "Packing"),
+            word(160, 10, "Opening"),
+            word(230, 10, "Receipt"),
+            word(300, 10, "Issues"),
+            word(370, 10, "Closing"),
+            word(460, 10, "Liquidation"),
+        ]
+        row = [
+            word(10, 40, "BLEMINOR"),
+            word(80, 40, "30ML"),
+            word(160, 40, "17"),
+            word(370, 40, "17"),
+            word(460, 40, "128"),
+            word(510, 40, "Days"),
+        ]
+        result = empty_result("photo.jpg", "jpg")
+        items = _parse_product_wise_stock_statement_photo_panel(
+            header + row, "", result, set()
+        )
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        self.assertEqual(item["opening_qty"], 17)
+        self.assertIsNone(item["receipts_qty"])
+        self.assertIsNone(item["sales_qty"])
+        self.assertEqual(item["closing_qty"], 17)
+        self.assertIsNone(item["sales_value"])
+        self.assertIsNone(item["closing_value"])
+
+
 if __name__ == "__main__":
     unittest.main()

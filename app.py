@@ -27669,6 +27669,21 @@ def upload_split_pdf_to_blob(pdf_bytes: bytes, invoice_filename: str, original_f
 # ============================================================================
 
 
+def _phase1_document_route(file_path: str, filename: str, requested_product: str):
+    """Classify an upload for the response. Extraction itself is unchanged."""
+    try:
+        from services.document_router import route_upload
+
+        return route_upload(
+            file_path,
+            filename,
+            requested_product=requested_product,
+        ).to_dict()
+    except Exception:
+        logger.warning("document route skipped for %s", filename, exc_info=True)
+        return None
+
+
 @app.post("/split-and-extract")
 def split_and_extract_invoices(
     background_tasks: BackgroundTasks,
@@ -27858,6 +27873,9 @@ def split_and_extract_invoices(
 
         file_size_mb = total_size / (1024 * 1024)
         print(f"💾 File size: {file_size_mb:.2f}MB")
+        document_route_payload = _phase1_document_route(
+            temp_path, source_filename, "invoice"
+        )
 
         # ------------------------------------------------------------------
         # Excel path — structured parse only (no OCR / no fitz). PDF & Image
@@ -27883,6 +27901,8 @@ def split_and_extract_invoices(
             _request_summary["total_execution_seconds"] = round(
                 (datetime.now() - start_time).total_seconds(), 2)
             update_request_progress("request_completed", force_log=True)
+            if document_route_payload:
+                response["document_route"] = document_route_payload
             return JSONResponse(response)
 
         if is_image_file:
@@ -29046,6 +29066,8 @@ def split_and_extract_invoices(
             },
             "invoices": all_invoices
         }
+        if document_route_payload:
+            response["document_route"] = document_route_payload
 
         print(f"\n✅ SUCCESS!")
         print(f"   Invoices: {len(all_invoices)}")
@@ -29147,6 +29169,9 @@ def test_extract(
 
         file_size_mb = total_size / (1024 * 1024)
         print(f"💾 File size: {file_size_mb:.2f}MB")
+        document_route_payload = _phase1_document_route(
+            temp_path, source_filename, "invoice"
+        )
 
         # Convert image to PDF if needed
         if is_image_file:
@@ -29874,6 +29899,8 @@ def test_extract(
             },
             "invoices": all_invoices
         }
+        if document_route_payload:
+            response["document_route"] = document_route_payload
 
         print(f"\n✅ TEST EXTRACT SUCCESS!")
         print(f"   Invoices found: {len(all_invoices)}")
@@ -30359,20 +30386,12 @@ async def extract_sales_statement_endpoint(
         # Never return a false-success zero statement when the quality gate
         # and Gemini Vision both failed to produce trustworthy products.
         if extra.get("extraction_failed"):
-            reasons = []
-            if isinstance(quality, dict):
-                reasons = list(quality.get("reasons") or [])
-            detail = {
-                "error": "extraction_failed",
-                "message": (
-                    "Could not reliably extract stock statement products. "
-                    "OCR/parser and Gemini Vision fallback both failed validation."
-                ),
-                "reasons": reasons,
-                "gemini_fallback": extra.get("gemini_fallback"),
-                "source_file": filename,
-            }
-            raise HTTPException(status_code=422, detail=detail)
+            from services.gemini_extraction_fallback import sales_statement_rejection
+
+            detail = sales_statement_rejection(sales_result, filename)
+            if detail is not None:
+                raise HTTPException(status_code=422, detail=detail)
+            extra = ((sales_result.get("totals") or {}).get("extra") or {})
         # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
         # reprocess requires the original statement contract (line_items,
         # stockist_name, period_from, statements).

@@ -673,25 +673,14 @@ async def _run_sales_background_job(
             extraction_duration_seconds=extraction_duration_seconds,
         )
         if extra.get("extraction_failed"):
-            reasons = []
-            if isinstance(quality, dict):
-                reasons = list(quality.get("reasons") or [])
-            final_status = "extraction_failed"
-            update_sales_progress(
-                request_id,
-                "failed",
-                error={
-                    "error": "extraction_failed",
-                    "message": (
-                        "Could not reliably extract stock statement products. "
-                        "OCR/parser and Gemini Vision fallback both failed validation."
-                    ),
-                    "reasons": reasons,
-                    "gemini_fallback": extra.get("gemini_fallback"),
-                    "source_file": filename,
-                },
-            )
-            raise RuntimeError("extraction_failed")
+            from services.gemini_extraction_fallback import sales_statement_rejection
+
+            detail = sales_statement_rejection(sales_result, filename)
+            if detail is not None:
+                final_status = "extraction_failed"
+                update_sales_progress(request_id, "failed", error=detail)
+                raise RuntimeError("extraction_failed")
+            extra = ((sales_result.get("totals") or {}).get("extra") or {})
 
         # Optional POD wrapper — same rule as the sync endpoint.
         response_payload: Any = sales_result

@@ -138,7 +138,8 @@ def load_pdf_pages(path: str, max_pages: int = 20) -> Tuple[List[PageSource], Li
                     chosen_text = ""
                     chosen_psm = None
                     chosen_digits = -1
-                    for psm in (6, 4):
+                    psm_modes = (6,) if os.getenv("QA_OCR_SINGLE_PSM", "").strip() == "1" else (6, 4)
+                    for psm in psm_modes:
                         try:
                             ocr, string = _ocr_page(page, zoom=zoom, psm=psm)
                         except Exception as exc:
