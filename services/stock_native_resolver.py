@@ -26,9 +26,7 @@ _CANON_TO_ITEM = {
     "closing_qty": ("closing_qty", False),
     "closing_value": ("closing_value", False),
     "sales_return_qty": ("sale_return", True),
-    "purchase_return_qty": ("purchase_return", True),
     "expiry_damage_qty": ("exp_damage", True),
-    "lms": ("lms_qty", True),
     "free_in_qty": ("free_in_qty", True),
     "free_out_qty": ("free_out_qty", True),
     "total_qty": ("total_stock", True),
@@ -264,11 +262,95 @@ def build_line_items_from_tokens(
             )
             items.append(item)
             continue
-        assigned = assign_cells(tokens, columns)
+        token_blob = " ".join(
+            str(t.get("text") or "") for t in tokens if isinstance(t, dict)
+        )
+        is_product_total = bool(
+            re.search(r"\bTotal\s*:", token_blob, re.I)
+            or (
+                tokens
+                and re.match(
+                    r"^(TOTAL|GRAND|SUB\s*TOTAL)\b",
+                    str((tokens[0] if isinstance(tokens[0], dict) else {}).get("text") or ""),
+                    re.I,
+                )
+            )
+        )
+        assign_tokens = tokens
+        if is_product_total:
+            # Drop the "Total :" label so amounts keep Op/Pur/Sl/Cl geometry.
+            assign_tokens = [
+                t
+                for t in tokens
+                if isinstance(t, dict)
+                and not re.search(r"\btotal\b", str(t.get("text") or ""), re.I)
+            ]
+        assigned = assign_cells(assign_tokens, columns)
         fields = assigned.get("fields") or {}
         formula_toks = [t for t in tokens if isinstance(t, dict) and t.get("formula")]
         item = fields_to_line_item(fields, formula_tokens=formula_toks)
         name = item.get("product_name")
+        # Pipe-ruled sheets print a product Total row after multi-lot lines.
+        # Prefer those printed totals over the first lot line alone.
+        total_label = str(name or "")
+        if items and (
+            is_product_total
+            or (
+                name
+                and (
+                    re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I)
+                    or _is_total_row_name(name)
+                )
+            )
+        ):
+            prev = items[-1]
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "sales_value",
+                "closing_value",
+                "opening_value",
+            ):
+                val = item.get(key)
+                if val not in (None, ""):
+                    prev[key] = val
+            prev_extra = prev.setdefault("extra", {})
+            item_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            for key in ("opening_value", "receipts_value", "sales_value", "closing_value"):
+                val = item_extra.get(key)
+                if val in (None, ""):
+                    val = item.get(key)
+                if val not in (None, ""):
+                    prev_extra[key] = val
+            if item.get("closing_value") not in (None, ""):
+                prev["closing_value"] = item.get("closing_value")
+            # Printed totals replace lot-line gaps — drop stale missing flags.
+            prev_extra.pop("row_status", None)
+            fs = prev_extra.get("field_source")
+            if isinstance(fs, dict):
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                ):
+                    if prev.get(key) not in (None, "") or prev_extra.get(key) not in (
+                        None,
+                        "",
+                    ):
+                        fs.pop(key, None)
+            logger.info(
+                "STOCK_PDF_WORDS_PRODUCT_TOTAL applied name=%s label=%s",
+                str(prev.get("product_name") or "")[:40],
+                (total_label or token_blob)[:40],
+            )
+            continue
         if not name or not re.search(r"[A-Za-z]", str(name)):
             continue
         if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I):
@@ -777,11 +859,15 @@ def _join_wrapped_name(parts: List[str]) -> str:
 
 def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
-    if not _ISSUE_LAYOUT <= canons:
+    if not (_ISSUE_LAYOUT <= canons):
         return False
-    # Wide Op.Qty / Sale Qty / Balance grids print one product per row
-    # (blank qty stays blank). Do not join those rows as wrapped names.
-    if canons & {"sales_return_qty", "purchase_return_qty", "lms"}:
+    # Require printed Receipt/Issue labels. Op.Qnt / Pur.Qnt / Sl.Qnt / Cl.Qnt
+    # sheets share the same canons but must use resolved word columns instead.
+    blob = " ".join(str(c.get("header_text") or "") for c in columns)
+    if not re.search(r"\breceipt|\bissue\b", blob, re.I):
+        logger.info(
+            "STOCK_PDF_WORDS_RECEIPT_ISSUE skip=no_receipt_issue_header"
+        )
         return False
     return True
 
@@ -1765,21 +1851,36 @@ def parse_grouped_qty_value_pdf(
     return result
 
 
+def _resolved_movement_columns_enabled() -> bool:
+    """Op/Pur/Sl/Cl word columns without a sales-return header (default ON)."""
+    return os.getenv(
+        "STOCK_PDF_RESOLVED_MOVEMENT_COLUMNS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _items_from_resolved_word_columns(
     page_results: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:
     """Use header-resolved word columns when the specialised word builders miss.
 
-    Requires opening, purchase, sales, sales return, and closing together so a
-    partial header does not replace a later parser.
+    Requires opening, purchase, sales, and closing together so a partial header
+    does not replace a later parser. Sales-return is optional (many pipe-ruled
+    Op.Qnt/Pur.Qnt/Sl.Qnt/Cl.Qnt sheets omit it).
     """
     from services.stock_native_tables import resolver_ready
 
-    needed = {
+    needed_with_return = {
         "opening_qty",
         "purchase_qty",
         "sales_qty",
         "sales_return_qty",
+        "closing_qty",
+        "closing_value",
+    }
+    needed_movement = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
         "closing_qty",
         "closing_value",
     }
@@ -1791,8 +1892,18 @@ def _items_from_resolved_word_columns(
         canons = {
             str(c.get("canonical") or "") for c in (ready.get("columns") or [])
         }
-        if needed <= canons:
+        if needed_with_return <= canons or (
+            _resolved_movement_columns_enabled() and needed_movement <= canons
+        ):
             ready_pages.append(page)
+            if needed_with_return <= canons:
+                logger.info(
+                    "STOCK_PDF_WORDS_RESOLVED_COLUMNS match=with_sales_return"
+                )
+            else:
+                logger.info(
+                    "STOCK_PDF_WORDS_RESOLVED_COLUMNS match=op_pur_sl_cl"
+                )
     if not ready_pages:
         return None
     items = build_items_from_pdf_page_results(ready_pages)
@@ -1804,34 +1915,31 @@ def _items_from_resolved_word_columns(
         if not name or _is_total_row_name(name):
             continue
         if name.startswith("[") or re.search(
-            r"software by|end of report|stock qt|total amount|total quantity",
+            r"software by|end of report|stock qt|total amount|total quantity|"
+            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->",
             name,
             re.I,
         ):
             continue
-        has_qty = any(
-            item.get(field) is not None
-            for field in (
-                "opening_qty",
-                "receipts_qty",
-                "sales_qty",
-                "closing_qty",
-            )
-        )
-        packing = str(item.get("packing") or "").strip()
-        # Division banners (HIMALAYA-ZEAL) and expiry legends (@@ => ...).
-        if not has_qty and not packing:
-            if name.startswith("@@") or (" " not in name and not re.search(r"\d", name)):
+        # Company / division banners have a name but no movement numbers.
+        qty_vals = [
+            item.get("opening_qty"),
+            item.get("receipts_qty"),
+            item.get("sales_qty"),
+            item.get("closing_qty"),
+        ]
+        if all(v in (None, "", 0, 0.0) for v in qty_vals):
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            if all(
+                extra.get(k) in (None, "", 0, 0.0)
+                for k in ("opening_value", "receipts_value", "sales_value", "closing_value")
+            ) and item.get("closing_value") in (None, "", 0, 0.0):
                 continue
         kept.append(item)
     if len(kept) < 3:
         return None
     logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s", len(kept))
-    return {
-        "line_items": kept,
-        "prefer_letterhead_stockist": True,
-        "letterhead_is_stockist_only": True,
-    }
+    return {"line_items": kept, "prefer_letterhead_stockist": True}
 
 
 def parse_pdf_free_column_statement(

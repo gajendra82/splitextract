@@ -81,6 +81,65 @@ class ResolveColumnsUnitTests(unittest.TestCase):
             ],
         )
 
+    def test_cl_qnt_not_branch_split(self):
+        """Cl.Qnt. is closing qty; Cl Panaji stays a non-stock branch split."""
+        result = resolve_columns(
+            _cells(
+                "Particular",
+                "Op.Qnt.",
+                "Op.Value",
+                "Expiry",
+                "Pur.Qnt.",
+                "Pur.Value",
+                "Sl.Qnt.",
+                "Sl.Value",
+                "Cl.Qnt.",
+                "Cl.Value",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "opening_qty",
+                "opening_value",
+                "ignore",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ],
+        )
+        self.assertEqual(result["columns"][3]["reason"], "date_or_near_expiry")
+        branch = resolve_columns(_cells("Product", "Opening", "Cl Panaji", "Cl Mapusa"))
+        self.assertEqual(branch["columns"][2]["canonical"], "ignore")
+        self.assertEqual(branch["columns"][2]["reason"], "branch_split_header")
+
+    def test_glued_op_value_expiry_prefers_opening_value(self):
+        """Clustered 'Op.Value Expiry' is opening value, not expiry_damage qty."""
+        result = resolve_columns(
+            _cells(
+                "Particular",
+                "Op.Qnt.",
+                "Op.Value Expiry",
+                "Pur.Qnt.",
+                "Pur.Value",
+                "Sl.Qnt.",
+                "Sl.Value",
+                "Cl.Qnt.",
+                "Cl.Value",
+            )
+        )
+        self.assertEqual(result["columns"][2]["canonical"], "opening_value")
+        self.assertNotEqual(result["columns"][2]["canonical"], "expiry_damage_qty")
+
+    def test_parse_number_strips_pipe_gutter(self):
+        self.assertEqual(parse_number("33.00|"), 33.0)
+        self.assertEqual(parse_number("1884.14|05/2029|"), 1884.14)
+        self.assertIsNone(parse_number("05/2029"))
+
     def test_two_row_header(self):
         cells = [
             {"text": "Opening", "x_center": None, "col_index": 0, "subheader_text": "Qty"},

@@ -289,10 +289,6 @@ _QUALIFIER_WORDS = frozenset(
         "return",
         "receipt",
         "cost",
-        # Wrapped STOCK AND SALES: Last Month + SalesQty, StockVa + lue.
-        "salesqty",
-        "saleqty",
-        "lue",
     }
 )
 
@@ -472,13 +468,25 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     if not texts:
         return True
     joined = " ".join(texts)
-    if re.search(r"^\s*(?:GRAND\s+)?TOTAL\b|PAGE\s*TOTAL|CONTINUED|Page\s*No", joined, re.I):
+    # Company / page / grand footers only. Product "Total :" rows with movement
+    # numbers must stay so multi-lot sheets can fold printed totals.
+    if re.search(
+        r"GRAND\s+TOTAL|PAGE\s*TOTAL|COMPANY\s*Total|Firm\s*Total|CONTINUED|Page\s*No",
+        joined,
+        re.I,
+    ):
         return True
+    from services.stock_header_resolver import parse_number
+
+    numeric = sum(1 for t in texts if parse_number(t) is not None)
     first = texts[0]
-    if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I):
+    if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I) and numeric < 3:
         return True
     alpha = next((t for t in texts if re.search(r"[A-Za-z]", t)), "")
-    if re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I):
+    if (
+        re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I)
+        and numeric < 3
+    ):
         return True
     return False
 
@@ -782,6 +790,35 @@ def _extract_pdf_page_rows(
 
     def _cluster_row(row_words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         row_words = sorted(row_words, key=lambda w: float(w.get("x0") or 0))
+        # Expand pipe-ruled fragments so "1884.14|05/2029|" becomes two cells.
+        _num_or_date = re.compile(r"^[\d.,/\-]+$")
+        expanded: List[Dict[str, Any]] = []
+        for w in row_words:
+            text = str(w.get("text") or "").strip()
+            if not text:
+                continue
+            x0 = float(w.get("x0") or 0)
+            x1 = float(w.get("x1") or x0)
+            if "|" not in text:
+                expanded.append({"text": text, "x0": x0, "x1": x1, "pipe_split": False})
+                continue
+            parts = [p.strip() for p in text.split("|")]
+            parts = [p for p in parts if p]
+            if not parts:
+                continue
+            span = max(x1 - x0, 1.0)
+            for i, part in enumerate(parts):
+                left = x0 + span * i / len(parts)
+                right = x0 + span * (i + 1) / len(parts)
+                expanded.append(
+                    {
+                        "text": part,
+                        "x0": left,
+                        "x1": right,
+                        "pipe_split": True,
+                    }
+                )
+        row_words = expanded
         inter: List[float] = []
         for i in range(1, len(row_words)):
             g = float(row_words[i].get("x0") or 0) - float(
@@ -796,19 +833,51 @@ def _extract_pdf_page_rows(
             x0 = float(w.get("x0") or 0)
             x1 = float(w.get("x1") or x0)
             text = str(w.get("text") or "").strip()
-            if not text:
+            pipe_split = bool(w.get("pipe_split"))
+            if not text or text == "|":
                 continue
-            prev = cells[-1]["text"] if cells else ""
-            both_numbers = bool(
-                cells
-                and re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", prev.replace(" ", ""))
-                and re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(" ", ""))
-            )
-            if cells and x0 - float(cells[-1]["x1"]) <= gap and not both_numbers:
-                cells[-1]["text"] = (cells[-1]["text"] + " " + text).strip()
+            if cells and x0 - float(cells[-1]["x1"]) <= gap:
+                prev_text = cells[-1]["text"]
+                # Keep distinct header aliases apart (Op.Value vs Expiry).
+                if _alias_hit(prev_text) and _alias_hit(text):
+                    from services.stock_header_resolver import _pick_group
+
+                    g_prev, _, _ = _pick_group(normalize_header(prev_text))
+                    g_new, _, _ = _pick_group(normalize_header(text))
+                    if g_prev and g_new and g_prev != g_new:
+                        cells.append(
+                            {
+                                "text": text,
+                                "x0": x0,
+                                "x1": x1,
+                                "pipe_split": pipe_split,
+                            }
+                        )
+                        continue
+                # Do not re-glue value|expiry fragments from a pipe-ruled cell.
+                if cells[-1].get("pipe_split") or pipe_split:
+                    if _num_or_date.match(prev_text) and _num_or_date.match(text):
+                        cells.append(
+                            {
+                                "text": text,
+                                "x0": x0,
+                                "x1": x1,
+                                "pipe_split": pipe_split,
+                            }
+                        )
+                        continue
+                cells[-1]["text"] = (prev_text + " " + text).strip()
                 cells[-1]["x1"] = max(float(cells[-1]["x1"]), x1)
+                cells[-1]["pipe_split"] = cells[-1].get("pipe_split") or pipe_split
             else:
-                cells.append({"text": text, "x0": x0, "x1": x1})
+                cells.append(
+                    {
+                        "text": text,
+                        "x0": x0,
+                        "x1": x1,
+                        "pipe_split": pipe_split,
+                    }
+                )
         out: List[Dict[str, Any]] = []
         for idx, c in enumerate(cells):
             xc = (float(c["x0"]) + float(c["x1"])) / 2.0
@@ -824,11 +893,27 @@ def _extract_pdf_page_rows(
             )
         return out
 
+    def _looks_like_value_summary_header(cells: List[Dict[str, Any]]) -> bool:
+        """Footer 'Value-> OB :… Purchase :…' must not beat the real column header."""
+        blob = " ".join(str(c.get("text") or "") for c in cells)
+        if re.search(r"Value\s*->|Qnt\s*->", blob, re.I):
+            return True
+        colon_amts = sum(
+            1
+            for c in cells
+            if re.match(r"^:\s*\d", str(c.get("text") or "").strip())
+        )
+        return colon_amts >= 2
+
     clustered = [_cluster_row(rw) for rw in rows]
     best_i = -1
     best_hits = 0
     best_header: List[Dict[str, Any]] = []
-    for i, cells in enumerate(clustered[:40]):
+    # Scan the whole page — continuation pages put the only false "header"
+    # (Value-> OB/Purchase/Sale) after the product rows.
+    for i, cells in enumerate(clustered):
+        if _looks_like_value_summary_header(cells):
+            continue
         hits, has_closing = _score_header_cells(cells)
         if hits >= 3 and has_closing and hits > best_hits:
             best_hits = hits
