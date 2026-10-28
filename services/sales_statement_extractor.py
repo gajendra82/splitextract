@@ -9160,6 +9160,12 @@ _XLS_HEADER_ALIASES = {
     "op.": "op",
     "opstock": "op",
     "op.stock": "op",
+    "rcpts": "pur",
+    "clstk": "bal",
+    "cl.stk": "bal",
+    "slvalue": "sval",
+    "sl.value": "sval",
+    "lms": "lms",
     "opening": "op",
     "openingstock": "op",
     "openingqty": "op",
@@ -12157,7 +12163,10 @@ def _html_excel_table_rows(file_bytes: bytes) -> List[List[str]]:
 
 
 def _is_opstock_rcpts_clstk_header(cells: List[str]) -> bool:
-    """Name/Code/Product/Packing/LMS/OP.Stock/Rcpts/Sales/HOS.SALES/CL.Stk/CL.Value."""
+    """Name/Code/Product/Packing/LMS/OP.Stock/Rcpts/Sales/CL.Stk/CL.Value.
+
+    HOS.SALES is optional — text/PDF Kluster sheets print SL.Value/Free instead.
+    """
     if not cells or len(cells) < 10:
         return False
     joined = " ".join(str(c or "") for c in cells)
@@ -12168,8 +12177,332 @@ def _is_opstock_rcpts_clstk_header(cells: List[str]) -> bool:
         and re.search(r"\bCL\.?\s*Value\b", joined, re.I)
         and re.search(r"\bProduct\b", joined, re.I)
         and re.search(r"\bPacking\b", joined, re.I)
-        and re.search(r"HOS\.?\s*SALES", joined, re.I)
+        and re.search(r"\bLMS\b", joined, re.I)
     )
+
+
+def _is_text_lms_opstock_rcpts_text(text: str) -> bool:
+    """Kluster/PDF Stock Statement: LMS + OP.Stock/OPSTOCK + Rcpts + CL.Stk."""
+    if not text:
+        return False
+    if not re.search(r"Stock\s*Statement\s*Report", text, re.I):
+        return False
+    if re.search(r"G?roup\s*Wise\s*Sales", text, re.I):
+        return False
+    compact = re.sub(r"[^a-z0-9.]", "", text.lower())
+    if "totalstock" in compact and "repl" in compact:
+        return False
+    blob = re.sub(r"\s+", " ", text)
+    return bool(
+        re.search(r"\bLMS\b", blob, re.I)
+        and re.search(r"\bOP\.?\s*STOCK\b", blob, re.I)
+        and re.search(r"\bRCPTS?\b", blob, re.I)
+        and re.search(r"\bCL\.?\s*STK\b", blob, re.I)
+        and re.search(r"\bCL\.?\s*VALUE\b", blob, re.I)
+        and re.search(r"\bPRODUCT\b", blob, re.I)
+        and re.search(r"\bPACKING\b", blob, re.I)
+        and re.search(r"\bSL\.?\s*VALUE\b", blob, re.I)
+        and re.search(r"\bFREE\b", blob, re.I)
+    )
+
+
+def _lms_is_num_or_dash(token: str) -> bool:
+    text = str(token or "").strip().replace(",", "")
+    if text in {"", "-", "--"}:
+        return True
+    return bool(re.fullmatch(r"-?\d+(?:\.\d+)?", text))
+
+
+def _is_lms_opstock_banner_name(name: str) -> bool:
+    """Himalaya division banners on LMS/OPSTOCK sheets, not SKUs."""
+    text = _clean_name(name)
+    if not text:
+        return False
+    return bool(
+        re.match(
+            r"^(?:THE\s+)?HIMALAYA\s*[- ]\s*"
+            r"(?:OTX|ZANDRA|ZEAL|ZENITH|PURE\s*HANDS)\b",
+            text,
+            re.I,
+        )
+    )
+
+
+def _parse_lms_opstock_compact_line(
+    line: str,
+) -> Optional[Tuple[str, str, Optional[str], List[Optional[float]]]]:
+    parts = str(line or "").split()
+    if len(parts) < 10:
+        return None
+    nums: List[Optional[float]] = []
+    idx = len(parts)
+    while idx > 0 and len(nums) < 8:
+        tok = parts[idx - 1].replace(",", "")
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", tok):
+            nums.append(_to_nullable_float(tok))
+            idx -= 1
+            continue
+        break
+    if len(nums) != 8:
+        return None
+    nums.reverse()
+    head = parts[:idx]
+    if len(head) < 2 or not re.fullmatch(r"\d{4,}", head[0]):
+        return None
+    packing = head[-1] if len(head) >= 3 else None
+    name = " ".join(head[1:-1] if packing else head[1:])
+    if packing and not re.search(r"[A-Za-z]{2,}", name or ""):
+        return None
+    if not packing:
+        name = " ".join(head[1:])
+    name = _clean_name(name)
+    if not name or _is_non_product_line_name(name) or _is_lms_opstock_banner_name(name):
+        return None
+    return head[0], name, packing, nums
+
+
+def _lms_opstock_item_from_nums(
+    code: str,
+    name: str,
+    packing: Optional[str],
+    nums: Sequence[Optional[float]],
+) -> Dict[str, Any]:
+    item = empty_line_item()
+    item["product_code"] = code or None
+    item["product_name"] = _clean_name(name)
+    item["packing"] = packing
+    item["opening_qty"] = nums[1]
+    item["receipts_qty"] = nums[2]
+    item["sales_qty"] = nums[3]
+    item["sales_value"] = nums[4]
+    item["closing_qty"] = nums[6]
+    item["closing_value"] = nums[7]
+    extra = item.setdefault("extra", {})
+    extra["layout"] = "text_lms_opstock_rcpts"
+    extra["lms"] = nums[0]
+    extra["free_qty"] = nums[5]
+    return item
+
+
+def _fill_lms_opstock_metadata(result: Dict[str, Any], text: str) -> None:
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    for ln in lines[:16]:
+        if re.search(r"Stock\s*Statement\s*Report", ln, re.I):
+            result["report_title"] = _clean_name(ln.split(":")[0] if ":" in ln else ln)
+            period = re.search(
+                r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}-\d{2}-\d{2})\s+to\s+"
+                r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}-\d{2}-\d{2})",
+                ln,
+                re.I,
+            )
+            if period:
+                result["period_from"] = _normalize_date(period.group(1))
+                result["period_to"] = _normalize_date(period.group(2))
+            continue
+        if re.match(r"^From\s+", ln, re.I):
+            period = re.search(
+                r"From\s+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\s+to\s+"
+                r"(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})",
+                ln,
+                re.I,
+            )
+            if period:
+                result["period_from"] = result.get("period_from") or _normalize_date(
+                    period.group(1)
+                )
+                result["period_to"] = result.get("period_to") or _normalize_date(
+                    period.group(2)
+                )
+            continue
+        if re.search(r"Contact\s*:|E-?mail\s*:|@|Phone\s*:", ln, re.I):
+            continue
+        if re.search(
+            r"^(CODE|PRODUCT|PACKING|LMS|OPSTOCK|#)\b", ln, re.I
+        ) or _is_opstock_rcpts_clstk_header(ln.split()):
+            break
+        if _is_lms_opstock_banner_name(ln) or re.match(r"^HIMALAYA\b", ln, re.I):
+            if not result.get("company_name"):
+                result["company_name"] = _clean_name(ln)
+            continue
+        if re.search(
+            r"FLOOR|STREET|ROAD|NAGAR|PIN\b|\b\d{3}\s*\d{3}\b",
+            ln,
+            re.I,
+        ) and len(ln) > 12:
+            if not result.get("stockist_address"):
+                result["stockist_address"] = _clean_name(ln)
+            continue
+        if (
+            not result.get("stockist_name")
+            and re.search(r"[A-Za-z]{3,}", ln)
+            and not re.search(r"Stock\s*Statement|Report", ln, re.I)
+        ):
+            result["stockist_name"] = _clean_name(ln)
+    if not result.get("company_name"):
+        for ln in lines:
+            if _is_lms_opstock_banner_name(ln) or re.match(r"^HIMALAYA\b", ln, re.I):
+                result["company_name"] = _clean_name(ln)
+                break
+
+
+def _parse_lms_opstock_stacked_rows(lines: List[str]) -> List[Dict[str, Any]]:
+    header_keys = {
+        "#",
+        "CODE",
+        "PRODUCT",
+        "PACKING",
+        "LMS",
+        "OPSTOCK",
+        "OP.STOCK",
+        "RCPTS",
+        "SALES",
+        "SL.VALUE",
+        "FREE",
+        "CL.STK",
+        "CL.VALUE",
+    }
+    start = 0
+    for i, ln in enumerate(lines):
+        if re.fullmatch(r"CL\.?\s*VALUE", ln, re.I) or (
+            re.search(r"\bLMS\b", ln, re.I)
+            and re.search(r"CL\.?\s*Value", ln, re.I)
+        ):
+            start = i + 1
+            break
+    items: List[Dict[str, Any]] = []
+    i = start
+    while i < len(lines):
+        ln = lines[i]
+        key = re.sub(r"\s+", "", ln.upper())
+        if key in header_keys or _is_opstock_rcpts_clstk_header(ln.split()):
+            i += 1
+            continue
+        if _is_lms_opstock_banner_name(ln):
+            i += 1
+            continue
+        if re.match(r"^TOTAL\b", ln, re.I):
+            i += 1
+            while i < len(lines) and _lms_is_num_or_dash(lines[i]):
+                i += 1
+            continue
+        compact = _parse_lms_opstock_compact_line(ln)
+        if compact:
+            code, name, packing, nums = compact
+            items.append(_lms_opstock_item_from_nums(code, name, packing, nums))
+            i += 1
+            continue
+        if (
+            i + 11 < len(lines)
+            and re.fullmatch(r"\d{1,4}", ln)
+            and re.fullmatch(r"\d{4,}", lines[i + 1])
+        ):
+            product = lines[i + 2]
+            packing = lines[i + 3]
+            numtoks = lines[i + 4 : i + 12]
+            if all(_lms_is_num_or_dash(t) for t in numtoks) and re.search(
+                r"[A-Za-z]{2,}", product
+            ):
+                if _is_non_product_line_name(product) or _is_lms_opstock_banner_name(
+                    product
+                ):
+                    i += 1
+                    continue
+                name = _clean_name(product)
+                pack = _clean_name(packing) if packing else None
+                if pack and name.upper().endswith(pack.upper()):
+                    name = name[: len(name) - len(pack)].strip(" -*")
+                else:
+                    split_name, glued = _company_wise_stock_split_name_pack(name)
+                    if split_name:
+                        name = split_name
+                        pack = pack or glued
+                items.append(
+                    _lms_opstock_item_from_nums(
+                        lines[i + 1],
+                        name or product,
+                        pack,
+                        [_to_nullable_float(t) for t in numtoks],
+                    )
+                )
+                i += 12
+                continue
+        i += 1
+    return items
+
+
+def _parse_text_lms_opstock_rcpts(
+    text: str, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Parse LMS / OP.Stock / Rcpts / Sales / SL.Value / Free / CL.Stk text."""
+    if not _is_text_lms_opstock_rcpts_text(text):
+        return None
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    items: List[Dict[str, Any]] = []
+    for ln in lines:
+        parsed = _parse_lms_opstock_compact_line(ln)
+        if parsed:
+            code, name, packing, nums = parsed
+            items.append(_lms_opstock_item_from_nums(code, name, packing, nums))
+    if len(items) < 3:
+        items = _parse_lms_opstock_stacked_rows(lines)
+    if not items:
+        return None
+    result = empty_result(filename, (ext or "pdf").lstrip("."))
+    _fill_lms_opstock_metadata(result, text)
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "text_lms_opstock_rcpts"
+    extra["layout"] = "text_lms_opstock_rcpts"
+    extra["stock_identity_formula"] = "closing=opening+receipts-sales"
+    extra["statement_count"] = 1
+    result["totals"]["sales_value"] = round(
+        sum(_to_float(i.get("sales_value")) for i in items if i.get("sales_value")),
+        2,
+    ) or None
+    result["totals"]["closing_value"] = round(
+        sum(_to_float(i.get("closing_value")) for i in items if i.get("closing_value")),
+        2,
+    ) or None
+    logger.info(
+        "SECONDARY_SALES_READER file=%s method=text_lms_opstock_rcpts items=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
+def _repair_lms_shifted_into_opening(result: Dict[str, Any], text: str) -> int:
+    """When LMS was stored as opening and OP.Stock as receipts, shift back."""
+    if not isinstance(result, dict):
+        return 0
+    if text and not _is_text_lms_opstock_rcpts_text(text):
+        return 0
+    repaired = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        opening = item.get("opening_qty")
+        receipts = item.get("receipts_qty")
+        sales = item.get("sales_qty")
+        closing = item.get("closing_qty")
+        try:
+            opening_f = float(opening)
+            receipts_f = float(receipts)
+            sales_f = float(sales)
+            closing_f = float(closing)
+        except (TypeError, ValueError):
+            continue
+        if abs(opening_f + receipts_f - sales_f - closing_f) <= 0.06:
+            continue
+        if abs(receipts_f - sales_f - closing_f) > 0.06:
+            continue
+        extra = item.setdefault("extra", {})
+        extra["lms"] = opening_f
+        extra["lms_opening_shift_repaired"] = True
+        item["opening_qty"] = receipts_f
+        item["receipts_qty"] = 0.0
+        repaired += 1
+    return repaired
 
 
 def _parse_html_excel_opstock_rcpts_clstk(
@@ -12183,7 +12516,10 @@ def _parse_html_excel_opstock_rcpts_clstk(
         return None
     header_idx = None
     for idx, cells in enumerate(rows[:5]):
-        if _is_opstock_rcpts_clstk_header(cells):
+        joined = " ".join(str(c or "") for c in cells)
+        if _is_opstock_rcpts_clstk_header(cells) and re.search(
+            r"HOS\.?\s*SALES", joined, re.I
+        ):
             header_idx = idx
             break
     if header_idx is None:
@@ -28472,6 +28808,14 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         for page_index in range(min(int(getattr(doc, "page_count", 0) or 0), 3)):
             peek_parts.append(doc[page_index].get_text("text") or "")
         peek = "\n".join(peek_parts)
+        # Kluster Stock Statement Report: LMS / OPSTOCK / RCPTS / CL.STK.
+        # Must run before generic multi-page split (division banners are not
+        # separate stockists) and before Gemini.
+        lms_blob = "\n".join((page.get_text("text") or "") for page in doc)
+        if _is_text_lms_opstock_rcpts_text(lms_blob):
+            lms_stmt = _parse_text_lms_opstock_rcpts(lms_blob, filename, "pdf")
+            if lms_stmt and lms_stmt.get("line_items"):
+                return lms_stmt
         if _is_product_wise_stock_statement_format(peek):
             pwss = _parse_product_wise_stock_statement_pdf(doc, filename)
             if pwss and pwss.get("line_items"):
