@@ -520,6 +520,19 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # Stock Statement (Details) xlsx: keep the dedicated column reader.
+    # Gemini Vision cannot read the workbook and would wipe printed qtys.
+    if (
+        str(extra.get("extraction_method") or "") == "stock_statement_details_xls"
+        or str(extra.get("layout") or "") == "stock_statement_details"
+    ):
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=stock_statement_details_xls",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # Excel mobile Opening / Receipt Qty / Total / Sale screenshot.
     # Generic Vision copies Total into closing and drops the Sale column.
     if str(extra.get("extraction_method") or "") == "excel_mobile_receipt_sale_screenshot":

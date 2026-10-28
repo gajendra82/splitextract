@@ -3270,6 +3270,7 @@ def _sanitize_statement_financials(result: Dict[str, Any]) -> Dict[str, Any]:
                 "free_return_total_value",
                 "op_pur_sale_bal_qnty_footer",
                 "product_wise_stock_statement_footer",
+                "stock_statement_details_footer",
             }
         )
     )
@@ -4037,6 +4038,73 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "reason": None
             if mismatch == 0 and parse_fail == 0
             else "Source values do not reconcile",
+        }
+        return result
+
+    # Stock Statement (Details) xlsx: Opening + Purchase Challan/Invoice +
+    # Sales Return + Adjustment - Sales Challan/Invoice - Purchase Return.
+    if totals["extra"].get("extraction_method") == "stock_statement_details_xls":
+        mismatch = 0
+
+        def _details_qty(item: Dict[str, Any], field: str, *extra_names: str) -> float:
+            if item.get(field) not in (None, ""):
+                return _to_float(item.get(field))
+            row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            for name in extra_names:
+                if row_extra.get(name) not in (None, ""):
+                    return _to_float(row_extra.get(name))
+            return 0.0
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            expected = round(
+                _details_qty(item, "opening_qty")
+                + _details_qty(item, "receipts_qty", "purchase_qty")
+                + _details_qty(item, "sales_return_qty")
+                + _details_qty(item, "adjustment_qty", "adjustment")
+                - _details_qty(item, "sales_qty")
+                - _details_qty(item, "purchase_return_qty"),
+                2,
+            )
+            closing = _details_qty(item, "closing_qty")
+            row_extra["expected_closing"] = expected
+            ok = abs(expected - closing) <= 0.05
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stock_identity_kind"] = "stock_statement_details"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+purchase_challan+purchase_invoice+sales_return"
+            "+adjustment-sales_challan-sales_invoice-purchase_return"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": receipt_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": mismatch == 0,
         }
         return result
 
@@ -11819,6 +11887,252 @@ def _parse_prompt_datewise_xls(
     return result
 
 
+_STOCK_STATEMENT_DETAILS_HEADER_ALIASES = {
+    "nameoftheitem": "item",
+    "nameofitem": "item",
+    "packing": "pack",
+    "pack": "pack",
+    "openingstock": "opening",
+    "purchasechallan": "purchase_challan",
+    "purchaseinvoice": "purchase_invoice",
+    "salesreturnqty": "sales_return",
+    "adjustment": "adjustment",
+    "totalinquantity": "total_in",
+    "totalinqty": "total_in",
+    "saleschallan": "sales_challan",
+    "salesinvoice": "sales_invoice",
+    "purchasereturnqty": "purchase_return",
+    "totaloutquantity": "total_out",
+    "totaloutqty": "total_out",
+    "closingstock": "closing",
+    "purrate": "rate",
+    "purate": "rate",
+    "closingstkvalue": "closing_value",
+    "closingstockvalue": "closing_value",
+}
+
+
+def _looks_like_stock_statement_details_xls(rows: List[List[Any]]) -> bool:
+    """True for Stock Statement (Details) Opening/Purchase Challan/Sales Invoice grids."""
+    return _find_stock_statement_details_xls_header(rows) is not None
+
+
+def _find_stock_statement_details_xls_header(
+    rows: List[List[Any]],
+) -> Optional[Tuple[int, Dict[str, int]]]:
+    """Detect Name Of The Item / Opening Stock / Purchase Challan / Sales Invoice.
+
+    Other Excel layouts (ITEM/PACK/S.RETURN, OPENSTK/PURSTK, generic Item/Op)
+    do not have this header set and return None.
+    """
+    for index, row in enumerate(rows[:25]):
+        if not isinstance(row, list):
+            continue
+        labels = {
+            _xls_header_compact(cell): col
+            for col, cell in enumerate(row)
+            if _xls_header_compact(cell)
+        }
+        if "nameoftheitem" not in labels or "openingstock" not in labels:
+            continue
+        if "closingstock" not in labels:
+            continue
+        has_purchase = "purchasechallan" in labels or "purchaseinvoice" in labels
+        has_sales = "salesinvoice" in labels or "saleschallan" in labels
+        if not has_purchase or not has_sales:
+            continue
+        roles: Dict[str, int] = {}
+        for compact, col in labels.items():
+            field = _STOCK_STATEMENT_DETAILS_HEADER_ALIASES.get(compact)
+            if field and field not in roles:
+                roles[field] = col
+        if "item" in roles and "opening" in roles and "closing" in roles:
+            return index, roles
+    return None
+
+
+def _parse_stock_statement_details_xls(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    header_info: Tuple[int, Dict[str, int]],
+) -> Dict[str, Any]:
+    """Parse Stock Statement (Details) xlsx. Does not change other Excel parsers."""
+    header_idx, roles = header_info
+    result = empty_result(filename, ext.lstrip(".") or "xlsx")
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "stock_statement_details_xls"
+    extra["layout"] = "stock_statement_details"
+    extra["header_row"] = header_idx
+
+    for row in rows[:header_idx]:
+        if not isinstance(row, list):
+            continue
+        texts = _xls_preamble_texts(row)
+        joined = " ".join(texts)
+        if not joined:
+            continue
+        if re.search(r"Stock\s+Statement", joined, re.I) and not result.get(
+            "report_title"
+        ):
+            result["report_title"] = "Stock Statement (Details)"
+        period = re.search(
+            rf"From\s*(?:Dt\.?|Date)?\s*:?\s*({_DATE_TOKEN_RE})\s*"
+            rf"To\s*(?:Dt\.?|Date)?\s*:?\s*({_DATE_TOKEN_RE})",
+            joined,
+            re.I,
+        )
+        if period:
+            if not result.get("period_from"):
+                result["period_from"] = _normalize_date(period.group(1))
+            if not result.get("period_to"):
+                result["period_to"] = _normalize_date(period.group(2))
+        manufacturer = re.search(
+            r"Manufacturer(?:\s*Name)?\s*:?\s*(.+)$", joined, re.I
+        )
+        if manufacturer and not result.get("company_name"):
+            result["company_name"] = _clean_name(manufacturer.group(1))
+        if (
+            not result.get("stockist_name")
+            and not re.search(
+                r"STOCK|STATEMENT|MANUFACTURER|EMAIL|MOB-?|PHONE|"
+                r"COMPANY\s*NAME|FROM\s*DT|@|PACKING|OPENING",
+                joined,
+                re.I,
+            )
+            and 4 <= len(joined) <= 80
+        ):
+            result["stockist_name"] = _clean_name(texts[0])
+        elif (
+            not result.get("stockist_address")
+            and result.get("stockist_name")
+            and re.search(r"NAGAR|ROAD|BAZAR|BAZAAR|HOUSE|STREET|NEAR|\d{6}", joined, re.I)
+            and not re.search(r"EMAIL|MOB-?|PHONE|STOCK|MANUFACTURER", joined, re.I)
+        ):
+            result["stockist_address"] = _clean_name(joined)
+
+    def cell(row: List[Any], key: str) -> Any:
+        idx = roles.get(key)
+        if idx is None or idx >= len(row):
+            return None
+        return row[idx]
+
+    items: List[Dict[str, Any]] = []
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list):
+            continue
+        raw_name = cell(row, "item")
+        if raw_name in (None, ""):
+            continue
+        product_name = _clean_name(str(raw_name))
+        if not product_name:
+            continue
+        sale_tot = re.search(r"Total\s+Sale\s*:?\s*([\d,.]+)", product_name, re.I)
+        if sale_tot:
+            result["totals"]["sales_value"] = _to_float(sale_tot.group(1))
+            extra["value_of_sale"] = result["totals"]["sales_value"]
+            extra["total_row_source"] = "stock_statement_details_footer"
+            continue
+        purch_tot = re.search(
+            r"Total\s+Purchase\s*:?\s*([\d,.]+)", product_name, re.I
+        )
+        if purch_tot:
+            extra["purchase_value"] = _to_float(purch_tot.group(1))
+            continue
+        if re.match(
+            r"^(?:company\s*name\s*:|manufacturer\s*wise\s*total|"
+            r"total\b|grand\s*total|sub\s*total)",
+            product_name,
+            re.I,
+        ):
+            company = re.search(r"Company\s*Name\s*:\s*(.+)", product_name, re.I)
+            if company and not result.get("company_name"):
+                result["company_name"] = _clean_name(company.group(1))
+            continue
+
+        parsed: Dict[str, Optional[float]] = {}
+        errors: Dict[str, str] = {}
+        for field, key in (
+            ("opening_qty", "opening"),
+            ("purchase_challan_qty", "purchase_challan"),
+            ("purchase_invoice_qty", "purchase_invoice"),
+            ("sales_return_qty", "sales_return"),
+            ("adjustment_qty", "adjustment"),
+            ("total_in_qty", "total_in"),
+            ("sales_challan_qty", "sales_challan"),
+            ("sales_invoice_qty", "sales_invoice"),
+            ("purchase_return_qty", "purchase_return"),
+            ("total_out_qty", "total_out"),
+            ("closing_qty", "closing"),
+            ("unit_rate", "rate"),
+            ("closing_value", "closing_value"),
+        ):
+            if key not in roles:
+                parsed[field] = 0.0 if field.endswith("_qty") else None
+                continue
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            parsed[field] = number
+            if error:
+                errors[field] = error
+
+        purchase_qty = round(
+            (parsed.get("purchase_challan_qty") or 0.0)
+            + (parsed.get("purchase_invoice_qty") or 0.0),
+            2,
+        )
+        sales_qty = round(
+            (parsed.get("sales_challan_qty") or 0.0)
+            + (parsed.get("sales_invoice_qty") or 0.0),
+            2,
+        )
+        raw_pack = cell(row, "pack")
+        packing = _clean_name(str(raw_pack)) if raw_pack not in (None, "") else None
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing or None
+        item["opening_qty"] = parsed["opening_qty"]
+        item["receipts_qty"] = purchase_qty
+        item["purchase_qty"] = purchase_qty
+        item["sales_qty"] = sales_qty
+        item["sales_return_qty"] = parsed["sales_return_qty"]
+        item["purchase_return_qty"] = parsed["purchase_return_qty"]
+        item["closing_qty"] = parsed["closing_qty"]
+        item["closing_value"] = parsed["closing_value"]
+        item["sales_value"] = None
+        item["source_product_name"] = product_name
+        item["source_packing"] = packing or None
+        row_extra = {
+            "layout": "stock_statement_details",
+            "source_product_name": product_name,
+            "source_packing": packing or None,
+            "purchase_challan_qty": parsed["purchase_challan_qty"],
+            "purchase_invoice_qty": parsed["purchase_invoice_qty"],
+            "purchase_qty": purchase_qty,
+            "sales_challan_qty": parsed["sales_challan_qty"],
+            "sales_invoice_qty": parsed["sales_invoice_qty"],
+            "sales_return_qty": parsed["sales_return_qty"],
+            "purchase_return_qty": parsed["purchase_return_qty"],
+            "adjustment_qty": parsed["adjustment_qty"],
+            "total_in_qty": parsed["total_in_qty"],
+            "total_out_qty": parsed["total_out_qty"],
+            "unit_rate": parsed["unit_rate"],
+        }
+        if errors:
+            row_extra["qty_parse_errors"] = errors
+        item["extra"] = row_extra
+        items.append(item)
+
+    result["line_items"] = items
+    extra["rows_detected"] = len(items)
+    if result.get("totals", {}).get("closing_value") in (None, 0.0):
+        printed_close = sum(
+            _to_float(i.get("closing_value")) for i in items if isinstance(i, dict)
+        )
+        if printed_close:
+            result["totals"]["closing_value"] = round(printed_close, 2)
+    return result
+
+
 def _is_excel_html_bytes(file_bytes: bytes) -> bool:
     """True for HTML/SpreadsheetML saved with a .xls name. Real BIFF is False."""
     if not file_bytes:
@@ -11996,6 +12310,13 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             return _xls_finalize_result(
                 _parse_stock_and_sale_analysis_xls(
                     rows, filename, ext, analysis_header
+                )
+            )
+        details_header = _find_stock_statement_details_xls_header(rows)
+        if details_header is not None:
+            return _xls_finalize_result(
+                _parse_stock_statement_details_xls(
+                    rows, filename, ext, details_header
                 )
             )
         marg_mexp = _parse_marg_closing_mexp_xls(rows, filename, ext, sheet_name)
@@ -21527,7 +21848,10 @@ def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict
 
 
 def _is_purc_sale_cl_header(blob: str) -> bool:
-    """MediVision Stock and Sales: Purc / Purc val / Sale / Sa val / Cl qty / Cl val."""
+    """MediVision Stock and Sales: Purc / Purc val / Sale / Sa val / Cl qty / Cl val.
+
+    Optional Op (qty) sits between Unit and Purc on the same sheet family.
+    """
     if not blob:
         return False
     return bool(
@@ -21540,9 +21864,17 @@ def _is_purc_sale_cl_header(blob: str) -> bool:
     )
 
 
+def _looks_like_purc_sale_cl_op_text(text: str) -> bool:
+    """True when the Purc/Sale/Cl sheet also prints an Op qty column."""
+    if not _is_purc_sale_cl_header(text):
+        return False
+    return bool(re.search(r"\bOp\b", text))
+
+
 def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[List[Tuple[str, float]]]:
     """Column starts from this header only. Other layouts never reach here."""
     starts: List[Tuple[str, float]] = []
+    seen_op = False
     seen_purc = False
     seen_cl = False
     for x, token in header_words:
@@ -21552,6 +21884,9 @@ def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[Lis
             field = "name"
         elif norm == "unit":
             field = "pack"
+        elif norm == "op":
+            field = "opening_value" if seen_op else "opening_qty"
+            seen_op = True
         elif norm == "purc":
             field = "receipts_value" if seen_purc else "receipts_qty"
             seen_purc = True
@@ -21587,6 +21922,23 @@ def _purc_sale_cl_field(x: float, starts: List[Tuple[str, float]]) -> Optional[s
         else:
             break
     return field
+
+
+def _repair_purc_sale_cl_blank_closing(
+    item: Dict[str, Any], closing_tokens: List[str]
+) -> None:
+    """Fill blank Cl qty from Op + Purc - Sale. Printed zeros stay as printed."""
+    if closing_tokens:
+        return
+    expected = round(
+        _to_float(item.get("opening_qty"))
+        + _to_float(item.get("receipts_qty"))
+        - _to_float(item.get("sales_qty")),
+        2,
+    )
+    if expected <= 0:
+        return
+    item["closing_qty"] = expected
 
 
 def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
@@ -21666,14 +22018,21 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
             item["product_name"] = name
             pack = " ".join(cells.get("pack") or []).strip()
             item["packing"] = pack or None
-            item["opening_qty"] = 0.0
+            item["opening_qty"] = (
+                _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+            )
             item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
             item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
             item["sales_value"] = _prompt_cell_number(cells.get("sales_value") or []) or 0.0
-            item["closing_qty"] = _prompt_cell_number(cells.get("closing_qty") or []) or 0.0
+            close_tokens = cells.get("closing_qty") or []
+            item["closing_qty"] = _prompt_cell_number(close_tokens) or 0.0
             item["closing_value"] = _prompt_cell_number(cells.get("closing_value") or []) or 0.0
+            _repair_purc_sale_cl_blank_closing(item, close_tokens)
             extra = item["extra"]
             extra["layout"] = "purc_sale_cl"
+            open_val = _prompt_cell_number(cells.get("opening_value") or [])
+            if open_val is not None:
+                extra["opening_value"] = open_val
             pur_val = _prompt_cell_number(cells.get("receipts_value") or [])
             if pur_val is not None:
                 extra["purchase_value"] = pur_val
