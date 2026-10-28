@@ -2826,8 +2826,43 @@ def _closing_value_missing(item: Dict[str, Any]) -> bool:
         return cv in {"", "-", "—", "–"}
 
 
+def _vision_result_is_qty_only_op_pur_sales_cl(result: Dict[str, Any]) -> bool:
+    """Opening + purchase + sales + closing headers with no VALUE column."""
+    extra = (result.get("totals") or {}).get("extra") or {}
+    column_map = extra.get("column_map") or []
+    texts: List[str] = []
+    canons: set = set()
+    if isinstance(column_map, list):
+        for col in column_map:
+            if not isinstance(col, dict):
+                continue
+            texts.append(str(col.get("header_text") or ""))
+            c = str(col.get("canonical") or "").strip()
+            if c:
+                canons.add(c)
+    if not texts:
+        items = result.get("line_items") or []
+        first = next((i for i in items if isinstance(i, dict)), None) or {}
+        headers = ((first.get("extra") or {}).get("vision_column_headers") or [])
+        texts = [str(h or "") for h in headers]
+    blob = " ".join(texts).upper()
+    if re.search(r"\bVAL(?:UE)?\b", blob):
+        return False
+    has_open = ("opening_qty" in canons) or bool(re.search(r"\bOPEN", blob))
+    has_pur = ("purchase_qty" in canons) or bool(
+        re.search(r"\bPURCHAS|\bRECEIPT|\bRECD\b|\bRCPTS?\b", blob)
+    )
+    has_sale = ("sales_qty" in canons) or bool(re.search(r"\bSALE|\bISSUE\b", blob))
+    has_close = ("closing_qty" in canons) or bool(re.search(r"\bCLOS", blob))
+    return bool(has_open and has_pur and has_sale and has_close)
+
+
 def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
-    """True when Vision headers are OPENING/RECEIPT/ISSUE/CLOSING (no VALUE)."""
+    """True when Vision headers are qty-only movement cols (no VALUE).
+
+    Covers OPENING/RECEIPT/ISSUE/CLOSING and Opening stock / Purchased Qty /
+    Sales Qty / Closing Stock. Large whole closings (e.g. 975) must stay qty.
+    """
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     headers = extra.get("vision_column_headers") or []
     if not isinstance(headers, (list, tuple)) or not headers:
@@ -2837,7 +2872,9 @@ def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
         return False
     has_open = bool(re.search(r"\bOPEN", blob))
     has_close = bool(re.search(r"\bCLOS", blob))
-    has_mid = bool(re.search(r"\b(?:RECEIPT|ISSUE|SALE)\b", blob))
+    has_mid = bool(
+        re.search(r"\b(?:RECEIPT|ISSUE|SALE|PURCH)", blob)
+    )
     return has_open and has_close and has_mid
 
 
@@ -8394,6 +8431,28 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
     # the row). Only treat low valid_ratio as empty/unreadable extraction when
     # almost no movement columns were read.
     if valid_ratio < min_ratio and missing / max(len(items), 1) >= 0.25:
+        # Qty-only Opening/Purchased/Sales/Closing sheets often leave Purchased
+        # blank and printed closing may not equal Op+Pur-Sales (returns not
+        # printed). Keep Vision when those headers resolved — do not hand the
+        # page to OPBAL/Medica/generic early Vision.
+        if _vision_result_is_qty_only_op_pur_sales_cl(result) and os.getenv(
+            "STOCK_VISION_KEEP_PRINTED_OP_PUR_SALES_CL", "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}:
+            structural = 0
+            try:
+                structural = int(counts.get("STRUCTURAL_ERROR") or 0)
+            except (TypeError, ValueError):
+                structural = 0
+            if structural == 0:
+                logger.info(
+                    "VISION_TABLE quality_fallback skip "
+                    "reason=keep_printed_op_pur_sales_cl "
+                    "valid_ratio=%s missing=%s rows=%s",
+                    valid_ratio,
+                    missing,
+                    len(items),
+                )
+                return None
         return "valid_ratio_low"
     return None
 

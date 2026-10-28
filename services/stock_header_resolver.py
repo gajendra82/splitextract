@@ -162,6 +162,8 @@ ALIASES: Dict[str, List[str]] = {
         "opening bal qty",
         "openbal qty",
         "opening stock",
+        # Vision/OCR often truncates the final letter(s) of "Opening stock".
+        "opening stoc",
         "opening qty",
         "opening quantity",
         "op stock",

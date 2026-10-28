@@ -11544,6 +11544,8 @@ _XLS_HEADER_ALIASES = {
     "clval": "bval",
     "stkval": "bval",
     "stockval": "bval",
+    # STOCK | Stock Value (qty then money) — stockvalue is always closing money.
+    "stockvalue": "bval",
     # ClosingBal ActualValBySale — money under closing, not qty.
     "actualvalbysale": "bval",
     "closingbalactualvalbysale": "bval",
@@ -11852,6 +11854,16 @@ def _parse_pod_hospital_sales_xlsx(
     return result
 
 
+def _xls_stock_column_as_closing_enabled() -> bool:
+    """Map bare STOCK header → closing_qty (STOCK | Stock Value sheets).
+
+    Default ON. Does not touch Stock Value (already bval) or Total Stock.
+    """
+    return os.getenv(
+        "STOCK_XLS_STOCK_COLUMN_AS_CLOSING", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _xls_norm_header(label: Any) -> str:
     text = str(label or "").replace("\u00a0", " ").replace("\r", " ").replace("\n", " ")
     compact = re.sub(r"[\s_]+", "", text.strip().lower())
@@ -11863,7 +11875,14 @@ def _xls_norm_header(label: Any) -> str:
     if compact in _XLS_HEADER_ALIASES:
         return _XLS_HEADER_ALIASES[compact]
     alnum = re.sub(r"[^a-z0-9#]+", "", compact)
-    return _XLS_HEADER_ALIASES.get(alnum, compact)
+    mapped = _XLS_HEADER_ALIASES.get(alnum)
+    if mapped is not None:
+        return mapped
+    # Bare STOCK (not TotalStock / ClosingStock) is printed closing qty next to
+    # Stock Value on Opening Qty / SALE / STOCK hub exports.
+    if alnum == "stock" and _xls_stock_column_as_closing_enabled():
+        return "bal"
+    return alnum
 
 
 _XLS_HEADER_SCORE = {
@@ -16139,13 +16158,41 @@ def _stockist_name_is_manufacturer_or_title(name: str) -> bool:
 
 
 def _clear_company_confused_stockist(result: Dict[str, Any]) -> bool:
-    """Move Company:/title out of stockist_name. Do not invent a distributor."""
+    """Move Company:/title out of stockist_name. Do not invent a distributor.
+
+    When Vision swaps letterhead (distributor) into company_name and manufacturer
+    into stockist_name, swap them back instead of only clearing stockist.
+    """
     if not _reject_company_as_stockist_enabled() or not isinstance(result, dict):
         return False
     stockist = str(result.get("stockist_name") or "").strip()
     if not stockist or not _stockist_name_is_manufacturer_or_title(stockist):
         return False
     company = str(result.get("company_name") or "").strip()
+    # Distributor letterhead parked in company_name while manufacturer sits in
+    # stockist_name (Opening stock / Purchased Qty STOCK & SALES screenshots).
+    if (
+        company
+        and not _stockist_name_is_manufacturer_or_title(company)
+        and re.search(
+            r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|associates|"
+            r"enterprises|traders|private\s+limited|pvt\.?\s*ltd)\b",
+            company,
+        )
+        and os.getenv(
+            "STOCK_SWAP_MANUFACTURER_STOCKIST", "true"
+        ).strip().lower()
+        in {"1", "true", "yes", "on"}
+    ):
+        result["company_name"] = stockist
+        result["stockist_name"] = company
+        logger.info(
+            "[STOCKIST_MATCH] matching_method=swap_manufacturer_stockist "
+            "company_name=%r stockist_name=%r",
+            result.get("company_name"),
+            result.get("stockist_name"),
+        )
+        return True
     is_title = bool(
         re.search(
             r"(?i)stock\s*[&©]\s*sales|stock\s+and\s+sales|sales\s*&\s*stock",
@@ -55098,7 +55145,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         )
         # Tall PDF-viewer screenshots (stacked pages) often OCR-fail without
         # Tesseract but are still OPBAL/REC/EXCESS grids — try Vision once.
-        if not _try_opbal_excess_photo and _peek_unreadable:
+        # Default OFF: tall+unreadable alone also matches Opening stock /
+        # Purchased Qty / Sales Qty / Closing Stock sheets and steals them
+        # into the wrong OPBAL/REC/EXCESS Vision schema.
+        _tall_opbal_on = os.getenv(
+            "STOCK_OPBAL_TALL_UNREADABLE_HEURISTIC", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if not _try_opbal_excess_photo and _peek_unreadable and _tall_opbal_on:
             try:
                 from PIL import Image as _PilOpbal
 
@@ -55106,8 +55159,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 _ow, _oh = _im_opbal.size
                 if _oh >= int(_ow * 1.25):
                     _try_opbal_excess_photo = True
+                    logger.info(
+                        "[SalesStatement] file=%s OPBAL tall-unreadable "
+                        "heuristic enabled aspect=%.2f",
+                        filename,
+                        (float(_oh) / float(_ow)) if _ow else 0.0,
+                    )
             except Exception:
                 pass
+        elif not _try_opbal_excess_photo and _peek_unreadable and not _tall_opbal_on:
+            logger.info(
+                "[SalesStatement] file=%s OPBAL tall-unreadable heuristic "
+                "skipped flag=STOCK_OPBAL_TALL_UNREADABLE_HEURISTIC",
+                filename,
+            )
         if _try_opbal_excess_photo:
             try:
                 _opbal_photo = _extract_opbal_rec_sales_excess_photo(
