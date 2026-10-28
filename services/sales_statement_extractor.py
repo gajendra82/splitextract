@@ -27547,10 +27547,11 @@ def _opbal_rec_sales_excess_words_enabled() -> bool:
 
 
 def _is_opbal_rec_sales_excess_text(text: str) -> bool:
-    """STOCK & SALES STATEMENT: OPBAL|REC|AVG/LST MN/FOR MN/TOTAL|EXCESS|Nr.EXP.
+    """STOCK & SALES STATEMENT: OPBAL|REC|AVG/LST MN/FOR MN|TOTAL|EXCESS|Nr.EXP.
 
-    TOTAL under SALES is period sales; EXCESS under STOCK is closing. Distinct
-    from classic OpBal/Receipt/Total/Issue/Closing and from Op/Cl Stk grids.
+    Parent bands vary: TOTAL may sit under SALES (sales) or STOCK (closing).
+    Identity picks FOR MN+TOTAL vs TOTAL+EXCESS. Distinct from classic
+    OpBal/Issue/Closing and from Op/Cl Stk grids.
     """
     blob = text or ""
     if not blob.strip():
@@ -27573,6 +27574,25 @@ def _is_opbal_rec_sales_excess_text(text: str) -> bool:
     return bool(re.search(r"LST\s*MN|FOR\s*MN|Nr\.?\s*EXP", blob, re.I))
 
 
+def _opbal_sales_stock_choose_sales_closing(
+    opening: float,
+    receipts: float,
+    slot_a: float,
+    slot_b: float,
+    slot_c: float,
+) -> Tuple[float, float, str]:
+    """Pick sales/closing from last-three slots via stock identity.
+
+    ``(slot_a, slot_b)`` = FOR MN + TOTAL (TOTAL under STOCK) or
+    ``(slot_b, slot_c)`` = TOTAL + EXCESS (TOTAL under SALES).
+    """
+    cand_ab = abs((opening + receipts) - slot_a - slot_b)
+    cand_bc = abs((opening + receipts) - slot_b - slot_c)
+    if cand_ab <= cand_bc:
+        return float(slot_a), float(slot_b), "for_total"
+    return float(slot_b), float(slot_c), "total_excess"
+
+
 def _opbal_rec_sales_excess_header_centres(
     rows: List[List[Tuple[Any, ...]]],
 ) -> Optional[Dict[str, float]]:
@@ -27589,6 +27609,16 @@ def _opbal_rec_sales_excess_header_centres(
             # Sub-header row: AVG / LST MN / FOR MN / TOTAL / EXCESS / Nr. EXP
             if not any(t in {"TOTAL", "EXCESS", "AVG", "LST", "FOR"} for t in texts):
                 continue
+        # Spaced parent band "S T O C K" / "S A L E S".
+        if texts == ["S", "T", "O", "C", "K"] or (
+            len(texts) >= 5
+            and texts[:5] == ["S", "T", "O", "C", "K"]
+        ):
+            centres["stock_parent"] = sum(cx for _, cx in labels[:5]) / 5.0
+        elif texts == ["S", "A", "L", "E", "S"] or (
+            len(texts) >= 5 and texts[:5] == ["S", "A", "L", "E", "S"]
+        ):
+            centres["sales_parent"] = sum(cx for _, cx in labels[:5]) / 5.0
         for i, (tok, cx) in enumerate(labels):
             if tok == "PACKING":
                 centres["packing"] = cx
@@ -27597,16 +27627,15 @@ def _opbal_rec_sales_excess_header_centres(
             elif tok in {"REC", "REC."}:
                 centres["receipts_qty"] = cx
             elif tok == "TOTAL":
-                centres["sales_qty"] = cx
+                centres["total_header"] = cx
             elif tok == "EXCESS":
-                centres["closing_qty"] = cx
+                centres["excess_header"] = cx
             elif tok in {"NR", "NR."} and i + 1 < len(labels) and labels[i + 1][0] in {
                 "EXP",
                 "EXP.",
             }:
                 centres["expiry_damage_qty"] = (cx + labels[i + 1][1]) / 2.0
             elif tok in {"EXP", "EXP."} and "expiry_damage_qty" not in centres:
-                # Lone EXP. under STOCK when NR. was on the previous token pass.
                 if "NR" in texts or "NR." in joined:
                     centres["expiry_damage_qty"] = cx
             elif tok == "AVG":
@@ -27617,14 +27646,25 @@ def _opbal_rec_sales_excess_header_centres(
                 tok == "FOR"
                 and i + 1 < len(labels)
                 and labels[i + 1][0] == "MN"
-                and "sales_qty" not in centres  # avoid title "For the month"
             ):
-                # Prefer FOR MN that sits between LST and TOTAL.
                 if any(t == "LST" for t in texts) or any(t == "TOTAL" for t in texts):
                     centres["lms_for"] = (cx + labels[i + 1][1]) / 2.0
-        # Also accept PRODUCT NAME on the same band as OPBAL.
-        if "OPBAL" in texts and "PRODUCT" in texts:
-            pass
+    # TOTAL under SALES → sales_qty; TOTAL under STOCK → closing_qty.
+    total_x = centres.get("total_header")
+    stock_x = centres.get("stock_parent")
+    excess_x = centres.get("excess_header")
+    if total_x is not None:
+        total_under_stock = bool(stock_x is not None and total_x >= stock_x - 10)
+        if total_under_stock:
+            centres["closing_qty"] = total_x
+            if centres.get("lms_for") is not None:
+                centres["sales_qty"] = centres["lms_for"]
+            if excess_x is not None:
+                centres["excess_header"] = excess_x
+        else:
+            centres["sales_qty"] = total_x
+            if excess_x is not None:
+                centres["closing_qty"] = excess_x
     required = ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
     if not all(k in centres for k in required):
         return None
@@ -27693,22 +27733,33 @@ def _assign_opbal_rec_sales_excess_row(
 
     qty_cells.sort(key=lambda t: t[0])
     nums = [v for _, v in qty_cells]
-    # Slots: OPBAL REC LST MN FOR MN TOTAL EXCESS [Nr.EXP]
+    # OPBAL REC [AVG] [LST] FOR/… TOTAL EXCESS [Nr.EXP] — last three decide
+    # sales/closing via identity (FOR+TOTAL vs TOTAL+EXCESS).
     opening = receipts = sales = closing = exp = 0.0
-    if len(nums) >= 7:
-        opening, receipts, _lst, _for, sales, closing, exp = nums[-7:]
-    elif len(nums) == 6:
-        opening, receipts, _lst, _for, sales, closing = nums
-    elif len(nums) == 5:
-        # Nr.EXP omitted and one history blank collapsed — prefer identity.
-        opening, receipts, sales, closing, exp = nums
-    elif len(nums) == 4:
-        opening, receipts, sales, closing = nums
+    map_tag = ""
+    if len(nums) >= 4:
+        opening, receipts = float(nums[0]), float(nums[1])
+        slot_a, slot_b, slot_c = (
+            float(nums[-3]),
+            float(nums[-2]),
+            float(nums[-1]),
+        )
+        sales, closing, map_tag = _opbal_sales_stock_choose_sales_closing(
+            opening, receipts, slot_a, slot_b, slot_c
+        )
+        # Leftover last slot when FOR+TOTAL won: EXCESS or Nr.EXP.
+        if map_tag == "for_total" and abs(slot_c) > 1e-9:
+            if centres.get("expiry_damage_qty") is not None and len(nums) >= 7:
+                # 7+ cols with Nr.EXP header: prefer near-expiry for the tail
+                # only when TOTAL+EXCESS identity is clearly worse (already).
+                exp = float(slot_c)
+            else:
+                # STOCK EXCESS (not closing) — keep under extra, not expiry.
+                pass
     elif len(nums) >= 1:
-        # Too few cells — still keep opening when only OPBAL printed.
-        opening = nums[0]
+        opening = float(nums[0])
         if len(nums) > 1:
-            receipts = nums[1]
+            receipts = float(nums[1])
     else:
         return None
 
@@ -27736,6 +27787,24 @@ def _assign_opbal_rec_sales_excess_row(
     item["receipts_qty"] = float(receipts)
     item["sales_qty"] = float(sales)
     item["closing_qty"] = float(closing)
+    if map_tag:
+        item["extra"]["opbal_sales_stock_map"] = map_tag
+    if map_tag == "for_total" and len(nums) >= 4 and abs(float(nums[-1])) > 1e-9:
+        tail = float(nums[-1])
+        item["extra"]["excess_qty"] = tail
+        # TOTAL left of STOCK parent ⇒ under SALES ⇒ tail is Nr.EXP (SAU).
+        # TOTAL under STOCK ⇒ tail is EXCESS metric (BS) — keep excess_qty only.
+        total_x = centres.get("total_header")
+        stock_x = centres.get("stock_parent")
+        total_under_stock = bool(
+            total_x is not None and stock_x is not None and total_x >= stock_x - 10
+        )
+        if (
+            centres.get("expiry_damage_qty") is not None
+            and len(nums) >= 7
+            and not total_under_stock
+        ):
+            exp = tail
     if exp:
         item["expiry_damage_qty"] = float(exp)
         item["extra"]["near_expiry_qty"] = float(exp)
@@ -27859,6 +27928,286 @@ def _parse_opbal_rec_sales_excess_words_from_doc(
             }
         )
     return _parse_opbal_rec_sales_excess_words_pages(page_infos, filename)
+
+
+def _parse_opbal_rec_sales_excess_ocr_line(line: str) -> Optional[Dict[str, Any]]:
+    """Parse one OCR line: name [pack] then trailing OPBAL…TOTAL/EXCESS nums."""
+    raw = (line or "").strip()
+    if not raw:
+        return None
+    if re.search(
+        r"PRODUCT\s*NAME|PACKING|OPBAL|\bREC\.?\b|VALUE\s+in|Pending\s+Claims|"
+        r"E\.?\s*&\s*O\.?\s*E|CLAIM\s*No|HIMALAYA\s+WELLNESS|HIMALAYA\s+ZANDRA|"
+        r"STOCK\s*&\s*SALES|Page\s*\d|For\s+the\s+month|^\s*TOTAL\b",
+        raw,
+        re.I,
+    ):
+        return None
+    tokens = raw.split()
+    qty_toks: List[str] = []
+    i = len(tokens) - 1
+    while i >= 0 and len(qty_toks) < 8:
+        val = _op_qty_val_cell(tokens[i])
+        if val is None:
+            break
+        qty_toks.append(tokens[i])
+        i -= 1
+    qty_toks.reverse()
+    if len(qty_toks) < 4:
+        return None
+    left = tokens[: i + 1]
+    if not left:
+        return None
+    packing = None
+    if left and (
+        _looks_like_packing_token(left[-1])
+        or re.fullmatch(
+            r"\d+(?:\.\d+)?(?:TAB|TABS|ML|MG|GM|CAP|SYP|S|'S\.?)?",
+            left[-1] or "",
+            re.I,
+        )
+    ):
+        packing = left[-1].rstrip(".,")
+        left = left[:-1]
+    elif (
+        len(left) >= 2
+        and re.fullmatch(r"\d+(?:\.\d+)?", left[-2] or "")
+        and re.fullmatch(r"(?:TAB|TABS|ML|MG|GM|CAP|SYP|S|'S\.?)", left[-1] or "", re.I)
+    ):
+        packing = f"{left[-2]} {left[-1]}"
+        left = left[:-2]
+    product_name = _clean_name(" ".join(left))
+    if len(product_name) < 3:
+        return None
+    nums = [float(_op_qty_val_cell(t) or 0.0) for t in qty_toks]
+    opening, receipts = nums[0], nums[1]
+    sales, closing, map_tag = _opbal_sales_stock_choose_sales_closing(
+        opening, receipts, nums[-3], nums[-2], nums[-1]
+    )
+    item = empty_line_item()
+    item["product_name"] = product_name
+    item["packing"] = packing
+    item["opening_qty"] = opening
+    item["receipts_qty"] = receipts
+    item["sales_qty"] = sales
+    item["closing_qty"] = closing
+    item["extra"]["opbal_sales_stock_map"] = map_tag
+    if map_tag == "for_total" and abs(nums[-1]) > 1e-9:
+        item["extra"]["excess_qty"] = nums[-1]
+    fs = item.setdefault("extra", {}).setdefault("field_source", {})
+    for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        fs[field] = "printed"
+    return item
+
+
+def _parse_opbal_rec_sales_excess_ocr_text(
+    text: str, filename: str, source_format: str = "jpg"
+) -> Optional[Dict[str, Any]]:
+    """OCR/text fallback when PDF words are unavailable (screenshots)."""
+    if not _opbal_rec_sales_excess_words_enabled():
+        return None
+    if not _is_opbal_rec_sales_excess_text(text):
+        return None
+    items: List[Dict[str, Any]] = []
+    for ln in text.splitlines():
+        if re.search(r"VALUE\s+in|Pending\s+Claims|CLAIM\s*No", ln, re.I):
+            break
+        parsed = _parse_opbal_rec_sales_excess_ocr_line(ln)
+        if parsed:
+            items.append(parsed)
+    if len(items) < 3:
+        return None
+    result = empty_result(filename, source_format.lstrip(".") or "jpg")
+    result["report_title"] = "STOCK & SALES STATEMENT"
+    result["line_items"] = items
+    for ln in text.splitlines()[:12]:
+        if re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", ln, re.I):
+            rest = re.sub(r"STOCK\s*&\s*SALES\s+STATEMENT", "", ln, flags=re.I)
+            rest = re.sub(r"Page\s*\d+\s*/\s*\d+", "", rest, flags=re.I).strip(" -|")
+            if len(rest) >= 4:
+                result["stockist_name"] = _clean_name(rest)
+            break
+    for ln in text.splitlines()[:50]:
+        if re.search(r"HIMALAYA\s+(?:WELLNESS|ZANDRA|ZEAL)", ln, re.I):
+            result["company_name"] = _clean_name(ln)
+            break
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "opbal_rec_sales_excess_ocr"
+    extra["layout"] = "opbal_rec_sales_total_excess"
+    extra["qty_only"] = True
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=tesseract method=opbal_rec_sales_excess_ocr items=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
+_OPBAL_REC_SALES_EXCESS_VISION_PROMPT = """
+This image is a STOCK & SALES STATEMENT with columns:
+PRODUCT NAME | PACKING | OPBAL | REC. | SALES(AVG, LST MN, FOR MN) | STOCK(TOTAL, EXCESS, Nr. EXP)
+
+Return JSON only:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": string|null,
+  "period_to": string|null,
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "avg_qty": number,
+      "lst_mn_qty": number,
+      "for_mn_qty": number,
+      "total_qty": number,
+      "excess_qty": number,
+      "near_expiry_qty": number
+    }
+  ]
+}
+
+Rules:
+- Read EVERY printed numeric column. Blank cells are 0.
+- Do NOT skip AVG / LST MN / FOR MN / TOTAL / EXCESS.
+- Ignore company banners like HIMALAYA WELLNESS / ZANDRA as products.
+- Stop before VALUE in 1,000s / Pending Claims / E.& O.E.
+- Do not invent values. Do not derive closing from arithmetic.
+"""
+
+
+def _extract_opbal_rec_sales_excess_vision(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Vision reader for OPBAL/REC/FOR MN/TOTAL/EXCESS screenshots."""
+    if not _opbal_rec_sales_excess_words_enabled():
+        return None
+    import os
+
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _OPBAL_REC_SALES_EXCESS_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
+    }
+    try:
+        response = generate_content_via_vertex(
+            model=model, payload=payload, timeout=120
+        )
+        parsed = _extract_json_object(_gemini_response_text(response))
+    except Exception as exc:
+        logger.info(
+            "OPBAL_REC_SALES_EXCESS vision failed file=%s err=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    if not parsed or not isinstance(parsed.get("line_items"), list):
+        return None
+    items: List[Dict[str, Any]] = []
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = _clean_name(str(raw.get("product_name") or ""))
+        if len(name) < 3:
+            continue
+        if re.search(r"HIMALAYA|WELLNESS|VALUE\s+in|PENDING|CLAIM", name, re.I):
+            continue
+        opening = _to_float(raw.get("opening_qty"))
+        receipts = _to_float(raw.get("receipts_qty"))
+        for_mn = _to_float(raw.get("for_mn_qty"))
+        total = _to_float(raw.get("total_qty"))
+        excess = _to_float(raw.get("excess_qty"))
+        near = _to_float(raw.get("near_expiry_qty"))
+        sales, closing, map_tag = _opbal_sales_stock_choose_sales_closing(
+            opening, receipts, for_mn, total, excess
+        )
+        item = empty_line_item()
+        item["product_name"] = name
+        pack = raw.get("packing")
+        item["packing"] = _clean_name(str(pack)) if pack else None
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipts
+        item["sales_qty"] = sales
+        item["closing_qty"] = closing
+        item["extra"]["opbal_sales_stock_map"] = map_tag
+        item["extra"]["avg_qty"] = _to_float(raw.get("avg_qty"))
+        item["extra"]["lst_mn_qty"] = _to_float(raw.get("lst_mn_qty"))
+        item["extra"]["for_mn_qty"] = for_mn
+        item["extra"]["total_qty"] = total
+        item["extra"]["excess_qty"] = excess
+        if near:
+            item["expiry_damage_qty"] = near
+            item["extra"]["near_expiry_qty"] = near
+        fs = item.setdefault("extra", {}).setdefault("field_source", {})
+        for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            fs[field] = "printed"
+        items.append(item)
+    if len(items) < 3:
+        return None
+    result = empty_result(filename, ext.lstrip(".") or "jpg")
+    result["report_title"] = "STOCK & SALES STATEMENT"
+    result["stockist_name"] = _clean_name(str(parsed.get("stockist_name") or "")) or None
+    result["company_name"] = _clean_name(str(parsed.get("company_name") or "")) or None
+    result["period_from"] = parsed.get("period_from")
+    result["period_to"] = parsed.get("period_to")
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "opbal_rec_sales_excess_vision"
+    extra["layout"] = "opbal_rec_sales_total_excess"
+    extra["qty_only"] = True
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision method=opbal_rec_sales_excess_vision items=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
+def _extract_opbal_rec_sales_excess_photo(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    *,
+    ocr_hint: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Screenshot/photo of OPBAL|REC|FOR MN|TOTAL|EXCESS — OCR first, else Vision."""
+    if not _opbal_rec_sales_excess_words_enabled():
+        return None
+    text = (ocr_hint or "").strip()
+    if not _is_opbal_rec_sales_excess_text(text):
+        try:
+            text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
+        except Exception as exc:
+            logger.info(
+                "OPBAL_REC_SALES_EXCESS file=%s status=ocr_skipped error=%s",
+                filename,
+                type(exc).__name__,
+            )
+            text = ""
+    if _is_opbal_rec_sales_excess_text(text):
+        parsed = _parse_opbal_rec_sales_excess_ocr_text(
+            text, filename, ext.lstrip(".") or "jpg"
+        )
+        if parsed and len(parsed.get("line_items") or []) >= 3:
+            return parsed
+    # Clean PDF-viewer screenshots: Vision with all columns + identity map.
+    return _extract_opbal_rec_sales_excess_vision(file_bytes, filename, ext)
 
 
 def _is_stock_sales_op_qty_val_words_text(text: str) -> bool:
@@ -53755,6 +54104,49 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 filename,
             )
         _peek_unreadable = len(re.findall(r"[A-Za-z]{3,}", _op_stk_peek or "")) < 12
+        # OPBAL/REC + FOR MN/TOTAL/EXCESS screenshots — before Medica (which
+        # maps AVG→sales and EXCESS→closing on this layout).
+        _opbal_excess_peek = _is_opbal_rec_sales_excess_text(_op_stk_peek)
+        _try_opbal_excess_photo = _opbal_excess_peek or (
+            re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", _op_stk_peek or "", re.I)
+            and re.search(r"\bOPBAL\b", _op_stk_peek or "", re.I)
+            and re.search(r"\bEXCESS\b", _op_stk_peek or "", re.I)
+        )
+        # Tall PDF-viewer screenshots (stacked pages) often OCR-fail without
+        # Tesseract but are still OPBAL/REC/EXCESS grids — try Vision once.
+        if not _try_opbal_excess_photo and _peek_unreadable:
+            try:
+                from PIL import Image as _PilOpbal
+
+                _im_opbal = _PilOpbal.open(io.BytesIO(file_bytes))
+                _ow, _oh = _im_opbal.size
+                if _oh >= int(_ow * 1.25):
+                    _try_opbal_excess_photo = True
+            except Exception:
+                pass
+        if _try_opbal_excess_photo:
+            try:
+                _opbal_photo = _extract_opbal_rec_sales_excess_photo(
+                    file_bytes, filename, ext, ocr_hint=_op_stk_peek
+                )
+            except Exception as _opbal_exc:
+                logger.info(
+                    "[SalesStatement] file=%s OPBAL/REC/EXCESS photo failed: %s",
+                    filename,
+                    type(_opbal_exc).__name__,
+                )
+                _opbal_photo = None
+            if _opbal_photo and _opbal_photo.get("line_items"):
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=opbal_rec_sales_excess "
+                    "file=%s line_items=%s method=%s",
+                    filename,
+                    len(_opbal_photo.get("line_items") or []),
+                    ((_opbal_photo.get("totals") or {}).get("extra") or {}).get(
+                        "extraction_method"
+                    ),
+                )
+                return _opbal_photo
         # Qty-only ORIC ANALYSIS: OCR+ps_pharma before VT (VT shifts RECEIPT).
         if _is_ssa_oric_qty_only_text(_op_stk_peek):
             try:
@@ -53788,13 +54180,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # unless OPSTK is actually in the peek. ANALYSIS qty/value sheets
         # must not lock medica_stock_statement (drops opening/receipt values
         # and shifts ISSUE/CLOSING onto the next product).
+        # Unreadable OCR alone must not claim Medica — PDF-viewer screenshots
+        # of OPBAL/REC/EXCESS were misread as Medica (AVG→sales, EXCESS→close).
         _try_medica_before_vt = _skip_vt_for_medica or (
             not _skip_vt_for_op_stk
             and vision_table_active_for("image")
             and not _ssa_sheets_qty_value
+            and not _opbal_excess_peek
             and (
                 (_medica_red_header_plausible(file_bytes) and _peek_has_opstk)
-                or _peek_unreadable
+                or (_peek_unreadable and _peek_has_opstk)
             )
         )
         if _ssa_sheets_qty_value:
@@ -53804,6 +54199,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
             _try_medica_before_vt = False
             _skip_vt_for_medica = False
+        if _opbal_excess_peek:
+            logger.info(
+                "[SalesStatement] file=%s medica probe skipped reason=opbal_rec_sales_excess",
+                filename,
+            )
+            _try_medica_before_vt = False
         if _skip_vt_for_medica:
             logger.info(
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=medica_opstk",
