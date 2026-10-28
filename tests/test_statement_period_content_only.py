@@ -50,7 +50,36 @@ class TestReportPeriodFromContent(unittest.TestCase):
         pf, pt, source = _extract_report_period_from_content(CLEAR_HEADER)
         self.assertEqual(pf, "2026-08-01")
         self.assertEqual(pt, "2026-08-31")
-        self.assertIn(source, {"report_header", "report_period", "report_from_to"})
+        self.assertIn(
+            source,
+            {"report_header", "report_period", "report_from_to", "report_period_of"},
+        )
+
+    def test_for_the_period_of_mixed_separators(self):
+        text = (
+            "PRAGATI MEDICAL AGENCY\n"
+            "Sales and Stock Statement Report for the period of "
+            "26-08-2026 to 26.09.2026\n"
+            "Mkt By : HIMALAYA\n"
+        )
+        pf, pt, source = _extract_report_period_from_content(text)
+        self.assertEqual(pf, "2026-08-26")
+        self.assertEqual(pt, "2026-09-26")
+        self.assertIsNotNone(source)
+
+    def test_ocr_header_overrides_wrong_vision_period(self):
+        result = empty_result("DOC-20261004-WA0034.pdf", "pdf")
+        result["period_from"] = "2026-10-04"
+        result["period_to"] = "2026-10-04"
+        text = (
+            "Sales and Stock Statement Report for the period of "
+            "26-08-2026 to 26-09-2026\n"
+        )
+        out = _finalize_statement_period_fields(result, content_text=text)
+        self.assertEqual(out.get("period_from"), "2026-08-26")
+        self.assertEqual(out.get("period_to"), "2026-09-26")
+        extra = (out.get("totals") or {}).get("extra") or {}
+        self.assertEqual(extra.get("statement_month"), "2026-09")
 
     def test_no_report_period_returns_null(self):
         pf, pt, source = _extract_report_period_from_content(NO_PERIOD)
