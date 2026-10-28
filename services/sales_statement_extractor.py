@@ -27334,10 +27334,47 @@ def _extract_medivision_op_wsale_photo(
     return _finalize_medivision_op_wsale(result)
 
 
-def _is_pharma_hub_jun_jul_header(text: str) -> bool:
-    """Code / Item stock statement with Stock-Out, Jun, Jul, and Stock-In.
+_PHARMA_HUB_PRIOR_MONTHS = (
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+)
 
-    Ganesh-style sheets have Opening / Purchase / Sales / Closing only.
+
+def _pharma_hub_prior_month_pair(text: str) -> bool:
+    """True when two prior-month headers sit between Stock-Out and Sales (Jun/Jul or Jul/Aug)."""
+    if not text:
+        return False
+    found = [
+        m
+        for m in _PHARMA_HUB_PRIOR_MONTHS
+        if re.search(rf"\b{m}\b", text, re.I)
+    ]
+    if len(found) < 2:
+        return False
+    # Prefer adjacent calendar months (Jun+Jul, Jul+Aug, …).
+    idxs = [_PHARMA_HUB_PRIOR_MONTHS.index(m) for m in found]
+    idxs = sorted(set(idxs))
+    for i in range(len(idxs) - 1):
+        if (idxs[i + 1] - idxs[i]) % 12 in {1, 11}:
+            return True
+    return False
+
+
+def _is_pharma_hub_jun_jul_header(text: str) -> bool:
+    """Code / Item stock statement with Stock-Out, two prior months, and Stock-In.
+
+    Sep statements print Jul|Aug; Aug statements print Jun|Jul. Ganesh-style
+    sheets have Opening / Purchase / Sales / Closing only.
     """
     if not text:
         return False
@@ -27351,7 +27388,7 @@ def _is_pharma_hub_jun_jul_header(text: str) -> bool:
         return False
     if not re.search(r"Stock[-\s]*Out", text, re.I):
         return False
-    if not re.search(r"\bJun\b", text, re.I) or not re.search(r"\bJul\b", text, re.I):
+    if not _pharma_hub_prior_month_pair(text):
         return False
     if not re.search(r"Stock[-\s]*In", text, re.I):
         return False
@@ -27359,7 +27396,7 @@ def _is_pharma_hub_jun_jul_header(text: str) -> bool:
 
 
 def _repair_pharma_hub_jun_jul_sales(item: Dict[str, Any]) -> None:
-    """Sales is the August column. Jun, Jul, and Stock-Out are not sales_qty."""
+    """Sales is the period Sales column. Prior months and Stock-Out are not sales_qty."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     opening = _to_float(item.get("opening_qty"))
     receipts = _to_float(item.get("receipts_qty"))
@@ -27368,7 +27405,14 @@ def _repair_pharma_hub_jun_jul_sales(item: Dict[str, Any]) -> None:
     if _medivision_qty_balances(opening, receipts, sales, closing):
         return
     side: List[float] = []
-    for key in ("june_sale_qty", "july_sale_qty", "stock_out_qty"):
+    for key in (
+        "june_sale_qty",
+        "july_sale_qty",
+        "august_sale_qty",
+        "prior_month_1_qty",
+        "prior_month_2_qty",
+        "stock_out_qty",
+    ):
         if key in extra and extra.get(key) not in (None, ""):
             side.append(_to_float(extra.get(key)))
     if any(abs(value - sales) < 0.01 for value in side) and _medivision_qty_balances(
@@ -27415,16 +27459,58 @@ def _finalize_pharma_hub_jun_jul(result: Dict[str, Any]) -> Optional[Dict[str, A
     result["line_items"] = items
     if not result.get("report_title"):
         result["report_title"] = "Stock Statement"
+    # Vision sometimes parks THE PHARMA HUB in company_name.
+    company = str(result.get("company_name") or "")
+    stockist = str(result.get("stockist_name") or "")
+    if re.search(r"PHARMA\s+HUB", company, re.I) and not re.search(
+        r"PHARMA\s+HUB", stockist, re.I
+    ):
+        result["stockist_name"] = _clean_name(company)
+        result["company_name"] = None
+    title = str(result.get("report_title") or "")
+    if not result.get("company_name"):
+        m_co = re.search(
+            r"Stock\s+Stat(?:e)?ment\s*:\s*(.+)$", title, re.I
+        ) or re.search(
+            r"Stock\s+Stat(?:e)?ment\s*:\s*(.+)$",
+            " ".join(
+                str(result.get(k) or "")
+                for k in ("report_title", "company_name", "stockist_name")
+            ),
+            re.I,
+        )
+        if m_co and not re.search(r"PHARMA\s+HUB", m_co.group(1), re.I):
+            result["company_name"] = _clean_name(m_co.group(1))
     extra_t = result.setdefault("totals", {}).setdefault("extra", {})
     extra_t["extraction_method"] = "pharma_hub_jun_jul_photo"
     extra_t["layout"] = "pharma_hub_jun_jul"
     return result
 
 
-def _pharma_hub_jun_jul_needs_reread(result: Dict[str, Any]) -> bool:
-    """True when Jun or Jul was stored as the August sales quantity."""
+def _pharma_hub_early_qtys_blank(result: Optional[Dict[str, Any]]) -> bool:
+    """Generic Gemini often returns names + zeros for cracked phone photos."""
     if not isinstance(result, dict):
         return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    blank = 0
+    for item in items:
+        if (
+            _to_float(item.get("opening_qty")) == 0
+            and _to_float(item.get("receipts_qty")) == 0
+            and _to_float(item.get("sales_qty")) == 0
+        ):
+            blank += 1
+    return blank >= max(5, int(len(items) * 0.6))
+
+
+def _pharma_hub_jun_jul_needs_reread(result: Dict[str, Any]) -> bool:
+    """True when Jun/Jul/Aug history was stored as period sales, or qtys blank."""
+    if not isinstance(result, dict):
+        return False
+    if _pharma_hub_party(result) and _pharma_hub_early_qtys_blank(result):
+        return True
     extra = ((result.get("totals") or {}).get("extra") or {})
     method = str(extra.get("extraction_method") or "")
     layout = str(extra.get("layout") or "")
@@ -27470,45 +27556,45 @@ def _pharma_hub_jun_jul_needs_reread(result: Dict[str, Any]) -> bool:
 
 _PHARMA_HUB_JUN_JUL_PROMPT = """
 This photo is already upright. Product names read left to right.
-This image is a "Stock Statement" with these columns left to right:
-Code, Item Description, Packing, Opening, Purchase, Stock-Out, Jun, Jul, Sales, Stock-In, Closing, Stock-Value, Sales-Value.
+This image is a "Stock Statement" / "Stock Statment" with these columns left to right:
+1 Code, 2 Item Description, 3 Packing, 4 Opening, 5 Purchase, 6 Stock-Out,
+7 <prior month>, 8 <prior month>, 9 Sales, 10 Stock-In, 11 Closing, 12 Stock-Value, 13 Sales-Value.
 
-The period is the month printed above the table (Aug. 2026 means period_from 2026-08-01 and period_to 2026-08-31).
-The date in the corner (01/09/26) is the print date, not the period end.
-stockist_name is the agency line (for example PHARMA HUB), not the company.
-company_name is the Stock Statement company (for example HIMALAYA DRUGS (ZEAL)).
-product_code is the numeric code. Do not put that code into opening_qty or the product name.
+The two prior-month headers are adjacent calendar months: Jun|Jul on Aug statements, or Jul|Aug on Sep statements.
+The period is the month printed above the table (Sep, 2026 means period_from 2026-09-01 and period_to 2026-09-30).
+The date in the corner (01/10/26) is the print date, not the period end.
+stockist_name is the agency line (for example THE PHARMA HUB), not the company.
+company_name is the Stock Statement company after the colon (for example HIMALAYA DRUGS (ZEAL)).
+product_code is the numeric code on the same row. Do not put that code into opening_qty or the product name.
+Keep each product_name with only that row's quantities — do not slide numbers onto a neighbour row.
 
-A blank cell is 0. Do not shift a later number left into an empty cell.
+A blank cell or dash is 0. Do not shift a later number left into an empty cell.
+Cracked phone glass may hide digits — still read Opening/Purchase/Sales/Closing from each row when visible.
 
-opening_qty = Opening
-receipts_qty = Purchase
-sales_qty = Sales only
-closing_qty = Closing
-closing_value = Stock-Value
-sales_value = Sales-Value
+opening_qty = Opening (col 4)
+receipts_qty = Purchase (col 5)
+sales_qty = Sales only (col 9; never Jul/Aug/Jun in cols 7-8)
+closing_qty = Closing (col 11)
+closing_value = Stock-Value (col 12)
+sales_value = Sales-Value (col 13)
 
-Jun and Jul are earlier months. They are not sales_qty.
+Prior months (Jun/Jul or Jul|Aug) are earlier months. They are not sales_qty.
 Stock-Out and Stock-In are not sales_qty and not Purchase.
-Closing qty is Opening + Purchase - Sales when Stock-Out and Stock-In are blank.
 
 Put the side columns in extra:
 stock_out_qty = Stock-Out
-june_sale_qty = Jun
-july_sale_qty = Jul
+june_sale_qty = first prior-month column (Jun or Jul)
+july_sale_qty = second prior-month column (Jul or Aug)
+august_sale_qty = 0 unless a third prior month is printed
 stock_in_qty = Stock-In
 
-Examples:
-CONFIDO TAB, packing 60, opening 53, Jun 8, Jul 13, Sales 12, closing 41.
-sales_qty is 12, not 8 or 13.
-CLARINA CREAM, packing 30GM, opening 40, Jun 12, Jul 10, Sales 9, closing 31.
-sales_qty is 9.
-LIV 52 TAB, packing 100's, opening 132, Jun 51, Jul 68, Sales 118, closing 14.
-sales_qty is 118, not 51 or 68.
-TALEKT SYP, packing 120ML, opening 192, Jun 18, Jul 29, Sales 23, closing 169, Stock-Value 16777.90.
-sales_qty is 23.
+Examples (teach col 9 vs prior months; read the printed digits on the page):
+CONFIDO TAB packing 60: Opening 41, Jul 13, Aug 12, Sales 24, Closing 17 → sales_qty=24 (not 13 or 12).
+ABANA TAB packing 60's: Opening 43, Jul 11, Aug 12, Sales 8, Closing 35 → sales_qty=8 (not 11 or 12).
+CLARINA CREAM: Opening 31, Jul 10, Aug 9, Sales 11, Closing 20 → sales_qty=11.
+LIV 52 TAB: Opening 14, Purchase 100, Jul 68, Aug 118, Sales 81, Closing 33 → sales_qty=81.
 
-If Stock-Out, Jun, Jul, and Stock-In are not printed, return {"line_items": []}.
+If Stock-Out and the two prior-month columns and Stock-In are not printed, return {"line_items": []}.
 Skip the TOTALS row. Do not invent products.
 
 Return ONLY valid JSON:
@@ -27534,6 +27620,7 @@ Return ONLY valid JSON:
         "stock_out_qty": number,
         "june_sale_qty": number,
         "july_sale_qty": number,
+        "august_sale_qty": number,
         "stock_in_qty": number
       }
     }
@@ -27541,6 +27628,44 @@ Return ONLY valid JSON:
   "totals": {"sales_value": number|null, "closing_value": number|null, "extra": {}}
 }
 """.strip()
+
+
+def _pharma_hub_photo_enhance_enabled() -> bool:
+    """Upscale cracked phone LCD pages and seed product rows into the hub prompt."""
+    return os.getenv("STOCK_PHARMA_HUB_PHOTO_ENHANCE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _pharma_hub_seed_prompt_block(seed_items: Optional[List[Dict[str, Any]]]) -> str:
+    """Append codes/names already seen on the page so qty cells stay on the right row."""
+    if not seed_items:
+        return ""
+    lines: List[str] = []
+    for raw in seed_items:
+        if not isinstance(raw, dict):
+            continue
+        name = str(raw.get("product_name") or "").strip()
+        if not name or re.match(r"^totals?\b", name, re.I):
+            continue
+        code = str(raw.get("product_code") or "").strip()
+        pack = str(raw.get("packing") or "").strip()
+        lines.append(f"{code}\t{name}\t{pack}".strip())
+        if len(lines) >= 40:
+            break
+    if len(lines) < 5:
+        return ""
+    return (
+        "\n\nProducts on this page (read quantities from the image for each; "
+        "do not invent extra products):\n"
+        + "\n".join(lines)
+        + "\n\nCount columns carefully: 1 Code 2 Item 3 Packing 4 Opening 5 Purchase "
+        "6 Stock-Out 7 PriorA 8 PriorB 9 Sales 10 Stock-In 11 Closing 12 Stock-Value "
+        "13 Sales-Value. sales_qty is column 9 only."
+    )
 
 
 def _jpeg_needs_quarter_turn(file_bytes: bytes) -> bool:
@@ -27588,7 +27713,21 @@ def _pharma_hub_page_jpeg(file_bytes: bytes) -> bytes:
     xs = [x for x in range(0, width, 4) if col_is_page(x)]
     if ys and xs:
         image = image.crop((min(xs), min(ys), max(xs) + 4, max(ys) + 4))
-    image = ImageEnhance.Contrast(image).enhance(1.25)
+    if _pharma_hub_photo_enhance_enabled():
+        # Cracked phone LCD: enlarge then sharpen so Opening/Sales/Closing stay separable.
+        image = image.resize(
+            (int(image.width * 1.5), int(image.height * 1.5)),
+            Image.Resampling.LANCZOS,
+        )
+        image = ImageEnhance.Contrast(image).enhance(1.3)
+        image = ImageEnhance.Sharpness(image).enhance(1.5)
+        logger.info(
+            "PHARMA_HUB_JUN_JUL page_jpeg enhance=upscale15 size=%sx%s",
+            image.width,
+            image.height,
+        )
+    else:
+        image = ImageEnhance.Contrast(image).enhance(1.25)
     return _pil_jpeg_bytes(image)
 
 
@@ -27612,15 +27751,44 @@ def _pharma_hub_extract_is_usable(result: Optional[Dict[str, Any]]) -> bool:
     return balanced >= 4
 
 
+def _pharma_hub_has_prior_month_signal(result: Optional[Dict[str, Any]]) -> bool:
+    """True when Stock-Out / prior-month / Stock-In side columns were actually read.
+
+    Opening/Purchase/Sales/Closing-only sheets (Ganesh-style) must not keep this reader.
+    """
+    if not isinstance(result, dict):
+        return False
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if any(
+            abs(_to_float(extra.get(key))) > 0.001
+            for key in (
+                "stock_out_qty",
+                "june_sale_qty",
+                "july_sale_qty",
+                "august_sale_qty",
+                "prior_month_1_qty",
+                "prior_month_2_qty",
+                "stock_in_qty",
+            )
+        ):
+            hits += 1
+            if hits >= 2:
+                return True
+    return False
+
+
 def _extract_pharma_hub_jun_jul_photo(
     file_bytes: bytes,
     filename: str,
     ext: str,
     force: bool = False,
+    seed_items: Optional[List[Dict[str, Any]]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Read the Stock-Out / Jun / Jul / Sales / Stock-In photo. Other images return None."""
-    import os
-
     from services.vertex_gemini_client import generate_content_via_vertex
 
     if not force:
@@ -27636,13 +27804,33 @@ def _extract_pharma_hub_jun_jul_photo(
         page = file_bytes
     mime = "image/jpeg" if page is not file_bytes else _image_mime(ext)
     b64 = base64.b64encode(page).decode("ascii")
-    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    model = os.getenv("STOCK_PHARMA_HUB_VISION_MODEL", "").strip() or os.getenv(
+        "VISION_MODEL", ""
+    ).strip()
+    if not model:
+        # Cracked LCD Jul|Aug sheets need the fuller flash model more often than lite.
+        model = (
+            "gemini-2.5-flash"
+            if _pharma_hub_photo_enhance_enabled()
+            else "gemini-2.5-flash-lite"
+        )
+    prompt = _PHARMA_HUB_JUN_JUL_PROMPT
+    if _pharma_hub_photo_enhance_enabled():
+        seed_block = _pharma_hub_seed_prompt_block(seed_items)
+        if seed_block:
+            prompt = prompt + seed_block
+            logger.info(
+                "PHARMA_HUB_JUN_JUL seed_rows=%s model=%s file=%s",
+                seed_block.count("\n") - 3,
+                model,
+                filename,
+            )
     payload = {
         "contents": [
             {
                 "role": "user",
                 "parts": [
-                    {"text": _PHARMA_HUB_JUN_JUL_PROMPT},
+                    {"text": prompt},
                     {"inline_data": {"mime_type": mime, "data": b64}},
                 ],
             }
@@ -27667,6 +27855,18 @@ def _extract_pharma_hub_jun_jul_photo(
     result = _apply_parsed_sales_json(result, parsed)
     result = _finalize_pharma_hub_jun_jul(result)
     if not _pharma_hub_extract_is_usable(result):
+        logger.info(
+            "PHARMA_HUB_JUN_JUL unusable file=%s rows=%s",
+            filename,
+            len((result or {}).get("line_items") or []),
+        )
+        return None
+    if not _pharma_hub_has_prior_month_signal(result):
+        logger.info(
+            "PHARMA_HUB_JUN_JUL no_prior_month_signal file=%s rows=%s",
+            filename,
+            len(result.get("line_items") or []),
+        )
         return None
     return result
 
@@ -53260,6 +53460,13 @@ def _header_driven_expected_closing(item: Dict[str, Any], roles: set) -> float:
     return round(closing, 2)
 
 
+def _excel_mobile_blank_qty(value: Any) -> float:
+    """Header-driven stock photos: blank/dash cells are 0, not missing."""
+    if value in (None, "", "-", "—", "."):
+        return 0.0
+    return _to_float(value)
+
+
 def _header_driven_items(
     parsed: Dict[str, Any], roles: set
 ) -> List[Dict[str, Any]]:
@@ -55313,14 +55520,24 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         return phone_rate
     hub_tried = False
 
-    def _try_pharma_hub_photo():
+    def _try_pharma_hub_photo(seed_from: Optional[Dict[str, Any]] = None):
         nonlocal hub_tried
         if hub_tried:
             return None
         hub_tried = True
+        seed_src = seed_from if isinstance(seed_from, dict) else early_vision
+        seed_rows = (
+            (seed_src or {}).get("line_items")
+            if isinstance(seed_src, dict)
+            else None
+        )
         try:
             return _extract_pharma_hub_jun_jul_photo(
-                file_bytes, filename, ext, force=True
+                file_bytes,
+                filename,
+                ext,
+                force=True,
+                seed_items=seed_rows if isinstance(seed_rows, list) else None,
             )
         except Exception as exc:
             logger.warning("Pharma Hub Jun/Jul photo skipped: %s", exc)
@@ -55396,6 +55613,18 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     extra_op["extraction_method"] = "opbal_issue_closing_photo"
                     extra_op["layout"] = "opbal_issue_closing"
                     return opbal
+                if (
+                    not hub_tried
+                    and (
+                        _pharma_hub_jun_jul_needs_reread(early_vision)
+                        or _pharma_hub_party(early_vision)
+                        or _pharma_hub_party(driven)
+                        or _pharma_hub_early_qtys_blank(driven)
+                    )
+                ):
+                    hub = _try_pharma_hub_photo(seed_from=driven)
+                    if hub and hub.get("line_items"):
+                        return hub
             driven_roles = set(
                 ((driven.get("totals") or {}).get("extra") or {}).get("column_roles")
                 or []
