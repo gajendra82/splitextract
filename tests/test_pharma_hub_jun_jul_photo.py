@@ -19,6 +19,9 @@ from services.sales_statement_extractor import (
     _pharma_hub_jun_jul_needs_reread,
     _pharma_hub_page_jpeg,
     _pharma_hub_party,
+    _pharma_hub_has_prior_month_signal,
+    _pharma_hub_photo_enhance_enabled,
+    _pharma_hub_seed_prompt_block,
     empty_line_item,
     empty_result,
 )
@@ -29,6 +32,13 @@ PHARMA HUB
 Stock Statment : HIMALAYA DRUGS (ZEAL)
 Aug. 2026
 Code Item Description Packing Opening Purchase Stock-Out Jun Jul Sales Stock-In Closing Stock-Value Sales-Value
+"""
+
+HEADER_SEP = """
+THE PHARMA HUB
+Stock Statment : HIMALAYA DRUGS (ZEAL)
+Sep, 2026
+Code Item Description Packing Opening Purchase Stock-Out Jul Aug Sales Stock-In Closing Stock-Value Sales-Value
 """
 
 GANESH = (
@@ -42,6 +52,7 @@ GANESH = (
 class TestPharmaHubJunJulPhoto(unittest.TestCase):
     def test_header_requires_the_extra_columns(self):
         self.assertTrue(_is_pharma_hub_jun_jul_header(HEADER))
+        self.assertTrue(_is_pharma_hub_jun_jul_header(HEADER_SEP))
         self.assertFalse(_is_pharma_hub_jun_jul_header(GANESH))
         self.assertTrue(_is_code_item_stock_statement_text(GANESH))
         self.assertFalse(_is_pharma_hub_jun_jul_header(""))
@@ -50,6 +61,26 @@ class TestPharmaHubJunJulPhoto(unittest.TestCase):
                 "Stock Statement (Datewise)\nOpening Purchase Sales Closing"
             )
         )
+
+    def test_blank_early_vision_triggers_reread_for_pharma_hub(self):
+        from services.sales_statement_extractor import (
+            _pharma_hub_early_qtys_blank,
+            _pharma_hub_jun_jul_needs_reread,
+        )
+
+        result = empty_result("hub.jpg", "jpg")
+        result["company_name"] = "THE PHARMA HUB"
+        result["report_title"] = "Stock Statment : HIMALAYA DRUGS (ZEAL)"
+        result["line_items"] = []
+        for i in range(8):
+            item = empty_line_item()
+            item["product_name"] = f"ITEM {i}"
+            item["opening_qty"] = 0.0
+            item["sales_qty"] = 0.0
+            item["closing_qty"] = float(i)
+            result["line_items"].append(item)
+        self.assertTrue(_pharma_hub_early_qtys_blank(result))
+        self.assertTrue(_pharma_hub_jun_jul_needs_reread(result))
 
     def test_july_qty_is_not_kept_as_august_sales(self):
         result = empty_result("hub.jpg", "jpg")
@@ -172,6 +203,55 @@ class TestPharmaHubJunJulPhoto(unittest.TestCase):
             item["closing_qty"] = 10
             result["line_items"].append(item)
         self.assertFalse(_pharma_hub_extract_is_usable(result))
+
+    def test_seed_prompt_lists_codes_from_early_rows(self):
+        self.assertTrue(_pharma_hub_photo_enhance_enabled())
+        seed = []
+        for index, name in enumerate(
+            (
+                "ABANA TAB",
+                "CLARINA CREAM",
+                "CONFIDO TAB",
+                "LIV 52 TAB",
+                "PILEX TAB",
+            ),
+            start=1,
+        ):
+            item = empty_line_item()
+            item["product_code"] = str(1300 + index)
+            item["product_name"] = name
+            item["packing"] = "60's"
+            seed.append(item)
+        block = _pharma_hub_seed_prompt_block(seed)
+        self.assertIn("ABANA TAB", block)
+        self.assertIn("1301", block)
+        self.assertIn("sales_qty is column 9 only", block)
+        self.assertEqual(_pharma_hub_seed_prompt_block([]), "")
+        self.assertEqual(_pharma_hub_seed_prompt_block(seed[:2]), "")
+
+    def test_prior_month_signal_rejects_opening_sales_only_sheets(self):
+        bare = empty_result("ganesh.jpg", "jpg")
+        bare["line_items"] = []
+        for index in range(8):
+            item = empty_line_item()
+            item["product_name"] = f"ITEM {index}"
+            item["opening_qty"] = 40
+            item["sales_qty"] = 10
+            item["closing_qty"] = 30
+            bare["line_items"].append(item)
+        self.assertFalse(_pharma_hub_has_prior_month_signal(bare))
+
+        hub = empty_result("hub.jpg", "jpg")
+        hub["line_items"] = []
+        for index in range(8):
+            item = empty_line_item()
+            item["product_name"] = f"ITEM {index}"
+            item["opening_qty"] = 40
+            item["sales_qty"] = 10
+            item["closing_qty"] = 30
+            item["extra"]["july_sale_qty"] = 4 if index < 3 else 0
+            hub["line_items"].append(item)
+        self.assertTrue(_pharma_hub_has_prior_month_signal(hub))
 
 
 if __name__ == "__main__":

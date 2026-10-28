@@ -11,6 +11,9 @@ from services.sales_statement_extractor import (
     _is_opbal_rec_sales_excess_text,
     _looks_like_zandra_stock_sale_text,
     _opbal_rec_sales_excess_header_centres,
+    _opbal_sales_stock_choose_sales_closing,
+    _parse_opbal_rec_sales_excess_ocr_line,
+    _parse_opbal_rec_sales_excess_ocr_text,
     _parse_opbal_rec_sales_excess_words_pages,
 )
 
@@ -199,6 +202,63 @@ class TestOpbalRecSalesExcessPages(unittest.TestCase):
             self.assertIsNone(
                 _parse_opbal_rec_sales_excess_words_pages(pages, "sau.pdf")
             )
+
+
+class TestOpbalSalesStockIdentity(unittest.TestCase):
+    def test_for_mn_plus_total_under_stock(self):
+        # AACTARIL: OPBAL8 REC72 AVG14 LST15 FOR15 TOTAL65 EXCESS37
+        sales, closing, tag = _opbal_sales_stock_choose_sales_closing(
+            8, 72, 15, 65, 37
+        )
+        self.assertEqual(tag, "for_total")
+        self.assertEqual(sales, 15.0)
+        self.assertEqual(closing, 65.0)
+
+    def test_total_plus_excess_under_sales(self):
+        # CYSTONE SAU: 2 0 8 6 2 0 → last three 6,2,0
+        sales, closing, tag = _opbal_sales_stock_choose_sales_closing(2, 0, 6, 2, 0)
+        self.assertEqual(tag, "total_excess")
+        self.assertEqual(sales, 2.0)
+        self.assertEqual(closing, 0.0)
+
+
+class TestOpbalRecSalesExcessOcr(unittest.TestCase):
+    def test_bs_pharma_ocr_line_uses_for_mn_not_avg(self):
+        item = _parse_opbal_rec_sales_excess_ocr_line(
+            "AACTARIL SOAP 75 GM 8 72 14 15 15 65 37"
+        )
+        self.assertIsNotNone(item)
+        self.assertEqual(item["product_name"], "AACTARIL SOAP")
+        self.assertEqual(item["opening_qty"], 8.0)
+        self.assertEqual(item["receipts_qty"], 72.0)
+        self.assertEqual(item["sales_qty"], 15.0)
+        self.assertEqual(item["closing_qty"], 65.0)
+        self.assertEqual(item["extra"].get("excess_qty"), 37.0)
+        self.assertFalse(item.get("expiry_damage_qty"))
+
+    def test_ocr_text_page_extracts_rows(self):
+        text = """
+STOCK & SALES STATEMENT    B. S. PHARMA    Page 1/2
+For the month Sep 2026
+PRODUCT NAME PACKING OPBAL REC. AVG. LST MN FOR MN TOTAL EXCESS Nr. EXP.
+HIMALAYA WELLNESS CO{ZEALDIV}
+AACTARIL SOAP 75 GM 8 72 14 15 15 65 37
+ABANA TAB. 60'S 59 0 29 34 25 34 0
+CONFIDO TABS. 60'S 187 0 22 17 36 151 107
+"""
+        result = _parse_opbal_rec_sales_excess_ocr_text(text, "36.jpg", "jpg")
+        self.assertIsNotNone(result)
+        by_name = {i["product_name"]: i for i in result["line_items"]}
+        self.assertEqual(by_name["AACTARIL SOAP"]["sales_qty"], 15.0)
+        self.assertEqual(by_name["AACTARIL SOAP"]["closing_qty"], 65.0)
+        self.assertEqual(by_name["ABANA TAB."]["sales_qty"], 25.0)
+        self.assertEqual(by_name["ABANA TAB."]["closing_qty"], 34.0)
+        self.assertEqual(by_name["CONFIDO TABS."]["sales_qty"], 36.0)
+        self.assertEqual(by_name["CONFIDO TABS."]["closing_qty"], 151.0)
+        self.assertEqual(
+            result["totals"]["extra"]["extraction_method"],
+            "opbal_rec_sales_excess_ocr",
+        )
 
 
 if __name__ == "__main__":

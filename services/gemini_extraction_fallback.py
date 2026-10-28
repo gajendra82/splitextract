@@ -831,6 +831,15 @@ def maybe_apply_gemini_fallback(
         return result
 
     if _allowlist_skip(
+        "branch_opening_receipt_closing_balance",
+        str(extra.get("extraction_method") or "")
+        == "branch_opening_receipt_closing_balance"
+        or str(extra.get("layout") or "")
+        == "branch_opening_receipt_closing_balance",
+    ):
+        return result
+
+    if _allowlist_skip(
         "code_item_stock_statement",
         str(extra.get("extraction_method") or "")
         in {
