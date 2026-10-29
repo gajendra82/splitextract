@@ -7117,6 +7117,212 @@ def _apply_stock_metrics(item: Dict[str, Any], roles, metrics) -> None:
         item["extra"]["issue_value"] = item["sales_value"]
 
 
+# ---------------------------------------------------------------------------
+# DEEPAA-style: STOCK AND SALES STATEMENT FOR THE MONTH OF ...
+# Fixed-width columns determined from the header keyword positions.
+# ---------------------------------------------------------------------------
+
+_DEEPAA_HEADER_RE = re.compile(
+    r"PRODUCT\s+NAME\b.*\bOPEN\b.*\bREC.*\bTOTAL\b.*\bSALES\b.*\bCLOSE",
+    re.I,
+)
+
+
+def _is_deepaa_stock_sales_txt(text: str) -> bool:
+    if not re.search(r"STOCK AND SALES STATEMENT\s+FOR\s+THE\s+MONTH", text, re.I):
+        return False
+    return bool(_DEEPAA_HEADER_RE.search(text))
+
+
+def _deepaa_col_slices(header: str):
+    """Return (slices, product_end) from the DEEPAA header line."""
+    cols: List[Tuple[int, int, str]] = []
+    for pat, role in (
+        (r"\bOPEN\b", "opening_qty"),
+        (r"\bREC", "receipts_qty"),
+        (r"\bTOTAL\b", "total_stock"),
+        (r"\bSALES\b", "sales_qty"),
+        (r"\bCLOSE\b", "closing_qty"),
+        (r"\bORD", "order_qty"),
+        (r"\bEXCES\b", "excess_value"),
+    ):
+        m = re.search(pat, header, re.I)
+        if m:
+            cols.append((m.start(), m.end(), role))
+    for i, m in enumerate(re.finditer(r"\bADJ\b", header, re.I)):
+        cols.append((m.start(), m.end(), "adj_minus" if i == 0 else "adj_plus"))
+    for idx, mm in enumerate(
+        re.finditer(
+            r"\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b", header, re.I
+        )
+    ):
+        cols.append((mm.start(), mm.end(), f"prev{idx + 1}_sales_qty"))
+    cols.sort(key=lambda c: c[0])
+    if len(cols) < 5:
+        return None, 0
+    product_end = cols[0][0]
+    slices: List[Tuple[int, int, str]] = []
+    for i, (ks, ke, role) in enumerate(cols):
+        centre = (ks + ke) // 2
+        if i == 0:
+            left = product_end
+        else:
+            prev_c = (cols[i - 1][0] + cols[i - 1][1]) // 2
+            left = (prev_c + centre) // 2
+        if i == len(cols) - 1:
+            right = max(len(header) + 10, 130)
+        else:
+            next_c = (cols[i + 1][0] + cols[i + 1][1]) // 2
+            right = (centre + next_c) // 2
+        slices.append((left, right, role))
+    return slices, product_end
+
+
+def _parse_deepaa_stock_sales_txt(
+    text: str, filename: str
+) -> Optional[Dict[str, Any]]:
+    if not _is_deepaa_stock_sales_txt(text):
+        return None
+    lines = text.splitlines()
+    result = empty_result(filename, "txt")
+
+    for ln in lines:
+        m = re.search(
+            r"STOCK AND SALES STATEMENT\s+FOR\s+THE\s+MONTH\s+OF\s+(.+)", ln, re.I
+        )
+        if m:
+            result["report_title"] = _clean_name(ln.strip())[:120]
+            m_month = re.search(r"(\w+)\s*['‘’]\s*(\d{4})", m.group(1))
+            if m_month:
+                result["totals"]["extra"]["statement_month"] = (
+                    f"{m_month.group(1)} {m_month.group(2)}"
+                )
+            m_date = re.search(
+                r"Run\s*Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})", ln, re.I
+            )
+            if m_date:
+                result["period_to"] = _normalize_date(m_date.group(1))
+            break
+
+    non_empty = [
+        ln.strip()
+        for ln in lines
+        if ln.strip() and not ln.strip().startswith("=")
+    ]
+    if non_empty and not re.search(
+        r"STOCK AND SALES|PRODUCT NAME|SUP:", non_empty[0], re.I
+    ):
+        result["stockist_name"] = _clean_name(non_empty[0])
+    if len(non_empty) > 1 and not re.search(
+        r"STOCK AND SALES|PRODUCT NAME|SUP:|={3,}", non_empty[1], re.I
+    ):
+        result["stockist_address"] = _clean_name(non_empty[1])
+
+    for ln in lines:
+        m_sup = re.match(r"\s*SUP:(.+?)(?:\s+MFR:(.+))?$", ln, re.I)
+        if m_sup:
+            result["company_name"] = _clean_name(m_sup.group(1).strip())
+            break
+
+    header_idx = None
+    for i, ln in enumerate(lines):
+        if _DEEPAA_HEADER_RE.search(ln):
+            header_idx = i
+            break
+    if header_idx is None:
+        return None
+
+    col_slices, product_end = _deepaa_col_slices(lines[header_idx])
+    if not col_slices:
+        return None
+
+    data_start = header_idx + 1
+    for j in range(header_idx + 1, min(header_idx + 4, len(lines))):
+        if j < len(lines) and (
+            lines[j].strip().startswith("=")
+            or re.search(r"STOCK\s+EIPT|\(-\)\s+\(\+\)", lines[j], re.I)
+        ):
+            data_start = j + 1
+
+    items: List[Dict[str, Any]] = []
+    core_roles = {"opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+
+    for ln in lines[data_start:]:
+        raw = ln.strip()
+        if not raw or re.match(r"[\s=\-_*]+$", raw):
+            continue
+        if re.search(
+            r"Cl\.Stk\s+Value|PERUM|LONG\s+PENDING|SALES\s+NOT\s+ACCOUNTED",
+            raw, re.I,
+        ):
+            break
+        if re.match(r"\s*SUP:", raw, re.I):
+            m_sup = re.match(r"\s*SUP:(.+?)(?:\s+MFR:(.+))?$", raw, re.I)
+            if m_sup:
+                result["company_name"] = _clean_name(m_sup.group(1).strip())
+            continue
+        if re.search(r"PRODUCT\s+NAME|^={3,}|^-{10,}", raw, re.I):
+            continue
+
+        product_text = ln[:product_end].strip() if len(ln) > product_end else ""
+        if not product_text or len(re.sub(r"[^A-Za-z]", "", product_text)) < 2:
+            continue
+
+        values: Dict[str, Optional[float]] = {}
+        any_num = False
+        for sl_start, sl_end, role in col_slices:
+            cell = ln[sl_start:min(sl_end, len(ln))] if sl_start < len(ln) else ""
+            cell = re.sub(r"[#*]", "", cell).strip()
+            m_num = re.search(r"-?\d+(?:\.\d+)?", cell)
+            if m_num:
+                values[role] = _to_float(m_num.group(0))
+                any_num = True
+            else:
+                values[role] = None
+        if not any_num:
+            continue
+
+        tokens = product_text.split()
+        packing = None
+        if tokens:
+            tail = tokens[-1].rstrip("*")
+            if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP|LT|KG", tail, re.I):
+                packing = tail
+                tokens = tokens[:-1]
+        name = _clean_name(" ".join(tokens)) if tokens else product_text
+
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        for role in core_roles:
+            item[role] = values.get(role)
+        for role, val in values.items():
+            if role not in core_roles and val is not None:
+                item["extra"][role] = val
+        item["extra"]["layout"] = "deepaa_stock_sales"
+        items.append(item)
+
+    if not items:
+        return None
+
+    for i, ln in enumerate(lines):
+        if re.search(r"Cl\.Stk\s+Value", ln, re.I) and i + 1 < len(lines):
+            nums = re.findall(r"-?\d[\d,]*(?:\.\d+)?", lines[i + 1])
+            nums = [n.replace(",", "") for n in nums]
+            if nums:
+                result["totals"]["closing_value"] = _to_float(nums[0])
+            if len(nums) >= 2:
+                result["totals"]["extra"]["excess_stock_value"] = _to_float(nums[1])
+            if len(nums) >= 3:
+                result["totals"]["sales_value"] = _to_float(nums[2])
+            break
+
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "deepaa_stock_sales_txt"
+    result["totals"]["extra"]["statement_count"] = 1
+    return result
+
+
 def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, Any]]:
     """Parse other fixed stock-statement TXT layouts. Unused when a specific parser already matched."""
     cleaned = _strip_printer_controls(text)
@@ -7574,6 +7780,10 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             _txt_maybe_native_resolver(fixed, text.splitlines(), column_plan=plan),
             content_text=text,
         )
+
+    deepaa = _parse_deepaa_stock_sales_txt(text, filename)
+    if deepaa and deepaa.get("line_items"):
+        return _finalize_statement_period_fields(deepaa, content_text=text)
 
     if _is_product_stock_report_text(text):
         psr = _parse_product_stock_report(text, filename, "txt")
