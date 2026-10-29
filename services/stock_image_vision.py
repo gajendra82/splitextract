@@ -906,11 +906,37 @@ def apply_direct_stock_image_gemini(
             }
         return psr
 
-    if (
+    # Medica OPSTK/PURCH/STK VAL only — do not steal Opening stock /
+    # Purchased Qty / Sales Qty / Closing Stock (STOCK & SALES STATEMENT)
+    # sheets that landed in generic early Vision.
+    _medica_title = bool(re.fullmatch(r"STOCK STATEMENT", title, re.I))
+    _medica_peek = bool(
+        re.search(r"\bOPSTK\b", peek_text or "", re.I)
+        and re.search(r"\bPURCH\b", peek_text or "", re.I)
+    )
+    _medica_prefer = (
         method.startswith("pharma_hub")
-        or method in {"gemini_vision", "gemini_extraction_fallback"}
-        or re.fullmatch(r"STOCK STATEMENT", title, re.I)
-    ):
+        or _medica_title
+        or (
+            method in {"gemini_vision", "gemini_extraction_fallback"}
+            and _medica_peek
+            and os.getenv(
+                "STOCK_MEDICA_PREFER_ON_GENERIC_VISION", "true"
+            ).strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+    )
+    if not _medica_prefer and method in {
+        "gemini_vision",
+        "gemini_extraction_fallback",
+    }:
+        logger.info(
+            "STOCK_IMAGE_GEMINI file=%s medica preferred skipped "
+            "reason=not_medica_opstk title=%s",
+            filename,
+            (title or "")[:60],
+        )
+    if _medica_prefer:
         try:
             from services.sales_statement_extractor import (
                 _extract_medica_stock_statement_vision,

@@ -1075,6 +1075,14 @@ def _apply_cell_layout_qty_value_repair(
             "reason=ssa_purchase_qty_grid"
         )
         return columns
+    # Group Wise Sales Free/Ret columns: free_in_qty would otherwise force a
+    # qty|value remap that parks Sales Qty under sales_value / closing_value.
+    if _columns_use_group_wise_sequence(columns):
+        logger.info(
+            "VISION_TABLE cell_layout_qty_value_repair skipped "
+            "reason=group_wise_sales_sequence"
+        )
+        return columns
 
     core = {
         str(c.get("canonical"))
@@ -1299,6 +1307,14 @@ def build_table_prompt() -> str:
         "printed. stockist_name is the letterhead, never a column header. "
         "Closing Stock QTY and VALUE are "
         "separate cells — never put the VALUE money into the QTY cell. "
+        "MR Report / Stock and Sales grids with "
+        "OPENING STK QTY|OPENING VALUE|PURCHASE QTY|PURCHASE VALUE|PUR FREE QTY|"
+        "SALE QTY|SALE VALUE|SALE FREE QTY|CLOSING STOCK|CLOSING VALUE (PUR RATE): "
+        "emit ONE header cell per printed column with the full two-line text "
+        "(e.g. 'OPENING STK QTY', 'CLOSING STOCK', 'CLOSING VALUE (PUR RATE)'), "
+        "never one cell per wrapped word. Keep blank PUR FREE / SALE FREE as null "
+        "so SALE and CLOSING do not shift left. Opening/Purchase/Sale/Closing each "
+        "have a qty column and a value column — never put value money into qty. "
         "LstSL|Open|Recd.|Sales|Close|Order|Pend|LstMove|Stk.Value sheets: "
         "Sales and Close are TWO separate columns — never merge them into one "
         "'Sales Close' header or one cell. LstSL maps to ignore/lms, Open to "
@@ -2047,6 +2063,25 @@ def _exif_orient_enabled() -> bool:
     }
 
 
+def _exif_skip_landscape_buffer_enabled() -> bool:
+    """STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER — default ON.
+
+    Some landscape stock-statement photos already store w>h pixels but carry a
+    bogus Orientation=6/8 that would rotate them to portrait. Gemini then reads
+    the grid sideways and scrambles OPENING/PURCHASE/SALE/CLOSING qty+value.
+    Skip transpose only for that landscape→portrait case; true portrait buffers
+    still transpose as before.
+    """
+    return os.getenv(
+        "STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _exif_orient_image_bytes(img: bytes) -> bytes:
     """Re-encode upright pixels when EXIF Orientation is set (no-op otherwise)."""
     if not img or not _exif_orient_enabled():
@@ -2062,6 +2097,23 @@ def _exif_orient_image_bytes(img: bytes) -> bytes:
             oriented = ImageOps.exif_transpose(im)
             if oriented is None:
                 return img
+            ow, oh = int(im.size[0]), int(im.size[1])
+            nw, nh = int(oriented.size[0]), int(oriented.size[1])
+            if (
+                _exif_skip_landscape_buffer_enabled()
+                and ow > oh
+                and nh > nw
+            ):
+                logger.info(
+                    "VISION_TABLE_EXIF_TRANSPOSE skipped landscape_buffer "
+                    "orientation=%s size=%sx%s would=%sx%s",
+                    ori,
+                    ow,
+                    oh,
+                    nw,
+                    nh,
+                )
+                return img
             buf = io.BytesIO()
             fmt = "JPEG" if img[:2] == b"\xff\xd8" else "PNG"
             save_kw: Dict[str, Any] = {}
@@ -2074,10 +2126,10 @@ def _exif_orient_image_bytes(img: bytes) -> bytes:
             logger.info(
                 "VISION_TABLE_EXIF_TRANSPOSE orientation=%s size=%sx%s -> %sx%s",
                 ori,
-                im.size[0],
-                im.size[1],
-                oriented.size[0],
-                oriented.size[1],
+                ow,
+                oh,
+                nw,
+                nh,
             )
             return out or img
     except Exception as exc:
@@ -2826,8 +2878,43 @@ def _closing_value_missing(item: Dict[str, Any]) -> bool:
         return cv in {"", "-", "—", "–"}
 
 
+def _vision_result_is_qty_only_op_pur_sales_cl(result: Dict[str, Any]) -> bool:
+    """Opening + purchase + sales + closing headers with no VALUE column."""
+    extra = (result.get("totals") or {}).get("extra") or {}
+    column_map = extra.get("column_map") or []
+    texts: List[str] = []
+    canons: set = set()
+    if isinstance(column_map, list):
+        for col in column_map:
+            if not isinstance(col, dict):
+                continue
+            texts.append(str(col.get("header_text") or ""))
+            c = str(col.get("canonical") or "").strip()
+            if c:
+                canons.add(c)
+    if not texts:
+        items = result.get("line_items") or []
+        first = next((i for i in items if isinstance(i, dict)), None) or {}
+        headers = ((first.get("extra") or {}).get("vision_column_headers") or [])
+        texts = [str(h or "") for h in headers]
+    blob = " ".join(texts).upper()
+    if re.search(r"\bVAL(?:UE)?\b", blob):
+        return False
+    has_open = ("opening_qty" in canons) or bool(re.search(r"\bOPEN", blob))
+    has_pur = ("purchase_qty" in canons) or bool(
+        re.search(r"\bPURCHAS|\bRECEIPT|\bRECD\b|\bRCPTS?\b", blob)
+    )
+    has_sale = ("sales_qty" in canons) or bool(re.search(r"\bSALE|\bISSUE\b", blob))
+    has_close = ("closing_qty" in canons) or bool(re.search(r"\bCLOS", blob))
+    return bool(has_open and has_pur and has_sale and has_close)
+
+
 def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
-    """True when Vision headers are OPENING/RECEIPT/ISSUE/CLOSING (no VALUE)."""
+    """True when Vision headers are qty-only movement cols (no VALUE).
+
+    Covers OPENING/RECEIPT/ISSUE/CLOSING and Opening stock / Purchased Qty /
+    Sales Qty / Closing Stock. Large whole closings (e.g. 975) must stay qty.
+    """
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     headers = extra.get("vision_column_headers") or []
     if not isinstance(headers, (list, tuple)) or not headers:
@@ -2837,7 +2924,9 @@ def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
         return False
     has_open = bool(re.search(r"\bOPEN", blob))
     has_close = bool(re.search(r"\bCLOS", blob))
-    has_mid = bool(re.search(r"\b(?:RECEIPT|ISSUE|SALE)\b", blob))
+    has_mid = bool(
+        re.search(r"\b(?:RECEIPT|ISSUE|SALE|PURCH)", blob)
+    )
     return has_open and has_close and has_mid
 
 
@@ -3701,6 +3790,237 @@ def _repair_free_in_issue_closing_shift(item: Dict[str, Any]) -> bool:
         item.get("closing_value"),
     )
     return True
+
+
+def _pur_free_sale_closing_shift_enabled() -> bool:
+    """Blank PUR FREE / SALE FREE dropped → SALE/CLOSING slid left. Default ON."""
+    return os.getenv(
+        "STOCK_VISION_PUR_FREE_SALE_CLOSING_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_pur_free_sale_closing_left_shift(item: Dict[str, Any]) -> bool:
+    """Re-slot when blank PUR FREE (or SALE FREE) was dropped and columns slid left.
+
+    MR Report / Stock and Sales:
+      OPENING|VALUE|PURCHASE|VALUE|PUR FREE|SALE QTY|SALE VALUE|SALE FREE|
+      CLOSING|CLOSING VALUE
+    Vision often omits the empty PUR FREE cell so:
+      free_in ← sale qty, sales_qty ← sale value, free_out ← closing qty,
+      closing_qty ← closing value.
+    Or only SALE FREE is dropped:
+      free_out ← closing qty, closing_qty ← closing value.
+    Move printed digits only when opening+purchase−sales ≈ closing. Never invents.
+    """
+    if not _pur_free_sale_closing_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+
+    free_in = extra.get("free_in_qty")
+    free_out = extra.get("free_out_qty")
+    sq = item.get("sales_qty")
+    sv = item.get("sales_value")
+    cq = item.get("closing_qty")
+    cv = item.get("closing_value")
+
+    # Case A: PUR FREE blank dropped — sale parked in free_in, closing in free_out.
+    case_a = (
+        fs.get("free_in_qty") == "printed"
+        and fs.get("free_out_qty") == "printed"
+        and _looks_small_qty(free_in)
+        and _looks_money(sq)
+        and _looks_small_qty(free_out)
+        and _looks_money(cq)
+        and (sv is None or fs.get("sales_value") != "printed")
+        and (cv is None or fs.get("closing_value") != "printed")
+    )
+    # Case B: only SALE FREE blank dropped — closing parked in free_out.
+    case_b = (
+        not case_a
+        and fs.get("free_out_qty") == "printed"
+        and _looks_small_qty(free_out)
+        and _looks_money(cq)
+        and (cv is None or fs.get("closing_value") != "printed")
+        and (
+            fs.get("sales_qty") == "printed"
+            or _qty_is_blank_zero(sq)
+            or sq is None
+        )
+        and not _looks_money(sq)
+    )
+    # Case C: SALE FREE + CLOSING blank dropped — closing qty in sales_value,
+    # closing money in free_out (SALE QTY/VALUE still shifted into free_in/sales).
+    case_c = (
+        not case_a
+        and not case_b
+        and fs.get("free_in_qty") == "printed"
+        and fs.get("free_out_qty") == "printed"
+        and fs.get("sales_value") == "printed"
+        and _looks_small_qty(free_in)
+        and _looks_money(sq)
+        and _looks_small_qty(sv)
+        and _looks_money(free_out)
+        and (cq is None or fs.get("closing_qty") != "printed")
+        and (cv is None or fs.get("closing_value") != "printed")
+    )
+    if not case_a and not case_b and not case_c:
+        return False
+
+    try:
+        oq = float(item.get("opening_qty") or 0)
+        rq = float(item.get("receipts_qty") or 0)
+        if case_a:
+            sale_n = float(free_in)
+            close_n = float(free_out)
+        elif case_c:
+            sale_n = float(free_in)
+            close_n = float(sv)
+        else:
+            sale_n = float(sq or 0)
+            close_n = float(free_out)
+        if abs((oq + rq - sale_n) - close_n) > 0.51:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    if case_a:
+        item["sales_qty"] = float(free_in)
+        item["sales_value"] = float(sq)
+        item["closing_qty"] = float(free_out)
+        item["closing_value"] = float(cq)
+        extra["free_in_qty"] = None
+        extra["free_out_qty"] = None
+        fs["free_in_qty"] = "missing"
+        fs["free_out_qty"] = "missing"
+        fs["sales_qty"] = "printed"
+        fs["sales_value"] = "printed"
+        fs["closing_qty"] = "printed"
+        fs["closing_value"] = "printed"
+        case_tag = "a"
+    elif case_c:
+        item["sales_qty"] = float(free_in)
+        item["sales_value"] = float(sq)
+        item["closing_qty"] = float(sv)
+        item["closing_value"] = float(free_out)
+        extra["free_in_qty"] = None
+        extra["free_out_qty"] = None
+        fs["free_in_qty"] = "missing"
+        fs["free_out_qty"] = "missing"
+        fs["sales_qty"] = "printed"
+        fs["sales_value"] = "printed"
+        fs["closing_qty"] = "printed"
+        fs["closing_value"] = "printed"
+        case_tag = "c"
+    else:
+        item["closing_qty"] = float(free_out)
+        item["closing_value"] = float(cq)
+        extra["free_out_qty"] = None
+        fs["free_out_qty"] = "missing"
+        fs["closing_qty"] = "printed"
+        fs["closing_value"] = "printed"
+        case_tag = "b"
+
+    flags = list(extra.get("flags") or [])
+    if "PUR_FREE_SALE_CLOSING_SHIFT" not in flags:
+        flags.append("PUR_FREE_SALE_CLOSING_SHIFT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PUR_FREE_SALE_CLOSING_SHIFT product=%s case=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        case_tag,
+        item.get("sales_qty"),
+        item.get("sales_value"),
+        item.get("closing_qty"),
+        item.get("closing_value"),
+    )
+    return True
+
+
+def _qty_copied_into_value_enabled() -> bool:
+    """Clear value fields that are exact copies of the paired qty. Default ON.
+
+    MR Report Vision sometimes repeats OPENING QTY into OPENING VALUE (19 → 19.0)
+    instead of the printed money. Treat that as unread — never invent money.
+    """
+    return os.getenv(
+        "STOCK_VISION_QTY_COPIED_INTO_VALUE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_qty_copied_into_value_fields(item: Dict[str, Any]) -> bool:
+    """When a value equals its qty and looks like a small whole qty, clear value."""
+    if not _qty_copied_into_value_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    pairs = (
+        ("opening_qty", "opening_value", "opening_value"),
+        ("receipts_qty", "purchase_value", "purchase_value"),
+        ("receipts_qty", "receipts_value", "receipts_value"),
+        ("sales_qty", "sales_value", "sales_value"),
+        ("closing_qty", "closing_value", "closing_value"),
+    )
+    changed = False
+    for qty_key, val_item_key, fs_key in pairs:
+        qty = item.get(qty_key)
+        if qty_key == "receipts_qty" and val_item_key in {"purchase_value", "receipts_value"}:
+            val = extra.get(val_item_key)
+            if val is None:
+                val = item.get(val_item_key)
+        else:
+            val = item.get(val_item_key)
+            if val is None:
+                val = extra.get(val_item_key)
+        try:
+            qf = float(qty) if qty not in (None, "") else None
+            vf = float(val) if val not in (None, "") else None
+        except (TypeError, ValueError):
+            continue
+        if qf is None or vf is None:
+            continue
+        if abs(qf - vf) > 0.001:
+            continue
+        if _looks_money(vf) or not _looks_small_qty(vf):
+            continue
+        if fs.get(fs_key) not in {"printed", None}:
+            continue
+        if val_item_key in {"opening_value", "sales_value", "closing_value"}:
+            item[val_item_key] = None
+        extra[val_item_key] = None
+        if val_item_key == "purchase_value":
+            extra["receipts_value"] = None
+            item["receipts_value"] = None
+            fs["receipts_value"] = "missing"
+        fs[fs_key] = "missing"
+        changed = True
+        logger.info(
+            "VISION_TABLE QTY_COPIED_INTO_VALUE product=%s cleared=%s qty=%s",
+            str(item.get("product_name") or "")[:60],
+            val_item_key,
+            qf,
+        )
+    if changed:
+        flags = list(extra.get("flags") or [])
+        if "QTY_COPIED_INTO_VALUE" not in flags:
+            flags.append("QTY_COPIED_INTO_VALUE")
+        extra["flags"] = flags
+    return changed
 
 
 def _rate_parked_in_opening_enabled() -> bool:
@@ -5705,6 +6025,55 @@ def _is_vision_total_row_name(name: Any) -> bool:
     )
 
 
+def _recover_product_name_from_serial_cell(
+    fields: Dict[str, Any],
+    cells: Sequence[Any],
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """When Vision glues '38 SPEMAN TABS 60' into the SNO cell and leaves ITEM blank.
+
+    Does not invent a name — only peels a leading serial off an ignore/SNO cell.
+    """
+    existing = str(fields.get("product_name") or "").strip()
+    if existing:
+        return False
+    serial_idxs = [
+        int(c.get("col_index") or 0)
+        for c in columns
+        if isinstance(c, dict)
+        and (
+            c.get("canonical") == "ignore"
+            or c.get("reason") == "serial_number_header"
+            or re.match(
+                r"(?i)^\s*(?:#|s\.?\s*no\.?|sno\.?|sl\.?\s*no\.?)\s*$",
+                str(c.get("header_text") or ""),
+            )
+        )
+    ]
+    if not serial_idxs and cells:
+        serial_idxs = [0]
+    for idx in serial_idxs:
+        if idx < 0 or idx >= len(cells):
+            continue
+        raw = str(cells[idx] or "").strip()
+        m = re.match(r"^(\d{1,4})\s+(.+\S)\s*$", raw)
+        if not m:
+            continue
+        name = m.group(2).strip()
+        if len(name) < 3 or not re.search(r"[A-Za-z]", name):
+            continue
+        if _is_vision_total_row_name(name) or _is_division_banner_name(name):
+            continue
+        fields["product_name"] = name
+        logger.info(
+            "VISION_TABLE SERIAL_PRODUCT_NAME_RECOVERED sno=%s name=%r",
+            m.group(1),
+            name[:60],
+        )
+        return True
+    return False
+
+
 def _peel_vision_total_named_items(
     items: Optional[Sequence[Dict[str, Any]]],
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -5761,6 +6130,10 @@ def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
     if not any_printed_qty and name.count(",") >= 2:
         return True
     if not any_printed_qty and _COMPANY_LETTERHEAD.search(name):
+        return True
+    # MR Report continuation: "COMPANY NAME - HIMALAYA WELNESS COM 11" section
+    # banner with no movement qty — not a product row.
+    if not any_printed_qty and _is_division_banner_name(name):
         return True
     return False
 
@@ -6475,6 +6848,8 @@ def _map_single_table(
             canon = str(c.get("canonical") or "ignore")
             if canon != "ignore" and canon not in fields:
                 fields[canon] = None
+        if _recover_product_name_from_serial_cell(fields, cells, columns):
+            errors.append("SERIAL_PRODUCT_NAME_RECOVERED")
         if _realign_group_wise_row_fields(fields, columns, cells):
             errors.append("GROUP_WISE_ROW_CLOSING_SHIFT")
 
@@ -6567,6 +6942,8 @@ def _map_single_table(
             _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)
             _repair_free_in_issue_closing_shift(item)
+            _repair_pur_free_sale_closing_left_shift(item)
+            _repair_qty_copied_into_value_fields(item)
             _repair_missing_pair_null_shift(item)
             _repair_qty_value_pair_left_shift(item)
             _repair_issue_value_left_shift(item)
@@ -8394,6 +8771,28 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
     # the row). Only treat low valid_ratio as empty/unreadable extraction when
     # almost no movement columns were read.
     if valid_ratio < min_ratio and missing / max(len(items), 1) >= 0.25:
+        # Qty-only Opening/Purchased/Sales/Closing sheets often leave Purchased
+        # blank and printed closing may not equal Op+Pur-Sales (returns not
+        # printed). Keep Vision when those headers resolved — do not hand the
+        # page to OPBAL/Medica/generic early Vision.
+        if _vision_result_is_qty_only_op_pur_sales_cl(result) and os.getenv(
+            "STOCK_VISION_KEEP_PRINTED_OP_PUR_SALES_CL", "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}:
+            structural = 0
+            try:
+                structural = int(counts.get("STRUCTURAL_ERROR") or 0)
+            except (TypeError, ValueError):
+                structural = 0
+            if structural == 0:
+                logger.info(
+                    "VISION_TABLE quality_fallback skip "
+                    "reason=keep_printed_op_pur_sales_cl "
+                    "valid_ratio=%s missing=%s rows=%s",
+                    valid_ratio,
+                    missing,
+                    len(items),
+                )
+                return None
         return "valid_ratio_low"
     return None
 

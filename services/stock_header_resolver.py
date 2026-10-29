@@ -162,6 +162,12 @@ ALIASES: Dict[str, List[str]] = {
         "opening bal qty",
         "openbal qty",
         "opening stock",
+        # Vision/OCR often truncates the final letter(s) of "Opening stock".
+        "opening stoc",
+        # MR Report: OPENING STK QTY (two-line header).
+        "opening stk qty",
+        "opening stk",
+        "opening stock qty",
         "opening qty",
         "opening quantity",
         "op stock",
@@ -355,6 +361,15 @@ ALIASES: Dict[str, List[str]] = {
         "free replace",
         "free repl",
         "free receipt",
+        # MR Report / Stock and Sales: PUR FREE QTY | SALE FREE QTY.
+        "pur free",
+        "pur free qty",
+        "purchase free",
+        "purchase free qty",
+        "sale free",
+        "sale free qty",
+        "sales free",
+        "sales free qty",
     ],
     "sample": [
         "sample",
@@ -558,6 +573,10 @@ _DIRECT_VALUE_FIELDS = {
     "closingbal tqty": "closing_value",
     "closing baltqty": "closing_value",
     "closingbal aqty": "closing_value",
+    # MR Report: CLOSING VALUE (PUR RATE) — money, not a rate column.
+    "closing value (pur rate)": "closing_value",
+    "closing value pur rate": "closing_value",
+    "closing value (purchase rate)": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
     "stk value": "closing_value",
@@ -850,7 +869,9 @@ def _promote_adjacent_same_group_qty_to_value(
             continue
         if left.get("is_value") or right.get("is_value"):
             continue
+        raw_left = str(left.get("header_text") or "")
         raw_right = str(right.get("header_text") or "")
+        norm_left = normalize_header(raw_left)
         norm_right = normalize_header(raw_right)
         # A header that already says Qty stays a quantity. Issue/Sales Qty
         # next to Issue Qty is a second qty, not the value column.
@@ -858,8 +879,31 @@ def _promote_adjacent_same_group_qty_to_value(
             continue
         # Bare repeated Sales/Purchase (Group Wise) stay qty. Only pair
         # headers (Receipt/Pur, Opening Bal, Closing Bala, Issue/Sales).
+        # Exception: identical bare OPENING|OPENING or PURCHASE|PURCHASE (MR
+        # Report two-line headers flattened to parent band only) → qty|value.
+        bare_same_band = (
+            group in {"opening", "purchase", "closing"}
+            and norm_left == norm_right
+            and norm_left
+            in {
+                "opening",
+                "open",
+                "op",
+                "opn",
+                "purchase",
+                "purchases",
+                "pur",
+                "purc",
+                "purch",
+                "closing",
+                "close",
+                "clos",
+                "cls",
+            }
+        )
         if (
-            "/" not in raw_right
+            not bare_same_band
+            and "/" not in raw_right
             and not re.search(r"(?i)\bbal", norm_right)
             and not _has_value_marker(norm_right)
         ):
@@ -2045,14 +2089,23 @@ def resolve_columns(
     # Repeated bare STOCK → first opening, last closing (before free/dedupe).
     _apply_multi_stock_sequence(prelim, errors)
 
-    # Free / scheme direction from neighbours.
+    # Free / scheme direction from neighbours (or PUR/SALE in the header text).
     for i, col in enumerate(prelim):
         if col["canonical"] != "free" and col.get("group") != "free":
             continue
+        hdr_free = normalize_header(col.get("header_text"))
         left_group = prelim[i - 1].get("group") if i > 0 else None
         right_group = prelim[i + 1].get("group") if i + 1 < len(prelim) else None
         left_canon = prelim[i - 1]["canonical"] if i > 0 else None
-        if left_group == "purchase" or left_canon in {
+        if re.search(r"\b(?:pur|purchase|rec|receipt)\b", hdr_free):
+            col["canonical"] = "free_in_qty"
+            col["confidence"] = 0.75
+            col["reason"] = "free_header_purchase"
+        elif re.search(r"\b(?:sale|sales)\b", hdr_free):
+            col["canonical"] = "free_out_qty"
+            col["confidence"] = 0.75
+            col["reason"] = "free_header_sales"
+        elif left_group == "purchase" or left_canon in {
             "purchase_qty",
             "purchase_value",
             "free_in_qty",
