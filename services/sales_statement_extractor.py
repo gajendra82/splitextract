@@ -4398,6 +4398,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "ssa_value_footer",
             "chopada_zandra_footer",
             "stock_sales_detail_total",
+            "marg_sale_purchase_value",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -5982,6 +5983,7 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "stock_sales_analysis",
             "stock_sales_analysis_geometry",
             "ssa_sales_free_columns",
+            "marg_sale_purchase_analysis",
         }
         or bool(extra.get("qty_only"))
     )
@@ -7710,6 +7712,10 @@ def _parse_txt(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     ):
         return _finalize_statement_period_fields(daily, content_text=text)
 
+    marg_analysis = _parse_marg_sale_purchase_analysis_text(text, filename, "txt")
+    if marg_analysis and marg_analysis.get("line_items"):
+        return _finalize_statement_period_fields(marg_analysis, content_text=text)
+
     # Product|Pack|LstSL|Open|Recd|Sales|Close|Order|Pend — Close is closing_qty.
     lstsl = _parse_lstsl_open_recd_statement(
         _strip_printer_controls(text), filename, "txt"
@@ -7962,6 +7968,7 @@ def _pdf_maybe_native_resolver(
             "photo",
             "scanned",
             "tesseract",
+            "marg_sale_purchase",
         )
     ):
         return result
@@ -13021,16 +13028,18 @@ def _find_marg_sale_purchase_analysis_header(
     for index in range(min(len(rows) - 1, 30)):
         if tuple(_marg_analysis_tokens(rows[index])) != _MARG_ANALYSIS_PARENT:
             continue
-        if tuple(_marg_analysis_tokens(rows[index + 1])) != _MARG_ANALYSIS_CHILD:
+        child_tokens = tuple(_marg_analysis_tokens(rows[index + 1]))
+        if child_tokens[: len(_MARG_ANALYSIS_CHILD)] != _MARG_ANALYSIS_CHILD:
             continue
         seen: List[int] = []
         for ci, cell in enumerate(rows[index + 1]):
             if re.sub(r"[^a-z]", "", str(cell or "").lower()):
                 seen.append(ci)
-        if len(seen) != len(_MARG_ANALYSIS_ROLES):
+        if len(seen) < len(_MARG_ANALYSIS_ROLES):
             continue
         roles = {
-            role: ci for ci, role in zip(seen, _MARG_ANALYSIS_ROLES)
+            role: ci
+            for ci, role in zip(seen[: len(_MARG_ANALYSIS_ROLES)], _MARG_ANALYSIS_ROLES)
         }
         for ci, cell in enumerate(rows[index]):
             if re.sub(r"[^a-z]", "", str(cell or "").lower()) == "itemdescription":
@@ -13069,14 +13078,15 @@ def _parse_marg_sale_purchase_analysis_xls(
         if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
             result["report_title"] = _clean_name(text)
             company = re.search(
-                r"STOCK\s*&\s*SALES\s*ANALYSIS\s+\((.+)\)\s+\d{1,2}-\d{1,2}-\d{4}",
+                r"STOCK\s*&\s*SALES\s*ANALYSIS\s+\((.+)\)\s+\d{1,2}[./-]\d{1,2}[./-]\d{2,4}",
                 text,
                 re.I,
             )
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
             period = re.search(
-                r"(\d{1,2}-\d{1,2}-\d{4})\s*-\s*(\d{1,2}-\d{1,2}-\d{4})",
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–—]+\s*"
+                r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
                 text,
             )
             if period and result.get("period_from") is None:
@@ -13119,7 +13129,7 @@ def _parse_marg_sale_purchase_analysis_xls(
             raw_name,
             re.I,
         ):
-            if re.match(r"^quantity\b", raw_name, re.I):
+            if re.match(r"^(?:total\s+)?quantity\b", raw_name, re.I):
                 result["totals"]["opening_qty"] = cell_qty(row, "opening_qty")
                 result["totals"]["receipts_qty"] = cell_qty(row, "purchase_qty")
                 result["totals"]["sales_qty"] = cell_qty(row, "sales_qty")
@@ -13196,7 +13206,128 @@ def _parse_marg_sale_purchase_analysis_xls(
     extra["layout"] = "marg_sale_purchase_analysis"
     extra["sheet"] = sheet_name
     extra.setdefault("total_row_source", "marg_sale_purchase_value")
+    extra.setdefault("qty_only", True)
     return result
+
+
+_MARG_ANALYSIS_TEXT_PARENT = (
+    "ITEM DESCRIPTION",
+    "OPENING",
+    "SALE",
+    "REPL",
+    "TOTAL",
+    "PURCHASE",
+    "REPL",
+    "CLOSING",
+    "RE",
+)
+_MARG_ANALYSIS_TEXT_CHILD = (
+    "",
+    "STOCK",
+    "PURCHASES",
+    "RETURN",
+    "OTHERS",
+    "STOCK",
+    "SALES",
+    "RETURN",
+    "OTHERS",
+    "STOCK",
+    "ORDER",
+)
+
+
+def _marg_analysis_text_is_qty_token(token: str) -> bool:
+    text = str(token or "").strip()
+    if not text:
+        return False
+    if text in {"-", "—", "--"}:
+        return True
+    return bool(re.fullmatch(r"-?\d+(?:\.\d+)?[Kk]?", text))
+
+
+def _marg_sale_purchase_analysis_rows_from_text(
+    text: str,
+) -> Optional[List[List[Any]]]:
+    """Turn a Marg SALE PURCHASES / PURCHASE SALES text dump into XLS-style rows.
+
+    Other STOCK & SALES ANALYSIS layouts (OPENING/RECEIPT/ISSUE, Busy QTY/FREE)
+    do not have this two-row header and return None.
+    """
+    if not text or not str(text).strip():
+        return None
+    lines = [ln.replace("\u00a0", " ").rstrip() for ln in str(text).splitlines()]
+    header_idx: Optional[int] = None
+    for index in range(len(lines) - 1):
+        parent = [part for part in re.split(r"\s{2,}", lines[index].strip()) if part]
+        child = [
+            part for part in re.split(r"\s{2,}", lines[index + 1].strip()) if part
+        ]
+        if tuple(_marg_analysis_tokens(parent)) != _MARG_ANALYSIS_PARENT:
+            continue
+        child_tokens = tuple(_marg_analysis_tokens(child))
+        if child_tokens[: len(_MARG_ANALYSIS_CHILD)] != _MARG_ANALYSIS_CHILD:
+            continue
+        header_idx = index
+        break
+    if header_idx is None:
+        return None
+
+    rows: List[List[Any]] = []
+    for line in lines[:header_idx]:
+        stripped = line.strip()
+        if stripped and not set(stripped) <= {"-"}:
+            rows.append([stripped])
+    rows.append(list(_MARG_ANALYSIS_TEXT_PARENT))
+    rows.append(list(_MARG_ANALYSIS_TEXT_CHILD))
+
+    for line in lines[header_idx + 2 :]:
+        stripped = line.strip()
+        if not stripped or set(stripped) <= {"-"}:
+            continue
+        if re.match(r"^LAST\s+MONTH\s+SALE\b", stripped, re.I):
+            break
+        cells = [part for part in re.split(r"\s{2,}", stripped) if part]
+        if not cells:
+            continue
+        qty_start = 0
+        while qty_start < len(cells) and not _marg_analysis_text_is_qty_token(
+            cells[qty_start]
+        ):
+            qty_start += 1
+        if qty_start == 0 or qty_start >= len(cells):
+            continue
+        name = "  ".join(cells[:qty_start])
+        qty = cells[qty_start : qty_start + len(_MARG_ANALYSIS_ROLES)]
+        if len(qty) < 5:
+            continue
+        rows.append([name] + qty)
+    return rows
+
+
+def _parse_marg_sale_purchase_analysis_text(
+    text: str,
+    filename: str,
+    source_format: str = "pdf",
+) -> Optional[Dict[str, Any]]:
+    """PDF/TXT dump of the Marg SALE PURCHASES / PURCHASE SALES analysis grid."""
+    rows = _marg_sale_purchase_analysis_rows_from_text(text)
+    if not rows:
+        return None
+    ext = source_format if str(source_format).startswith(".") else f".{source_format}"
+    parsed = _parse_marg_sale_purchase_analysis_xls(
+        rows, filename, ext, source_format
+    )
+    if not parsed or not parsed.get("line_items"):
+        return None
+    extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+    extra["parser_used"] = "marg_sale_purchase_analysis"
+    logger.info(
+        "MARG_SALE_PURCHASE_ANALYSIS file=%s items=%s source=%s",
+        filename,
+        len(parsed.get("line_items") or []),
+        source_format,
+    )
+    return parsed
 
 
 _OP_PI_CLQTY_HEADER = (
@@ -14873,6 +15004,11 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     rows, filename, ext, analysis_header
                 )
             )
+        marg_sale_purchase = _parse_marg_sale_purchase_analysis_xls(
+            rows, filename, ext, sheet_name
+        )
+        if marg_sale_purchase and marg_sale_purchase.get("line_items"):
+            return _xls_finalize_result(marg_sale_purchase)
         marg_mexp = _parse_marg_closing_mexp_xls(rows, filename, ext, sheet_name)
         if marg_mexp and marg_mexp.get("line_items"):
             return _xls_finalize_result(marg_mexp)
@@ -15994,7 +16130,7 @@ def _xls_fill_from_rows(
         if re.search(
             r"^(Item|Item Name|Mat Name|Mat Code|Pack|Manufacturer|Sales\s*:|"
             r"Opening|Closing|Product Name|Product|Description|Customer Name|"
-            r"Year|Month|Div|Quantity|VALUE|Value in Rs\.?)$",
+            r"Year|Month|Div|Quantity|VALUE|Value in Rs\.?|LAST MONTH SALE)$",
             product_name,
             re.I,
         ):
@@ -25417,6 +25553,13 @@ def _is_ssa_opening_receipt_issue_value_text(text: str) -> bool:
         re.search(r"\bPurchases\b", text)
         and re.search(r"\bOthers\b", text)
         and re.search(r"\bRate\b", text)
+    ):
+        return False
+    # Qty-only OPENING / SALE PURCHASES / TOTAL STOCK / SALES / CLOSING grids
+    # are not Opening/Receipt/Issue qty+value. Last-9 token grab glues printed
+    # qty onto the product name and leaves opening/sales/closing at 0.
+    if re.search(r"\bPURCHASES\b", text, re.I) and re.search(
+        r"SALE\s+REPL|PURCHASE\s+RETURN|REPL\.?\s*/", text, re.I
     ):
         return False
     return True
@@ -36505,6 +36648,19 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     try:
+        # Marg SALE PURCHASES / PURCHASE SALES text dump. Must run before the
+        # generic semantic table, which maps TOTAL STOCK as purchase and leaves
+        # sales/closing as 0. Other SSA headers return None from this parser.
+        marg_analysis_text = "\n".join(
+            (page.get_text("text") or "") for page in doc
+        )
+        marg_analysis = _parse_marg_sale_purchase_analysis_text(
+            marg_analysis_text, filename, "pdf"
+        )
+        if marg_analysis and marg_analysis.get("line_items"):
+            marg_analysis["totals"]["extra"]["statement_count"] = 1
+            return marg_analysis
+
         # Flag-gated: multi-division Group Wise / Sales & Stock image-only PDFs
         # need Swil Receipt/Pur page merge (division stamp + page completeness)
         # ahead of camera_multipage vision_table, which flattens divisions.
@@ -39676,6 +39832,12 @@ def _parse_semantic_text_table(
     """Extract a stock table from PDF/OCR text using the Excel header aliases."""
     if not text or not text.strip():
         return None
+    # Two-row SALE PURCHASES / PURCHASE SALES qty grid. Aliases map TOTAL STOCK
+    # as purchase, leave sales/closing at 0, and ingest footer Value-in-Rs /
+    # LAST MONTH SALE rows as products.
+    marg = _parse_marg_sale_purchase_analysis_text(text, filename, source_format)
+    if marg and marg.get("line_items"):
+        return marg
     rows: List[List[Any]] = []
     for ln in text.splitlines():
         raw = ln.replace("\u00a0", " ").strip()
@@ -40485,6 +40647,14 @@ def _parse_opn_sold_lsale_analysis(
 def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[str, Any]:
     """Turn free-form sales-statement text into unified JSON."""
     import os
+
+    # Marg SALE PURCHASES / PURCHASE SALES. Semantic header aliases map TOTAL
+    # STOCK as purchase and leave sales/closing at 0 on this two-row header.
+    marg_analysis = _parse_marg_sale_purchase_analysis_text(
+        text, filename, source_format
+    )
+    if marg_analysis and marg_analysis.get("line_items"):
+        return marg_analysis
 
     # Opn / Sold / Lsale analysis. Lsale is not Sold. The generic row reader
     # stores Rec and its value as sales.
