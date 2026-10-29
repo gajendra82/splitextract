@@ -3563,6 +3563,46 @@ def _apply_himalaya_dump_stock_validation(result: Dict[str, Any]) -> Dict[str, A
     return result
 
 
+def _himalaya_zl_secondary_qty_unit_rate(item: Dict[str, Any]) -> Optional[float]:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for key in ("secondary_rate", "unit_rate"):
+        if extra.get(key) not in (None, ""):
+            return _to_float(extra.get(key))
+    return None
+
+
+def _repair_himalaya_zl_secondary_qty_row(item: Dict[str, Any]) -> bool:
+    """Align printed Cb with opening + primary - secondary on this dump.
+
+    Negative Primary is a purchase return. Opening/receipts/sales stay as
+    printed. Closing value is floored at zero stock times Secondary Rate so
+    return-only rows do not create negative stock value.
+    Returns True when the printed closing quantity was rewritten.
+    """
+    row_extra = item.setdefault("extra", {})
+    if not isinstance(row_extra, dict):
+        row_extra = {}
+        item["extra"] = row_extra
+    expected = round(
+        _to_float(item.get("opening_qty"))
+        + _to_float(item.get("receipts_qty"))
+        - _to_float(item.get("sales_qty")),
+        2,
+    )
+    stated = round(_to_float(item.get("closing_qty")), 2)
+    row_extra["expected_closing"] = expected
+    repaired = abs(expected - stated) > 0.05
+    if repaired:
+        row_extra["source_closing_qty"] = stated
+        row_extra["closing_qty_repaired"] = True
+        item["closing_qty"] = expected
+        rate = _himalaya_zl_secondary_qty_unit_rate(item)
+        if rate is not None:
+            item["closing_value"] = round(max(0.0, expected) * rate, 2)
+    row_extra["stock_identity_ok"] = True
+    return repaired
+
+
 def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
     """Validate stock identity using columns present in the detected format.
 
@@ -4712,6 +4752,77 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(row_extra, dict):
                 row_extra["expected_closing"] = _to_float(item.get("closing_qty"))
                 row_extra["stock_identity_ok"] = True
+        return result
+
+    # Himalaya ZL Secondary Qty Total / Secondary Value dump.
+    # Qty is authoritative. Secondary Value is sheet-rate money, not PTR.
+    # Printed Cb can ignore purchase returns; repair closing to identity.
+    if totals["extra"].get("extraction_method") == "himalaya_zl_secondary_qty" or (
+        totals["extra"].get("layout") == "himalaya_zl_secondary_qty"
+    ):
+        stated_closing_sum = 0.0
+        stated_closing_value_sum = 0.0
+        mismatch = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            stated_closing_sum += _to_float(item.get("closing_qty"))
+            stated_closing_value_sum += _to_float(item.get("closing_value"))
+            if _repair_himalaya_zl_secondary_qty_row(item):
+                mismatch += 1
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        receipt_sum = sum(
+            _to_float(i.get("receipts_qty")) for i in items if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_value_sum = round(
+            sum(_to_float(i.get("closing_value")) for i in items if isinstance(i, dict)),
+            2,
+        )
+        calculated_closing = round(opening_sum + receipt_sum - sales_sum, 2)
+        totals["opening_qty"] = opening_sum
+        totals["receipts_qty"] = receipt_sum
+        totals["sales_qty"] = sales_sum
+        totals["closing_qty"] = closing_sum
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = receipt_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        totals["extra"]["stated_closing_qty"] = stated_closing_sum
+        totals["extra"]["stated_closing_value"] = round(stated_closing_value_sum, 2)
+        totals["extra"]["closing_value"] = closing_value_sum
+        totals["extra"]["line_closing_value_sum"] = closing_value_sum
+        totals["extra"]["stock_identity_kind"] = "himalaya_zl_secondary_qty"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+primary-secondary_qty; "
+            "printed Cb repaired to identity; "
+            "closing_value floors at 0 x Secondary Rate; "
+            "sales_value is Product Master PTR, not Secondary Value"
+        )
+        totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stated_stock_identity_fail_count"] = mismatch
+        totals["extra"]["no_sales_value"] = True
+        totals["sales_value"] = None
+        totals["closing_value"] = closing_value_sum or None
+        totals["extra"]["line_sales_value_sum"] = None
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": receipt_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "stated_closing": stated_closing_sum,
+            "calculated_closing": calculated_closing,
+            "extracted_closing_value": closing_value_sum,
+            "stated_closing_value": round(stated_closing_value_sum, 2),
+            "is_valid": abs(calculated_closing - closing_sum) <= 0.05,
+        }
         return result
 
     fail = 0
@@ -8988,6 +9099,23 @@ def _norm_tabular_col_key(value: Any) -> str:
     return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
 
 
+def _looks_like_zl_secondary_qty_value_header(header_cells: List[Any]) -> bool:
+    """Himalaya ZL dump: Secondary Qty Total + Secondary Value + Secondary Rate.
+
+    Sheet Secondary Value is qty × Secondary Rate, not Product Master PTR.
+    """
+    tokens = {
+        re.sub(r"[\s_]+", "", str(cell or "").strip().lower())
+        for cell in (header_cells or [])
+        if cell is not None and str(cell).strip()
+    }
+    return (
+        "secondaryqtytotal" in tokens
+        and "secondaryvalue" in tokens
+        and "secondaryrate" in tokens
+    )
+
+
 def _find_zl_secondary_xlsx_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
@@ -10714,6 +10842,45 @@ def _looks_like_ssa_opening_receipt_issue_closing_text(text: str) -> bool:
     )
 
 
+def _ssa_ops_normalize_probe(text: str) -> str:
+    """OCR of ZEAL banners often reads STOCK as $TOCK."""
+    blob = re.sub(r"\$TOCK", "STOCK", text or "", flags=re.I)
+    return re.sub(r"\bS\s*TOCK\b", "STOCK", blob, flags=re.I)
+
+
+def _looks_like_ssa_opening_primary_sale_closing_text(text: str) -> bool:
+    """Qty-only STOCK & SALES ANALYSIS: OPENING / PRIMARY / SALE / CLOSING.
+
+    PRIMARY is receipts (not ZL Opening_bal Primary_qty). Distinct from
+    RECEIPT/ISSUE ORI sheets and SALE/CLOSING-only prints.
+    OPENING→opening_qty, PRIMARY→receipts_qty, SALE→sales_qty, CLOSING→closing_qty.
+    """
+    blob = _ssa_ops_normalize_probe(text)
+    if not re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", blob, re.I):
+        return False
+    if not re.search(r"ITEM\s*DESCRIPTION", blob, re.I):
+        return False
+    if not re.search(r"OPENING", blob, re.I):
+        return False
+    if not re.search(r"PRIMAR|PRINARY|PR1MARY", blob, re.I):
+        return False
+    if not re.search(r"SALE", blob, re.I):
+        return False
+    if not re.search(r"CLOS", blob, re.I):
+        return False
+    # ZL Opening_bal dumps keep their own reader.
+    if re.search(r"Material[_\s]?name", blob, re.I) and re.search(
+        r"Primary[_\s]?qty|Opening[_\s]?bal", blob, re.I
+    ):
+        return False
+    # Qty/value DUMP and RECEIPT/ISSUE sheets stay on their own paths.
+    if re.search(r"\bDUMP\b", blob, re.I) and re.search(r"\bVALUE\b", blob, re.I):
+        return False
+    if re.search(r"\bRECEIPT\b", blob, re.I) and re.search(r"\bISSUE\b", blob, re.I):
+        return False
+    return True
+
+
 def _ssa_ori_qty_photo_identity_weak(result: Optional[Dict[str, Any]]) -> bool:
     """True when SSA ORI qty rows fail stock identity (column shift / hallucination)."""
     if not isinstance(result, dict):
@@ -10730,6 +10897,7 @@ def _ssa_ori_qty_photo_identity_weak(result: Optional[Dict[str, Any]]) -> bool:
         "ssa_qty_value_vision",
         "ssa_qty_value_vision_pdf",
         "ssa_opening_receipt_issue_dump",
+        "ssa_opening_primary_sale_closing",
     }:
         return False
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
@@ -10788,6 +10956,7 @@ def _ssa_ori_qty_photo_openings_missing(result: Optional[Dict[str, Any]]) -> boo
         "ssa_qty_value_vision",
         "ssa_qty_value_vision_pdf",
         "ssa_opening_receipt_issue_dump",
+        "ssa_opening_primary_sale_closing",
     }:
         return False
     items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
@@ -13504,6 +13673,7 @@ def _xls_fill_from_rows(
     # Himalaya ZL dump: Opening_bal_qty / Primary_qty / Closing_bal_qty / Secondaryrate.
     # No sales or amount column. Flag only this header so other layouts stay unchanged.
     zl_bal_layout = False
+    zl_secondary_qty_value = False
     if header_idx is not None and header_idx < len(rows):
         _zl_compacts = {
             re.sub(r"[\s_]+", "", str(cell or "").strip().lower())
@@ -13516,6 +13686,9 @@ def _xls_fill_from_rows(
             and "primaryqty" in _zl_compacts
             and "secondaryrate" in _zl_compacts
             and "sale" not in colmap
+        )
+        zl_secondary_qty_value = _looks_like_zl_secondary_qty_value_header(
+            rows[header_idx]
         )
     # Stock & sales sheet: each qty column has a printed value beside it.
     # Quantity already comes from opening/closing. Do not remap issue/receive qty.
@@ -13612,12 +13785,16 @@ def _xls_fill_from_rows(
                         result["totals"]["sales_value"] = _to_float(texts[i + 1][1])
                         break
             continue
-        if re.search(
-            r"Manufacturer|Item\b|Pack\b|Item Name|Op\.?\s*Stock|Cl\s*Stock|"
-            r"Mat Name|Mat Code|Product Name|Secondary Qty",
-            joined,
-            re.I,
-        ) and header_idx is not None:
+        if (
+            not zl_secondary_qty_value
+            and re.search(
+                r"Manufacturer|Item\b|Pack\b|Item Name|Op\.?\s*Stock|Cl\s*Stock|"
+                r"Mat Name|Mat Code|Product Name|Secondary Qty",
+                joined,
+                re.I,
+            )
+            and header_idx is not None
+        ):
             continue
         if re.search(
             r"^(VALUE OF|Company\s*:|Desc\s*:|From\s*:|To\s*:|Report Generated|Prepared By|Page\s+\d)",
@@ -13677,7 +13854,13 @@ def _xls_fill_from_rows(
             if re.match(r"^(?:grand\s+|net\s+)?total\b", product_name.strip(), re.I):
                 sv = _col("sval", "secondary value")
                 bv = _col("bval")
-                if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
+                # Secondary Value is sheet-rate money, not Product Master PTR.
+                if (
+                    not zl_secondary_qty_value
+                    and sv is not None
+                    and sv < len(row)
+                    and _xls_cell_has_qty(row[sv])
+                ):
                     result["totals"]["sales_value"] = _to_float(row[sv])
                 if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
                     result["totals"]["closing_value"] = _to_float(row[bv])
@@ -13756,7 +13939,13 @@ def _xls_fill_from_rows(
         _assign_number("sales_qty", sale_i)
         _assign_number("closing_qty", bal_i)
         _assign_number("closing_value", bval_i)
-        _assign_number("sales_value", sval_i)
+        if zl_secondary_qty_value:
+            # Keep the printed sheet valuation in extra. Official sales_value
+            # is Product Master PTR, not Secondary Rate × qty.
+            _assign_number("secondary_value", sval_i, into_extra=True)
+            item["sales_value"] = None
+        else:
+            _assign_number("sales_value", sval_i)
         _assign_number("opening_value", _col("opval"), into_extra=True)
         _assign_number("receipts_value", _col("purval"), into_extra=True)
         for extra_field, extra_names in (
@@ -13768,7 +13957,14 @@ def _xls_fill_from_rows(
         if rate_i is not None and rate_i < len(row) and _xls_cell_has_qty(row[rate_i]):
             item["extra"]["unit_rate"] = _to_float(row[rate_i])
             rate = item["extra"]["unit_rate"]
-            if rate and not item.get("sales_value") and item.get("sales_qty") is not None:
+            if zl_secondary_qty_value:
+                item["extra"]["secondary_rate"] = rate
+            if (
+                rate
+                and not zl_secondary_qty_value
+                and not item.get("sales_value")
+                and item.get("sales_qty") is not None
+            ):
                 item["sales_value"] = round(item["sales_qty"] * rate, 2)
             if rate and not item.get("closing_value") and item.get("closing_qty") is not None:
                 item["closing_value"] = round(item["closing_qty"] * rate, 2)
@@ -13866,6 +14062,19 @@ def _xls_fill_from_rows(
         }
     if "sale" not in colmap and items:
         extra["extraction_warning"] = "sales quantity column was not detected"
+    if zl_secondary_qty_value:
+        extra["extraction_method"] = "himalaya_zl_secondary_qty"
+        extra["layout"] = "himalaya_zl_secondary_qty"
+        extra["no_sales_value"] = True
+        extra["secondary_value_sum"] = round(
+            sum(
+                _to_float((i.get("extra") or {}).get("secondary_value"))
+                for i in items
+                if isinstance(i, dict)
+            ),
+            2,
+        )
+        result["totals"]["sales_value"] = None
     extra["column_mapping"] = column_mapping
     extra["extraction_metadata"] = {
         "source_type": result.get("source_format"),
@@ -27610,6 +27819,7 @@ def _maybe_early_vision_for_image_only_pdf(
         or _is_ssa_opening_receipt_issue_dump_text(sample)
         or _is_ssa_opening_receipt_issue_dump_text_fuzzy(sample)
         or _looks_like_product_wise_stock_sale_text(sample)
+        or _looks_like_ssa_opening_primary_sale_closing_text(sample)
     )
     if known_ocr_format:
         logger.info(
@@ -28829,6 +29039,19 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             if saha and saha.get("line_items"):
                 saha["totals"]["extra"]["statement_count"] = 1
                 return saha
+
+        # Image-only qty-only OPENING/PRIMARY/SALE/CLOSING (Fair Agency /
+        # Rakesh Enterprises etc.). Must run before the qty/value dump vision
+        # path, which invents money and parks OPENING/PRIMARY under sales.
+        try:
+            image_only_ops = _parse_image_only_ssa_opening_primary_sale_pdf(
+                doc, filename
+            )
+        except Exception as exc:
+            logger.warning("SSA OPENING/PRIMARY/SALE PDF skipped: %s", exc)
+            image_only_ops = None
+        if image_only_ops and image_only_ops.get("line_items"):
+            return image_only_ops
 
         # Image-only STOCK & SALES ANALYSIS (Adarsh etc.): dedicated vision path
         # before the slow generic per-page Gemini fallback that times out.
@@ -32762,6 +32985,483 @@ Keep each product's numbers on that same row.
     if not _ssa_qty_value_result_usable(result):
         return None
     return result
+
+
+def _ssa_ops_cell_qty(text: str) -> float:
+    raw = str(text or "").strip()
+    if not raw or raw in {"-", "—", "--"}:
+        return 0.0
+    digits = re.sub(r"[^\d.\-]", "", raw)
+    if not digits or digits in {".", "-", "-."}:
+        return 0.0
+    try:
+        return float(digits)
+    except ValueError:
+        match = re.search(r"\d+", raw)
+        return float(match.group(0)) if match else 0.0
+
+
+def _ssa_ops_clean_product(text: str) -> str:
+    name = re.sub(r"[\[\]|_]+", " ", str(text or ""))
+    name = re.sub(r"\bLIV\.S2\b", "LIV.52", name, flags=re.I)
+    name = re.sub(r"(\d)\s*m!", r"\1ml", name, flags=re.I)
+    return _clean_name(name)
+
+
+def _ssa_ops_is_total_row(name: str, opening: float, receipts: float, sales: float, closing: float) -> bool:
+    compact = re.sub(r"[^A-Z]", "", (name or "").upper())
+    if compact in {"TOTAL", "TTAL", "TOAL", "TOTL", "TOIAL", "TOTA"} or compact.startswith(
+        ("TOTAL", "TTAL", "TOAL", "TOTL", "TOTA")
+    ):
+        return True
+    if re.match(r"^TOTAL\b", name or "", re.I):
+        return True
+    # Last-page TOTAL when the label OCR is garbage but the four totals print.
+    if (
+        opening >= 500
+        and receipts >= 500
+        and sales >= 500
+        and closing >= 500
+        and abs((opening + receipts - sales) - closing) <= 0.51
+    ):
+        return True
+    return False
+
+
+def _ssa_ops_repair_row(item: Dict[str, Any]) -> None:
+    """Restore one missing OPENING/PRIMARY/SALE cell from stock identity.
+
+    OPENING + PRIMARY - SALE = CLOSING. Sparse ZEAL sheets leave most
+    OPENING/PRIMARY cells blank; OCR can drop the few printed digits, which
+    made Opening+Purchases=0 and flagged closing as overstock.
+
+    Grid wipe can turn SALE 17 into 7. Do not invent SALE when CLOSING was
+    blank (that would turn Tentex 350/600/300/650 into 950/0).
+    """
+    opening = _to_float(item.get("opening_qty"))
+    receipts = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    if abs((opening + receipts - sales) - closing) <= 0.51:
+        return
+    if abs(closing) < 0.01 and (abs(opening) + abs(receipts)) > 0.01:
+        return
+    inferred_sale = opening + receipts - closing
+    ocr = str(int(round(abs(sales)))) if abs(sales) >= 0.01 else ""
+    inf = str(int(round(abs(inferred_sale))))
+    if (
+        inferred_sale >= -0.51
+        and ocr
+        and inf.endswith(ocr)
+        and len(inf) > len(ocr)
+    ):
+        item["sales_qty"] = inferred_sale
+        return
+    inferred_open = closing - receipts + sales
+    if abs(opening) < 0.01 and inferred_open > 0.51:
+        item["opening_qty"] = inferred_open
+        return
+    inferred_rec = closing - opening + sales
+    if abs(receipts) < 0.01 and inferred_rec > 0.51:
+        item["receipts_qty"] = inferred_rec
+        return
+    if abs(sales) < 0.01 and inferred_sale >= -0.01:
+        item["sales_qty"] = inferred_sale
+
+
+def _ssa_ops_ocr_cell(image: Any, box: Tuple[int, int, int, int], digits: bool) -> str:
+    from PIL import Image, ImageOps
+
+    x0, y0, x1, y1 = box
+    if x1 - x0 < 4 or y1 - y0 < 4:
+        return ""
+    cell = image.crop((x0, y0, x1, y1))
+    cell = cell.resize(
+        (max(cell.width * 3, 24), max(cell.height * 3, 24)),
+        Image.Resampling.LANCZOS,
+    )
+    cell = ImageOps.autocontrast(cell.convert("L"))
+    config = "--psm 7"
+    if digits:
+        config += " -c tessedit_char_whitelist=0123456789"
+    text = _a2z_tesseract().image_to_string(cell, config=config) or ""
+    return " ".join(text.split())
+
+
+def _ssa_ops_table_grid(image: Any) -> Optional[Tuple[List[int], List[int]]]:
+    """Horizontal row lines + 6 vertical borders of a 5-column qty grid."""
+    gray = image.convert("L")
+    width, height = gray.size
+    pixels = gray.load()
+    hlines: List[int] = []
+    for y in range(height):
+        dark = 0
+        for x in range(0, width, 2):
+            if pixels[x, y] < 90:
+                dark += 1
+        if dark / max(width / 2.0, 1.0) > 0.35:
+            if not hlines or y > hlines[-1] + 2:
+                hlines.append(y)
+    if len(hlines) < 4:
+        return None
+    gaps = [hlines[i + 1] - hlines[i] for i in range(len(hlines) - 1)]
+    median = sorted(gaps)[len(gaps) // 2]
+    if median < 12 or median > 80:
+        return None
+    y0, y1 = hlines[0], hlines[-1]
+    cands: List[int] = []
+    for x in range(width):
+        dark = 0
+        n = 0
+        for y in range(y0, y1, 2):
+            n += 1
+            if pixels[x, y] < 100:
+                dark += 1
+        if n and dark / n > 0.55:
+            cands.append(x)
+    clusters: List[List[int]] = []
+    for x in cands:
+        if not clusters or x > clusters[-1][-1] + 3:
+            clusters.append([x])
+        else:
+            clusters[-1].append(x)
+    xs = [cluster[len(cluster) // 2] for cluster in clusters]
+    if len(xs) < 6:
+        return None
+    merged: List[int] = []
+    for x in xs:
+        if not merged or x > merged[-1] + 40:
+            merged.append(x)
+    if len(merged) != 6:
+        return None
+    return hlines, merged
+
+
+def _ssa_ops_parse_banner(text: str, result: Dict[str, Any]) -> None:
+    blob = re.sub(r"\$TOCK", "STOCK", text or "", flags=re.I)
+    title = re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", blob, re.I)
+    if title and not result.get("report_title"):
+        result["report_title"] = "STOCK & SALES ANALYSIS"
+    period = re.search(
+        r"(\d{1,2}[-./]\d{1,2}[-./]\d{2,4})\s*(?:TO|-)\s*"
+        r"(\d{1,2}[-./]\d{1,2}[-./]\d{2,4})",
+        blob,
+        re.I,
+    )
+    if period:
+        result["period_from"] = result.get("period_from") or _normalize_date(
+            period.group(1)
+        )
+        result["period_to"] = result.get("period_to") or _normalize_date(period.group(2))
+    # Same-month statement: OCR often turns 2026 into 2028 on the TO date.
+    pf, pt = result.get("period_from"), result.get("period_to")
+    if (
+        isinstance(pf, str)
+        and isinstance(pt, str)
+        and len(pf) >= 10
+        and len(pt) >= 10
+        and pf[5:7] == pt[5:7]
+        and pf[:4] != pt[:4]
+    ):
+        result["period_to"] = pf[:4] + pt[4:]
+    zeal = re.search(
+        r"STOCK\s*&\s*SALES\s*ANALYSIS\s+([A-Z]{3,})\b", blob, re.I
+    )
+    if zeal and not result.get("company_name"):
+        token = zeal.group(1).strip().upper()
+        if token not in {"FROM", "TO", "PAGE"}:
+            result["company_name"] = token
+    stockist = _ssa_ori_header_stockist(blob)
+    if stockist and not result.get("stockist_name"):
+        result["stockist_name"] = stockist
+    if result.get("stockist_name") and not result.get("stockist_address"):
+        for line in blob.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if _clean_name(stripped).upper() == _clean_name(
+                str(result.get("stockist_name") or "")
+            ).upper():
+                continue
+            if re.search(r"STOCK\s*&\s*SALES|ITEM\s*DESCRIPTION", stripped, re.I):
+                break
+            if re.search(r"[A-Za-z]{3,}", stripped) and not re.search(r"\d{5,}", stripped):
+                result["stockist_address"] = _clean_name(stripped)
+                break
+
+
+def _ssa_ops_parse_grid_image(
+    image: Any,
+    filename: str,
+    *,
+    require_header: bool,
+) -> Optional[Dict[str, Any]]:
+    """Read one OPENING/PRIMARY/SALE/CLOSING page from a clean table image."""
+    from PIL import ImageDraw, ImageOps
+
+    found = _ssa_ops_table_grid(image)
+    if found is None:
+        return None
+    hlines, xs = found
+    pytesseract = _a2z_tesseract()
+    header_row = image.crop(
+        (xs[0] + 2, hlines[0] + 1, xs[-1] - 2, hlines[min(1, len(hlines) - 1)] - 1)
+    )
+    header_row = ImageOps.autocontrast(header_row.convert("L"))
+    header_text = pytesseract.image_to_string(header_row, config="--psm 6") or ""
+    banner = image.crop((0, max(0, hlines[0] - 200), image.width, hlines[0]))
+    banner_text = pytesseract.image_to_string(banner, config="--psm 6") or ""
+    # Digital ZEAL prints put the blue title in the first grid row and the
+    # OPENING/PRIMARY/SALE/CLOSING labels in the second. Probe both.
+    header_chunks = [banner_text, header_text]
+    for row_i in range(1, min(3, len(hlines) - 1)):
+        extra_row = image.crop(
+            (xs[0] + 2, hlines[row_i] + 1, xs[-1] - 2, hlines[row_i + 1] - 1)
+        )
+        extra_row = ImageOps.autocontrast(extra_row.convert("L"))
+        header_chunks.append(
+            pytesseract.image_to_string(extra_row, config="--psm 6") or ""
+        )
+    probe = _ssa_ops_normalize_probe("\n".join(header_chunks))
+    header_text = _ssa_ops_normalize_probe(header_text)
+    header_hit = _looks_like_ssa_opening_primary_sale_closing_text(probe) or (
+        re.search(r"OPENING", probe, re.I)
+        and re.search(r"PRIMAR|PRINARY|PR1MARY", probe, re.I)
+        and re.search(r"SALE", probe, re.I)
+        and re.search(r"CLOS", probe, re.I)
+    )
+    if require_header and not header_hit:
+        return None
+
+    clean = image.convert("L").convert("RGB")
+    draw = ImageDraw.Draw(clean)
+    for y in hlines:
+        draw.line([(xs[0], y), (xs[-1], y)], fill=(255, 255, 255), width=2)
+    for x in xs:
+        draw.line([(x, hlines[0]), (x, hlines[-1])], fill=(255, 255, 255), width=2)
+    table = clean.crop((xs[0] + 2, hlines[0] + 2, xs[-1] - 2, hlines[-1] - 2))
+    data = pytesseract.image_to_data(
+        table, config="--psm 6", output_type=pytesseract.Output.DICT
+    )
+    origin_x, origin_y = xs[0] + 2, hlines[0] + 2
+
+    def col_of(cx: float) -> Optional[int]:
+        px = cx + origin_x
+        for index in range(len(xs) - 1):
+            if xs[index] <= px < xs[index + 1]:
+                return index
+        return None
+
+    def row_of(cy: float) -> Optional[int]:
+        py = cy + origin_y
+        for index in range(len(hlines) - 1):
+            if hlines[index] <= py < hlines[index + 1]:
+                return index
+        return None
+
+    cells: Dict[Tuple[int, int], List[str]] = {}
+    texts = data.get("text") or []
+    for index, raw in enumerate(texts):
+        token = str(raw or "").strip()
+        if not token:
+            continue
+        cx = (data["left"][index] or 0) + (data["width"][index] or 0) / 2.0
+        cy = (data["top"][index] or 0) + (data["height"][index] or 0) / 2.0
+        row_i, col_i = row_of(cy), col_of(cx)
+        if row_i is None or col_i is None:
+            continue
+        cells.setdefault((row_i, col_i), []).append(token)
+
+    result = empty_result(filename, "png")
+    result["report_title"] = "STOCK & SALES ANALYSIS"
+    _ssa_ops_parse_banner(probe, result)
+    items: List[Dict[str, Any]] = []
+    total_nums: Optional[List[float]] = None
+    ncol = len(xs) - 1
+    for row_i in range(len(hlines) - 1):
+        row = [" ".join(cells.get((row_i, col), [])) for col in range(ncol)]
+        name = _ssa_ops_clean_product(row[0] if row else "")
+        blob = " ".join(row)
+        if name and (
+            _looks_like_ssa_opening_primary_sale_closing_text(blob)
+            or re.search(
+                r"ITEM\s*DESCRIPTION|OPENING|PRIMARY|=SALE=|=CLOSING=", name, re.I
+            )
+        ):
+            continue
+        opening = _ssa_ops_cell_qty(row[1] if len(row) > 1 else "")
+        receipts = _ssa_ops_cell_qty(row[2] if len(row) > 2 else "")
+        sales = _ssa_ops_cell_qty(row[3] if len(row) > 3 else "")
+        closing = _ssa_ops_cell_qty(row[4] if len(row) > 4 else "")
+        needs_reread = (
+            re.match(r"^TOTAL\b", name or "", re.I)
+            or abs((opening + receipts - sales) - closing) > 0.51
+            or row_i >= len(hlines) - 3
+        )
+        if needs_reread and row_i + 1 < len(hlines):
+            y1, y2 = hlines[row_i] + 2, hlines[row_i + 1] - 2
+            if not name or re.match(r"^TOTAL\b", name, re.I):
+                name = _ssa_ops_clean_product(
+                    _ssa_ops_ocr_cell(
+                        image, (xs[0] + 3, y1, xs[1] - 2, y2), digits=False
+                    )
+                ) or name
+            # Left-aligned qty digits sit on the cell border; +3 clipped "1".
+            opening = _ssa_ops_cell_qty(
+                _ssa_ops_ocr_cell(image, (xs[1] + 1, y1, xs[2] - 2, y2), True)
+            )
+            receipts = _ssa_ops_cell_qty(
+                _ssa_ops_ocr_cell(image, (xs[2] + 1, y1, xs[3] - 2, y2), True)
+            )
+            sales = _ssa_ops_cell_qty(
+                _ssa_ops_ocr_cell(image, (xs[3] + 1, y1, xs[4] - 2, y2), True)
+            )
+            closing = _ssa_ops_cell_qty(
+                _ssa_ops_ocr_cell(image, (xs[4] + 1, y1, xs[5] - 2, y2), True)
+            )
+        if _ssa_ops_is_total_row(name, opening, receipts, sales, closing):
+            total_nums = [opening, receipts, sales, closing]
+            continue
+        if not name:
+            continue
+        if _ssa_skip_product(name):
+            continue
+        name, pack = _ssa_ori_split_pack(name)
+        if not name:
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = pack
+        item["opening_qty"] = opening
+        item["receipts_qty"] = receipts
+        item["sales_qty"] = sales
+        item["closing_qty"] = closing
+        extra = item.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["layout"] = "ssa_opening_primary_sale_closing"
+        _ssa_ops_repair_row(item)
+        items.append(item)
+
+    if not items:
+        return None
+    result["line_items"] = items
+    extra = result["totals"].setdefault("extra", {})
+    extra["extraction_method"] = "ssa_opening_primary_sale_closing"
+    extra["layout"] = "ssa_opening_primary_sale_closing"
+    extra["qty_only"] = True
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    extra["header_probe"] = True if header_hit else False
+    if total_nums and len(total_nums) >= 4:
+        extra["opening_qty"] = total_nums[0]
+        extra["receipts_qty"] = total_nums[1]
+        extra["sales_qty"] = total_nums[2]
+        extra["closing_qty"] = total_nums[3]
+        extra["total_row_source"] = "ssa_opening_primary_sale_closing"
+    return result
+
+
+def _ssa_ops_merge_pages(
+    pages: List[Dict[str, Any]], filename: str, source_format: str
+) -> Optional[Dict[str, Any]]:
+    if not pages:
+        return None
+    merged = empty_result(filename, source_format)
+    merged["report_title"] = "STOCK & SALES ANALYSIS"
+    items: List[Dict[str, Any]] = []
+    total_extra: Dict[str, Any] = {}
+    for page in pages:
+        for key in (
+            "stockist_name",
+            "stockist_address",
+            "company_name",
+            "period_from",
+            "period_to",
+            "report_title",
+        ):
+            if page.get(key) and not merged.get(key):
+                merged[key] = page[key]
+        items.extend(page.get("line_items") or [])
+        extra = ((page.get("totals") or {}).get("extra") or {})
+        if extra.get("total_row_source"):
+            total_extra = extra
+    if len(items) < 3:
+        return None
+    merged["line_items"] = items
+    extra = merged["totals"].setdefault("extra", {})
+    extra["extraction_method"] = "ssa_opening_primary_sale_closing"
+    extra["layout"] = "ssa_opening_primary_sale_closing"
+    extra["qty_only"] = True
+    extra["rows_detected"] = len(items)
+    extra["fallback_used"] = False
+    extra["statement_count"] = 1
+    if total_extra.get("total_row_source"):
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "total_row_source",
+        ):
+            if key in total_extra:
+                extra[key] = total_extra[key]
+    return merged
+
+
+def _extract_ssa_opening_primary_sale_closing_image(
+    file_bytes: bytes, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Qty-only OPENING/PRIMARY/SALE/CLOSING photo or rendered PDF page."""
+    from PIL import Image, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+    except Exception:
+        return None
+    parsed = _ssa_ops_parse_grid_image(image, filename, require_header=True)
+    if not parsed or not parsed.get("line_items"):
+        return None
+    parsed["source_format"] = (ext or ".png").lstrip(".") or "png"
+    return parsed
+
+
+def _parse_image_only_ssa_opening_primary_sale_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Image-only STOCK & SALES ANALYSIS OPENING/PRIMARY/SALE/CLOSING PDFs."""
+    import fitz
+
+    page_count = int(getattr(doc, "page_count", 0) or 0)
+    if page_count < 1 or page_count > 12:
+        return None
+    page0 = doc[0]
+    embedded0 = (page0.get_text("text") or "").strip()
+    if len(re.sub(r"\s+", "", embedded0)) >= 40:
+        return None
+    pages: List[Dict[str, Any]] = []
+    for page_index, page in enumerate(doc):
+        if page_index >= 12:
+            break
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+        png = pix.tobytes("png")
+        try:
+            from PIL import Image, ImageOps
+
+            image = ImageOps.exif_transpose(Image.open(io.BytesIO(png))).convert("RGB")
+        except Exception:
+            continue
+        parsed = _ssa_ops_parse_grid_image(
+            image,
+            f"{filename}#page{page_index + 1}",
+            require_header=(page_index == 0),
+        )
+        if page_index == 0 and (not parsed or not parsed.get("line_items")):
+            return None
+        if parsed and parsed.get("line_items"):
+            pages.append(parsed)
+    return _ssa_ops_merge_pages(pages, filename, "pdf")
 
 
 def _parse_image_only_ssa_qty_value_pdf(
@@ -43314,6 +44014,21 @@ def _maybe_early_vision_for_image(
         )
         return None, False
 
+    # Qty-only OPENING/PRIMARY/SALE/CLOSING: PRIMARY is receipts. Generic
+    # Vision parks those units under sales and invents money columns.
+    if _looks_like_ssa_opening_primary_sale_closing_text(sample):
+        try:
+            ops = _extract_ssa_opening_primary_sale_closing_image(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.warning("SSA OPENING/PRIMARY/SALE early prefer skipped: %s", exc)
+            ops = None
+        if ops and ops.get("line_items"):
+            extra = ops.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "ssa_opening_primary_sale_closing"
+            return ops, True
+
     # Qty-only STOCK & SALES ANALYSIS OPENING/RECEIPT/ISSUE/CLOSING photos:
     # generic Vision shifts mid-page rows (Bresol/Clarina/Intima). Prefer ORI.
     # Money DUMP sheets (QTY+VALUE) must use SSA qty/value — not qty-only ORI.
@@ -45701,6 +46416,17 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         sasr = None
     if sasr and sasr.get("line_items"):
         return sasr
+
+    # Qty-only OPENING/PRIMARY/SALE/CLOSING before generic Vision.
+    try:
+        ops = _extract_ssa_opening_primary_sale_closing_image(
+            file_bytes, filename, ext
+        )
+    except Exception as exc:
+        logger.warning("SSA OPENING/PRIMARY/SALE photo skipped: %s", exc)
+        ops = None
+    if ops and ops.get("line_items"):
+        return ops
 
     # Sideways Zeal ORDER FORM. The stock-statement reader does not apply,
     # and the OCR probe is skipped when Tesseract is not installed.

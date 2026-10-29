@@ -543,6 +543,19 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return result
 
+    # Qty-only OPENING/PRIMARY/SALE/CLOSING. Generic Vision parks PRIMARY
+    # under sales and invents sales/closing values.
+    if (
+        str(extra.get("extraction_method") or "") == "ssa_opening_primary_sale_closing"
+        or str(extra.get("layout") or "") == "ssa_opening_primary_sale_closing"
+    ):
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK skipped reason=ssa_opening_primary_sale_closing",
+            filename,
+        )
+        _stamp(result, quality, "not_called")
+        return result
+
     # Code/Item Opening/Purchase/Sales phone photo — keep dedicated Vision reader.
     if str(extra.get("extraction_method") or "") in {
         "code_item_stock_statement_photo",
