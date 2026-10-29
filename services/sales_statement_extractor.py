@@ -13846,12 +13846,12 @@ def _xls_fill_from_rows(
         if re.search(r"^(Sales|Opening Val|Closing Val|Purchase|Credit|Branch|Adj)\b", product_name, re.I):
             continue
         if re.search(
-            r"^(Total Of|TOTAL\b|Grand Total|Sub\s*Total|Net\s*Total|SUMMARY\b|"
+            r"^(Total Of|(?:Grand\s+|Sub\s*|Net\s+)?TOTALS?|SUMMARY\b|"
             r"Opening Stock|Closing Stock|Report Generated|Prepared By)\b",
             product_name,
             re.I,
         ):
-            if re.match(r"^(?:grand\s+|net\s+)?total\b", product_name.strip(), re.I):
+            if re.match(r"^(?:grand\s+|net\s+|sub\s*)?totals?\b", product_name.strip(), re.I):
                 sv = _col("sval", "secondary value")
                 bv = _col("bval")
                 # Secondary Value is sheet-rate money, not Product Master PTR.
@@ -14800,7 +14800,7 @@ def _drop_trailing_statement_total_item(
         return cleaned
     last = cleaned[-1]
     name = str(last.get("product_name") or "")
-    if re.search(r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL|AMOUNT\s*TOTAL)\b", name, re.I):
+    if re.search(r"^(TOTALS?|GRAND\s*TOTALS?|SUB\s*TOTALS?|AMOUNT\s*TOTALS?)\b", name, re.I):
         return cleaned[:-1]
     others = cleaned[:-1]
     last_rcp = _to_float(last.get("receipts_qty"))
@@ -14820,7 +14820,7 @@ def _is_non_product_line_name(name: str) -> bool:
     if not text:
         return True
     if re.match(
-        r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL|AMOUNT\s*TOTAL|NET\s*TOTAL)\b",
+        r"^(TOTALS?|GRAND\s*TOTALS?|SUB\s*TOTALS?|AMOUNT\s*TOTALS?|NET\s*TOTALS?)\b",
         text,
         re.I,
     ):
@@ -21023,8 +21023,19 @@ def _is_ssa_opening_receipt_issue_value_text(text: str) -> bool:
     return True
 
 
-def _ssa_ori_number(token: str) -> float:
+def _ssa_ori_norm_token(token: str) -> str:
+    """OCR dash/decimal variants used on SSA QTY/VALUE DUMP prints."""
     raw = str(token or "").strip()
+    if raw in {"", "~", "˜", "—", "–", "--", "---"}:
+        return "-"
+    # Tesseract often reads 0.00 as 0:00 on these grids.
+    if re.fullmatch(r"-?\d+:\d{2}", raw):
+        return raw.replace(":", ".", 1)
+    return raw
+
+
+def _ssa_ori_number(token: str) -> float:
+    raw = _ssa_ori_norm_token(token)
     if raw in {"", "-", "—", "--"}:
         return 0.0
     return _to_float(raw)
@@ -21157,7 +21168,14 @@ def _parse_ssa_opening_receipt_issue_value(
             continue
         if re.match(r"^TOTAL\b", stripped, re.I):
             tokens = stripped.split()
-            nums = [t for t in tokens[1:] if _SSA_ORI_TOKEN_RE.match(t)]
+            nums = []
+            for t in tokens[1:]:
+                norm = _ssa_ori_norm_token(t)
+                if _SSA_ORI_TOKEN_RE.match(norm):
+                    nums.append(norm)
+                elif re.fullmatch(r"[A-Za-z)(]+", t or ""):
+                    # OCR junk in a qty slot (tt) / bY) on the TOTAL row).
+                    nums.append("0")
             if len(nums) >= 8:
                 extra = result["totals"]["extra"]
                 extra["opening_qty"] = _ssa_ori_number(nums[0])
@@ -21180,10 +21198,14 @@ def _parse_ssa_opening_receipt_issue_value(
             ):
                 result["company_name"] = _clean_name(stripped)
             continue
-        tail = tokens[-9:]
+        tail = [_ssa_ori_norm_token(tok) for tok in tokens[-9:]]
         if not all(_SSA_ORI_TOKEN_RE.match(tok) for tok in tail):
             continue
         name = " ".join(tokens[:-9]).strip()
+        name_parts = name.split()
+        # Packing + UOM (PCS) sit before OPENING QTY on Gurukrupa-style prints.
+        if name_parts and re.fullmatch(r"PCS\.?", name_parts[-1], re.I):
+            name = " ".join(name_parts[:-1]).strip()
         if not name or _ssa_skip_product(name) or re.match(r"^TOTAL\b", name, re.I):
             continue
         name, pack = _ssa_ori_split_pack(name)
@@ -32902,6 +32924,77 @@ def _ssa_qty_value_result_usable(result: Optional[Dict[str, Any]]) -> bool:
     ):
         return True
     return False
+
+
+def _ocr_ssa_qty_value_scaled_text(file_bytes: bytes) -> str:
+    """3x contrast OCR for compact SSA QTY/VALUE DUMP scans (1080px-wide prints)."""
+    from PIL import Image, ImageEnhance, ImageOps
+
+    try:
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
+    except Exception:
+        return ""
+    longest = max(image.size)
+    scale = 3 if longest < 1600 else 2
+    wide = image.resize(
+        (image.width * scale, image.height * scale), Image.Resampling.LANCZOS
+    )
+    wide = ImageEnhance.Contrast(wide).enhance(1.4)
+    try:
+        return _a2z_tesseract().image_to_string(wide, config="--psm 6") or ""
+    except Exception:
+        return ""
+
+
+def _peek_ssa_qty_value_dump_layout(text: str) -> bool:
+    """True for OPENING/RECEIPT/ISSUE/CLOSING qty+value DUMP prints (OCR-tolerant)."""
+    if not text:
+        return False
+    return bool(
+        _is_ssa_opening_receipt_issue_value_text(text)
+        or _is_ssa_opening_receipt_issue_dump_text(text)
+        or _is_ssa_opening_receipt_issue_dump_text_fuzzy(text)
+    )
+
+
+def _extract_ssa_opening_receipt_issue_value_image(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    peek_text: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Native SSA QTY/VALUE DUMP reader for photos. Other layouts return None.
+
+    1x OCR of compact prints garbles ISSUE and glues closing VALUE into qty.
+    Scaled OCR plus the existing text parser keeps rupees in VALUE columns.
+    """
+    preview = peek_text or ""
+    if not _peek_ssa_qty_value_dump_layout(preview):
+        if peek_text:
+            return None
+        try:
+            preview = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+        except Exception:
+            preview = ""
+        if not _peek_ssa_qty_value_dump_layout(preview):
+            return None
+    text = _ocr_ssa_qty_value_scaled_text(file_bytes)
+    if not text.strip():
+        return None
+    parsed = _parse_ssa_opening_receipt_issue_value(
+        text, filename, (ext or ".jpg").lstrip(".") or "jpg"
+    )
+    if not parsed or not parsed.get("line_items"):
+        return None
+    extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "ssa_opening_receipt_issue_value"
+    extra["layout"] = "ssa_opening_receipt_issue_value"
+    extra["ocr_scaled"] = True
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=tesseract method=ssa_opening_receipt_issue_value_ocr",
+        filename,
+    )
+    return parsed
 
 
 def _extract_ssa_opening_receipt_issue_dump_image(
@@ -46460,6 +46553,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         age_probe = _ocr_image_to_text(file_bytes) or ""
     except Exception:
         age_probe = ""
+    # Compact SSA OPENING/RECEIPT/ISSUE/CLOSING qty+value DUMP photos: 1x OCR
+    # garbles ISSUE and parks rupees in qty. Scaled OCR uses the native parser.
+    if _peek_ssa_qty_value_dump_layout(age_probe):
+        try:
+            ssa_ori_img = _extract_ssa_opening_receipt_issue_value_image(
+                file_bytes, filename, ext, peek_text=age_probe
+            )
+        except Exception as exc:
+            logger.warning("SSA qty/value dump OCR skipped: %s", exc)
+            ssa_ori_img = None
+        if ssa_ori_img and ssa_ori_img.get("line_items"):
+            extra = ssa_ori_img.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "ssa_opening_receipt_issue_value_ocr"
+            return ssa_ori_img
     if _looks_like_opening_received_issued_closing_age_text(age_probe):
         try:
             age_sheet = _extract_opening_received_issued_closing_age(
