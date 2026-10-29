@@ -11536,6 +11536,10 @@ _XLS_HEADER_ALIASES = {
     "closingvalue": "bval",
     "closingval": "bval",
     "closingamount": "bval",
+    # CL.AMOUNT / Cls Amt — truncated closing money (qty stays under CLOSING).
+    "clamount": "bval",
+    "clsamount": "bval",
+    "clsamt": "bval",
     "closingstockvalue": "bval",
     "closingvaluation": "bval",
     "clvalue": "bval",
@@ -11561,6 +11565,10 @@ _XLS_HEADER_ALIASES = {
     "salevalue": "sval",
     "saleamount": "sval",
     "salesamount": "sval",
+    # SALE AMO. / Sale Amt — truncated sales money (qty stays under SALE).
+    "saleamo": "sval",
+    "saleamt": "sval",
+    "salesamt": "sval",
     "secondarysalesvalue": "sval",
     "valueofsales": "sval",
     "salval": "sval",
