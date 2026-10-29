@@ -4248,6 +4248,16 @@ def _repair_paisa_parked_in_qty_fields(item: Dict[str, Any]) -> bool:
     fs = extra.setdefault("field_source", {})
     if not isinstance(fs, dict):
         return False
+    # MR Report free-column shift: free_in/free_out still hold real qtys while
+    # sales_qty/closing_qty look like money — leave for PUR_FREE shift, do not
+    # clear the qty slots.
+    free_in = extra.get("free_in_qty")
+    free_out = extra.get("free_out_qty")
+    if (
+        (fs.get("free_in_qty") == "printed" and _looks_small_qty(free_in))
+        or (fs.get("free_out_qty") == "printed" and _looks_small_qty(free_out))
+    ):
+        return False
     oq = _printed_float(item, "opening_qty")
     rq = _printed_float(item, "purchase_qty")
     if rq is None:
@@ -6937,12 +6947,15 @@ def _map_single_table(
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
             _repair_rate_parked_in_opening_qty(item)
             _repair_rate_taken_as_opening_qty(item)
+            # Free-column left-shift BEFORE paisa: sale/closing money parked in
+            # qty while free_in/free_out hold the real qtys. Paisa would clear
+            # those qty slots and block PUR_FREE_SALE_CLOSING_SHIFT.
+            _repair_free_in_issue_closing_shift(item)
+            _repair_pur_free_sale_closing_left_shift(item)
             _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)
-            _repair_free_in_issue_closing_shift(item)
-            _repair_pur_free_sale_closing_left_shift(item)
             _repair_qty_copied_into_value_fields(item)
             _repair_missing_pair_null_shift(item)
             _repair_qty_value_pair_left_shift(item)
