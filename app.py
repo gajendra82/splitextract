@@ -7,7 +7,7 @@ from services.sales_statement_extractor import (
     SUPPORTED_EXTENSIONS as SALES_STATEMENT_EXTENSIONS,
     extract_sales_statement,
 )
-from services.file_type_detector import FileKind, FileTypeDetector
+from services.file_type_detect2or import FileKind, FileTypeDetector
 from services.excel_invoice_extract import (
     build_excel_ocr_text,
     extract_invoices_from_excel,
