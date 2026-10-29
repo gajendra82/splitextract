@@ -255,6 +255,7 @@ ALIASES: Dict[str, List[str]] = {
         "cn",
         "return",
         "retrn",
+        "sale ret.",
     ],
     "purchase_return": [
         "pret",
@@ -297,6 +298,10 @@ ALIASES: Dict[str, List[str]] = {
         "nrexp",
         "near exp",
         "near expiry",
+        # Breakage / expiry / purchase-return combined movement column.
+        "b/e/pr",
+        "bepr",
+        "b e pr",
     ],
     "closing": [
         "cls",
@@ -439,6 +444,8 @@ ALIASES: Dict[str, List[str]] = {
         "opval",
         "receive value",
         "issue value",
+        "amount-i",
+        "amount i",
     ],
 }
 
@@ -1425,6 +1432,132 @@ def _build_column_bands(
     return bands
 
 
+_QTY_VALUE_CANONS = frozenset(
+    {
+        "opening_qty",
+        "opening_value",
+        "purchase_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "expiry_damage_qty",
+        "total_qty",
+        "free_in_qty",
+        "free_out_qty",
+        "order_qty",
+        "rate",
+    }
+)
+
+_UNIT_PACK_RE = re.compile(
+    r"^\(?[A-Z]?\d+(?:\.\d+)?\s*"
+    r"(?:\*\s*\d+(?:\.\d+)?)?\s*"
+    r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|GRM|G|PH|UNT)\)?$",
+    re.I,
+)
+
+
+def _header_peel_pack_in_qty_enabled() -> bool:
+    """Peel pack tokens that landed in a qty/value band (60'S / 30ML / HIM).
+
+    Default ON. Same generic rule as Vision unlabeled-pack peel: a pack word
+    under OPENING must not collide with the printed opening qty.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PEEL_PACK_IN_QTY", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _unit_pack_token(text: Any) -> bool:
+    t = str(text or "").strip().rstrip(".,-_")
+    if not t:
+        return False
+    if _UNIT_PACK_RE.fullmatch(t):
+        return True
+    return bool(
+        re.fullmatch(
+            r"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
+            t,
+            re.I,
+        )
+    )
+
+
+def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str]]:
+    """Split pack-like tokens out of a qty/value bucket."""
+    packs: List[str] = []
+    rest: List[str] = []
+    for t in texts:
+        if _unit_pack_token(t):
+            packs.append(t)
+        else:
+            rest.append(t)
+    if not packs and len(texts) >= 2:
+        letter = [t for t in texts if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())]
+        numeric = [
+            t
+            for t in texts
+            if re.fullmatch(r"-?\d+(?:[.,]\d+)?", str(t or "").strip().replace(",", ""))
+        ]
+        if letter and numeric and len(letter) + len(numeric) == len(texts):
+            return letter, numeric
+    return packs, rest
+
+
+def _stash_peeled_pack(fields: Dict[str, Optional[str]], packs: Sequence[str]) -> None:
+    token = " ".join(p for p in packs if p).strip()
+    if not token:
+        return
+    existing = str(fields.get("pack") or "").strip()
+    fields["pack"] = f"{existing} {token}".strip() if existing else token
+    logger.info("STOCK_HEADER_PEEL_PACK_IN_QTY pack=%r", token)
+
+
+def _finalize_qty_bucket(
+    texts: List[str],
+    canon: str,
+    fields: Dict[str, Optional[str]],
+    errors: List[Dict[str, Any]],
+    col_index: int,
+) -> None:
+    """Write one column bucket, peeling unlabeled pack tokens out of qty cells."""
+    if not texts:
+        fields.setdefault(canon, None)
+        return
+    if (
+        _header_peel_pack_in_qty_enabled()
+        and canon in _QTY_VALUE_CANONS
+    ):
+        packs, rest = _peel_pack_from_qty_texts(texts)
+        if packs:
+            _stash_peeled_pack(fields, packs)
+            texts = rest
+        if not texts:
+            fields[canon] = None
+            return
+        if len(texts) == 1:
+            fields[canon] = texts[0]
+            return
+    if len(texts) == 1:
+        fields[canon] = texts[0]
+        return
+    if canon == "product_name":
+        fields[canon] = " ".join(t for t in texts if t).strip() or None
+        return
+    fields[canon] = None
+    errors.append(
+        {
+            "code": "CELL_COLLISION",
+            "message": f"Two tokens in column {col_index} ({canon})",
+            "col_index": col_index,
+        }
+    )
+
+
 def _assign_cells_by_column_bands(
     row_tokens: List[Dict[str, Any]],
     centers: Sequence[Tuple[int, float, str]],
@@ -1511,24 +1644,7 @@ def _assign_cells_by_column_bands(
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
-        texts = bucket.get(idx) or []
-        if len(texts) == 0:
-            fields.setdefault(canon, None)
-        elif len(texts) == 1:
-            fields[canon] = texts[0]
-        elif canon == "product_name":
-            # A product name is several words in one column. Qty columns stay
-            # collisions so two numbers are not glued into one cell.
-            fields[canon] = " ".join(t for t in texts if t).strip() or None
-        else:
-            fields[canon] = None
-            errors.append(
-                {
-                    "code": "CELL_COLLISION",
-                    "message": f"Two tokens in column {idx} ({canon})",
-                    "col_index": idx,
-                }
-            )
+        _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
     logger.info(
         "HEADER_COLUMN_BANDS mode=bands assigned=%s ambiguous=%s unassigned=%s "
@@ -2401,20 +2517,7 @@ def assign_cells(
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
-        texts = bucket.get(idx) or []
-        if len(texts) == 0:
-            fields.setdefault(canon, None)
-        elif len(texts) == 1:
-            fields[canon] = texts[0]
-        else:
-            fields[canon] = None
-            errors.append(
-                {
-                    "code": "CELL_COLLISION",
-                    "message": f"Two tokens in column {idx} ({canon})",
-                    "col_index": idx,
-                }
-            )
+        _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
     return {"fields": fields, "errors": errors}
 

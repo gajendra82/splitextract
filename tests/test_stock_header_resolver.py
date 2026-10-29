@@ -563,6 +563,22 @@ class AssignCellsTests(unittest.TestCase):
         self.assertTrue(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
         self.assertIsNone(out["fields"]["opening_qty"])
 
+    def test_pack_token_in_opening_band_does_not_null_qty(self):
+        columns = self._qty_columns([15, 119, 157, 295, 374])
+        tokens = [
+            {"x": 15, "text": "BONNISAN"},
+            {"x": 48, "text": "DROPS"},
+            {"x": 86, "text": "30ML"},
+            {"x": 125, "text": "13"},
+            {"x": 183, "text": "0"},
+            {"x": 307, "text": "0"},
+            {"x": 396, "text": "13"},
+        ]
+        out = assign_cells(tokens, columns)
+        self.assertEqual(out["fields"]["opening_qty"], "13")
+        self.assertEqual(out["fields"]["pack"], "30ML")
+        self.assertFalse(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
+
 
 class ParseNumberTests(unittest.TestCase):
     def test_cases(self):

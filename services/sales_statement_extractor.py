@@ -2204,7 +2204,11 @@ def _looks_like_packing_token(tok: str) -> bool:
         re.I,
     ):
         return True
-    if re.fullmatch(r"\d+\*\d+", t):
+    if re.fullmatch(
+        r"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
+        t,
+        re.I,
+    ):
         return True
     # "1X60", "1 X200ML", "1 X 100GRM", "1 X400G", bare "X20" / "X200ML"
     if re.fullmatch(
@@ -11694,6 +11698,9 @@ _XLS_HEADER_ALIASES = {
     "primary(qty)": "pur",
     "sale": "sale",
     "sales": "sale",
+    "saleret": "sret",
+    "salereturn": "sret",
+    "sret": "sret",
     "saleqty": "sale",
     "salesqty": "sale",
     "soldqty": "sale",
@@ -11810,6 +11817,7 @@ _XLS_HEADER_ALIASES = {
     "sampleqty": "sample",
     "expiry": "expiry",
     "expiryclos": "expiry",
+    "bepr": "bepr",
     "rate": "rate",
     "secondaryrate": "rate",
     "productcode": "product_code",
@@ -12082,6 +12090,78 @@ def _xls_stock_column_as_closing_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _xls_unlabeled_pack_peel_enabled() -> bool:
+    """Peel a pack token parked in the first qty column when PACK is not a header.
+
+    Default ON. Same generic rule as Vision unlabeled-pack peel: 60'S / 30ML
+    sitting under OPENING must not become opening_qty.
+    """
+    return os.getenv(
+        "STOCK_XLS_UNLABELED_PACK_PEEL", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pdf_prefer_semantic_over_weak_txt_enabled() -> bool:
+    """Prefer the header-alias table when TXT heuristics return a handful of rows.
+
+    Default ON. Kaveri fallback treats unlabeled total rows (1396 / 1552) as
+    products, then the PDF path marks the extract weak and Vision returns nulls.
+    """
+    return os.getenv(
+        "STOCK_PDF_SEMANTIC_OVER_WEAK_TXT", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _xls_amount_after_qty_field(
+    colmap: Dict[str, int], col_index: int
+) -> Optional[str]:
+    """AMOUNT-I beside a qty column is that column's printed value."""
+    if "sale" in colmap and "sval" not in colmap and colmap["sale"] < col_index:
+        return "sval"
+    if "bal" in colmap and "bval" not in colmap and colmap["bal"] < col_index:
+        return "bval"
+    if "op" in colmap and "opval" not in colmap and colmap["op"] < col_index:
+        return "opval"
+    if "pur" in colmap and "purval" not in colmap and colmap["pur"] < col_index:
+        return "purval"
+    return None
+
+
+def _xls_cell_is_unlabeled_pack(value: Any, next_value: Any = None) -> bool:
+    token = str(value or "").strip()
+    if not token:
+        return False
+    if _looks_like_packing_token(token):
+        return True
+    if _xls_cell_has_qty(token):
+        return False
+    # Brand/pack token (HIM) in the unlabeled pack slot, with qty to the right.
+    return bool(
+        re.fullmatch(r"[A-Za-z]{2,6}", token) and _xls_cell_has_qty(next_value)
+    )
+
+
+def _xls_peel_unlabeled_pack_row(
+    row: List[Any], colmap: Dict[str, int]
+) -> Tuple[List[Any], Optional[str]]:
+    """Drop an unlabeled pack cell so remaining cells line up with headers."""
+    if not _xls_unlabeled_pack_peel_enabled():
+        return row, None
+    if "pack" in colmap:
+        return row, None
+    op_i = colmap.get("op")
+    if op_i is None or op_i < 0 or op_i >= len(row):
+        return row, None
+    nxt = row[op_i + 1] if op_i + 1 < len(row) else None
+    if not _xls_cell_is_unlabeled_pack(row[op_i], nxt):
+        return row, None
+    token = str(row[op_i]).strip()
+    peeled = list(row)
+    peeled.pop(op_i)
+    logger.info("STOCK_XLS_UNLABELED_PACK_PEEL pack=%r", token)
+    return peeled, token
+
+
 def _xls_norm_header(label: Any) -> str:
     text = str(label or "").replace("\u00a0", " ").replace("\r", " ").replace("\n", " ")
     compact = re.sub(r"[\s_]+", "", text.strip().lower())
@@ -12244,6 +12324,23 @@ def _xls_movement_qty_value_fanout_enabled() -> bool:
     }
 
 
+def _xls_movement_qty_value_offset_fanout_enabled() -> bool:
+    """STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT_OFFSET — equal-width SALE/CLOSING on VALUE.
+
+    Default ON. Fan-out still runs if the group title sits on VALUE and the QTY
+    column parent is blank (all printed quantities otherwise stay 0). Set false
+    to restore the equal-width index-join skip.
+    """
+    return os.getenv(
+        "STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT_OFFSET", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 _XLS_QTY_VALUE_PAIR_RE = re.compile(
     r"^(qty|quantity|qnty)\s+(value|val|amt|amount)s?$",
     re.I,
@@ -12285,6 +12382,42 @@ def _xls_split_qty_value_cells(row: List[Any]) -> List[Any]:
     return out
 
 
+def _xls_qty_value_group_labels_offset(
+    parents_row: List[Any], children: List[Any]
+) -> bool:
+    """True when a QTY child has a blank parent and the next col is movement+VALUE.
+
+    SALE/CLOSING group titles are often centered on the VALUE cell, so equal-width
+    index-join maps SALE VALUE but never SALE QTY (all quantities become 0).
+    """
+    n = min(len(parents_row), len(children))
+    for i in range(n - 1):
+        parent = parents_row[i]
+        child = children[i]
+        parent_empty = parent in (None, "") or not str(parent).strip()
+        child_tok = (
+            _xls_parent_token(child)
+            if child not in (None, "") and str(child).strip()
+            else ""
+        )
+        if not parent_empty or child_tok not in {"qty", "quantity", "qnty"}:
+            continue
+        nxt_parent = parents_row[i + 1]
+        nxt_child = children[i + 1]
+        if nxt_parent in (None, "") or not str(nxt_parent).strip():
+            continue
+        if _xls_parent_token(nxt_parent) not in _XLS_MOVEMENT_HEADER_PARENTS:
+            continue
+        nxt_child_tok = (
+            _xls_parent_token(nxt_child)
+            if nxt_child not in (None, "") and str(nxt_child).strip()
+            else ""
+        )
+        if nxt_child_tok in {"value", "values", "val", "amt", "amount", "amounts"}:
+            return True
+    return False
+
+
 def _xls_fanout_movement_qty_value(
     parents_row: List[Any], children_row: List[Any]
 ) -> Optional[List[Any]]:
@@ -12299,7 +12432,13 @@ def _xls_fanout_movement_qty_value(
     if not isinstance(parents_row, list) or not isinstance(children_row, list):
         return None
     children = _xls_split_qty_value_cells(children_row)
-    if len(parents_row) == len(children):
+    equal_width = len(parents_row) == len(children)
+    offset_groups = equal_width and _xls_qty_value_group_labels_offset(
+        parents_row, children
+    )
+    if equal_width and not (
+        offset_groups and _xls_movement_qty_value_offset_fanout_enabled()
+    ):
         return None
     parent_cells = [
         c
@@ -12352,10 +12491,11 @@ def _xls_fanout_movement_qty_value(
     if child_i < 4:
         return None
     logger.info(
-        "STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT parents=%s children=%s cols=%s",
+        "STOCK_XLS_MOVEMENT_QTY_VALUE_FANOUT parents=%s children=%s cols=%s offset=%s",
         [str(p) for p in parent_cells],
         [str(c) for c in child_cells],
         [str(c) for c in combined],
+        offset_groups,
     )
     return combined
 
@@ -12453,6 +12593,11 @@ def _xls_header_colmap(row: List[Any]) -> Dict[str, int]:
         field = _xls_norm_header(cell)
         if not field:
             continue
+        if field in {"amounti", "amount-i"}:
+            paired = _xls_amount_after_qty_field(colmap, ci)
+            if not paired:
+                continue
+            field = paired
         is_weak = _xls_label_compact(cell) in _XLS_WEAK_LABELS.get(field, ())
         if field not in colmap:
             colmap[field] = ci
@@ -15919,8 +16064,13 @@ def _xls_fill_from_rows(
         # Year + Month are period metadata only. Do not invent calendar dates.
 
         pack_i = _col("pack")
+        unlabeled_pack = None
+        if pack_i is None:
+            row, unlabeled_pack = _xls_peel_unlabeled_pack_row(list(row), colmap)
         if pack_i is not None and pack_i < len(row) and row[pack_i]:
             item["packing"] = str(row[pack_i]).strip()
+        elif unlabeled_pack:
+            item["packing"] = unlabeled_pack
 
         # Opening/Closing Balance (qty) aliases → op/bal via _xls_norm_header.
         # Prefer OpenBalQty over bare OPENING (often OPENING VALUE).
@@ -15980,6 +16130,8 @@ def _xls_fill_from_rows(
             ("scheme_qty", ("scheme",)),
             ("free_qty", ("free",)),
             ("sample_qty", ("sample",)),
+            ("sale_return_qty", ("sret", "saleret")),
+            ("exp_damage", ("bepr",)),
         ):
             _assign_number(extra_field, _col(*extra_names), into_extra=True)
         if rate_i is not None and rate_i < len(row) and _xls_cell_has_qty(row[rate_i]):
@@ -40417,12 +40569,28 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
     # 1) Local TXT heuristics (works well for Kaveri-like layouts)
     local = _parse_txt(text.encode("utf-8", errors="ignore"), filename)
     local["source_format"] = source_format
+
+    # 1b) Semantic header-alias table (Mat Name / Item Name / wrapped columns)
+    semantic = _parse_semantic_text_table(text, filename, source_format)
+    local_n = len(local.get("line_items") or [])
+    sem_n = len((semantic or {}).get("line_items") or [])
+    if (
+        _pdf_prefer_semantic_over_weak_txt_enabled()
+        and semantic
+        and sem_n >= 8
+        and local_n < 8
+    ):
+        logger.info(
+            "STOCK_PDF_SEMANTIC_OVER_WEAK_TXT local_items=%s semantic_items=%s",
+            local_n,
+            sem_n,
+        )
+        return _apply_total_row_to_result(semantic, text)
+
     if local.get("line_items"):
         local["totals"]["extra"]["extraction_method"] = "pdf_text_heuristic"
         return _apply_total_row_to_result(local, text)
 
-    # 1b) Semantic header-alias table (Mat Name / Item Name / wrapped columns)
-    semantic = _parse_semantic_text_table(text, filename, source_format)
     if semantic and semantic.get("line_items"):
         return _apply_total_row_to_result(semantic, text)
 
