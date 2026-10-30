@@ -5964,7 +5964,8 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
     r"\b(?:zandra|division)\b|"
     r"\bdivi\b|"
     r"\([^)]*\bdiv(?:i|ision)?\b[^)]*\)|"
-    r"\bhimalaya\b\s*\("
+    r"\bhimalaya\b\s*\(|"
+    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)"
 )
 
 # LstSL / Open / Recd footer money labels — never SKUs.

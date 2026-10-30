@@ -113,6 +113,9 @@ class TestDivisionDetector(unittest.TestCase):
         self.assertTrue(_is_statement_division_banner("HIMALAYA ZANDRA (HIM3)"))
         self.assertTrue(_is_non_product_line_name("HIMALAYA PURE HANDS DIV"))
         self.assertTrue(_is_non_product_line_name("Total (Value In Rs.)"))
+        self.assertTrue(
+            _is_non_product_line_name("MARG ERP NANO for Chemist Rs.5550")
+        )
         self.assertFalse(_is_non_product_line_name("CONFIDO TABLETS"))
 
 

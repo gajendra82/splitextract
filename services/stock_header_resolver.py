@@ -31,6 +31,7 @@ CANONICAL_FIELDS = (
     "sales_return_qty",
     "purchase_return_qty",
     "expiry_damage_qty",
+    "other_outward_qty",
     "total_qty",
     "closing_qty",
     "closing_value",
@@ -204,6 +205,7 @@ ALIASES: Dict[str, List[str]] = {
         "receipt pur",
         "receipt/pur",
         "receive quantity",
+        "receive quant",  # wrapped RECEIVE QUANT(ITY)
         "purchase qty",
         "purchased",
         "purchased qty",
@@ -227,6 +229,7 @@ ALIASES: Dict[str, List[str]] = {
         "outward",
         "sold",
         "issue quantity",
+        "issue quant",  # wrapped ISSUE QUANT(ITY)
         "issue/sales",
         "sales qty",
         "sale qty",
@@ -240,6 +243,8 @@ ALIASES: Dict[str, List[str]] = {
         "sale ret",
         "sale ref",
         "s ret",
+        "s return",
+        "sreturn",
         "sret",
         "sr",
         "sales return",
@@ -259,6 +264,8 @@ ALIASES: Dict[str, List[str]] = {
     ],
     "purchase_return": [
         "pret",
+        "p return",
+        "preturn",
         "pur ret",
         "purc ret",
         "purc. ret",
@@ -324,6 +331,7 @@ ALIASES: Dict[str, List[str]] = {
         "ci stk",
         "cb",
         "closing stock",
+        "closing stoc",  # wrapped CLOSING STOC(K)
         "closing qty",
         "closing balance",
         "closing bal",
@@ -379,6 +387,15 @@ ALIASES: Dict[str, List[str]] = {
     "sample": [
         "sample",
         "smpl",
+    ],
+    # Signed adjustment between sales and closing (outward when negative).
+    "others": [
+        "others",
+        "others qty",
+        "other qty",
+        "repl other",
+        "repl/other",
+        "repl / other",
     ],
     "total": [
         "total",
@@ -456,6 +473,7 @@ _GROUP_TO_QTY = {
     "sales_return": "sales_return_qty",
     "purchase_return": "purchase_return_qty",
     "expiry_damage": "expiry_damage_qty",
+    "others": "other_outward_qty",
     "closing": "closing_qty",
     "total": "total_qty",
     "order": "order_qty",
@@ -540,8 +558,13 @@ def _has_value_marker(norm: str) -> bool:
             # Only amt/rs for endswith — bare "val" would false-hit *val words.
             if m in tokens:
                 return True
+            # "ClsAmt" / "Stk Rs" suffix only. "others" ends in "rs" and is not money.
             if m_compact in {"amt", "rs"} and compact.endswith(m_compact):
-                return True
+                if compact == m_compact:
+                    return True
+                prev = compact[-len(m_compact) - 1]
+                if not prev.isalpha():
+                    return True
         else:
             if m in norm or m_compact in compact:
                 return True
@@ -628,6 +651,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     if not norm:
         return None, 0.0, "empty"
 
+    compact_early = re.sub(r"\s+", "", norm)
+    # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
+    if compact_early in {"itemcode", "itemcd"} or norm == "item code":
+        return "non_stock_qty", 0.95, "item_code"
+
     direct = _direct_value_field(norm)
     if direct:
         return f"direct:{direct}", 0.95, f"direct_value:{direct}"
@@ -681,6 +709,9 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     for group, alias, conf in hits:
         if group == "sales_return" and alias == "return":
             if any(t.startswith("pur") for t in tokens) or "purchase" in norm:
+                continue
+            # P.RETURN is purchase return; bare "return" must not claim it.
+            if "p" in tokens:
                 continue
         if group == "purchase" and (
             "return" in tokens
@@ -1505,6 +1536,17 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
         ]
         if letter and numeric and len(letter) + len(numeric) == len(texts):
             return letter, numeric
+        # Truncated pack fragments (10M from 10ML, 100M from 100ML) are not
+        # unit tokens and not letter-only. Keep printed numbers; peel the rest.
+        numbers: List[str] = []
+        others: List[str] = []
+        for t in texts:
+            if parse_number(t) is not None:
+                numbers.append(t)
+            else:
+                others.append(t)
+        if numbers and others:
+            return others, numbers
     return packs, rest
 
 
@@ -2429,15 +2471,32 @@ def assign_cells(
     absorb_ignore = _absorb_ignore_geometry_enabled()
     centers: List[Tuple[int, float, str]] = []
     date_ignore_absorbers = 0
-    for c in columns:
-        if c.get("x_center") is None:
-            continue
+    geo_cols = [c for c in columns if c.get("x_center") is not None]
+    non_ignore_xs = [
+        float(c["x_center"])
+        for c in geo_cols
+        if str(c.get("canonical") or "ignore") != "ignore"
+    ]
+    left_anchor = min(non_ignore_xs) if non_ignore_xs else None
+    for c in geo_cols:
         canon = str(c.get("canonical") or "ignore")
         reason = str(c.get("reason") or "")
         is_date_ignore = canon == "ignore" and reason == "date_or_near_expiry"
-        if canon == "ignore" and not absorb_ignore and not is_date_ignore:
+        # OTHERS / ITEMCODE sit right of the product column. Dropping them
+        # spills their tokens into closing/order (CELL_COLLISION → None).
+        is_right_ignore = (
+            canon == "ignore"
+            and left_anchor is not None
+            and float(c["x_center"]) > left_anchor
+        )
+        if (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_right_ignore
+        ):
             continue
-        if is_date_ignore:
+        if is_date_ignore or is_right_ignore:
             date_ignore_absorbers += 1
         centers.append((int(c["col_index"]), float(c["x_center"]), canon))
     centers.sort(key=lambda t: t[1])
@@ -2522,6 +2581,49 @@ def assign_cells(
     return {"fields": fields, "errors": errors}
 
 
+# Consecutive Greek τ..ύ (U+03C4..U+03CD) are a common PDF ToUnicode miss
+# for digits 0-9. Mapping is codepoint - 0x03C4; no-op when absent.
+_PSEUDO_DIGIT_START = 0x03C4
+_PSEUDO_DIGIT_END = 0x03CD
+
+
+def decode_pdf_pseudo_digits(text: Any) -> str:
+    """Map PDF pseudo-digit Greek letters τ..ύ onto ASCII 0-9."""
+    raw = "" if text is None else str(text)
+    if not raw:
+        return raw
+    out: List[str] = []
+    changed = False
+    for ch in raw:
+        cp = ord(ch)
+        if _PSEUDO_DIGIT_START <= cp <= _PSEUDO_DIGIT_END:
+            out.append(chr(ord("0") + (cp - _PSEUDO_DIGIT_START)))
+            changed = True
+        else:
+            out.append(ch)
+    return "".join(out) if changed else raw
+
+
+def decode_pdf_word_tokens(words: Any) -> Any:
+    """Decode pseudo-digits on pdfplumber/fitz word tokens. Other shapes pass through."""
+    if not words:
+        return words
+    decoded: List[Any] = []
+    for word in words:
+        if isinstance(word, dict):
+            item = dict(word)
+            if "text" in item:
+                item["text"] = decode_pdf_pseudo_digits(item.get("text"))
+            decoded.append(item)
+        elif isinstance(word, (list, tuple)) and len(word) > 4:
+            seq = list(word)
+            seq[4] = decode_pdf_pseudo_digits(seq[4])
+            decoded.append(tuple(seq) if isinstance(word, tuple) else seq)
+        else:
+            decoded.append(word)
+    return decoded
+
+
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
     """Parse a printed quantity/amount into float|None.
 
@@ -2534,7 +2636,7 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
         return None
     if isinstance(raw, (int, float)):
         return float(raw)
-    text = str(raw).strip()
+    text = decode_pdf_pseudo_digits(str(raw).strip())
     if not text:
         return None
     lower = text.lower()

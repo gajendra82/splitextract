@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from services.stock_header_resolver import (
     assign_cells,
+    decode_pdf_pseudo_digits,
     normalize_header,
     parse_number,
     resolve_columns,
@@ -55,6 +56,78 @@ class HeaderSamplesTests(unittest.TestCase):
 
 
 class ResolveColumnsUnitTests(unittest.TestCase):
+    def test_p_return_is_purchase_return_not_sales_return(self):
+        result = resolve_columns(
+            _cells(
+                "ITEM",
+                "PACK",
+                "OPENING",
+                "PURCHASE",
+                "P.RETURN",
+                "SALE",
+                "S.RETURN",
+                "OTHERS",
+                "CLOSING",
+                "REORDER - QTY",
+                "ITEMCODE",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "pack",
+                "opening_qty",
+                "purchase_qty",
+                "purchase_return_qty",
+                "sales_qty",
+                "sales_return_qty",
+                "ignore",
+                "closing_qty",
+                "order_qty",
+                "ignore",
+            ],
+        )
+        self.assertEqual(result["columns"][4]["canonical"], "purchase_return_qty")
+        self.assertEqual(result["columns"][10]["reason"], "item_code")
+
+    def test_parse_number_pdf_pseudo_digits(self):
+        # τυ-Sep-φϊ visual 01-Sep-26; φτ visual 20; ωϋ.φϋ visual 57.27
+        self.assertEqual(decode_pdf_pseudo_digits("φτ"), "20")
+        self.assertEqual(decode_pdf_pseudo_digits("ωϋ.φϋ"), "57.27")
+        self.assertEqual(parse_number("φτ"), 20.0)
+        self.assertEqual(parse_number("ωϋ.φϋ"), 57.27)
+        self.assertEqual(parse_number("20"), 20.0)
+
+    def test_wrapped_receive_quant_issue_quant_closing_stoc(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT DESCRIPTION",
+                "OPENING STOCK",
+                "OPENING VALUE",
+                "RECEIVE QUANT",
+                "RECEIVE VALUE",
+                "ISSUE QUANTITY",
+                "ISSUE VALUE",
+                "CLOSING STOC",
+                "CLOSING VALUE",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "opening_qty",
+                "opening_value",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ],
+        )
+
     def test_op_qty_value_strip(self):
         cells = _cells(
             "Op Qty",
@@ -577,6 +650,24 @@ class AssignCellsTests(unittest.TestCase):
         out = assign_cells(tokens, columns)
         self.assertEqual(out["fields"]["opening_qty"], "13")
         self.assertEqual(out["fields"]["pack"], "30ML")
+        self.assertFalse(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
+
+    def test_truncated_pack_fragment_does_not_null_opening_qty(self):
+        columns = self._qty_columns([0.267, 0.383, 0.500, 0.618, 0.734])
+        tokens = [
+            {"x": 0.221, "text": "OPTHACARE"},
+            {"x": 0.278, "text": "EYE"},
+            {"x": 0.314, "text": "DROP"},
+            {"x": 0.349, "text": "10M"},
+            {"x": 0.395, "text": "444"},
+            {"x": 0.514, "text": "0"},
+            {"x": 0.632, "text": "156"},
+            {"x": 0.746, "text": "288"},
+        ]
+        out = assign_cells(tokens, columns)
+        self.assertEqual(out["fields"]["opening_qty"], "444")
+        self.assertEqual(out["fields"]["sales_qty"], "156")
+        self.assertEqual(out["fields"]["closing_qty"], "288")
         self.assertFalse(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
 
 

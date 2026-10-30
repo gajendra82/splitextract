@@ -27,6 +27,7 @@ _CANON_TO_ITEM = {
     "closing_value": ("closing_value", False),
     "sales_return_qty": ("sale_return", True),
     "expiry_damage_qty": ("exp_damage", True),
+    "other_outward_qty": ("others_qty", True),
     "free_in_qty": ("free_in_qty", True),
     "free_out_qty": ("free_out_qty", True),
     "total_qty": ("total_stock", True),
@@ -56,6 +57,8 @@ def _is_total_row_name(name: Any) -> bool:
     key = _norm_name(name).lower()
     if not key:
         return True
+    if "totalvalue" in key or key.startswith("grandtotal"):
+        return True
     return key in {
         "total",
         "grandtotal",
@@ -63,6 +66,27 @@ def _is_total_row_name(name: Any) -> bool:
         "pagetotal",
         "gtotal",
     } or (key.startswith("total") and len(key) <= 12)
+
+
+_SHEET_TOTAL_NAME = re.compile(
+    r"(?:^|\b)(?:grand\s+|sub\s+|division\s+|company\s+|page\s+)?"
+    r"total\s+value\b"
+    r"|^\s*(?:amount|qty|quantity)\s+(?:grand\s+)?total\b"
+    r"|^\s*(?:division|company)\s+total\b"
+    r"|^\s*grand\s+total\b",
+    re.I,
+)
+
+
+def _is_sheet_total_name(name: Any) -> bool:
+    """Division / company / value totals — not a product 'Total :' lot row."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if _SHEET_TOTAL_NAME.search(text):
+        return True
+    key = _norm_name(text).lower()
+    return "totalvalue" in key
 
 
 def _row_match_key(item: Dict[str, Any]) -> Tuple[str, str, str]:
@@ -233,8 +257,18 @@ def build_line_items_from_tokens(
     from services.stock_header_resolver import assign_cells
     from services.stock_row_classifier import RowStatus, record_candidate
 
+    from services.stock_native_tables import is_software_price_ad_name
+
     items: List[Dict[str, Any]] = []
     for tokens in token_rows:
+        blob = " ".join(
+            str(t.get("text") or "").strip()
+            for t in tokens
+            if isinstance(t, dict) and t.get("text") not in (None, "")
+        )
+        if is_software_price_ad_name(blob):
+            logger.info("STOCK_SOFTWARE_AD_SKIP blob=%s", blob[:80])
+            continue
         structural = any(
             isinstance(t, dict) and t.get("_structural") for t in tokens
         )
@@ -265,17 +299,13 @@ def build_line_items_from_tokens(
         token_blob = " ".join(
             str(t.get("text") or "") for t in tokens if isinstance(t, dict)
         )
-        is_product_total = bool(
-            re.search(r"\bTotal\s*:", token_blob, re.I)
-            or (
-                tokens
-                and re.match(
-                    r"^(TOTAL|GRAND|SUB\s*TOTAL)\b",
-                    str((tokens[0] if isinstance(tokens[0], dict) else {}).get("text") or ""),
-                    re.I,
-                )
+        if _is_sheet_total_name(token_blob):
+            logger.info(
+                "STOCK_PDF_WORDS_TOTAL_SKIP sheet_total blob=%s",
+                token_blob[:60],
             )
-        )
+            continue
+        is_product_total = bool(re.search(r"\bTotal\s*:", token_blob, re.I))
         assign_tokens = tokens
         if is_product_total:
             # Drop the "Total :" label so amounts keep Op/Pur/Sl/Cl geometry.
@@ -290,19 +320,13 @@ def build_line_items_from_tokens(
         formula_toks = [t for t in tokens if isinstance(t, dict) and t.get("formula")]
         item = fields_to_line_item(fields, formula_tokens=formula_toks)
         name = item.get("product_name")
+        if _is_sheet_total_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", str(name)[:60])
+            continue
         # Pipe-ruled sheets print a product Total row after multi-lot lines.
         # Prefer those printed totals over the first lot line alone.
         total_label = str(name or "")
-        if items and (
-            is_product_total
-            or (
-                name
-                and (
-                    re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I)
-                    or _is_total_row_name(name)
-                )
-            )
-        ):
+        if items and is_product_total:
             prev = items[-1]
             for key in (
                 "opening_qty",
@@ -768,7 +792,7 @@ def items_from_free_column_rows(
 
     Returns None when that column set is not printed. Does not invent qtys.
     """
-    from services.stock_native_tables import resolver_ready
+    from services.stock_native_tables import is_software_price_ad_name, resolver_ready
 
     ready = resolver_ready(header_cells)
     columns = list(ready.get("columns") or [])
@@ -783,6 +807,9 @@ def items_from_free_column_rows(
             continue
         label = _row_label(tokens)
         numbers = _row_numbers(tokens)
+        if is_software_price_ad_name(label):
+            logger.info("STOCK_SOFTWARE_AD_SKIP name=%s", label[:80])
+            continue
         if label and _TOTAL_LABEL.search(label):
             if _AMOUNT_GRAND.search(label) and numbers:
                 from services.stock_header_resolver import parse_number
@@ -805,6 +832,9 @@ def items_from_free_column_rows(
             continue
         item = built[0]
         name = str(item.get("product_name") or "").strip()
+        if is_software_price_ad_name(name):
+            logger.info("STOCK_SOFTWARE_AD_SKIP name=%s", name[:80])
+            continue
         if not name or _TOTAL_LABEL.search(name) or _is_total_row_name(name):
             logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name or label)
             continue
@@ -857,9 +887,28 @@ def _join_wrapped_name(parts: List[str]) -> str:
     return re.sub(r"\s+", " ", out).strip()
 
 
+def _qty_value_grid_skips_receipt_issue() -> bool:
+    """STOCK_PDF_QTY_VALUE_SKIP_RECEIPT_ISSUE — default ON.
+
+    OPENING STOCK/VALUE + RECEIVE QUANT/VALUE grids already cluster as
+    complete rows. The wrapped-name Receipt/Issue reader would steal packing
+    digits as opening_qty and glue a TOTAL footer onto the last product.
+    """
+    return os.getenv(
+        "STOCK_PDF_QTY_VALUE_SKIP_RECEIPT_ISSUE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
     if not (_ISSUE_LAYOUT <= canons):
+        return False
+    # Qty+value pair headers are not the wrapped-name Receipt/Issue layout.
+    if _qty_value_grid_skips_receipt_issue() and {
+        "opening_value",
+        "purchase_value",
+    } <= canons:
+        logger.info("STOCK_PDF_WORDS_RECEIPT_ISSUE skip=qty_value_grid")
         return False
     # Require printed Receipt/Issue labels. Op.Qnt / Pur.Qnt / Sl.Qnt / Cl.Qnt
     # sheets share the same canons but must use resolved word columns instead.
@@ -870,6 +919,28 @@ def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
         )
         return False
     return True
+
+
+def _page_rows_have_aligned_qty_value(page_results: List[Dict[str, Any]]) -> bool:
+    """True when most clustered word rows already carry a full qty/value set."""
+    from services.stock_header_resolver import parse_number
+
+    rows: List[List[Dict[str, Any]]] = []
+    for page in page_results or []:
+        rows.extend(page.get("data_rows") or [])
+    if len(rows) < 3:
+        return False
+    rich = 0
+    for tokens in rows:
+        nums = 0
+        for tok in tokens:
+            if not isinstance(tok, dict):
+                continue
+            if parse_number(str(tok.get("text") or "")) is not None:
+                nums += 1
+        if nums >= 6:
+            rich += 1
+    return rich >= max(3, int(0.6 * len(rows)))
 
 
 def _band_for_x(x: float, bands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -1726,6 +1797,10 @@ def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
     name = str(item.get("product_name") or "").strip()
     if not name:
         return True
+    from services.stock_native_tables import is_software_price_ad_name
+
+    if is_software_price_ad_name(name):
+        return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", name, re.I):
         return True
     if re.search(
@@ -1884,7 +1959,14 @@ def _items_from_resolved_word_columns(
         "closing_qty",
         "closing_value",
     }
+    needed_qty_only = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+    }
     ready_pages = []
+    qty_only = False
     for page in page_results or []:
         ready = resolver_ready(page.get("header_cells") or [])
         if not ready.get("resolved"):
@@ -1892,6 +1974,7 @@ def _items_from_resolved_word_columns(
         canons = {
             str(c.get("canonical") or "") for c in (ready.get("columns") or [])
         }
+        has_value = bool(canons & {"closing_value", "sales_value", "opening_value"})
         if needed_with_return <= canons or (
             _resolved_movement_columns_enabled() and needed_movement <= canons
         ):
@@ -1904,6 +1987,14 @@ def _items_from_resolved_word_columns(
                 logger.info(
                     "STOCK_PDF_WORDS_RESOLVED_COLUMNS match=op_pur_sl_cl"
                 )
+        elif (
+            _resolved_movement_columns_enabled()
+            and needed_qty_only <= canons
+            and not has_value
+        ):
+            ready_pages.append(page)
+            qty_only = True
+            logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS match=qty_only")
     if not ready_pages:
         return None
     items = build_items_from_pdf_page_results(ready_pages)
@@ -1912,9 +2003,11 @@ def _items_from_resolved_word_columns(
         if not isinstance(item, dict):
             continue
         name = str(item.get("product_name") or "").strip()
-        if not name or _is_total_row_name(name):
+        if not name or _is_total_row_name(name) or _is_sheet_total_name(name):
             continue
-        if name.startswith("[") or re.search(
+        from services.stock_native_tables import is_software_price_ad_name
+
+        if name.startswith("[") or is_software_price_ad_name(name) or re.search(
             r"software by|end of report|stock qt|total amount|total quantity|"
             r"^himalaya\b|company\s*total|value\s*->|qnt\s*->",
             name,
@@ -1938,8 +2031,14 @@ def _items_from_resolved_word_columns(
         kept.append(item)
     if len(kept) < 3:
         return None
-    logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s", len(kept))
-    return {"line_items": kept, "prefer_letterhead_stockist": True}
+    logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s qty_only=%s", len(kept), qty_only)
+    parsed: Dict[str, Any] = {
+        "line_items": kept,
+        "prefer_letterhead_stockist": True,
+    }
+    if qty_only:
+        parsed["qty_only"] = True
+    return parsed
 
 
 def parse_pdf_free_column_statement(
@@ -1953,22 +2052,53 @@ def parse_pdf_free_column_statement(
     except Exception:
         return None
     from services.sales_statement_extractor import empty_result
-    from services.stock_native_tables import from_pdf_words
+    from services.stock_native_tables import (
+        from_fitz_pdf_bytes,
+        from_pdf_words,
+        pdf_built_has_nul_digits,
+    )
 
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             built = from_pdf_words(pdf)
+            if pdf_built_has_nul_digits(built):
+                logger.info("STOCK_PDF_PSEUDO_DIGITS plumber_nul=1 fallback=fitz")
+                built = from_fitz_pdf_bytes(file_bytes)
             peek = ""
             if pdf.pages:
-                peek = pdf.pages[0].extract_text() or ""
+                from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+                peek = decode_pdf_pseudo_digits(pdf.pages[0].extract_text() or "")
+            if "\x00" in (peek or ""):
+                try:
+                    import fitz
+
+                    _doc = fitz.open(stream=file_bytes, filetype="pdf")
+                    peek = decode_pdf_pseudo_digits(
+                        _doc[0].get_text("text") or peek
+                    )
+                    _doc.close()
+                except Exception:
+                    pass
             parsed = items_from_free_column_rows(
                 built.get("header_cells") or [],
                 built.get("data_rows") or [],
             )
+            page_results = built.get("page_results") or []
+            # Prefer x-aligned qty/value rows over the wrapped-name Receipt/Issue
+            # y-band reader. That reader treats packing digits as opening_qty.
+            if (
+                (not parsed or not parsed.get("line_items"))
+                and _qty_value_grid_skips_receipt_issue()
+                and _page_rows_have_aligned_qty_value(page_results)
+            ):
+                parsed = _items_from_resolved_word_columns(page_results)
+                if parsed and parsed.get("line_items"):
+                    logger.info(
+                        "STOCK_PDF_WORDS_RESOLVED_COLUMNS prefer=aligned_qty_value"
+                    )
             if not parsed or not parsed.get("line_items"):
-                parsed = items_from_receipt_issue_pages(
-                    pdf, built.get("page_results") or []
-                )
+                parsed = items_from_receipt_issue_pages(pdf, page_results)
             if not parsed or not parsed.get("line_items"):
                 parsed = items_from_lms_qty_rows(
                     built.get("header_cells") or [],
@@ -1987,7 +2117,11 @@ def parse_pdf_free_column_statement(
                 and parsed.get("letterhead_is_stockist_only")
                 and pdf.pages
             ):
-                peek = pdf.pages[0].extract_text(x_tolerance=1, y_tolerance=3) or peek
+                from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+                peek = decode_pdf_pseudo_digits(
+                    pdf.pages[0].extract_text(x_tolerance=1, y_tolerance=3) or peek
+                )
     except Exception as exc:
         logger.info(
             "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
@@ -2001,6 +2135,10 @@ def parse_pdf_free_column_statement(
     result["line_items"] = parsed["line_items"]
     if re.search(r"Sale\s+And\s+Stock\s+Statement", peek, re.I):
         result["report_title"] = "Sale And Stock Statement"
+    elif re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", peek, re.I):
+        result["report_title"] = "STOCK & SALES ANALYSIS"
+    elif re.search(r"STOCK\s*&\s*SALES", peek, re.I):
+        result["report_title"] = "STOCK & SALES"
     elif re.search(r"Stock\s+Statement", peek, re.I):
         result["report_title"] = "Stock Statement Report"
     elif re.search(r"Statements\s+of", peek, re.I):
@@ -2048,6 +2186,18 @@ def parse_pdf_free_column_statement(
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
     if not result.get("period_from"):
+        month_period = re.search(
+            r"From\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s+"
+            r"To\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+            peek,
+            re.I,
+        )
+        if month_period:
+            from services.sales_statement_extractor import _normalize_date
+
+            result["period_from"] = _normalize_date(month_period.group(1))
+            result["period_to"] = _normalize_date(month_period.group(2))
+    if not result.get("period_from"):
         compact = re.search(
             r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})\s*[-–]\s*"
             r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})",
@@ -2075,6 +2225,8 @@ def parse_pdf_free_column_statement(
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1
+    if parsed.get("qty_only"):
+        extra["qty_only"] = True
     if parsed.get("closing_value") is not None:
         result["totals"]["closing_value"] = parsed["closing_value"]
     if parsed.get("sales_value") is not None:

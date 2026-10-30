@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 from services.stock_header_resolver import (
     ALIASES,
+    decode_pdf_pseudo_digits,
     normalize_header,
+    parse_number,
     resolve_columns,
 )
 
@@ -284,6 +286,7 @@ _QUALIFIER_WORDS = frozenset(
         "value",
         "val",
         "quantity",
+        "quant",  # wrapped QUANT(ITY)
         # Second line under Opening/Purchase/Sale/Total/Closing:
         # Stock, Quantity, Return, Receipt, Cost, Value.
         "return",
@@ -317,19 +320,121 @@ _HEADER_LEXICON = frozenset(
         "amt",
         "qty",
         "quantity",
+        "quant",
         "value",
         "val",
         "stock",
+        "stoc",
         "rate",
         "division",
         "div",
+        "description",
     }
 ) | _QUALIFIER_WORDS
+
+# Mid-word wrap fragments from narrow PDF columns (OPENI/NG, RECEIV/E, QUANT/ITY).
+_WRAP_FRAGMENTS = frozenset(
+    {
+        "ng",
+        "g",
+        "e",
+        "i",
+        "ity",
+        "quant",
+        "stoc",
+        "openi",
+        "openin",
+        "receiv",
+        "closi",
+        "closin",
+    }
+)
+_HEADER_WRAP_COMPLETIONS = frozenset(
+    {
+        "opening",
+        "closing",
+        "receive",
+        "received",
+        "receipt",
+        "quantity",
+        "stock",
+        "value",
+        "issue",
+        "sales",
+        "purchase",
+        "description",
+        "product",
+        "amount",
+    }
+)
+_QTY_CHILD_WORDS = frozenset({"qty", "quantity", "qnty", "quant"})
+_VALUE_CHILD_WORDS = frozenset({"value", "val", "amt", "amount"})
 
 
 def _cell_is_header_lexicon(text: Any) -> bool:
     tokens = [t for t in normalize_header(text).split() if t]
     return bool(tokens) and all(t in _HEADER_LEXICON for t in tokens)
+
+
+def _should_glue_header_parts(left: str, right: str) -> bool:
+    """True when right continues a wrapped word in left (OPENI+NG, QUANT+ITY)."""
+    if not left or not right:
+        return False
+    if not re.fullmatch(r"[A-Za-z]+", right):
+        return False
+    last = left.split()[-1]
+    if not re.fullmatch(r"[A-Za-z]+", last):
+        return False
+    compact = (last + right).lower()
+    if compact in _HEADER_WRAP_COMPLETIONS:
+        return True
+    if 1 <= len(right) <= 3 and len(last) >= 4:
+        return True
+    return False
+
+
+def _glue_header_text(host: str, word: str, *, prepend: bool) -> str:
+    host = str(host or "").strip()
+    word = str(word or "").strip()
+    if not word:
+        return host
+    if not host:
+        return word
+    host_parts = host.lower().split()
+    if word.lower() in host_parts or word.lower() == host.lower():
+        return host
+    left, right = (word, host) if prepend else (host, word)
+    if _should_glue_header_parts(left, right):
+        return (left + right).strip()
+    return (left + " " + right).strip()
+
+
+def _row_is_header_wrap_continuation(cells: List[Dict[str, Any]]) -> bool:
+    """Continuation of a mid-word wrapped header (NG / STOCK / QUANT / ITY)."""
+    if not cells:
+        return False
+    wrap_hits = 0
+    for cell in cells:
+        text = normalize_header(cell.get("text"))
+        parts = [p for p in text.split() if p]
+        if not parts:
+            return False
+        for part in parts:
+            if part in _WRAP_FRAGMENTS:
+                wrap_hits += 1
+            elif part in _HEADER_LEXICON or part in _QUALIFIER_WORDS:
+                continue
+            else:
+                return False
+    return wrap_hits >= 1
+
+
+def _qty_value_child_conflict(prev_text: Any, text: Any) -> bool:
+    prev = normalize_header(prev_text)
+    nxt = normalize_header(text)
+    return (prev in _QTY_CHILD_WORDS and nxt in _VALUE_CHILD_WORDS) or (
+        prev in _VALUE_CHILD_WORDS and nxt in _QTY_CHILD_WORDS
+    )
 
 
 def _place_header_word(
@@ -345,12 +450,9 @@ def _place_header_word(
         h0 = float(host.get("x0") or 0)
         h1 = float(host.get("x1") or h0)
         if min(h1, x1) >= max(h0, x0) - 2:
-            if word.lower() not in str(host.get("text") or "").lower():
-                host["text"] = (
-                    (word + " " + str(host.get("text") or "")).strip()
-                    if prepend
-                    else (str(host.get("text") or "") + " " + word).strip()
-                )
+            host["text"] = _glue_header_text(
+                str(host.get("text") or ""), word, prepend=prepend
+            )
             host["x0"] = min(h0, x0)
             host["x1"] = max(h1, x1)
             return
@@ -366,6 +468,19 @@ def _place_header_word(
     )
 
 
+def _wrap_header_enabled() -> bool:
+    """STOCK_PDF_WORDS_WRAP_HEADER — absorb OPENI/NG/STOCK stacked labels.
+
+    Default ON. Set false to keep only the original ±1 lexicon absorb.
+    """
+    return os.getenv("STOCK_PDF_WORDS_WRAP_HEADER", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _absorb_nearby_header_rows(
     header: List[Dict[str, Any]],
     clustered: List[List[Dict[str, Any]]],
@@ -377,24 +492,45 @@ def _absorb_nearby_header_rows(
 
     A word that overlaps a header cell is glued onto it. A word that sits in
     the gap between cells becomes its own column (Sales Amount, Closing Amount).
+    Wrapped OPENI/NG/STOCK stacks are absorbed when STOCK_PDF_WORDS_WRAP_HEADER
+    is on (default).
     """
     if best_i < 0 or not header or best_i >= len(rows):
         return []
     header_top = float((rows[best_i][0] or {}).get("top") or 0)
     limit = max(8.0, 1.25 * float(med_h or 8.0))
+    wrap_limit = max(limit, 2.75 * float(med_h or 8.0))
+    wrap_on = _wrap_header_enabled()
     consumed: List[int] = []
-    for idx in (best_i - 1, best_i + 1):
+    candidates: List[Tuple[int, int, List[Dict[str, Any]]]] = []
+    scan_lo = best_i - (2 if wrap_on else 1)
+    scan_hi = best_i + (2 if wrap_on else 1)
+    for idx in range(scan_lo, scan_hi + 1):
+        if idx == best_i:
+            continue
         if idx < 0 or idx >= len(clustered) or idx >= len(rows) or not rows[idx]:
             continue
         top = float((rows[idx][0] or {}).get("top") or 0)
-        if abs(top - header_top) > limit:
-            continue
+        dist = abs(top - header_top)
         cells = clustered[idx]
-        if not cells or not all(_cell_is_header_lexicon(c.get("text")) for c in cells):
+        if not cells:
             continue
+        is_lex = all(_cell_is_header_lexicon(c.get("text")) for c in cells)
+        is_wrap = wrap_on and _row_is_header_wrap_continuation(cells)
+        if is_lex and dist <= limit and abs(idx - best_i) == 1:
+            candidates.append((abs(idx - best_i), idx, cells))
+        elif is_wrap and dist <= wrap_limit:
+            candidates.append((abs(idx - best_i), idx, cells))
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    for _rank, idx, cells in candidates:
         for cell in cells:
             _place_header_word(header, cell, prepend=idx < best_i)
         consumed.append(idx)
+        logger.info(
+            "STOCK_PDF_WORDS_WRAP_HEADER row=%s cols=%s",
+            idx,
+            [c.get("text") for c in cells],
+        )
     if not consumed:
         return []
     width = None
@@ -463,11 +599,31 @@ def _merge_qualifier_subheader(
     return True
 
 
+# Billing-software ads printed under the grid (ERP package + price / chemist slogan).
+# Never a SKU. Generic: does not key off a stockist or filename.
+_SOFTWARE_PRICE_AD_NAME = re.compile(
+    r"(?ix)"
+    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)"
+    r"|(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b).{0,80}\bERP\b"
+)
+
+
+def is_software_price_ad_name(name: Any) -> bool:
+    """True for ERP/software price-tag rows that must not become line items."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    return bool(_SOFTWARE_PRICE_AD_NAME.search(text))
+
+
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     texts = [str(t.get("text") or "").strip() for t in tokens if isinstance(t, dict)]
     if not texts:
         return True
     joined = " ".join(texts)
+    if is_software_price_ad_name(joined):
+        logger.info("STOCK_SOFTWARE_AD_SKIP blob=%s", joined[:80])
+        return True
     # Company / page / grand footers only. Product "Total :" rows with movement
     # numbers must stay so multi-lot sheets can fold printed totals.
     if re.search(
@@ -480,9 +636,20 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
 
     numeric = sum(1 for t in texts if parse_number(t) is not None)
     first = texts[0]
+    # Bare TOTAL / GRAND TOTAL is a sheet footer even when qty columns are filled.
+    # Product lot totals print "Total :" (colon) and must remain.
+    if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I) and ":" not in first:
+        logger.info("STOCK_PDF_WORDS_TOTAL_SKIP footer blob=%s", joined[:60])
+        return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I) and numeric < 3:
         return True
     alpha = next((t for t in texts if re.search(r"[A-Za-z]", t)), "")
+    if (
+        re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I)
+        and ":" not in alpha
+    ):
+        logger.info("STOCK_PDF_WORDS_TOTAL_SKIP footer blob=%s", joined[:60])
+        return True
     if (
         re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I)
         and numeric < 3
@@ -557,7 +724,7 @@ def _tokens_align_to_header(
 
 
 _QTY_VALUE_CHILD_WORDS = frozenset(
-    {"qty", "quantity", "qnty", "value", "val", "amt", "amount"}
+    {"qty", "quantity", "qnty", "quant", "value", "val", "amt", "amount"}
 )
 _GROUP_LABELS = frozenset(
     {
@@ -794,7 +961,7 @@ def _extract_pdf_page_rows(
         _num_or_date = re.compile(r"^[\d.,/\-]+$")
         expanded: List[Dict[str, Any]] = []
         for w in row_words:
-            text = str(w.get("text") or "").strip()
+            text = decode_pdf_pseudo_digits(str(w.get("text") or "")).strip()
             if not text:
                 continue
             x0 = float(w.get("x0") or 0)
@@ -854,6 +1021,31 @@ def _extract_pdf_page_rows(
                             }
                         )
                         continue
+                # Keep QUANT vs VALUE (and qty vs amount) as separate columns.
+                if _qty_value_child_conflict(prev_text, text):
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
+                # Qty and its neighbouring value are two cells, not "51 10689.52".
+                if (
+                    parse_number(prev_text) is not None
+                    and parse_number(text) is not None
+                ):
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
                 # Do not re-glue value|expiry fragments from a pipe-ruled cell.
                 if cells[-1].get("pipe_split") or pipe_split:
                     if _num_or_date.match(prev_text) and _num_or_date.match(text):
@@ -1222,3 +1414,80 @@ def resolver_ready(header_cells: List[Dict[str, Any]]) -> Dict[str, Any]:
         "errors": errors,
         "raw": resolved,
     }
+
+
+class _FitzWordPage:
+    """pdfplumber-shaped page so from_pdf_words can consume PyMuPDF words."""
+
+    def __init__(self, words: List[Dict[str, Any]], width: float, height: float):
+        self._words = words
+        self.width = width
+        self.height = height
+
+    def extract_words(self, **_kwargs: Any) -> List[Dict[str, Any]]:
+        return list(self._words)
+
+
+def pdf_built_has_nul_digits(built: Dict[str, Any]) -> bool:
+    """True when plumber dropped custom-encoded digits to NUL."""
+    for page in (built or {}).get("page_results") or []:
+        for row in page.get("data_rows") or []:
+            for token in row or []:
+                if not isinstance(token, dict):
+                    continue
+                if "\x00" in str(token.get("text") or ""):
+                    return True
+    return False
+
+
+def from_fitz_pdf_bytes(file_bytes: bytes) -> Dict[str, Any]:
+    """Rebuild native word tables from PyMuPDF, decoding pseudo-digit fonts."""
+    try:
+        import fitz
+    except Exception:
+        return {
+            "header_cells": [],
+            "data_rows": [],
+            "pages_total": 0,
+            "pages_resolved": 0,
+            "page_results": [],
+        }
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except Exception:
+        return {
+            "header_cells": [],
+            "data_rows": [],
+            "pages_total": 0,
+            "pages_resolved": 0,
+            "page_results": [],
+        }
+    try:
+        shims: List[_FitzWordPage] = []
+        for page in doc:
+            rect = page.rect
+            words: List[Dict[str, Any]] = []
+            for raw in page.get_text("words") or []:
+                if not isinstance(raw, (list, tuple)) or len(raw) < 5:
+                    continue
+                words.append(
+                    {
+                        "x0": float(raw[0]),
+                        "top": float(raw[1]),
+                        "x1": float(raw[2]),
+                        "bottom": float(raw[3]),
+                        "text": decode_pdf_pseudo_digits(raw[4]),
+                    }
+                )
+            shims.append(
+                _FitzWordPage(words, float(rect.width), float(rect.height))
+            )
+        built = from_pdf_words(shims)
+        logger.info(
+            "STOCK_PDF_PSEUDO_DIGITS source=fitz pages=%s resolved=%s",
+            built.get("pages_total"),
+            built.get("pages_resolved"),
+        )
+        return built
+    finally:
+        doc.close()

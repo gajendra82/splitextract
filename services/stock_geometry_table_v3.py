@@ -271,6 +271,14 @@ _NON_PRODUCT_RULES: List[Tuple[re.Pattern[str], str]] = [
         re.compile(r"\bdrug\s+co(?:mpany)?\b|\bwellness\b", re.I),
         "metadata_company_banner",
     ),
+    # Billing-software ads (ERP package + rupee price / chemist slogan).
+    (
+        re.compile(
+            r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)",
+            re.I,
+        ),
+        "software_price_ad",
+    ),
 ]
 
 _COLUMN_HEADING_NAME = re.compile(

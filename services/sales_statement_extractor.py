@@ -167,7 +167,9 @@ def _to_float(value: Any, default: float = 0.0) -> float:
         return default
     if isinstance(value, (int, float)):
         return float(value)
-    text = str(value).strip().replace("\u00a0", " ")
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    text = decode_pdf_pseudo_digits(str(value).strip().replace("\u00a0", " "))
     if not text or text.upper() in _EMPTY_NUMERIC:
         return default
     negative = text.startswith("(") and text.endswith(")")
@@ -2164,7 +2166,9 @@ def _ocr_qty_token(tok: str) -> Optional[float]:
     """Parse a trailing qty token; tolerate OCR letter glue (S54, a2) and o/° as 0."""
     if tok is None:
         return None
-    t = str(tok).strip().replace(",", "")
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    t = decode_pdf_pseudo_digits(str(tok).strip().replace(",", ""))
     # Unicode / en-dash minus used on STOCK & SALES ANALYSIS closing columns.
     t = t.replace("\u2212", "-").replace("\u2013", "-").replace("\u2014", "-")
     if not t:
@@ -11707,7 +11711,10 @@ _XLS_HEADER_ALIASES = {
     "sales": "sale",
     "saleret": "sret",
     "salereturn": "sret",
+    "sreturn": "sret",
     "sret": "sret",
+    "preturn": "pret",
+    "pret": "pret",
     "saleqty": "sale",
     "salesqty": "sale",
     "soldqty": "sale",
@@ -12646,7 +12653,11 @@ def _xls_cell_has_qty(value: Any) -> bool:
         return False
     if isinstance(value, (int, float)):
         return True
-    text = str(value).strip().replace("\u00a0", " ").replace(",", "").replace("₹", "")
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    text = decode_pdf_pseudo_digits(
+        str(value).strip().replace("\u00a0", " ").replace(",", "").replace("₹", "")
+    )
     if text.upper() in _EMPTY_NUMERIC:
         return False
     if text.startswith("(") and text.endswith(")"):
@@ -15258,7 +15269,9 @@ def _xls_sreturn_qty_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
         return None, "ambiguous"
     if isinstance(value, (int, float)):
         return float(value), None
-    text = str(value).replace("\u00a0", " ").strip()
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    text = decode_pdf_pseudo_digits(str(value).replace("\u00a0", " ").strip())
     if text in {"", "-", "—", "--", "–"}:
         return 0.0, None
     if text.upper() in _EMPTY_NUMERIC or text.upper() in {"?", "NIL"}:
@@ -16267,6 +16280,7 @@ def _xls_fill_from_rows(
             ("free_qty", ("free",)),
             ("sample_qty", ("sample",)),
             ("sale_return_qty", ("sret", "saleret")),
+            ("purchase_return_qty", ("pret", "preturn")),
             ("exp_damage", ("bepr",)),
         ):
             _assign_number(extra_field, _col(*extra_names), into_extra=True)
@@ -18586,6 +18600,10 @@ def _is_non_product_line_name(name: str) -> bool:
         return True
     if _is_statement_division_banner(text):
         return True
+    from services.stock_native_tables import is_software_price_ad_name
+
+    if is_software_price_ad_name(text):
+        return True
     if (
         _drop_promotional_footer_products_enabled()
         and _looks_like_promotional_footer_text(text)
@@ -18598,6 +18616,7 @@ def _is_non_product_line_name(name: str) -> bool:
 _PROMO_FOOTER_KEYWORD_RE = re.compile(
     r"Digital\s+Purchase|"
     r"ERP\s+Order(?:ing)?|"
+    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)|"
     r"QR\s*Code|QRCode|"
     r"extra\s+earnings|"
     r"\bCall\s+MARG\b|"
@@ -18629,6 +18648,10 @@ def _looks_like_promotional_footer_text(name: str) -> bool:
     if text.count("|") >= 2:
         return True
     if _PROMO_FOOTER_KEYWORD_RE.search(text):
+        return True
+    from services.stock_native_tables import is_software_price_ad_name
+
+    if is_software_price_ad_name(text):
         return True
     phones = _PROMO_FOOTER_PHONE_RE.findall(text)
     if len(phones) >= 2 and len(text) >= 40:
@@ -18703,6 +18726,10 @@ def _is_promotional_footer_line_item(item: Dict[str, Any]) -> bool:
     # hallucinate qty onto the slogan.
     if name.count("|") >= 2 or _PROMO_FOOTER_KEYWORD_RE.search(name):
         return True
+    from services.stock_native_tables import is_software_price_ad_name
+
+    if is_software_price_ad_name(name):
+        return True
     return not _line_item_has_stock_qty_signal(item)
 
 
@@ -18710,24 +18737,30 @@ def _drop_promotional_footer_line_items(result: Dict[str, Any]) -> Dict[str, Any
     """Post-extract filter: remove PDF footer/promo slogans from line_items."""
     if not isinstance(result, dict):
         return result
-    if not _drop_promotional_footer_products_enabled():
-        return result
     items = result.get("line_items") or []
     if not items:
         return result
+    from services.stock_native_tables import is_software_price_ad_name
+
+    flag_on = _drop_promotional_footer_products_enabled()
     kept: List[Dict[str, Any]] = []
     dropped = 0
     for item in items:
-        if isinstance(item, dict) and _is_promotional_footer_line_item(item):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        software_ad = is_software_price_ad_name(name)
+        promo = flag_on and _is_promotional_footer_line_item(item)
+        if software_ad or promo:
             dropped += 1
             logger.info(
-                "STOCK_PROMO_FOOTER_DROP product_name=%s file=%s",
-                str(item.get("product_name") or "")[:120],
+                "%s product_name=%s file=%s",
+                "STOCK_SOFTWARE_AD_SKIP" if software_ad else "STOCK_PROMO_FOOTER_DROP",
+                name[:120],
                 result.get("source_file"),
             )
             continue
-        if isinstance(item, dict):
-            kept.append(item)
+        kept.append(item)
     if not dropped:
         return result
     result["line_items"] = kept
@@ -39832,6 +39865,12 @@ def _parse_semantic_text_table(
     """Extract a stock table from PDF/OCR text using the Excel header aliases."""
     if not text or not text.strip():
         return None
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    decoded = decode_pdf_pseudo_digits(text)
+    if decoded != text:
+        logger.info("STOCK_PDF_PSEUDO_DIGITS parser=semantic_text_table")
+        text = decoded
     # Two-row SALE PURCHASES / PURCHASE SALES qty grid. Aliases map TOTAL STOCK
     # as purchase, leave sales/closing at 0, and ingest footer Value-in-Rs /
     # LAST MONTH SALE rows as products.
@@ -40647,6 +40686,13 @@ def _parse_opn_sold_lsale_analysis(
 def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[str, Any]:
     """Turn free-form sales-statement text into unified JSON."""
     import os
+
+    from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+    decoded = decode_pdf_pseudo_digits(text)
+    if decoded != text:
+        logger.info("STOCK_PDF_PSEUDO_DIGITS parser=structure_sales_text")
+        text = decoded
 
     # Marg SALE PURCHASES / PURCHASE SALES. Semantic header aliases map TOTAL
     # STOCK as purchase and leave sales/closing at 0 on this two-row header.
