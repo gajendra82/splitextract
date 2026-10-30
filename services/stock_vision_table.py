@@ -1054,6 +1054,38 @@ def _realign_group_wise_row_fields(
     return True
 
 
+def _headers_are_bare_qty_value_oric(columns: Sequence[Dict[str, Any]]) -> bool:
+    """True when headers are mostly bare QTY/VALUE with no movement canons.
+
+    STOCK & SALES ANALYSIS Vision often emits only the child QTY/VALUE row
+    (parents OPENING/RECEIPT/ISSUE/CLOSING dropped) — all resolve to ignore.
+    """
+    bare_qty = 0
+    bare_val = 0
+    movement = 0
+    for c in columns or []:
+        if not isinstance(c, dict):
+            continue
+        canon = str(c.get("canonical") or "ignore")
+        if canon in {
+            "opening_qty",
+            "opening_value",
+            "purchase_qty",
+            "purchase_value",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+        }:
+            movement += 1
+        norm = re.sub(r"\s+", "", normalize_header(c.get("header_text"))).rstrip(".")
+        if norm in {"qty", "quantity", "qnty"}:
+            bare_qty += 1
+        elif norm in {"value", "val", "amt", "amount"}:
+            bare_val += 1
+    return bare_qty >= 3 and bare_val >= 3 and movement < 2
+
+
 def _apply_cell_layout_qty_value_repair(
     columns: List[Dict[str, Any]],
     rows: Sequence[Dict[str, Any]],
@@ -1063,7 +1095,12 @@ def _apply_cell_layout_qty_value_repair(
     force: bool = False,
 ) -> List[Dict[str, Any]]:
     """Override broken header maps using left-to-right cell geometry."""
-    if not force and not _cell_layout_repair_enabled():
+    bare_oric = _headers_are_bare_qty_value_oric(columns)
+    if (
+        not force
+        and not _cell_layout_repair_enabled()
+        and not (_vision_group_qty_value_fanout_enabled() and bare_oric)
+    ):
         return columns
     # SSA purchase qty grids already resolve TOTAL STOCK / SALES / CLOSING from
     # headers. Inferring qty/value pairs from cell geometry remaps TOTAL→sales.
@@ -1687,6 +1724,8 @@ def _normalize_header_rows(
         return out
 
     # Live shape: flat [{text, col_index}, ...] — group on col_index reset.
+    # Child QTY/VALUE rows often restart at col_index 1 (not 0) under OPENING/
+    # RECEIPT/ISSUE/CLOSING parents; any decrease starts a new header row.
     coercions["header_rows_flat"] = coercions.get("header_rows_flat", 0) + 1
     rows: List[List[Dict[str, Any]]] = []
     cur: List[Dict[str, Any]] = []
@@ -1698,7 +1737,7 @@ def _normalize_header_rows(
             idx = int(cell.get("col_index"))
         except (TypeError, ValueError):
             idx = 0
-        if cur and idx < prev_idx and idx == 0:
+        if cur and idx < prev_idx:
             rows.append(cur)
             cur = []
         cur.append(cell)
@@ -2064,16 +2103,17 @@ def _exif_orient_enabled() -> bool:
 
 
 def _exif_skip_landscape_buffer_enabled() -> bool:
-    """STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER — default ON.
+    """STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER — default OFF.
 
-    Some landscape stock-statement photos already store w>h pixels but carry a
-    bogus Orientation=6/8 that would rotate them to portrait. Gemini then reads
-    the grid sideways and scrambles OPENING/PURCHASE/SALE/CLOSING qty+value.
-    Skip transpose only for that landscape→portrait case; true portrait buffers
-    still transpose as before.
+    Opt-in for landscape Stock/MR Report photos that already store w>h pixels
+    but carry a bogus Orientation=6/8 (transpose would wrongly rotate them to
+    portrait and scramble OPENING…CLOSING). Phone portrait JPEGs (landscape
+    buffer + Orientation=6) must transpose — otherwise Gemini reads the grid
+    sideways and parks CLOSING digits at the wrong end. Keep this OFF unless a
+    specific landscape sheet needs the skip.
     """
     return os.getenv(
-        "STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER", "true"
+        "STOCK_VISION_EXIF_SKIP_LANDSCAPE_BUFFER", "false"
     ).strip().lower() in {
         "1",
         "true",
@@ -2371,6 +2411,119 @@ def extract_stock_table_vision(
     return parsed
 
 
+_QTY_VALUE_CHILD_NORMS = frozenset(
+    {"qty", "quantity", "qnty", "value", "val", "amt", "amount"}
+)
+_MOVEMENT_GROUP_NAMES = frozenset({"opening", "purchase", "sales", "closing"})
+
+
+def _vision_group_qty_value_fanout_enabled() -> bool:
+    """Pair OPENING/RECEIPT/ISSUE/CLOSING parents with QTY/VALUE children.
+
+    Default ON. Vision often emits parent bands at cols 1..4 and eight QTY/VALUE
+    cells at cols 1..8; index-merge would park CLOSING under ignore.
+    """
+    return os.getenv(
+        "STOCK_VISION_GROUP_QTY_VALUE_FANOUT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _header_cell_movement_group(text: Any) -> Optional[str]:
+    from services.stock_header_resolver import _pick_group
+
+    group, _conf, _reason = _pick_group(normalize_header(text))
+    if group in _MOVEMENT_GROUP_NAMES:
+        return group
+    return None
+
+
+def _header_cell_is_qty_value_child(text: Any) -> bool:
+    return normalize_header(text) in _QTY_VALUE_CHILD_NORMS
+
+
+def _try_fanout_group_qty_value_header_rows(
+    rows: Sequence[List[Dict[str, Any]]],
+) -> Optional[List[Dict[str, Any]]]:
+    """OPENING|RECEIPT|ISSUE|CLOSING × QTY|VALUE → one cell per child column."""
+    if not _vision_group_qty_value_fanout_enabled() or len(rows) < 2:
+        return None
+    for parent_i, child_i in ((0, 1), (1, 0)):
+        parents = sorted(
+            rows[parent_i],
+            key=lambda c: int(c.get("col_index") if c.get("col_index") is not None else -1),
+        )
+        children = sorted(
+            rows[child_i],
+            key=lambda c: int(c.get("col_index") if c.get("col_index") is not None else -1),
+        )
+        group_parents = [p for p in parents if _header_cell_movement_group(p.get("text"))]
+        qv_children = [
+            c for c in children if _header_cell_is_qty_value_child(c.get("text"))
+        ]
+        if len(group_parents) < 2 or len(qv_children) < 4:
+            continue
+        # Need a qty+value pair per parent band (Opening…Closing).
+        if len(qv_children) < 2 * len(group_parents):
+            continue
+        qv_children = qv_children[: 2 * len(group_parents)]
+        leading = [
+            p
+            for p in parents
+            if int(p.get("col_index") if p.get("col_index") is not None else -1)
+            < int(
+                group_parents[0].get("col_index")
+                if group_parents[0].get("col_index") is not None
+                else 0
+            )
+        ]
+        out: List[Dict[str, Any]] = []
+        col_i = 0
+        for cell in leading:
+            out.append(
+                {
+                    "text": str(cell.get("text") or ""),
+                    "col_index": col_i,
+                    "x_center": cell.get("x_center"),
+                    "subheader_text": None,
+                }
+            )
+            col_i += 1
+        for gi, parent in enumerate(group_parents):
+            parent_text = str(parent.get("text") or "")
+            for child in qv_children[2 * gi : 2 * gi + 2]:
+                child_text = str(child.get("text") or "")
+                # Child as text + parent as subheader: "OPENIN QTY" falsely
+                # matches total alias "in qty"; "QTY"/"OPENIN" resolves opening.
+                out.append(
+                    {
+                        "text": child_text,
+                        "col_index": col_i,
+                        "x_center": child.get("x_center") or parent.get("x_center"),
+                        "subheader_text": parent_text or None,
+                    }
+                )
+                col_i += 1
+        if len(out) < 6:
+            continue
+        logger.info(
+            "VISION_TABLE GROUP_QTY_VALUE_FANOUT cols=%s",
+            [
+                (
+                    str(c.get("text") or "")
+                    + ("/" + str(c.get("subheader_text")) if c.get("subheader_text") else "")
+                )
+                for c in out
+            ],
+        )
+        return out
+    return None
+
+
 def _flatten_header_cells(
     header_rows: Sequence[Any], column_count: int
 ) -> List[Dict[str, Any]]:
@@ -2384,6 +2537,22 @@ def _flatten_header_cells(
             rows.append(cells)
     if not rows:
         return []
+
+    fanned = _try_fanout_group_qty_value_header_rows(rows)
+    if fanned is not None:
+        by_index = {int(c["col_index"]): c for c in fanned}
+        width = max(int(column_count or 0), max(by_index) + 1 if by_index else 0)
+        for idx in range(width):
+            by_index.setdefault(
+                idx,
+                {
+                    "text": "",
+                    "col_index": idx,
+                    "x_center": None,
+                    "subheader_text": None,
+                },
+            )
+        return [by_index[i] for i in sorted(by_index)]
 
     by_index: Dict[int, Dict[str, Any]] = {}
     for cell in rows[0]:
@@ -3520,8 +3689,8 @@ def _repair_lstsl_close_parked_in_order(item: Dict[str, Any]) -> bool:
 def _oric_open_close_realign_enabled() -> bool:
     """STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN — re-slot open=close dash rows after pack peel.
 
-    Default OFF. When Vision drops a blank RECEIPT/ISSUE cell after peeling 1X1
-    pack, the remaining digits park in the wrong ORIC columns; re-slot only.
+    Default OFF. Qty-only ORIC only — qty+value grids use pack-cell align instead
+    so CLOSING digits are not moved out of sales after the fact.
     """
     return os.getenv(
         "STOCK_VISION_ORIC_OPEN_CLOSE_REALIGN", "false"
@@ -3533,14 +3702,175 @@ def _oric_open_close_realign_enabled() -> bool:
     }
 
 
+def _oric_qv_pack_cell_align_enabled() -> bool:
+    """STOCK_VISION_ORIC_QV_PACK_CELL_ALIGN — pad missing ORIC slots after pack peel.
+
+    Default ON. When Vision emits pack + a short QTY/VALUE grid, insert nulls so
+    printed CLOSING stays under closing headers (no sales↔closing shuffle).
+    """
+    return os.getenv(
+        "STOCK_VISION_ORIC_QV_PACK_CELL_ALIGN", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _columns_are_oric_qty_value_grid(columns: Sequence[Dict[str, Any]]) -> bool:
+    """True when headers resolve to full OPENING…CLOSING × qty+value."""
+    canons = {
+        str(c.get("canonical") or "")
+        for c in columns
+        if isinstance(c, dict)
+    }
+    return {
+        "opening_qty",
+        "opening_value",
+        "purchase_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }.issubset(canons)
+
+
+def _cell_numeric_or_zero(text: Any) -> Optional[float]:
+    if text is None:
+        return None
+    s = str(text).strip()
+    if s in {"", "-", "—", "–"}:
+        return None
+    return parse_number(s, allow_internal_spaces=True)
+
+
+def _is_oric_whole_qty_token(val: Optional[float]) -> bool:
+    """Whole qty including negatives (returned stock / open=close rows)."""
+    if val is None:
+        return False
+    return abs(val - round(val)) <= 0.001
+
+
+def _align_oric_qv_cells_after_pack_peel(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+    *,
+    peeled_pack: bool,
+) -> Tuple[List[Any], int]:
+    """Pad missing RECEIPT/ISSUE slots so CLOSING stays under closing headers.
+
+    After unlabeled pack peel, Vision often emits 6–7 numbers. Left-align then
+    parks CLOSING under sales. Insert nulls only — never rewrite printed digits.
+    May widen column_count to 9 when fanout headers need CLOSING VALUE.
+    """
+    if not peeled_pack or not _oric_qv_pack_cell_align_enabled():
+        return cells, column_count
+    if not _columns_are_oric_qty_value_grid(columns):
+        return cells, column_count
+    width = max(int(column_count or 0), 9)
+    out = list(cells)
+    if len(out) < width:
+        out = out + [None] * (width - len(out))
+    body = out[1:9]
+    filled_idx = [i for i, v in enumerate(body) if _cell_numeric_or_zero(v) is not None]
+    if len(filled_idx) not in {6, 7}:
+        return cells, column_count
+    filled = [body[i] for i in filled_idx]
+    new_body: Optional[List[Any]] = None
+
+    if len(filled) == 6:
+        oq = _cell_numeric_or_zero(filled[0])
+        ov = _cell_numeric_or_zero(filled[1])
+        a = _cell_numeric_or_zero(filled[2])
+        b = _cell_numeric_or_zero(filled[3])
+        c = _cell_numeric_or_zero(filled[4])
+        d = _cell_numeric_or_zero(filled[5])
+        # A) open|mid|close with open≈close (blank ISSUE).
+        if (
+            oq is not None
+            and c is not None
+            and abs(oq - c) <= 0.51
+            and ov is not None
+            and d is not None
+            and abs(ov - d) <= 0.51
+        ):
+            new_body = list(filled[:4]) + [None, None] + list(filled[4:6])
+        # B) oq,ov,rq,iq,iv,cq — blank receipt VALUE (ABANA sell-through).
+        elif (
+            oq is not None
+            and a is not None
+            and b is not None
+            and c is not None
+            and d is not None
+            and _is_oric_whole_qty_token(b)
+            and (_has_paisa(c) or abs(c) >= 1.0)
+            and abs((oq + a - b) - d) <= 0.51
+            and oq > 0.01
+        ):
+            new_body = list(filled[:3]) + [None] + list(filled[3:6]) + [None]
+        # C) negative open: Vision parked CLOSING under ISSUE and trailed 0
+        #    (CLARINA FACE / AMALAKI) — restore close from the duplicate pair.
+        elif (
+            oq is not None
+            and oq < -0.01
+            and ov is not None
+            and a is not None
+            and b is not None
+            and c is not None
+            and abs(oq - b) <= 0.51
+            and abs(ov - c) <= 0.51
+            and d is not None
+            and abs(d) <= 0.51
+        ):
+            new_body = [
+                filled[0],
+                filled[1],
+                filled[2],
+                None,
+                None,
+                None,
+                filled[3],
+                filled[4],
+            ]
+    elif len(filled) == 7:
+        # Blank receipt VALUE: oq,ov,rq,iq,iv,cq,cv — insert null after rq.
+        oq = _cell_numeric_or_zero(filled[0])
+        rq = _cell_numeric_or_zero(filled[2])
+        iq = _cell_numeric_or_zero(filled[3])
+        iv = _cell_numeric_or_zero(filled[4])
+        cq = _cell_numeric_or_zero(filled[5])
+        if (
+            oq is not None
+            and rq is not None
+            and iq is not None
+            and cq is not None
+            and _is_oric_whole_qty_token(iq)
+            and (_has_paisa(iv) or (iv is not None and abs(iv) >= 1.0))
+            and abs((oq + rq - iq) - cq) <= 0.51
+        ):
+            new_body = list(filled[:3]) + [None] + list(filled[3:7])
+
+    if new_body is None or len(new_body) != 8:
+        return cells, column_count
+    out[1:9] = new_body
+    logger.info(
+        "VISION_TABLE ORIC_QV_PACK_CELL_ALIGN filled=%s body=%s width=%s",
+        len(filled),
+        [str(v) if v is not None else None for v in new_body],
+        width,
+    )
+    return out, width
+
+
 def _repair_oric_open_close_dash_pair(item: Dict[str, Any]) -> bool:
     """Qty-only ORIC: open=close with blank mid, after pack peel left-shifted digits.
 
-    Two printed-safe patterns (never invent digits):
-      1) opening printed, receipts missing, sales≈opening, closing missing
-         → sales was CLOSING; clear ISSUE.
-      2) opening+closing missing, receipts==sales≥1
-         → both digits are OPENING and CLOSING (blank RECEIPT/ISSUE).
+    Printed-safe pattern (never invent digits):
+      opening printed, receipts missing, sales≈opening, closing missing
+      → sales was CLOSING; clear ISSUE.
     """
     if not _oric_open_close_realign_enabled():
         return False
@@ -3568,36 +3898,35 @@ def _repair_oric_open_close_dash_pair(item: Dict[str, Any]) -> bool:
     except (TypeError, ValueError):
         return False
 
-    # Open printed, mid blank, sales holds closing (== open). Do not treat
-    # receipt==sales with blank open/close as open=close — that is the normal
-    # "- / R / R / -" RECEIPT=ISSUE pattern (e.g. RENALKA).
-    if (
+    # Open printed (incl. negative stock), mid blank, sales holds closing.
+    if not (
         fs.get("opening_qty") == "printed"
-        and opening >= 0.01
+        and abs(opening) >= 0.01
         and _missing("receipts_qty")
         and fs.get("sales_qty") == "printed"
         and abs(opening - sales) <= 0.51
         and _missing("closing_qty")
     ):
-        logger.info(
-            "VISION_TABLE ORIC_OPEN_CLOSE_REALIGN kind=sales_is_closing "
-            "product=%s open=%s sales_as_close=%s",
-            str(item.get("product_name") or "")[:60],
-            opening,
-            sales,
-        )
-        item["closing_qty"] = sales
-        item["sales_qty"] = None
-        item["receipts_qty"] = None
-        fs["closing_qty"] = "printed"
-        fs["sales_qty"] = "missing"
-        fs["purchase_qty"] = "missing"
-        flags = list(extra.get("flags") or [])
-        if "ORIC_OPEN_CLOSE_REALIGN" not in flags:
-            flags.append("ORIC_OPEN_CLOSE_REALIGN")
-        extra["flags"] = flags
-        return True
-    return False
+        return False
+
+    logger.info(
+        "VISION_TABLE ORIC_OPEN_CLOSE_REALIGN kind=sales_is_closing "
+        "product=%s open=%s sales_as_close=%s",
+        str(item.get("product_name") or "")[:60],
+        opening,
+        sales,
+    )
+    item["closing_qty"] = sales
+    item["sales_qty"] = None
+    item["receipts_qty"] = None
+    fs["closing_qty"] = "printed"
+    fs["sales_qty"] = "missing"
+    fs["purchase_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "ORIC_OPEN_CLOSE_REALIGN" not in flags:
+        flags.append("ORIC_OPEN_CLOSE_REALIGN")
+    extra["flags"] = flags
+    return True
 
 
 def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
@@ -3645,6 +3974,9 @@ def _repair_pack_shifted_open_issue_close(item: Dict[str, Any]) -> bool:
     except (TypeError, ValueError):
         return False
     if parked_issue < 0 or parked_close < 0:
+        return False
+    # All-zero rows satisfy 0-0≈0 but must not mark closing as printed 0.
+    if abs(opening) < 0.01 and abs(parked_issue) < 0.01 and abs(parked_close) < 0.01:
         return False
     # opening - issue ≈ closing (receipts column was blank on the sheet).
     if abs((opening - parked_issue) - parked_close) > 0.51:
@@ -4248,12 +4580,35 @@ def _repair_paisa_parked_in_qty_fields(item: Dict[str, Any]) -> bool:
     fs = extra.setdefault("field_source", {})
     if not isinstance(fs, dict):
         return False
+    # MR Report free-column shift: free_in/free_out still hold real qtys while
+    # sales_qty/closing_qty look like money — leave for PUR_FREE shift, do not
+    # clear the qty slots.
+    free_in = extra.get("free_in_qty")
+    free_out = extra.get("free_out_qty")
+    if (
+        (fs.get("free_in_qty") == "printed" and _looks_small_qty(free_in))
+        or (fs.get("free_out_qty") == "printed" and _looks_small_qty(free_out))
+    ):
+        return False
     oq = _printed_float(item, "opening_qty")
     rq = _printed_float(item, "purchase_qty")
     if rq is None:
         rq = _printed_float(item, "receipts_qty")
     sq = _printed_float(item, "sales_qty")
     cq = _printed_float(item, "closing_qty")
+    # Blank receipt VALUE left-shift: purchase_value holds issue qty and
+    # sales_qty holds issue value — leave for QTY_VALUE_PAIR_SHIFT.
+    pv = _printed_float(item, "purchase_value")
+    sv = _printed_float(item, "sales_value")
+    if (
+        pv is not None
+        and _is_whole_qty(pv)
+        and pv > 0.001
+        and _has_paisa(sq)
+        and sv is not None
+        and _is_whole_qty(sv)
+    ):
+        return False
     money_open = _has_paisa(oq)
     money_rec = _has_paisa(rq)
     money_sale = _has_paisa(sq)
@@ -6710,6 +7065,25 @@ def _map_single_table(
             if force_layout:
                 errors.append("DATA_HEADER_LAYOUT_REPAIR")
             columns = _repair_ssa_missing_sales_after_total(columns, errors)
+            # Fanout ORIC qty+value uses cols 0..8; Vision often reports
+            # column_count=8 (pack ate a slot). Widen so CLOSING VALUE maps.
+            if _columns_are_oric_qty_value_grid(columns):
+                max_idx = max(
+                    (
+                        int(c.get("col_index") or 0)
+                        for c in columns
+                        if isinstance(c, dict)
+                    ),
+                    default=-1,
+                )
+                need = max_idx + 1
+                if need > column_count:
+                    logger.info(
+                        "VISION_TABLE ORIC_QV_COLUMN_COUNT_WIDEN from=%s to=%s",
+                        column_count,
+                        need,
+                    )
+                    column_count = need
             header_used = {
                 "column_count": column_count,
                 "columns": columns,
@@ -6805,6 +7179,12 @@ def _map_single_table(
         unlabeled_pack: Optional[str] = None
         cells, unlabeled_pack = _extract_unlabeled_pack_token(
             cells, columns, column_count, inplace=use_carry
+        )
+        cells, column_count = _align_oric_qv_cells_after_pack_peel(
+            cells,
+            columns,
+            column_count,
+            peeled_pack=bool(unlabeled_pack) and not use_carry,
         )
         if len(cells) < column_count:
             cells = cells + [None] * (column_count - len(cells))
@@ -6937,12 +7317,18 @@ def _map_single_table(
             _maybe_repair_shifted_qty_row(item, printed_fields=printed_fields)
             _repair_rate_parked_in_opening_qty(item)
             _repair_rate_taken_as_opening_qty(item)
+            # Free-column left-shift BEFORE paisa: sale/closing money parked in
+            # qty while free_in/free_out hold the real qtys. Paisa would clear
+            # those qty slots and block PUR_FREE_SALE_CLOSING_SHIFT.
+            _repair_free_in_issue_closing_shift(item)
+            _repair_pur_free_sale_closing_left_shift(item)
+            # Pair-shift before paisa: blank receipt VALUE must not be cleared
+            # as money-in-qty (issue value parked in sales_qty).
+            _repair_qty_value_pair_left_shift(item)
             _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)
             _repair_lstsl_close_parked_in_order(item)
-            _repair_free_in_issue_closing_shift(item)
-            _repair_pur_free_sale_closing_left_shift(item)
             _repair_qty_copied_into_value_fields(item)
             _repair_missing_pair_null_shift(item)
             _repair_qty_value_pair_left_shift(item)

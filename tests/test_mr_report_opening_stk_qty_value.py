@@ -13,11 +13,12 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from services.stock_header_resolver import resolve_columns
+from services.stock_header_resolver import parse_number, resolve_columns
 from services.stock_vision_table import (
     _exif_orient_image_bytes,
     _is_non_product_vision_row,
     _recover_product_name_from_serial_cell,
+    _repair_paisa_parked_in_qty_fields,
     _repair_pur_free_sale_closing_left_shift,
     _repair_qty_copied_into_value_fields,
     build_table_prompt,
@@ -298,6 +299,53 @@ class MrReportOpeningStkQtyValueTests(unittest.TestCase):
             self.assertTrue(_repair_qty_copied_into_value_fields(item))
         self.assertIsNone(item["opening_value"])
         self.assertIsNone(item["extra"]["purchase_value"])
+        self.assertEqual(item["closing_value"], 11390.68)
+
+    def test_trailing_dot_closing_value_parses(self):
+        """Vision truncates CLOSING VALUE as '3,123.' / '9,877.' — keep integer part."""
+        self.assertEqual(parse_number("3,123."), 3123.0)
+        self.assertEqual(parse_number("9,877."), 9877.0)
+        self.assertEqual(parse_number("804."), 804.0)
+        self.assertEqual(parse_number("9,877.40"), 9877.4)
+        self.assertIsNone(parse_number("."))
+
+    def test_paisa_skips_when_free_out_holds_closing_qty(self):
+        """Do not clear sales/closing qty when free columns still hold the shift."""
+        item = {
+            "product_name": "SPEMAN TABS 60",
+            "opening_qty": 19.0,
+            "receipts_qty": 50.0,
+            "sales_qty": 167.51,
+            "sales_value": None,
+            "closing_qty": 11390.68,
+            "closing_value": None,
+            "extra": {
+                "free_in_qty": 1.0,
+                "free_out_qty": 68.0,
+                "field_source": {
+                    "opening_qty": "printed",
+                    "purchase_qty": "printed",
+                    "free_in_qty": "printed",
+                    "sales_qty": "printed",
+                    "free_out_qty": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "missing",
+                },
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_CLOSING_MONEY_IN_QTY_REPAIR": "true"}, clear=False
+        ):
+            self.assertFalse(_repair_paisa_parked_in_qty_fields(item))
+        self.assertEqual(item["sales_qty"], 167.51)
+        self.assertEqual(item["closing_qty"], 11390.68)
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PUR_FREE_SALE_CLOSING_SHIFT": "true"}, clear=False
+        ):
+            self.assertTrue(_repair_pur_free_sale_closing_left_shift(item))
+        self.assertEqual(item["sales_qty"], 1.0)
+        self.assertEqual(item["sales_value"], 167.51)
+        self.assertEqual(item["closing_qty"], 68.0)
         self.assertEqual(item["closing_value"], 11390.68)
 
 

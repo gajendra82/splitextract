@@ -11745,6 +11745,9 @@ _XLS_HEADER_ALIASES = {
     "bval": "bval",
     "closingvalue": "bval",
     "closingval": "bval",
+    # PRODUCT WISE STOCK AND SALE CONSOLIDATED — CLOSING VALUE ON BASIC
+    "closingvalueonbasic": "bval",
+    "closingvalueonbasics": "bval",
     "closingamount": "bval",
     # CL.AMOUNT / Cls Amt — truncated closing money (qty stays under CLOSING).
     "clamount": "bval",
@@ -15859,14 +15862,15 @@ def _xls_fill_from_rows(
         if re.search(r"^(Sales|Opening Val|Closing Val|Purchase|Credit|Branch|Adj)\b", product_name, re.I):
             continue
         if re.search(
-            r"^(Total Of|TOTAL\b|Grand\s*Total|Sub\s*Total|Net\s*Total|SUMMARY\b|"
+            # TOTALS / GRAND TOTALS (plural) — PRODUCT WISE STOCK AND SALE footers
+            r"^(Total Of|TOTALS?\b|Grand\s*Totals?|Sub\s*Totals?|Net\s*Totals?|SUMMARY\b|"
             r"Opening Stock|Closing Stock|Report Generated|Prepared By)\b",
             # Decorated footer such as "----Total----->>" is a total row.
             re.sub(r"^[-=*_]{2,}\s*", "", product_name),
             re.I,
         ):
             if re.match(
-                r"^(?:grand\s*|net\s+)?total\b",
+                r"^(?:grand\s*|net\s+)?totals?\b",
                 re.sub(r"^[-=*_]{2,}\s*", "", product_name).strip(),
                 re.I,
             ):
@@ -15876,6 +15880,12 @@ def _xls_fill_from_rows(
                     result["totals"]["sales_value"] = _to_float(row[sv])
                 if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
                     result["totals"]["closing_value"] = _to_float(row[bv])
+                sq = _col("sale", "sale qty", "sales qty")
+                cq = _col("bal", "cl stock", "closing")
+                if sq is not None and sq < len(row) and _xls_cell_has_qty(row[sq]):
+                    result["totals"]["sales_qty"] = _to_float(row[sq])
+                if cq is not None and cq < len(row) and _xls_cell_has_qty(row[cq]):
+                    result["totals"]["closing_qty"] = _to_float(row[cq])
             continue
         if header_idx is not None:
             qty_cells = [

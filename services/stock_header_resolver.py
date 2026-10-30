@@ -2455,6 +2455,10 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
     # Pipe-ruled PDFs glue gutters / expiry onto amounts ("33.00|", "1884.14|05/2029|").
     if "|" in text:
         text = text.split("|", 1)[0].strip()
+    # Vision/OCR often truncates money as "9,877." / "3,123." — trailing dot,
+    # no fraction digits. Keep the printed integer part; never invent decimals.
+    if re.fullmatch(r"-?\d+\.", text):
+        text = text[:-1]
     if not text:
         return None
     if not re.fullmatch(r"-?\d+(?:\.\d+)?", text):

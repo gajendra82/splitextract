@@ -58,10 +58,15 @@ def _is_total_row_name(name: Any) -> bool:
         return True
     return key in {
         "total",
+        "totals",
         "grandtotal",
+        "grandtotals",
         "subtotal",
+        "subtotals",
         "pagetotal",
+        "pagetotals",
         "gtotal",
+        "gtotals",
     } or (key.startswith("total") and len(key) <= 12)
 
 
