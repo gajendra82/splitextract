@@ -51,16 +51,21 @@ Example mapping when those headers are visible:
 - SALE / Sale -> sales_qty
 - SALE VAL -> sales_value
 - Total -> extra.total_stock (NOT closing_qty)
-- SaleRet / Sale Ret -> extra.sale_return (NOT sales_qty)
+- SaleRet / Sale Ret / S.RETURN -> extra.sale_return (NOT sales_qty)
+- P.RETURN -> purchase_return_qty (NOT sales_qty)
 - Exp/Dmg -> expiry_damage_qty / extra.exp_damage
 - ClosStock / Closing Stock / Closing -> closing_qty
 - Clos.Amt / Cls Amt / Closing Amount -> closing_value
 - IN/OTSTOCK or N/O/STOCK or STOCK (stock-on-hand after SALE VAL) -> closing_qty
 - STK VAL -> closing_value
 - EXP3M -> expiry_damage_qty
+- PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|FREE|S.RETURN|FREE|OTHERS|CLOSING:
+  PACK (60, 30ML, 60 TAB) is packing, never opening_qty. Keep one cell per FREE
+  even when it is a dash so SALE/CLOSING do not shift. Period "01-Apr-26 To
+  30-Apr-26" is period_from/period_to (DD-Mon-YY).
 
 These are not quantity columns unless the printed header clearly says so:
-PACKING, SALE VAL, STK VAL, JUL, JUN, STK120, Total, Clos.Amt.
+PACK, PACKING, SALE VAL, STK VAL, JUL, JUN, STK120, Total, Clos.Amt.
 
 Skip division banners such as HIMALAYA-ZEAL and Division Total rows.
 Do not invent products from phone UI chrome ("Done", free-trial banners).
@@ -152,7 +157,17 @@ _TRUSTED_LAYOUTS = frozenset(
     }
 )
 _WEAK_METHODS = frozenset(
-    {"", "parser", "unknown", "generic", "ocr", "image_ocr", "vikash"}
+    {
+        "",
+        "parser",
+        "unknown",
+        "generic",
+        "ocr",
+        "image_ocr",
+        "vikash",
+        "tesseract_heuristic",
+        "pdf_text_heuristic",
+    }
 )
 _VISION_METHODS = frozenset(
     {"gemini_vision", "gemini_extraction_fallback", "stock_image_gemini"}
@@ -1020,6 +1035,14 @@ def apply_direct_stock_image_gemini(
                 extra.pop("stock_image_vision_decided", None)
         except Exception:
             pass
+        if extra.get("ocr_header_aligned") and result.get("line_items"):
+            extra["stock_image_gemini_status"] = "failed_keep_header_aligned"
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s status=failed_keep_header_aligned rows=%s",
+                filename,
+                len(result.get("line_items") or []),
+            )
+            return result
         return _fail_closed_untrusted(result, decision, "gemini_invoke_failed")
     if not isinstance(parsed, dict):
         extra["stock_image_gemini_status"] = "invalid_json"

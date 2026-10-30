@@ -82,7 +82,7 @@ class ResolveColumnsUnitTests(unittest.TestCase):
                 "purchase_return_qty",
                 "sales_qty",
                 "sales_return_qty",
-                "ignore",
+                "other_outward_qty",
                 "closing_qty",
                 "order_qty",
                 "ignore",
@@ -90,6 +90,37 @@ class ResolveColumnsUnitTests(unittest.TestCase):
         )
         self.assertEqual(result["columns"][4]["canonical"], "purchase_return_qty")
         self.assertEqual(result["columns"][10]["reason"], "item_code")
+
+    def test_pack_free_preturn_sreturn_keeps_sale_free(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT",
+                "PACK",
+                "OPENING",
+                "PURCHASE",
+                "FREE",
+                "P.RETURN",
+                "FREE",
+                "SALE",
+                "FREE",
+                "S.RETURN",
+                "FREE",
+                "OTHERS",
+                "CLOSING",
+            )
+        )
+        canons = _canons(result)
+        self.assertEqual(canons[0], "product_name")
+        self.assertEqual(canons[1], "pack")
+        self.assertEqual(canons[2], "opening_qty")
+        self.assertEqual(canons[3], "purchase_qty")
+        self.assertEqual(canons[4], "free_in_qty")
+        self.assertEqual(canons[5], "purchase_return_qty")
+        self.assertEqual(canons[6], "ignore")  # return-free after P.RETURN
+        self.assertEqual(canons[7], "sales_qty")
+        self.assertEqual(canons[8], "free_out_qty")
+        self.assertEqual(canons[9], "sales_return_qty")
+        self.assertEqual(canons[12], "closing_qty")
 
     def test_pr_and_replace_others_and_expiry_stock(self):
         result = resolve_columns(

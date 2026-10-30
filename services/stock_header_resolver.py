@@ -2354,6 +2354,19 @@ def resolve_columns(
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.6
             col["reason"] = "neighbour"
+        elif left_group == "purchase_return" or left_canon in {
+            "purchase_return_qty",
+        }:
+            # FREE after P.RETURN is return-free. Do not steal free_out from
+            # the FREE column that sits after SALE (right neighbour is SALE).
+            col["canonical"] = "ignore"
+            col["confidence"] = 0.5
+            col["reason"] = "return_free"
+            logger.info(
+                "STOCK_HEADER_RETURN_FREE ignored col_index=%s text=%r",
+                col.get("col_index"),
+                col.get("header_text"),
+            )
         elif left_group == "sales" or left_canon in {
             "sales_qty",
             "sales_value",
@@ -2362,6 +2375,17 @@ def resolve_columns(
             col["canonical"] = "free_out_qty"
             col["confidence"] = 0.6
             col["reason"] = "neighbour"
+        elif left_group == "sales_return" or left_canon in {
+            "sales_return_qty",
+        }:
+            col["canonical"] = "ignore"
+            col["confidence"] = 0.5
+            col["reason"] = "return_free"
+            logger.info(
+                "STOCK_HEADER_RETURN_FREE ignored col_index=%s text=%r",
+                col.get("col_index"),
+                col.get("header_text"),
+            )
         elif right_group == "purchase":
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.6

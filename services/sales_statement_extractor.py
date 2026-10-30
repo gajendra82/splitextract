@@ -560,6 +560,13 @@ _REPORT_PERIOD_INLINE_RE = re.compile(
     r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
     re.I | re.M,
 )
+# Printed "01-Apr-26 To 30-Apr-26" / "From : 01-Apr-26 To : 30-Apr-26".
+_REPORT_PERIOD_MON_RANGE_RE = re.compile(
+    r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s*"
+    r"(?:to|upto|-|–|—)\s*:?\s*"
+    r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+    re.I,
+)
 
 
 def _extract_report_period_from_content(
@@ -579,6 +586,7 @@ def _extract_report_period_from_content(
         (_REPORT_PERIOD_INLINE_RE, "report_header"),
         (_REPORT_PERIOD_RANGE_RE, "report_period"),
         (_REPORT_PERIOD_FROM_TO_RE, "report_from_to"),
+        (_REPORT_PERIOD_MON_RANGE_RE, "report_mon_range"),
     ):
         m = pattern.search(header_band) or pattern.search(text[:4000])
         if not m:
@@ -40960,6 +40968,17 @@ Rules:
   closing_qty = CLOSING. closing_value = CLOSING AMT.
   sales_qty = null. receipts_qty = null. Do not copy OP QTY or CLOSING into sales_qty.
   Do not calculate sales_qty. Set report_title to the printed title.
+- PRODUCT | PACK | OPENING | PURCHASE | FREE | P.RETURN | FREE | SALE | FREE | S.RETURN | FREE | OTHERS | CLOSING:
+  PACK (60, 30ML, 60 TAB, 10 ML) is packing, NEVER opening_qty or sales_qty.
+  Keep one cell per FREE / P.RETURN / S.RETURN / OTHERS column even when the
+  cell is dash/blank so SALE and CLOSING do not shift left.
+  P.RETURN -> extra.purchase_return (not sales). S.RETURN -> extra.sale_return.
+  PURCHASE -> receipts_qty. SALE -> sales_qty. CLOSING -> closing_qty.
+  Example: ARJUNA TABLET pack=60, opening blank, sale=13, closing=47.
+  Example: BONNISAN DROPS pack=30ML, opening=57, purchase=50, sale=73, sale free=1, closing=33.
+  Period "01-Apr-26 To 30-Apr-26" is period_from=2026-04-01, period_to=2026-04-30.
+  Do not put the period line or the PRODUCT/PACK header into stockist_name.
+  Qty-only: sales_value=0, closing_value=0 unless a value column is printed.
 - Use 0 only for a cell that is actually blank.
 - Include every printed product row.
 """.strip()
@@ -41037,6 +41056,12 @@ Rules:
   "TOTAL 290022 230450 292807 262432" must be captured as:
   totals.opening_qty=290022, totals.receipts_qty=230450,
   totals.sales_qty=292807 (ISSUE), totals.closing_qty=262432.
+- PRODUCT | PACK | OPENING | PURCHASE | FREE | P.RETURN | FREE | SALE | FREE | S.RETURN | FREE | OTHERS | CLOSING:
+  PACK (60, 30ML, 60 TAB) is packing, NEVER opening_qty or sales_qty. Keep one
+  cell per FREE/return/OTHERS column even when the cell is dash/blank so later
+  numbers do not shift left. P.RETURN is purchase return, S.RETURN is sales return.
+  Dates like 01-Apr-26 To 30-Apr-26 are period_from/period_to (DD-Mon-YY → 2026-04-01).
+  Do not put the period line or the PRODUCT/PACK header into stockist_name.
 - Reject OCR-merged numbers (e.g. 75374123024). Prefer null over garbage money.
 - Use 0 for missing numeric fields. Include every product row with numbers.
 """.strip()
@@ -41338,6 +41363,695 @@ def _apply_parsed_sales_json(
     return result
 
 
+def _ocr_header_align_enabled() -> bool:
+    """STOCK_OCR_HEADER_ALIGN — map OCR row tokens from printed headers.
+
+    Default ON. When PACK/OPENING/PURCHASE/SALE/CLOSING headers are present,
+    column assignment uses header col_index instead of last-N numbers.
+    """
+    return os.getenv("STOCK_OCR_HEADER_ALIGN", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_OCR_PACK_UNIT_RE = re.compile(
+    r"^(?:ML|TAB|TABS|GM|G|MG|CAP|CAPS|SYP|INJ|S|'S|GRM|GR|KG|LTRS?|LITRE)$",
+    re.I,
+)
+_OCR_DASH_TOKEN_RE = re.compile(r"^(?:[-–—_~]+|\.+)$")
+_OCR_NUM_TOKEN_RE = re.compile(r"^-?\d+(?:[.,]\d+)?$")
+_OCR_PACK_TOKEN_RE = re.compile(
+    r"^\(?\d+(?:[.,]\d+)?\s*"
+    r"(?:ML|TAB|TABS|GM|G|MG|CAP|CAPS|SYP|INJ|S|'S|GRM|GR|KG|LTRS?|LITRE|,S)?\)?$",
+    re.I,
+)
+
+
+def _ocr_line_is_stockist_candidate(line: str) -> bool:
+    """True when a header line can be a stockist, not a period/column banner."""
+    text = (line or "").strip()
+    if len(text) < 4:
+        return False
+    if re.search(
+        r"\b(?:PRODUCT|PACK|OPENING|PURCHASE|CLOSING|S\.?RETURN|P\.?RETURN)\b",
+        text,
+        re.I,
+    ):
+        return False
+    if re.search(r"\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4}", text):
+        return False
+    if re.search(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", text):
+        return False
+    if re.match(r"^(?:FROM|TO|PERIOD|CONT)\b", text, re.I):
+        return False
+    words = re.findall(r"[A-Za-z]{3,}", text)
+    if len(words) < 2:
+        return False
+    if re.search(r"\bFREE\b", text, re.I) and not re.search(
+        r"AGENC|STORES|MEDICO|MEDICAL|PHARMA", text, re.I
+    ):
+        return False
+    qtyish = sum(
+        1 for tok in _ocr_merge_row_tokens(text) if _ocr_token_is_pack_or_qty(tok)
+    )
+    if qtyish >= 3:
+        return False
+    return True
+
+
+def _ocr_text_has_pack_opening_headers(text: str) -> bool:
+    """True when OCR shows PACK + OPENING plus a movement/closing header."""
+    blob = text or ""
+    if not re.search(r"\bPACK\b", blob, re.I):
+        return False
+    if not re.search(r"\bOPENING\b", blob, re.I):
+        return False
+    return bool(re.search(r"\b(?:PURCHASE|SALE|CLOSING)\b", blob, re.I))
+
+
+def _ocr_merge_row_tokens(line: str) -> List[str]:
+    """Whitespace tokens with pack units and P./S. RETURN glued."""
+    raw = (line or "").replace("\u00a0", " ").split()
+    out: List[str] = []
+    i = 0
+    while i < len(raw):
+        cur = raw[i]
+        nxt = raw[i + 1] if i + 1 < len(raw) else ""
+        if re.fullmatch(r"[PS]\.?", cur, re.I) and re.fullmatch(r"RETURN", nxt, re.I):
+            out.append(f"{cur.rstrip('.')}.RETURN")
+            i += 2
+            continue
+        if _OCR_NUM_TOKEN_RE.match(cur) and _OCR_PACK_UNIT_RE.match(nxt):
+            out.append(f"{cur} {nxt}")
+            i += 2
+            continue
+        out.append(cur)
+        i += 1
+    while out and re.match(r"^(?:cont\.?|continued).*$", out[-1], re.I):
+        out.pop()
+    return out
+
+
+def _ocr_token_is_pack_or_qty(token: str) -> bool:
+    t = str(token or "").strip()
+    if not t:
+        return False
+    if _OCR_DASH_TOKEN_RE.match(t):
+        return True
+    if _OCR_PACK_TOKEN_RE.match(t):
+        return True
+    from services.stock_header_resolver import parse_number, _unit_pack_token
+
+    if parse_number(t) is not None:
+        return True
+    return bool(_unit_pack_token(t))
+
+
+def _ocr_tokens_as_header_cells(tokens: Sequence[str]) -> List[Dict[str, Any]]:
+    return [
+        {
+            "text": tok,
+            "x_center": None,
+            "col_index": idx,
+            "subheader_text": None,
+        }
+        for idx, tok in enumerate(tokens)
+    ]
+
+
+def _ocr_pack_opening_columns(tokens: Sequence[str]) -> Optional[List[Dict[str, Any]]]:
+    """Resolve PRODUCT/PACK/OPENING/... headers. None when that layout is absent."""
+    if len(tokens) < 5:
+        return None
+    from services.stock_header_resolver import resolve_columns
+
+    resolved = resolve_columns(_ocr_tokens_as_header_cells(tokens))
+    columns = list(resolved.get("columns") or [])
+    canons = {str(c.get("canonical") or "") for c in columns}
+    if "pack" not in canons or "opening_qty" not in canons or "closing_qty" not in canons:
+        return None
+    if "purchase_qty" not in canons and "sales_qty" not in canons:
+        return None
+    if "product_name" not in canons:
+        return None
+    return columns
+
+
+def _ocr_fields_to_line_item(fields: Dict[str, Optional[str]]) -> Dict[str, Any]:
+    """Map header-resolver fields onto a line item. Dashes stay missing."""
+    from services.stock_header_resolver import parse_number
+
+    item = empty_line_item()
+    extra = item.setdefault("extra", {})
+    field_source: Dict[str, str] = {}
+    name = fields.get("product_name")
+    item["product_name"] = _clean_name(name) if name else None
+    pack = fields.get("pack")
+    pack_s = str(pack).strip() if pack not in (None, "") else ""
+    if pack_s:
+        pack_keep = [
+            tok
+            for tok in pack_s.split()
+            if _ocr_token_is_pack_or_qty(tok)
+            or re.fullmatch(r"\d+(?:[.,]\d+)?", tok)
+        ]
+        pack_s = " ".join(pack_keep).strip()
+        if pack_s and not re.search(r"\d", pack_s):
+            pack_s = ""
+    item["packing"] = pack_s or None
+    field_source["pack"] = "printed" if pack_s else "missing"
+
+    def _qty(canon: str, dest: str, *, extra_key: Optional[str] = None) -> None:
+        raw = fields.get(canon)
+        if raw is None or str(raw).strip() == "":
+            field_source[dest] = "missing"
+            return
+        parsed = parse_number(raw)
+        if parsed is None:
+            field_source[dest] = "missing"
+            return
+        if extra_key:
+            extra[extra_key] = float(parsed)
+        else:
+            item[dest] = float(parsed)
+        field_source[dest] = "printed"
+
+    _qty("opening_qty", "opening_qty")
+    _qty("purchase_qty", "receipts_qty")
+    purchase = parse_number(fields.get("purchase_qty"))
+    if purchase is not None:
+        item["purchase_qty"] = float(purchase)
+        item["receipts_qty"] = float(purchase)
+        field_source["receipts_qty"] = "printed"
+        field_source["purchase_qty"] = "printed"
+    _qty("sales_qty", "sales_qty")
+    _qty("closing_qty", "closing_qty")
+    _qty("sales_return_qty", "sales_return_qty")
+    _qty("purchase_return_qty", "purchase_return_qty")
+    _qty("other_outward_qty", "others_qty")
+    _qty("free_in_qty", "free_in_qty", extra_key="free_in_qty")
+    _qty("free_out_qty", "free_out_qty", extra_key="free_out_qty")
+    extra["field_source"] = field_source
+    extra["ocr_header_aligned"] = True
+    return item
+
+
+def _ocr_image_to_word_boxes(
+    file_bytes: bytes,
+    *,
+    page: str = "1",
+) -> List[Dict[str, Any]]:
+    """Tesseract word boxes for header x-centre assignment on photos."""
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+    except ImportError:
+        return []
+    pytesseract = _a2z_tesseract()
+    image = Image.open(io.BytesIO(file_bytes))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    width, height = image.size
+    # Drop table-cloth / footer under the printed sheet.
+    image = image.crop((0, 0, width, max(1, int(height * 0.90))))
+    processed = ImageOps.autocontrast(image.convert("L"))
+    processed = ImageEnhance.Sharpness(processed).enhance(1.6)
+    from services.stock_ocr_policy import stock_ocr_context
+
+    page_key = str(page or "1").strip() or "1"
+    with stock_ocr_context(region="page", page=page_key, scope="page"):
+        data = pytesseract.image_to_data(
+            processed, config="--psm 6", output_type=pytesseract.Output.DICT
+        )
+    words: List[Dict[str, Any]] = []
+    texts = data.get("text") or []
+    for i, raw in enumerate(texts):
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        try:
+            conf = float((data.get("conf") or [None])[i])
+        except (TypeError, ValueError, IndexError):
+            conf = -1.0
+        if conf < 15:
+            continue
+        left = float((data.get("left") or [0])[i] or 0)
+        top = float((data.get("top") or [0])[i] or 0)
+        ww = float((data.get("width") or [0])[i] or 0)
+        hh = float((data.get("height") or [0])[i] or 0)
+        words.append(
+            {
+                "text": text,
+                "x": left + ww / 2.0,
+                "y": top + hh / 2.0,
+                "h": hh,
+                "conf": conf,
+                "page_w": float(processed.size[0]),
+                "page_h": float(processed.size[1]),
+            }
+        )
+    logger.info("STOCK_OCR_WORD_BOXES page=%s words=%s", page_key, len(words))
+    return words
+
+
+def _ocr_word_boxes_to_text(words: Sequence[Dict[str, Any]]) -> str:
+    """Join word boxes into line text for period/header detection."""
+    rows = _cluster_ocr_words_into_rows(words)
+    lines: List[str] = []
+    for row in rows:
+        line = " ".join(str(w.get("text") or "") for w in row if w.get("text"))
+        if line.strip():
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def _ocr_header_token_key(text: str) -> Optional[str]:
+    from services.stock_header_resolver import normalize_header
+
+    norm = normalize_header(text)
+    compact = re.sub(r"\s+", "", norm)
+    if compact in {"product", "item"} or norm in {"product", "item"}:
+        return "product"
+    if compact in {"pack", "packing", "packg"}:
+        return "pack"
+    if compact.startswith("open"):
+        return "opening"
+    if compact.startswith("purch") or compact in {"pur", "purc"}:
+        return "purchase"
+    if compact == "free":
+        return "free"
+    if compact in {"sale", "sales"}:
+        return "sale"
+    if compact.startswith("clos"):
+        return "closing"
+    if compact in {"preturn", "preturn"} or norm in {"p return", "p.return"}:
+        return "preturn"
+    if compact in {"sreturn"} or norm in {"s return", "s.return"}:
+        return "sreturn"
+    if compact.startswith("other"):
+        return "others"
+    return None
+
+
+def _ocr_collect_header_tokens_from_words(
+    words: Sequence[Dict[str, Any]],
+    page_h: float,
+) -> Dict[str, Dict[str, Any]]:
+    """Pick PACK/OPENING/SALE/CLOSING tokens even when a fold splits header y."""
+    keyed: List[tuple] = []
+    for word in words:
+        key = _ocr_header_token_key(str(word.get("text") or ""))
+        if key:
+            keyed.append((key, word))
+    if len(keyed) < 3:
+        return {}
+    clusters: List[List[tuple]] = []
+    for item in sorted(keyed, key=lambda kv: float(kv[1].get("y") or 0)):
+        y = float(item[1].get("y") or 0)
+        h = float(item[1].get("h") or 12)
+        tol = max(16.0, h * 1.1)
+        if clusters:
+            cy = sum(float(x[1].get("y") or 0) for x in clusters[-1]) / len(
+                clusters[-1]
+            )
+            if abs(y - cy) <= tol:
+                clusters[-1].append(item)
+                continue
+        clusters.append([item])
+    y_limit = page_h * 0.55 if page_h else 1e9
+    headerish = [
+        cluster
+        for cluster in clusters
+        if len({k for k, _ in cluster}) >= 2
+        and (
+            sum(float(x[1].get("y") or 0) for x in cluster) / len(cluster)
+        )
+        <= y_limit
+    ]
+    found: Dict[str, Dict[str, Any]] = {}
+    for cluster in sorted(
+        headerish,
+        key=lambda c: min(float(x[1].get("x") or 0) for x in c),
+    ):
+        for key, word in sorted(
+            cluster, key=lambda kv: float(kv[1].get("x") or 0)
+        ):
+            if key == "free" or key not in found:
+                found[key] = word
+    return found
+
+
+def _ocr_attach_qty_words_by_row_y(
+    rows: List[List[Dict[str, Any]]],
+    extra_words: Sequence[Dict[str, Any]],
+) -> None:
+    """Append SALE/CLOSING qty tokens whose y matches a left-band product row."""
+    if not rows or not extra_words:
+        return
+    row_ys: List[Optional[float]] = []
+    for row in rows:
+        if not row:
+            row_ys.append(None)
+            continue
+        row_ys.append(sum(float(w.get("y") or 0) for w in row) / len(row))
+    for word in extra_words:
+        text = str(word.get("text") or "")
+        if _ocr_header_token_key(text):
+            continue
+        if not _ocr_token_is_pack_or_qty(text):
+            continue
+        wy = float(word.get("y") or 0)
+        tol = max(14.0, float(word.get("h") or 12) * 0.9)
+        best_i: Optional[int] = None
+        best_d: Optional[float] = None
+        for i, row_y in enumerate(row_ys):
+            if row_y is None:
+                continue
+            dist = abs(wy - row_y)
+            if dist <= tol and (best_d is None or dist < best_d):
+                best_d = dist
+                best_i = i
+        if best_i is not None:
+            rows[best_i].append(word)
+
+
+def _cluster_ocr_words_into_rows(
+    words: Sequence[Dict[str, Any]],
+) -> List[List[Dict[str, Any]]]:
+    ordered = sorted(words, key=lambda w: (float(w.get("y") or 0), float(w.get("x") or 0)))
+    rows: List[List[Dict[str, Any]]] = []
+    current_y: Optional[float] = None
+    current: List[Dict[str, Any]] = []
+    for word in ordered:
+        y = float(word.get("y") or 0)
+        h = float(word.get("h") or 12)
+        tol = max(14.0, h * 0.75)
+        if current_y is None or abs(y - current_y) <= tol:
+            current.append(word)
+            current_y = y if current_y is None else (current_y * 0.6 + y * 0.4)
+        else:
+            rows.append(sorted(current, key=lambda w: float(w.get("x") or 0)))
+            current = [word]
+            current_y = y
+    if current:
+        rows.append(sorted(current, key=lambda w: float(w.get("x") or 0)))
+    return rows
+
+
+def _parse_ocr_word_boxes_pack_opening(
+    words: Sequence[Dict[str, Any]],
+    filename: str,
+    ext: str,
+    *,
+    ocr_text: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Assign photo OCR words to PACK/OPENING/PURCHASE/SALE/CLOSING by x-centre."""
+    if not _ocr_header_align_enabled() or len(words) < 12:
+        return None
+    from services.stock_header_resolver import assign_cells, resolve_columns
+
+    page_h = float(words[0].get("page_h") or 0) or max(
+        float(w.get("y") or 0) for w in words
+    )
+    page_w = float(words[0].get("page_w") or 0) or max(
+        float(w.get("x") or 0) for w in words
+    )
+    found = _ocr_collect_header_tokens_from_words(words, page_h)
+    if "pack" not in found or "opening" not in found:
+        return None
+    if "purchase" not in found and "sale" not in found and "closing" not in found:
+        return None
+
+    header_order = [
+        "product",
+        "pack",
+        "opening",
+        "purchase",
+        "free",
+        "preturn",
+        "sale",
+        "sreturn",
+        "others",
+        "closing",
+    ]
+    header_cells: List[Dict[str, Any]] = []
+    col_index = 0
+    if "product" not in found:
+        header_cells.append(
+            {
+                "text": "PRODUCT",
+                "x_center": min(float(found["pack"]["x"]) * 0.45, page_w * 0.18),
+                "col_index": 0,
+                "subheader_text": None,
+            }
+        )
+        col_index = 1
+    for key in header_order:
+        word = found.get(key)
+        if not word:
+            continue
+        label = {
+            "product": "PRODUCT",
+            "pack": "PACK",
+            "opening": "OPENING",
+            "purchase": "PURCHASE",
+            "free": "FREE",
+            "preturn": "P.RETURN",
+            "sale": "SALE",
+            "sreturn": "S.RETURN",
+            "others": "OTHERS",
+            "closing": "CLOSING",
+        }[key]
+        header_cells.append(
+            {
+                "text": label,
+                "x_center": float(word["x"]),
+                "col_index": col_index,
+                "subheader_text": None,
+            }
+        )
+        col_index += 1
+    resolved = resolve_columns(header_cells)
+    columns = list(resolved.get("columns") or [])
+    x_by_idx = {
+        int(c["col_index"]): c.get("x_center")
+        for c in header_cells
+        if c.get("col_index") is not None
+    }
+    for col in columns:
+        idx = int(col.get("col_index") or 0)
+        if col.get("x_center") is None and x_by_idx.get(idx) is not None:
+            col["x_center"] = float(x_by_idx[idx])
+    canons = {str(c.get("canonical") or "") for c in columns}
+    if "pack" not in canons or "opening_qty" not in canons:
+        return None
+
+    pack_x = float(found["pack"]["x"])
+    header_y = float(found["pack"].get("y") or 0)
+    # Folded photos glue left-name rows to right-qty rows. Cluster only the
+    # PACK/OPENING/PURCHASE band (left of the crease).
+    left_cut = page_w * 0.52
+    if "purchase" in found:
+        left_cut = max(left_cut, float(found["purchase"]["x"]) + 80)
+    if "sale" in found:
+        left_cut = min(left_cut, float(found["sale"]["x"]) - 20)
+    left_words = [w for w in words if float(w.get("x") or 0) <= left_cut]
+    right_words = [w for w in words if float(w.get("x") or 0) > left_cut]
+    rows = _cluster_ocr_words_into_rows(left_words)
+    if "sale" in found or "closing" in found:
+        _ocr_attach_qty_words_by_row_y(rows, right_words)
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        if not row:
+            continue
+        row_y = sum(float(w.get("y") or 0) for w in row) / len(row)
+        if row_y <= header_y + 8:
+            continue
+        name_parts = [
+            str(w.get("text") or "")
+            for w in row
+            if float(w.get("x") or 0) < pack_x - 12
+            and re.search(r"[A-Za-z]{2,}", str(w.get("text") or ""))
+            and not _ocr_token_is_pack_or_qty(w.get("text"))
+        ]
+        name = _clean_name(" ".join(name_parts))
+        if not name or _is_non_product_line_name(name):
+            continue
+        if len(re.findall(r"[A-Za-z]", name)) < 3:
+            continue
+        tokens = [
+            {
+                "text": name,
+                "x": min(float(w.get("x") or 0) for w in row if float(w.get("x") or 0) < pack_x)
+                if any(float(w.get("x") or 0) < pack_x for w in row)
+                else pack_x * 0.3,
+                "col_index": 0,
+            }
+        ]
+        for word in row:
+            text = str(word.get("text") or "")
+            if (
+                float(word.get("x") or 0) < pack_x - 12
+                and re.search(r"[A-Za-z]{2,}", text)
+                and not _ocr_token_is_pack_or_qty(text)
+            ):
+                continue
+            tokens.append(
+                {
+                    "text": text,
+                    "x": float(word.get("x") or 0),
+                }
+            )
+        assigned = assign_cells(tokens, columns)
+        fields = dict(assigned.get("fields") or {})
+        fields["product_name"] = name
+        item = _ocr_fields_to_line_item(fields)
+        if not item.get("product_name"):
+            continue
+        items.append(item)
+    if len(items) < 2:
+        return None
+
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "tesseract_heuristic"
+    extra["ocr_header_aligned"] = True
+    extra["ocr_word_boxes"] = True
+    extra["qty_only"] = True
+    extra["ocr_header_aligned_rows"] = len(items)
+    blob = ocr_text or _ocr_word_boxes_to_text(words)
+    logger.info(
+        "STOCK_OCR_HEADER_ALIGN file=%s mode=word_boxes rows=%s cols=%s",
+        filename,
+        len(items),
+        len(columns),
+    )
+    return _finalize_statement_period_fields(result, content_text=blob)
+
+
+def _parse_ocr_header_aligned_text(
+    ocr_text: str, filename: str, ext: str
+) -> Optional[Dict[str, Any]]:
+    """Assign OCR product rows from printed PACK/OPENING/... headers.
+
+    Returns None when those headers are not present so other OCR parsers run.
+    """
+    if not _ocr_header_align_enabled() or not (ocr_text or "").strip():
+        return None
+    from services.stock_header_resolver import assign_cells
+
+    lines = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
+    columns: Optional[List[Dict[str, Any]]] = None
+    header_idx = -1
+    header_tokens: List[str] = []
+    for idx, line in enumerate(lines[:25]):
+        tokens = _ocr_merge_row_tokens(line)
+        found = _ocr_pack_opening_columns(tokens)
+        if found:
+            columns = found
+            header_idx = idx
+            header_tokens = tokens
+            break
+    if columns is None:
+        for idx, line in enumerate(lines[:24]):
+            if _extract_report_period_from_content(line)[0]:
+                continue
+            if idx + 1 >= len(lines):
+                break
+            joined = _ocr_merge_row_tokens(line + " " + lines[idx + 1])
+            found = _ocr_pack_opening_columns(joined)
+            if found:
+                columns = found
+                header_idx = idx + 1
+                header_tokens = joined
+                break
+    if not columns or header_idx < 0:
+        return None
+
+    non_product = [c for c in columns if str(c.get("canonical") or "") != "product_name"]
+    n_data = len(non_product)
+    if n_data < 4:
+        return None
+
+    items: List[Dict[str, Any]] = []
+    skipped = 0
+    for line in lines[header_idx + 1 :]:
+        tokens = _ocr_merge_row_tokens(line)
+        if len(tokens) < n_data + 1:
+            skipped += 1
+            continue
+        name_tokens = tokens[: len(tokens) - n_data]
+        data_tokens = tokens[len(tokens) - n_data :]
+        name = _clean_name(" ".join(name_tokens))
+        if not name or _is_non_product_line_name(name):
+            continue
+        if not any(ch.isalpha() for ch in name):
+            continue
+        if not _ocr_token_is_pack_or_qty(data_tokens[0] if data_tokens else ""):
+            skipped += 1
+            continue
+        product_col = next(
+            (
+                int(c.get("col_index") or 0)
+                for c in columns
+                if str(c.get("canonical") or "") == "product_name"
+            ),
+            0,
+        )
+        row_tokens: List[Dict[str, Any]] = [
+            {"text": name, "col_index": product_col, "x": None}
+        ]
+        for col, tok in zip(non_product, data_tokens):
+            row_tokens.append(
+                {
+                    "text": tok,
+                    "col_index": int(col.get("col_index") or 0),
+                    "x": None,
+                }
+            )
+        assigned = assign_cells(row_tokens, columns)
+        fields = assigned.get("fields") or {}
+        item = _ocr_fields_to_line_item(fields)
+        if not item.get("product_name"):
+            continue
+        items.append(item)
+
+    result = empty_result(filename, (ext or ".txt").lstrip(".") or "txt")
+    for ln in lines[:8]:
+        if re.search(r"AGENC|STORES|MEDICO|MEDICAL", ln, re.I) and _ocr_line_is_stockist_candidate(
+            ln
+        ):
+            result["stockist_name"] = _clean_name(ln)
+            break
+    if not result.get("stockist_name"):
+        for ln in lines[:8]:
+            if _ocr_line_is_stockist_candidate(ln) and not re.search(
+                r"STOCK\s*&\s*SALES|STOCK\s+REPORT", ln, re.I
+            ):
+                result["stockist_name"] = _clean_name(ln)
+                break
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "tesseract_heuristic"
+    extra["ocr_header_aligned"] = True
+    extra["ocr_header_tokens"] = header_tokens
+    extra["ocr_header_aligned_rows"] = len(items)
+    extra["ocr_header_aligned_skipped"] = skipped
+    extra["qty_only"] = True
+    logger.info(
+        "STOCK_OCR_HEADER_ALIGN file=%s cols=%s rows=%s skipped=%s header=%s",
+        filename,
+        len(columns),
+        len(items),
+        skipped,
+        " ".join(header_tokens)[:120],
+    )
+    return _finalize_statement_period_fields(result, content_text=ocr_text)
+
+
 def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, Any]:
     """Heuristic parse for Vikash-style stock report OCR text."""
     # Prefer OpBal/Issue/Closing mapping when that header is present
@@ -41353,16 +42067,41 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
     if psr and psr.get("line_items"):
         return psr
 
+    header_aligned = _parse_ocr_header_aligned_text(ocr_text, filename, ext)
+    if header_aligned is not None:
+        return header_aligned
+
+    if _ocr_text_has_pack_opening_headers(ocr_text):
+        # Last-N number assignment would file PACK into opening_qty. Leave rows
+        # empty so the original-image Gemini path can read the photo.
+        result = empty_result(filename, (ext or ".txt").lstrip(".") or "txt")
+        extra = result.setdefault("totals", {}).setdefault("extra", {})
+        extra["extraction_method"] = "tesseract_heuristic"
+        extra["ocr_header_aligned"] = False
+        extra["ocr_pack_opening_unaligned"] = True
+        extra["layout_unsafe"] = True
+        extra["qty_only"] = True
+        logger.info(
+            "STOCK_OCR_HEADER_ALIGN file=%s status=skip_last_n "
+            "reason=pack_opening_present_unaligned",
+            filename,
+        )
+        return _finalize_statement_period_fields(result, content_text=ocr_text)
+
     result = empty_result(filename, ext.lstrip("."))
     lines = [ln.strip() for ln in ocr_text.splitlines() if ln.strip()]
     if lines:
         # Prefer agency-looking header over manufacturer
         for ln in lines[:8]:
             if re.search(r"AGENC|STORES|MEDICO|MEDICAL", ln, re.I):
-                result["stockist_name"] = _clean_name(ln)
-                break
+                if _ocr_line_is_stockist_candidate(ln):
+                    result["stockist_name"] = _clean_name(ln)
+                    break
         if not result["stockist_name"]:
-            result["stockist_name"] = _clean_name(lines[0])
+            for ln in lines[:8]:
+                if _ocr_line_is_stockist_candidate(ln):
+                    result["stockist_name"] = _clean_name(ln)
+                    break
     for ln in lines[:15]:
         if re.search(r"HEALTHCARE|PHARMA\s*LTD|VERITAZ|AUROBINDO", ln, re.I):
             if not re.search(r"AGENC|STORES|MEDICO", ln, re.I):
@@ -56891,7 +57630,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
     try:
         check_sales_deadline("ocr")
-        ocr_text = _ocr_image_to_text(file_bytes)
+        ocr_words: List[Dict[str, Any]] = []
+        try:
+            ocr_words = _ocr_image_to_word_boxes(file_bytes)
+        except Exception as exc:
+            logger.info(
+                "STOCK_OCR_WORD_BOXES file=%s skipped: %s",
+                filename,
+                type(exc).__name__,
+            )
+            ocr_words = []
+        if ocr_words:
+            ocr_text = _ocr_word_boxes_to_text(ocr_words)
+        else:
+            ocr_text = _ocr_image_to_text(file_bytes)
     except SalesExtractionDeadlineExceeded:
         raise
     except Exception as exc:
@@ -56966,8 +57718,27 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     if heuristic.get("line_items"):
         return heuristic
 
+    extra_h = ((heuristic or {}).get("totals") or {}).get("extra") or {}
+    if ocr_words:
+        try:
+            word_result = _parse_ocr_word_boxes_pack_opening(
+                ocr_words, filename, ext, ocr_text=ocr_text
+            )
+        except Exception as exc:
+            logger.info(
+                "STOCK_OCR_HEADER_ALIGN file=%s word_boxes failed: %s",
+                filename,
+                type(exc).__name__,
+            )
+            word_result = None
+        if word_result and word_result.get("line_items"):
+            return word_result
+
     result["totals"]["extra"]["ocr_preview"] = ocr_text[:2000]
     result["totals"]["extra"]["error"] = "could not structure OCR text"
+    if extra_h.get("ocr_pack_opening_unaligned"):
+        result["totals"]["extra"]["ocr_pack_opening_unaligned"] = True
+        result["totals"]["extra"]["layout_unsafe"] = True
     return result
 
 
