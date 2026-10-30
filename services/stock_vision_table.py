@@ -1305,6 +1305,11 @@ def build_table_prompt() -> str:
         "Sales Free|Cl.Stock): emit one cell per header column even when Free/"
         "Ret Free cells are blank or 0 — never drop those columns or Cl.Stock "
         "shifts left into Sales. Strength/pack is not opening_qty. "
+        "PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|FREE|S.RETURN|"
+        "FREE|OTHERS|CLOSING: PACK (60, 30ML, 60 TAB) is packing, never "
+        "opening_qty. Emit one cell per FREE/P.RETURN/S.RETURN/OTHERS column "
+        "even when the cell is dash/blank so SALE and CLOSING do not shift left. "
+        "P.RETURN is purchase_return_qty, S.RETURN is sales_return_qty. "
         "STOCK & SALES ANALYSIS / qty+value grids: emit TWO header rows — "
         "parent bands OPENING, RECEIPT/RECEIPTS, ISSUE/SALES, CLOSING (and "
         "DUMP if printed) on row 1, and QTY/VALUE sub-headers on row 2. "
@@ -6319,7 +6324,8 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
     r"\b(?:zandra|division)\b|"
     r"\bdivi\b|"
     r"\([^)]*\bdiv(?:i|ision)?\b[^)]*\)|"
-    r"\bhimalaya\b\s*\("
+    r"\bhimalaya\b\s*\(|"
+    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)"
 )
 
 # LstSL / Open / Recd footer money labels — never SKUs.

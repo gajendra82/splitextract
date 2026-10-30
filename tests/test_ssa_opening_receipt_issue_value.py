@@ -30,6 +30,13 @@ BUSY = (
     "Item Description Opening Purchases Return Others Total Sales Closing Rate\n"
 )
 
+SALE_PURCHASES = (
+    "STOCK & SALES ANALYSIS  (HIMALAYA ZEAL) 01/09/2026 - 23/09/2026\n"
+    "ITEM DESCRIPTION                              OPENING               SALE  REPL./    TOTAL          PURCHASE   REPL./  CLOSING   RE-\n"
+    "                                               STOCK   PURCHASES  RETURN  OTHERS    STOCK    SALES   RETURN   OTHERS   STOCK   ORDER   AUG N/EXP\n"
+    "Value in Rs.                                  381687        0     1047        0   382734   138206        0        0   259092\n"
+)
+
 SALEABLE = (
     "Saleable Stock Report\n"
     "Particular | | Opn | Rec | Issue | Bal\n"
@@ -40,6 +47,7 @@ class TestSsaOriDetection(unittest.TestCase):
     def test_detects_receipt_issue_dump_not_other_layouts(self):
         self.assertTrue(_is_ssa_opening_receipt_issue_value_text(HEADER))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(BUSY))
+        self.assertFalse(_is_ssa_opening_receipt_issue_value_text(SALE_PURCHASES))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(SALEABLE))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(""))
         self.assertFalse(_is_saleable_stock_report_text(HEADER))
