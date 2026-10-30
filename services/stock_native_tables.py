@@ -580,6 +580,53 @@ def _split_column_pages_enabled() -> bool:
     }
 
 
+def _footer_totals_enabled() -> bool:
+    """STOCK_PDF_WORDS_FOOTER_TOTALS — keep printed TOTAL QUANTITY/VALUE rows.
+
+    Default ON. Sheet footers are skipped as products; the numbers are copied
+    into statement totals. Never invented from row arithmetic.
+    """
+    return os.getenv("STOCK_PDF_WORDS_FOOTER_TOTALS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
+    """'quantity' or 'value' when the row is a printed sheet TOTAL footer."""
+    texts = [str(t.get("text") or "").strip() for t in tokens if isinstance(t, dict)]
+    texts = [t for t in texts if t]
+    if not texts:
+        return None
+    joined = " ".join(texts)
+    if is_software_price_ad_name(joined):
+        return None
+    numeric = sum(1 for t in texts if parse_number(t) is not None)
+    if numeric < 3:
+        return None
+    if re.search(
+        r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
+        r"total\s+(?:quantity|qty|qnt)\b",
+        joined,
+    ):
+        return "quantity"
+    if re.search(
+        r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
+        r"total\s+value\b",
+        joined,
+    ):
+        return "value"
+    if re.match(r"(?i)^(?:grand\s+|page\s+|sub\s+)?total$", texts[0]):
+        second = texts[1] if len(texts) > 1 else ""
+        if re.match(r"(?i)^(quantity|qty|qnt)$", second):
+            return "quantity"
+        if re.match(r"(?i)^value$", second):
+            return "value"
+    return None
+
+
 def _header_has_group(header_cells: List[Dict[str, Any]], group_name: str) -> bool:
     from services.stock_header_resolver import _pick_group
 
@@ -622,8 +669,12 @@ def _split_page_product_rows(
     rows: List[List[Dict[str, Any]]], *, named: bool
 ) -> List[List[Dict[str, Any]]]:
     out: List[List[Dict[str, Any]]] = []
+    keep_totals = _footer_totals_enabled()
     for row in rows or []:
-        if not row or _is_footer_or_total_tokens(row):
+        if not row:
+            continue
+        kind = _sheet_total_row_kind(row) if keep_totals else None
+        if _is_footer_or_total_tokens(row) and not kind:
             continue
         texts = [str(t.get("text") or "") for t in row if isinstance(t, dict)]
         has_num = any(parse_number(t) is not None for t in texts)
@@ -1525,7 +1576,10 @@ def from_pdf_words(
             if page_header and _is_repeated_header_tokens(tokens, page_header):
                 continue
             if _is_footer_or_total_tokens(tokens):
-                continue
+                if not (
+                    _footer_totals_enabled() and _sheet_total_row_kind(tokens)
+                ):
+                    continue
             if structural:
                 # Tag so the resolver path can mark STRUCTURAL_ERROR.
                 tagged = [dict(t) for t in tokens]

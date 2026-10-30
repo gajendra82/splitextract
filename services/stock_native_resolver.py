@@ -91,6 +91,69 @@ def _is_sheet_total_name(name: Any) -> bool:
     return "totalvalue" in key
 
 
+def _footer_totals_from_page_results(
+    page_results: List[Dict[str, Any]],
+) -> Dict[str, float]:
+    """Copy printed TOTAL QUANTITY / TOTAL VALUE cells onto statement totals.
+
+    Column assignment uses the same header bands as product rows. TOTAL VALUE
+    numbers land in qty canons because the header is qty; remap those to values.
+    """
+    from services.stock_header_resolver import assign_cells
+    from services.stock_native_tables import (
+        _footer_totals_enabled,
+        _sheet_total_row_kind,
+        resolver_ready,
+    )
+
+    if not _footer_totals_enabled():
+        return {}
+    out: Dict[str, float] = {}
+    for page in page_results or []:
+        ready = resolver_ready(page.get("header_cells") or [])
+        columns = ready.get("columns") or []
+        if not columns:
+            continue
+        for row in page.get("data_rows") or []:
+            kind = _sheet_total_row_kind(row)
+            if not kind:
+                continue
+            assigned = assign_cells(row, columns)
+            item = fields_to_line_item(assigned.get("fields") or {})
+            if kind == "value":
+                mapping = (
+                    ("opening_qty", "opening_value"),
+                    ("receipts_qty", "receipts_value"),
+                    ("sales_qty", "sales_value"),
+                    ("closing_qty", "closing_value"),
+                )
+            else:
+                mapping = (
+                    ("opening_qty", "opening_qty"),
+                    ("receipts_qty", "receipts_qty"),
+                    ("sales_qty", "sales_qty"),
+                    ("closing_qty", "closing_qty"),
+                )
+            for src, dest in mapping:
+                val = item.get(src)
+                if val in (None, ""):
+                    continue
+                try:
+                    out[dest] = float(val)
+                except (TypeError, ValueError):
+                    continue
+            logger.info(
+                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s opening=%s receipts=%s "
+                "sales=%s closing=%s",
+                kind,
+                out.get("opening_qty", out.get("opening_value")),
+                out.get("receipts_qty", out.get("receipts_value")),
+                out.get("sales_qty", out.get("sales_value")),
+                out.get("closing_qty", out.get("closing_value")),
+            )
+    return out
+
+
 def _row_match_key(item: Dict[str, Any]) -> Tuple[str, str, str]:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     return (
@@ -2040,6 +2103,9 @@ def _items_from_resolved_word_columns(
     }
     if qty_only:
         parsed["qty_only"] = True
+    footer = _footer_totals_from_page_results(ready_pages)
+    if footer:
+        parsed["footer_totals"] = footer
     return parsed
 
 
@@ -2256,6 +2322,26 @@ def parse_pdf_free_column_statement(
         if key in {"sales_value", "closing_value"} or value is None:
             continue
         extra[key] = value
+    footer = parsed.get("footer_totals")
+    if not footer:
+        footer = _footer_totals_from_page_results(page_results)
+    if footer:
+        extra["total_row_source"] = "printed_footer"
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "opening_value",
+            "receipts_value",
+        ):
+            if footer.get(key) is not None:
+                result["totals"][key] = footer[key]
+                extra[key] = footer[key]
+        if footer.get("sales_value") is not None:
+            result["totals"]["sales_value"] = footer["sales_value"]
+        if footer.get("closing_value") is not None:
+            result["totals"]["closing_value"] = footer["closing_value"]
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,
