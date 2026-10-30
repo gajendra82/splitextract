@@ -55,6 +55,17 @@ class TestReportPeriodFromContent(unittest.TestCase):
             {"report_header", "report_period", "report_from_to", "report_period_of"},
         )
 
+    def test_printed_dd_mon_yy_to_range(self):
+        text = (
+            "PRODUCT : 01-Apr-26 To : 30-Apr-26\n"
+            "PRODUCT PACK OPENING PURCHASE SALE CLOSING\n"
+            "ARJUNA TABLET 60 - - 13 47\n"
+        )
+        pf, pt, source = _extract_report_period_from_content(text)
+        self.assertEqual(pf, "2026-04-01")
+        self.assertEqual(pt, "2026-04-30")
+        self.assertEqual(source, "report_mon_range")
+
     def test_for_the_period_of_mixed_separators(self):
         text = (
             "PRAGATI MEDICAL AGENCY\n"

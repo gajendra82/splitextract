@@ -72,6 +72,20 @@ class ProductTotalRowKeepTests(unittest.TestCase):
         ]
         self.assertTrue(_is_footer_or_total_tokens(tokens))
 
+    def test_bare_sheet_total_with_numbers_is_footer(self):
+        tokens = [
+            {"text": "TOTAL", "x": 0.20},
+            {"text": "7567", "x": 0.39},
+            {"text": "945242.25", "x": 0.44},
+            {"text": "4944", "x": 0.51},
+            {"text": "707577.62", "x": 0.56},
+            {"text": "6539", "x": 0.63},
+            {"text": "902881.34", "x": 0.68},
+            {"text": "5972", "x": 0.74},
+            {"text": "777273.27", "x": 0.80},
+        ]
+        self.assertTrue(_is_footer_or_total_tokens(tokens))
+
 
 class MithilaPdfWordsIntegrationTests(unittest.TestCase):
     @classmethod

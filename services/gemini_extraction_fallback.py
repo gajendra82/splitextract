@@ -919,6 +919,15 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    # Marg SALE PURCHASES / PURCHASE SALES qty grid. SSA qty-value last-N
+    # mapping glues printed qty onto the product name and zeros columns.
+    if _allowlist_skip(
+        "marg_sale_purchase_analysis",
+        str(extra.get("extraction_method") or "") == "marg_sale_purchase_analysis"
+        or str(extra.get("layout") or "") == "marg_sale_purchase_analysis",
+    ):
+        return result
+
     # Busy/Himalaya STOCK & SALES ANALYSIS: TOTAL STOCK ≠ CLOSING STOCK.
     # Gemini often maps TOTAL→closing and zeroes sales; keep native mapping.
     if _allowlist_skip(

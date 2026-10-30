@@ -112,6 +112,9 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "breakage_qty",
         "shortage_qty",
     ),
+    "others": (
+        "others_qty",
+    ),
     "closing": (
         "closing_qty",
         "closing",
@@ -583,6 +586,9 @@ def expected_closing(fields: Dict[str, Optional[float]]) -> Optional[float]:
         if sales_return is not None:
             derived += float(sales_return)
 
+    others = fields.get("others")
+    if others is not None:
+        derived += float(others)
     for sub_key in ("sales", "free_out", "purchase_return", "expiry_damage"):
         value = fields.get(sub_key)
         if value is not None:

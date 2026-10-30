@@ -126,6 +126,14 @@ def _br_trf_qty(item: Dict[str, Any]) -> float:
     return 0.0
 
 
+def _others_qty(item: Dict[str, Any]) -> float:
+    """Printed signed OTHERS adjustment (negative = outward)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("others_qty") is not None:
+        return _f(extra.get("others_qty"))
+    return 0.0
+
+
 def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> float:
     """Outward adjustments (scheme / other / optional Br.Trf.)."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -279,6 +287,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     sales_free = _sales_free_qty(item)
     br = _br_trf_qty(item)
     other_plain = _other_out_qty(item, include_br_trf=False)
+    others_signed = _others_qty(item)
     free_in = _free_in_qty(item)
     open_pur = opening + purchase + free_in
     total = _printed_total(item)
@@ -306,6 +315,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     core = (
         base
         + sret_adj
+        + others_signed
         - sales
         - sales_free
         - purchase_return
@@ -366,6 +376,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
             "expiry_damage_qty": round(expiry, 4),
             "sample_qty": round(sample, 4),
             "other_outward_qty": round(other_out, 4),
+            "others_qty": round(others_signed, 4),
             "br_trf_qty": round(br, 4),
         },
         "expected_closing_qty": expected,

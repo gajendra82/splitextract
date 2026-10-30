@@ -31,6 +31,7 @@ CANONICAL_FIELDS = (
     "sales_return_qty",
     "purchase_return_qty",
     "expiry_damage_qty",
+    "other_outward_qty",
     "total_qty",
     "closing_qty",
     "closing_value",
@@ -204,6 +205,7 @@ ALIASES: Dict[str, List[str]] = {
         "receipt pur",
         "receipt/pur",
         "receive quantity",
+        "receive quant",  # wrapped RECEIVE QUANT(ITY)
         "purchase qty",
         "purchased",
         "purchased qty",
@@ -227,6 +229,7 @@ ALIASES: Dict[str, List[str]] = {
         "outward",
         "sold",
         "issue quantity",
+        "issue quant",  # wrapped ISSUE QUANT(ITY)
         "issue/sales",
         "sales qty",
         "sale qty",
@@ -240,6 +243,8 @@ ALIASES: Dict[str, List[str]] = {
         "sale ret",
         "sale ref",
         "s ret",
+        "s return",
+        "sreturn",
         "sret",
         "sr",
         "sales return",
@@ -255,9 +260,17 @@ ALIASES: Dict[str, List[str]] = {
         "cn",
         "return",
         "retrn",
+        "sale ret.",
     ],
     "purchase_return": [
         "pret",
+        "p return",
+        "preturn",
+        "p r",
+        "p r qty",
+        "p r quantity",
+        "pr qty",
+        "pr quantity",
         "pur ret",
         "purc ret",
         "purc. ret",
@@ -297,6 +310,10 @@ ALIASES: Dict[str, List[str]] = {
         "nrexp",
         "near exp",
         "near expiry",
+        # Breakage / expiry / purchase-return combined movement column.
+        "b/e/pr",
+        "bepr",
+        "b e pr",
     ],
     "closing": [
         "cls",
@@ -319,6 +336,7 @@ ALIASES: Dict[str, List[str]] = {
         "ci stk",
         "cb",
         "closing stock",
+        "closing stoc",  # wrapped CLOSING STOC(K)
         "closing qty",
         "closing balance",
         "closing bal",
@@ -375,6 +393,18 @@ ALIASES: Dict[str, List[str]] = {
         "sample",
         "smpl",
     ],
+    # Signed adjustment between sales and closing (outward when negative).
+    "others": [
+        "others",
+        "others qty",
+        "other qty",
+        "repl other",
+        "repl/other",
+        "repl / other",
+        "replace",
+        "replace others",
+        "replace+",
+    ],
     "total": [
         "total",
         "tot",
@@ -390,6 +420,8 @@ ALIASES: Dict[str, List[str]] = {
         "in qty",
         "total receipt",
         "total receipts",
+        "total receive",
+        "total received",
         "op+rec",
         "op + rec",
         "op rec",
@@ -439,6 +471,8 @@ ALIASES: Dict[str, List[str]] = {
         "opval",
         "receive value",
         "issue value",
+        "amount-i",
+        "amount i",
     ],
 }
 
@@ -449,6 +483,7 @@ _GROUP_TO_QTY = {
     "sales_return": "sales_return_qty",
     "purchase_return": "purchase_return_qty",
     "expiry_damage": "expiry_damage_qty",
+    "others": "other_outward_qty",
     "closing": "closing_qty",
     "total": "total_qty",
     "order": "order_qty",
@@ -533,8 +568,13 @@ def _has_value_marker(norm: str) -> bool:
             # Only amt/rs for endswith — bare "val" would false-hit *val words.
             if m in tokens:
                 return True
+            # "ClsAmt" / "Stk Rs" suffix only. "others" ends in "rs" and is not money.
             if m_compact in {"amt", "rs"} and compact.endswith(m_compact):
-                return True
+                if compact == m_compact:
+                    return True
+                prev = compact[-len(m_compact) - 1]
+                if not prev.isalpha():
+                    return True
         else:
             if m in norm or m_compact in compact:
                 return True
@@ -621,6 +661,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     if not norm:
         return None, 0.0, "empty"
 
+    compact_early = re.sub(r"\s+", "", norm)
+    # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
+    if compact_early in {"itemcode", "itemcd"} or norm == "item code":
+        return "non_stock_qty", 0.95, "item_code"
+
     direct = _direct_value_field(norm)
     if direct:
         return f"direct:{direct}", 0.95, f"direct_value:{direct}"
@@ -675,6 +720,9 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         if group == "sales_return" and alias == "return":
             if any(t.startswith("pur") for t in tokens) or "purchase" in norm:
                 continue
+            # P.RETURN is purchase return; bare "return" must not claim it.
+            if "p" in tokens:
+                continue
         if group == "purchase" and (
             "return" in tokens
             or "ret" in tokens
@@ -696,7 +744,12 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         if group == "total" and any(
             k in compact_norm for k in ("sold", "sale", "rcvd", "receipt", "recv")
         ):
-            if norm not in {"total receipt", "total receipts"}:
+            if norm not in {
+                "total receipt",
+                "total receipts",
+                "total receive",
+                "total received",
+            }:
                 continue
         # Short "op" must not beat a multi-token total alias like "op rec".
         # Keep Op.Value / Op.Qnt / Op.Value Expiry (qty-value or glued date label).
@@ -1425,6 +1478,195 @@ def _build_column_bands(
     return bands
 
 
+_QTY_VALUE_CANONS = frozenset(
+    {
+        "opening_qty",
+        "opening_value",
+        "purchase_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "expiry_damage_qty",
+        "total_qty",
+        "free_in_qty",
+        "free_out_qty",
+        "order_qty",
+        "rate",
+    }
+)
+
+_UNIT_PACK_RE = re.compile(
+    r"^\(?[A-Z]?\d+(?:\.\d+)?\s*"
+    r"(?:\*\s*\d+(?:\.\d+)?)?\s*"
+    r"(?:TAB|TABS|ML|MG|CAP|SYP|INJ|DS|S|'S|GR|GM|GRM|G|PH|UNT)\)?$",
+    re.I,
+)
+
+
+def _header_peel_pack_in_qty_enabled() -> bool:
+    """Peel pack tokens that landed in a qty/value band (60'S / 30ML / HIM).
+
+    Default ON. Same generic rule as Vision unlabeled-pack peel: a pack word
+    under OPENING must not collide with the printed opening qty.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PEEL_PACK_IN_QTY", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _unit_pack_token(text: Any) -> bool:
+    t = str(text or "").strip().rstrip(".,-_")
+    if not t:
+        return False
+    if _UNIT_PACK_RE.fullmatch(t):
+        return True
+    return bool(
+        re.fullmatch(
+            r"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
+            t,
+            re.I,
+        )
+    )
+
+
+def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str]]:
+    """Split pack-like tokens out of a qty/value bucket."""
+    packs: List[str] = []
+    rest: List[str] = []
+    for t in texts:
+        if _unit_pack_token(t):
+            packs.append(t)
+        else:
+            rest.append(t)
+    if not packs and len(texts) >= 2:
+        letter = [t for t in texts if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())]
+        numeric = [
+            t
+            for t in texts
+            if re.fullmatch(r"-?\d+(?:[.,]\d+)?", str(t or "").strip().replace(",", ""))
+        ]
+        if letter and numeric and len(letter) + len(numeric) == len(texts):
+            return letter, numeric
+        # Truncated pack fragments (10M from 10ML, 100M from 100ML) are not
+        # unit tokens and not letter-only. Keep printed numbers; peel the rest.
+        numbers: List[str] = []
+        others: List[str] = []
+        for t in texts:
+            if parse_number(t) is not None:
+                numbers.append(t)
+            else:
+                others.append(t)
+        if numbers and others:
+            return others, numbers
+    return packs, rest
+
+
+def _stash_peeled_pack(fields: Dict[str, Optional[str]], packs: Sequence[str]) -> None:
+    token = " ".join(p for p in packs if p).strip()
+    if not token:
+        return
+    existing = str(fields.get("pack") or "").strip()
+    fields["pack"] = f"{existing} {token}".strip() if existing else token
+    logger.info("STOCK_HEADER_PEEL_PACK_IN_QTY pack=%r", token)
+
+
+def _finalize_qty_bucket(
+    texts: List[str],
+    canon: str,
+    fields: Dict[str, Optional[str]],
+    errors: List[Dict[str, Any]],
+    col_index: int,
+) -> None:
+    """Write one column bucket, peeling unlabeled pack tokens out of qty cells."""
+    if not texts:
+        fields.setdefault(canon, None)
+        return
+    if (
+        _header_peel_pack_in_qty_enabled()
+        and canon in _QTY_VALUE_CANONS
+    ):
+        packs, rest = _peel_pack_from_qty_texts(texts)
+        if packs:
+            _stash_peeled_pack(fields, packs)
+            texts = rest
+        if not texts:
+            fields[canon] = None
+            return
+        if len(texts) == 1:
+            fields[canon] = texts[0]
+            return
+    if len(texts) == 1:
+        fields[canon] = texts[0]
+        return
+    if canon == "product_name":
+        fields[canon] = " ".join(t for t in texts if t).strip() or None
+        return
+    fields[canon] = None
+    errors.append(
+        {
+            "code": "CELL_COLLISION",
+            "message": f"Two tokens in column {col_index} ({canon})",
+            "col_index": col_index,
+        }
+    )
+
+
+def _disambiguate_gap_token(
+    raw: str,
+    left_b: Dict[str, Any],
+    right_b: Dict[str, Any],
+    tx: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """Pick a side when a token sits in the dead zone between two header bands.
+
+    Pack-size digits belong with the product name. Right-aligned whole qtys
+    sit past the closing/opening label, in the gap before RATE.
+    """
+    left_c = str(left_b.get("canonical") or "")
+    right_c = str(right_b.get("canonical") or "")
+    number = parse_number(raw)
+    has_letter = bool(re.search(r"[A-Za-z]", raw or ""))
+    if left_c == "product_name" and right_c in {"pack", "opening_qty"}:
+        if re.fullmatch(r"(?i)pcs|nos|no", raw or ""):
+            return right_b if right_c == "pack" else left_b
+        return left_b
+    qty_canons = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+        "total_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "other_outward_qty",
+        "free_in_qty",
+        "free_out_qty",
+    }
+    if left_c in qty_canons and right_c in qty_canons and tx is not None:
+        ld = abs(float(tx) - float(left_b.get("x_center") or 0))
+        rd = abs(float(tx) - float(right_b.get("x_center") or 0))
+        return left_b if ld <= rd else right_b
+    if left_c in qty_canons and right_c == "rate":
+        if number is None or has_letter:
+            return None
+        if abs(number - round(number)) < 0.001:
+            return left_b
+        return right_b
+    if left_c == "rate" and right_c in {"lms", "ignore"}:
+        if number is None:
+            return None
+        if abs(number - round(number)) > 0.001:
+            return left_b
+        return right_b
+    if left_c == "lms" and right_c in {"ignore", "expiry_damage_qty"}:
+        return left_b if number is not None else None
+    return None
+
+
 def _assign_cells_by_column_bands(
     row_tokens: List[Dict[str, Any]],
     centers: Sequence[Tuple[int, float, str]],
@@ -1483,6 +1725,11 @@ def _assign_cells_by_column_bands(
                 right_b = b
                 break
         if left_b is not None and right_b is not None:
+            chosen = _disambiguate_gap_token(raw, left_b, right_b, tx)
+            if chosen is not None:
+                bucket[int(chosen["col_index"])].append(raw)
+                assigned += 1
+                continue
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -1511,24 +1758,7 @@ def _assign_cells_by_column_bands(
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
-        texts = bucket.get(idx) or []
-        if len(texts) == 0:
-            fields.setdefault(canon, None)
-        elif len(texts) == 1:
-            fields[canon] = texts[0]
-        elif canon == "product_name":
-            # A product name is several words in one column. Qty columns stay
-            # collisions so two numbers are not glued into one cell.
-            fields[canon] = " ".join(t for t in texts if t).strip() or None
-        else:
-            fields[canon] = None
-            errors.append(
-                {
-                    "code": "CELL_COLLISION",
-                    "message": f"Two tokens in column {idx} ({canon})",
-                    "col_index": idx,
-                }
-            )
+        _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
     logger.info(
         "HEADER_COLUMN_BANDS mode=bands assigned=%s ambiguous=%s unassigned=%s "
@@ -1915,7 +2145,17 @@ def resolve_columns(
 
         # M.EXP / Expiry / Expiry Date columns are dates, not expiry_damage qty.
         # Qty damage columns use Exp/Dmg, Exp Dmg, Breakage, Shortage, etc.
-        if compact_hdr in {"mexp", "mexpiry", "shexp", "nearexpiry", "nearexp", "expirydate", "expdate", "expdt"} or norm in {
+        if compact_hdr in {
+            "mexp",
+            "mexpiry",
+            "shexp",
+            "nearexpiry",
+            "nearexp",
+            "expirydate",
+            "expdate",
+            "expdt",
+            "expirystock",
+        } or norm in {
             "m exp",
             "sh exp",
             "near expiry",
@@ -1923,6 +2163,7 @@ def resolve_columns(
             "expiry date",
             "exp date",
             "exp dt",
+            "expiry stock",
         }:
             prelim.append(
                 {
@@ -2113,6 +2354,19 @@ def resolve_columns(
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.6
             col["reason"] = "neighbour"
+        elif left_group == "purchase_return" or left_canon in {
+            "purchase_return_qty",
+        }:
+            # FREE after P.RETURN is return-free. Do not steal free_out from
+            # the FREE column that sits after SALE (right neighbour is SALE).
+            col["canonical"] = "ignore"
+            col["confidence"] = 0.5
+            col["reason"] = "return_free"
+            logger.info(
+                "STOCK_HEADER_RETURN_FREE ignored col_index=%s text=%r",
+                col.get("col_index"),
+                col.get("header_text"),
+            )
         elif left_group == "sales" or left_canon in {
             "sales_qty",
             "sales_value",
@@ -2121,6 +2375,17 @@ def resolve_columns(
             col["canonical"] = "free_out_qty"
             col["confidence"] = 0.6
             col["reason"] = "neighbour"
+        elif left_group == "sales_return" or left_canon in {
+            "sales_return_qty",
+        }:
+            col["canonical"] = "ignore"
+            col["confidence"] = 0.5
+            col["reason"] = "return_free"
+            logger.info(
+                "STOCK_HEADER_RETURN_FREE ignored col_index=%s text=%r",
+                col.get("col_index"),
+                col.get("header_text"),
+            )
         elif right_group == "purchase":
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.6
@@ -2313,15 +2578,32 @@ def assign_cells(
     absorb_ignore = _absorb_ignore_geometry_enabled()
     centers: List[Tuple[int, float, str]] = []
     date_ignore_absorbers = 0
-    for c in columns:
-        if c.get("x_center") is None:
-            continue
+    geo_cols = [c for c in columns if c.get("x_center") is not None]
+    non_ignore_xs = [
+        float(c["x_center"])
+        for c in geo_cols
+        if str(c.get("canonical") or "ignore") != "ignore"
+    ]
+    left_anchor = min(non_ignore_xs) if non_ignore_xs else None
+    for c in geo_cols:
         canon = str(c.get("canonical") or "ignore")
         reason = str(c.get("reason") or "")
         is_date_ignore = canon == "ignore" and reason == "date_or_near_expiry"
-        if canon == "ignore" and not absorb_ignore and not is_date_ignore:
+        # OTHERS / ITEMCODE sit right of the product column. Dropping them
+        # spills their tokens into closing/order (CELL_COLLISION → None).
+        is_right_ignore = (
+            canon == "ignore"
+            and left_anchor is not None
+            and float(c["x_center"]) > left_anchor
+        )
+        if (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_right_ignore
+        ):
             continue
-        if is_date_ignore:
+        if is_date_ignore or is_right_ignore:
             date_ignore_absorbers += 1
         centers.append((int(c["col_index"]), float(c["x_center"]), canon))
     centers.sort(key=lambda t: t[1])
@@ -2401,22 +2683,52 @@ def assign_cells(
         if canon in ambiguous_canons:
             fields[canon] = None
             continue
-        texts = bucket.get(idx) or []
-        if len(texts) == 0:
-            fields.setdefault(canon, None)
-        elif len(texts) == 1:
-            fields[canon] = texts[0]
-        else:
-            fields[canon] = None
-            errors.append(
-                {
-                    "code": "CELL_COLLISION",
-                    "message": f"Two tokens in column {idx} ({canon})",
-                    "col_index": idx,
-                }
-            )
+        _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
     return {"fields": fields, "errors": errors}
+
+
+# Consecutive Greek τ..ύ (U+03C4..U+03CD) are a common PDF ToUnicode miss
+# for digits 0-9. Mapping is codepoint - 0x03C4; no-op when absent.
+_PSEUDO_DIGIT_START = 0x03C4
+_PSEUDO_DIGIT_END = 0x03CD
+
+
+def decode_pdf_pseudo_digits(text: Any) -> str:
+    """Map PDF pseudo-digit Greek letters τ..ύ onto ASCII 0-9."""
+    raw = "" if text is None else str(text)
+    if not raw:
+        return raw
+    out: List[str] = []
+    changed = False
+    for ch in raw:
+        cp = ord(ch)
+        if _PSEUDO_DIGIT_START <= cp <= _PSEUDO_DIGIT_END:
+            out.append(chr(ord("0") + (cp - _PSEUDO_DIGIT_START)))
+            changed = True
+        else:
+            out.append(ch)
+    return "".join(out) if changed else raw
+
+
+def decode_pdf_word_tokens(words: Any) -> Any:
+    """Decode pseudo-digits on pdfplumber/fitz word tokens. Other shapes pass through."""
+    if not words:
+        return words
+    decoded: List[Any] = []
+    for word in words:
+        if isinstance(word, dict):
+            item = dict(word)
+            if "text" in item:
+                item["text"] = decode_pdf_pseudo_digits(item.get("text"))
+            decoded.append(item)
+        elif isinstance(word, (list, tuple)) and len(word) > 4:
+            seq = list(word)
+            seq[4] = decode_pdf_pseudo_digits(seq[4])
+            decoded.append(tuple(seq) if isinstance(word, tuple) else seq)
+        else:
+            decoded.append(word)
+    return decoded
 
 
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
@@ -2431,7 +2743,7 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
         return None
     if isinstance(raw, (int, float)):
         return float(raw)
-    text = str(raw).strip()
+    text = decode_pdf_pseudo_digits(str(raw).strip())
     if not text:
         return None
     lower = text.lower()

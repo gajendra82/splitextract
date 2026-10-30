@@ -37,6 +37,7 @@ _EXTRA_FIELDS = {
     "total_qty": "total_stock",
     "free_in_qty": "free_in_qty",
     "free_out_qty": "free_out_qty",
+    "other_outward_qty": "others_qty",
     "pack": "packing",  # handled specially
 }
 
