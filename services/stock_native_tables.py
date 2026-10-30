@@ -291,7 +291,9 @@ _QUALIFIER_WORDS = frozenset(
         # Stock, Quantity, Return, Receipt, Cost, Value.
         "return",
         "receipt",
+        "receive",
         "cost",
+        "others",
     }
 )
 
@@ -329,6 +331,16 @@ _HEADER_LEXICON = frozenset(
         "division",
         "div",
         "description",
+        "receive",
+        "others",
+        "month",
+        "last",
+        "expiry",
+        "purchase",
+        "unit",
+        "replace",
+        "total",
+        "return",
     }
 ) | _QUALIFIER_WORDS
 
@@ -409,6 +421,21 @@ def _glue_header_text(host: str, word: str, *, prepend: bool) -> str:
     return (left + " " + right).strip()
 
 
+def _row_is_alpha_header_child(cells: List[Dict[str, Any]]) -> bool:
+    """Second header line of stacked labels (RECEIVE / QUANTITY / OTHERS / STOCK)."""
+    if not cells or len(cells) < 2:
+        return False
+    for cell in cells:
+        text = str(cell.get("text") or "").strip()
+        if not text or len(text) > 16:
+            return False
+        if parse_number(text) is not None:
+            return False
+        if not re.search(r"[A-Za-z]", text):
+            return False
+    return True
+
+
 def _row_is_header_wrap_continuation(cells: List[Dict[str, Any]]) -> bool:
     """Continuation of a mid-word wrapped header (NG / STOCK / QUANT / ITY)."""
     if not cells:
@@ -446,16 +473,28 @@ def _place_header_word(
     word = str(cell.get("text") or "").strip()
     if not word:
         return
+    xc = (x0 + x1) / 2.0
+    best: Optional[Dict[str, Any]] = None
+    best_dist: Optional[float] = None
     for host in header:
         h0 = float(host.get("x0") or 0)
         h1 = float(host.get("x1") or h0)
-        if min(h1, x1) >= max(h0, x0) - 2:
-            host["text"] = _glue_header_text(
-                str(host.get("text") or ""), word, prepend=prepend
-            )
-            host["x0"] = min(h0, x0)
-            host["x1"] = max(h1, x1)
-            return
+        if min(h1, x1) < max(h0, x0) - 2:
+            continue
+        hc = (h0 + h1) / 2.0
+        dist = abs(hc - xc)
+        if best_dist is None or dist < best_dist:
+            best = host
+            best_dist = dist
+    if best is not None:
+        h0 = float(best.get("x0") or 0)
+        h1 = float(best.get("x1") or h0)
+        best["text"] = _glue_header_text(
+            str(best.get("text") or ""), word, prepend=prepend
+        )
+        best["x0"] = min(h0, x0)
+        best["x1"] = max(h1, x1)
+        return
     header.append(
         {
             "text": word,
@@ -466,6 +505,52 @@ def _place_header_word(
             "x1": x1,
         }
     )
+
+
+_SAME_ROW_QUALIFIERS = frozenset(
+    {"return", "others", "receive", "receipt", "quantity", "quant", "stock"}
+)
+
+
+def _is_same_row_qualifier(text: Any) -> bool:
+    tokens = [t for t in normalize_header(text).split() if t]
+    return bool(tokens) and all(t in _SAME_ROW_QUALIFIERS for t in tokens)
+
+
+def _glue_adjacent_qualifier_cells(cells: List[Dict[str, Any]]) -> None:
+    """Join SALE+RETURN / REPLACE++OTHERS that sat just apart in the header row.
+
+    Does not glue RATE/AMT/VALUE — those are their own columns.
+    """
+    i = 1
+    while i < len(cells):
+        right = cells[i]
+        if not _is_same_row_qualifier(right.get("text")):
+            i += 1
+            continue
+        left = cells[i - 1]
+        gap = float(right.get("x0") or 0) - float(left.get("x1") or 0)
+        left_w = max(1.0, float(left.get("x1") or 0) - float(left.get("x0") or 0))
+        if gap > max(14.0, 0.55 * left_w):
+            i += 1
+            continue
+        width = None
+        xc = left.get("x_center")
+        mid = (float(left.get("x0") or 0) + float(left.get("x1") or 0)) / 2.0
+        if xc and mid:
+            width = mid / float(xc)
+        left["text"] = _glue_header_text(
+            str(left.get("text") or ""),
+            str(right.get("text") or ""),
+            prepend=False,
+        )
+        left["x1"] = max(float(left.get("x1") or 0), float(right.get("x1") or 0))
+        new_mid = (float(left["x0"]) + float(left["x1"])) / 2.0
+        if width:
+            left["x_center"] = new_mid / width
+        cells.pop(i)
+        for idx, cell in enumerate(cells):
+            cell["col_index"] = idx
 
 
 def _wrap_header_enabled() -> bool:
@@ -479,6 +564,172 @@ def _wrap_header_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _split_column_pages_enabled() -> bool:
+    """STOCK_PDF_SPLIT_COLUMN_PAGES — stitch left-name + right-qty page halves.
+
+    Default ON. Wide STOCK & SALES sheets print product/opening on one page
+    and sales/closing on the next; concatenating those pages duplicates rows.
+    """
+    return os.getenv("STOCK_PDF_SPLIT_COLUMN_PAGES", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _header_has_group(header_cells: List[Dict[str, Any]], group_name: str) -> bool:
+    from services.stock_header_resolver import _pick_group
+
+    for cell in header_cells or []:
+        text = str(cell.get("text") or "")
+        sub = str(cell.get("subheader_text") or "")
+        combined = f"{text} {sub}".strip()
+        group, _conf, _reason = _pick_group(normalize_header(combined or text))
+        if group == group_name:
+            return True
+    return False
+
+
+def _page_header_canons(header_cells: List[Dict[str, Any]]) -> set:
+    resolved = resolve_columns(header_cells or [])
+    return {
+        str(c.get("canonical") or "")
+        for c in (resolved.get("columns") or [])
+        if isinstance(c, dict) and c.get("canonical") not in (None, "ignore")
+    }
+
+
+def _is_left_split_header(canons: set) -> bool:
+    return (
+        "product_name" in canons
+        and "opening_qty" in canons
+        and "closing_qty" not in canons
+    )
+
+
+def _is_right_split_header(canons: set) -> bool:
+    return (
+        "closing_qty" in canons
+        and "product_name" not in canons
+        and ("sales_qty" in canons or "total_qty" in canons)
+    )
+
+
+def _split_page_product_rows(
+    rows: List[List[Dict[str, Any]]], *, named: bool
+) -> List[List[Dict[str, Any]]]:
+    out: List[List[Dict[str, Any]]] = []
+    for row in rows or []:
+        if not row or _is_footer_or_total_tokens(row):
+            continue
+        texts = [str(t.get("text") or "") for t in row if isinstance(t, dict)]
+        has_num = any(parse_number(t) is not None for t in texts)
+        blob = " ".join(texts)
+        has_name = bool(re.search(r"[A-Za-z]{3,}", blob))
+        if named:
+            if has_num and has_name:
+                out.append(row)
+        elif has_num and not has_name:
+            out.append(row)
+    return out
+
+
+def _merge_split_headers(
+    left: List[Dict[str, Any]], right: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    for cell in left or []:
+        entry = dict(cell)
+        entry["col_index"] = len(merged)
+        merged.append(entry)
+    for cell in right or []:
+        entry = dict(cell)
+        entry["col_index"] = len(merged)
+        if entry.get("x_center") is not None:
+            entry["x_center"] = float(entry["x_center"]) + 1.0
+        merged.append(entry)
+    return merged
+
+
+def _merge_split_row(
+    left: List[Dict[str, Any]], right: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    out = [dict(t) for t in left if isinstance(t, dict)]
+    for token in right or []:
+        if not isinstance(token, dict):
+            continue
+        tok = dict(token)
+        if tok.get("x") is not None:
+            tok["x"] = float(tok["x"]) + 1.0
+        out.append(tok)
+    return out
+
+
+def _stitch_split_column_pages(
+    page_results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Zip a product/opening page with the following sales/closing-only page."""
+    if not _split_column_pages_enabled() or len(page_results) < 2:
+        return page_results
+    out: List[Dict[str, Any]] = []
+    index = 0
+    while index < len(page_results):
+        current = page_results[index]
+        nxt = page_results[index + 1] if index + 1 < len(page_results) else None
+        left_header = (current or {}).get("header_cells") or []
+        right_header = (nxt or {}).get("header_cells") or [] if nxt else []
+        if (
+            nxt is not None
+            and left_header
+            and right_header
+            and _is_left_split_header(_page_header_canons(left_header))
+            and _is_right_split_header(_page_header_canons(right_header))
+        ):
+            left_rows = _split_page_product_rows(
+                current.get("data_rows") or [], named=True
+            )
+            right_rows = _split_page_product_rows(
+                nxt.get("data_rows") or [], named=False
+            )
+            n_left = len(left_rows)
+            n_right = len(right_rows)
+            slack = max(2, int(0.15 * max(n_left, n_right, 1)))
+            if n_left >= 3 and n_right >= 3 and abs(n_left - n_right) <= slack:
+                n = min(n_left, n_right)
+                merged_rows = [
+                    _merge_split_row(left_rows[i], right_rows[i]) for i in range(n)
+                ]
+                out.append(
+                    {
+                        "page_index": current.get("page_index"),
+                        "header_cells": _merge_split_headers(left_header, right_header),
+                        "data_rows": merged_rows,
+                        "resolved": True,
+                        "structural": False,
+                        "group_qty_value_header": bool(
+                            current.get("group_qty_value_header")
+                            or nxt.get("group_qty_value_header")
+                        ),
+                        "split_column_pages": [
+                            current.get("page_index"),
+                            nxt.get("page_index"),
+                        ],
+                    }
+                )
+                logger.info(
+                    "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
+                    current.get("page_index"),
+                    nxt.get("page_index"),
+                    n,
+                )
+                index += 2
+                continue
+        out.append(current)
+        index += 1
+    return out
 
 
 def _absorb_nearby_header_rows(
@@ -505,6 +756,7 @@ def _absorb_nearby_header_rows(
     candidates: List[Tuple[int, int, List[Dict[str, Any]]]] = []
     scan_lo = best_i - (2 if wrap_on else 1)
     scan_hi = best_i + (2 if wrap_on else 1)
+    lex_limit = max(limit, 2.0 * float(med_h or 8.0))
     for idx in range(scan_lo, scan_hi + 1):
         if idx == best_i:
             continue
@@ -517,9 +769,12 @@ def _absorb_nearby_header_rows(
             continue
         is_lex = all(_cell_is_header_lexicon(c.get("text")) for c in cells)
         is_wrap = wrap_on and _row_is_header_wrap_continuation(cells)
-        if is_lex and dist <= limit and abs(idx - best_i) == 1:
+        is_alpha_child = abs(idx - best_i) == 1 and _row_is_alpha_header_child(cells)
+        if is_lex and dist <= lex_limit and abs(idx - best_i) == 1:
             candidates.append((abs(idx - best_i), idx, cells))
         elif is_wrap and dist <= wrap_limit:
+            candidates.append((abs(idx - best_i), idx, cells))
+        elif is_alpha_child and dist <= lex_limit:
             candidates.append((abs(idx - best_i), idx, cells))
     candidates.sort(key=lambda item: (item[0], item[1]))
     for _rank, idx, cells in candidates:
@@ -1006,12 +1261,18 @@ def _extract_pdf_page_rows(
             if cells and x0 - float(cells[-1]["x1"]) <= gap:
                 prev_text = cells[-1]["text"]
                 # Keep distinct header aliases apart (Op.Value vs Expiry).
+                # SALE+RETURN stays one column: RETURN is a qualifier of SALE.
                 if _alias_hit(prev_text) and _alias_hit(text):
                     from services.stock_header_resolver import _pick_group
 
                     g_prev, _, _ = _pick_group(normalize_header(prev_text))
                     g_new, _, _ = _pick_group(normalize_header(text))
-                    if g_prev and g_new and g_prev != g_new:
+                    if (
+                        g_prev
+                        and g_new
+                        and g_prev != g_new
+                        and not _is_same_row_qualifier(text)
+                    ):
                         cells.append(
                             {
                                 "text": text,
@@ -1107,10 +1368,19 @@ def _extract_pdf_page_rows(
         if _looks_like_value_summary_header(cells):
             continue
         hits, has_closing = _score_header_cells(cells)
-        if hits >= 3 and has_closing and hits > best_hits:
+        left_half = (
+            _split_column_pages_enabled()
+            and hits >= 3
+            and _header_has_group(cells, "product_name")
+            and _header_has_group(cells, "opening")
+        )
+        if hits >= 3 and (has_closing or left_half) and hits > best_hits:
             best_hits = hits
             best_i = i
             best_header = cells
+
+    if best_header:
+        _glue_adjacent_qualifier_cells(best_header)
 
     skip_row_indexes: List[int] = []
     absorbed = _absorb_nearby_header_rows(
@@ -1285,6 +1555,18 @@ def from_pdf_words(
                 ),
             }
         )
+
+    if _split_column_pages_enabled():
+        page_results = _stitch_split_column_pages(page_results)
+        combined_rows = []
+        pages_resolved = 0
+        primary_header = []
+        for page in page_results:
+            combined_rows.extend(page.get("data_rows") or [])
+            if page.get("resolved"):
+                pages_resolved += 1
+            if not primary_header and page.get("header_cells"):
+                primary_header = list(page.get("header_cells") or [])
 
     return {
         "header_cells": primary_header,

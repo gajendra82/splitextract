@@ -266,6 +266,11 @@ ALIASES: Dict[str, List[str]] = {
         "pret",
         "p return",
         "preturn",
+        "p r",
+        "p r qty",
+        "p r quantity",
+        "pr qty",
+        "pr quantity",
         "pur ret",
         "purc ret",
         "purc. ret",
@@ -396,6 +401,9 @@ ALIASES: Dict[str, List[str]] = {
         "repl other",
         "repl/other",
         "repl / other",
+        "replace",
+        "replace others",
+        "replace+",
     ],
     "total": [
         "total",
@@ -412,6 +420,8 @@ ALIASES: Dict[str, List[str]] = {
         "in qty",
         "total receipt",
         "total receipts",
+        "total receive",
+        "total received",
         "op+rec",
         "op + rec",
         "op rec",
@@ -734,7 +744,12 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         if group == "total" and any(
             k in compact_norm for k in ("sold", "sale", "rcvd", "receipt", "recv")
         ):
-            if norm not in {"total receipt", "total receipts"}:
+            if norm not in {
+                "total receipt",
+                "total receipts",
+                "total receive",
+                "total received",
+            }:
                 continue
         # Short "op" must not beat a multi-token total alias like "op rec".
         # Keep Op.Value / Op.Qnt / Op.Value Expiry (qty-value or glued date label).
@@ -1600,6 +1615,58 @@ def _finalize_qty_bucket(
     )
 
 
+def _disambiguate_gap_token(
+    raw: str,
+    left_b: Dict[str, Any],
+    right_b: Dict[str, Any],
+    tx: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
+    """Pick a side when a token sits in the dead zone between two header bands.
+
+    Pack-size digits belong with the product name. Right-aligned whole qtys
+    sit past the closing/opening label, in the gap before RATE.
+    """
+    left_c = str(left_b.get("canonical") or "")
+    right_c = str(right_b.get("canonical") or "")
+    number = parse_number(raw)
+    has_letter = bool(re.search(r"[A-Za-z]", raw or ""))
+    if left_c == "product_name" and right_c in {"pack", "opening_qty"}:
+        if re.fullmatch(r"(?i)pcs|nos|no", raw or ""):
+            return right_b if right_c == "pack" else left_b
+        return left_b
+    qty_canons = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+        "total_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "other_outward_qty",
+        "free_in_qty",
+        "free_out_qty",
+    }
+    if left_c in qty_canons and right_c in qty_canons and tx is not None:
+        ld = abs(float(tx) - float(left_b.get("x_center") or 0))
+        rd = abs(float(tx) - float(right_b.get("x_center") or 0))
+        return left_b if ld <= rd else right_b
+    if left_c in qty_canons and right_c == "rate":
+        if number is None or has_letter:
+            return None
+        if abs(number - round(number)) < 0.001:
+            return left_b
+        return right_b
+    if left_c == "rate" and right_c in {"lms", "ignore"}:
+        if number is None:
+            return None
+        if abs(number - round(number)) > 0.001:
+            return left_b
+        return right_b
+    if left_c == "lms" and right_c in {"ignore", "expiry_damage_qty"}:
+        return left_b if number is not None else None
+    return None
+
+
 def _assign_cells_by_column_bands(
     row_tokens: List[Dict[str, Any]],
     centers: Sequence[Tuple[int, float, str]],
@@ -1658,6 +1725,11 @@ def _assign_cells_by_column_bands(
                 right_b = b
                 break
         if left_b is not None and right_b is not None:
+            chosen = _disambiguate_gap_token(raw, left_b, right_b, tx)
+            if chosen is not None:
+                bucket[int(chosen["col_index"])].append(raw)
+                assigned += 1
+                continue
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -2073,7 +2145,17 @@ def resolve_columns(
 
         # M.EXP / Expiry / Expiry Date columns are dates, not expiry_damage qty.
         # Qty damage columns use Exp/Dmg, Exp Dmg, Breakage, Shortage, etc.
-        if compact_hdr in {"mexp", "mexpiry", "shexp", "nearexpiry", "nearexp", "expirydate", "expdate", "expdt"} or norm in {
+        if compact_hdr in {
+            "mexp",
+            "mexpiry",
+            "shexp",
+            "nearexpiry",
+            "nearexp",
+            "expirydate",
+            "expdate",
+            "expdt",
+            "expirystock",
+        } or norm in {
             "m exp",
             "sh exp",
             "near expiry",
@@ -2081,6 +2163,7 @@ def resolve_columns(
             "expiry date",
             "exp date",
             "exp dt",
+            "expiry stock",
         }:
             prelim.append(
                 {

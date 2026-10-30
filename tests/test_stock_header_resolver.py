@@ -91,6 +91,68 @@ class ResolveColumnsUnitTests(unittest.TestCase):
         self.assertEqual(result["columns"][4]["canonical"], "purchase_return_qty")
         self.assertEqual(result["columns"][10]["reason"], "item_code")
 
+    def test_pr_and_replace_others_and_expiry_stock(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT DESCRIPTION",
+                "UNIT",
+                "OPENING STOCK",
+                "PURCHASE QUANTITY",
+                "SALE RETURN QUANTITY",
+                "REPLACE+ OTHERS",
+                "TOTAL RECEIVE",
+                "SALE QUANTITY",
+                "P/R QUANTITY",
+                "REPLACE+ OTHERS",
+                "CLOSING STOCK",
+                "RATE",
+                "LAST MONTH SALE",
+                "EXPIRY STOCK",
+            )
+        )
+        canons = _canons(result)
+        self.assertEqual(canons[0], "product_name")
+        self.assertEqual(canons[1], "pack")
+        self.assertEqual(canons[2], "opening_qty")
+        self.assertEqual(canons[3], "purchase_qty")
+        self.assertEqual(canons[4], "sales_return_qty")
+        self.assertEqual(canons[6], "total_qty")
+        self.assertEqual(canons[7], "sales_qty")
+        self.assertEqual(canons[8], "purchase_return_qty")
+        self.assertEqual(canons[10], "closing_qty")
+        self.assertEqual(canons[11], "rate")
+        self.assertEqual(canons[12], "lms")
+        self.assertEqual(canons[13], "ignore")
+        self.assertEqual(result["columns"][13]["reason"], "date_or_near_expiry")
+        others = [c for c in canons if c == "other_outward_qty"]
+        self.assertEqual(len(others), 1)
+
+    def test_gap_token_prefers_product_and_closing_not_rate(self):
+        from services.stock_header_resolver import _disambiguate_gap_token
+
+        product = {"canonical": "product_name", "col_index": 0, "x_center": 0.2}
+        pack = {"canonical": "pack", "col_index": 1, "x_center": 0.45}
+        self.assertEqual(
+            _disambiguate_gap_token("60", product, pack)["canonical"],
+            "product_name",
+        )
+        closing = {"canonical": "closing_qty", "col_index": 10, "x_center": 1.48}
+        rate = {"canonical": "rate", "col_index": 11, "x_center": 1.56}
+        self.assertEqual(
+            _disambiguate_gap_token("7", closing, rate)["canonical"],
+            "closing_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("141.17", closing, rate)["canonical"],
+            "rate",
+        )
+        sret = {"canonical": "sales_return_qty", "col_index": 4, "x_center": 0.715}
+        others = {"canonical": "other_outward_qty", "col_index": 5, "x_center": 0.818}
+        self.assertEqual(
+            _disambiguate_gap_token("1", sret, others, 0.766)["canonical"],
+            "sales_return_qty",
+        )
+
     def test_parse_number_pdf_pseudo_digits(self):
         # τυ-Sep-φϊ visual 01-Sep-26; φτ visual 20; ωϋ.φϋ visual 57.27
         self.assertEqual(decode_pdf_pseudo_digits("φτ"), "20")

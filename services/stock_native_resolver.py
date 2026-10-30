@@ -26,8 +26,10 @@ _CANON_TO_ITEM = {
     "closing_qty": ("closing_qty", False),
     "closing_value": ("closing_value", False),
     "sales_return_qty": ("sale_return", True),
+    "purchase_return_qty": ("purchase_return", True),
     "expiry_damage_qty": ("exp_damage", True),
     "other_outward_qty": ("others_qty", True),
+    "lms": ("lms", True),
     "free_in_qty": ("free_in_qty", True),
     "free_out_qty": ("free_out_qty", True),
     "total_qty": ("total_stock", True),
@@ -2068,7 +2070,9 @@ def parse_pdf_free_column_statement(
             if pdf.pages:
                 from services.stock_header_resolver import decode_pdf_pseudo_digits
 
-                peek = decode_pdf_pseudo_digits(pdf.pages[0].extract_text() or "")
+                peek = decode_pdf_pseudo_digits(
+                    "\n".join(page.extract_text() or "" for page in pdf.pages)
+                )
             if "\x00" in (peek or ""):
                 try:
                     import fitz
@@ -2152,19 +2156,36 @@ def parse_pdf_free_column_statement(
     company = re.search(r"Company\s*:\s*(.+)", peek, re.I)
     if stated:
         result["stockist_name"] = stated.group(1).strip()
-    elif first and re.search(r"[A-Za-z]", first) and not re.search(r"\d{2,}", first):
+    elif (
+        first
+        and re.search(r"[A-Za-z]", first)
+        and not re.search(r"\d{2,}", first)
+        and not re.search(
+            r"PRODUCT\s+DESCRIPTION|ITEM\s+DESCRIPTION|^ITEM$|^PRODUCT$",
+            first,
+            re.I,
+        )
+    ):
         result["stockist_name"] = first
         if not parsed.get("letterhead_is_stockist_only"):
             result["company_name"] = first
     if company:
         result["company_name"] = company.group(1).strip()
+    title_co = re.search(
+        r"([A-Z][A-Z0-9 .&'-]{2,}?)\s+STOCK\s*[&+]\s*SALES\s+STATEM",
+        peek,
+        re.I,
+    )
+    if title_co:
+        result["company_name"] = re.sub(r"\s+", " ", title_co.group(1)).strip()
     if parsed.get("prefer_letterhead_stockist") and not result.get("stockist_name"):
         for line in peek.splitlines():
             stripped = line.strip()
             if not stripped or re.search(r"\d{2,}", stripped):
                 continue
             if re.search(
-                r"stock\s+statement|company\s*:|item type|product name|page\s*:",
+                r"stock\s+statement|company\s*:|item type|product name|page\s*:|"
+                r"product\s+description|item\s+description",
                 stripped,
                 re.I,
             ):
