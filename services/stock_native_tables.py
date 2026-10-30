@@ -418,6 +418,108 @@ def _absorb_nearby_header_rows(
     return consumed
 
 
+def _merge_split_stock_headers_enabled() -> bool:
+    """STOCK_PDF_WORDS_MERGE_SPLIT_STOCK_HEADERS — join Op.+Stock / Stock+Value.
+
+    pdfplumber often emits Op. and Stock as separate words with a 2–4pt gap.
+    Bare Stock then maps to closing_qty (medica_stock) and steals Cl.Stock.
+    Default ON — only glues adjacent printed fragments (gap ≤ 8pt).
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_MERGE_SPLIT_STOCK_HEADERS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _merge_split_stock_header_cells(
+    header: List[Dict[str, Any]],
+    page_width: Optional[float] = None,
+) -> List[Dict[str, Any]]:
+    """Join adjacent Op.+Stock and Stock+Value fragments into one header cell.
+
+    Does not invent columns — only glues printed fragments that belong to one
+    label so alias resolution sees Op.Stock / Stock Value.
+    """
+    if not _merge_split_stock_headers_enabled() or len(header) < 2:
+        return header
+
+    def _norm(cell: Dict[str, Any]) -> str:
+        return normalize_header(cell.get("text"))
+
+    def _is_op_frag(norm: str) -> bool:
+        return norm in {"op", "op."} or bool(re.fullmatch(r"op\.?", norm or ""))
+
+    def _is_stock_frag(norm: str) -> bool:
+        return norm == "stock"
+
+    def _is_value_frag(norm: str) -> bool:
+        return norm in {"value", "val"}
+
+    def _is_product_frag(norm: str) -> bool:
+        return norm in {"product", "product name", "item"}
+
+    def _is_name_frag(norm: str) -> bool:
+        return norm == "name"
+
+    max_gap = 8.0
+    merged: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(header):
+        cur = dict(header[i])
+        if i + 1 < len(header):
+            nxt = header[i + 1]
+            gap = float(nxt.get("x0") or 0) - float(cur.get("x1") or 0)
+            n0 = _norm(cur)
+            n1 = _norm(nxt)
+            join = False
+            label = ""
+            if gap <= max_gap and _is_op_frag(n0) and _is_stock_frag(n1):
+                join = True
+                label = "op_stock"
+            elif gap <= max_gap and _is_stock_frag(n0) and _is_value_frag(n1):
+                join = True
+                label = "stock_value"
+            elif gap <= max_gap and _is_product_frag(n0) and _is_name_frag(n1):
+                join = True
+                label = "product_name"
+            if join:
+                cur["text"] = (
+                    str(cur.get("text") or "").strip()
+                    + " "
+                    + str(nxt.get("text") or "").strip()
+                ).strip()
+                cur["x1"] = max(float(cur.get("x1") or 0), float(nxt.get("x1") or 0))
+                cur["x0"] = min(
+                    float(cur.get("x0") or 0), float(nxt.get("x0") or 0)
+                )
+                logger.info(
+                    "STOCK_PDF_WORDS_MERGE_SPLIT_STOCK pair=%s text=%r",
+                    label,
+                    cur["text"],
+                )
+                i += 2
+                merged.append(cur)
+                continue
+        merged.append(cur)
+        i += 1
+
+    width = float(page_width or 0) or None
+    if width is None:
+        for cell in merged:
+            xc = cell.get("x_center")
+            if xc not in (None, 0, 0.0):
+                mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+                if mid and float(xc):
+                    width = mid / float(xc)
+                    break
+    if not width or width <= 0:
+        width = 1.0
+    for idx, cell in enumerate(merged):
+        cell["col_index"] = idx
+        mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+        cell["x_center"] = mid / width
+    return merged
+
+
 def _merge_qualifier_subheader(
     header: List[Dict[str, Any]], next_cells: List[Dict[str, Any]]
 ) -> bool:
@@ -854,6 +956,27 @@ def _extract_pdf_page_rows(
                             }
                         )
                         continue
+                # Cl.Stock qty next to Box Pack ("89" + "100x60'S") must stay apart
+                # even when the row's median gap makes the merge threshold large.
+                _qty_pack = re.compile(
+                    r"(?i)^(?:\d+x\d+|\d+\s*['']?[sS]\b|\d+[a-zA-Z]|[a-zA-Z]+\d)"
+                )
+                if (
+                    _num_or_date.fullmatch(prev_text.replace(",", ""))
+                    and _qty_pack.search(text)
+                ) or (
+                    _qty_pack.search(prev_text)
+                    and _num_or_date.fullmatch(text.replace(",", ""))
+                ):
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
                 # Do not re-glue value|expiry fragments from a pipe-ruled cell.
                 if cells[-1].get("pipe_split") or pipe_split:
                     if _num_or_date.match(prev_text) and _num_or_date.match(text):
@@ -932,6 +1055,9 @@ def _extract_pdf_page_rows(
         and _merge_qualifier_subheader(best_header, clustered[best_i + 1])
     ):
         skip_row_indexes.append(best_i + 1)
+
+    if best_header:
+        best_header = _merge_split_stock_header_cells(best_header, width)
 
     group_qty_value = False
     expanded = _expand_group_qty_value_header(

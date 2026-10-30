@@ -972,6 +972,30 @@ def _absorb_ignore_geometry_enabled() -> bool:
     }
 
 
+def _absorb_interior_ignore_enabled() -> bool:
+    """STOCK_HEADER_ABSORB_INTERIOR_IGNORE — ignore cols between kept cols absorb.
+
+    Op.Stock | … | Cl.Stock | Stock Value sheets print BLM/LM/QtyPur/Box between
+    movement columns. Dropping those ignores widens Op/Cl/Value bands so LM qty
+    collides with opening and Box pack collides with closing value. Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_ABSORB_INTERIOR_IGNORE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _prefer_non_ignore_dead_zone_enabled() -> bool:
+    """STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE — Cl.Stock|Box midpoint → qty.
+
+    Tokens on the dead-zone between a movement column and an ignore absorber
+    (closing qty vs Box Pack) used to null both. Prefer the non-ignore side.
+    Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _medica_in_ot_as_free_in_enabled() -> bool:
     """STOCK_MEDICA_IN_OT_AS_FREE_IN — Medica printed IN/OT is free_in_qty. Default OFF."""
     return os.getenv("STOCK_MEDICA_IN_OT_AS_FREE_IN", "false").strip().lower() in {
@@ -1005,6 +1029,21 @@ def _group_wise_sales_sequence_enabled() -> bool:
     real Sales Qty column. Default OFF.
     """
     return os.getenv("STOCK_HEADER_GROUP_WISE_SEQUENCE", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _free_skip_ignore_neighbour_enabled() -> bool:
+    """STOCK_HEADER_FREE_SKIP_IGNORE — Free looks past one ignore neighbour.
+
+    Pur. Qty | Pur. Free often becomes Pur. | QtyPur. | Free; QtyPur. is
+    unknown/ignore so Free would otherwise take the Sales neighbour as
+    free_out. Default ON — only skips one ignore cell to the immediate left.
+    """
+    return os.getenv("STOCK_HEADER_FREE_SKIP_IGNORE", "true").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -1483,6 +1522,25 @@ def _assign_cells_by_column_bands(
                 right_b = b
                 break
         if left_b is not None and right_b is not None:
+            # Cl.Stock | Box Pack: qty on the midpoint should keep closing_qty,
+            # not null both sides. Same for Pur. | QtyPur. purchase zeros.
+            if _prefer_non_ignore_dead_zone_enabled():
+                non_ignore = [
+                    b
+                    for b in (left_b, right_b)
+                    if str(b.get("canonical") or "") != "ignore"
+                ]
+                if len(non_ignore) == 1:
+                    bucket[int(non_ignore[0]["col_index"])].append(raw)
+                    assigned += 1
+                    logger.info(
+                        "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE token=%r "
+                        "col_index=%s canonical=%s",
+                        raw,
+                        non_ignore[0].get("col_index"),
+                        non_ignore[0].get("canonical"),
+                    )
+                    continue
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -2097,6 +2155,19 @@ def resolve_columns(
         left_group = prelim[i - 1].get("group") if i > 0 else None
         right_group = prelim[i + 1].get("group") if i + 1 < len(prelim) else None
         left_canon = prelim[i - 1]["canonical"] if i > 0 else None
+        # Pur. | QtyPur. | Free: glued QtyPur. is ignore; look one cell further.
+        if (
+            left_canon == "ignore"
+            and i >= 2
+            and _free_skip_ignore_neighbour_enabled()
+        ):
+            left_group = prelim[i - 2].get("group") or left_group
+            left_canon = prelim[i - 2].get("canonical") or left_canon
+            logger.info(
+                "STOCK_HEADER_FREE_SKIP_IGNORE col_index=%s via=%s",
+                col.get("col_index"),
+                prelim[i - 2].get("header_text"),
+            )
         if re.search(r"\b(?:pur|purchase|rec|receipt)\b", hdr_free):
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.75
@@ -2311,27 +2382,59 @@ def assign_cells(
     # always absorb — otherwise Op.Value|Expiry|Pur.Qnt bands collapse and
     # amounts land in the wrong movement field.
     absorb_ignore = _absorb_ignore_geometry_enabled()
+    absorb_interior = _absorb_interior_ignore_enabled()
+    kept_xs: List[float] = []
+    if absorb_interior and not absorb_ignore:
+        for c in columns:
+            if c.get("x_center") is None:
+                continue
+            canon = str(c.get("canonical") or "ignore")
+            if canon != "ignore":
+                kept_xs.append(float(c["x_center"]))
+    interior_lo = min(kept_xs) if kept_xs else None
+    interior_hi = max(kept_xs) if kept_xs else None
     centers: List[Tuple[int, float, str]] = []
     date_ignore_absorbers = 0
+    interior_ignore_absorbers = 0
     for c in columns:
         if c.get("x_center") is None:
             continue
         canon = str(c.get("canonical") or "ignore")
         reason = str(c.get("reason") or "")
+        xc = float(c["x_center"])
         is_date_ignore = canon == "ignore" and reason == "date_or_near_expiry"
-        if canon == "ignore" and not absorb_ignore and not is_date_ignore:
-            continue
+        is_serial_ignore = canon == "ignore" and reason == "serial_number_header"
+        is_interior_ignore = (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_serial_ignore
+            and interior_lo is not None
+            and interior_hi is not None
+            and interior_lo < xc < interior_hi
+        )
+        if (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_serial_ignore
+        ):
+            if is_interior_ignore:
+                interior_ignore_absorbers += 1
+            else:
+                continue
         if is_date_ignore:
             date_ignore_absorbers += 1
-        centers.append((int(c["col_index"]), float(c["x_center"]), canon))
+        centers.append((int(c["col_index"]), xc, canon))
     centers.sort(key=lambda t: t[1])
-    if absorb_ignore or date_ignore_absorbers:
+    if absorb_ignore or date_ignore_absorbers or interior_ignore_absorbers:
         logger.info(
             "STOCK_HEADER_ABSORB_IGNORE_GEOMETRY centers=%s ignore_absorbers=%s "
-            "date_ignore=%s flag=%s",
+            "date_ignore=%s interior_ignore=%s flag=%s",
             len(centers),
             sum(1 for _i, _x, c in centers if c == "ignore"),
             date_ignore_absorbers,
+            interior_ignore_absorbers,
             absorb_ignore,
         )
     if len(centers) < 2:
