@@ -37338,6 +37338,19 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
         result = extract_sales_statement(file_bytes, filename)
+        extra = ((result.get("totals") or {}).get("extra") or {})
+        if extra.get("extraction_failed") and extra.get("photo_quality_rejected"):
+            from services.stock_photo_quality import photo_quality_client_detail
+
+            detail = photo_quality_client_detail(extra, filename) or {
+                "error": "extraction_failed",
+                "message": extra.get("extraction_failed_message")
+                or "Photo is not clear. Please retry.",
+                "reasons": extra.get("extraction_failed_reasons")
+                or ["poor_photo_quality"],
+                "source_file": filename,
+            }
+            raise HTTPException(status_code=422, detail=detail)
         return JSONResponse(content=result)
     except HTTPException:
         raise
@@ -38011,14 +38024,22 @@ async def extract_sales_statement_endpoint(
         # Never return a false-success zero statement when the quality gate
         # and Gemini Vision both failed to produce trustworthy products.
         if extra.get("extraction_failed"):
+            from services.stock_photo_quality import photo_quality_client_detail
+
+            photo_detail = photo_quality_client_detail(extra, filename)
+            if photo_detail:
+                raise HTTPException(status_code=422, detail=photo_detail)
             reasons = []
             if isinstance(quality, dict):
                 reasons = list(quality.get("reasons") or [])
             detail = {
                 "error": "extraction_failed",
                 "message": (
-                    "Could not reliably extract stock statement products. "
-                    "OCR/parser and Gemini Vision fallback both failed validation."
+                    extra.get("extraction_failed_message")
+                    or (
+                        "Could not reliably extract stock statement products. "
+                        "OCR/parser and Gemini Vision fallback both failed validation."
+                    )
                 ),
                 "reasons": reasons,
                 "gemini_fallback": extra.get("gemini_fallback"),
