@@ -49005,6 +49005,14 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
         return False
     if _looks_like_op_stk_rcpts_grid_text(text):
         return False
+    # Phone photos often OCR the gray header as junk. Product rows still
+    # carry 8 qty/value cells + expiry (01-Oct-26) — keep this layout.
+    row_hits = 0
+    for line in text.splitlines():
+        if _main_stock_parse_ocr_line(line):
+            row_hits += 1
+            if row_hits >= 3:
+                return True
     has_open = bool(re.search(r"OPEN(?:ING)?\s*STOCK|OPEN(?:ING)?\s*VAL|\bOPN\b|\bOP\s*[\{\[]", upper))
     has_recv = bool(re.search(r"RECEIVE|REC\s*[\{\[]|\bRECE\b|\bREC\b", upper))
     has_issue = bool(re.search(r"\bISSUE\b|\bTSSUE\b", upper))
@@ -49329,7 +49337,8 @@ def _main_stock_name_ok(name: str) -> bool:
     # Prefer real product lines; reject short OCR junk without pack cues.
     if not re.search(
         r"(?i)TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LOTION|WASH|GRAN|GUMMI|"
-        r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL",
+        r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL|"
+        r"\d+\s*'?S\b",
         cleaned,
     ):
         return len(letters) >= 12
@@ -49342,12 +49351,17 @@ def _main_stock_ocr_number(token: str) -> Optional[float]:
     if not raw:
         return None
     # Packing / strength tokens stay in the product name, never as qty/value.
+    # 60S / 10S / 30'S are tablet packs — do not convert trailing S into 5.
     if re.search(
         r"(?i)\d+\s*(?:ML|MG|GM|GMS|KG|TAB|TABS|CAP|CAPS|SYP|DROP|DROPS|"
-        r"LTR|LIT|\%|'S|\*|/)",
+        r"LTR|LIT|\%|'?S\b|\*|/)",
         raw,
     ):
         return None
+    # Cell-border crumbs (13.  52,  22|  4)) are still the printed number.
+    stripped = re.sub(r"[\.,|:;\|\)\]\}]+$", "", raw)
+    if stripped:
+        raw = stripped
     # Digit glued to a paren is OCR noise for an empty/zero cell — not a qty.
     if re.fullmatch(r"\d{1,2}[\(\)\[\]\{\}]+", raw):
         return None
@@ -50425,6 +50439,8 @@ def _extract_opening_receive_issue_closing_photo(
     except ImportError:
         preview = file_bytes
         full_text = ""
+        image = None
+        crop = None
     else:
         image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
         width, height = image.size
@@ -50434,18 +50450,23 @@ def _extract_opening_receive_issue_closing_photo(
         crop.save(buf, format="JPEG", quality=85)
         preview = buf.getvalue()
         full_text = ""
+    # Do not use _ocr_image_to_text here: region=page reuses the first
+    # (often sideways, pre-EXIF) page OCR and misses OPENING/RECEIVE rows.
     try:
-        text = _ocr_image_to_text(preview, psm=6)
+        from services.stock_ocr_policy import stock_ocr_context
+
+        tess = _a2z_tesseract()
+        if crop is not None:
+            with stock_ocr_context(region="opening_receive_header", page="1"):
+                text = tess.image_to_string(crop, config="--psm 6") or ""
+        else:
+            text = _ocr_image_to_text(preview, psm=6)
     except Exception as exc:
         logger.info("Opening/receive/issue photo header OCR skipped: %s", exc)
         text = ""
     spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(text)
     if not spreadsheet_shot:
-        # UI chrome often sits above the 38% crop cutoff — one cheap full pass.
-        try:
-            full_text = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
-        except Exception:
-            full_text = text
+        full_text = text
         spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(full_text)
         if spreadsheet_shot and full_text:
             text = full_text
@@ -50467,7 +50488,10 @@ def _extract_opening_receive_issue_closing_photo(
             return op_stk
         return None
 
-    if not _is_opening_receive_issue_closing_stock_text(text):
+    if not (
+        _is_opening_receive_issue_closing_stock_text(text)
+        or _is_opening_receive_issue_closing_stock_text(probe)
+    ):
         # Gray/blue header strips alone are not enough; require statement title.
         # Sheets ANALYSIS screenshots use the same OPENING/RECEIVE/ISSUE/CLOSING
         # qty+value columns as STATEMENT; Medica OPSTK must not own them.
@@ -54342,6 +54366,46 @@ def _maybe_early_vision_for_image(
         else "KEEP_OCR_PATH",
         ",".join(quality.get("reasons") or []) or "none",
     )
+
+    # Marg OPENING/RECEIVE/ISSUE photos: run before the poor-OCR Gemini gate.
+    # Sideways EXIF samples look like junk and would otherwise skip this reader.
+    try:
+        opening = _extract_opening_receive_issue_closing_photo(
+            file_bytes, filename, ext
+        )
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s opening/receive photo before quality gate failed: %s",
+            filename,
+            exc,
+        )
+        opening = None
+    if opening and opening.get("line_items"):
+        if _main_stock_result_is_all_zero_shell(opening):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=all_zero_shell",
+                filename,
+            )
+            opening = None
+        elif _main_stock_result_is_op_stk_misfiled(opening, sample or ""):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=op_stk_misfiled",
+                filename,
+            )
+            opening = None
+        else:
+            extra = opening.setdefault("totals", {}).setdefault("extra", {})
+            extra.setdefault(
+                "early_vision_reason",
+                ",".join(quality.get("reasons") or []) or "opening_receive_issue_closing",
+            )
+            logger.info(
+                "[SalesStatement] file=%s decision=OPENING_RECEIVE_ISSUE_OCR rows=%s",
+                filename,
+                len(opening.get("line_items") or []),
+            )
+            return opening, True
+
     if not quality.get("should_fallback"):
         return None, False
 

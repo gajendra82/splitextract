@@ -173,6 +173,50 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
         self.assertEqual(item["opening_qty"], 32.0)
         self.assertIn("200", item["product_name"])
 
+        cystone = _main_stock_parse_ocr_line(
+            "CYSTONE TABLETS 60S 73 11981.49 100 16413 37 6850.18 136 22321.68 01-Apr-27"
+        )
+        self.assertIsNotNone(cystone)
+        self.assertEqual(cystone["opening_qty"], 73.0)
+        self.assertEqual(cystone["receipts_qty"], 100.0)
+        self.assertIn("60S", cystone["product_name"].upper())
+        self.assertNotEqual(cystone["opening_qty"], 605.0)
+
+        himplasia = _main_stock_parse_ocr_line(
+            "HIMPLASIA 30S 65 9775.03 0 0 1 169.64 64 9624.64 01-Dec-27"
+        )
+        self.assertIsNotNone(himplasia)
+        self.assertEqual(himplasia["opening_qty"], 65.0)
+        self.assertEqual(himplasia["sales_qty"], 1.0)
+        self.assertEqual(himplasia["closing_qty"], 64.0)
+        self.assertIn("HIMPLASIA", himplasia["product_name"].upper())
+
+    def test_ocr_cell_border_crumbs_stay_numbers(self):
+        drops = _main_stock_parse_ocr_line(
+            "BONNISAN DROPS 30ML 13. 860.47 0 0 4 298.64 9 595.71 01-Oct-26"
+        )
+        self.assertIsNotNone(drops)
+        self.assertEqual(drops["product_name"].upper(), "BONNISAN DROPS 30ML")
+        self.assertEqual(drops["opening_qty"], 13.0)
+        self.assertEqual(drops["sales_qty"], 4.0)
+        self.assertEqual(drops["closing_qty"], 9.0)
+        self.assertNotIn("13.", drops["product_name"])
+
+        lukol = _main_stock_parse_ocr_line(
+            "LUKOL TABLETS 60S 52, 8885.76 0 0 7 1349.32 45 7689.6 01-Sep-28"
+        )
+        self.assertIsNotNone(lukol)
+        self.assertEqual(lukol["opening_qty"], 52.0)
+        self.assertEqual(lukol["sales_qty"], 7.0)
+        self.assertNotIn("52", lukol["product_name"])
+
+        syrup = _main_stock_parse_ocr_line(
+            "CYSTONE SYRUP 200ML 14 2349.2 0 0 4) 757.12 10 1678 01-Oct-26"
+        )
+        self.assertIsNotNone(syrup)
+        self.assertEqual(syrup["sales_qty"], 4.0)
+        self.assertEqual(syrup["sales_value"], 757.12)
+
     def test_product_key_collapses_ocr_variants(self):
         self.assertEqual(
             _main_stock_product_key("BONNISAN OROP 30ML"),
@@ -200,6 +244,16 @@ class TestKatruwarOpeningReceiveIssueClosing(unittest.TestCase):
             "ARJUNA 1 2 3 4 5\n"
         )
         self.assertFalse(_is_opening_receive_issue_closing_stock_text(ssa))
+        # Phone photo: title readable, gray OPENING/RECEIVE header is junk.
+        headerless = (
+            "LAXMI SALES PHARMACEUTICALS\n"
+            "HIMALAYA ZANDRA DIVI STOCK & SALES STATEMENT 01-09-2026 - 30-09-2026\n"
+            "= SSE] st] (| |\n"
+            "BONNISAN DROPS 30ML 13 860.47 0 0 4 298.64 9 595.71 01-Oct-26\n"
+            "BONNISAN LIQUID 100ML 53 3185.3 0 0 3 203.4 50 3005 01-May-27\n"
+            "BRESOL SYRUP 200ML 24 3485.04 0 0 1 163.8 23 3339.83 01-Mar-29\n"
+        )
+        self.assertTrue(_is_opening_receive_issue_closing_stock_text(headerless))
 
     @unittest.skipUnless(FIXTURE.exists(), "fixture image missing")
     def test_strips_cover_full_page(self):

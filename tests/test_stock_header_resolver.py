@@ -91,6 +91,49 @@ class ResolveColumnsUnitTests(unittest.TestCase):
         self.assertEqual(result["columns"][4]["canonical"], "purchase_return_qty")
         self.assertEqual(result["columns"][10]["reason"], "item_code")
 
+    def test_blm_lm_op_stock_adj_sal_val(self):
+        result = resolve_columns(
+            _cells(
+                "Product Name",
+                "Pack",
+                "BLM Qty",
+                "LM Qty",
+                "Op. Stock",
+                "Pur. Qty",
+                "Pur. Free",
+                "Sales Qty",
+                "Sales Free",
+                "SR Qty",
+                "SR Free",
+                "Adj Qty",
+                "Cl.Stock",
+                "Stock Value",
+                "Sal. Val",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "pack",
+                "ignore",
+                "ignore",
+                "opening_qty",
+                "purchase_qty",
+                "free_in_qty",
+                "sales_qty",
+                "free_out_qty",
+                "sales_return_qty",
+                "ignore",
+                "other_outward_qty",
+                "closing_qty",
+                "closing_value",
+                "sales_value",
+            ],
+        )
+        self.assertEqual(result["columns"][2]["reason"], "blm_lm")
+        self.assertEqual(result["columns"][3]["reason"], "blm_lm")
+
     def test_pack_free_preturn_sreturn_keeps_sale_free(self):
         result = resolve_columns(
             _cells(
@@ -182,6 +225,37 @@ class ResolveColumnsUnitTests(unittest.TestCase):
         self.assertEqual(
             _disambiguate_gap_token("1", sret, others, 0.766)["canonical"],
             "sales_return_qty",
+        )
+        cl_qty = {"canonical": "closing_qty", "col_index": 9, "x_center": 0.653}
+        cl_val = {"canonical": "closing_value", "col_index": 10, "x_center": 0.720}
+        self.assertEqual(
+            _disambiguate_gap_token("57", cl_qty, cl_val, 0.682)["canonical"],
+            "closing_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("8470.20", cl_qty, cl_val, 0.700)["canonical"],
+            "closing_value",
+        )
+        sales_val = {"canonical": "sales_value", "col_index": 8, "x_center": 0.567}
+        self.assertEqual(
+            _disambiguate_gap_token("23962.50", sales_val, cl_qty, 0.609)["canonical"],
+            "sales_value",
+        )
+        sales = {"canonical": "sales_qty", "col_index": 7, "x_center": 0.510}
+        ignore_lm = {"canonical": "ignore", "col_index": 6, "x_center": 0.445}
+        self.assertEqual(
+            _disambiguate_gap_token("101", ignore_lm, sales, 0.474)["canonical"],
+            "ignore",
+        )
+        opening = {"canonical": "opening_qty", "col_index": 3, "x_center": 0.271}
+        purchase = {"canonical": "purchase_qty", "col_index": 4, "x_center": 0.327}
+        self.assertEqual(
+            _disambiguate_gap_token("1", opening, purchase, 0.300)["canonical"],
+            "opening_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("6", ignore_lm, sales, 0.479)["canonical"],
+            "ignore",
         )
 
     def test_parse_number_pdf_pseudo_digits(self):
