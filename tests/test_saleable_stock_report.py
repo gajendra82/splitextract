@@ -65,44 +65,93 @@ class TestSaleableStockReportDetection(unittest.TestCase):
         self.assertEqual(extra.get("printed_sales_value"), 39498.46)
         self.assertEqual(extra.get("printed_closing_value"), 663700.61)
 
-    def test_packing_amt_pairs_not_shifted_into_qty(self):
-        """Packing|Opn qty|Opn amt|Rec…|Bal amt must not put pack/Bal Amt in qtys."""
-        header = (
-            "SARVAHITHA AYURVEDALAYA PVT. LTD.\n"
-            "(From 01/10/2026 To 31/10/2026)\n"
-            "Saleable Stock Report\n"
-            "Particular |Packing| Opn| Opn| Rec| Rec| Issue| Issue| Bal| Bal\n"
-            "           |       | (Q+F)| Amt(Q+F)| (Q+F)| Amt| (Q+F)| Amt| (Q+F)| Amt(Q+F)\n"
+    def test_1x_pack_and_amount_are_not_opening_or_closing_qty(self):
+        text = (
+            HEADER
+            + "SHIGRU TAB 60TAB-HIMALAY 1 26 0 0 0 26 2852.64\n"
+            + "TULASI TAB 60TAB-HIMALAY 1 23 0 2 0 21 1854.12\n"
         )
-        self.assertTrue(_saleable_amt_pair_layout(header))
-        row = (
-            "ABANA TAB 60TAB-HIMALAY |1 | 184.00| ——| 100.00| 14860.00|"
-            " 110.00| 17602.17| 174.00| 25856.42"
-        )
-        matched = _saleable_match_row(row, amt_pairs=True)
-        self.assertIsNotNone(matched)
-        self.assertEqual(matched["pack"], "1")
-        self.assertEqual(matched["opn"], "184.00")
-        self.assertEqual(matched["rec"], "100.00")
-        self.assertEqual(matched["issue"], "110.00")
-        self.assertEqual(matched["bal"], "174.00")
-        self.assertEqual(matched["issue_amt"], "17602.17")
-        self.assertEqual(matched["bal_amt"], "25856.42")
+        result = _parse_saleable_stock_report(text, "rad111EC.pdf", "pdf")
+        self.assertIsNotNone(result)
+        by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in result["line_items"]
+        }
+        shigru = next(item for key, item in by_name.items() if "SHIGRU" in key)
+        self.assertEqual(shigru["opening_qty"], 26.0)
+        self.assertEqual(shigru["receipts_qty"], 0.0)
+        self.assertEqual(shigru["sales_qty"], 0.0)
+        self.assertEqual(shigru["closing_qty"], 26.0)
+        self.assertNotEqual(shigru["closing_qty"], 2852.64)
+        self.assertNotEqual(shigru["opening_qty"], 1.0)
+        tulasi = next(item for key, item in by_name.items() if "TULASI" in key)
+        self.assertEqual(tulasi["opening_qty"], 23.0)
+        self.assertEqual(tulasi["sales_qty"], 2.0)
+        self.assertEqual(tulasi["closing_qty"], 21.0)
 
-        text = header + row + "\n"
-        parsed = _parse_saleable_stock_report(text, "radE3BB3.pdf", "pdf")
-        self.assertIsNotNone(parsed)
-        ab = parsed["line_items"][0]
-        self.assertEqual(ab.get("packing"), "1")
-        self.assertEqual(ab.get("opening_qty"), 184.0)
-        self.assertEqual(ab.get("receipts_qty"), 100.0)
-        self.assertEqual(ab.get("sales_qty"), 110.0)
-        self.assertEqual(ab.get("closing_qty"), 174.0)
-        self.assertEqual(ab.get("sales_value"), 17602.17)
-        self.assertEqual(ab.get("closing_value"), 25856.42)
-        # Must not keep the old shift: pack→opening, Bal Amt→closing_qty.
-        self.assertNotEqual(ab.get("opening_qty"), 1.0)
-        self.assertNotEqual(ab.get("closing_qty"), 25856.42)
+    def test_qty_amt_pairs_are_not_shifted_into_qty(self):
+        """Opn/Rec/Issue/Bal each print QTY then Amount; Amount is never qty."""
+        text = (
+            "SARVAHITHA AYURVEDALAYA PVT. LTD.\n"
+            "(From 01/09/2026 To 30/09/2026)\n"
+            "Saleable Stock Report\n"
+            "Particular |Packing| Opn | Opn | Rec | Rec | Issue | Issue | Bal | Bal\n"
+            "           |       | (Q+F)| Amt(Q+F)| (Q+F)| Amt | (Q+F)| Amt | (Q+F)| Amt(Q+F)\n"
+            "AACTARIL SOAP 75GM-HIMALAY |1 | 84.00| — | 72.00| 5592.97| 63.00| 5253.68| 93.00| 7224.25\n"
+            "ALTHEA LOTION 100ML-HIMALAY |1 | 51.00| 164.13| — | — | 7.00| 1245.99| 44.00| 7221.72\n"
+            "ARJUNA TAB 60CAPS-HIMALAY |1 | 75.00| 3309.45| 60.00| 13237.83| 67.00| 15864.79| 68.00| 15002.87\n"
+            "AMALAKI TAB 60TAB-HIMALAY |1 | 18.00| —— | 60.00| 13237.74| 19.00| 4475.00| 59.00| 13017.11\n"
+            "KOFLET-H LOZENGES (ORANGE) 6TAB-HIMALAY |1 | 195.00| 672.00| 160.00| 3072.01| 95.00| 1856.50| 260.00| 4896.01\n"
+            "TULASI SYRUP 200ML-HIMALAY |1 | 25.00| 2885.00| — | — | 5.00| 615.22| 20.00| 2308.00\n"
+            "LIV 52 SYRUP S.F 100 ML - HIMALAYA |100 ML | 68.00| — | — | — | 5.00| 608.00| 63.00| 7148.61\n"
+        )
+        result = _parse_saleable_stock_report(text, "rad111EC.pdf", "pdf")
+        self.assertIsNotNone(result)
+        by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in result["line_items"]
+        }
+        aactaril = next(item for key, item in by_name.items() if "AACTARIL" in key)
+        self.assertEqual(aactaril["opening_qty"], 84.0)
+        self.assertEqual(aactaril["receipts_qty"], 72.0)
+        self.assertEqual(aactaril["sales_qty"], 63.0)
+        self.assertEqual(aactaril["closing_qty"], 93.0)
+        self.assertEqual(aactaril["sales_value"], 5253.68)
+        self.assertEqual(aactaril["closing_value"], 7224.25)
+        self.assertNotEqual(aactaril["opening_qty"], 1.0)
+        althea = next(item for key, item in by_name.items() if "ALTHEA" in key)
+        self.assertEqual(althea["opening_qty"], 51.0)
+        self.assertEqual(althea["receipts_qty"], 0.0)
+        self.assertEqual(althea["sales_qty"], 7.0)
+        self.assertEqual(althea["closing_qty"], 44.0)
+        arjuna = next(item for key, item in by_name.items() if "ARJUNA" in key)
+        self.assertEqual(arjuna["opening_qty"], 75.0)
+        self.assertEqual(arjuna["receipts_qty"], 60.0)
+        self.assertEqual(arjuna["sales_qty"], 67.0)
+        self.assertEqual(arjuna["closing_qty"], 68.0)
+        amalaki = next(item for key, item in by_name.items() if "AMALAKI" in key)
+        self.assertEqual(amalaki["opening_qty"], 18.0)
+        self.assertEqual(amalaki["receipts_qty"], 60.0)
+        self.assertEqual(amalaki["sales_qty"], 19.0)
+        self.assertEqual(amalaki["closing_qty"], 59.0)
+        koflet = next(item for key, item in by_name.items() if "KOFLET-H" in key)
+        self.assertEqual(koflet["opening_qty"], 195.0)
+        self.assertEqual(koflet["receipts_qty"], 160.0)
+        self.assertEqual(koflet["sales_qty"], 95.0)
+        self.assertEqual(koflet["closing_qty"], 260.0)
+        self.assertNotEqual(koflet["opening_qty"], 672.0)
+        tulasi = next(item for key, item in by_name.items() if "TULASI SYRUP" in key)
+        self.assertEqual(tulasi["opening_qty"], 25.0)
+        self.assertEqual(tulasi["receipts_qty"], 0.0)
+        self.assertEqual(tulasi["sales_qty"], 5.0)
+        self.assertEqual(tulasi["closing_qty"], 20.0)
+        self.assertNotEqual(tulasi["receipts_qty"], 2885.0)
+        liv = next(item for key, item in by_name.items() if "LIV 52" in key)
+        self.assertEqual(liv["packing"], "100 ML")
+        self.assertEqual(liv["opening_qty"], 68.0)
+        self.assertEqual(liv["receipts_qty"], 0.0)
+        self.assertEqual(liv["sales_qty"], 5.0)
+        self.assertEqual(liv["closing_qty"], 63.0)
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Paras Medicos fixture")

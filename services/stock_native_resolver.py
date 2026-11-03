@@ -2091,6 +2091,19 @@ def _resolved_movement_columns_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _count_moved_items(items: Optional[List[Dict[str, Any]]]) -> int:
+    """Rows with printed opening or closing — not later-page summary tables."""
+    n = 0
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("opening_qty") not in (None, "") or item.get(
+            "closing_qty"
+        ) not in (None, ""):
+            n += 1
+    return n
+
+
 def _items_from_resolved_word_columns(
     page_results: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:
@@ -2177,13 +2190,14 @@ def _items_from_resolved_word_columns(
             continue
         # Company / division banners have a name but no movement numbers.
         # Keep printed zero-stock SKUs that still have a packing column.
+        # Printed 0 is a real qty — do not treat all-zero product rows as banners.
         qty_vals = [
             item.get("opening_qty"),
             item.get("receipts_qty"),
             item.get("sales_qty"),
             item.get("closing_qty"),
         ]
-        if all(v in (None, "", 0, 0.0) for v in qty_vals):
+        if all(v in (None, "") for v in qty_vals):
             extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
             has_pack = bool(str(item.get("packing") or "").strip())
             if (
@@ -2216,6 +2230,115 @@ def _items_from_resolved_word_columns(
     return parsed
 
 
+def _pdf_words_letterhead_meta_enabled() -> bool:
+    """STOCK_PDF_WORDS_LETTERHEAD_META — banner company + printed address.
+
+    Default ON. Kill switch STOCK_PDF_WORDS_LETTERHEAD_META=false.
+    """
+    return os.getenv("STOCK_PDF_WORDS_LETTERHEAD_META", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_LETTERHEAD_TITLE_RE = re.compile(
+    r"(?i)stock\s+and\s+sales|stock\s*&\s*sales|sale\s+and\s+stock|"
+    r"stock\s+statement|page\s*no\b|for\s+the\s+period"
+)
+_LETTERHEAD_TABLE_RE = re.compile(
+    r"(?i)^(?:sl\.?\s*no|sno|product(?:\s+name)?|item(?:\s+name)?|"
+    r"particulars|opening|op\.?\s*stock|pack(?:ing)?)\b"
+)
+_LETTERHEAD_ADDRESS_RE = re.compile(
+    r"(?i)\bgstin\b|\bgst\s*:|\bpin(?:code)?\b|\bdist(?:rict)?\b|"
+    r"\broad\b|\bstreet\b|\bnagar\b|\bplot\b|\bat/?po\b|"
+    r"\b\d{6}\b|\bphone\b|\bmobile\b|\be-?mail\b|\bstate\b"
+)
+_LETTERHEAD_DISTRIBUTOR_RE = re.compile(
+    r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|"
+    r"private\s+limited|pvt\.?\s*ltd)\b"
+)
+
+
+def _looks_like_division_banner(line: str) -> bool:
+    s = str(line or "").strip()
+    if not s or len(s) > 60:
+        return False
+    if _LETTERHEAD_TITLE_RE.search(s) or _LETTERHEAD_TABLE_RE.search(s):
+        return False
+    if _LETTERHEAD_ADDRESS_RE.search(s) or _LETTERHEAD_DISTRIBUTOR_RE.search(s):
+        return False
+    if re.search(r"\d{2,}", s):
+        return False
+    words = re.findall(r"[A-Za-z]{2,}", s)
+    return 1 <= len(words) <= 6
+
+
+def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
+    """Fill company from the printed division banner; address from GSTIN/city lines.
+
+    Does not invent Puttur/GSTIN when those tokens are not on the page.
+    """
+    if not _pdf_words_letterhead_meta_enabled() or not isinstance(result, dict):
+        return False
+    lines = [ln.strip() for ln in str(peek or "").splitlines() if ln.strip()]
+    if not lines:
+        return False
+    table_i = next(
+        (i for i, ln in enumerate(lines) if _LETTERHEAD_TABLE_RE.match(ln)),
+        min(12, len(lines)),
+    )
+    header_lines = lines[:table_i]
+    changed = False
+    stockist = str(result.get("stockist_name") or "").strip()
+    company = str(result.get("company_name") or "").strip()
+    if company and stockist and company.upper() == stockist.upper():
+        result["company_name"] = None
+        company = ""
+        changed = True
+    if not company:
+        for ln in header_lines:
+            if stockist and ln.upper() == stockist.upper():
+                continue
+            if _LETTERHEAD_TITLE_RE.search(ln):
+                continue
+            if _looks_like_division_banner(ln):
+                result["company_name"] = re.sub(r"\s+", " ", ln)
+                logger.info(
+                    "STOCK_PDF_WORDS_LETTERHEAD_META company=%r",
+                    result["company_name"],
+                )
+                changed = True
+                break
+    address = str(result.get("stockist_address") or "").strip()
+    if address and _LETTERHEAD_TITLE_RE.search(address):
+        result["stockist_address"] = None
+        address = ""
+        changed = True
+    if not address:
+        company_now = str(result.get("company_name") or "").strip()
+        parts: List[str] = []
+        for ln in header_lines:
+            if stockist and ln.upper() == stockist.upper():
+                continue
+            if company_now and ln.upper() == company_now.upper():
+                continue
+            if _LETTERHEAD_TITLE_RE.search(ln):
+                continue
+            if _LETTERHEAD_ADDRESS_RE.search(ln):
+                parts.append(ln)
+        if parts:
+            result["stockist_address"] = " ".join(parts)
+            logger.info(
+                "STOCK_PDF_WORDS_LETTERHEAD_META address=%r",
+                result["stockist_address"],
+            )
+            changed = True
+    return changed
+
+
 def parse_pdf_free_column_statement(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -2226,6 +2349,7 @@ def parse_pdf_free_column_statement(
     from services.stock_native_tables import (
         from_fitz_pdf_bytes,
         from_pdf_words,
+        pdf_built_has_mashed_headers,
         pdf_built_has_nul_digits,
     )
 
@@ -2240,6 +2364,16 @@ def parse_pdf_free_column_statement(
 
             pdf = pdfplumber.open(io.BytesIO(file_bytes))
             built = from_pdf_words(pdf)
+            nul = pdf_built_has_nul_digits(built)
+            mashed = pdf_built_has_mashed_headers(built)
+            if nul or mashed:
+                logger.info(
+                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s fallback=fitz",
+                    int(nul),
+                    int(mashed),
+                )
+                built = from_fitz_pdf_bytes(file_bytes)
+            peek = ""
             if pdf.pages:
                 from services.stock_header_resolver import decode_pdf_pseudo_digits
 
@@ -2343,6 +2477,8 @@ def parse_pdf_free_column_statement(
         result["report_title"] = "STOCK & SALES ANALYSIS"
     elif re.search(r"STOCK\s*&\s*SALES", peek, re.I):
         result["report_title"] = "STOCK & SALES"
+    elif re.search(r"Stock\s+And\s+Sales\s+Statement", peek, re.I):
+        result["report_title"] = "Stock And Sales Statement"
     elif re.search(r"Stock\s+Statement", peek, re.I):
         result["report_title"] = "Stock Statement Report"
     elif re.search(r"Statements\s+of", peek, re.I):
@@ -2422,6 +2558,24 @@ def parse_pdf_free_column_statement(
             result["period_from"] = _normalize_date(month_period.group(1))
             result["period_to"] = _normalize_date(month_period.group(2))
     if not result.get("period_from"):
+        for_period = re.search(
+            r"(?:For\s+the\s+)?Period\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+            r"To\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+            peek,
+            re.I,
+        )
+        if for_period:
+            def _iso_period(day: str, month: str, year: str) -> str:
+                yr = year if len(year) == 4 else ("20" + year)
+                return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+            result["period_from"] = _iso_period(
+                for_period.group(1), for_period.group(2), for_period.group(3)
+            )
+            result["period_to"] = _iso_period(
+                for_period.group(4), for_period.group(5), for_period.group(6)
+            )
+    if not result.get("period_from"):
         compact = re.search(
             r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})\s*[-–]\s*"
             r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})",
@@ -2446,6 +2600,7 @@ def parse_pdf_free_column_statement(
             and "PRODUCT" not in lines[1].upper()
         ):
             result["stockist_address"] = lines[1]
+    _apply_pdf_words_letterhead_meta(result, peek)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1
