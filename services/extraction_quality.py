@@ -488,6 +488,10 @@ def evaluate_extraction_quality(
     _keep_on_identity = method in {
         "stock_sales_op_qty_val_words",
         "stock_sales_consolidated_opval",
+        # Stock and Sales Detail: a few printed rows are off-by-1/2 on the
+        # sheet itself; keep header-aligned Cr/Db columns, do not Gemini-overwrite.
+        "stock_sales_detail_opval",
+        "docx_stock_sales_detail",
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}

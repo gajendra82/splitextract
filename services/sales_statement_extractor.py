@@ -9457,6 +9457,22 @@ def _parse_stock_sales_detail_item_row(
         # Always store when the column exists in the sheet (header or positional)
         if field in colmap or len(cells) > positional[field]:
             extra[field] = _to_float(cell) if cell != "" else 0.0
+    # Cr.Qty / Db.Qty / Br.S.Qty participate in stock identity.
+    credit = float(extra.get("credit_qty") or 0.0) + float(
+        extra.get("credit_scheme_qty") or 0.0
+    )
+    debit = float(extra.get("debit_qty") or 0.0) + float(
+        extra.get("debit_scheme_qty") or 0.0
+    )
+    break_sales = float(extra.get("break_sales_qty") or 0.0)
+    if "credit_qty" in extra or "credit_scheme_qty" in extra:
+        item["sales_return_qty"] = credit
+        extra["sales_return_qty"] = credit
+    if "debit_qty" in extra or "debit_scheme_qty" in extra:
+        item["purchase_return_qty"] = debit
+        extra["purchase_return_qty"] = debit
+    if "break_sales_qty" in extra:
+        extra["other_outward_qty"] = break_sales
     item["extra"] = extra
     return item
 
@@ -29644,6 +29660,22 @@ _DETAIL_OPVAL_LABELS = {
     "s.qty": "sales_qty",
     "s.sch": "sales_scheme",
     "s.val": "sales_value",
+    "br.s.qty": "break_sales_qty",
+    "brsqty": "break_sales_qty",
+    "br.s.val": "break_sales_value",
+    "brsval": "break_sales_value",
+    "cr.qty": "credit_qty",
+    "crqty": "credit_qty",
+    "cr.sch.qty": "credit_scheme_qty",
+    "crschqty": "credit_scheme_qty",
+    "cr.val": "credit_value",
+    "crval": "credit_value",
+    "db.qty": "debit_qty",
+    "dbqty": "debit_qty",
+    "db.sch.qty": "debit_scheme_qty",
+    "dbschqty": "debit_scheme_qty",
+    "db.val": "debit_value",
+    "dbval": "debit_value",
     "cl.qty": "closing_qty",
     "cl.val": "closing_value",
 }
@@ -31205,10 +31237,43 @@ def _parse_stock_sales_detail_opval(doc, filename: str) -> Optional[Dict[str, An
             item.update(ordered)
             extra = item["extra"]
             extra["layout"] = "stock_sales_detail_opval"
-            for key in ("purchase_scheme", "purchase_value", "sales_scheme"):
+            for key in (
+                "purchase_scheme",
+                "purchase_value",
+                "sales_scheme",
+                "break_sales_qty",
+                "break_sales_value",
+                "credit_qty",
+                "credit_scheme_qty",
+                "credit_value",
+                "debit_qty",
+                "debit_scheme_qty",
+                "debit_value",
+            ):
                 num = _detail_opval_number(cells.get(key) or [])
                 if num is not None:
                     extra[key] = num
+            # Cr.Qty / Cr.Sch.Qty are printed sales returns; Db.* are purchase returns.
+            # Without them, Opening+Purchase-Sales misses Closing by Cr units.
+            credit = float(extra.get("credit_qty") or 0.0) + float(
+                extra.get("credit_scheme_qty") or 0.0
+            )
+            debit = float(extra.get("debit_qty") or 0.0) + float(
+                extra.get("debit_scheme_qty") or 0.0
+            )
+            break_sales = float(extra.get("break_sales_qty") or 0.0)
+            fs = extra.setdefault("field_source", {})
+            if credit != 0.0 or "credit_qty" in extra or "credit_scheme_qty" in extra:
+                item["sales_return_qty"] = credit
+                extra["sales_return_qty"] = credit
+                fs["sales_return_qty"] = "printed"
+            if debit != 0.0 or "debit_qty" in extra or "debit_scheme_qty" in extra:
+                item["purchase_return_qty"] = debit
+                extra["purchase_return_qty"] = debit
+                fs["purchase_return_qty"] = "printed"
+            if break_sales != 0.0 or "break_sales_qty" in extra:
+                extra["other_outward_qty"] = break_sales
+                fs["other_outward_qty"] = "printed"
             items.append(item)
 
         for row in rows:
