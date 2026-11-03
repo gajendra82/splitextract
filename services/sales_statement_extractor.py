@@ -1833,7 +1833,38 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     result = empty_result(filename, "pdf")
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if lines:
-        result["stockist_name"] = _clean_name(lines[0])
+        # Phone photos often put OCR junk above the letterhead. Prefer a real
+        # agency line over the first noisy fragment.
+        stockist = None
+        skip_hdr = (
+            r"STOCK\s*&\s*SALES|Sales\s*&\s*Stock|OPENING\s+RECEIPT|"
+            r"Phone|GSTIN|E-Mail|ITEM\s+DESCRIPTION"
+        )
+        for ln in lines[:10]:
+            if re.search(skip_hdr, ln, re.I):
+                continue
+            if re.search(
+                r"MEDICAL|AGENC|PHARMA|ENTERPRISE|DISTRIB|TRADERS|STORE|"
+                r"WELLNESS|DRUG",
+                ln,
+                re.I,
+            ) and len(re.findall(r"[A-Za-z]", ln)) >= 6:
+                stockist = _clean_name(ln)
+                break
+        if not stockist:
+            for ln in lines[:10]:
+                if re.search(skip_hdr, ln, re.I):
+                    continue
+                letters = re.findall(r"[A-Za-z]", ln)
+                if (
+                    len(ln) >= 12
+                    and len(letters) >= 10
+                    and sum(1 for c in letters if c.isupper()) >= 4
+                    and not re.search(r"[\uFFFD]", ln)
+                ):
+                    stockist = _clean_name(ln)
+                    break
+        result["stockist_name"] = stockist or _clean_name(lines[0])
     for ln in lines[:12]:
         if re.search(r"STOCK\s*&\s*SALES|Sales\s*&\s*Stock", ln, re.I):
             result["report_title"] = _clean_name(ln)
@@ -1855,6 +1886,21 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             )
             if him and not result.get("company_name"):
                 result["company_name"] = _clean_name(him.group(1))
+            # Title form: STOCK & SALES ANALYSIS (ZEAL) / (ZANDRA) / (ZENITH) …
+            if not result.get("company_name"):
+                div = re.search(
+                    r"\(\s*(ZEAL|ZANDRA|ZENITH|OTX|PURE\s*HANDS)\s*\)",
+                    ln,
+                    re.I,
+                )
+                if div:
+                    result["company_name"] = _clean_name(
+                        f"HIMALAYA {div.group(1).upper()}"
+                    )
+                    logger.info(
+                        "SSA_ORIC_COMPANY_FROM_TITLE_DIV division=%s",
+                        div.group(1).upper(),
+                    )
         if re.search(r"AUROBINDO|VERITAZ|HEALTHCARE", ln, re.I) and not re.search(
             r"PHARMACEUTICALS|ANALYSIS", ln, re.I
         ):
@@ -1960,6 +2006,15 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
                 result["company_name"] = "THE HIMALAYA DRUG CO"
             pending_name = ""
             continue
+        # Bare division banner row (e.g. ZEAL) is company, never a product.
+        if _is_statement_division_banner(ln) and not row_re.match(ln):
+            if not result.get("company_name"):
+                div = _detect_statement_division(ln) or {}
+                result["company_name"] = _clean_name(
+                    div.get("division_name") or ln
+                )
+            pending_name = ""
+            continue
         m5 = row5_re.match(ln)
         if m5 and _ps_name_pack(m5.group(1))[1]:
             o, r, i, c = _ps_pharma_pick_oric_tokens(
@@ -2060,12 +2115,12 @@ def _extract_ssa_oric_qty_only_photo(
     """
     if not _ssa_oric_qty_only_ocr_enabled():
         return None
-    text = (ocr_hint or "").strip()
-    if text and not _is_ssa_oric_qty_only_text(text):
+    hint = (ocr_hint or "").strip()
+    if hint and not _is_ssa_oric_qty_only_text(hint):
         # Hint already identifies qty+value / DUMP / M.EXP / RATE — do not re-OCR.
-        if re.search(r"STOCK\s*&\s*SALES", text, re.I) and re.search(
+        if re.search(r"STOCK\s*&\s*SALES", hint, re.I) and re.search(
             r"QTY\.?\s+VALUE|VALUE\s+QTY|\bDUMP\b|\bM\.?\s*EXP\b|\bRATE\b",
-            text,
+            hint,
             re.I,
         ):
             logger.info(
@@ -2073,22 +2128,31 @@ def _extract_ssa_oric_qty_only_photo(
                 filename,
             )
             return None
+    # Always OCR this image for the parse text. A stale qty-only hint from a
+    # previous upload (OCR region_shared_reuse) must not be parsed as this file.
+    text = ""
+    try:
+        text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
+    except Exception as exc:
+        logger.info(
+            "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        text = ""
     if not _is_ssa_oric_qty_only_text(text):
-        try:
-            text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
-        except Exception as exc:
+        if _is_ssa_oric_qty_only_text(hint):
+            text = hint
             logger.info(
-                "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
+                "SSA_ORIC_QTY_ONLY file=%s status=hint_fallback reason=fresh_ocr_mismatch",
                 filename,
-                type(exc).__name__,
+            )
+        else:
+            logger.info(
+                "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
+                filename,
             )
             return None
-    if not _is_ssa_oric_qty_only_text(text):
-        logger.info(
-            "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
-            filename,
-        )
-        return None
     result = _parse_ps_pharma_statement(text, filename)
     if not result or len(result.get("line_items") or []) < 3:
         logger.info(
