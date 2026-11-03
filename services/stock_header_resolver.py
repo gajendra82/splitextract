@@ -143,6 +143,8 @@ ALIASES: Dict[str, List[str]] = {
         "hsn",
         "dump",
         "dump qty",
+        "scrap",
+        "scrap qty",
     ],
     "opening": [
         "op",
@@ -218,6 +220,7 @@ ALIASES: Dict[str, List[str]] = {
     "sales": [
         "sale",
         "sales",
+        "sal",  # Sal. Val / Sal. Amt
         "sl",
         "issue",
         "iss",
@@ -398,6 +401,8 @@ ALIASES: Dict[str, List[str]] = {
         "others",
         "others qty",
         "other qty",
+        "adj",
+        "adj qty",
         "repl other",
         "repl/other",
         "repl / other",
@@ -626,6 +631,8 @@ _DIRECT_VALUE_FIELDS = {
     "sval": "sales_value",
     "sale val": "sales_value",
     "sa val": "sales_value",
+    "sal val": "sales_value",
+    "sal. val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
     "sales bill amt": "sales_value",
@@ -665,6 +672,21 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
     if compact_early in {"itemcode", "itemcd"} or norm == "item code":
         return "non_stock_qty", 0.95, "item_code"
+    # BLM / LM qty are last-month history, never opening or sales.
+    _blm_lm_tokens = _tokens(norm)
+    if compact_early in {
+        "blm",
+        "blmqty",
+        "blmq",
+        "lmqty",
+        "lmq",
+        "qtylm",
+        "qtyblm",
+    } or (
+        set(_blm_lm_tokens) <= {"blm", "lm", "qty", "q", "qnty", "quantity"}
+        and set(_blm_lm_tokens) & {"blm", "lm"}
+    ):
+        return "non_stock_qty", 0.95, "blm_lm"
 
     direct = _direct_value_field(norm)
     if direct:
@@ -1524,6 +1546,8 @@ def _unit_pack_token(text: Any) -> bool:
         return False
     if _UNIT_PACK_RE.fullmatch(t):
         return True
+    if re.fullmatch(r"\d+(?:\.\d+)?\s*[xX*]\s*\S+", t):
+        return True
     return bool(
         re.fullmatch(
             r"\d+\s*\*\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|G|GRM|GR|TAB|TABS|CAP|UNT)?",
@@ -1605,6 +1629,19 @@ def _finalize_qty_bucket(
     if canon == "product_name":
         fields[canon] = " ".join(t for t in texts if t).strip() or None
         return
+    # Right-aligned Cl.Stock: a short Sal.Amt can sit in the left of this
+    # band. Keep the rightmost printed number; do not blank the column.
+    if canon == "closing_qty":
+        nums = [t for t in texts if parse_number(t) is not None]
+        if nums:
+            fields[canon] = nums[-1]
+            logger.info(
+                "STOCK_HEADER_RIGHTMOST_IN_BAND canon=%s kept=%r dropped=%s",
+                canon,
+                nums[-1],
+                [t for t in texts if t != nums[-1]],
+            )
+            return
     fields[canon] = None
     errors.append(
         {
@@ -1646,10 +1683,52 @@ def _disambiguate_gap_token(
         "free_in_qty",
         "free_out_qty",
     }
-    if left_c in qty_canons and right_c in qty_canons and tx is not None:
-        ld = abs(float(tx) - float(left_b.get("x_center") or 0))
-        rd = abs(float(tx) - float(right_b.get("x_center") or 0))
-        return left_b if ld <= rd else right_b
+    if left_c in qty_canons and right_c in qty_canons:
+        # Right-aligned qty sits past its header centre, often in the dead
+        # zone before the next qty header. Nearest-centre steals a short
+        # opening into purchase (CELL_COLLISION blanks both).
+        if number is None or has_letter:
+            return None
+        logger.info(
+            "STOCK_HEADER_GAP_LEFT_QTY token=%r left=%s right=%s",
+            raw,
+            left_c,
+            right_c,
+        )
+        return left_b
+    value_canons = {
+        "opening_value",
+        "purchase_value",
+        "sales_value",
+        "closing_value",
+    }
+    if left_c in qty_canons and right_c in value_canons:
+        if number is None or has_letter:
+            return None
+        if abs(number - round(number)) < 0.001:
+            return left_b
+        return right_b
+    if left_c in value_canons and right_c in qty_canons:
+        if number is None or has_letter:
+            return None
+        return left_b
+    if left_c in qty_canons and right_c == "ignore":
+        if number is None or has_letter:
+            return None
+        if abs(number - round(number)) < 0.001:
+            return left_b
+        return None
+    if left_c == "ignore" and right_c in qty_canons:
+        # LM/BLM ignore numbers are right-aligned into the gap before Sales.
+        # Nearest-centre would dump them on sales_qty and collide with Sales.
+        if number is None:
+            return left_b
+        logger.info(
+            "STOCK_HEADER_GAP_LEFT_IGNORE token=%r right=%s",
+            raw,
+            right_c,
+        )
+        return left_b
     if left_c in qty_canons and right_c == "rate":
         if number is None or has_letter:
             return None

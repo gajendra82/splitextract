@@ -6227,6 +6227,15 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     elif ext in {".xls", ".xlsx", ".xlsm"}:
         result = _parse_xls(file_bytes, name, ext)
     elif ext in IMAGE_EXTENSIONS:
+        try:
+            from services.stock_photo_quality import apply_stock_photo_quality_gate
+
+            _photo_reject = apply_stock_photo_quality_gate(file_bytes, name, ext)
+        except Exception:
+            logger.exception("STOCK_PHOTO_QUALITY file=%s status=checker_error", name)
+            _photo_reject = None
+        if _photo_reject is not None:
+            return _photo_reject
         result = _parse_image(file_bytes, name, ext)
         result = _fill_printed_report_period_from_ocr(
             result, image_bytes=file_bytes
@@ -25098,12 +25107,110 @@ def _saleable_movement_from_nums(nums: List[float]) -> Optional[Dict[str, float]
     return None
 
 
+def _saleable_cell_is_money(token: str) -> bool:
+    """True when a cell is printed rupees (non-zero paisa), not a stock qty."""
+    raw = str(token or "").strip().replace(",", "")
+    match = re.fullmatch(r"-?\d+\.(\d+)", raw)
+    if not match:
+        return False
+    return set(match.group(1)) != {"0"}
+
+
+def _saleable_should_peel_leading_one(
+    name: str, pack: str, cells: Sequence[str]
+) -> bool:
+    """1X60 TAB often splits so the leading 1 is a fake opening qty."""
+    if len(cells) < 5:
+        return False
+    if _saleable_qty(cells[0]) != 1.0:
+        return False
+    blob = f"{name or ''} {pack or ''}"
+    if re.search(r"(?i)\d+\s*X\s*\d+", blob):
+        return False
+    return bool(re.search(r"(?i)\d+\s*(?:TAB|CAPS?|GM|ML|SYP|PCS)\b", blob))
+
+
+def _saleable_is_amt_slot(token: str) -> bool:
+    """Amount may be rupees with paisa, round rupees (672.00), or a blank dash."""
+    raw = str(token or "").strip().replace(",", "")
+    if re.fullmatch(r"[—–\-\ufffd]+", raw) or raw == "":
+        return True
+    return bool(re.fullmatch(r"-?\d+(?:\.\d+)?", raw))
+
+
+def _saleable_qty_amt_pairs(
+    cells: Sequence[str],
+) -> Optional[Tuple[List[str], List[str]]]:
+    """Last 8 cells are Opn/Rec/Issue/Bal each as QTY then Amount."""
+    if len(cells) < 8:
+        return None
+    tail = [str(c) for c in cells[-8:]]
+    qtys: List[str] = []
+    amts: List[str] = []
+    for i in range(0, 8, 2):
+        qty, amt = tail[i], tail[i + 1]
+        if _saleable_cell_is_money(qty):
+            return None
+        if not _saleable_is_amt_slot(amt):
+            return None
+        qtys.append(qty)
+        amts.append(amt)
+    return qtys, amts
+
+
+def _saleable_from_metric_cells(
+    name: str, pack: str, cells: Sequence[str]
+) -> Optional[Dict[str, str]]:
+    """Opn/Rec/Issue/Bal qty — never Amount, and never packing 1 as opening."""
+    paired = _saleable_qty_amt_pairs(cells)
+    if paired:
+        qtys, amts = paired
+        if not pack and len(cells) >= 9 and _saleable_qty(str(cells[0])) == 1.0:
+            pack = str(cells[0]).strip()
+        return {
+            "name": name,
+            "pack": pack,
+            "opn": qtys[0],
+            "rec": qtys[1],
+            "issue": qtys[2],
+            "bal": qtys[3],
+            "opening_value": amts[0],
+            "receipts_value": amts[1],
+            "sales_value": amts[2],
+            "closing_value": amts[3],
+        }
+    qty_cells = [str(c) for c in cells if not _saleable_cell_is_money(str(c))]
+    if _saleable_should_peel_leading_one(name, pack, qty_cells):
+        pack = ("1X" + (pack or "")).strip() if pack else "1X"
+        if pack.upper().startswith("1X") and pack[2:3].isdigit():
+            pack = "1X" + pack[2:]
+        elif pack != "1X" and not pack.upper().startswith("1X"):
+            pack = "1X " + pack
+        qty_cells = list(qty_cells[1:])
+        logger.info(
+            "saleable_stock_row peel_1x_pack name=%s pack=%s",
+            _clean_name(name)[:40],
+            pack,
+        )
+    if len(qty_cells) < 4:
+        return None
+    return {
+        "name": name,
+        "pack": pack,
+        "opn": qty_cells[0],
+        "rec": qty_cells[1],
+        "issue": qty_cells[2],
+        "bal": qty_cells[-1],
+    }
+
+
 def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
     """Map a Saleable Stock Report row to name/pack/opn/rec/issue/bal.
 
     Supports Particular|Opn|Rec|Issue|Bal and Particular|Packing|Opn|Rec|Issue|
     age-buckets|Bal. Age buckets are ignored; Bal is always the last qty cell.
     Phone OCR without pipes uses trailing qty cells (4 or 7 with age buckets).
+    A glued Amount cell (2852.64) is never Bal. A split 1X pack is never Opn.
     """
     # Wider pipe layouts (Packing + age) must not use the short regex — it
     # absorbs Opn/Rec/Issue into the name and reads age cells as movement.
@@ -25114,6 +25221,15 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
         name = parts[0].strip()
         if not name:
             return None
+        # Packing | OpnQ | OpnAmt | RecQ | RecAmt | IssueQ | IssueAmt | BalQ | BalAmt
+        if len(parts) >= 10:
+            mapped = _saleable_from_metric_cells(name, parts[1], parts[2:10])
+            if mapped:
+                logger.info(
+                    "saleable_stock_row layout=qty_amt_pairs name=%s",
+                    _clean_name(name)[:40],
+                )
+                return mapped
         idx = 1
         pack = ""
         if idx < len(parts) and parts[idx] and not _SALEABLE_QTY_CELL_RE.fullmatch(
@@ -25128,25 +25244,20 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
             token = cell.replace(" ", "")
             if not token:
                 continue
-            if _SALEABLE_QTY_CELL_RE.fullmatch(token) or re.fullmatch(
-                r"[—–\-]+", cell.strip()
+            if (
+                _SALEABLE_QTY_CELL_RE.fullmatch(token)
+                or re.fullmatch(r"[—–\-]+", cell.strip())
+                or cell.strip() in {"\ufffd"}
             ):
                 qty_cells.append(cell.strip())
-        if len(qty_cells) < 4:
-            return None
-        logger.info(
-            "saleable_stock_row layout=pack_age name=%s qty_cells=%d",
-            _clean_name(name)[:40],
-            len(qty_cells),
-        )
-        return {
-            "name": name,
-            "pack": pack,
-            "opn": qty_cells[0],
-            "rec": qty_cells[1],
-            "issue": qty_cells[2],
-            "bal": qty_cells[-1],
-        }
+        mapped = _saleable_from_metric_cells(name, pack, qty_cells)
+        if mapped:
+            logger.info(
+                "saleable_stock_row layout=pack_age name=%s qty_cells=%d",
+                _clean_name(name)[:40],
+                len(qty_cells),
+            )
+        return mapped
 
     match = _SALEABLE_ROW_RE.match(raw)
     if match:
@@ -25159,40 +25270,35 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
             "bal": match.group("bal"),
         }
 
-    # Phone OCR: no pipes — take last 7 (with age) or last 4 qty cells.
-    for count in (7, 4):
+    # No pipes: take every trailing qty/amount cell, then drop Amount / 1X.
+    split = None
+    for count in range(12, 3, -1):
         split = _trailing_metrics(raw, count)
-        if not split:
-            continue
-        left, metrics = split
-        if not left:
-            continue
-        tokens = list(left)
-        pack = ""
-        if (
-            len(tokens) >= 3
-            and re.fullmatch(r"\d+(?:\.\d+)?", tokens[-2])
-            and re.fullmatch(r"[A-Za-z']{1,8}", tokens[-1], re.I)
-        ):
-            pack = f"{tokens[-2]} {tokens[-1]}"
-            tokens = tokens[:-2]
-        elif len(tokens) >= 2:
-            tail = tokens[-1]
-            if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP|PCS|\bS\b", tail, re.I):
-                pack = tail.rstrip(",")
-                tokens = tokens[:-1]
-        name = " ".join(tokens).strip()
-        if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
-            continue
-        return {
-            "name": name,
-            "pack": pack,
-            "opn": metrics[0],
-            "rec": metrics[1],
-            "issue": metrics[2],
-            "bal": metrics[-1],
-        }
-    return None
+        if split:
+            break
+    if not split:
+        return None
+    left, metrics = split
+    if not left:
+        return None
+    tokens = list(left)
+    pack = ""
+    if (
+        len(tokens) >= 3
+        and re.fullmatch(r"\d+(?:\.\d+)?", tokens[-2])
+        and re.fullmatch(r"[A-Za-z']{1,8}", tokens[-1], re.I)
+    ):
+        pack = f"{tokens[-2]} {tokens[-1]}"
+        tokens = tokens[:-2]
+    elif len(tokens) >= 2:
+        tail = tokens[-1]
+        if re.search(r"\d|'|`|ML|GM|TAB|CAP|SYP|PCS|\bS\b", tail, re.I):
+            pack = tail.rstrip(",")
+            tokens = tokens[:-1]
+    name = " ".join(tokens).strip()
+    if len(re.sub(r"[^A-Za-z]", "", name)) < 3:
+        return None
+    return _saleable_from_metric_cells(name, pack, metrics)
 
 
 def _is_saleable_stock_report_text(text: str) -> bool:
@@ -25215,7 +25321,7 @@ def _is_saleable_stock_report_text(text: str) -> bool:
 
 def _saleable_qty(token: str) -> float:
     raw = str(token or "").strip()
-    if not raw or re.fullmatch(r"[—–\-\s]+", raw):
+    if not raw or re.fullmatch(r"[—–\-\s\ufffd]+", raw):
         return 0.0
     return _to_float(raw)
 
@@ -25326,6 +25432,18 @@ def _parse_saleable_stock_report(
         item["receipts_qty"] = _saleable_qty(matched["rec"])
         item["sales_qty"] = _saleable_qty(matched["issue"])
         item["closing_qty"] = _saleable_qty(matched["bal"])
+        if "sales_value" in matched:
+            item["sales_value"] = _saleable_qty(matched.get("sales_value"))
+        if "closing_value" in matched:
+            item["closing_value"] = _saleable_qty(matched.get("closing_value"))
+        if "opening_value" in matched or "receipts_value" in matched:
+            extra_item = item.setdefault("extra", {})
+            extra_item["opening_value"] = _saleable_qty(
+                matched.get("opening_value")
+            )
+            extra_item["receipts_value"] = _saleable_qty(
+                matched.get("receipts_value")
+            )
         items.append(item)
 
     if not items:
@@ -25639,11 +25757,18 @@ def _ssa_ori_qty_value_tail_enabled() -> bool:
 
 
 def _ssa_ori_token_is_qty(token: str) -> bool:
-    """QTY cell: blank dash or a whole count. Printed qty has no decimal point."""
+    """QTY cell: dash, a whole count, or a count printed as n.00.
+
+    Some STOCK & SALES ANALYSIS sheets print Opening/Receipt qty as 5.00 /
+    28.00. Those must not be treated as VALUE, or last-9 grabs SCRAP and
+    shifts every qty/value pair.
+    """
     raw = str(token or "").strip()
     if raw in {"", "-", "—", "–", "--"}:
         return True
-    return bool(re.fullmatch(r"-?\d+", raw))
+    if re.fullmatch(r"-?\d+", raw):
+        return True
+    return bool(re.fullmatch(r"-?\d+\.0+", raw))
 
 
 def _ssa_ori_token_is_value(token: str) -> bool:
@@ -49005,6 +49130,14 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
         return False
     if _looks_like_op_stk_rcpts_grid_text(text):
         return False
+    # Phone photos often OCR the gray header as junk. Product rows still
+    # carry 8 qty/value cells + expiry (01-Oct-26) — keep this layout.
+    row_hits = 0
+    for line in text.splitlines():
+        if _main_stock_parse_ocr_line(line):
+            row_hits += 1
+            if row_hits >= 3:
+                return True
     has_open = bool(re.search(r"OPEN(?:ING)?\s*STOCK|OPEN(?:ING)?\s*VAL|\bOPN\b|\bOP\s*[\{\[]", upper))
     has_recv = bool(re.search(r"RECEIVE|REC\s*[\{\[]|\bRECE\b|\bREC\b", upper))
     has_issue = bool(re.search(r"\bISSUE\b|\bTSSUE\b", upper))
@@ -49329,7 +49462,8 @@ def _main_stock_name_ok(name: str) -> bool:
     # Prefer real product lines; reject short OCR junk without pack cues.
     if not re.search(
         r"(?i)TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LOTION|WASH|GRAN|GUMMI|"
-        r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL",
+        r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL|"
+        r"\d+\s*'?S\b",
         cleaned,
     ):
         return len(letters) >= 12
@@ -49342,12 +49476,17 @@ def _main_stock_ocr_number(token: str) -> Optional[float]:
     if not raw:
         return None
     # Packing / strength tokens stay in the product name, never as qty/value.
+    # 60S / 10S / 30'S are tablet packs — do not convert trailing S into 5.
     if re.search(
         r"(?i)\d+\s*(?:ML|MG|GM|GMS|KG|TAB|TABS|CAP|CAPS|SYP|DROP|DROPS|"
-        r"LTR|LIT|\%|'S|\*|/)",
+        r"LTR|LIT|\%|'?S\b|\*|/)",
         raw,
     ):
         return None
+    # Cell-border crumbs (13.  52,  22|  4)) are still the printed number.
+    stripped = re.sub(r"[\.,|:;\|\)\]\}]+$", "", raw)
+    if stripped:
+        raw = stripped
     # Digit glued to a paren is OCR noise for an empty/zero cell — not a qty.
     if re.fullmatch(r"\d{1,2}[\(\)\[\]\{\}]+", raw):
         return None
@@ -50425,6 +50564,8 @@ def _extract_opening_receive_issue_closing_photo(
     except ImportError:
         preview = file_bytes
         full_text = ""
+        image = None
+        crop = None
     else:
         image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
         width, height = image.size
@@ -50434,18 +50575,23 @@ def _extract_opening_receive_issue_closing_photo(
         crop.save(buf, format="JPEG", quality=85)
         preview = buf.getvalue()
         full_text = ""
+    # Do not use _ocr_image_to_text here: region=page reuses the first
+    # (often sideways, pre-EXIF) page OCR and misses OPENING/RECEIVE rows.
     try:
-        text = _ocr_image_to_text(preview, psm=6)
+        from services.stock_ocr_policy import stock_ocr_context
+
+        tess = _a2z_tesseract()
+        if crop is not None:
+            with stock_ocr_context(region="opening_receive_header", page="1"):
+                text = tess.image_to_string(crop, config="--psm 6") or ""
+        else:
+            text = _ocr_image_to_text(preview, psm=6)
     except Exception as exc:
         logger.info("Opening/receive/issue photo header OCR skipped: %s", exc)
         text = ""
     spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(text)
     if not spreadsheet_shot:
-        # UI chrome often sits above the 38% crop cutoff — one cheap full pass.
-        try:
-            full_text = _ocr_image_to_text(file_bytes, psm=6, enhance=False)
-        except Exception:
-            full_text = text
+        full_text = text
         spreadsheet_shot = _is_excel_sheets_stock_sales_screenshot(full_text)
         if spreadsheet_shot and full_text:
             text = full_text
@@ -50467,7 +50613,10 @@ def _extract_opening_receive_issue_closing_photo(
             return op_stk
         return None
 
-    if not _is_opening_receive_issue_closing_stock_text(text):
+    if not (
+        _is_opening_receive_issue_closing_stock_text(text)
+        or _is_opening_receive_issue_closing_stock_text(probe)
+    ):
         # Gray/blue header strips alone are not enough; require statement title.
         # Sheets ANALYSIS screenshots use the same OPENING/RECEIVE/ISSUE/CLOSING
         # qty+value columns as STATEMENT; Medica OPSTK must not own them.
@@ -54342,6 +54491,46 @@ def _maybe_early_vision_for_image(
         else "KEEP_OCR_PATH",
         ",".join(quality.get("reasons") or []) or "none",
     )
+
+    # Marg OPENING/RECEIVE/ISSUE photos: run before the poor-OCR Gemini gate.
+    # Sideways EXIF samples look like junk and would otherwise skip this reader.
+    try:
+        opening = _extract_opening_receive_issue_closing_photo(
+            file_bytes, filename, ext
+        )
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s opening/receive photo before quality gate failed: %s",
+            filename,
+            exc,
+        )
+        opening = None
+    if opening and opening.get("line_items"):
+        if _main_stock_result_is_all_zero_shell(opening):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=all_zero_shell",
+                filename,
+            )
+            opening = None
+        elif _main_stock_result_is_op_stk_misfiled(opening, sample or ""):
+            logger.info(
+                "[SalesStatement] file=%s main_stock early skip reason=op_stk_misfiled",
+                filename,
+            )
+            opening = None
+        else:
+            extra = opening.setdefault("totals", {}).setdefault("extra", {})
+            extra.setdefault(
+                "early_vision_reason",
+                ",".join(quality.get("reasons") or []) or "opening_receive_issue_closing",
+            )
+            logger.info(
+                "[SalesStatement] file=%s decision=OPENING_RECEIVE_ISSUE_OCR rows=%s",
+                filename,
+                len(opening.get("line_items") or []),
+            )
+            return opening, True
+
     if not quality.get("should_fallback"):
         return None, False
 
