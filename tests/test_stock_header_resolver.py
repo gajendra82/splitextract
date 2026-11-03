@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from services.stock_header_resolver import (
     assign_cells,
+    decode_pdf_pseudo_digits,
     normalize_header,
     parse_number,
     resolve_columns,
@@ -55,6 +56,245 @@ class HeaderSamplesTests(unittest.TestCase):
 
 
 class ResolveColumnsUnitTests(unittest.TestCase):
+    def test_p_return_is_purchase_return_not_sales_return(self):
+        result = resolve_columns(
+            _cells(
+                "ITEM",
+                "PACK",
+                "OPENING",
+                "PURCHASE",
+                "P.RETURN",
+                "SALE",
+                "S.RETURN",
+                "OTHERS",
+                "CLOSING",
+                "REORDER - QTY",
+                "ITEMCODE",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "pack",
+                "opening_qty",
+                "purchase_qty",
+                "purchase_return_qty",
+                "sales_qty",
+                "sales_return_qty",
+                "other_outward_qty",
+                "closing_qty",
+                "order_qty",
+                "ignore",
+            ],
+        )
+        self.assertEqual(result["columns"][4]["canonical"], "purchase_return_qty")
+        self.assertEqual(result["columns"][10]["reason"], "item_code")
+
+    def test_blm_lm_op_stock_adj_sal_val(self):
+        result = resolve_columns(
+            _cells(
+                "Product Name",
+                "Pack",
+                "BLM Qty",
+                "LM Qty",
+                "Op. Stock",
+                "Pur. Qty",
+                "Pur. Free",
+                "Sales Qty",
+                "Sales Free",
+                "SR Qty",
+                "SR Free",
+                "Adj Qty",
+                "Cl.Stock",
+                "Stock Value",
+                "Sal. Val",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "pack",
+                "ignore",
+                "ignore",
+                "opening_qty",
+                "purchase_qty",
+                "free_in_qty",
+                "sales_qty",
+                "free_out_qty",
+                "sales_return_qty",
+                "ignore",
+                "other_outward_qty",
+                "closing_qty",
+                "closing_value",
+                "sales_value",
+            ],
+        )
+        self.assertEqual(result["columns"][2]["reason"], "blm_lm")
+        self.assertEqual(result["columns"][3]["reason"], "blm_lm")
+
+    def test_pack_free_preturn_sreturn_keeps_sale_free(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT",
+                "PACK",
+                "OPENING",
+                "PURCHASE",
+                "FREE",
+                "P.RETURN",
+                "FREE",
+                "SALE",
+                "FREE",
+                "S.RETURN",
+                "FREE",
+                "OTHERS",
+                "CLOSING",
+            )
+        )
+        canons = _canons(result)
+        self.assertEqual(canons[0], "product_name")
+        self.assertEqual(canons[1], "pack")
+        self.assertEqual(canons[2], "opening_qty")
+        self.assertEqual(canons[3], "purchase_qty")
+        self.assertEqual(canons[4], "free_in_qty")
+        self.assertEqual(canons[5], "purchase_return_qty")
+        self.assertEqual(canons[6], "ignore")  # return-free after P.RETURN
+        self.assertEqual(canons[7], "sales_qty")
+        self.assertEqual(canons[8], "free_out_qty")
+        self.assertEqual(canons[9], "sales_return_qty")
+        self.assertEqual(canons[12], "closing_qty")
+
+    def test_pr_and_replace_others_and_expiry_stock(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT DESCRIPTION",
+                "UNIT",
+                "OPENING STOCK",
+                "PURCHASE QUANTITY",
+                "SALE RETURN QUANTITY",
+                "REPLACE+ OTHERS",
+                "TOTAL RECEIVE",
+                "SALE QUANTITY",
+                "P/R QUANTITY",
+                "REPLACE+ OTHERS",
+                "CLOSING STOCK",
+                "RATE",
+                "LAST MONTH SALE",
+                "EXPIRY STOCK",
+            )
+        )
+        canons = _canons(result)
+        self.assertEqual(canons[0], "product_name")
+        self.assertEqual(canons[1], "pack")
+        self.assertEqual(canons[2], "opening_qty")
+        self.assertEqual(canons[3], "purchase_qty")
+        self.assertEqual(canons[4], "sales_return_qty")
+        self.assertEqual(canons[6], "total_qty")
+        self.assertEqual(canons[7], "sales_qty")
+        self.assertEqual(canons[8], "purchase_return_qty")
+        self.assertEqual(canons[10], "closing_qty")
+        self.assertEqual(canons[11], "rate")
+        self.assertEqual(canons[12], "lms")
+        self.assertEqual(canons[13], "ignore")
+        self.assertEqual(result["columns"][13]["reason"], "date_or_near_expiry")
+        others = [c for c in canons if c == "other_outward_qty"]
+        self.assertEqual(len(others), 1)
+
+    def test_gap_token_prefers_product_and_closing_not_rate(self):
+        from services.stock_header_resolver import _disambiguate_gap_token
+
+        product = {"canonical": "product_name", "col_index": 0, "x_center": 0.2}
+        pack = {"canonical": "pack", "col_index": 1, "x_center": 0.45}
+        self.assertEqual(
+            _disambiguate_gap_token("60", product, pack)["canonical"],
+            "product_name",
+        )
+        closing = {"canonical": "closing_qty", "col_index": 10, "x_center": 1.48}
+        rate = {"canonical": "rate", "col_index": 11, "x_center": 1.56}
+        self.assertEqual(
+            _disambiguate_gap_token("7", closing, rate)["canonical"],
+            "closing_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("141.17", closing, rate)["canonical"],
+            "rate",
+        )
+        sret = {"canonical": "sales_return_qty", "col_index": 4, "x_center": 0.715}
+        others = {"canonical": "other_outward_qty", "col_index": 5, "x_center": 0.818}
+        self.assertEqual(
+            _disambiguate_gap_token("1", sret, others, 0.766)["canonical"],
+            "sales_return_qty",
+        )
+        cl_qty = {"canonical": "closing_qty", "col_index": 9, "x_center": 0.653}
+        cl_val = {"canonical": "closing_value", "col_index": 10, "x_center": 0.720}
+        self.assertEqual(
+            _disambiguate_gap_token("57", cl_qty, cl_val, 0.682)["canonical"],
+            "closing_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("8470.20", cl_qty, cl_val, 0.700)["canonical"],
+            "closing_value",
+        )
+        sales_val = {"canonical": "sales_value", "col_index": 8, "x_center": 0.567}
+        self.assertEqual(
+            _disambiguate_gap_token("23962.50", sales_val, cl_qty, 0.609)["canonical"],
+            "sales_value",
+        )
+        sales = {"canonical": "sales_qty", "col_index": 7, "x_center": 0.510}
+        ignore_lm = {"canonical": "ignore", "col_index": 6, "x_center": 0.445}
+        self.assertEqual(
+            _disambiguate_gap_token("101", ignore_lm, sales, 0.474)["canonical"],
+            "ignore",
+        )
+        opening = {"canonical": "opening_qty", "col_index": 3, "x_center": 0.271}
+        purchase = {"canonical": "purchase_qty", "col_index": 4, "x_center": 0.327}
+        self.assertEqual(
+            _disambiguate_gap_token("1", opening, purchase, 0.300)["canonical"],
+            "opening_qty",
+        )
+        self.assertEqual(
+            _disambiguate_gap_token("6", ignore_lm, sales, 0.479)["canonical"],
+            "ignore",
+        )
+
+    def test_parse_number_pdf_pseudo_digits(self):
+        # τυ-Sep-φϊ visual 01-Sep-26; φτ visual 20; ωϋ.φϋ visual 57.27
+        self.assertEqual(decode_pdf_pseudo_digits("φτ"), "20")
+        self.assertEqual(decode_pdf_pseudo_digits("ωϋ.φϋ"), "57.27")
+        self.assertEqual(parse_number("φτ"), 20.0)
+        self.assertEqual(parse_number("ωϋ.φϋ"), 57.27)
+        self.assertEqual(parse_number("20"), 20.0)
+
+    def test_wrapped_receive_quant_issue_quant_closing_stoc(self):
+        result = resolve_columns(
+            _cells(
+                "PRODUCT DESCRIPTION",
+                "OPENING STOCK",
+                "OPENING VALUE",
+                "RECEIVE QUANT",
+                "RECEIVE VALUE",
+                "ISSUE QUANTITY",
+                "ISSUE VALUE",
+                "CLOSING STOC",
+                "CLOSING VALUE",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "opening_qty",
+                "opening_value",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ],
+        )
+
     def test_op_qty_value_strip(self):
         cells = _cells(
             "Op Qty",
@@ -80,6 +320,65 @@ class ResolveColumnsUnitTests(unittest.TestCase):
                 "closing_value",
             ],
         )
+
+    def test_cl_qnt_not_branch_split(self):
+        """Cl.Qnt. is closing qty; Cl Panaji stays a non-stock branch split."""
+        result = resolve_columns(
+            _cells(
+                "Particular",
+                "Op.Qnt.",
+                "Op.Value",
+                "Expiry",
+                "Pur.Qnt.",
+                "Pur.Value",
+                "Sl.Qnt.",
+                "Sl.Value",
+                "Cl.Qnt.",
+                "Cl.Value",
+            )
+        )
+        self.assertEqual(
+            _canons(result),
+            [
+                "product_name",
+                "opening_qty",
+                "opening_value",
+                "ignore",
+                "purchase_qty",
+                "purchase_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            ],
+        )
+        self.assertEqual(result["columns"][3]["reason"], "date_or_near_expiry")
+        branch = resolve_columns(_cells("Product", "Opening", "Cl Panaji", "Cl Mapusa"))
+        self.assertEqual(branch["columns"][2]["canonical"], "ignore")
+        self.assertEqual(branch["columns"][2]["reason"], "branch_split_header")
+
+    def test_glued_op_value_expiry_prefers_opening_value(self):
+        """Clustered 'Op.Value Expiry' is opening value, not expiry_damage qty."""
+        result = resolve_columns(
+            _cells(
+                "Particular",
+                "Op.Qnt.",
+                "Op.Value Expiry",
+                "Pur.Qnt.",
+                "Pur.Value",
+                "Sl.Qnt.",
+                "Sl.Value",
+                "Cl.Qnt.",
+                "Cl.Value",
+            )
+        )
+        self.assertEqual(result["columns"][2]["canonical"], "opening_value")
+        self.assertNotEqual(result["columns"][2]["canonical"], "expiry_damage_qty")
+
+    def test_parse_number_strips_pipe_gutter(self):
+        self.assertEqual(parse_number("33.00|"), 33.0)
+        self.assertEqual(parse_number("1884.14|05/2029|"), 1884.14)
+        self.assertIsNone(parse_number("05/2029"))
 
     def test_two_row_header(self):
         cells = [
@@ -503,6 +802,40 @@ class AssignCellsTests(unittest.TestCase):
         out = assign_cells(tokens, columns)
         self.assertTrue(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
         self.assertIsNone(out["fields"]["opening_qty"])
+
+    def test_pack_token_in_opening_band_does_not_null_qty(self):
+        columns = self._qty_columns([15, 119, 157, 295, 374])
+        tokens = [
+            {"x": 15, "text": "BONNISAN"},
+            {"x": 48, "text": "DROPS"},
+            {"x": 86, "text": "30ML"},
+            {"x": 125, "text": "13"},
+            {"x": 183, "text": "0"},
+            {"x": 307, "text": "0"},
+            {"x": 396, "text": "13"},
+        ]
+        out = assign_cells(tokens, columns)
+        self.assertEqual(out["fields"]["opening_qty"], "13")
+        self.assertEqual(out["fields"]["pack"], "30ML")
+        self.assertFalse(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
+
+    def test_truncated_pack_fragment_does_not_null_opening_qty(self):
+        columns = self._qty_columns([0.267, 0.383, 0.500, 0.618, 0.734])
+        tokens = [
+            {"x": 0.221, "text": "OPTHACARE"},
+            {"x": 0.278, "text": "EYE"},
+            {"x": 0.314, "text": "DROP"},
+            {"x": 0.349, "text": "10M"},
+            {"x": 0.395, "text": "444"},
+            {"x": 0.514, "text": "0"},
+            {"x": 0.632, "text": "156"},
+            {"x": 0.746, "text": "288"},
+        ]
+        out = assign_cells(tokens, columns)
+        self.assertEqual(out["fields"]["opening_qty"], "444")
+        self.assertEqual(out["fields"]["sales_qty"], "156")
+        self.assertEqual(out["fields"]["closing_qty"], "288")
+        self.assertFalse(any(e["code"] == "CELL_COLLISION" for e in out["errors"]))
 
 
 class ParseNumberTests(unittest.TestCase):

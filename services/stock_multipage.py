@@ -1340,6 +1340,16 @@ def extract_multipage_image_stock_statement(
         )
         try:
             page_result = parse_image_fn(file_bytes, safe_name, ext)
+            try:
+                from services.sales_statement_extractor import (
+                    _fill_printed_report_period_from_ocr,
+                )
+
+                page_result = _fill_printed_report_period_from_ocr(
+                    page_result, image_bytes=file_bytes
+                )
+            except Exception:
+                pass
         except Exception as exc:
             logger.info(
                 "MULTI_PAGE_EXTRACTION_FAILED request_id=%s page_number=%s "

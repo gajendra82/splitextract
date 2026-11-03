@@ -30,6 +30,13 @@ BUSY = (
     "Item Description Opening Purchases Return Others Total Sales Closing Rate\n"
 )
 
+SALE_PURCHASES = (
+    "STOCK & SALES ANALYSIS  (HIMALAYA ZEAL) 01/09/2026 - 23/09/2026\n"
+    "ITEM DESCRIPTION                              OPENING               SALE  REPL./    TOTAL          PURCHASE   REPL./  CLOSING   RE-\n"
+    "                                               STOCK   PURCHASES  RETURN  OTHERS    STOCK    SALES   RETURN   OTHERS   STOCK   ORDER   AUG N/EXP\n"
+    "Value in Rs.                                  381687        0     1047        0   382734   138206        0        0   259092\n"
+)
+
 SALEABLE = (
     "Saleable Stock Report\n"
     "Particular | | Opn | Rec | Issue | Bal\n"
@@ -40,6 +47,7 @@ class TestSsaOriDetection(unittest.TestCase):
     def test_detects_receipt_issue_dump_not_other_layouts(self):
         self.assertTrue(_is_ssa_opening_receipt_issue_value_text(HEADER))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(BUSY))
+        self.assertFalse(_is_ssa_opening_receipt_issue_value_text(SALE_PURCHASES))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(SALEABLE))
         self.assertFalse(_is_ssa_opening_receipt_issue_value_text(""))
         self.assertFalse(_is_saleable_stock_report_text(HEADER))
@@ -90,6 +98,53 @@ class TestSsaOriDetection(unittest.TestCase):
         self.assertEqual(parsed["stockist_name"], "R P AND SON'S.")
         self.assertEqual(parsed["period_from"], "2026-08-01")
         self.assertEqual(parsed["period_to"], "2026-08-31")
+
+    def test_decimal_qty_and_scrap_column_do_not_shift_pairs(self):
+        from services.sales_statement_extractor import (
+            _parse_ssa_opening_receipt_issue_value,
+        )
+
+        text = (
+            "SHEETHAL PHARMA\n"
+            "STOCK & SALES ANALYSIS  (HIMALAYA-ZINDEL) 01-09-2026 - 30-09-2026\n"
+            "ITEM DESCRIPTION  OPENING  RECEIPT  ISSUE  CLOSING  DUMP\n"
+            "QTY. VALUE QTY. VALUE QTY. VALUE QTY. VALUE QTY. SCRAP\n"
+            "ASHWAGANDA TAB 60'S(HIM) 60'S 0 0.00 5.00 990.50 0 0.00 5.00 990.50 0 0\n"
+            "GASEX ELACHI 200ML 200ML 28.00 2836.40 0 0.00 3.00 342.84 25.00 2532.50 25.00 0\n"
+            "TOTAL 242 26722.19 400 26357.75 136 13047.77 506 40921.16\n"
+        )
+        parsed = _parse_ssa_opening_receipt_issue_value(text, "zindel.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in parsed["line_items"]
+        }
+        ash = next(
+            item
+            for key, item in by_name.items()
+            if key.startswith("ASHWAGANDA")
+        )
+        self.assertEqual(ash["opening_qty"], 0.0)
+        self.assertEqual(ash["extra"]["opening_value"], 0.0)
+        self.assertEqual(ash["receipts_qty"], 5.0)
+        self.assertEqual(ash["extra"]["receipts_value"], 990.5)
+        self.assertEqual(ash["sales_qty"], 0.0)
+        self.assertEqual(ash["closing_qty"], 5.0)
+        self.assertEqual(ash["closing_value"], 990.5)
+        gasex = next(
+            item
+            for key, item in by_name.items()
+            if key.startswith("GASEX ELACHI")
+        )
+        self.assertEqual(gasex["opening_qty"], 28.0)
+        self.assertEqual(gasex["extra"]["opening_value"], 2836.4)
+        self.assertEqual(gasex["receipts_qty"], 0.0)
+        self.assertEqual(gasex["sales_qty"], 3.0)
+        self.assertEqual(gasex["sales_value"], 342.84)
+        self.assertEqual(gasex["closing_qty"], 25.0)
+        self.assertEqual(gasex["closing_value"], 2532.5)
+        self.assertEqual(parsed["totals"]["sales_value"], 13047.77)
+        self.assertEqual(parsed["totals"]["closing_value"], 40921.16)
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Prakash SSA fixture")

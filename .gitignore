@@ -36,3 +36,8 @@ output_sales_statements/
 
 # Batch QA outputs (history is regenerated locally)
 qa_results/
+
+debug_uploads/
+_doc_wa0011_inspect/
+_ganpati_inspect/
+

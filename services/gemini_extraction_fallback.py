@@ -831,6 +831,15 @@ def maybe_apply_gemini_fallback(
         return result
 
     if _allowlist_skip(
+        "branch_opening_receipt_closing_balance",
+        str(extra.get("extraction_method") or "")
+        == "branch_opening_receipt_closing_balance"
+        or str(extra.get("layout") or "")
+        == "branch_opening_receipt_closing_balance",
+    ):
+        return result
+
+    if _allowlist_skip(
         "code_item_stock_statement",
         str(extra.get("extraction_method") or "")
         in {
@@ -907,6 +916,15 @@ def maybe_apply_gemini_fallback(
             "marg_closing_mexp_photo",
         }
         or str(extra.get("layout") or "") == "marg_closing_mexp",
+    ):
+        return result
+
+    # Marg SALE PURCHASES / PURCHASE SALES qty grid. SSA qty-value last-N
+    # mapping glues printed qty onto the product name and zeros columns.
+    if _allowlist_skip(
+        "marg_sale_purchase_analysis",
+        str(extra.get("extraction_method") or "") == "marg_sale_purchase_analysis"
+        or str(extra.get("layout") or "") == "marg_sale_purchase_analysis",
     ):
         return result
 

@@ -696,20 +696,31 @@ async def _run_sales_background_job(
             extraction_duration_seconds=extraction_duration_seconds,
         )
         if extra.get("extraction_failed"):
+            from services.stock_photo_quality import photo_quality_client_detail
+
+            photo_detail = photo_quality_client_detail(extra, filename)
             reasons = []
             if isinstance(quality, dict):
                 reasons = list(quality.get("reasons") or [])
+            fail_message = (
+                (photo_detail or {}).get("message")
+                if photo_detail
+                else extra.get("extraction_failed_message")
+            ) or (
+                "Could not reliably extract stock statement products. "
+                "OCR/parser and Gemini Vision fallback both failed validation."
+            )
+            fail_reasons = (
+                (photo_detail or {}).get("reasons") if photo_detail else reasons
+            )
             final_status = "extraction_failed"
             update_sales_progress(
                 request_id,
                 "failed",
                 error={
                     "error": "extraction_failed",
-                    "message": (
-                        "Could not reliably extract stock statement products. "
-                        "OCR/parser and Gemini Vision fallback both failed validation."
-                    ),
-                    "reasons": reasons,
+                    "message": fail_message,
+                    "reasons": fail_reasons,
                     "gemini_fallback": extra.get("gemini_fallback"),
                     "source_file": filename,
                 },

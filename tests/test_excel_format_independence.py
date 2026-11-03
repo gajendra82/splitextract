@@ -76,6 +76,19 @@ class TestExcelAliases(unittest.TestCase):
         self.assertNotEqual(_xls_norm_header("Closing Amount"), "bal")
         self.assertNotEqual(_xls_norm_header("Opening Balance"), "opval")
 
+    def test_sale_amo_and_cl_amount_are_value_not_qty(self):
+        """Truncated SALE AMO. / CL.AMOUNT money headers next to SALE / CLOSING qty."""
+        self.assertEqual(_xls_norm_header("SALE AMO."), "sval")
+        self.assertEqual(_xls_norm_header("Sale Amo."), "sval")
+        self.assertEqual(_xls_norm_header("SALE AMT"), "sval")
+        self.assertEqual(_xls_norm_header("CL.AMOUNT"), "bval")
+        self.assertEqual(_xls_norm_header("Cl.Amount"), "bval")
+        self.assertEqual(_xls_norm_header("Cls Amt"), "bval")
+        self.assertEqual(_xls_norm_header("SALE"), "sale")
+        self.assertEqual(_xls_norm_header("CLOSING"), "bal")
+        self.assertNotEqual(_xls_norm_header("SALE AMO."), "sale")
+        self.assertNotEqual(_xls_norm_header("CL.AMOUNT"), "bal")
+
     def test_numeric_normalization(self):
         self.assertEqual(_to_float("1,250"), 1250.0)
         self.assertEqual(_to_float("₹ 1,250.50"), 1250.50)
@@ -96,6 +109,79 @@ class TestExcelLayouts(unittest.TestCase):
         result = extract_sales_statement(data, "row1.xlsx")
         self.assertEqual(result["totals"]["extra"]["header_row"], 0)
         self.assertEqual(result["line_items"][0]["sales_qty"], 2.0)
+
+    def test_sale_amo_cl_amount_fetches_printed_qty_and_value(self):
+        """Qty-only OPENING/PURCHASE plus SALE AMO. / CL.AMOUNT money columns.
+
+        Printed sales/closing values must be read; absent opening/purchase
+        values stay at the schema default (no invented money).
+        """
+        data = _one(
+            [
+                ["GARG MEDICAL AGENCIES"],
+                ["COMPANY : HIMALAYA ZEAL DIVISION"],
+                ["FROM 01/09/2026 TO 30/09/2026"],
+                [],
+                [
+                    "ITEM NAME",
+                    "OPENING",
+                    "PURCHASE",
+                    "  SALE",
+                    "SALE AMO.",
+                    "CLOSING",
+                    "CL.AMOUNT",
+                    "NEAR EXP.",
+                    "NE VALUE",
+                    "SALE %",
+                ],
+                [
+                    "ABANA             60TAB  ",
+                    102,
+                    0,
+                    15,
+                    2229,
+                    87,
+                    14582.94,
+                    0,
+                    0,
+                    14.71,
+                ],
+                [
+                    "HERBOLAX TAB      100    ",
+                    11,
+                    50,
+                    18,
+                    2674.8,
+                    43,
+                    7207.66,
+                    0,
+                    0,
+                    29.51,
+                ],
+            ]
+        )
+        result = extract_sales_statement(data, "sale_amo_cl_amount.xlsx")
+        mapping = result["totals"]["extra"]["column_mapping"]
+        self.assertEqual(mapping["sales_qty"]["header"].strip(), "SALE")
+        self.assertEqual(mapping["sales_value"]["header"], "SALE AMO.")
+        self.assertEqual(mapping["closing_qty"]["header"], "CLOSING")
+        self.assertEqual(mapping["closing_value"]["header"], "CL.AMOUNT")
+        self.assertEqual(mapping["opening_value"]["confidence"], 0.0)
+        self.assertEqual(mapping["receipts_value"]["confidence"], 0.0)
+        by_name = {i["product_name"]: i for i in result["line_items"]}
+        abana = by_name["ABANA 60TAB"]
+        self.assertEqual(abana["opening_qty"], 102.0)
+        self.assertEqual(abana["receipts_qty"], 0.0)
+        self.assertEqual(abana["sales_qty"], 15.0)
+        self.assertEqual(abana["sales_value"], 2229.0)
+        self.assertEqual(abana["closing_qty"], 87.0)
+        self.assertAlmostEqual(abana["closing_value"], 14582.94)
+        herb = by_name["HERBOLAX TAB 100"]
+        self.assertEqual(herb["receipts_qty"], 50.0)
+        self.assertEqual(herb["sales_qty"], 18.0)
+        self.assertAlmostEqual(herb["sales_value"], 2674.8)
+        self.assertEqual(herb["closing_qty"], 43.0)
+        self.assertAlmostEqual(herb["closing_value"], 7207.66)
 
     def test_header_on_row_5_and_row_10(self):
         for blank_count, filename in ((4, "row5.xlsx"), (9, "row10.xlsx")):

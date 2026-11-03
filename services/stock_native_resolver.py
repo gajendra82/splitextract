@@ -28,7 +28,8 @@ _CANON_TO_ITEM = {
     "sales_return_qty": ("sale_return", True),
     "purchase_return_qty": ("purchase_return", True),
     "expiry_damage_qty": ("exp_damage", True),
-    "lms": ("lms_qty", True),
+    "other_outward_qty": ("others_qty", True),
+    "lms": ("lms", True),
     "free_in_qty": ("free_in_qty", True),
     "free_out_qty": ("free_out_qty", True),
     "total_qty": ("total_stock", True),
@@ -58,13 +59,104 @@ def _is_total_row_name(name: Any) -> bool:
     key = _norm_name(name).lower()
     if not key:
         return True
+    if "totalvalue" in key or key.startswith("grandtotal"):
+        return True
     return key in {
         "total",
+        "totals",
         "grandtotal",
+        "grandtotals",
         "subtotal",
+        "subtotals",
         "pagetotal",
+        "pagetotals",
         "gtotal",
+        "gtotals",
     } or (key.startswith("total") and len(key) <= 12)
+
+
+_SHEET_TOTAL_NAME = re.compile(
+    r"(?:^|\b)(?:grand\s+|sub\s+|division\s+|company\s+|page\s+)?"
+    r"total\s+value\b"
+    r"|^\s*(?:amount|qty|quantity)\s+(?:grand\s+)?total\b"
+    r"|^\s*(?:division|company)\s+total\b"
+    r"|^\s*grand\s+total\b",
+    re.I,
+)
+
+
+def _is_sheet_total_name(name: Any) -> bool:
+    """Division / company / value totals — not a product 'Total :' lot row."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    if _SHEET_TOTAL_NAME.search(text):
+        return True
+    key = _norm_name(text).lower()
+    return "totalvalue" in key
+
+
+def _footer_totals_from_page_results(
+    page_results: List[Dict[str, Any]],
+) -> Dict[str, float]:
+    """Copy printed TOTAL QUANTITY / TOTAL VALUE cells onto statement totals.
+
+    Column assignment uses the same header bands as product rows. TOTAL VALUE
+    numbers land in qty canons because the header is qty; remap those to values.
+    """
+    from services.stock_header_resolver import assign_cells
+    from services.stock_native_tables import (
+        _footer_totals_enabled,
+        _sheet_total_row_kind,
+        resolver_ready,
+    )
+
+    if not _footer_totals_enabled():
+        return {}
+    out: Dict[str, float] = {}
+    for page in page_results or []:
+        ready = resolver_ready(page.get("header_cells") or [])
+        columns = ready.get("columns") or []
+        if not columns:
+            continue
+        for row in page.get("data_rows") or []:
+            kind = _sheet_total_row_kind(row)
+            if not kind:
+                continue
+            assigned = assign_cells(row, columns)
+            item = fields_to_line_item(assigned.get("fields") or {})
+            if kind == "value":
+                mapping = (
+                    ("opening_qty", "opening_value"),
+                    ("receipts_qty", "receipts_value"),
+                    ("sales_qty", "sales_value"),
+                    ("closing_qty", "closing_value"),
+                )
+            else:
+                mapping = (
+                    ("opening_qty", "opening_qty"),
+                    ("receipts_qty", "receipts_qty"),
+                    ("sales_qty", "sales_qty"),
+                    ("closing_qty", "closing_qty"),
+                )
+            for src, dest in mapping:
+                val = item.get(src)
+                if val in (None, ""):
+                    continue
+                try:
+                    out[dest] = float(val)
+                except (TypeError, ValueError):
+                    continue
+            logger.info(
+                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s opening=%s receipts=%s "
+                "sales=%s closing=%s",
+                kind,
+                out.get("opening_qty", out.get("opening_value")),
+                out.get("receipts_qty", out.get("receipts_value")),
+                out.get("sales_qty", out.get("sales_value")),
+                out.get("closing_qty", out.get("closing_value")),
+            )
+    return out
 
 
 def _row_match_key(item: Dict[str, Any]) -> Tuple[str, str, str]:
@@ -235,8 +327,18 @@ def build_line_items_from_tokens(
     from services.stock_header_resolver import assign_cells
     from services.stock_row_classifier import RowStatus, record_candidate
 
+    from services.stock_native_tables import is_software_price_ad_name
+
     items: List[Dict[str, Any]] = []
     for tokens in token_rows:
+        blob = " ".join(
+            str(t.get("text") or "").strip()
+            for t in tokens
+            if isinstance(t, dict) and t.get("text") not in (None, "")
+        )
+        if is_software_price_ad_name(blob):
+            logger.info("STOCK_SOFTWARE_AD_SKIP blob=%s", blob[:80])
+            continue
         structural = any(
             isinstance(t, dict) and t.get("_structural") for t in tokens
         )
@@ -264,11 +366,85 @@ def build_line_items_from_tokens(
             )
             items.append(item)
             continue
-        assigned = assign_cells(tokens, columns)
+        token_blob = " ".join(
+            str(t.get("text") or "") for t in tokens if isinstance(t, dict)
+        )
+        if _is_sheet_total_name(token_blob):
+            logger.info(
+                "STOCK_PDF_WORDS_TOTAL_SKIP sheet_total blob=%s",
+                token_blob[:60],
+            )
+            continue
+        is_product_total = bool(re.search(r"\bTotal\s*:", token_blob, re.I))
+        assign_tokens = tokens
+        if is_product_total:
+            # Drop the "Total :" label so amounts keep Op/Pur/Sl/Cl geometry.
+            assign_tokens = [
+                t
+                for t in tokens
+                if isinstance(t, dict)
+                and not re.search(r"\btotal\b", str(t.get("text") or ""), re.I)
+            ]
+        assigned = assign_cells(assign_tokens, columns)
         fields = assigned.get("fields") or {}
         formula_toks = [t for t in tokens if isinstance(t, dict) and t.get("formula")]
         item = fields_to_line_item(fields, formula_tokens=formula_toks)
         name = item.get("product_name")
+        if _is_sheet_total_name(name):
+            logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", str(name)[:60])
+            continue
+        # Pipe-ruled sheets print a product Total row after multi-lot lines.
+        # Prefer those printed totals over the first lot line alone.
+        total_label = str(name or "")
+        if items and is_product_total:
+            prev = items[-1]
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "sales_value",
+                "closing_value",
+                "opening_value",
+            ):
+                val = item.get(key)
+                if val not in (None, ""):
+                    prev[key] = val
+            prev_extra = prev.setdefault("extra", {})
+            item_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            for key in ("opening_value", "receipts_value", "sales_value", "closing_value"):
+                val = item_extra.get(key)
+                if val in (None, ""):
+                    val = item.get(key)
+                if val not in (None, ""):
+                    prev_extra[key] = val
+            if item.get("closing_value") not in (None, ""):
+                prev["closing_value"] = item.get("closing_value")
+            # Printed totals replace lot-line gaps — drop stale missing flags.
+            prev_extra.pop("row_status", None)
+            fs = prev_extra.get("field_source")
+            if isinstance(fs, dict):
+                for key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                ):
+                    if prev.get(key) not in (None, "") or prev_extra.get(key) not in (
+                        None,
+                        "",
+                    ):
+                        fs.pop(key, None)
+            logger.info(
+                "STOCK_PDF_WORDS_PRODUCT_TOTAL applied name=%s label=%s",
+                str(prev.get("product_name") or "")[:40],
+                (total_label or token_blob)[:40],
+            )
+            continue
         if not name or not re.search(r"[A-Za-z]", str(name)):
             continue
         if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I):
@@ -686,7 +862,7 @@ def items_from_free_column_rows(
 
     Returns None when that column set is not printed. Does not invent qtys.
     """
-    from services.stock_native_tables import resolver_ready
+    from services.stock_native_tables import is_software_price_ad_name, resolver_ready
 
     ready = resolver_ready(header_cells)
     columns = list(ready.get("columns") or [])
@@ -701,6 +877,9 @@ def items_from_free_column_rows(
             continue
         label = _row_label(tokens)
         numbers = _row_numbers(tokens)
+        if is_software_price_ad_name(label):
+            logger.info("STOCK_SOFTWARE_AD_SKIP name=%s", label[:80])
+            continue
         if label and _TOTAL_LABEL.search(label):
             if _AMOUNT_GRAND.search(label) and numbers:
                 from services.stock_header_resolver import parse_number
@@ -723,6 +902,9 @@ def items_from_free_column_rows(
             continue
         item = built[0]
         name = str(item.get("product_name") or "").strip()
+        if is_software_price_ad_name(name):
+            logger.info("STOCK_SOFTWARE_AD_SKIP name=%s", name[:80])
+            continue
         if not name or _TOTAL_LABEL.search(name) or _is_total_row_name(name):
             logger.info("STOCK_PDF_WORDS_TOTAL_SKIP name=%s", name or label)
             continue
@@ -775,15 +957,60 @@ def _join_wrapped_name(parts: List[str]) -> str:
     return re.sub(r"\s+", " ", out).strip()
 
 
+def _qty_value_grid_skips_receipt_issue() -> bool:
+    """STOCK_PDF_QTY_VALUE_SKIP_RECEIPT_ISSUE — default ON.
+
+    OPENING STOCK/VALUE + RECEIVE QUANT/VALUE grids already cluster as
+    complete rows. The wrapped-name Receipt/Issue reader would steal packing
+    digits as opening_qty and glue a TOTAL footer onto the last product.
+    """
+    return os.getenv(
+        "STOCK_PDF_QTY_VALUE_SKIP_RECEIPT_ISSUE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _issue_column_layout(columns: List[Dict[str, Any]]) -> bool:
     canons = {str(c.get("canonical") or "") for c in columns}
-    if not _ISSUE_LAYOUT <= canons:
+    if not (_ISSUE_LAYOUT <= canons):
         return False
-    # Wide Op.Qty / Sale Qty / Balance grids print one product per row
-    # (blank qty stays blank). Do not join those rows as wrapped names.
-    if canons & {"sales_return_qty", "purchase_return_qty", "lms"}:
+    # Qty+value pair headers are not the wrapped-name Receipt/Issue layout.
+    if _qty_value_grid_skips_receipt_issue() and {
+        "opening_value",
+        "purchase_value",
+    } <= canons:
+        logger.info("STOCK_PDF_WORDS_RECEIPT_ISSUE skip=qty_value_grid")
+        return False
+    # Require printed Receipt/Issue labels. Op.Qnt / Pur.Qnt / Sl.Qnt / Cl.Qnt
+    # sheets share the same canons but must use resolved word columns instead.
+    blob = " ".join(str(c.get("header_text") or "") for c in columns)
+    if not re.search(r"\breceipt|\bissue\b", blob, re.I):
+        logger.info(
+            "STOCK_PDF_WORDS_RECEIPT_ISSUE skip=no_receipt_issue_header"
+        )
         return False
     return True
+
+
+def _page_rows_have_aligned_qty_value(page_results: List[Dict[str, Any]]) -> bool:
+    """True when most clustered word rows already carry a full qty/value set."""
+    from services.stock_header_resolver import parse_number
+
+    rows: List[List[Dict[str, Any]]] = []
+    for page in page_results or []:
+        rows.extend(page.get("data_rows") or [])
+    if len(rows) < 3:
+        return False
+    rich = 0
+    for tokens in rows:
+        nums = 0
+        for tok in tokens:
+            if not isinstance(tok, dict):
+                continue
+            if parse_number(str(tok.get("text") or "")) is not None:
+                nums += 1
+        if nums >= 6:
+            rich += 1
+    return rich >= max(3, int(0.6 * len(rows)))
 
 
 def _band_for_x(x: float, bands: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -1640,6 +1867,10 @@ def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
     name = str(item.get("product_name") or "").strip()
     if not name:
         return True
+    from services.stock_native_tables import is_software_price_ad_name
+
+    if is_software_price_ad_name(name):
+        return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", name, re.I):
         return True
     if re.search(
@@ -1765,17 +1996,38 @@ def parse_grouped_qty_value_pdf(
     return result
 
 
+def _resolved_movement_columns_enabled() -> bool:
+    """Op/Pur/Sl/Cl word columns without a sales-return header (default ON)."""
+    return os.getenv(
+        "STOCK_PDF_RESOLVED_MOVEMENT_COLUMNS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _count_moved_items(items: Optional[List[Dict[str, Any]]]) -> int:
+    """Rows with printed opening or closing — not later-page summary tables."""
+    n = 0
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("opening_qty") not in (None, "") or item.get(
+            "closing_qty"
+        ) not in (None, ""):
+            n += 1
+    return n
+
+
 def _items_from_resolved_word_columns(
     page_results: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:
     """Use header-resolved word columns when the specialised word builders miss.
 
-    Requires opening, purchase, sales, sales return, and closing together so a
-    partial header does not replace a later parser.
+    Requires opening, purchase, sales, and closing together so a partial header
+    does not replace a later parser. Sales-return is optional (many pipe-ruled
+    Op.Qnt/Pur.Qnt/Sl.Qnt/Cl.Qnt sheets omit it).
     """
     from services.stock_native_tables import resolver_ready
 
-    needed = {
+    needed_with_return = {
         "opening_qty",
         "purchase_qty",
         "sales_qty",
@@ -1783,7 +2035,21 @@ def _items_from_resolved_word_columns(
         "closing_qty",
         "closing_value",
     }
+    needed_movement = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+        "closing_value",
+    }
+    needed_qty_only = {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+    }
     ready_pages = []
+    qty_only = False
     for page in page_results or []:
         ready = resolver_ready(page.get("header_cells") or [])
         if not ready.get("resolved"):
@@ -1791,8 +2057,27 @@ def _items_from_resolved_word_columns(
         canons = {
             str(c.get("canonical") or "") for c in (ready.get("columns") or [])
         }
-        if needed <= canons:
+        has_value = bool(canons & {"closing_value", "sales_value", "opening_value"})
+        if needed_with_return <= canons or (
+            _resolved_movement_columns_enabled() and needed_movement <= canons
+        ):
             ready_pages.append(page)
+            if needed_with_return <= canons:
+                logger.info(
+                    "STOCK_PDF_WORDS_RESOLVED_COLUMNS match=with_sales_return"
+                )
+            else:
+                logger.info(
+                    "STOCK_PDF_WORDS_RESOLVED_COLUMNS match=op_pur_sl_cl"
+                )
+        elif (
+            _resolved_movement_columns_enabled()
+            and needed_qty_only <= canons
+            and not has_value
+        ):
+            ready_pages.append(page)
+            qty_only = True
+            logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS match=qty_only")
     if not ready_pages:
         return None
     items = build_items_from_pdf_page_results(ready_pages)
@@ -1801,37 +2086,155 @@ def _items_from_resolved_word_columns(
         if not isinstance(item, dict):
             continue
         name = str(item.get("product_name") or "").strip()
-        if not name or _is_total_row_name(name):
+        if not name or _is_total_row_name(name) or _is_sheet_total_name(name):
             continue
-        if name.startswith("[") or re.search(
-            r"software by|end of report|stock qt|total amount|total quantity",
+        from services.stock_native_tables import is_software_price_ad_name
+
+        if name.startswith("[") or is_software_price_ad_name(name) or re.search(
+            r"software by|end of report|stock qt|total amount|total quantity|"
+            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->",
             name,
             re.I,
         ):
             continue
-        has_qty = any(
-            item.get(field) is not None
-            for field in (
-                "opening_qty",
-                "receipts_qty",
-                "sales_qty",
-                "closing_qty",
-            )
-        )
-        packing = str(item.get("packing") or "").strip()
-        # Division banners (HIMALAYA-ZEAL) and expiry legends (@@ => ...).
-        if not has_qty and not packing:
-            if name.startswith("@@") or (" " not in name and not re.search(r"\d", name)):
+        # Company / division banners have a name but no movement numbers.
+        # Printed 0 is a real qty — do not treat all-zero product rows as banners.
+        qty_vals = [
+            item.get("opening_qty"),
+            item.get("receipts_qty"),
+            item.get("sales_qty"),
+            item.get("closing_qty"),
+        ]
+        if all(v in (None, "") for v in qty_vals):
+            extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            if all(
+                extra.get(k) in (None, "")
+                for k in ("opening_value", "receipts_value", "sales_value", "closing_value")
+            ) and item.get("closing_value") in (None, ""):
                 continue
         kept.append(item)
     if len(kept) < 3:
         return None
-    logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s", len(kept))
-    return {
+    logger.info("STOCK_PDF_WORDS_RESOLVED_COLUMNS rows=%s qty_only=%s", len(kept), qty_only)
+    parsed: Dict[str, Any] = {
         "line_items": kept,
         "prefer_letterhead_stockist": True,
-        "letterhead_is_stockist_only": True,
     }
+    if qty_only:
+        parsed["qty_only"] = True
+    footer = _footer_totals_from_page_results(ready_pages)
+    if footer:
+        parsed["footer_totals"] = footer
+    return parsed
+
+
+def _pdf_words_letterhead_meta_enabled() -> bool:
+    """STOCK_PDF_WORDS_LETTERHEAD_META — banner company + printed address.
+
+    Default ON. Kill switch STOCK_PDF_WORDS_LETTERHEAD_META=false.
+    """
+    return os.getenv("STOCK_PDF_WORDS_LETTERHEAD_META", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_LETTERHEAD_TITLE_RE = re.compile(
+    r"(?i)stock\s+and\s+sales|stock\s*&\s*sales|sale\s+and\s+stock|"
+    r"stock\s+statement|page\s*no\b|for\s+the\s+period"
+)
+_LETTERHEAD_TABLE_RE = re.compile(
+    r"(?i)^(?:sl\.?\s*no|sno|product(?:\s+name)?|item(?:\s+name)?|"
+    r"particulars|opening|op\.?\s*stock|pack(?:ing)?)\b"
+)
+_LETTERHEAD_ADDRESS_RE = re.compile(
+    r"(?i)\bgstin\b|\bgst\s*:|\bpin(?:code)?\b|\bdist(?:rict)?\b|"
+    r"\broad\b|\bstreet\b|\bnagar\b|\bplot\b|\bat/?po\b|"
+    r"\b\d{6}\b|\bphone\b|\bmobile\b|\be-?mail\b|\bstate\b"
+)
+_LETTERHEAD_DISTRIBUTOR_RE = re.compile(
+    r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|"
+    r"private\s+limited|pvt\.?\s*ltd)\b"
+)
+
+
+def _looks_like_division_banner(line: str) -> bool:
+    s = str(line or "").strip()
+    if not s or len(s) > 60:
+        return False
+    if _LETTERHEAD_TITLE_RE.search(s) or _LETTERHEAD_TABLE_RE.search(s):
+        return False
+    if _LETTERHEAD_ADDRESS_RE.search(s) or _LETTERHEAD_DISTRIBUTOR_RE.search(s):
+        return False
+    if re.search(r"\d{2,}", s):
+        return False
+    words = re.findall(r"[A-Za-z]{2,}", s)
+    return 1 <= len(words) <= 6
+
+
+def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
+    """Fill company from the printed division banner; address from GSTIN/city lines.
+
+    Does not invent Puttur/GSTIN when those tokens are not on the page.
+    """
+    if not _pdf_words_letterhead_meta_enabled() or not isinstance(result, dict):
+        return False
+    lines = [ln.strip() for ln in str(peek or "").splitlines() if ln.strip()]
+    if not lines:
+        return False
+    table_i = next(
+        (i for i, ln in enumerate(lines) if _LETTERHEAD_TABLE_RE.match(ln)),
+        min(12, len(lines)),
+    )
+    header_lines = lines[:table_i]
+    changed = False
+    stockist = str(result.get("stockist_name") or "").strip()
+    company = str(result.get("company_name") or "").strip()
+    if company and stockist and company.upper() == stockist.upper():
+        result["company_name"] = None
+        company = ""
+        changed = True
+    if not company:
+        for ln in header_lines:
+            if stockist and ln.upper() == stockist.upper():
+                continue
+            if _LETTERHEAD_TITLE_RE.search(ln):
+                continue
+            if _looks_like_division_banner(ln):
+                result["company_name"] = re.sub(r"\s+", " ", ln)
+                logger.info(
+                    "STOCK_PDF_WORDS_LETTERHEAD_META company=%r",
+                    result["company_name"],
+                )
+                changed = True
+                break
+    address = str(result.get("stockist_address") or "").strip()
+    if address and _LETTERHEAD_TITLE_RE.search(address):
+        result["stockist_address"] = None
+        address = ""
+        changed = True
+    if not address:
+        company_now = str(result.get("company_name") or "").strip()
+        parts: List[str] = []
+        for ln in header_lines:
+            if stockist and ln.upper() == stockist.upper():
+                continue
+            if company_now and ln.upper() == company_now.upper():
+                continue
+            if _LETTERHEAD_TITLE_RE.search(ln):
+                continue
+            if _LETTERHEAD_ADDRESS_RE.search(ln):
+                parts.append(ln)
+        if parts:
+            result["stockist_address"] = " ".join(parts)
+            logger.info(
+                "STOCK_PDF_WORDS_LETTERHEAD_META address=%r",
+                result["stockist_address"],
+            )
+            changed = True
+    return changed
 
 
 def parse_pdf_free_column_statement(
@@ -1845,22 +2248,66 @@ def parse_pdf_free_column_statement(
     except Exception:
         return None
     from services.sales_statement_extractor import empty_result
-    from services.stock_native_tables import from_pdf_words
+    from services.stock_native_tables import (
+        from_fitz_pdf_bytes,
+        from_pdf_words,
+        pdf_built_has_mashed_headers,
+        pdf_built_has_nul_digits,
+    )
 
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             built = from_pdf_words(pdf)
+            nul = pdf_built_has_nul_digits(built)
+            mashed = pdf_built_has_mashed_headers(built)
+            if nul or mashed:
+                logger.info(
+                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s fallback=fitz",
+                    int(nul),
+                    int(mashed),
+                )
+                built = from_fitz_pdf_bytes(file_bytes)
             peek = ""
             if pdf.pages:
-                peek = pdf.pages[0].extract_text() or ""
+                from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+                peek = decode_pdf_pseudo_digits(
+                    "\n".join(page.extract_text() or "" for page in pdf.pages)
+                )
+            if "\x00" in (peek or ""):
+                try:
+                    import fitz
+
+                    _doc = fitz.open(stream=file_bytes, filetype="pdf")
+                    peek = decode_pdf_pseudo_digits(
+                        _doc[0].get_text("text") or peek
+                    )
+                    _doc.close()
+                except Exception:
+                    pass
             parsed = items_from_free_column_rows(
                 built.get("header_cells") or [],
                 built.get("data_rows") or [],
             )
+            page_results = built.get("page_results") or []
+            resolved = _items_from_resolved_word_columns(page_results)
+            # Prefer header-x assignment over free-column row glue: that glue
+            # concatenates blank product rows and later pages with other tables.
+            if resolved and resolved.get("line_items"):
+                if not parsed or not parsed.get("line_items"):
+                    parsed = resolved
+                    logger.info(
+                        "STOCK_PDF_WORDS_RESOLVED_COLUMNS prefer=aligned_qty_value"
+                    )
+                elif _count_moved_items(resolved.get("line_items")) >= _count_moved_items(
+                    parsed.get("line_items")
+                ):
+                    parsed = resolved
+                    logger.info(
+                        "STOCK_PDF_WORDS_RESOLVED_COLUMNS prefer=over_free_columns"
+                    )
             if not parsed or not parsed.get("line_items"):
-                parsed = items_from_receipt_issue_pages(
-                    pdf, built.get("page_results") or []
-                )
+                parsed = items_from_receipt_issue_pages(pdf, page_results)
             if not parsed or not parsed.get("line_items"):
                 parsed = items_from_lms_qty_rows(
                     built.get("header_cells") or [],
@@ -1879,7 +2326,11 @@ def parse_pdf_free_column_statement(
                 and parsed.get("letterhead_is_stockist_only")
                 and pdf.pages
             ):
-                peek = pdf.pages[0].extract_text(x_tolerance=1, y_tolerance=3) or peek
+                from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+                peek = decode_pdf_pseudo_digits(
+                    pdf.pages[0].extract_text(x_tolerance=1, y_tolerance=3) or peek
+                )
     except Exception as exc:
         logger.info(
             "STOCK_PDF_WORDS_TABLE file=%s status=skipped error=%s",
@@ -1893,6 +2344,12 @@ def parse_pdf_free_column_statement(
     result["line_items"] = parsed["line_items"]
     if re.search(r"Sale\s+And\s+Stock\s+Statement", peek, re.I):
         result["report_title"] = "Sale And Stock Statement"
+    elif re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", peek, re.I):
+        result["report_title"] = "STOCK & SALES ANALYSIS"
+    elif re.search(r"STOCK\s*&\s*SALES", peek, re.I):
+        result["report_title"] = "STOCK & SALES"
+    elif re.search(r"Stock\s+And\s+Sales\s+Statement", peek, re.I):
+        result["report_title"] = "Stock And Sales Statement"
     elif re.search(r"Stock\s+Statement", peek, re.I):
         result["report_title"] = "Stock Statement Report"
     elif re.search(r"Statements\s+of", peek, re.I):
@@ -1906,19 +2363,36 @@ def parse_pdf_free_column_statement(
     company = re.search(r"Company\s*:\s*(.+)", peek, re.I)
     if stated:
         result["stockist_name"] = stated.group(1).strip()
-    elif first and re.search(r"[A-Za-z]", first) and not re.search(r"\d{2,}", first):
+    elif (
+        first
+        and re.search(r"[A-Za-z]", first)
+        and not re.search(r"\d{2,}", first)
+        and not re.search(
+            r"PRODUCT\s+DESCRIPTION|ITEM\s+DESCRIPTION|^ITEM$|^PRODUCT$",
+            first,
+            re.I,
+        )
+    ):
         result["stockist_name"] = first
         if not parsed.get("letterhead_is_stockist_only"):
             result["company_name"] = first
     if company:
         result["company_name"] = company.group(1).strip()
+    title_co = re.search(
+        r"([A-Z][A-Z0-9 .&'-]{2,}?)\s+STOCK\s*[&+]\s*SALES\s+STATEM",
+        peek,
+        re.I,
+    )
+    if title_co:
+        result["company_name"] = re.sub(r"\s+", " ", title_co.group(1)).strip()
     if parsed.get("prefer_letterhead_stockist") and not result.get("stockist_name"):
         for line in peek.splitlines():
             stripped = line.strip()
             if not stripped or re.search(r"\d{2,}", stripped):
                 continue
             if re.search(
-                r"stock\s+statement|company\s*:|item type|product name|page\s*:",
+                r"stock\s+statement|company\s*:|item type|product name|page\s*:|"
+                r"product\s+description|item\s+description",
                 stripped,
                 re.I,
             ):
@@ -1939,6 +2413,36 @@ def parse_pdf_free_column_statement(
 
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    if not result.get("period_from"):
+        month_period = re.search(
+            r"From\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s+"
+            r"To\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+            peek,
+            re.I,
+        )
+        if month_period:
+            from services.sales_statement_extractor import _normalize_date
+
+            result["period_from"] = _normalize_date(month_period.group(1))
+            result["period_to"] = _normalize_date(month_period.group(2))
+    if not result.get("period_from"):
+        for_period = re.search(
+            r"(?:For\s+the\s+)?Period\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+            r"To\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+            peek,
+            re.I,
+        )
+        if for_period:
+            def _iso_period(day: str, month: str, year: str) -> str:
+                yr = year if len(year) == 4 else ("20" + year)
+                return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+            result["period_from"] = _iso_period(
+                for_period.group(1), for_period.group(2), for_period.group(3)
+            )
+            result["period_to"] = _iso_period(
+                for_period.group(4), for_period.group(5), for_period.group(6)
+            )
     if not result.get("period_from"):
         compact = re.search(
             r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})\s*[-–]\s*"
@@ -1964,9 +2468,12 @@ def parse_pdf_free_column_statement(
             and "PRODUCT" not in lines[1].upper()
         ):
             result["stockist_address"] = lines[1]
+    _apply_pdf_words_letterhead_meta(result, peek)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1
+    if parsed.get("qty_only"):
+        extra["qty_only"] = True
     if parsed.get("closing_value") is not None:
         result["totals"]["closing_value"] = parsed["closing_value"]
     if parsed.get("sales_value") is not None:
@@ -1975,6 +2482,26 @@ def parse_pdf_free_column_statement(
         if key in {"sales_value", "closing_value"} or value is None:
             continue
         extra[key] = value
+    footer = parsed.get("footer_totals")
+    if not footer:
+        footer = _footer_totals_from_page_results(page_results)
+    if footer:
+        extra["total_row_source"] = "printed_footer"
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "opening_value",
+            "receipts_value",
+        ):
+            if footer.get(key) is not None:
+                result["totals"][key] = footer[key]
+                extra[key] = footer[key]
+        if footer.get("sales_value") is not None:
+            result["totals"]["sales_value"] = footer["sales_value"]
+        if footer.get("closing_value") is not None:
+            result["totals"]["closing_value"] = footer["closing_value"]
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,
