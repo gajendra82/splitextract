@@ -6,6 +6,7 @@ Separate from invoice OCR — do not use for tax invoices.
 from __future__ import annotations
 
 import base64
+import contextvars
 import io
 import itertools
 import json
@@ -6160,6 +6161,9 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _parse_word(file_bytes, name, ext)
     elif ext == ".pdf":
         result = _parse_pdf(file_bytes, name)
+        recovered = _PDF_RECOVERED_BYTES.get()
+        if recovered:
+            file_bytes = recovered
         result = _pdf_maybe_native_resolver(result, file_bytes, name)
     elif ext in {".xls", ".xlsx", ".xlsm"}:
         result = _parse_xls(file_bytes, name, ext)
@@ -35479,6 +35483,168 @@ def _parse_saha_in_out_stock_doc(doc, filename: str) -> Optional[Dict[str, Any]]
 
 
 
+# Bytes actually opened after PDF_OPEN_RECOVER. None when the upload opened as-is.
+_PDF_RECOVERED_BYTES: contextvars.ContextVar[Optional[bytes]] = contextvars.ContextVar(
+    "sales_pdf_recovered_bytes",
+    default=None,
+)
+
+
+def _pdf_from_base64(file_bytes: bytes) -> Optional[bytes]:
+    """Return PDF bytes when the upload is a base64 (or data-URI) PDF."""
+    blob = file_bytes.strip().strip(b"\"'")
+    if blob[:80].lower().startswith(b"data:") and b"base64," in blob[:300].lower():
+        blob = blob.split(b",", 1)[1]
+    compact = re.sub(rb"\s+", b"", blob)
+    if not compact.startswith(b"JVBER"):
+        return None
+    if len(compact) < 32 or not re.fullmatch(rb"[A-Za-z0-9+/]+=*", compact):
+        return None
+    pad = (-len(compact)) % 4
+    try:
+        decoded = base64.b64decode(compact + (b"=" * pad), validate=False)
+    except Exception:
+        return None
+    idx = decoded.find(b"%PDF")
+    if idx < 0:
+        return None
+    return decoded[idx:]
+
+
+def _pdf_from_utf16(file_bytes: bytes) -> Optional[bytes]:
+    """Return PDF bytes when a binary PDF was re-encoded as UTF-16."""
+    if not (
+        file_bytes.startswith((b"\xff\xfe", b"\xfe\xff"))
+        or b"%\x00P\x00D\x00F" in file_bytes[:80]
+        or b"\x00%\x00P\x00D\x00F" in file_bytes[:80]
+    ):
+        return None
+    try:
+        raw = file_bytes.decode("utf-16").encode("latin1")
+    except Exception:
+        return None
+    idx = raw.find(b"%PDF")
+    if idx < 0 or b"obj" not in raw:
+        return None
+    return raw[idx:]
+
+
+def _rebuild_pdf_xref(data: bytes) -> Optional[bytes]:
+    """Append a classic xref when objects exist but MuPDF finds none."""
+    entries: Dict[int, Tuple[int, int]] = {}
+    for match in re.finditer(rb"(\d+)\s+(\d+)\s+obj\b", data):
+        num = int(match.group(1))
+        if num not in entries and 0 < num < 100000:
+            entries[num] = (match.start(), int(match.group(2)))
+    if not entries:
+        return None
+    root = None
+    for num, (off, _gen) in entries.items():
+        end = data.find(b"endobj", off)
+        chunk = data[off : end if end != -1 else off + 1200]
+        if re.search(rb"/Type\s*/Catalog", chunk):
+            root = num
+            break
+    if root is None:
+        return None
+    size = max(entries) + 1
+    parts = [b"xref\r\n", f"0 {size}\r\n".encode(), b"0000000000 65535 f\r\n"]
+    for num in range(1, size):
+        if num in entries:
+            off, gen = entries[num]
+            parts.append(f"{off:010d} {gen:05d} n\r\n".encode())
+        else:
+            parts.append(b"0000000000 65535 f\r\n")
+    start = len(data) + 2
+    trailer = (
+        f"trailer\r\n<<\r\n/Size {size}\r\n/Root {root} 0 R\r\n>>\r\n"
+        f"startxref\r\n{start}\r\n%%EOF\r\n"
+    ).encode()
+    return data + b"\r\n" + b"".join(parts) + trailer
+
+
+def _pdf_recovery_candidates(file_bytes: bytes) -> List[Tuple[str, bytes]]:
+    found: List[Tuple[str, bytes]] = []
+    seen = set()
+
+    def add(method: str, blob: Optional[bytes]) -> None:
+        if not blob or blob == file_bytes or blob in seen or len(blob) < 8:
+            return
+        seen.add(blob)
+        found.append((method, blob))
+
+    idx = file_bytes.find(b"%PDF")
+    if idx > 0:
+        add("offset", file_bytes[idx:])
+    add("utf16", _pdf_from_utf16(file_bytes))
+    add("base64", _pdf_from_base64(file_bytes))
+    for method, blob in list(found) + [("raw", file_bytes)]:
+        if b"endobj" not in blob or not re.search(rb"\d+\s+\d+\s+obj\b", blob):
+            continue
+        add(method + "_xref", _rebuild_pdf_xref(blob))
+    return found
+
+
+def _try_open_pdf(fitz_mod: Any, data: bytes) -> Any:
+    try:
+        doc = fitz_mod.open(stream=data, filetype="pdf")
+    except Exception:
+        return None
+    try:
+        if int(doc.page_count) < 1:
+            doc.close()
+            return None
+    except Exception:
+        try:
+            doc.close()
+        except Exception:
+            pass
+        return None
+    return doc
+
+
+def _pdf_open_recover_enabled() -> bool:
+    return os.getenv("STOCK_PDF_OPEN_RECOVER", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _open_sales_pdf(fitz_mod: Any, file_bytes: bytes, filename: str) -> Any:
+    """Open a PDF. On 'no objects found', try offset, base64, UTF-16, or a rebuilt xref."""
+    try:
+        doc = fitz_mod.open(stream=file_bytes, filetype="pdf")
+        _PDF_RECOVERED_BYTES.set(None)
+        return doc
+    except Exception as exc:
+        if not _pdf_open_recover_enabled():
+            raise
+        for method, blob in _pdf_recovery_candidates(file_bytes or b""):
+            doc = _try_open_pdf(fitz_mod, blob)
+            if doc is None:
+                continue
+            logger.info(
+                "PDF_OPEN_RECOVER method=%s file=%s in_bytes=%s out_bytes=%s",
+                method,
+                filename,
+                len(file_bytes or b""),
+                len(blob),
+            )
+            _PDF_RECOVERED_BYTES.set(blob)
+            return doc
+        logger.info(
+            "PDF_OPEN_RECOVER failed file=%s in_bytes=%s err=%s",
+            filename,
+            len(file_bytes or b""),
+            exc,
+        )
+        raise ValueError(
+            "PDF could not be opened (no objects found). The file is not a readable PDF."
+        ) from exc
+
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -35493,7 +35659,8 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     max_pages = int(os.getenv("SALES_PDF_MAX_PAGES", "20"))
     zoom = float(os.getenv("SALES_PDF_RENDER_ZOOM", "2.0"))
 
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    doc = _open_sales_pdf(fitz, file_bytes, filename)
+    file_bytes = _PDF_RECOVERED_BYTES.get() or file_bytes
     try:
         # Flag-gated: multi-division Group Wise / Sales & Stock image-only PDFs
         # need Swil Receipt/Pur page merge (division stamp + page completeness)
