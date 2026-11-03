@@ -8,6 +8,8 @@ from pathlib import Path
 from services.sales_statement_extractor import (
     _is_saleable_stock_report_text,
     _parse_saleable_stock_report,
+    _saleable_amt_pair_layout,
+    _saleable_match_row,
     extract_sales_statement,
 )
 
@@ -62,6 +64,45 @@ class TestSaleableStockReportDetection(unittest.TestCase):
         self.assertEqual(extra.get("receipts_value"), 7435.70)
         self.assertEqual(extra.get("printed_sales_value"), 39498.46)
         self.assertEqual(extra.get("printed_closing_value"), 663700.61)
+
+    def test_packing_amt_pairs_not_shifted_into_qty(self):
+        """Packing|Opn qty|Opn amt|Rec…|Bal amt must not put pack/Bal Amt in qtys."""
+        header = (
+            "SARVAHITHA AYURVEDALAYA PVT. LTD.\n"
+            "(From 01/10/2026 To 31/10/2026)\n"
+            "Saleable Stock Report\n"
+            "Particular |Packing| Opn| Opn| Rec| Rec| Issue| Issue| Bal| Bal\n"
+            "           |       | (Q+F)| Amt(Q+F)| (Q+F)| Amt| (Q+F)| Amt| (Q+F)| Amt(Q+F)\n"
+        )
+        self.assertTrue(_saleable_amt_pair_layout(header))
+        row = (
+            "ABANA TAB 60TAB-HIMALAY |1 | 184.00| ——| 100.00| 14860.00|"
+            " 110.00| 17602.17| 174.00| 25856.42"
+        )
+        matched = _saleable_match_row(row, amt_pairs=True)
+        self.assertIsNotNone(matched)
+        self.assertEqual(matched["pack"], "1")
+        self.assertEqual(matched["opn"], "184.00")
+        self.assertEqual(matched["rec"], "100.00")
+        self.assertEqual(matched["issue"], "110.00")
+        self.assertEqual(matched["bal"], "174.00")
+        self.assertEqual(matched["issue_amt"], "17602.17")
+        self.assertEqual(matched["bal_amt"], "25856.42")
+
+        text = header + row + "\n"
+        parsed = _parse_saleable_stock_report(text, "radE3BB3.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        ab = parsed["line_items"][0]
+        self.assertEqual(ab.get("packing"), "1")
+        self.assertEqual(ab.get("opening_qty"), 184.0)
+        self.assertEqual(ab.get("receipts_qty"), 100.0)
+        self.assertEqual(ab.get("sales_qty"), 110.0)
+        self.assertEqual(ab.get("closing_qty"), 174.0)
+        self.assertEqual(ab.get("sales_value"), 17602.17)
+        self.assertEqual(ab.get("closing_value"), 25856.42)
+        # Must not keep the old shift: pack→opening, Bal Amt→closing_qty.
+        self.assertNotEqual(ab.get("opening_qty"), 1.0)
+        self.assertNotEqual(ab.get("closing_qty"), 25856.42)
 
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Paras Medicos fixture")

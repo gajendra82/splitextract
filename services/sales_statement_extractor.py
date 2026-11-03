@@ -14785,10 +14785,15 @@ def _opstock_rcpts_clstk_colmap(header_cells: List[str]) -> Dict[str, int]:
         ("pur", r"^Rcpts$"),
         ("sale", r"^Sales$"),
         ("sval", r"^SL\.?\s*Value$"),
+        # Optional HO / Transit money|qty between Sales and CL (StockStatement Report).
+        ("ho_sale", r"^Ho\s*Sale(?:\s*\([^)]*\))?$|^Ho\s*Sale\(Incl\)$"),
+        ("ho_val", r"^Ho\s*Sale\s*Val$|^Val$"),
         ("free", r"^Free$"),
         ("hos_sales", r"^HOS\.?\s*SALES$"),
         ("bal", r"^CL\.?\s*Stk$"),
         ("bval", r"^CL\.?\s*Value$"),
+        ("transit", r"^Transit$"),
+        ("transit_val", r"^Transit\.?\s*Val$"),
     )
     colmap: Dict[str, int] = {}
     for idx, cell in enumerate(header_cells or []):
@@ -25098,11 +25103,41 @@ def _saleable_movement_from_nums(nums: List[float]) -> Optional[Dict[str, float]
     return None
 
 
-def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
+def _saleable_amt_pair_layout(text: str) -> bool:
+    """True when Opn/Rec/Issue/Bal each print qty + Amt (Saleable Stock Report)."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Amt\s*\(\s*Q\s*\+\s*F\s*\)", text, re.I)
+        or (
+            re.search(r"\bPacking\b", text, re.I)
+            and re.search(r"\bAmt\b", text, re.I)
+            and len(re.findall(r"\bOpn\b", text, re.I)) >= 2
+        )
+    )
+
+
+def _saleable_qty_cells_from_parts(parts: List[str], start: int) -> List[str]:
+    qty_cells: List[str] = []
+    for cell in parts[start:]:
+        token = (cell or "").replace(" ", "")
+        if not token:
+            continue
+        if _SALEABLE_QTY_CELL_RE.fullmatch(token) or re.fullmatch(
+            r"[—–\-]+", (cell or "").strip()
+        ):
+            qty_cells.append((cell or "").strip())
+    return qty_cells
+
+
+def _saleable_match_row(
+    raw: str, *, amt_pairs: bool = False
+) -> Optional[Dict[str, str]]:
     """Map a Saleable Stock Report row to name/pack/opn/rec/issue/bal.
 
     Supports Particular|Opn|Rec|Issue|Bal and Particular|Packing|Opn|Rec|Issue|
     age-buckets|Bal. Age buckets are ignored; Bal is always the last qty cell.
+    When Amt(Q+F) columns are printed, movement uses qty slots only (not Amt).
     Phone OCR without pipes uses trailing qty cells (4 or 7 with age buckets).
     """
     # Wider pipe layouts (Packing + age) must not use the short regex — it
@@ -25116,24 +25151,60 @@ def _saleable_match_row(raw: str) -> Optional[Dict[str, str]]:
             return None
         idx = 1
         pack = ""
-        if idx < len(parts) and parts[idx] and not _SALEABLE_QTY_CELL_RE.fullmatch(
-            parts[idx].replace(" ", "")
-        ):
-            pack = parts[idx]
+        following = _saleable_qty_cells_from_parts(parts, idx)
+        first = parts[idx] if idx < len(parts) else ""
+        first_tok = first.replace(" ", "")
+        # Packing may be "75 GM" or a bare factor "1". Bare integers must not
+        # become opening_qty when Opn/Rec/Issue/Bal (+ Amt) follow.
+        bare_pack = bool(re.fullmatch(r"\d{1,4}", first_tok or ""))
+        if first and not _SALEABLE_QTY_CELL_RE.fullmatch(first_tok):
+            pack = first
             idx += 1
+        elif bare_pack and (
+            amt_pairs
+            or len(following) >= 8
+            or len(following) == 5
+        ):
+            pack = first
+            idx += 1
+            logger.info(
+                "SALEABLE_BARE_PACKING peel=%s following=%s amt_pairs=%s",
+                pack,
+                len(following),
+                amt_pairs,
+            )
         while idx < len(parts) and not parts[idx]:
             idx += 1
-        qty_cells: List[str] = []
-        for cell in parts[idx:]:
-            token = cell.replace(" ", "")
-            if not token:
-                continue
-            if _SALEABLE_QTY_CELL_RE.fullmatch(token) or re.fullmatch(
-                r"[—–\-]+", cell.strip()
-            ):
-                qty_cells.append(cell.strip())
+        qty_cells = _saleable_qty_cells_from_parts(parts, idx)
+        # Amt-pair rows sometimes still leave packing in the qty list.
+        if (
+            amt_pairs
+            and len(qty_cells) >= 9
+            and re.fullmatch(r"\d{1,4}", (qty_cells[0] or "").replace(" ", ""))
+            and not pack
+        ):
+            pack = qty_cells[0]
+            qty_cells = qty_cells[1:]
         if len(qty_cells) < 4:
             return None
+        if amt_pairs and len(qty_cells) >= 8:
+            logger.info(
+                "saleable_stock_row layout=pack_amt_pairs name=%s qty_cells=%d",
+                _clean_name(name)[:40],
+                len(qty_cells),
+            )
+            return {
+                "name": name,
+                "pack": pack,
+                "opn": qty_cells[0],
+                "rec": qty_cells[2],
+                "issue": qty_cells[4],
+                "bal": qty_cells[6],
+                "opn_amt": qty_cells[1],
+                "rec_amt": qty_cells[3],
+                "issue_amt": qty_cells[5],
+                "bal_amt": qty_cells[7],
+            }
         logger.info(
             "saleable_stock_row layout=pack_age name=%s qty_cells=%d",
             _clean_name(name)[:40],
@@ -25249,6 +25320,13 @@ def _parse_saleable_stock_report(
     if not _is_saleable_stock_report_text(text):
         return None
 
+    amt_pairs = _saleable_amt_pair_layout(text)
+    if amt_pairs:
+        logger.info(
+            "SALEABLE_AMT_PAIR_LAYOUT file=%s status=detected",
+            filename,
+        )
+
     result = empty_result(filename, source_format)
     result["report_title"] = "Saleable Stock Report"
     items: List[Dict[str, Any]] = []
@@ -25258,12 +25336,12 @@ def _parse_saleable_stock_report(
         if not raw:
             continue
         if not result.get("stockist_name") and re.search(
-            r"MEDICO|AGENC|STORES|PHARMA|DISTRIBUT", raw, re.I
+            r"MEDICO|AGENC|STORES|PHARMA|DISTRIBUT|AYURVED", raw, re.I
         ):
             result["stockist_name"] = _clean_name(raw)
             continue
         if not result.get("stockist_address") and re.search(
-            r"ROAD|COMPLEX|NAGAR|SONEPAT|HOUSE", raw, re.I
+            r"ROAD|COMPLEX|NAGAR|SONEPAT|HOUSE|PLOT|SUBURB", raw, re.I
         ):
             result["stockist_address"] = _clean_name(raw)
             continue
@@ -25310,7 +25388,7 @@ def _parse_saleable_stock_report(
                 extra["printed_closing_value"] = moved["closing"]
             continue
 
-        matched = _saleable_match_row(raw)
+        matched = _saleable_match_row(raw, amt_pairs=amt_pairs)
         if not matched:
             continue
         name = _clean_name(matched["name"])
@@ -25326,6 +25404,22 @@ def _parse_saleable_stock_report(
         item["receipts_qty"] = _saleable_qty(matched["rec"])
         item["sales_qty"] = _saleable_qty(matched["issue"])
         item["closing_qty"] = _saleable_qty(matched["bal"])
+        if amt_pairs:
+            # Printed Issue Amt / Bal Amt — do not leave Bal Amt in closing_qty.
+            issue_amt = _saleable_qty(matched.get("issue_amt") or "")
+            bal_amt = _saleable_qty(matched.get("bal_amt") or "")
+            if issue_amt:
+                item["sales_value"] = issue_amt
+            if bal_amt:
+                item["closing_value"] = bal_amt
+            rec_amt = _saleable_qty(matched.get("rec_amt") or "")
+            opn_amt = _saleable_qty(matched.get("opn_amt") or "")
+            extra_item = item.setdefault("extra", {})
+            if isinstance(extra_item, dict):
+                if opn_amt:
+                    extra_item["opening_value"] = opn_amt
+                if rec_amt:
+                    extra_item["receipts_value"] = rec_amt
         items.append(item)
 
     if not items:
@@ -25333,7 +25427,11 @@ def _parse_saleable_stock_report(
     result["line_items"] = items
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "saleable_stock_report"
-    extra["layout"] = "saleable_opn_rec_issue_bal"
+    extra["layout"] = (
+        "saleable_opn_rec_issue_bal_amt"
+        if amt_pairs
+        else "saleable_opn_rec_issue_bal"
+    )
     extra["rows_detected"] = len(items)
     extra["fallback_used"] = False
     return result
@@ -37204,6 +37302,59 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             ezeal["totals"]["extra"]["statement_count"] = 1
             return ezeal
 
+        # LMS | OP.Stock | Rcpts | … | CL.Stk | CL.Value (Fatima / StockStatement).
+        # Must run before Swil Receipt/Pur vision — that path maps LMS→opening_qty
+        # and CL.Value→closing_qty. Multi-line PDF text often fails the line
+        # parser; word-x columns (fitz) then keep Packing/LMS/OP.Stock aligned.
+        try:
+            lms_blob = "\n".join(
+                (page.get_text("text") or "")
+                for page_index, page in enumerate(doc)
+                if page_index < min(3, max_pages)
+            )
+            if _text_has_lms_opstock_rcpts_headers(lms_blob):
+                lms_op_pdf = _parse_text_lms_opstock_rcpts(
+                    lms_blob, filename, "pdf"
+                )
+                if not (lms_op_pdf and lms_op_pdf.get("line_items")):
+                    try:
+                        from services.stock_native_resolver import (
+                            parse_pdf_free_column_statement,
+                        )
+
+                        lms_op_pdf = parse_pdf_free_column_statement(
+                            file_bytes, filename
+                        )
+                        if lms_op_pdf and lms_op_pdf.get("line_items"):
+                            logger.info(
+                                "LMS_OPSTOCK_RCPTS file=%s status=early_pdf_words "
+                                "rows=%s",
+                                filename,
+                                len(lms_op_pdf["line_items"]),
+                            )
+                    except Exception as words_exc:
+                        logger.info(
+                            "LMS_OPSTOCK_RCPTS file=%s status=early_pdf_words_skip "
+                            "error=%s",
+                            filename,
+                            type(words_exc).__name__,
+                        )
+                        lms_op_pdf = None
+                if lms_op_pdf and lms_op_pdf.get("line_items"):
+                    lms_op_pdf["totals"]["extra"]["statement_count"] = 1
+                    logger.info(
+                        "LMS_OPSTOCK_RCPTS file=%s status=early_pdf_hit rows=%s",
+                        filename,
+                        len(lms_op_pdf["line_items"]),
+                    )
+                    return lms_op_pdf
+        except Exception as exc:
+            logger.info(
+                "LMS_OPSTOCK_RCPTS file=%s status=early_pdf_skip error=%s",
+                filename,
+                type(exc).__name__,
+            )
+
         swil_pair = _parse_swil_landscape_qty_value_statement(
             doc, filename, allow_portrait_pair=True
         )
@@ -40200,9 +40351,10 @@ def _parse_text_lms_opstock_rcpts(
             and re.search(r"\bCL\.?\s*Stk\b", ln, re.I)
         ):
             continue
-        # Keep dotted labels intact (OP.Stock / CL.Stk / SL.Value).
+        # Keep dotted / multi-word labels intact (OP.Stock, Ho Sale(Incl), Transit.Val).
         cells = re.findall(
             r"OP\.?\s*Stock|Op\.?\s*Stk|CL\.?\s*Stk|CL\.?\s*Value|SL\.?\s*Value|"
+            r"Ho\s*Sale\s*Val|Ho\s*Sale(?:\([^)]*\))?|Transit\.?\s*Val|"
             r"HOS\.?\s*SALES|[A-Za-z][A-Za-z0-9./']*",
             ln,
             re.I,
@@ -40217,6 +40369,36 @@ def _parse_text_lms_opstock_rcpts(
             header_idx = i
             header_cells = cells
             break
+    # PDF text often prints one header label per line (Name / Code / Product / …).
+    if header_idx is None:
+        header_line_re = re.compile(
+            r"^(?:Name|Code|Product|Packing|LMS|OP\.?\s*Stock|Op\.?\s*Stk|Rcpts|"
+            r"Sales|SL\.?\s*Value|Ho\s*Sale(?:\s*\([^)]*\))?|Ho\s*Sale\s*Val|"
+            r"Free|HOS\.?\s*SALES|CL\.?\s*Stk|CL\.?\s*Value|Transit|"
+            r"Transit\.?\s*Val)$",
+            re.I,
+        )
+        run: List[str] = []
+        run_start: Optional[int] = None
+        for i, ln in enumerate(lines[:80]):
+            if header_line_re.match(ln):
+                if run_start is None:
+                    run_start = i
+                run.append(ln)
+                continue
+            if run_start is not None and len(run) >= 8:
+                norms = {_xls_norm_header(c) for c in run}
+                if {"lms", "op", "pur", "bal"} <= norms:
+                    header_idx = run_start
+                    header_cells = list(run)
+                    break
+            run = []
+            run_start = None
+        if header_idx is None and run_start is not None and len(run) >= 8:
+            norms = {_xls_norm_header(c) for c in run}
+            if {"lms", "op", "pur", "bal"} <= norms:
+                header_idx = run_start
+                header_cells = list(run)
     if header_idx is None or not header_cells:
         return None
 
@@ -40224,8 +40406,21 @@ def _parse_text_lms_opstock_rcpts(
     # Fallback via shared XLS aliases when regex colmap missed a label.
     if "op" not in colmap or "pur" not in colmap or "bal" not in colmap:
         alias_map = _xls_header_colmap(header_cells)
-        for key in ("lms", "op", "pur", "sale", "sval", "free", "hos_sales", "bal", "bval",
-                    "item", "pack", "product_code", "name"):
+        for key in (
+            "lms",
+            "op",
+            "pur",
+            "sale",
+            "sval",
+            "free",
+            "hos_sales",
+            "bal",
+            "bval",
+            "item",
+            "pack",
+            "product_code",
+            "name",
+        ):
             if key not in colmap and key in alias_map:
                 colmap[key] = alias_map[key]
     if not {"op", "pur", "sale", "bal"}.issubset(colmap):
@@ -40236,6 +40431,8 @@ def _parse_text_lms_opstock_rcpts(
         )
         return None
 
+    # Include optional HO/Transit slots so they consume numbers and do not
+    # left-shift OP.Stock into receipts or CL.Value into closing_qty.
     numeric_keys = [
         k
         for k, _idx in sorted(colmap.items(), key=lambda kv: kv[1])
@@ -40246,10 +40443,14 @@ def _parse_text_lms_opstock_rcpts(
             "pur",
             "sale",
             "sval",
+            "ho_sale",
+            "ho_val",
             "free",
             "hos_sales",
             "bal",
             "bval",
+            "transit",
+            "transit_val",
         }
     ]
     if len(numeric_keys) < 4:
@@ -40277,44 +40478,36 @@ def _parse_text_lms_opstock_rcpts(
 
     items: List[Dict[str, Any]] = []
     num_re = re.compile(r"-?\d+(?:,\d{3})*(?:\.\d+)?")
-    for ln in lines[header_idx + 1 :]:
-        if re.search(r"^(total|grand\s+total|page\s+\d)", ln, re.I):
-            continue
-        nums = [m.group(0) for m in num_re.finditer(ln)]
-        if len(nums) < len(numeric_keys):
-            continue
-        # Trailing numeric block matches header numeric columns left-to-right.
-        tail = nums[-len(numeric_keys) :]
-        head = ln
-        for tok in reversed(tail):
-            # Strip from the right once per token occurrence.
-            idx = head.rfind(tok)
-            if idx >= 0:
-                head = (head[:idx] + head[idx + len(tok) :]).rstrip()
-        head = head.strip()
-        code = None
-        packing = None
-        name = head
-        m_code = re.match(r"^(\d{4,})\s+(.+)$", head)
-        if m_code:
-            code = m_code.group(1)
-            name = m_code.group(2).strip()
-        pack_m = re.search(
-            r"^(.*?)(\d+\s*(?:ML|GMS?|GM|G|TAB|TABS|CAP|CAPS|'S|S)|"
-            r"\d+ML|\d+GMS?|\d+'S|\d+\"S)\s*$",
-            name,
-            re.I,
-        )
-        if pack_m:
-            name = pack_m.group(1).strip(" -")
-            packing = pack_m.group(2).strip()
-        name = _clean_name(name)
-        if not name or len(name) < 2:
-            continue
-        if re.search(r"product|packing|op\.?\s*stock|stockist", name, re.I):
-            continue
+    pack_token_re = re.compile(
+        r"^(?:\d+\s*(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S)|"
+        r"\d+ML|\d+GMS?|\d+GR|\d+'S|\d+\"S)$",
+        re.I,
+    )
+    pack_tail_re = re.compile(
+        r"^(?P<name>.*?)(?P<pack>\d+\s*(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S)|"
+        r"\d+ML|\d+GMS?|\d+GR|\d+'S|\d+\"S)\s*$",
+        re.I,
+    )
+    header_ln = lines[header_idx]
+    multi_line_header = not (
+        re.search(r"\bLMS\b", header_ln, re.I)
+        and re.search(r"\bOP\.?\s*Stock\b|\bOp\.?\s*Stk\b", header_ln, re.I)
+    )
+    body_start = header_idx + (len(header_cells) if multi_line_header else 1)
+    min_needed = sum(
+        1 for k in ("lms", "op", "pur", "sale", "bal") if k in numeric_keys
+    )
 
-        values = {k: _to_float(v) for k, v in zip(numeric_keys, tail)}
+    def _append_lms_item(
+        name: str,
+        code: Optional[str],
+        packing: Optional[str],
+        values: Dict[str, Any],
+    ) -> None:
+        if not name or len(name) < 2:
+            return
+        if re.search(r"product|packing|op\.?\s*stock|stockist", name, re.I):
+            return
         item = empty_line_item()
         item["product_code"] = code
         item["product_name"] = name
@@ -40341,7 +40534,143 @@ def _parse_text_lms_opstock_rcpts(
             item["extra"]["free_qty"] = values.get("free")
         if "hos_sales" in values:
             item["extra"]["hos_sales_qty"] = values.get("hos_sales")
+        if "ho_sale" in values:
+            item["extra"]["ho_sale_qty"] = values.get("ho_sale")
+        if "ho_val" in values:
+            item["extra"]["ho_sale_value"] = values.get("ho_val")
         items.append(item)
+
+    def _values_from_nums(nums: List[str]) -> Dict[str, Any]:
+        if len(nums) >= len(numeric_keys):
+            used = nums[: len(numeric_keys)]
+            return {k: _to_float(v) for k, v in zip(numeric_keys, used)}
+        values: Dict[str, Any] = {}
+        left_keys = [
+            k
+            for k in numeric_keys
+            if k not in {"bal", "bval", "transit", "transit_val"}
+        ]
+        for k, v in zip(left_keys, nums):
+            values[k] = _to_float(v)
+        rest = nums[len(left_keys) :]
+        if "bval" in numeric_keys and rest:
+            # Prefer the largest money token as CL.Value — trailing Transit.Val
+            # is often 0.00 and must not steal closing_value / shift closing_qty.
+            money_idxs = [i for i, v in enumerate(rest) if "." in str(v)]
+            if money_idxs:
+                money_i = max(
+                    money_idxs,
+                    key=lambda i: abs(_to_float(rest[i]) or 0.0),
+                )
+                values["bval"] = _to_float(rest[money_i])
+                before = rest[:money_i]
+                after = rest[money_i + 1 :]
+                if "bal" in numeric_keys and before:
+                    whole = [v for v in before if "." not in str(v)]
+                    values["bal"] = _to_float(whole[-1] if whole else before[-1])
+                if "transit_val" in numeric_keys and after:
+                    values["transit_val"] = _to_float(after[0])
+            elif "bal" in numeric_keys and rest:
+                values["bal"] = _to_float(rest[0])
+        return values
+
+    if multi_line_header:
+        # One cell per line: walk tokens, peel pack, then left-align movement nums.
+        tokens = [
+            ln
+            for ln in lines[body_start:]
+            if ln and not re.search(r"^(total|grand\s+total|page\s+\d)", ln, re.I)
+        ]
+        i = 0
+        while i < len(tokens):
+            if not pack_token_re.match(tokens[i] or ""):
+                i += 1
+                continue
+            packing = tokens[i]
+            # Name / code sit immediately before packing.
+            pre: List[str] = []
+            j = i - 1
+            while j >= 0 and not pack_token_re.match(tokens[j] or ""):
+                # Stop before prior row's trailing numerics.
+                if num_re.fullmatch(tokens[j] or "") and (
+                    "." in tokens[j] or len(pre) >= 6
+                ):
+                    break
+                pre.insert(0, tokens[j])
+                j -= 1
+                if len(pre) >= 8:
+                    break
+            code = None
+            name_parts: List[str] = []
+            for tok in pre:
+                if code is None and re.fullmatch(r"\d{4,}", tok or ""):
+                    code = tok
+                    continue
+                # Skip short Name-column serials between Code and Product.
+                if re.fullmatch(r"\d{1,3}", tok or "") and not name_parts:
+                    continue
+                if re.search(r"[A-Za-z]", tok or ""):
+                    name_parts.append(tok)
+            name = _clean_name(" ".join(name_parts))
+            nums: List[str] = []
+            k = i + 1
+            while k < len(tokens) and len(nums) < len(numeric_keys):
+                tok = tokens[k]
+                if pack_token_re.match(tok or "") and nums:
+                    break
+                if re.fullmatch(r"\d{4,}", tok or "") and len(nums) >= min_needed:
+                    break
+                if num_re.fullmatch(tok or ""):
+                    nums.append(tok)
+                    k += 1
+                    continue
+                if re.search(r"[A-Za-z]", tok or "") and nums:
+                    break
+                k += 1
+            if name and len(nums) >= max(4, min_needed):
+                _append_lms_item(name, code, packing, _values_from_nums(nums))
+            i = max(i + 1, k)
+    else:
+        pack_before_nums_re = re.compile(
+            r"^(?P<name>.*?)\s+"
+            r"(?P<pack>\d+\s*(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S)|"
+            r"\d+ML|\d+GMS?|\d+GR|\d+'S|\d+\"S)\s+"
+            r"(?P<rest>-?\d[\d,.\s]*)$",
+            re.I,
+        )
+        for ln in lines[body_start:]:
+            if re.search(r"^(total|grand\s+total|page\s+\d)", ln, re.I):
+                continue
+            work = ln.strip()
+            code = None
+            packing = None
+            m_code = re.match(r"^(\d{4,})\s+(.+)$", work)
+            if m_code:
+                code = m_code.group(1)
+                work = m_code.group(2).strip()
+            # Packing sits between the product name and the movement numbers.
+            # Peel it first so "60s" / "100ml" / name digits ("LIV 52") never
+            # enter the LMS/OP.Stock slots.
+            pack_mid = pack_before_nums_re.match(work)
+            if pack_mid:
+                packing = pack_mid.group("pack").strip()
+                name = _clean_name(pack_mid.group("name"))
+                nums = [m.group(0) for m in num_re.finditer(pack_mid.group("rest"))]
+            else:
+                pack_m = pack_tail_re.match(work)
+                if pack_m:
+                    packing = pack_m.group("pack").strip()
+                    work = pack_m.group("name").strip(" -")
+                nums = [m.group(0) for m in num_re.finditer(work)]
+                if nums and re.match(r"^\d{4,}$", nums[0] or ""):
+                    if not code:
+                        code = nums[0]
+                    nums = nums[1:]
+                name = _clean_name(re.sub(num_re, " ", work))
+            if len(nums) < max(4, min_needed):
+                continue
+            values = _values_from_nums(nums)
+            _append_lms_item(name, code, packing, values)
 
     if len(items) < 3:
         logger.info(

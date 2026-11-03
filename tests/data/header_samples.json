@@ -115,7 +115,7 @@
       {"text": "Sales-Value", "x_center": null, "col_index": 8, "subheader_text": null}
     ],
     "expected": [
-      "ignore", "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty",
+      "product_code", "product_name", "pack", "opening_qty", "purchase_qty", "sales_qty",
       "closing_qty", "closing_value", "sales_value"
     ]
   },

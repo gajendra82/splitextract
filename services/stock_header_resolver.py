@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_FIELDS = (
     "product_name",
+    "product_code",
     "pack",
     "batch",
     "rate",
@@ -41,7 +42,7 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot"}
+    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "code", "sku"}
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -67,6 +68,17 @@ ALIASES: Dict[str, List[str]] = {
         "description",
         "desc",
         "name",
+    ],
+    "product_code": [
+        "code",
+        "item code",
+        "product code",
+        "prod code",
+        "sku",
+        "itemcode",
+        "sku code",
+        "mat code",
+        "material code",
     ],
     "pack": [
         "pack",
@@ -1047,6 +1059,73 @@ def _prefer_non_ignore_dead_zone_enabled() -> bool:
     return os.getenv(
         "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _prefer_product_over_name_enabled() -> bool:
+    """STOCK_HEADER_PREFER_PRODUCT_OVER_NAME — Product wins over bare Name.
+
+    StockStatement Report prints company under Name and SKU under Product.
+    Both alias to product_name; first-wins dedupe keeps Name and drops Product,
+    so qty rows lose their product label. Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PREFER_PRODUCT_OVER_NAME", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _apply_prefer_product_over_name(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Demote bare Name when a Product column also claims product_name."""
+    if not _prefer_product_over_name_enabled():
+        return False
+    name_idxs: List[int] = []
+    product_idxs: List[int] = []
+    for i, col in enumerate(prelim):
+        if str(col.get("canonical") or "") != "product_name":
+            continue
+        norm = normalize_header(col.get("header_text"))
+        if norm == "name":
+            name_idxs.append(i)
+        elif norm in {
+            "product",
+            "product name",
+            "item",
+            "item name",
+            "particular",
+            "particulars",
+        } or norm.startswith("product "):
+            product_idxs.append(i)
+    if not name_idxs or not product_idxs:
+        return False
+    for i in name_idxs:
+        prelim[i]["canonical"] = "ignore"
+        prelim[i]["group"] = None
+        prelim[i]["confidence"] = 0.0
+        prelim[i]["reason"] = "name_before_product"
+        logger.info(
+            "STOCK_HEADER_PREFER_PRODUCT_OVER_NAME demote_name col_index=%s "
+            "keep_product_col=%s",
+            prelim[i].get("col_index"),
+            prelim[product_idxs[0]].get("col_index"),
+        )
+        errors.append(
+            {
+                "code": "PREFER_PRODUCT_OVER_NAME",
+                "message": (
+                    f"Demoted Name col_index={prelim[i].get('col_index')} to ignore; "
+                    f"kept Product col_index={prelim[product_idxs[0]].get('col_index')}"
+                ),
+                "col_index": prelim[i].get("col_index"),
+            }
+        )
+    for i in product_idxs:
+        prelim[i]["canonical"] = "product_name"
+        prelim[i]["group"] = "product_name"
+        prelim[i]["confidence"] = max(float(prelim[i].get("confidence") or 0.0), 0.95)
+        prelim[i]["reason"] = "prefer_product_over_name"
+    return True
 
 
 def _medica_in_ot_as_free_in_enabled() -> bool:
@@ -2257,7 +2336,7 @@ def resolve_columns(
                 idx,
                 text,
             )
-        elif group in {"product_name", "pack", "batch", "lms"}:
+        elif group in {"product_name", "product_code", "pack", "batch", "lms"}:
             canonical = group
         elif group == "value_marker":
             canonical = "value_marker"  # inherit later
@@ -2523,6 +2602,9 @@ def resolve_columns(
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)
 
+    # Name + Product both → product_name: keep Product (SKU), demote Name.
+    _apply_prefer_product_over_name(prelim, errors)
+
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}
     for i, col in enumerate(prelim):
@@ -2664,22 +2746,53 @@ def assign_cells(
         xc = float(c["x_center"])
         is_date_ignore = canon == "ignore" and reason == "date_or_near_expiry"
         is_serial_ignore = canon == "ignore" and reason == "serial_number_header"
+        # Company/stockist Name left of Product must absorb (ZEAL / HIMALAYA-).
+        is_name_before_product = (
+            canon == "ignore" and reason == "name_before_product"
+        )
+        hdr_norm = normalize_header(c.get("header_text") or c.get("text"))
+        is_code_ignore = canon == "ignore" and hdr_norm in {
+            "code",
+            "item code",
+            "product code",
+            "sku",
+            "itemcode",
+            "prod code",
+        }
         is_interior_ignore = (
             canon == "ignore"
             and not absorb_ignore
             and not is_date_ignore
             and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
             and interior_lo is not None
             and interior_hi is not None
             and interior_lo < xc < interior_hi
+        )
+        # Transit / Transit.Val sit right of CL.Value; dropping them spills 0.00
+        # into closing_value and CELL_COLLISION-nulls the printed amount.
+        is_trailing_ignore = (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
+            and not is_interior_ignore
+            and interior_hi is not None
+            and xc > interior_hi
+            and _absorb_interior_ignore_enabled()
         )
         if (
             canon == "ignore"
             and not absorb_ignore
             and not is_date_ignore
             and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
         ):
-            if is_interior_ignore:
+            if is_interior_ignore or is_trailing_ignore:
                 interior_ignore_absorbers += 1
             else:
                 continue
