@@ -478,7 +478,7 @@ def assess_stock_structured_quality(
 def prepare_original_image(
     file_bytes: bytes, ext: str
 ) -> Tuple[bytes, str, Dict[str, Any]]:
-    """Return bytes for Gemini. Resize only when the upload is too large."""
+    """Return bytes for Gemini. EXIF-orient first; resize only if still too large."""
     original = hashlib.sha256(file_bytes or b"").hexdigest()
     mime = {
         ".png": "image/png",
@@ -494,12 +494,56 @@ def prepare_original_image(
         "normalized": False,
         "normalization_reason": None,
         "byte_length": len(file_bytes or b""),
+        "exif_oriented": False,
     }
-    if not file_bytes or len(file_bytes) <= max_bytes:
+    if not file_bytes:
         return file_bytes, mime, meta
-    from PIL import Image
 
-    image = Image.open(io.BytesIO(file_bytes))
+    from PIL import Image, ImageOps
+
+    working = file_bytes
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as raw:
+            ori = int(raw.getexif().get(274) or 1) if hasattr(raw, "getexif") else 1
+            if ori not in (0, 1):
+                oriented = ImageOps.exif_transpose(raw)
+                if oriented is not None:
+                    if oriented.mode not in ("RGB", "L"):
+                        oriented = oriented.convert("RGB")
+                    buf = io.BytesIO()
+                    fmt = "JPEG" if file_bytes[:2] == b"\xff\xd8" else "PNG"
+                    save_kw: Dict[str, Any] = {}
+                    if fmt == "JPEG":
+                        save_kw["quality"] = 92
+                        if oriented.mode != "RGB":
+                            oriented = oriented.convert("RGB")
+                    oriented.save(buf, format=fmt, **save_kw)
+                    out = buf.getvalue()
+                    if out:
+                        working = out
+                        meta["exif_oriented"] = True
+                        meta["normalized"] = True
+                        meta["normalization_reason"] = "exif_orient"
+                        meta["gemini_input_sha256"] = hashlib.sha256(working).hexdigest()
+                        meta["byte_length"] = len(working)
+                        mime = "image/jpeg" if fmt == "JPEG" else "image/png"
+                        logger.info(
+                            "STOCK_IMAGE_GEMINI_EXIF orientation=%s original_sha256=%s "
+                            "gemini_input_sha256=%s",
+                            ori,
+                            meta["original_sha256"],
+                            meta["gemini_input_sha256"],
+                        )
+    except Exception as exc:
+        logger.info(
+            "STOCK_IMAGE_GEMINI_EXIF skipped err=%s", type(exc).__name__
+        )
+        working = file_bytes
+
+    if len(working) <= max_bytes:
+        return working, mime, meta
+
+    image = Image.open(io.BytesIO(working))
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
     image.thumbnail((2200, 2200))
@@ -508,7 +552,11 @@ def prepare_original_image(
     normalized = buf.getvalue()
     meta["gemini_input_sha256"] = hashlib.sha256(normalized).hexdigest()
     meta["normalized"] = True
-    meta["normalization_reason"] = "original_exceeds_max_bytes"
+    meta["normalization_reason"] = (
+        "exif_orient+original_exceeds_max_bytes"
+        if meta.get("exif_oriented")
+        else "original_exceeds_max_bytes"
+    )
     meta["byte_length"] = len(normalized)
     logger.info(
         "STOCK_IMAGE_GEMINI_NORMALIZE original_sha256=%s gemini_input_sha256=%s "

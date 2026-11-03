@@ -1881,7 +1881,8 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
 
     # Row: <product [packing]> opening receipt issue closing.
     # A printed "-" is an empty qty cell, not a missing column.
-    qty_tok = r"(?:-?\d+(?:\.\d+)?|-)"
+    # OCR often turns the dash into = ~ _ or similar; treat those as empty too.
+    qty_tok = r"(?:-?\d+(?:\.\d+)?|-|=|~|_|\.|—|–)"
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
@@ -1899,9 +1900,10 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
+    _ps_empty_qty = frozenset({"-", "=", "~", "_", ".", "—", "–"})
 
     def _ps_qty(token: str) -> float:
-        if str(token).strip() == "-":
+        if str(token).strip() in _ps_empty_qty:
             return 0.0
         return _to_float(token)
 
@@ -2029,6 +2031,8 @@ def _is_ssa_oric_qty_only_text(text: str) -> bool:
     """Qty-only STOCK & SALES ANALYSIS: OPENING/RECEIPT/ISSUE/CLOSING, no VALUE/M.EXP.
 
     Distinct from qty+value DUMP grids and from Marg CLOSING M.EXP photos.
+    ITEM/TEM DESCRIPTION is preferred but optional — phone OCR often drops the
+    left header while still reading OPENING RECEIPT ISSUE CLOSING cleanly.
     """
     if not text:
         return False
@@ -2037,8 +2041,6 @@ def _is_ssa_oric_qty_only_text(text: str) -> bool:
     if re.search(r"\bM\.?\s*EXP\b|\bDUMP\b|\bRATE\b", text, re.I):
         return False
     if re.search(r"QTY\.?\s+VALUE|VALUE\s+QTY", text, re.I):
-        return False
-    if not re.search(r"(?:ITEM|TEM)\s*DESCRIPTION", text, re.I):
         return False
     return bool(
         re.search(r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", text, re.I)
@@ -10329,6 +10331,15 @@ def _ocr_image_to_text(
 
     pytesseract = _a2z_tesseract()
     image = Image.open(io.BytesIO(file_bytes))
+    # Phone/tablet JPEGs often store sideways pixels with EXIF Orientation=6/8.
+    # Without transpose, ORIC peeks and qty OCR read garbage and miss the
+    # OPENING|RECEIPT|ISSUE|CLOSING path (values land in the wrong columns).
+    try:
+        oriented = ImageOps.exif_transpose(image)
+        if oriented is not None:
+            image = oriented
+    except Exception:
+        pass
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
     original_width, original_height = image.size
@@ -56634,7 +56645,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _op_stk_peek = (
                 _ocr_image_to_text(_peek_src, psm=6, enhance=True) or ""
             )
-            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I):
+            # Second pass helps Medica/OPSTK peeks, but concatenating another
+            # full-page OCR onto an already-complete OPENING|RECEIPT|ISSUE|
+            # CLOSING sheet doubles every product row in the ORIC parser.
+            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I) and not re.search(
+                r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", _op_stk_peek, re.I
+            ):
                 _op_stk_peek = (
                     (_op_stk_peek or "")
                     + "\n"
