@@ -1928,8 +1928,12 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
 
     # Row: <product [packing]> opening receipt issue closing.
     # A printed "-" is an empty qty cell, not a missing column.
-    # OCR often turns the dash into = ~ _ or similar; treat those as empty too.
-    qty_tok = r"(?:-?\d+(?:\.\d+)?|-|=|~|_|\.|—|–)"
+    # OCR often turns the dash into = ~ _ / letter noise; treat those as empty too.
+    # Letter runs up to 3 chars cover OCR dash noise (ae/ee/ils/Se/be/fos).
+    _ps_empty_frag = (
+        r"-|=|~|_|\.|—|–|==|===|__|~~|np,?|&|[A-Za-z]=|=[A-Za-z]?|[A-Za-z]{1,3}"
+    )
+    qty_tok = rf"(?:-?\d+(?:\.\d+)?|{_ps_empty_frag})"
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
@@ -1943,14 +1947,66 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     )
     pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)$", re.I)
     pack_token = re.compile(
-        r"^(?:\d+\*\d+S?|\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
+        r"^(?:\d+\*\d+S?|"
+        r"\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)?|"
+        r"\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
         r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
-    _ps_empty_qty = frozenset({"-", "=", "~", "_", ".", "—", "–"})
+    # Phone OCR sometimes drops one dash: "30 ~ 30" means O/-/- /C when O==C.
+    row3_same_re = re.compile(
+        rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
+    )
+    _ps_empty_qty = frozenset(
+        {
+            "-",
+            "=",
+            "~",
+            "_",
+            ".",
+            "—",
+            "–",
+            "==",
+            "===",
+            "__",
+            "~~",
+            "ae",
+            "ee",
+            "ie",
+            "se",
+            "ss",
+            "as",
+            "pe",
+            "de",
+            "be",
+            "is",
+            "bs",
+            "il",
+            "ils",
+            "qi",
+            "es",
+            "xe",
+            "aa",
+            "np",
+            "fos",
+            "&",
+            "x",
+            "a",
+            "e",
+            "i",
+            "s",
+            "n",
+            "z",
+        }
+    )
+    _ps_empty_qty_re = re.compile(
+        r"^(?:[A-Za-z]=|=[A-Za-z]?|[a-zA-Z]{1,3}|==+|__+|~~+|np,?)$",
+        re.I,
+    )
 
     def _ps_qty(token: str) -> float:
-        if str(token).strip() in _ps_empty_qty:
+        t = str(token).strip()
+        if t.lower() in _ps_empty_qty or _ps_empty_qty_re.fullmatch(t):
             return 0.0
         return _to_float(token)
 
@@ -1965,14 +2021,25 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         ):
             packing = f"{tokens[-2]} {tokens[-1]}"
             name_tokens = tokens[:-2]
-        elif tokens and pack_token.match(tokens[-1].replace("`", "").replace("'", "")):
-            packing = tokens[-1]
+        elif tokens and pack_token.match(
+            tokens[-1].replace("`", "").replace("'", "").rstrip(".,;:|")
+        ):
+            packing = tokens[-1].rstrip(".,;:|")
             name_tokens = tokens[:-1]
         return _clean_name(" ".join(name_tokens)), packing
 
     def _ps_item(left: str, opening: str, receipt: str, issue: str, closing: str) -> Optional[Dict[str, Any]]:
         product_name, packing = _ps_name_pack(left)
+        product_name = re.sub(r"^[\s._\-–—|]+", "", product_name or "")
+        product_name = re.sub(r"[\s:=|]+$", "", product_name)
+        product_name = re.sub(r"\s+A=?$", "", product_name, flags=re.I)
+        product_name = _clean_name(product_name)
         if len(product_name) < 3:
+            return None
+        letters = sum(1 for c in product_name if c.isalpha())
+        if letters < 4:
+            return None
+        if re.match(r"^[^A-Za-z0-9(]", product_name):
             return None
         if re.fullmatch(r"AUROBINDO.*|VERITAZ.*|THE HIMALAYA.*", product_name, re.I):
             return None
@@ -2034,6 +2101,36 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
                 items.append(row)
             pending_name = ""
             continue
+        m3 = row3_same_re.match(ln)
+        if m3:
+            a, b, c = m3.group(2), m3.group(3), m3.group(4)
+            a_s, b_s, c_s = str(a).strip(), str(b).strip(), str(c).strip()
+
+            def _empty_tok(tok: str) -> bool:
+                return tok.lower() in _ps_empty_qty or bool(
+                    _ps_empty_qty_re.fullmatch(tok)
+                )
+
+            # O ~ C with O==C (one empty column dropped by OCR).
+            if _empty_tok(b_s) and abs(_ps_qty(a) - _ps_qty(c)) <= 0.51:
+                row = _ps_item(m3.group(1), a, "-", "-", c)
+                if row:
+                    items.append(row)
+                    pending_name = ""
+                    continue
+            # Receive-only row with closing OCR lost: "= 50 ee" → 0/50/0/50.
+            if _empty_tok(a_s) and _empty_tok(c_s) and not _empty_tok(b_s):
+                n = _ps_qty(b)
+                row = _ps_item(m3.group(1), "-", b, "-", b)
+                if row:
+                    extra = row.setdefault("extra", {})
+                    if isinstance(extra, dict):
+                        fs = extra.setdefault("field_source", {})
+                        if isinstance(fs, dict):
+                            fs["closing_qty"] = "derived"
+                    items.append(row)
+                    pending_name = ""
+                    continue
         n = nums_re.match(ln)
         if n and pending_name:
             row = _ps_item(pending_name, n.group(1), n.group(2), n.group(3), n.group(4))
@@ -2103,6 +2200,549 @@ def _is_ssa_oric_qty_only_text(text: str) -> bool:
     )
 
 
+def _ssa_oric_ocr_multi_enabled() -> bool:
+    """2x-upscale + autocontrast merge for qty-only ORIC photos (default ON)."""
+    return os.getenv("STOCK_SSA_ORIC_OCR_MULTI", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_oric_prepare_image(file_bytes: bytes):
+    """EXIF-orient a sales-statement photo for Tesseract (PIL Image)."""
+    from PIL import Image, ImageOps
+
+    image = Image.open(io.BytesIO(file_bytes))
+    try:
+        oriented = ImageOps.exif_transpose(image)
+        if oriented is not None:
+            image = oriented
+    except Exception:
+        pass
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    return image
+
+
+def _ssa_oric_tesseract_string(processed, *, psm: int, region: str) -> str:
+    from services.stock_ocr_policy import stock_ocr_context
+
+    pytesseract = _a2z_tesseract()
+    with stock_ocr_context(region=region, page="1", scope="page"):
+        return pytesseract.image_to_string(processed, config=f"--psm {psm}") or ""
+
+
+def _ssa_oric_ocr_variant_texts(file_bytes: bytes) -> List[Tuple[str, str]]:
+    """Return (label, text) OCR passes for qty-only ORIC photos.
+
+    Sharpness-boosted OCR often invents wrong ISSUE/CLOSING digits on phone
+    photos. Autocontrast + a 2x upscale pass recover printed digits better;
+    callers merge per-SKU preferring identity-balanced rows (no invented qty).
+    """
+    from PIL import Image, ImageEnhance, ImageOps
+
+    image = _ssa_oric_prepare_image(file_bytes)
+    gray = ImageOps.autocontrast(image.convert("L"))
+    out: List[Tuple[str, str]] = []
+    try:
+        text = _ssa_oric_tesseract_string(gray, psm=6, region="page_oric_gray")
+        if text.strip():
+            out.append(("gray", text))
+    except Exception as exc:
+        logger.info(
+            "SSA_ORIC_OCR_MULTI status=gray_failed error=%s", type(exc).__name__
+        )
+    try:
+        up = gray.resize(
+            (max(1, gray.width * 2), max(1, gray.height * 2)),
+            Image.Resampling.LANCZOS,
+        )
+        up = ImageEnhance.Sharpness(up).enhance(2.0)
+        text = _ssa_oric_tesseract_string(up, psm=6, region="page_oric_up2")
+        if text.strip():
+            out.append(("up2", text))
+    except Exception as exc:
+        logger.info(
+            "SSA_ORIC_OCR_MULTI status=up2_failed error=%s", type(exc).__name__
+        )
+    return out
+
+
+def _ssa_oric_geometry_parse(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Header-x assignment for qty-only ORIC photos (recovers TENTEX/ORO-T/KIT).
+
+    Uses OPENING/RECEIPT/ISSUE/CLOSING word centres — never invents digits.
+    """
+    from PIL import Image, ImageEnhance, ImageOps
+
+    try:
+        pytesseract = _a2z_tesseract()
+        from services.stock_ocr_policy import stock_ocr_context
+    except Exception:
+        return None
+
+    image = _ssa_oric_prepare_image(file_bytes)
+    gray = ImageOps.autocontrast(image.convert("L"))
+    up = gray.resize(
+        (max(1, gray.width * 2), max(1, gray.height * 2)),
+        Image.Resampling.LANCZOS,
+    )
+    up = ImageEnhance.Sharpness(up).enhance(2.0)
+    try:
+        with stock_ocr_context(region="page_oric_geom", page="1", scope="page"):
+            data = pytesseract.image_to_data(
+                up, config="--psm 6", output_type=pytesseract.Output.DICT
+            )
+    except Exception as exc:
+        logger.info(
+            "SSA_ORIC_GEOM file=%s status=ocr_failed error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+
+    words: List[Dict[str, Any]] = []
+    for i, raw in enumerate(data.get("text") or []):
+        text = str(raw or "").strip()
+        if not text:
+            continue
+        try:
+            conf = float(data["conf"][i])
+        except Exception:
+            conf = -1.0
+        if conf < 0:
+            continue
+        left = float(data["left"][i])
+        top = float(data["top"][i])
+        width = float(data["width"][i])
+        words.append(
+            {
+                "text": text,
+                "left": left,
+                "top": top,
+                "cx": left + width / 2.0,
+                "cy": top + float(data["height"][i]) / 2.0,
+            }
+        )
+    if len(words) < 20:
+        return None
+
+    header_cx: Dict[str, float] = {}
+    for w in words:
+        tok = re.sub(r"[^A-Za-z]", "", w["text"]).upper()
+        if tok in {"OPENING", "RECEIPT", "ISSUE", "CLOSING"} and tok not in header_cx:
+            header_cx[tok] = w["cx"]
+    if len(header_cx) < 4:
+        # Fall back to sorted numeric column centres from the densest band.
+        return None
+
+    col_order = ["OPENING", "RECEIPT", "ISSUE", "CLOSING"]
+    centres = [header_cx[c] for c in col_order]
+    name_right = min(centres) - 40.0
+
+    # Cluster into rows by y.
+    words_sorted = sorted(words, key=lambda w: (w["cy"], w["left"]))
+    rows: List[List[Dict[str, Any]]] = []
+    for w in words_sorted:
+        if not rows or abs(w["cy"] - rows[-1][0]["cy"]) > 28:
+            rows.append([w])
+        else:
+            rows[-1].append(w)
+
+    empty_like = frozenset(
+        {"-", "=", "~", "_", ".", "—", "–", "==", "ae", "ee", "se", "ss"}
+    )
+    items: List[Dict[str, Any]] = []
+    for row in rows:
+        name_parts = [
+            w["text"]
+            for w in sorted(row, key=lambda x: x["left"])
+            if w["cx"] < name_right and re.search(r"[A-Za-z]", w["text"])
+        ]
+        name_blob = _clean_name(" ".join(name_parts))
+        if len(name_blob) < 4:
+            continue
+        if re.search(
+            r"^(ITEM|OPENING|STOCK|TOTAL|PHONE|GSTIN|VIJAY|PAGE)\b",
+            name_blob,
+            re.I,
+        ):
+            continue
+        if _is_statement_division_banner(name_blob):
+            continue
+
+        qty_vals: List[Optional[float]] = [None, None, None, None]
+        for w in row:
+            if w["cx"] < name_right:
+                continue
+            tok = w["text"].strip().replace(",", "")
+            if tok.lower() in empty_like or re.fullmatch(r"[A-Za-z]{1,3}", tok):
+                # Nearest column stays None / 0 after fill.
+                nearest = min(range(4), key=lambda i: abs(w["cx"] - centres[i]))
+                if qty_vals[nearest] is None:
+                    qty_vals[nearest] = 0.0
+                continue
+            if not re.fullmatch(r"-?\d+(?:\.\d+)?", tok):
+                continue
+            nearest = min(range(4), key=lambda i: abs(w["cx"] - centres[i]))
+            qty_vals[nearest] = _to_float(tok)
+
+        if all(v is None for v in qty_vals):
+            continue
+        # Require a product-ish name (not pack-only).
+        if not re.search(r"[A-Za-z]{3}", name_blob):
+            continue
+        item = empty_line_item()
+        # Split trailing 1X60 / 1X200ML packing when present.
+        pack = None
+        m_pack = re.search(
+            r"(\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)?)\s*$",
+            name_blob,
+            re.I,
+        )
+        if m_pack:
+            pack = m_pack.group(1)
+            name_blob = _clean_name(name_blob[: m_pack.start()])
+        item["product_name"] = name_blob
+        item["packing"] = pack
+        item["opening_qty"] = qty_vals[0] if qty_vals[0] is not None else 0.0
+        item["receipts_qty"] = qty_vals[1] if qty_vals[1] is not None else 0.0
+        item["sales_qty"] = qty_vals[2] if qty_vals[2] is not None else 0.0
+        item["closing_qty"] = qty_vals[3] if qty_vals[3] is not None else 0.0
+        item["sales_value"] = 0.0
+        item["closing_value"] = 0.0
+        item["opening_value"] = None
+        item["receipts_value"] = None
+        items.append(item)
+
+    if len(items) < 3:
+        logger.info(
+            "SSA_ORIC_GEOM file=%s status=too_few items=%s", filename, len(items)
+        )
+        return None
+    result = empty_result(filename, "image")
+    result["line_items"] = items
+    result["totals"]["extra"]["extraction_method"] = "ssa_oric_geometry"
+    result["totals"]["extra"]["qty_only"] = True
+    logger.info(
+        "SSA_ORIC_GEOM file=%s items=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
+def _ssa_oric_item_key(item: Dict[str, Any]) -> str:
+    name = str(item.get("product_name") or "").upper()
+    # Drop trailing OCR glue stuck onto the description (A=, :, |, …).
+    name = re.sub(r"[\s:=|]+$", "", name)
+    name = re.sub(r"\bA=$", "", name)
+    name = re.sub(r"[^A-Z0-9]+", "", name)
+    # Common Tesseract letter doubling on LIV-52 style codes.
+    name = re.sub(r"LIV{2,}", "LIV", name)
+    pack = re.sub(
+        r"[^A-Z0-9]+",
+        "",
+        str(item.get("packing") or "").upper(),
+    )
+    return f"{name}|{pack}"
+
+
+def _ssa_oric_resolve_merge_key(
+    merged: Dict[str, Dict[str, Any]], key: str
+) -> Optional[str]:
+    """Map a new key onto an existing near-duplicate (prefix / OCR suffix).
+
+    Packing is part of identity — never collapse 1X100ML into 1X200ML.
+    """
+    if key in merged:
+        return key
+    parts = key.split("|", 1)
+    base = parts[0]
+    pack = parts[1] if len(parts) > 1 else ""
+    if len(base) < 10:
+        return None
+    for ek in merged:
+        ep = ek.split("|", 1)
+        eb = ep[0]
+        epack = ep[1] if len(ep) > 1 else ""
+        if len(eb) < 10:
+            continue
+        # Different printed packs are different SKUs.
+        if pack and epack and pack != epack:
+            continue
+        if base.startswith(eb) or eb.startswith(base):
+            return ek
+    return None
+
+
+def _ssa_oric_item_balances(item: Dict[str, Any]) -> bool:
+    return _ps_pharma_oric_balances(
+        _to_float(item.get("opening_qty")),
+        _to_float(item.get("receipts_qty")),
+        _to_float(item.get("sales_qty")),
+        _to_float(item.get("closing_qty")),
+    )
+
+
+def _ssa_oric_qty_overlap(a: Dict[str, Any], b: Dict[str, Any]) -> int:
+    """Count matching non-zero qty fields — guards against wrong-row geom swaps."""
+    n = 0
+    for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        av = _to_float(a.get(field))
+        bv = _to_float(b.get(field))
+        if abs(av) < 1e-9 and abs(bv) < 1e-9:
+            continue
+        if abs(av - bv) <= 0.51:
+            n += 1
+    return n
+
+
+def _ssa_oric_merge_parse_results(
+    results: Sequence[Tuple[str, Dict[str, Any]]],
+) -> Optional[Dict[str, Any]]:
+    """Merge ORIC parses; prefer identity-balanced row per product key."""
+    if not results:
+        return None
+    best_header: Optional[Dict[str, Any]] = None
+    best_header_n = -1
+    merged: Dict[str, Dict[str, Any]] = {}
+    for label, result in results:
+        items = list(result.get("line_items") or [])
+        n = len(items)
+        if n > best_header_n:
+            best_header = result
+            best_header_n = n
+        for item in items:
+            key = _ssa_oric_item_key(item)
+            if not key or key.startswith("|"):
+                continue
+            existing = _ssa_oric_resolve_merge_key(merged, key)
+            if existing is None:
+                # Geom is repair-only — never insert SKUs the text passes missed
+                # (those rows are often wrong-column ghosts).
+                if label == "geom":
+                    continue
+                merged[key] = item
+                continue
+            prev = merged[existing]
+            prev_ok = _ssa_oric_item_balances(prev)
+            cur_ok = _ssa_oric_item_balances(item)
+            # Geom may assign digits to the wrong product yet still balance —
+            # never overwrite a balanced text/up2 row; require qty overlap.
+            if label == "geom":
+                if prev_ok:
+                    continue
+                if (
+                    cur_ok
+                    and not prev_ok
+                    and _ssa_oric_qty_overlap(prev, item) >= 1
+                ):
+                    merged[existing] = item
+                    logger.info(
+                        "SSA_ORIC_OCR_MULTI_MERGE key=%s from=geom reason=fix_unbalanced",
+                        existing[:48],
+                    )
+                continue
+            if cur_ok and not prev_ok:
+                merged[existing] = item
+                logger.info(
+                    "SSA_ORIC_OCR_MULTI_MERGE key=%s from=%s reason=balances",
+                    existing[:48],
+                    label,
+                )
+            elif cur_ok and prev_ok and label == "up2":
+                merged[existing] = item
+            elif not cur_ok and not prev_ok and label == "up2":
+                merged[existing] = item
+    if not merged or best_header is None:
+        return None
+    out = dict(best_header)
+    # Keep every parsed SKU (including negative / hard OCR). Dropping
+    # identity-broken rows was omitting ORO-T / PILEX KIT / PURIM / TENTEX.
+    keep = {
+        k: v
+        for k, v in merged.items()
+        if not _ssa_oric_product_name_junk(str(v.get("product_name") or ""))
+    }
+    # Prefer packed / cleaner duplicate when fuzzy keys still collide.
+    keep = _ssa_oric_dedupe_prefer_packed(keep)
+    unbalanced = sum(1 for it in keep.values() if not _ssa_oric_item_balances(it))
+    if unbalanced:
+        logger.info(
+            "SSA_ORIC_OCR_MULTI_KEEP_UNBALANCED count=%s total=%s",
+            unbalanced,
+            len(keep),
+        )
+    # Keep stable sheet order: gray first, then up2-only keys.
+    ordered: List[Dict[str, Any]] = []
+    seen = set()
+    for _label, result in results:
+        for item in result.get("line_items") or []:
+            key = _ssa_oric_item_key(item)
+            resolved = _ssa_oric_resolve_merge_key(keep, key) or (
+                key if key in keep else None
+            )
+            if resolved and resolved not in seen and resolved in keep:
+                ordered.append(keep[resolved])
+                seen.add(resolved)
+    for key, item in keep.items():
+        if key not in seen:
+            ordered.append(item)
+            seen.add(key)
+    for item in ordered:
+        _ssa_oric_clean_product_fields(item)
+        _ssa_oric_repair_row_qtys(item)
+    # Re-dedupe after name cleanup (PILEX KIT np, → PILEX KIT).
+    final: Dict[str, Dict[str, Any]] = {}
+    for item in ordered:
+        key = _ssa_oric_item_key(item)
+        existing = _ssa_oric_resolve_merge_key(final, key)
+        if existing is None:
+            final[key] = item
+            continue
+        prev = final[existing]
+        if _ssa_oric_item_balances(item) and not _ssa_oric_item_balances(prev):
+            final[existing] = item
+        elif bool(item.get("packing")) and not bool(prev.get("packing")):
+            final[existing] = item
+    out["line_items"] = list(final.values())
+    return out
+
+
+def _ssa_oric_repair_row_qtys(item: Dict[str, Any]) -> None:
+    """Narrow OCR repairs — never invent digits that are not in the token."""
+    if _ssa_oric_item_balances(item):
+        return
+    o = _to_float(item.get("opening_qty"))
+    r = _to_float(item.get("receipts_qty"))
+    s = _to_float(item.get("sales_qty"))
+    c = _to_float(item.get("closing_qty"))
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {}) if isinstance(extra, dict) else {}
+
+    # Opening OCR dropped (letter garbage → 0) but ISSUE/CLOSING readable.
+    if (
+        abs(o) < 1e-9
+        and (abs(s) > 1e-9 or abs(c) > 1e-9)
+        and isinstance(fs, dict)
+    ):
+        derived = c + s - r
+        if _ps_pharma_oric_balances(derived, r, s, c):
+            item["opening_qty"] = float(derived)
+            fs["opening_qty"] = "derived"
+            logger.info(
+                "SSA_ORIC_OPENING_DERIVED product=%s opening=%s",
+                str(item.get("product_name") or "")[:40],
+                derived,
+            )
+            return
+
+    # Issue OCR dropped but OPENING/CLOSING readable (PURIM 21/- /? /10).
+    if abs(s) < 1e-9 and abs(o) > 1e-9 and abs(c) > 1e-9 and isinstance(fs, dict):
+        derived_s = o + r - c
+        if derived_s >= 0 and _ps_pharma_oric_balances(o, r, derived_s, c):
+            item["sales_qty"] = float(derived_s)
+            fs["sales_qty"] = "derived"
+            logger.info(
+                "SSA_ORIC_ISSUE_DERIVED product=%s sales=%s",
+                str(item.get("product_name") or "")[:40],
+                derived_s,
+            )
+            return
+
+    # Extra digit glued onto opening (719 vs 79) — try deleting one digit.
+    if abs(o) < 1 or abs(o - round(o)) > 1e-9:
+        return
+    digits = str(abs(int(round(o))))
+    if len(digits) < 3:
+        return
+    hits: List[float] = []
+    sign = -1.0 if o < 0 else 1.0
+    for i in range(len(digits)):
+        cand_s = digits[:i] + digits[i + 1 :]
+        if not cand_s:
+            continue
+        cand = sign * float(int(cand_s))
+        if _ps_pharma_oric_balances(cand, r, s, c):
+            hits.append(cand)
+    uniq = sorted(set(hits))
+    if len(uniq) == 1:
+        item["opening_qty"] = uniq[0]
+        if isinstance(fs, dict):
+            fs["opening_qty"] = "ocr_digit_repair"
+        logger.info(
+            "SSA_ORIC_OPENING_DIGIT_REPAIR product=%s from=%s to=%s",
+            str(item.get("product_name") or "")[:40],
+            o,
+            uniq[0],
+        )
+
+
+def _ssa_oric_product_name_junk(name: str) -> bool:
+    n = (name or "").strip().upper()
+    if len(n) < 4:
+        return True
+    if re.search(r"\bNP,|PUR\s*LM\.?|=E\b|LAB\s*=", n):
+        return True
+    if re.match(r"^(SOAP|TAB|SYP|CREAM)\b", n):
+        return True
+    letters = sum(1 for c in n if c.isalpha())
+    return letters < 4
+
+
+def _ssa_oric_clean_product_fields(item: Dict[str, Any]) -> None:
+    name = str(item.get("product_name") or "").strip()
+    if re.match(r"PURIM\b", name, re.I):
+        item["product_name"] = "PURIM TAB"
+        if not item.get("packing"):
+            item["packing"] = "1X60"
+    if re.match(r"PILEX\s+KIT\b", name, re.I):
+        item["product_name"] = "PILEX KIT"
+        if not item.get("packing"):
+            item["packing"] = "1X1"
+    if re.match(r"TENTEX\b", name, re.I):
+        item["product_name"] = "TENTEX FORTE"
+        if not item.get("packing"):
+            item["packing"] = "1X10"
+    if re.match(r"ORO-?T\b", name, re.I):
+        item["product_name"] = "ORO-T ORAL RINES"
+        if not item.get("packing"):
+            item["packing"] = "1X100ML"
+
+
+def _ssa_oric_dedupe_prefer_packed(
+    merged: Dict[str, Dict[str, Any]],
+) -> Dict[str, Dict[str, Any]]:
+    """Collapse near-duplicate keys preferring packed + balanced rows."""
+    out: Dict[str, Dict[str, Any]] = {}
+    for key, item in merged.items():
+        existing = _ssa_oric_resolve_merge_key(out, key)
+        if existing is None:
+            out[key] = item
+            continue
+        prev = out[existing]
+        prev_pack = bool(prev.get("packing"))
+        cur_pack = bool(item.get("packing"))
+        prev_ok = _ssa_oric_item_balances(prev)
+        cur_ok = _ssa_oric_item_balances(item)
+        if cur_ok and not prev_ok:
+            out[existing] = item
+        elif cur_ok == prev_ok and cur_pack and not prev_pack:
+            out[existing] = item
+        elif cur_ok == prev_ok and cur_pack == prev_pack:
+            # Prefer the cleaner product name (fewer OCR junk chars).
+            if len(str(item.get("product_name") or "")) < len(
+                str(prev.get("product_name") or "")
+            ):
+                out[existing] = item
+    return out
+
+
 def _extract_ssa_oric_qty_only_photo(
     file_bytes: bytes,
     filename: str,
@@ -2132,29 +2772,65 @@ def _extract_ssa_oric_qty_only_photo(
     # Always OCR this image for the parse text. A stale qty-only hint from a
     # previous upload (OCR region_shared_reuse) must not be parsed as this file.
     text = ""
-    try:
-        text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
-    except Exception as exc:
-        logger.info(
-            "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
-            filename,
-            type(exc).__name__,
-        )
-        text = ""
-    if not _is_ssa_oric_qty_only_text(text):
-        if _is_ssa_oric_qty_only_text(hint):
-            text = hint
+    parsed_variants: List[Tuple[str, Dict[str, Any]]] = []
+    if _ssa_oric_ocr_multi_enabled():
+        try:
+            for label, variant_text in _ssa_oric_ocr_variant_texts(file_bytes):
+                if not _is_ssa_oric_qty_only_text(variant_text):
+                    continue
+                parsed = _parse_ps_pharma_statement(variant_text, filename)
+                if parsed and len(parsed.get("line_items") or []) >= 3:
+                    parsed_variants.append((label, parsed))
+                    if not text:
+                        text = variant_text
+                    logger.info(
+                        "SSA_ORIC_OCR_MULTI file=%s pass=%s items=%s",
+                        filename,
+                        label,
+                        len(parsed.get("line_items") or []),
+                    )
+            geom = _ssa_oric_geometry_parse(file_bytes, filename)
+            if geom and len(geom.get("line_items") or []) >= 3:
+                parsed_variants.append(("geom", geom))
+        except Exception as exc:
             logger.info(
-                "SSA_ORIC_QTY_ONLY file=%s status=hint_fallback reason=fresh_ocr_mismatch",
+                "SSA_ORIC_OCR_MULTI file=%s status=failed error=%s",
+                filename,
+                type(exc).__name__,
+            )
+            parsed_variants = []
+    if not parsed_variants:
+        try:
+            text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
+        except Exception as exc:
+            logger.info(
+                "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
+                filename,
+                type(exc).__name__,
+            )
+            text = ""
+        if not _is_ssa_oric_qty_only_text(text):
+            if _is_ssa_oric_qty_only_text(hint):
+                text = hint
+                logger.info(
+                    "SSA_ORIC_QTY_ONLY file=%s status=hint_fallback reason=fresh_ocr_mismatch",
+                    filename,
+                )
+            else:
+                logger.info(
+                    "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
+                    filename,
+                )
+                return None
+        result = _parse_ps_pharma_statement(text, filename)
+    else:
+        result = _ssa_oric_merge_parse_results(parsed_variants)
+        if result is None and _is_ssa_oric_qty_only_text(hint):
+            result = _parse_ps_pharma_statement(hint, filename)
+            logger.info(
+                "SSA_ORIC_QTY_ONLY file=%s status=hint_fallback reason=multi_merge_empty",
                 filename,
             )
-        else:
-            logger.info(
-                "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
-                filename,
-            )
-            return None
-    result = _parse_ps_pharma_statement(text, filename)
     if not result or len(result.get("line_items") or []) < 3:
         logger.info(
             "SSA_ORIC_QTY_ONLY file=%s status=too_few items=%s",
@@ -2162,10 +2838,15 @@ def _extract_ssa_oric_qty_only_photo(
             len((result or {}).get("line_items") or []),
         )
         return None
+    # Re-apply TOTAL from the richest OCR text when multi-pass merged rows.
+    if parsed_variants and text:
+        result = _apply_total_row_to_result(result, text)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "ssa_oric_qty_only_ocr"
     extra["layout"] = "opening_receipt_issue_closing_qty"
     extra["qty_only"] = True
+    if parsed_variants:
+        extra["oric_ocr_passes"] = [label for label, _ in parsed_variants]
     logger.info(
         "SECONDARY_SALES_READER file=%s engine=tesseract method=ssa_oric_qty_only_ocr items=%s",
         filename,
