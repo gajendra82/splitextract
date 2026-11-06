@@ -25516,21 +25516,21 @@ def _parse_saleable_stock_report(
         item["sales_qty"] = _saleable_qty(matched["issue"])
         item["closing_qty"] = _saleable_qty(matched["bal"])
         if amt_pairs:
-            # Printed Issue Amt / Bal Amt — do not leave Bal Amt in closing_qty.
-            issue_amt = _saleable_qty(matched.get("issue_amt") or "")
-            bal_amt = _saleable_qty(matched.get("bal_amt") or "")
-            if issue_amt:
-                item["sales_value"] = issue_amt
-            if bal_amt:
-                item["closing_value"] = bal_amt
-            rec_amt = _saleable_qty(matched.get("rec_amt") or "")
-            opn_amt = _saleable_qty(matched.get("opn_amt") or "")
+            # Match may use issue_amt/bal_amt or sales_value/closing_value keys.
+            raw_sv = matched.get("sales_value", matched.get("issue_amt"))
+            raw_cv = matched.get("closing_value", matched.get("bal_amt"))
+            if raw_sv is not None:
+                item["sales_value"] = _saleable_qty(str(raw_sv))
+            if raw_cv is not None:
+                item["closing_value"] = _saleable_qty(str(raw_cv))
+            raw_ov = matched.get("opening_value", matched.get("opn_amt"))
+            raw_rv = matched.get("receipts_value", matched.get("rec_amt"))
             extra_item = item.setdefault("extra", {})
             if isinstance(extra_item, dict):
-                if opn_amt:
-                    extra_item["opening_value"] = opn_amt
-                if rec_amt:
-                    extra_item["receipts_value"] = rec_amt
+                if raw_ov is not None:
+                    extra_item["opening_value"] = _saleable_qty(str(raw_ov))
+                if raw_rv is not None:
+                    extra_item["receipts_value"] = _saleable_qty(str(raw_rv))
         items.append(item)
 
     if not items:
@@ -36954,6 +36954,47 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                     filename,
                     exc,
                 )
+
+        # Stock and Sales Detail (Op.Qty/Op.Val + P.Sch) image-only PDFs must
+        # run BEFORE camera_multipage/vision_table. Those generic paths map
+        # scheme/return money into sales_qty and were winning in Postman while
+        # this Detail extractor only ran under STOCK_VISION_TABLE=scanned_pdf.
+        try:
+            from services.stock_vision_table import is_scanned_pdf_bytes
+            from services.stock_direct_vision import (
+                extract_stock_sales_op_qty_val_scanned_pdf,
+                is_stock_vision_locked,
+            )
+
+            _detail_early = os.getenv(
+                "STOCK_SALES_DETAIL_SCANNED_EARLY", "1"
+            ).strip().lower() not in {"0", "false", "no", "off"}
+            if _detail_early and is_scanned_pdf_bytes(file_bytes, doc):
+                detail_opval = extract_stock_sales_op_qty_val_scanned_pdf(
+                    file_bytes, filename
+                )
+                if (
+                    detail_opval
+                    and detail_opval.get("line_items")
+                    and is_stock_vision_locked(detail_opval)
+                ):
+                    detail_opval.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )["statement_count"] = 1
+                    logger.info(
+                        "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s "
+                        "status=early_hit_before_multipage rows=%s",
+                        filename,
+                        len(detail_opval["line_items"]),
+                    )
+                    return detail_opval
+        except Exception as detail_exc:
+            logger.info(
+                "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s "
+                "status=skip_before_multipage error=%s",
+                filename,
+                type(detail_exc).__name__,
+            )
 
         # Camera-merged multi-page stock PDFs (Flutter): per-page extract +
         # cross-page identity resolution. Image-only, page_count>=2 only —

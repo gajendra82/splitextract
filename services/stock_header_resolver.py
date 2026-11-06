@@ -185,6 +185,8 @@ ALIASES: Dict[str, List[str]] = {
         "opening stock qty",
         "opening qty",
         "opening quantity",
+        "op qty",
+        "op.qty",
         "op stock",
         "op.",
         "op.bal",
