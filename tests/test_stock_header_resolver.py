@@ -948,5 +948,30 @@ class MedicaInOtFreeInTests(unittest.TestCase):
         self.assertIn("medica_in_ot_glued", cols[4]["reason"])
 
 
+class OpeningObSlashTests(unittest.TestCase):
+    def test_ob_slash_is_opening_not_unknown(self):
+        cols = resolve_columns(
+            _cells(
+                "SNo",
+                "Item",
+                "MRP",
+                "O/B",
+                "Receipts",
+                "Issues",
+                "Balance",
+                "Sales Value",
+                "Stock Value",
+            )
+        )["columns"]
+        by_header = {c["header_text"]: c["canonical"] for c in cols}
+        self.assertEqual(by_header["O/B"], "opening_qty")
+        self.assertEqual(by_header["Receipts"], "purchase_qty")
+        self.assertEqual(by_header["Issues"], "sales_qty")
+        self.assertEqual(by_header["Balance"], "closing_qty")
+        self.assertEqual(by_header["Sales Value"], "sales_value")
+        self.assertEqual(by_header["Stock Value"], "closing_value")
+        self.assertEqual(by_header["SNo"], "ignore")
+
+
 if __name__ == "__main__":
     unittest.main()

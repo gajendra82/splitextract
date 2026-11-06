@@ -41,7 +41,7 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot"}
+    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "pq", "sq"}
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -157,6 +157,8 @@ ALIASES: Dict[str, List[str]] = {
         "ostk",
         "o stk",  # O.Stk / O Stk (Profitmaker Stock & Sales)
         "ob",
+        # O/B normalises to "o b", so the compact alias "ob" does not match.
+        "o/b",
         "opbal",
         "op bal",
         # OpenBalQty — must beat closing "bal qty" infix inside openbalqty.
@@ -184,10 +186,16 @@ ALIASES: Dict[str, List[str]] = {
     ],
     "purchase": [
         "pur",
+        "pq",  # Purchase Qty (whole token; must not match inside other words)
         "purc",
         "purch",
         "purchase",
         "purchases",
+        # PurTot / Pur Tot — purchase total qty (OStk / PurTot / SaleTot / Qoh).
+        "purtot",
+        "pur tot",
+        "purchase tot",
+        "purchase total",
         "recd",
         "rec",
         "rcpt",
@@ -221,6 +229,7 @@ ALIASES: Dict[str, List[str]] = {
         "sale",
         "sales",
         "sal",  # Sal. Val / Sal. Amt
+        "sq",  # Sales Qty (whole token)
         "sl",
         "issue",
         "iss",
@@ -236,6 +245,12 @@ ALIASES: Dict[str, List[str]] = {
         "issue/sales",
         "sales qty",
         "sale qty",
+        # SaleTot / Sale Tot — sale total qty beside Qoh.
+        "saletot",
+        "sale tot",
+        "sale total",
+        "sales tot",
+        "sales total",
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
@@ -628,6 +643,11 @@ _DIRECT_VALUE_FIELDS = {
     "stk. value": "closing_value",
     "stock value": "closing_value",
     "stock-value": "closing_value",
+    # QohValue — closing money beside Qoh qty (Profitmaker / Daxinsoft).
+    "qoh value": "closing_value",
+    "qohvalue": "closing_value",
+    "qoh val": "closing_value",
+    "qohval": "closing_value",
     "sval": "sales_value",
     "sale val": "sales_value",
     "sa val": "sales_value",
@@ -1746,11 +1766,116 @@ def _disambiguate_gap_token(
     return None
 
 
+def _peel_leading_row_number(text: str) -> str:
+    """Drop a row index glued to the product name. Leave pack sizes (60S, 200ML)."""
+    token = str(text or "").strip()
+    spaced = re.match(r"^(\d+)\s+(.+)$", token)
+    if spaced and re.search(r"[A-Za-z]", spaced.group(2)):
+        return spaced.group(2).strip()
+    glued = re.match(r"^(\d+)([A-Za-z].+)$", token)
+    if glued and len(re.findall(r"[A-Za-z]", glued.group(2))) >= 3:
+        return glued.group(2).strip()
+    return token
+
+
+def _row_has_serial_header(columns: Sequence[Dict[str, Any]]) -> bool:
+    for col in columns or []:
+        if str(col.get("reason") or "") == "serial_number_header":
+            return True
+        if str(col.get("canonical") or "") != "ignore":
+            continue
+        if re.match(
+            r"^(?:#|s\.?\s*no\.?|sl\.?\s*no\.?|sr\.?\s*no\.?)$",
+            str(col.get("header_text") or "").strip(),
+            re.I,
+        ):
+            return True
+    return False
+
+
+def _rehome_serial_name_tokens(
+    bucket: Dict[int, List[str]],
+    bands: List[Dict[str, Any]],
+    *,
+    peel_serial: bool = False,
+) -> None:
+    """Move a product name that fell in the serial column back to product_name.
+
+    SNo is narrow and Item is centred in a wide name column, so left-aligned
+    names land in the serial band. A bare integer stays the row number. A
+    leading integer glued to letters is that same row number.
+    """
+    ordered = sorted(bands, key=lambda b: float(b.get("x_center") or 0))
+    for band, nxt in zip(ordered, ordered[1:]):
+        if str(band.get("canonical") or "") != "ignore":
+            continue
+        if str(nxt.get("canonical") or "") != "product_name":
+            continue
+        serial_idx = int(band["col_index"])
+        product_idx = int(nxt["col_index"])
+        kept: List[str] = []
+        moved: List[str] = []
+        for raw in bucket.get(serial_idx) or []:
+            text = str(raw or "").strip()
+            if not re.search(r"[A-Za-z]", text):
+                kept.append(raw)
+                continue
+            peeled = _peel_leading_row_number(text)
+            if not peeled or not re.search(r"[A-Za-z]", peeled):
+                kept.append(raw)
+                continue
+            if peeled != text:
+                logger.info(
+                    "STOCK_HEADER_SERIAL_NAME_PEEL from=%r to=%r",
+                    text,
+                    peeled,
+                )
+            moved.append(peeled)
+        bucket[serial_idx] = kept
+        if moved:
+            bucket[product_idx] = moved + list(bucket.get(product_idx) or [])
+        _peel_product_bucket_serial(bucket, product_idx, peel_serial=peel_serial)
+        return
+    if peel_serial:
+        for band in ordered:
+            if str(band.get("canonical") or "") == "product_name":
+                _peel_product_bucket_serial(
+                    bucket, int(band["col_index"]), peel_serial=True
+                )
+                return
+
+
+def _peel_product_bucket_serial(
+    bucket: Dict[int, List[str]],
+    product_idx: int,
+    *,
+    peel_serial: bool,
+) -> None:
+    if not peel_serial:
+        return
+    prod = list(bucket.get(product_idx) or [])
+    if not prod:
+        return
+    first = str(prod[0] or "")
+    peeled = _peel_leading_row_number(first)
+    if peeled == first.strip() or not re.search(r"[A-Za-z]", peeled):
+        return
+    logger.info(
+        "STOCK_HEADER_SERIAL_NAME_PEEL from=%r to=%r",
+        first.strip(),
+        peeled,
+    )
+    prod[0] = peeled
+    bucket[product_idx] = prod
+
+
 def _assign_cells_by_column_bands(
     row_tokens: List[Dict[str, Any]],
     centers: Sequence[Tuple[int, float, str]],
     pitch: float,
     fields: Dict[str, Optional[str]],
+    *,
+    peel_serial: bool = False,
 ) -> Dict[str, Any]:
     """Assign tokens by header x-bands (row tokens already Y-clustered by caller)."""
     errors: List[Dict[str, Any]] = []
@@ -1827,6 +1952,8 @@ def _assign_cells_by_column_bands(
         else:
             errors.append({"code": "UNASSIGNED_TOKEN", "message": raw, "x": tx})
             unassigned += 1
+
+    _rehome_serial_name_tokens(bucket, bands, peel_serial=peel_serial)
 
     for b in bands:
         idx = int(b["col_index"])
@@ -2707,7 +2834,11 @@ def assign_cells(
     # restores nearest-centre assign for rollback without code revert.
     if _column_bands_enabled():
         return _assign_cells_by_column_bands(
-            row_tokens, centers, pitch, fields
+            row_tokens,
+            centers,
+            pitch,
+            fields,
+            peel_serial=_row_has_serial_header(columns),
         )
 
     # Legacy nearest-centre assign (flag off).

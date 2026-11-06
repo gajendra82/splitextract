@@ -564,6 +564,108 @@ def _unglue_header_enabled() -> bool:
     }
 
 
+def _right_align_qty_enabled() -> bool:
+    """STOCK_PDF_RIGHT_ALIGN_QTY — right-aligned qtys under left-aligned headers.
+
+    Default ON. Kill switch STOCK_PDF_RIGHT_ALIGN_QTY=false.
+    A qty printed at the right edge of its column sits closer to the next
+    header centre. Snap it back when it is still left of that next header.
+    Also keeps a following expiry date, and a pack size, as their own cells.
+    """
+    return os.getenv("STOCK_PDF_RIGHT_ALIGN_QTY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_unit_pack(text: str) -> bool:
+    from services.stock_header_resolver import _unit_pack_token
+
+    token = str(text or "").replace("`", "'").replace("’", "'").replace("´", "'")
+    return _unit_pack_token(token)
+
+
+_EXPIRY_DATE_TOKEN_RE = re.compile(r"^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$")
+
+
+def _snap_right_aligned_qty_tokens(
+    header_cells: List[Dict[str, Any]],
+    rows: List[List[Dict[str, Any]]],
+) -> int:
+    """Move a right-aligned qty onto its header centre.
+
+    Owner is the header whose text starts at or before the number's right
+    edge and before the next header. Snap only when that number sits past
+    the header glyph and nearest-centre would pick a different column.
+    """
+    if not _right_align_qty_enabled():
+        return 0
+    spans = [
+        h
+        for h in header_cells or []
+        if isinstance(h, dict)
+        and h.get("x0") is not None
+        and h.get("x_center") is not None
+    ]
+    spans.sort(key=lambda h: float(h["x0"]))
+    if len(spans) < 3:
+        return 0
+    snapped = 0
+    for row in rows or []:
+        for tok in row:
+            if not isinstance(tok, dict):
+                continue
+            raw = str(tok.get("text") or "").strip()
+            # Plain qtys only. Parenthetical codes such as (078) are not amounts.
+            if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw.replace(",", "")):
+                continue
+            if parse_number(raw) is None:
+                continue
+            if tok.get("x0") is None or tok.get("x1") is None:
+                continue
+            right = float(tok["x1"])
+            center = (float(tok["x0"]) + right) / 2.0
+            owner = None
+            for i, header in enumerate(spans):
+                nxt = (
+                    float(spans[i + 1]["x0"]) if i + 1 < len(spans) else 1e12
+                )
+                if float(header["x0"]) - 1.0 <= right < nxt - 0.5:
+                    owner = header
+                    break
+            if owner is None:
+                continue
+            owner_right = float(owner.get("x1") or owner["x0"])
+            if center <= owner_right + 2.0:
+                continue
+            nearest = min(
+                spans,
+                key=lambda h: abs(
+                    (
+                        (float(h["x0"]) + float(h.get("x1") or h["x0"]))
+                        / 2.0
+                    )
+                    - center
+                ),
+            )
+            if int(nearest.get("col_index") or -1) == int(
+                owner.get("col_index") or -2
+            ):
+                continue
+            tok["x"] = float(owner["x_center"])
+            snapped += 1
+            logger.info(
+                "STOCK_PDF_RIGHT_ALIGN_QTY token=%s header=%s",
+                raw,
+                owner.get("text"),
+            )
+    if snapped:
+        logger.info("STOCK_PDF_RIGHT_ALIGN_QTY snapped=%s", snapped)
+    return snapped
+
+
 def _split_qty_pack_cluster_enabled() -> bool:
     """STOCK_PDF_SPLIT_QTY_PACK_CLUSTER — keep Cl.Stock qty off Box Pack.
 
@@ -815,6 +917,9 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         r"total\s+(?:quantity|qty|qnt)\b",
         joined,
     ):
+        return "quantity"
+    # "Total For: All Items" — qty under the movement columns, money under value.
+    if re.search(r"(?i)total\s+for\b", joined):
         return "quantity"
     if re.search(
         r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
@@ -1187,6 +1292,9 @@ def _is_repeated_header_tokens(
 ) -> bool:
     """True when a data row looks like a reprinted column header."""
     if not tokens or not header_cells:
+        return False
+    # A printed amount means this is a value footer, not a reprinted header.
+    if any(parse_number(t.get("text")) is not None for t in tokens):
         return False
     hits = sum(1 for t in tokens if _alias_hit(t.get("text")))
     has_closing = any(_is_closing_alias(t.get("text")) for t in tokens)
@@ -1649,6 +1757,47 @@ def _extract_pdf_page_rows(
                         }
                     )
                     continue
+                # Closing qty and the expiry date beside it are two cells.
+                if (
+                    _right_align_qty_enabled()
+                    and parse_number(prev_text) is not None
+                    and _EXPIRY_DATE_TOKEN_RE.fullmatch(text)
+                ):
+                    logger.info(
+                        "STOCK_PDF_RIGHT_ALIGN_QTY split_date left=%r right=%r",
+                        prev_text,
+                        text,
+                    )
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
+                # Pack size after the product name is the packing column.
+                if (
+                    _right_align_qty_enabled()
+                    and _looks_like_unit_pack(text)
+                    and re.search(r"[A-Za-z]", prev_text)
+                    and not _looks_like_unit_pack(prev_text)
+                ):
+                    logger.info(
+                        "STOCK_PDF_RIGHT_ALIGN_QTY split_pack left=%r right=%r",
+                        prev_text,
+                        text,
+                    )
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
                 # Qty and neighbouring box-pack are two cells, not "89 100x60'S".
                 if _qty_and_pack_cluster_split(prev_text, text):
                     logger.info(
@@ -1770,6 +1919,8 @@ def _extract_pdf_page_rows(
                 "text": c["text"],
                 "col_index": c["col_index"],
                 "x": c["x_center"],
+                "x0": c.get("x0"),
+                "x1": c.get("x1"),
             }
             for c in cells
         ]
@@ -1898,6 +2049,8 @@ def from_pdf_words(
             else:
                 page_data.append(tokens)
 
+        if page_header and page_data:
+            _snap_right_aligned_qty_tokens(page_header, page_data)
         if resolved:
             pages_resolved += 1
         combined_rows.extend(page_data)

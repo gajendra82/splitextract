@@ -5103,6 +5103,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "ssa_value_footer",
                 "chopada_zandra_footer",
                 "stock_sales_detail_total",
+                "printed_footer",
             }
         )
     )
@@ -5159,6 +5160,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "chopada_zandra_footer",
             "stock_sales_detail_total",
             "marg_sale_purchase_value",
+            "printed_footer",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -12425,6 +12427,8 @@ _XLS_HEADER_ALIASES = {
     "itemname": "item",
     "product": "item",
     "productname": "item",
+    # Profitmaker / Daxinsoft Stock & Sales: "Name" product column.
+    "name": "item",
     "description": "item",
     "desc": "item",
     "productdescription": "item",
@@ -12454,6 +12458,9 @@ _XLS_HEADER_ALIASES = {
     "op.stock": "op",
     "opstk": "op",
     "op.stk": "op",
+    # OStk / O.Stk — opening stock qty (same as stock_header_resolver).
+    "ostk": "op",
+    "o.stk": "op",
     "opening": "op",
     "openingstock": "op",
     "openingstk": "op",
@@ -12483,6 +12490,11 @@ _XLS_HEADER_ALIASES = {
     "purchase": "pur",
     "purchases": "pur",
     "purchaseqty": "pur",
+    # PurTot — purchase total qty (OStk / PurTot / SaleTot / Qoh sheets).
+    "purtot": "pur",
+    "purtotal": "pur",
+    "purchasetot": "pur",
+    "purchasetotal": "pur",
     "receipt": "pur",
     "receipts": "pur",
     "recp": "pur",
@@ -12511,6 +12523,11 @@ _XLS_HEADER_ALIASES = {
     "saleqty": "sale",
     "salesqty": "sale",
     "soldqty": "sale",
+    # SaleTot — sale total qty beside Qoh closing.
+    "saletot": "sale",
+    "saletotal": "sale",
+    "salestot": "sale",
+    "salestotal": "sale",
     "secondaryqtytotal": "sale",
     "secondaryqty": "sale",
     "secondaryquantity": "sale",
@@ -12549,6 +12566,9 @@ _XLS_HEADER_ALIASES = {
     "curstock": "bal",
     "currentstk": "bal",
     "currentstock": "bal",
+    # Qoh — qty on hand / closing (Profitmaker / Daxinsoft).
+    "qoh": "bal",
+    "qohqty": "bal",
     "date": "date",
     "statementdate": "date",
     "stockdate": "date",
@@ -12559,6 +12579,9 @@ _XLS_HEADER_ALIASES = {
     "bval": "bval",
     "closingvalue": "bval",
     "closingval": "bval",
+    # QohValue — closing money beside Qoh qty.
+    "qohvalue": "bval",
+    "qohval": "bval",
     # PRODUCT WISE STOCK AND SALE CONSOLIDATED — CLOSING VALUE ON BASIC
     "closingvalueonbasic": "bval",
     "closingvalueonbasics": "bval",
