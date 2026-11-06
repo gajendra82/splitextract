@@ -37337,7 +37337,23 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
-        result = extract_sales_statement(file_bytes, filename)
+        # This earlier duplicate route still matches first in FastAPI. Bind the
+        # sales deadline/request_id so stock OCR policy cannot region_shared_reuse
+        # another upload's page text (request_id=unknown thread-local leak).
+        from services.sales_extraction_runtime import (
+            SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+            resolve_request_id,
+            run_sales_extract_with_deadline,
+        )
+
+        result = await asyncio.to_thread(
+            run_sales_extract_with_deadline,
+            extract_sales_statement,
+            file_bytes,
+            filename,
+            resolve_request_id(),
+            float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS),
+        )
         extra = ((result.get("totals") or {}).get("extra") or {})
         if extra.get("extraction_failed") and extra.get("photo_quality_rejected"):
             from services.stock_photo_quality import photo_quality_client_detail

@@ -6,6 +6,7 @@ Separate from invoice OCR — do not use for tax invoices.
 from __future__ import annotations
 
 import base64
+import contextvars
 import io
 import itertools
 import json
@@ -1833,7 +1834,38 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     result = empty_result(filename, "pdf")
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if lines:
-        result["stockist_name"] = _clean_name(lines[0])
+        # Phone photos often put OCR junk above the letterhead. Prefer a real
+        # agency line over the first noisy fragment.
+        stockist = None
+        skip_hdr = (
+            r"STOCK\s*&\s*SALES|Sales\s*&\s*Stock|OPENING\s+RECEIPT|"
+            r"Phone|GSTIN|E-Mail|ITEM\s+DESCRIPTION"
+        )
+        for ln in lines[:10]:
+            if re.search(skip_hdr, ln, re.I):
+                continue
+            if re.search(
+                r"MEDICAL|AGENC|PHARMA|ENTERPRISE|DISTRIB|TRADERS|STORE|"
+                r"WELLNESS|DRUG",
+                ln,
+                re.I,
+            ) and len(re.findall(r"[A-Za-z]", ln)) >= 6:
+                stockist = _clean_name(ln)
+                break
+        if not stockist:
+            for ln in lines[:10]:
+                if re.search(skip_hdr, ln, re.I):
+                    continue
+                letters = re.findall(r"[A-Za-z]", ln)
+                if (
+                    len(ln) >= 12
+                    and len(letters) >= 10
+                    and sum(1 for c in letters if c.isupper()) >= 4
+                    and not re.search(r"[\uFFFD]", ln)
+                ):
+                    stockist = _clean_name(ln)
+                    break
+        result["stockist_name"] = stockist or _clean_name(lines[0])
     for ln in lines[:12]:
         if re.search(r"STOCK\s*&\s*SALES|Sales\s*&\s*Stock", ln, re.I):
             result["report_title"] = _clean_name(ln)
@@ -1855,6 +1887,21 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             )
             if him and not result.get("company_name"):
                 result["company_name"] = _clean_name(him.group(1))
+            # Title form: STOCK & SALES ANALYSIS (ZEAL) / (ZANDRA) / (ZENITH) …
+            if not result.get("company_name"):
+                div = re.search(
+                    r"\(\s*(ZEAL|ZANDRA|ZENITH|OTX|PURE\s*HANDS)\s*\)",
+                    ln,
+                    re.I,
+                )
+                if div:
+                    result["company_name"] = _clean_name(
+                        f"HIMALAYA {div.group(1).upper()}"
+                    )
+                    logger.info(
+                        "SSA_ORIC_COMPANY_FROM_TITLE_DIV division=%s",
+                        div.group(1).upper(),
+                    )
         if re.search(r"AUROBINDO|VERITAZ|HEALTHCARE", ln, re.I) and not re.search(
             r"PHARMACEUTICALS|ANALYSIS", ln, re.I
         ):
@@ -1881,7 +1928,8 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
 
     # Row: <product [packing]> opening receipt issue closing.
     # A printed "-" is an empty qty cell, not a missing column.
-    qty_tok = r"(?:-?\d+(?:\.\d+)?|-)"
+    # OCR often turns the dash into = ~ _ or similar; treat those as empty too.
+    qty_tok = r"(?:-?\d+(?:\.\d+)?|-|=|~|_|\.|—|–)"
     row_re = re.compile(
         rf"^(.+?)\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
@@ -1899,9 +1947,10 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
+    _ps_empty_qty = frozenset({"-", "=", "~", "_", ".", "—", "–"})
 
     def _ps_qty(token: str) -> float:
-        if str(token).strip() == "-":
+        if str(token).strip() in _ps_empty_qty:
             return 0.0
         return _to_float(token)
 
@@ -1956,6 +2005,15 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         if re.search(r"THE HIMALAYA DRUG", ln, re.I):
             if not result.get("company_name"):
                 result["company_name"] = "THE HIMALAYA DRUG CO"
+            pending_name = ""
+            continue
+        # Bare division banner row (e.g. ZEAL) is company, never a product.
+        if _is_statement_division_banner(ln) and not row_re.match(ln):
+            if not result.get("company_name"):
+                div = _detect_statement_division(ln) or {}
+                result["company_name"] = _clean_name(
+                    div.get("division_name") or ln
+                )
             pending_name = ""
             continue
         m5 = row5_re.match(ln)
@@ -2029,6 +2087,8 @@ def _is_ssa_oric_qty_only_text(text: str) -> bool:
     """Qty-only STOCK & SALES ANALYSIS: OPENING/RECEIPT/ISSUE/CLOSING, no VALUE/M.EXP.
 
     Distinct from qty+value DUMP grids and from Marg CLOSING M.EXP photos.
+    ITEM/TEM DESCRIPTION is preferred but optional — phone OCR often drops the
+    left header while still reading OPENING RECEIPT ISSUE CLOSING cleanly.
     """
     if not text:
         return False
@@ -2037,8 +2097,6 @@ def _is_ssa_oric_qty_only_text(text: str) -> bool:
     if re.search(r"\bM\.?\s*EXP\b|\bDUMP\b|\bRATE\b", text, re.I):
         return False
     if re.search(r"QTY\.?\s+VALUE|VALUE\s+QTY", text, re.I):
-        return False
-    if not re.search(r"(?:ITEM|TEM)\s*DESCRIPTION", text, re.I):
         return False
     return bool(
         re.search(r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", text, re.I)
@@ -2058,12 +2116,12 @@ def _extract_ssa_oric_qty_only_photo(
     """
     if not _ssa_oric_qty_only_ocr_enabled():
         return None
-    text = (ocr_hint or "").strip()
-    if text and not _is_ssa_oric_qty_only_text(text):
+    hint = (ocr_hint or "").strip()
+    if hint and not _is_ssa_oric_qty_only_text(hint):
         # Hint already identifies qty+value / DUMP / M.EXP / RATE — do not re-OCR.
-        if re.search(r"STOCK\s*&\s*SALES", text, re.I) and re.search(
+        if re.search(r"STOCK\s*&\s*SALES", hint, re.I) and re.search(
             r"QTY\.?\s+VALUE|VALUE\s+QTY|\bDUMP\b|\bM\.?\s*EXP\b|\bRATE\b",
-            text,
+            hint,
             re.I,
         ):
             logger.info(
@@ -2071,22 +2129,31 @@ def _extract_ssa_oric_qty_only_photo(
                 filename,
             )
             return None
+    # Always OCR this image for the parse text. A stale qty-only hint from a
+    # previous upload (OCR region_shared_reuse) must not be parsed as this file.
+    text = ""
+    try:
+        text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
+    except Exception as exc:
+        logger.info(
+            "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        text = ""
     if not _is_ssa_oric_qty_only_text(text):
-        try:
-            text = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
-        except Exception as exc:
+        if _is_ssa_oric_qty_only_text(hint):
+            text = hint
             logger.info(
-                "SSA_ORIC_QTY_ONLY file=%s status=ocr_skipped error=%s",
+                "SSA_ORIC_QTY_ONLY file=%s status=hint_fallback reason=fresh_ocr_mismatch",
                 filename,
-                type(exc).__name__,
+            )
+        else:
+            logger.info(
+                "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
+                filename,
             )
             return None
-    if not _is_ssa_oric_qty_only_text(text):
-        logger.info(
-            "SSA_ORIC_QTY_ONLY file=%s status=skip reason=header_mismatch",
-            filename,
-        )
-        return None
     result = _parse_ps_pharma_statement(text, filename)
     if not result or len(result.get("line_items") or []) < 3:
         logger.info(
@@ -6223,6 +6290,9 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         result = _parse_word(file_bytes, name, ext)
     elif ext == ".pdf":
         result = _parse_pdf(file_bytes, name)
+        recovered = _PDF_RECOVERED_BYTES.get()
+        if recovered:
+            file_bytes = recovered
         result = _pdf_maybe_native_resolver(result, file_bytes, name)
     elif ext in {".xls", ".xlsx", ".xlsm"}:
         result = _parse_xls(file_bytes, name, ext)
@@ -10329,6 +10399,15 @@ def _ocr_image_to_text(
 
     pytesseract = _a2z_tesseract()
     image = Image.open(io.BytesIO(file_bytes))
+    # Phone/tablet JPEGs often store sideways pixels with EXIF Orientation=6/8.
+    # Without transpose, ORIC peeks and qty OCR read garbage and miss the
+    # OPENING|RECEIPT|ISSUE|CLOSING path (values land in the wrong columns).
+    try:
+        oriented = ImageOps.exif_transpose(image)
+        if oriented is not None:
+            image = oriented
+    except Exception:
+        pass
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
     original_width, original_height = image.size
@@ -25402,6 +25481,131 @@ def _saleable_qty(token: str) -> float:
     return _to_float(raw)
 
 
+def _saleable_qty_value_pairs_enabled() -> bool:
+    """Read Opn/Rec/Issue/Bal (Q+F) separately from the Amt column beside each.
+
+    Default ON. Used only when the printed header repeats each group as
+    qty then amount. Four-column Opn|Rec|Issue|Bal reports are unchanged.
+    """
+    return os.getenv("STOCK_SALEABLE_QTY_VALUE_PAIRS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_SALEABLE_PAIR_GROUP = {
+    "opn": "opening",
+    "rec": "receipts",
+    "issue": "sales",
+    "sale": "sales",
+    "sample": "sample",
+    "expiry": "expiry",
+    "adj": "adjustment",
+    "bal": "closing",
+}
+
+
+def _saleable_header_group(cell: str) -> Optional[str]:
+    match = re.search(
+        r"\b(Opn|Rec|Issue|Sale|Sample|Expiry|Adj|Bal)\b", cell or "", re.I
+    )
+    return match.group(1).lower() if match else None
+
+
+def _saleable_header_kind(cell: str) -> Optional[str]:
+    """Qty vs amount for one header cell. Amt(Q+F) is the amount column."""
+    text = cell or ""
+    has_qty = bool(re.search(r"\(Q\s*\+\s*F\)", text, re.I))
+    has_amt = bool(re.search(r"\bAmt\b", text, re.I))
+    if has_amt:
+        return "value"
+    if has_qty:
+        return "qty"
+    return None
+
+
+def _saleable_pair_column_map(text: str) -> Optional[List[str]]:
+    """Canonical fields for a Saleable Stock Report whose header is qty|amount pairs.
+
+    Header example: Opn | Opn | Rec | Rec | Issue | Issue | Bal | Bal
+    over (Q+F) | Amt | (Q+F) | Amt | (Q+F) | Amt | (Q+F) | Amt.
+    Returns None when that header is not printed.
+    """
+    if not _saleable_qty_value_pairs_enabled() or not text:
+        return None
+    groups: Optional[List[str]] = None
+    kinds: Optional[List[str]] = None
+    for line in text.splitlines():
+        if "|" not in line:
+            continue
+        parts = [part.strip() for part in line.split("|")]
+        found_groups = [
+            group for group in (_saleable_header_group(part) for part in parts) if group
+        ]
+        found_kinds = [
+            kind for kind in (_saleable_header_kind(part) for part in parts) if kind
+        ]
+        if (
+            len(found_groups) >= 8
+            and found_groups.count("opn") >= 2
+            and found_groups.count("rec") >= 2
+            and found_groups.count("bal") >= 2
+            and ("issue" in found_groups or "sale" in found_groups)
+        ):
+            groups = found_groups
+        if len(found_kinds) >= 8 and found_kinds[0] == "qty" and found_kinds[1] == "value":
+            kinds = found_kinds
+    if not groups or not kinds or len(groups) != len(kinds):
+        return None
+    fields: List[str] = []
+    for group, kind in zip(groups, kinds):
+        base = _SALEABLE_PAIR_GROUP.get(group)
+        if not base:
+            return None
+        fields.append(f"{base}_{'value' if kind == 'value' else 'qty'}")
+    if not fields or not fields[0].endswith("_qty"):
+        return None
+    logger.info("SALEABLE_QTY_VALUE_PAIR columns=%s", ",".join(fields))
+    return fields
+
+
+def _saleable_parse_qty_cell(token: str) -> Tuple[Optional[float], str]:
+    """Parse one printed qty/amount cell. Does not turn a bad token into a number.
+
+    Status is printed (including a dash used as zero), missing, or uncertain.
+    """
+    raw = str(token or "").strip()
+    if not raw:
+        return None, "missing"
+    if re.fullmatch(r"[—–\-\s]+", raw):
+        return 0.0, "printed"
+    compact = raw.replace(",", "").replace(" ", "")
+    if compact.count(".") > 1:
+        return None, "uncertain"
+    if re.fullmatch(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", compact):
+        return None, "uncertain"
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", compact):
+        return float(compact), "printed"
+    return None, "uncertain"
+
+
+def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]:
+    """Metric cells aligned to the pair header. Empty cells keep their column."""
+    if raw.count("|") < len(fields):
+        return None
+    parts = [part.strip() for part in raw.split("|")]
+    if not parts or not parts[0]:
+        return None
+    cells = parts[1:]
+    while cells and not cells[-1]:
+        cells.pop()
+    if len(cells) < len(fields):
+        return None
+    return cells[: len(fields)]
+
+
 def _saleable_split_packing(particular: str) -> Tuple[str, Optional[str]]:
     text = _clean_name(particular)
     glued = re.search(
@@ -25424,6 +25628,129 @@ def _saleable_split_packing(particular: str) -> Tuple[str, Optional[str]]:
     return name, pack or None
 
 
+_SALEABLE_TOP_LEVEL_FIELDS = {
+    "opening_qty",
+    "receipts_qty",
+    "sales_qty",
+    "sales_value",
+    "closing_qty",
+    "closing_value",
+}
+
+
+def _saleable_pair_assignment(
+    cells: Sequence[str], fields: Sequence[str]
+) -> Tuple[Dict[str, Optional[float]], Dict[str, str]]:
+    values: Dict[str, Optional[float]] = {}
+    sources: Dict[str, str] = {}
+    for field, cell in zip(fields, cells):
+        value, status = _saleable_parse_qty_cell(cell)
+        values[field] = value
+        sources[field] = status
+    return values, sources
+
+
+def _saleable_note_identity(item: Dict[str, Any]) -> None:
+    """Record Closing vs Opening + Receipt − Sale. Does not change printed qty."""
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+
+    def _num(key: str) -> Optional[float]:
+        if fs.get(key) in {"uncertain", "missing"}:
+            return None
+        raw = item.get(key) if key in item else None
+        if raw is None:
+            raw = extra.get(key)
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    opening = _num("opening_qty")
+    receipt = _num("receipts_qty")
+    sales = _num("sales_qty")
+    closing = _num("closing_qty")
+    if None in (opening, receipt, sales, closing):
+        extra["stock_identity_ok"] = None
+        return
+    expected = opening + receipt - sales
+    for key in ("sample_qty", "expiry_qty", "adjustment_qty"):
+        if key not in fs:
+            continue
+        extra_qty = _num(key)
+        if extra_qty is None:
+            extra["stock_identity_ok"] = None
+            return
+        expected -= extra_qty
+    delta = round(float(closing) - expected, 2)
+    extra["stock_identity_delta"] = delta
+    extra["stock_identity_ok"] = abs(delta) <= 0.51
+
+
+def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, Any]]:
+    cells = _saleable_pair_cells(raw, fields)
+    if cells is None:
+        return None
+    name = _clean_name(raw.split("|", 1)[0])
+    if not name or _SALEABLE_SKIP_NAME_RE.search(name):
+        return None
+    values, sources = _saleable_pair_assignment(cells, fields)
+    pack = None
+    name, pack = _saleable_split_packing(name)
+    item = empty_line_item()
+    item["product_name"] = name
+    item["packing"] = pack
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    for field, value in values.items():
+        if field in _SALEABLE_TOP_LEVEL_FIELDS:
+            item[field] = value
+        else:
+            extra[field] = value
+        fs[field] = sources[field]
+        if sources[field] == "uncertain":
+            logger.info(
+                "SALEABLE_QTY_VALUE_PAIR uncertain field=%s product=%s cell=%r",
+                field,
+                name[:40],
+                cells[list(fields).index(field)],
+            )
+    _saleable_note_identity(item)
+    return item
+
+
+def _saleable_store_pair_totals(
+    extra: Dict[str, Any], raw: str, fields: Optional[Sequence[str]]
+) -> bool:
+    if not fields:
+        return False
+    cells = _saleable_pair_cells(raw, fields)
+    if cells is None:
+        return False
+    values, sources = _saleable_pair_assignment(cells, fields)
+    if any(status == "uncertain" for status in sources.values()):
+        logger.info("SALEABLE_QTY_VALUE_PAIR uncertain total row")
+        return False
+    key_map = {
+        "sales_value": "printed_sales_value",
+        "closing_value": "printed_closing_value",
+    }
+    for field, value in values.items():
+        extra[key_map.get(field, field)] = value
+    logger.info(
+        "SALEABLE_QTY_VALUE_PAIR totals opening=%s receipts=%s sales=%s closing=%s",
+        values.get("opening_qty"),
+        values.get("receipts_qty"),
+        values.get("sales_qty"),
+        values.get("closing_qty"),
+    )
+    return True
+
+
 def _parse_saleable_stock_report(
     text: str, filename: str, source_format: str = "pdf"
 ) -> Optional[Dict[str, Any]]:
@@ -25441,6 +25768,7 @@ def _parse_saleable_stock_report(
     result = empty_result(filename, source_format)
     result["report_title"] = "Saleable Stock Report"
     items: List[Dict[str, Any]] = []
+    pair_fields = _saleable_pair_column_map(text)
 
     for ln in text.splitlines():
         raw = ln.strip()
@@ -25473,21 +25801,26 @@ def _parse_saleable_stock_report(
             continue
 
         if re.search(r"^(?:COMPANY|Firm|Grand)\s+Total\b", raw, re.I):
-            nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
-            moved = _saleable_movement_from_nums(nums)
-            if moved:
-                extra = result["totals"]["extra"]
-                extra["opening_qty"] = moved["opening"]
-                extra["receipts_qty"] = moved["receipts"]
-                extra["sales_qty"] = moved["sales"]
-                extra["closing_qty"] = moved["closing"]
+            extra = result["totals"]["extra"]
+            paired_total = _saleable_store_pair_totals(extra, raw, pair_fields)
+            if not paired_total:
+                nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
+                moved = _saleable_movement_from_nums(nums)
+                if moved:
+                    extra["opening_qty"] = moved["opening"]
+                    extra["receipts_qty"] = moved["receipts"]
+                    extra["sales_qty"] = moved["sales"]
+                    extra["closing_qty"] = moved["closing"]
+            if extra.get("opening_qty") is not None or paired_total:
                 if re.search(r"^Grand\s+Total\b", raw, re.I):
                     extra["total_row_source"] = "saleable_grand_total"
                 else:
                     extra["total_row_source"] = "saleable_company_total"
             continue
-        if re.search(r"(?:\|A\||^\s*A\b)", raw) and re.search(
-            r"\d+\.\d{2}", raw
+        if (
+            not pair_fields
+            and re.search(r"(?:\|A\||^\s*A\b)", raw)
+            and re.search(r"\d+\.\d{2}", raw)
         ):
             nums = [_to_float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", raw)]
             moved = _saleable_movement_from_nums(nums)
@@ -25499,7 +25832,13 @@ def _parse_saleable_stock_report(
                 extra["printed_closing_value"] = moved["closing"]
             continue
 
-        matched = _saleable_match_row(raw, amt_pairs=amt_pairs)
+        if pair_fields:
+            paired = _saleable_pair_item(raw, pair_fields)
+            if paired:
+                items.append(paired)
+            continue
+
+        matched = _saleable_match_row(raw)
         if not matched:
             continue
         name = _clean_name(matched["name"])
@@ -25539,9 +25878,13 @@ def _parse_saleable_stock_report(
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "saleable_stock_report"
     extra["layout"] = (
+        "saleable_opn_rec_issue_bal_qty_value"
+        if pair_fields
+        else (
         "saleable_opn_rec_issue_bal_amt"
         if amt_pairs
         else "saleable_opn_rec_issue_bal"
+    )
     )
     extra["rows_detected"] = len(items)
     extra["fallback_used"] = False
@@ -36648,6 +36991,167 @@ def _parse_saha_in_out_stock_doc(doc, filename: str) -> Optional[Dict[str, Any]]
 
 
 
+_PDF_RECOVERED_BYTES: contextvars.ContextVar[Optional[bytes]] = contextvars.ContextVar(
+    "sales_pdf_recovered_bytes",
+    default=None,
+)
+
+
+def _pdf_from_base64(file_bytes: bytes) -> Optional[bytes]:
+    """Return PDF bytes when the upload is a base64 (or data-URI) PDF."""
+    blob = file_bytes.strip().strip(b"\"'")
+    if blob[:80].lower().startswith(b"data:") and b"base64," in blob[:300].lower():
+        blob = blob.split(b",", 1)[1]
+    compact = re.sub(rb"\s+", b"", blob)
+    if not compact.startswith(b"JVBER"):
+        return None
+    if len(compact) < 32 or not re.fullmatch(rb"[A-Za-z0-9+/]+=*", compact):
+        return None
+    pad = (-len(compact)) % 4
+    try:
+        decoded = base64.b64decode(compact + (b"=" * pad), validate=False)
+    except Exception:
+        return None
+    idx = decoded.find(b"%PDF")
+    if idx < 0:
+        return None
+    return decoded[idx:]
+
+
+def _pdf_from_utf16(file_bytes: bytes) -> Optional[bytes]:
+    """Return PDF bytes when a binary PDF was re-encoded as UTF-16."""
+    if not (
+        file_bytes.startswith((b"\xff\xfe", b"\xfe\xff"))
+        or b"%\x00P\x00D\x00F" in file_bytes[:80]
+        or b"\x00%\x00P\x00D\x00F" in file_bytes[:80]
+    ):
+        return None
+    try:
+        raw = file_bytes.decode("utf-16").encode("latin1")
+    except Exception:
+        return None
+    idx = raw.find(b"%PDF")
+    if idx < 0 or b"obj" not in raw:
+        return None
+    return raw[idx:]
+
+
+def _rebuild_pdf_xref(data: bytes) -> Optional[bytes]:
+    """Append a classic xref when objects exist but MuPDF finds none."""
+    entries: Dict[int, Tuple[int, int]] = {}
+    for match in re.finditer(rb"(\d+)\s+(\d+)\s+obj\b", data):
+        num = int(match.group(1))
+        if num not in entries and 0 < num < 100000:
+            entries[num] = (match.start(), int(match.group(2)))
+    if not entries:
+        return None
+    root = None
+    for num, (off, _gen) in entries.items():
+        end = data.find(b"endobj", off)
+        chunk = data[off : end if end != -1 else off + 1200]
+        if re.search(rb"/Type\s*/Catalog", chunk):
+            root = num
+            break
+    if root is None:
+        return None
+    size = max(entries) + 1
+    parts = [b"xref\r\n", f"0 {size}\r\n".encode(), b"0000000000 65535 f\r\n"]
+    for num in range(1, size):
+        if num in entries:
+            off, gen = entries[num]
+            parts.append(f"{off:010d} {gen:05d} n\r\n".encode())
+        else:
+            parts.append(b"0000000000 65535 f\r\n")
+    start = len(data) + 2
+    trailer = (
+        f"trailer\r\n<<\r\n/Size {size}\r\n/Root {root} 0 R\r\n>>\r\n"
+        f"startxref\r\n{start}\r\n%%EOF\r\n"
+    ).encode()
+    return data + b"\r\n" + b"".join(parts) + trailer
+
+
+def _pdf_recovery_candidates(file_bytes: bytes) -> List[Tuple[str, bytes]]:
+    found: List[Tuple[str, bytes]] = []
+    seen = set()
+
+    def add(method: str, blob: Optional[bytes]) -> None:
+        if not blob or blob == file_bytes or blob in seen or len(blob) < 8:
+            return
+        seen.add(blob)
+        found.append((method, blob))
+
+    idx = file_bytes.find(b"%PDF")
+    if idx > 0:
+        add("offset", file_bytes[idx:])
+    add("utf16", _pdf_from_utf16(file_bytes))
+    add("base64", _pdf_from_base64(file_bytes))
+    for method, blob in list(found) + [("raw", file_bytes)]:
+        if b"endobj" not in blob or not re.search(rb"\d+\s+\d+\s+obj\b", blob):
+            continue
+        add(method + "_xref", _rebuild_pdf_xref(blob))
+    return found
+
+
+def _try_open_pdf(fitz_mod: Any, data: bytes) -> Any:
+    try:
+        doc = fitz_mod.open(stream=data, filetype="pdf")
+    except Exception:
+        return None
+    try:
+        if int(doc.page_count) < 1:
+            doc.close()
+            return None
+    except Exception:
+        try:
+            doc.close()
+        except Exception:
+            pass
+        return None
+    return doc
+
+
+def _pdf_open_recover_enabled() -> bool:
+    return os.getenv("STOCK_PDF_OPEN_RECOVER", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _open_sales_pdf(fitz_mod: Any, file_bytes: bytes, filename: str) -> Any:
+    """Open a PDF. On 'no objects found', try offset, base64, UTF-16, or a rebuilt xref."""
+    try:
+        doc = fitz_mod.open(stream=file_bytes, filetype="pdf")
+        _PDF_RECOVERED_BYTES.set(None)
+        return doc
+    except Exception as exc:
+        if not _pdf_open_recover_enabled():
+            raise
+        for method, blob in _pdf_recovery_candidates(file_bytes or b""):
+            doc = _try_open_pdf(fitz_mod, blob)
+            if doc is None:
+                continue
+            logger.info(
+                "PDF_OPEN_RECOVER method=%s file=%s in_bytes=%s out_bytes=%s",
+                method,
+                filename,
+                len(file_bytes or b""),
+                len(blob),
+            )
+            _PDF_RECOVERED_BYTES.set(blob)
+            return doc
+        logger.info(
+            "PDF_OPEN_RECOVER failed file=%s in_bytes=%s err=%s",
+            filename,
+            len(file_bytes or b""),
+            exc,
+        )
+        raise ValueError(
+            "PDF could not be opened (no objects found). The file is not a readable PDF."
+        ) from exc
+
+
 _SHARDA_OPSTK_CR_COLS = (
     "jul_qty",
     "aug_qty",
@@ -36785,7 +37289,7 @@ def _parse_sharda_opstk_crqty_pdf(
             continue
 
         # Find the totals row (no name, numbers at every column) and use its
-        # token x-positions as the TRUE column anchors â€” headers are left-aligned
+        # token x-positions as the TRUE column anchors — headers are left-aligned
         # labels while cells can be right-aligned numbers, so header_x is a poor
         # distance origin for nearest-column assignment.
         anchor_x: List[float] = [c[1] for c in ordered_cols]
@@ -36821,14 +37325,14 @@ def _parse_sharda_opstk_crqty_pdf(
             name_tokens = [t for x, t in toks if x < name_cutoff_x]
             data_tokens = [(x, t) for x, t in toks if x >= name_cutoff_x]
 
-            # Banner row (e.g. "HIMALAYA ZANDRA") â€” remember as company and skip.
+            # Banner row (e.g. "HIMALAYA ZANDRA") — remember as company and skip.
             if name_tokens and not data_tokens:
                 banner = " ".join(name_tokens)
                 if re.search(r"HIMALAYA", banner, re.I) and not company_name:
                     company_name = _clean_name(banner)
                 continue
 
-            # Totals row â€” no name, numbers aligned with every column.
+            # Totals row — no name, numbers aligned with every column.
             if not name_tokens and len(data_tokens) >= 6:
                 tot: Dict[str, float] = {}
                 for x, tok in data_tokens:
@@ -36901,6 +37405,7 @@ def _parse_sharda_opstk_crqty_pdf(
     return result
 
 
+
 def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """Split multi-stockist PDFs into statements, then extract each."""
     import os
@@ -36913,7 +37418,8 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     max_pages = int(os.getenv("SALES_PDF_MAX_PAGES", "20"))
     zoom = float(os.getenv("SALES_PDF_RENDER_ZOOM", "2.0"))
 
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    doc = _open_sales_pdf(fitz, file_bytes, filename)
+    file_bytes = _PDF_RECOVERED_BYTES.get() or file_bytes
     try:
         # Marg SALE PURCHASES / PURCHASE SALES text dump. Must run before the
         # generic semantic table, which maps TOTAL STOCK as purchase and leaves
@@ -56997,7 +57503,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _op_stk_peek = (
                 _ocr_image_to_text(_peek_src, psm=6, enhance=True) or ""
             )
-            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I):
+            # Second pass helps Medica/OPSTK peeks, but concatenating another
+            # full-page OCR onto an already-complete OPENING|RECEIPT|ISSUE|
+            # CLOSING sheet doubles every product row in the ORIC parser.
+            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I) and not re.search(
+                r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", _op_stk_peek, re.I
+            ):
                 _op_stk_peek = (
                     (_op_stk_peek or "")
                     + "\n"
