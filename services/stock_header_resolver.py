@@ -154,6 +154,10 @@ ALIASES: Dict[str, List[str]] = {
         "opening",
         "opstk",
         "op stk",
+        # Op-St. / Op-St (qty beside its amount). "op" alone is dropped when
+        # the extra token is "st", which is not in the short-alias keep set.
+        "op st",
+        "opst",
         "ostk",
         "o stk",  # O.Stk / O Stk (Profitmaker Stock & Sales)
         "ob",
@@ -1009,6 +1013,75 @@ def _promote_adjacent_same_group_qty_to_value(
         right["reason"] = "adjacent_qty_value_pair"
         logger.info(
             "STOCK_HEADER_ADJACENT_QTY_VALUE_PAIR col=%s %r -> %s left=%s",
+            right.get("col_index"),
+            right.get("header_text"),
+            val_field,
+            left.get("header_text"),
+        )
+        changed = True
+    return changed
+
+
+def _movement_value_follower_enabled() -> bool:
+    """Op-St.|<amount> Receipt|<amount> … Cl. Stock|AMOUNT.
+
+    Default ON. Only runs when those band headers are all printed, so other
+    layouts are unchanged. Does not invent digits.
+    """
+    return os.getenv(
+        "STOCK_HEADER_MOVEMENT_VALUE_FOLLOWER", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _promote_movement_value_followers(prelim: List[Dict[str, Any]]) -> bool:
+    """Right-hand money column under Op-St / Receipt / Sale / Cl. Stock.
+
+    The amount often has a blank header or a repeated band name. Map that
+    column to the band's value field. Sale-return and purchase-return have
+    no value field here, so their follower stays unmapped.
+    """
+    if not _movement_value_follower_enabled() or len(prelim) < 4:
+        return False
+    norms = [normalize_header(c.get("header_text")) for c in prelim]
+    compact = [re.sub(r"\s+", "", n) for n in norms]
+    blob = " ".join(n for n in norms if n)
+    compact_blob = "".join(compact)
+    has_op_st = bool(re.search(r"\bop st\b", blob)) or "opst" in compact_blob
+    has_receipt = bool(re.search(r"\breceipts?\b", blob))
+    has_sret = bool(re.search(r"\bs ret\b", blob)) or "sret" in compact_blob
+    has_pret = bool(re.search(r"\bpur ret\b", blob)) or "purret" in compact_blob
+    has_cl = bool(re.search(r"\bcl stock\b", blob)) or "clstock" in compact_blob
+    if not (has_op_st and has_receipt and has_sret and has_pret and has_cl):
+        return False
+    changed = False
+    for i in range(len(prelim) - 1):
+        left = prelim[i]
+        right = prelim[i + 1]
+        group = left.get("group")
+        val_field = _GROUP_TO_VALUE.get(group or "")
+        qty_field = _GROUP_TO_QTY.get(group or "")
+        if not val_field or not qty_field:
+            continue
+        if left.get("canonical") != qty_field or left.get("is_value"):
+            continue
+        right_canon = str(right.get("canonical") or "ignore")
+        left_norm = norms[i]
+        right_norm = norms[i + 1]
+        if right_canon == qty_field:
+            if not left_norm or left_norm != right_norm:
+                continue
+        elif right_canon in {"ignore", "unknown"}:
+            if right_norm and right_norm not in {"-", "—"}:
+                continue
+        else:
+            continue
+        right["canonical"] = val_field
+        right["group"] = group
+        right["is_value"] = True
+        right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
+        right["reason"] = "movement_value_follower"
+        logger.info(
+            "STOCK_HEADER_MOVEMENT_VALUE_FOLLOWER col=%s %r -> %s left=%r",
             right.get("col_index"),
             right.get("header_text"),
             val_field,
@@ -2662,6 +2735,8 @@ def resolve_columns(
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)
+    # Op-St.|amount, Receipt|amount, Sale|amount, Cl. Stock|AMOUNT.
+    _promote_movement_value_followers(prelim)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

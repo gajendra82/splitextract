@@ -35386,6 +35386,43 @@ def _is_packing_opstk_sps_statement_text(text: str) -> bool:
     )
 
 
+_packing_opstk_block_swil: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "packing_opstk_block_swil", default=False
+)
+
+
+def _packing_opstk_scan_enabled() -> bool:
+    """STOCK_PACKING_OPSTK_SCAN — image-only Packing / Op Stk / D. Qty grids.
+
+    Default ON. Text PDFs keep the word-position parser. Other photo layouts
+    are unchanged because the header OCR must show this column set.
+    """
+    return os.getenv("STOCK_PACKING_OPSTK_SCAN", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_packing_opstk_sps_scan_text(text: str) -> bool:
+    """OCR-tolerant gate for a scanned Packing / Op Stk / D. Qty grid.
+
+    Requires the damage column so Zandra and Receipt/Pur photos stay off
+    this reader. Accepts ClStk / CiStk, the usual OCR of Cl Stk.
+    """
+    blob = text or ""
+    if not re.search(r"Stock\s+and\s+Sale\s+Statement", blob, re.I):
+        return False
+    if not re.search(r"\bPacking\b", blob, re.I):
+        return False
+    if not re.search(r"Op\s*Stk", blob, re.I):
+        return False
+    if not re.search(r"D\.\s*Qty", blob, re.I):
+        return False
+    return bool(re.search(r"(?:Cl|Ci)\s*Stk", blob, re.I))
+
+
 def _packing_opstk_column_rights(words: List[Any]) -> Optional[Dict[str, float]]:
     """Right edges of the value headers, including the Sp S Qty line under S Qty."""
     packing = None
@@ -38341,6 +38378,13 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         image_only_ssa = _parse_image_only_ssa_qty_value_pdf(doc, filename)
         if image_only_ssa and image_only_ssa.get("line_items"):
             return image_only_ssa
+
+        # Image-only Packing / Op Stk / Sp S Qty / D. Qty scans. Must run
+        # before Receipt/Pur vision, which files S Qty as purchase.
+        packing_scan = _parse_image_only_packing_opstk_sps_pdf(doc, filename)
+        if packing_scan and packing_scan.get("line_items"):
+            packing_scan["totals"]["extra"]["statement_count"] = 1
+            return packing_scan
 
         # Image-only Sales & Stock Receipt/Pur photos (monitor screenshots).
         # OCR is unreadable; must run before early generic Gemini escape.
@@ -42896,6 +42940,14 @@ def _ocr_pack_opening_columns(tokens: Sequence[str]) -> Optional[List[Dict[str, 
     """Resolve PRODUCT/PACK/OPENING/... headers. None when that layout is absent."""
     if len(tokens) < 5:
         return None
+    # A tilted photo glues the report title onto the column header. That line
+    # has a few real headers and many title words; do not treat it as columns.
+    blob = " ".join(tokens)
+    if re.search(r"\b(?:STATEMENT|PERIOD|AGENCY|BAZAR)\b", blob, re.I):
+        return None
+    keyed = sum(1 for tok in tokens if _ocr_header_token_key(tok))
+    if keyed < 4 or keyed / float(len(tokens)) < 0.45:
+        return None
     from services.stock_header_resolver import resolve_columns
 
     resolved = resolve_columns(_ocr_tokens_as_header_cells(tokens))
@@ -42964,6 +43016,22 @@ def _ocr_fields_to_line_item(fields: Dict[str, Optional[str]]) -> Dict[str, Any]
     _qty("other_outward_qty", "others_qty")
     _qty("free_in_qty", "free_in_qty", extra_key="free_in_qty")
     _qty("free_out_qty", "free_out_qty", extra_key="free_out_qty")
+
+    def _money(canon: str, dest: str, *, into_extra: bool = False) -> None:
+        raw = fields.get(canon)
+        parsed = parse_number(raw) if raw not in (None, "") else None
+        if parsed is None:
+            return
+        if into_extra:
+            extra[dest] = float(parsed)
+        else:
+            item[dest] = float(parsed)
+        field_source[dest] = "printed"
+
+    _money("opening_value", "opening_value", into_extra=True)
+    _money("purchase_value", "purchase_value", into_extra=True)
+    _money("sales_value", "sales_value")
+    _money("closing_value", "closing_value")
     extra["field_source"] = field_source
     extra["ocr_header_aligned"] = True
     return item
@@ -42979,6 +43047,12 @@ def _ocr_image_to_word_boxes(
         from PIL import Image, ImageEnhance, ImageOps
     except ImportError:
         return []
+    try:
+        from services.stock_photo_deskew import maybe_deskew_stock_photo
+
+        file_bytes = maybe_deskew_stock_photo(file_bytes)
+    except Exception:
+        logger.info("STOCK_PHOTO_DESKEW status=error stage=word_boxes")
     pytesseract = _a2z_tesseract()
     image = Image.open(io.BytesIO(file_bytes))
     if image.mode not in ("RGB", "L"):
@@ -43023,7 +43097,228 @@ def _ocr_image_to_word_boxes(
             }
         )
     logger.info("STOCK_OCR_WORD_BOXES page=%s words=%s", page_key, len(words))
+    words = _ocr_enrich_op_st_names_and_letterhead(
+        image, words, pytesseract, page_key=page_key
+    )
     return words
+
+
+def _ocr_line_looks_like_stockist(text: str) -> bool:
+    raw = _clean_name(text) or ""
+    if len(re.findall(r"[A-Za-z]{3,}", raw)) < 2:
+        return False
+    if re.search(
+        r"\b(?:STATEMENT|PERIOD|PRODUCT|PACKING|RECEIPT|OPENING)\b",
+        raw,
+        re.I,
+    ):
+        return False
+    return bool(
+        re.search(
+            r"\b(?:AGENCY|MEDICAL|MEDICO|STORE|STORES|DISTRIBUT|PHARMA|DRUG|CHEMIST)\b",
+            raw,
+            re.I,
+        )
+    )
+
+
+def _ocr_enrich_op_st_names_and_letterhead(
+    image,
+    words: List[Dict[str, Any]],
+    pytesseract,
+    *,
+    page_key: str,
+) -> List[Dict[str, Any]]:
+    """Read the product-name column and the letterhead that full-page OCR drops.
+
+    Only runs when the page header is Op-St / Packing. Does not change other photos.
+    """
+    if not words:
+        return words
+    opening = None
+    pack = None
+    for word in words:
+        key = _ocr_header_token_key(str(word.get("text") or ""))
+        if key == "opening" and opening is None:
+            norm = re.sub(r"[^a-z]", "", str(word.get("text") or "").lower())
+            if "opst" in norm or "opstk" in norm:
+                opening = word
+        elif key == "pack" and pack is None:
+            pack = word
+    if opening is None or pack is None:
+        return words
+    from services.stock_ocr_policy import stock_ocr_context
+
+    page_w = float(words[0].get("page_w") or image.size[0])
+    page_h = float(words[0].get("page_h") or image.size[1])
+    added: List[Dict[str, Any]] = []
+    try:
+        top_h = max(1, int(image.size[1] * 0.24))
+        top = image.crop((0, 0, image.size[0], top_h))
+        top = top.resize((top.size[0] * 2, top.size[1] * 2))
+        with stock_ocr_context(region="letterhead", page=page_key, scope="page"):
+            top_text = pytesseract.image_to_string(top, config="--psm 6") or ""
+        y_slot = 18.0
+        for line in top_text.splitlines():
+            cleaned = _clean_name(line)
+            if not cleaned:
+                continue
+            if re.search(r"\b(?:STATEMENT|PRODUCT|PACKING)\b", cleaned, re.I):
+                dates = re.findall(
+                    r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", cleaned
+                )
+                if dates:
+                    added.append(
+                        {
+                            "text": " ".join(dates),
+                            "x": page_w * 0.55,
+                            "y": y_slot,
+                            "h": 12,
+                            "conf": 90,
+                            "page_w": page_w,
+                            "page_h": page_h,
+                            "letterhead_dates": True,
+                        }
+                    )
+                continue
+            if not _ocr_line_looks_like_stockist(cleaned) and not re.search(
+                r"\b(?:BAZAR|BAZAAR|ROAD|NAGAR|STREET|SONBHADRA)\b",
+                cleaned,
+                re.I,
+            ):
+                continue
+            added.append(
+                {
+                    "text": cleaned,
+                    "x": page_w * 0.4,
+                    "y": y_slot,
+                    "h": 14,
+                    "conf": 90,
+                    "page_w": page_w,
+                    "page_h": page_h,
+                    "letterhead_line": True,
+                }
+            )
+            y_slot += 16.0
+    except Exception as exc:
+        logger.info(
+            "STOCK_OCR_LETTERHEAD status=error error=%s", type(exc).__name__
+        )
+
+    pack_x = float(pack.get("x") or 0)
+    header_y = float(opening.get("y") or 0)
+    try:
+        x1 = max(1, int(min(image.size[0], pack_x - 40)))
+        y0 = max(0, int(header_y + 6))
+        if x1 > 40 and y0 < image.size[1] - 20:
+            crop = image.crop((0, y0, x1, image.size[1]))
+            scale = 2.5
+            crop = crop.resize(
+                (max(1, int(crop.size[0] * scale)), max(1, int(crop.size[1] * scale)))
+            )
+            with stock_ocr_context(region="name_column", page=page_key, scope="page"):
+                data = pytesseract.image_to_data(
+                    crop, config="--psm 6", output_type=pytesseract.Output.DICT
+                )
+            for i, raw in enumerate(data.get("text") or []):
+                text = str(raw or "").strip()
+                if not re.search(r"[A-Za-z]{2,}", text):
+                    continue
+                try:
+                    conf = float((data.get("conf") or [None])[i])
+                except (TypeError, ValueError, IndexError):
+                    conf = -1
+                if conf < 20:
+                    continue
+                left = float((data.get("left") or [0])[i] or 0)
+                top = float((data.get("top") or [0])[i] or 0)
+                ww = float((data.get("width") or [0])[i] or 0)
+                hh = float((data.get("height") or [0])[i] or 0)
+                x = left / scale + ww / (2.0 * scale)
+                y = y0 + top / scale + hh / (2.0 * scale)
+                if x > pack_x - 55:
+                    continue
+                added.append(
+                    {
+                        "text": text,
+                        "x": x,
+                        "y": y,
+                        "h": max(8.0, hh / scale),
+                        "conf": conf,
+                        "page_w": page_w,
+                        "page_h": page_h,
+                        "name_column": True,
+                    }
+                )
+    except Exception as exc:
+        logger.info(
+            "STOCK_OCR_NAME_STRIP status=error error=%s", type(exc).__name__
+        )
+    if added:
+        logger.info(
+            "STOCK_OCR_NAME_STRIP added=%s letterhead=%s",
+            sum(1 for w in added if not w.get("letterhead_line")),
+            sum(1 for w in added if w.get("letterhead_line")),
+        )
+    return words + added
+
+
+def _ocr_apply_letterhead(result: Dict[str, Any], words: Sequence[Dict[str, Any]], header_y: float) -> None:
+    """Stockist and address are the lines above the column header."""
+    above = [
+        w
+        for w in words
+        if float(w.get("y") or 0) < header_y - 12
+        and not w.get("name_column")
+    ]
+    if not above:
+        return
+    # A zoomed letterhead line is already one phrase. Full-page marks above
+    # that line (stamps, rules) must not be glued onto the stockist name.
+    if any(w.get("letterhead_line") for w in above):
+        above = [
+            w
+            for w in above
+            if w.get("letterhead_line") or w.get("letterhead_dates")
+        ]
+    rows = _cluster_ocr_words_into_rows(above, y_tol=14.0, anchor_first=True)
+    lines: List[str] = []
+    date_blob = ""
+    for row in rows:
+        if any(w.get("letterhead_dates") for w in row):
+            date_blob += " " + " ".join(str(w.get("text") or "") for w in row)
+            continue
+        text = _clean_name(
+            " ".join(str(w.get("text") or "") for w in row if w.get("text"))
+        )
+        if not text:
+            continue
+        if re.search(r"\b(?:STATEMENT|PRODUCT|PACKING|OP\s*ST|RECEIPT)\b", text, re.I):
+            date_blob += " " + text
+            continue
+        lines.append(text)
+    stockist = next((ln for ln in lines if _ocr_line_looks_like_stockist(ln)), None)
+    if stockist:
+        result["stockist_name"] = stockist
+    if stockist and stockist in lines:
+        idx = lines.index(stockist)
+        if idx + 1 < len(lines):
+            nxt = lines[idx + 1]
+            if nxt != stockist and not _ocr_line_looks_like_stockist(nxt):
+                result["stockist_address"] = nxt
+    dates = re.findall(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}", date_blob)
+    if dates:
+        result["period_from"] = _normalize_date(dates[0]) or result.get("period_from")
+    if len(dates) >= 2:
+        result["period_to"] = _normalize_date(dates[1]) or result.get("period_to")
+    if result.get("stockist_name"):
+        logger.info(
+            "STOCK_OCR_LETTERHEAD stockist=%s address=%s period=%s..%s",
+            result.get("stockist_name"),
+            result.get("stockist_address"),
+            result.get("period_from"),
+            result.get("period_to"),
+        )
 
 
 def _ocr_word_boxes_to_text(words: Sequence[Dict[str, Any]]) -> str:
@@ -43046,8 +43341,16 @@ def _ocr_header_token_key(text: str) -> Optional[str]:
         return "product"
     if compact in {"pack", "packing", "packg"}:
         return "pack"
+    # Op-St. / Op.Stk — "op" plus "st" is not the word "opening".
+    if compact in {"opst", "opstk"} or norm in {"op st", "op stk"}:
+        return "opening"
     if compact.startswith("open"):
         return "opening"
+    if compact in {"receipt", "receipts", "rcpt", "rcpts"} or norm in {
+        "receipt",
+        "receipts",
+    }:
+        return "purchase"
     if compact.startswith("purch") or compact in {"pur", "purc"}:
         return "purchase"
     if compact == "free":
@@ -43056,10 +43359,23 @@ def _ocr_header_token_key(text: str) -> Optional[str]:
         return "sale"
     if compact.startswith("clos"):
         return "closing"
-    if compact in {"preturn", "preturn"} or norm in {"p return", "p.return"}:
+    if compact in {"clstock", "clstk"} or norm in {"cl stock", "cl stk"}:
+        return "closing"
+    if compact in {"preturn", "purret", "pret"} or norm in {
+        "p return",
+        "p.return",
+        "pur ret",
+        "p ret",
+    }:
         return "preturn"
-    if compact in {"sreturn"} or norm in {"s return", "s.return"}:
+    if compact in {"sreturn", "sret"} or norm in {
+        "s return",
+        "s.return",
+        "s ret",
+    }:
         return "sreturn"
+    if norm == "amount":
+        return "amount"
     if compact.startswith("other"):
         return "others"
     return None
@@ -43149,6 +43465,9 @@ def _ocr_attach_qty_words_by_row_y(
 
 def _cluster_ocr_words_into_rows(
     words: Sequence[Dict[str, Any]],
+    *,
+    y_tol: Optional[float] = None,
+    anchor_first: bool = False,
 ) -> List[List[Dict[str, Any]]]:
     ordered = sorted(words, key=lambda w: (float(w.get("y") or 0), float(w.get("x") or 0)))
     rows: List[List[Dict[str, Any]]] = []
@@ -43157,10 +43476,18 @@ def _cluster_ocr_words_into_rows(
     for word in ordered:
         y = float(word.get("y") or 0)
         h = float(word.get("h") or 12)
-        tol = max(14.0, h * 0.75)
-        if current_y is None or abs(y - current_y) <= tol:
+        tol = float(y_tol) if y_tol is not None else max(14.0, h * 0.75)
+        # anchor_first keeps the row tied to its first word so a slow y-drift
+        # cannot swallow the next product.
+        near = (
+            current_y is not None and (y - current_y) <= tol
+            if anchor_first
+            else current_y is not None and abs(y - current_y) <= tol
+        )
+        if current_y is None or near:
             current.append(word)
-            current_y = y if current_y is None else (current_y * 0.6 + y * 0.4)
+            if current_y is None or not anchor_first:
+                current_y = y if current_y is None else (current_y * 0.6 + y * 0.4)
         else:
             rows.append(sorted(current, key=lambda w: float(w.get("x") or 0)))
             current = [word]
@@ -43168,6 +43495,405 @@ def _cluster_ocr_words_into_rows(
     if current:
         rows.append(sorted(current, key=lambda w: float(w.get("x") or 0)))
     return rows
+
+
+def _ocr_op_st_header_slope(found: Dict[str, Dict[str, Any]]) -> float:
+    """Pixels of y per pixel of x across the printed header. 0 when level."""
+    pts = [
+        (float(word.get("x") or 0), float(word.get("y") or 0))
+        for word in found.values()
+        if isinstance(word, dict)
+    ]
+    if len(pts) < 3:
+        return 0.0
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    mean_x = sum(xs) / len(xs)
+    mean_y = sum(ys) / len(ys)
+    var_x = sum((x - mean_x) ** 2 for x in xs)
+    if var_x < 1.0:
+        return 0.0
+    slope = sum((x - mean_x) * (y - mean_y) for x, y in pts) / var_x
+    if abs(slope) < 0.012 or abs(slope) > 0.18:
+        return 0.0
+    return slope
+
+
+def _ocr_op_st_pair_number(text: str) -> Optional[float]:
+    from services.stock_header_resolver import parse_number
+
+    raw = str(text or "").strip().strip("()[]|,;:")
+    if not raw or re.search(r"[A-Za-z$]", raw):
+        return None
+    return parse_number(raw)
+
+
+def _ocr_name_tokens_same(a: str, b: str) -> bool:
+    """True when two OCR tokens are the same word or one letter apart."""
+    left = re.sub(r"[^A-Za-z0-9]", "", a or "").upper()
+    right = re.sub(r"[^A-Za-z0-9]", "", b or "").upper()
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if min(len(left), len(right)) < 5 or abs(len(left) - len(right)) > 1:
+        return False
+    if len(left) == len(right):
+        limit = 2 if len(left) >= 6 else 1
+        return sum(c1 != c2 for c1, c2 in zip(left, right)) <= limit
+    longer, shorter = (left, right) if len(left) > len(right) else (right, left)
+    return any(longer[:i] + longer[i + 1 :] == shorter for i in range(len(longer)))
+
+
+def _ocr_merge_product_name(current: str, overlay: str) -> str:
+    """Prefer the name-column reading, and keep row tokens that add a real word."""
+    overlay_tokens = [t for t in (overlay or "").split() if t]
+    current_tokens = [t for t in (current or "").split() if t]
+    if overlay_tokens and current_tokens and all(
+        any(_ocr_name_tokens_same(tok, cur) for cur in current_tokens)
+        for tok in overlay_tokens
+    ):
+        replaced = []
+        for cur in current_tokens:
+            swap = next(
+                (
+                    tok
+                    for tok in overlay_tokens
+                    if _ocr_name_tokens_same(tok, cur) and tok.upper() != cur.upper()
+                ),
+                None,
+            )
+            replaced.append(swap or cur)
+        return _clean_name(" ".join(replaced))
+    if (
+        len(overlay_tokens) == 1
+        and len(current_tokens) >= 2
+        and len(re.sub(r"[^A-Za-z]", "", overlay_tokens[0])) <= 4
+        and not any(_ocr_name_tokens_same(overlay_tokens[0], tok) for tok in current_tokens)
+    ):
+        size_at = next(
+            (i for i, tok in enumerate(current_tokens) if re.search(r"\d", tok)),
+            len(current_tokens),
+        )
+        merged = current_tokens[:size_at] + overlay_tokens + current_tokens[size_at:]
+        return _clean_name(" ".join(merged))
+    kept: List[str] = []
+    for tok in overlay_tokens:
+        if any(_ocr_name_tokens_same(tok, prev) for prev in kept):
+            continue
+        kept.append(tok)
+    for tok in current_tokens:
+        compact = re.sub(r"[^A-Za-z0-9]", "", tok)
+        if len(compact) <= 2 and not compact.isdigit():
+            continue
+        if any(_ocr_name_tokens_same(tok, prev) for prev in kept):
+            continue
+        if len(compact) <= 3 and any(
+            prev.upper().endswith(compact.upper()) and len(prev) > len(compact)
+            for prev in kept
+        ):
+            continue
+        kept.append(tok)
+    return _clean_name(" ".join(kept))
+
+
+def _ocr_name_column_line_text(
+    line: Sequence[Dict[str, Any]], pack_x: float
+) -> str:
+    parts = []
+    for word in sorted(line, key=lambda w: float(w.get("x") or 0)):
+        text = str(word.get("text") or "").strip()
+        if not text or not re.search(r"[A-Za-z]", text):
+            continue
+        if float(word.get("x") or 0) >= pack_x - 75:
+            continue
+        parts.append(text)
+    name = _clean_name(" ".join(parts))
+    if not name or len(re.findall(r"[A-Za-z]", name)) < 3:
+        return ""
+    if re.search(
+        r"\b(?:TOTAL|PRODUCT|PACKING|HIMALAYA|STATEMENT|AMOUNT|REMARK)\b",
+        name,
+        re.I,
+    ):
+        return ""
+    return name
+
+
+def _parse_ocr_word_boxes_op_st_pairs(
+    words: Sequence[Dict[str, Any]],
+    filename: str,
+    ext: str,
+    *,
+    ocr_text: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Op-St / Receipt / S.Ret / Sale / Pur.Ret / Cl. Stock, each qty then amount.
+
+    One product per corrected text line. Does not invent a missing digit.
+    """
+    if not _ocr_header_align_enabled() or len(words) < 12:
+        return None
+    from services.stock_header_resolver import normalize_header
+
+    page_h = float(words[0].get("page_h") or 0) or max(
+        float(w.get("y") or 0) for w in words
+    )
+    found = _ocr_collect_header_tokens_from_words(words, page_h)
+    opening = found.get("opening")
+    if "pack" not in found or not opening or "purchase" not in found:
+        return None
+    opening_norm = normalize_header(opening.get("text"))
+    opening_compact = re.sub(r"\s+", "", opening_norm)
+    if opening_norm not in {"op st", "op stk"} and opening_compact not in {
+        "opst",
+        "opstk",
+    }:
+        return None
+
+    order = ["opening", "purchase", "sreturn", "sale", "preturn", "closing"]
+    known = [(i, float(found[key]["x"])) for i, key in enumerate(order) if key in found]
+    if len(known) < 3:
+        return None
+    gaps = [known[i + 1][1] - known[i][1] for i in range(len(known) - 1)]
+    gaps = [g for g in gaps if g > 20]
+    pitch = (sum(gaps) / len(gaps)) if gaps else 110.0
+    xs: Dict[str, float] = {order[i]: x for i, x in known}
+    for i, key in enumerate(order):
+        if key in xs:
+            continue
+        prev_i = next((j for j in range(i - 1, -1, -1) if order[j] in xs), None)
+        next_i = next((j for j in range(i + 1, len(order)) if order[j] in xs), None)
+        if prev_i is not None and next_i is not None:
+            span = float(next_i - prev_i)
+            xs[key] = xs[order[prev_i]] + (i - prev_i) / span * (
+                xs[order[next_i]] - xs[order[prev_i]]
+            )
+        elif prev_i is not None:
+            xs[key] = xs[order[prev_i]] + pitch * (i - prev_i)
+        elif next_i is not None:
+            xs[key] = xs[order[next_i]] - pitch * (next_i - i)
+    pack_x = float(found["pack"]["x"])
+    header_y = float(opening.get("y") or found["pack"].get("y") or 0)
+    slope = _ocr_op_st_header_slope(found)
+    ref_x = float(opening.get("x") or 0)
+    leveled = []
+    for word in words:
+        copy = dict(word)
+        copy["y"] = float(word.get("y") or 0) - slope * (
+            float(word.get("x") or 0) - ref_x
+        )
+        leveled.append(copy)
+    body = [
+        w
+        for w in leveled
+        if not w.get("name_column")
+        and not w.get("letterhead_line")
+        and not w.get("letterhead_dates")
+    ]
+    rows = _cluster_ocr_words_into_rows(body, y_tol=12.0, anchor_first=True)
+    name_lines = _cluster_ocr_words_into_rows(
+        [w for w in leveled if w.get("name_column")],
+        y_tol=10.0,
+        anchor_first=True,
+    )
+    items: List[Dict[str, Any]] = []
+    band_right = {
+        key: (xs[order[i + 1]] - 8.0) if i + 1 < len(order) else xs[key] + pitch
+        for i, key in enumerate(order)
+    }
+    field_for = {
+        "opening": ("opening_qty", "opening_value"),
+        "purchase": ("receipts_qty", "purchase_value"),
+        "sreturn": ("sales_return_qty", None),
+        "sale": ("sales_qty", "sales_value"),
+        "preturn": ("purchase_return_qty", None),
+        "closing": ("closing_qty", "closing_value"),
+    }
+    line_text = []
+    for line in name_lines:
+        if not line:
+            continue
+        line_y = sum(float(w.get("y") or 0) for w in line) / len(line)
+        text = _ocr_name_column_line_text(line, pack_x)
+        if text:
+            line_text.append((line_y, text))
+    row_has_number: List[bool] = []
+    row_y_list: List[float] = []
+    row_names: List[str] = []
+    for row in rows:
+        if not row:
+            row_has_number.append(False)
+            row_y_list.append(0.0)
+            row_names.append("")
+            continue
+        row_y = sum(float(w.get("y") or 0) for w in row) / len(row)
+        row_y_list.append(row_y)
+        name_bits = [
+            str(w.get("text") or "").strip()
+            for w in row
+            if str(w.get("text") or "").strip()
+            and float(w.get("x") or 0) < pack_x - 75
+            and re.search(r"[A-Za-z0-9]", str(w.get("text") or ""))
+        ]
+        row_names.append(_clean_name(" ".join(name_bits)))
+        has_number = False
+        if row_y > header_y + 8:
+            for word in row:
+                x = float(word.get("x") or 0)
+                if x < xs["opening"] - 18:
+                    continue
+                if _ocr_op_st_pair_number(str(word.get("text") or "")) is None:
+                    continue
+                if any(xs[key] - 16 <= x < band_right[key] for key in order):
+                    has_number = True
+                    break
+        row_has_number.append(has_number)
+    matches: List[tuple] = []
+    for i, has_number in enumerate(row_has_number):
+        if not has_number:
+            continue
+        for j, (line_y, line_name) in enumerate(line_text):
+            dist = abs(row_y_list[i] - line_y)
+            if dist > 26:
+                continue
+            row_tokens = row_names[i].split()
+            over_tokens = line_name.split()
+            shared = any(
+                _ocr_name_tokens_same(a, b)
+                or (
+                    len(re.sub(r"[^A-Za-z0-9]", "", a)) <= 3
+                    and b.upper().endswith(a.upper())
+                    and len(b) > len(a)
+                )
+                for a in row_tokens
+                for b in over_tokens
+            )
+            letters = len(re.findall(r"[A-Za-z]", row_names[i]))
+            cost = dist
+            if letters >= 8 and not shared:
+                cost += 40
+            elif shared:
+                cost -= 5
+            elif letters <= 6:
+                cost -= 3
+            matches.append((cost, dist, i, j))
+    matches.sort()
+    used_rows: set = set()
+    used_lines: set = set()
+    overlay: Dict[int, str] = {}
+    for _cost, _dist, i, j in matches:
+        if i in used_rows or j in used_lines:
+            continue
+        used_rows.add(i)
+        used_lines.add(j)
+        overlay[i] = line_text[j][1]
+    if overlay:
+        logger.info(
+            "STOCK_OCR_NAME_OVERLAY rows=%s names=%s",
+            len(overlay),
+            " | ".join(overlay[i] for i in sorted(overlay)),
+        )
+    for row_i, row in enumerate(rows):
+        if not row:
+            continue
+        row_y = row_y_list[row_i]
+        if row_y <= header_y + 8:
+            continue
+        name_parts = []
+        pack_parts = []
+        numbers: Dict[str, List[tuple]] = {key: [] for key in order}
+        for word in row:
+            text = str(word.get("text") or "").strip()
+            x = float(word.get("x") or 0)
+            if not text or _ocr_header_token_key(text):
+                continue
+            if x < pack_x - 75:
+                if re.search(r"[A-Za-z0-9]", text):
+                    name_parts.append(text)
+                continue
+            if x < xs["opening"] - 18:
+                pack_parts.append(text)
+                continue
+            number = _ocr_op_st_pair_number(text)
+            if number is None:
+                continue
+            for key in order:
+                if xs[key] - 16 <= x < band_right[key]:
+                    numbers[key].append((x, number))
+                    break
+        name = _ocr_merge_product_name(
+            _clean_name(" ".join(name_parts)), overlay.get(row_i, "")
+        )
+        if not name or len(re.findall(r"[A-Za-z]", name)) < 3:
+            continue
+        if re.search(
+            r"\b(?:TOTAL|PRODUCT|PACKING|HIMALAYA|STATEMENT|AMOUNT)\b",
+            name,
+            re.I,
+        ):
+            continue
+        if _is_non_product_line_name(name):
+            continue
+        item = empty_line_item()
+        item["product_name"] = name
+        pack = _clean_name(" ".join(pack_parts))
+        item["packing"] = pack or None
+        extra = item.setdefault("extra", {})
+        field_source: Dict[str, str] = {}
+        wrote = 0
+        for key, (qty_field, value_field) in field_for.items():
+            pair = sorted(numbers[key], key=lambda pair: pair[0])
+            if not pair:
+                continue
+            qty = pair[0][1]
+            if qty_field == "receipts_qty":
+                item["receipts_qty"] = float(qty)
+                item["purchase_qty"] = float(qty)
+                field_source["receipts_qty"] = "printed"
+                field_source["purchase_qty"] = "printed"
+            elif qty_field == "sales_return_qty":
+                item["sales_return_qty"] = float(qty)
+                extra["sale_return"] = float(qty)
+                field_source["sales_return_qty"] = "printed"
+            elif qty_field == "purchase_return_qty":
+                item["purchase_return_qty"] = float(qty)
+                extra["purchase_return_qty"] = float(qty)
+                field_source["purchase_return_qty"] = "printed"
+            else:
+                item[qty_field] = float(qty)
+                field_source[qty_field] = "printed"
+            wrote += 1
+            if value_field and len(pair) >= 2:
+                amount = pair[1][1]
+                if value_field in {"opening_value", "purchase_value"}:
+                    extra[value_field] = float(amount)
+                else:
+                    item[value_field] = float(amount)
+                field_source[value_field] = "printed"
+        if wrote < 1 or (wrote < 2 and row_i not in overlay):
+            continue
+        extra["field_source"] = field_source
+        extra["layout"] = "op_st_receipt_qty_value"
+        items.append(item)
+    if len(items) < 3:
+        return None
+    result = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
+    result["line_items"] = items
+    _ocr_apply_letterhead(result, words, header_y)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "tesseract_heuristic"
+    extra["ocr_header_aligned"] = True
+    extra["ocr_word_boxes"] = True
+    extra["layout"] = "op_st_receipt_qty_value"
+    extra["ocr_header_aligned_rows"] = len(items)
+    logger.info(
+        "STOCK_OCR_OP_ST_PAIRS file=%s rows=%s slope=%.4f",
+        filename,
+        len(items),
+        slope,
+    )
+    blob = ocr_text or _ocr_word_boxes_to_text(words)
+    return _finalize_statement_period_fields(result, content_text=blob)
 
 
 def _parse_ocr_word_boxes_pack_opening(
@@ -43178,6 +43904,11 @@ def _parse_ocr_word_boxes_pack_opening(
     ocr_text: str = "",
 ) -> Optional[Dict[str, Any]]:
     """Assign photo OCR words to PACK/OPENING/PURCHASE/SALE/CLOSING by x-centre."""
+    paired = _parse_ocr_word_boxes_op_st_pairs(
+        words, filename, ext, ocr_text=ocr_text
+    )
+    if paired and paired.get("line_items"):
+        return paired
     if not _ocr_header_align_enabled() or len(words) < 12:
         return None
     from services.stock_header_resolver import assign_cells, resolve_columns
@@ -47004,6 +47735,569 @@ def _repair_swil_receipt_total_as_sales_qty(
     return repaired
 
 
+_PACKING_OPSTK_SPS_SCAN_PROMPT = """
+This image is one crop of a printed "Stock and Sale Statement".
+Read the cells that are printed. Do not calculate a missing number from other columns.
+
+Columns LEFT TO RIGHT:
+Item Name | Packing | Op Stk | P Qty | P Val | S Qty | Sp S Qty | S Val | C Qty | D. Qty | A Qty | Cl Stk | Cl Val | Order
+
+Mapping. A blank qty cell is 0. Do not slide a later number left into a blank cell.
+1 Item Name -> product_name
+2 Packing -> packing
+3 Op Stk -> opening_qty
+4 P Qty -> receipts_qty
+5 P Val -> extra.purchase_value
+6 S Qty -> sales_qty
+7 Sp S Qty -> extra.sales_scheme_qty
+8 S Val -> sales_value
+9 C Qty -> extra.c_qty
+10 D. Qty -> extra.d_qty
+11 A Qty -> extra.a_qty
+12 Cl Stk -> closing_qty
+13 Cl Val -> closing_value
+14 Order -> extra.order_qty
+
+S Qty is the only sales quantity. Sp S Qty is not sales_qty.
+C Qty is not closing. Cl Stk is closing_qty. Cl Val is closing_value.
+P Val is purchase value, not sales value. S Val is sales_value.
+
+Include EVERY product row in this crop, including rows whose qty cells are all blank.
+Keep products that share a brand as separate rows.
+Do not emit the division banner (HIMALAYA-ZEAL or similar) as a product.
+Put that banner in company_name. stockist_name is the agency on the letterhead.
+Do not emit the footer total, Aprox Order Value, or the proprietor signature as a product.
+The bottom total line (P Val, S Val, Cl Stk, Cl Val) is totals only. Never copy Cl Stk or Cl Val from that total line onto the last product.
+If a footer total line is visible, copy only the printed totals:
+  totals.extra.purchase_value = P Val total
+  totals.sales_value = S Val total
+  totals.extra.closing_qty = Cl Stk total
+  totals.closing_value = Cl Val total
+Period is the printed From / To date. Two-digit years 20-29 are 2020-2029.
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "stockist_address": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock and Sale Statement",
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": number,
+      "closing_qty": number,
+      "closing_value": number,
+      "extra": {
+        "purchase_value": number,
+        "sales_scheme_qty": number,
+        "c_qty": number,
+        "d_qty": number,
+        "a_qty": number,
+        "order_qty": number
+      }
+    }
+  ],
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {"purchase_value": number|null, "closing_qty": number|null}
+  }
+}
+""".strip()
+
+
+def _packing_opstk_scan_header_text(image_bytes: bytes) -> str:
+    """OCR the top band only. Body digits are read by the column-locked vision."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return ""
+    try:
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except Exception:
+        return ""
+    width, height = image.size
+    # Column titles sit above the first product. A taller band pulls product
+    # rows into the header OCR and drops "Op Stk" / "Packing".
+    band = image.crop((0, 0, width, max(90, int(height * 0.09))))
+    buf = io.BytesIO()
+    band.save(buf, format="PNG")
+    try:
+        return _ocr_image_to_text(buf.getvalue(), psm=6, enhance=False, page="hdr") or ""
+    except Exception:
+        return ""
+
+
+def _packing_opstk_page_jpeg(page) -> bytes:
+    """Page scan as JPEG, keeping the embedded photo when the PDF is image-only."""
+    import fitz
+    from PIL import Image
+
+    raw = b""
+    try:
+        images = page.get_images() or []
+        if len(images) == 1:
+            pix = fitz.Pixmap(page.parent, images[0][0])
+            if pix.n >= 4:
+                pix = fitz.Pixmap(fitz.csRGB, pix)
+            raw = pix.tobytes("png")
+    except Exception:
+        raw = b""
+    if not raw:
+        pix = page.get_pixmap(matrix=fitz.Matrix(2.5, 2.5), alpha=False)
+        raw = pix.tobytes("png")
+    image = Image.open(io.BytesIO(raw)).convert("RGB")
+    width, height = image.size
+    longest = max(width, height)
+    if longest > 3200:
+        scale = 3200.0 / float(longest)
+        image = image.resize(
+            (max(1, int(width * scale)), max(1, int(height * scale))),
+            Image.Resampling.LANCZOS,
+        )
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG", quality=82)
+    return buf.getvalue()
+
+
+def _packing_opstk_jpeg_crops(image_bytes: bytes) -> List[bytes]:
+    """Upper and lower bands. The upper band keeps the printed column header."""
+    from PIL import Image
+
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    width, height = image.size
+    if height < 900:
+        return [image_bytes]
+    crops: List[bytes] = []
+    for top, bottom in ((0.0, 0.58), (0.42, 1.0)):
+        band = image.crop((0, int(height * top), width, int(height * bottom)))
+        buf = io.BytesIO()
+        band.save(buf, format="JPEG", quality=82)
+        crops.append(buf.getvalue())
+    return crops
+
+
+def _packing_opstk_row_key(item: Dict[str, Any]) -> str:
+    name = re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper())
+    pack = re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper())
+    return name + "|" + pack
+
+
+def _packing_opstk_unhook_footer_total(
+    items: List[Dict[str, Any]], parts: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Drop a footer Cl Stk / Cl Val that vision copied onto the last product.
+
+    The product's own qty and sales value stay. Nothing is calculated.
+    """
+    if len(items) < 8:
+        return items
+    closing_qty = None
+    closing_value = None
+    for part in parts:
+        totals = part.get("totals") if isinstance(part.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        if extra.get("closing_qty") not in (None, ""):
+            closing_qty = _to_float(extra.get("closing_qty"))
+        if totals.get("closing_value") not in (None, ""):
+            closing_value = _to_float(totals.get("closing_value"))
+    if not closing_value or closing_value < 1000:
+        return items
+    last = dict(items[-1])
+    if abs(_to_float(last.get("closing_value")) - closing_value) > 0.05:
+        return items
+    if closing_qty and abs(_to_float(last.get("closing_qty")) - closing_qty) > 0.05:
+        return items
+    last["closing_qty"] = 0.0
+    last["closing_value"] = 0.0
+    logger.info(
+        "PACKING_OPSTK_SCAN status=footer_unhooked product=%s",
+        last.get("product_name"),
+    )
+    return items[:-1] + [last]
+
+
+def _packing_opstk_drop_footer_purchase(
+    items: List[Dict[str, Any]], parts: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Clear a statement P Val total that vision stored on the last product."""
+    if not items:
+        return items
+    purchase_total = None
+    for part in parts:
+        totals = part.get("totals") if isinstance(part.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        if extra.get("purchase_value") not in (None, ""):
+            purchase_total = _to_float(extra.get("purchase_value"))
+    if not purchase_total or purchase_total < 1000:
+        return items
+    last = items[-1]
+    extra = last.get("extra") if isinstance(last.get("extra"), dict) else {}
+    if abs(_to_float(extra.get("purchase_value")) - purchase_total) > 0.05:
+        return items
+    last = dict(last)
+    extra = dict(extra)
+    extra["purchase_value"] = 0.0
+    last["extra"] = extra
+    logger.info(
+        "PACKING_OPSTK_SCAN status=footer_purchase_unhooked product=%s",
+        last.get("product_name"),
+    )
+    return items[:-1] + [last]
+
+
+def _packing_opstk_lower_opening(
+    items: List[Dict[str, Any]], parts: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Rows below the header crop sometimes file Op Stk as P Qty.
+
+    Only a lower-only row with a blank P Val is moved. The printed number
+    stays the same. A row that has a purchase value is left as purchase.
+    """
+    if len(parts) < 2:
+        return items
+    upper_keys = {
+        _packing_opstk_row_key(item)
+        for item in (parts[0].get("line_items") or [])
+        if isinstance(item, dict)
+    }
+    fixed: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            fixed.append(item)
+            continue
+        if _packing_opstk_row_key(item) in upper_keys:
+            fixed.append(item)
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        receipts = _to_float(item.get("receipts_qty"))
+        if (
+            _to_float(item.get("opening_qty")) > 0
+            or receipts <= 0
+            or abs(_to_float(extra.get("purchase_value"))) > 0
+        ):
+            fixed.append(item)
+            continue
+        moved = dict(item)
+        moved["opening_qty"] = receipts
+        moved["receipts_qty"] = 0.0
+        extra = dict(extra)
+        extra["opstk_read_as_purchase"] = True
+        moved["extra"] = extra
+        logger.info(
+            "PACKING_OPSTK_SCAN status=opstk_not_purchase product=%s qty=%s",
+            moved.get("product_name"),
+            receipts,
+        )
+        fixed.append(moved)
+    return fixed
+
+
+def _packing_opstk_prefer_row(
+    upper: Dict[str, Any], lower: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Pick one printed reading. Do not calculate a new quantity.
+
+    A lower crop sometimes files Op Stk under P Qty. Keep the reading that
+    still has that number in opening_qty.
+    """
+    upper_sale = _to_float(upper.get("sales_value"))
+    lower_sale = _to_float(lower.get("sales_value"))
+    upper_extra = upper.get("extra") if isinstance(upper.get("extra"), dict) else {}
+    lower_extra = lower.get("extra") if isinstance(lower.get("extra"), dict) else {}
+    upper_pval = _to_float(upper_extra.get("purchase_value"))
+    lower_pval = _to_float(lower_extra.get("purchase_value"))
+    # S Val read into P Val on one crop. Keep the crop that left it in sales_value.
+    if upper_sale > 0 and lower_sale == 0 and abs(lower_pval - upper_sale) < 0.05:
+        return upper
+    if lower_sale > 0 and upper_sale == 0 and abs(upper_pval - lower_sale) < 0.05:
+        return lower
+    upper_op = _to_float(upper.get("opening_qty"))
+    lower_op = _to_float(lower.get("opening_qty"))
+    upper_pur = _to_float(upper.get("receipts_qty"))
+    lower_pur = _to_float(lower.get("receipts_qty"))
+    if upper_op > 0 and lower_op == 0 and abs(lower_pur - upper_op) < 0.05:
+        return upper
+    if lower_op > 0 and upper_op == 0 and abs(upper_pur - lower_op) < 0.05:
+        return lower
+    if _packing_opstk_row_richness(lower) > _packing_opstk_row_richness(upper):
+        return lower
+    return upper
+
+
+def _packing_opstk_row_richness(item: Dict[str, Any]) -> int:
+    score = 0
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    ):
+        if abs(_to_float(item.get(key))) > 0:
+            score += 1
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if abs(_to_float(extra.get("purchase_value"))) > 0:
+        score += 1
+    return score
+
+
+def _packing_opstk_skip_name(name: str) -> bool:
+    text = _clean_name(name)
+    if not text or _is_non_product_line_name(text):
+        return True
+    return bool(
+        re.search(
+            r"\b(?:APROX|APPROX|PROPRIETOR|ORDER\s*VALUE)\b",
+            text,
+            re.I,
+        )
+    )
+
+
+def _call_packing_opstk_scan_vision(image_bytes: bytes) -> Optional[Dict[str, Any]]:
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _PACKING_OPSTK_SPS_SCAN_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": base64.b64encode(image_bytes).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 16384},
+    }
+    parsed = None
+    last_err: Optional[Exception] = None
+    for attempt in range(2):
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                return parsed
+        except Exception as exc:
+            last_err = exc
+            time.sleep(min(2 ** attempt, 4))
+    if last_err:
+        logger.info(
+            "PACKING_OPSTK_SCAN vision_failed error=%s", type(last_err).__name__
+        )
+    return None
+
+
+def _finish_packing_opstk_scan(
+    parsed: Dict[str, Any], filename: str
+) -> Dict[str, Any]:
+    result = empty_result(filename, "pdf")
+    result = _apply_parsed_sales_json(result, parsed)
+    if not result.get("company_name"):
+        for raw in parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            division = _detect_statement_division(str(raw.get("product_name") or ""))
+            if division:
+                result["company_name"] = division.get("division_name")
+                break
+    kept: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if _packing_opstk_skip_name(str(item.get("product_name") or "")):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        if extra.get("purchase_value") not in (None, ""):
+            extra["purchase_value"] = _to_float(extra.get("purchase_value"))
+        kept.append(item)
+    result["line_items"] = kept
+    if not result.get("report_title"):
+        result["report_title"] = "Stock and Sale Statement"
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "packing_opstk_sps_scan"
+    extra["layout"] = "packing_opstk_sps"
+    extra["total_row_source"] = "packing_opstk_sps_scan"
+    return result
+
+
+def _packing_opstk_scan_result_ok(result: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 25:
+        return False
+    sales_rows = sum(1 for item in items if _to_float(item.get("sales_qty")) > 0)
+    sales_value = sum(_to_float(item.get("sales_value")) for item in items)
+    closing_rows = sum(1 for item in items if _to_float(item.get("closing_qty")) > 0)
+    return sales_rows >= 8 and sales_value > 1000 and closing_rows >= 8
+
+
+def _merge_packing_opstk_scan_results(
+    parts: List[Dict[str, Any]], filename: str
+) -> Dict[str, Any]:
+    ordered: List[Dict[str, Any]] = []
+    index_by_key: Dict[str, int] = {}
+    for part in parts:
+        for item in part.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            key = _packing_opstk_row_key(item)
+            if not key.strip("|"):
+                continue
+            if key not in index_by_key:
+                index_by_key[key] = len(ordered)
+                ordered.append(item)
+                continue
+            prev = ordered[index_by_key[key]]
+            ordered[index_by_key[key]] = _packing_opstk_prefer_row(prev, item)
+    base = parts[-1] if parts else empty_result(filename, "pdf")
+    merged = empty_result(filename, "pdf")
+    for key in (
+        "stockist_name",
+        "stockist_address",
+        "company_name",
+        "period_from",
+        "period_to",
+        "report_title",
+    ):
+        for part in parts:
+            if part.get(key):
+                merged[key] = part.get(key)
+                break
+    merged["line_items"] = _packing_opstk_lower_opening(
+        _packing_opstk_drop_footer_purchase(
+            _packing_opstk_unhook_footer_total(ordered, parts),
+            parts,
+        ),
+        parts,
+    )
+    totals = merged.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    # S Val total must match the product rows. Aprox Order Value is a
+    # different footer number and must not be stored as sales_value.
+    line_sales = sum(
+        _to_float(item.get("sales_value"))
+        for item in merged.get("line_items") or []
+        if isinstance(item, dict)
+    )
+    sales_candidates: List[float] = []
+    for part in parts:
+        part_totals = part.get("totals") if isinstance(part.get("totals"), dict) else {}
+        if part_totals.get("sales_value") not in (None, ""):
+            sales_candidates.append(_to_float(part_totals.get("sales_value")))
+    if sales_candidates and line_sales > 0:
+        best_sales = min(sales_candidates, key=lambda value: abs(value - line_sales))
+        if abs(best_sales - line_sales) <= max(50.0, line_sales * 0.05):
+            totals["sales_value"] = best_sales
+    source = base if base.get("line_items") else (parts[0] if parts else base)
+    source_totals = source.get("totals") if isinstance(source.get("totals"), dict) else {}
+    if source_totals.get("closing_value") not in (None, ""):
+        totals["closing_value"] = source_totals.get("closing_value")
+    source_extra = source_totals.get("extra") if isinstance(source_totals.get("extra"), dict) else {}
+    for key in ("purchase_value", "closing_qty", "receipts_value"):
+        if source_extra.get(key) not in (None, ""):
+            extra[key] = source_extra.get(key)
+    if extra.get("purchase_value") not in (None, ""):
+        totals["receipts_value"] = extra.get("purchase_value")
+    extra["extraction_method"] = "packing_opstk_sps_scan"
+    extra["layout"] = "packing_opstk_sps"
+    extra["total_row_source"] = "packing_opstk_sps_scan"
+    logger.info(
+        "PACKING_OPSTK_SCAN status=merged rows=%s sales_value=%s closing_value=%s",
+        len(ordered),
+        totals.get("sales_value"),
+        totals.get("closing_value"),
+    )
+    return merged
+
+
+def _parse_image_only_packing_opstk_sps_pdf(
+    doc, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Scanned Packing / Op Stk / Sp S Qty / D. Qty grid.
+
+    The text parser needs PDF words. A CamScanner page has none, and the
+    Receipt/Pur vision reader then stores S Qty as purchase and drops S Val.
+    """
+    if not _packing_opstk_scan_enabled():
+        return None
+    _packing_opstk_block_swil.set(False)
+    try:
+        page_count = int(getattr(doc, "page_count", 0) or 0)
+    except Exception:
+        return None
+    if page_count != 1:
+        return None
+    embedded = 0
+    try:
+        embedded = len(re.sub(r"\s+", "", doc[0].get_text("text") or ""))
+    except Exception:
+        return None
+    if embedded >= 40:
+        return None
+    try:
+        jpeg = _packing_opstk_page_jpeg(doc[0])
+    except Exception as exc:
+        logger.info(
+            "PACKING_OPSTK_SCAN status=skip file=%s error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    header = _packing_opstk_scan_header_text(jpeg)
+    if not _is_packing_opstk_sps_scan_text(header):
+        logger.info(
+            "PACKING_OPSTK_SCAN status=skip file=%s reason=header_mismatch text=%s",
+            filename,
+            re.sub(r"\s+", " ", header or "")[:240],
+        )
+        return None
+    _packing_opstk_block_swil.set(True)
+    parts: List[Dict[str, Any]] = []
+    for index, crop in enumerate(_packing_opstk_jpeg_crops(jpeg)):
+        parsed = _call_packing_opstk_scan_vision(crop)
+        if not parsed:
+            continue
+        part = _finish_packing_opstk_scan(parsed, filename)
+        if part.get("line_items"):
+            parts.append(part)
+            logger.info(
+                "PACKING_OPSTK_SCAN status=crop index=%s rows=%s",
+                index,
+                len(part.get("line_items") or []),
+            )
+    if not parts:
+        return None
+    merged = _merge_packing_opstk_scan_results(parts, filename)
+    if not _packing_opstk_scan_result_ok(merged):
+        logger.info(
+            "PACKING_OPSTK_SCAN status=reject file=%s rows=%s",
+            filename,
+            len(merged.get("line_items") or []),
+        )
+        return None
+    return merged
+
+
 def _parse_image_only_swil_receipt_pur_pdf(
     doc, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -47017,6 +48311,11 @@ def _parse_image_only_swil_receipt_pur_pdf(
 
     page_count = doc.page_count
     if page_count < 1 or page_count > 12:
+        return None
+    # Set when this page is a Packing / Op Stk / D. Qty scan. Swil's
+    # Receipt/Pur prompt stores S Qty as purchase and drops S Val.
+    if _packing_opstk_block_swil.get():
+        logger.info("PACKING_OPSTK_SCAN status=skip_swil file=%s", filename)
         return None
     embedded_chars = 0
     for page_index in range(page_count):
@@ -57745,6 +59044,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         sales_sleep_respecting_deadline,
     )
 
+    # Mild camera tilt merges product rows into one jumbled line. Straighten
+    # only when table rules are clearly slanted; already-level images are
+    # returned unchanged. Flag STOCK_PHOTO_DESKEW (default on).
+    try:
+        from services.stock_photo_deskew import maybe_deskew_stock_photo
+
+        file_bytes = maybe_deskew_stock_photo(file_bytes)
+    except Exception:
+        logger.info("STOCK_PHOTO_DESKEW status=error file=%s", filename)
+
     result = empty_result(filename, ext.lstrip("."))
     _vt_meta: Dict[str, Any] = {}
     _diag = {
@@ -59192,6 +60501,21 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         result["line_items"] = []
         result["totals"]["extra"]["error"] = "vision_unavailable"
         return result
+
+    if ocr_words:
+        try:
+            op_st_pairs = _parse_ocr_word_boxes_op_st_pairs(
+                ocr_words, filename, ext, ocr_text=ocr_text
+            )
+        except Exception as exc:
+            logger.info(
+                "STOCK_OCR_OP_ST_PAIRS file=%s status=error error=%s",
+                filename,
+                type(exc).__name__,
+            )
+            op_st_pairs = None
+        if op_st_pairs and len(op_st_pairs.get("line_items") or []) >= 3:
+            return op_st_pairs
 
     heuristic = _parse_vikash_ocr_text(ocr_text, filename, ext)
     if heuristic.get("line_items"):

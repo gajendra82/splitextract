@@ -960,6 +960,13 @@ def maybe_apply_gemini_fallback(
         return result
 
     if _allowlist_skip(
+        "packing_opstk_sps_scan",
+        str(extra.get("extraction_method") or "") == "packing_opstk_sps_scan"
+        or str(extra.get("layout") or "") == "packing_opstk_sps",
+    ):
+        return result
+
+    if _allowlist_skip(
         "opbal_issue_closing_photo",
         str(extra.get("extraction_method") or "") == "opbal_issue_closing_photo"
         or str(extra.get("layout") or "") == "opbal_issue_closing",
