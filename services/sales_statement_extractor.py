@@ -47908,12 +47908,58 @@ def _packing_opstk_unhook_footer_total(
         if totals.get("closing_value") not in (None, ""):
             closing_value = _to_float(totals.get("closing_value"))
     if not closing_value or closing_value < 1000:
-        return items
+        return _packing_opstk_unhook_oversized_last(items, parts)
     last = dict(items[-1])
     if abs(_to_float(last.get("closing_value")) - closing_value) > 0.05:
         return items
     if closing_qty and abs(_to_float(last.get("closing_qty")) - closing_qty) > 0.05:
         return items
+    last["closing_qty"] = 0.0
+    last["closing_value"] = 0.0
+    logger.info(
+        "PACKING_OPSTK_SCAN status=footer_unhooked product=%s",
+        last.get("product_name"),
+    )
+    return items[:-1] + [last]
+
+
+def _packing_opstk_unhook_oversized_last(
+    items: List[Dict[str, Any]], parts: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Last-row Cl Stk / Cl Val that dwarf every other product are the footer.
+
+    Used when vision never copied those totals into the totals block.
+    The product qty and sales value stay. Nothing is calculated.
+    """
+    if len(items) < 8:
+        return items
+    last = items[-1]
+    closing_qty = _to_float(last.get("closing_qty"))
+    closing_value = _to_float(last.get("closing_value"))
+    if closing_qty < 1000 or closing_value < 100000:
+        return items
+    other_qty = [
+        _to_float(item.get("closing_qty"))
+        for item in items[:-1]
+        if isinstance(item, dict)
+    ]
+    other_value = [
+        _to_float(item.get("closing_value"))
+        for item in items[:-1]
+        if isinstance(item, dict)
+    ]
+    if not other_qty or not other_value:
+        return items
+    if closing_qty < 5 * max(other_qty) or closing_value < 5 * max(other_value):
+        return items
+    if parts:
+        totals = parts[-1].setdefault("totals", {})
+        extra = totals.setdefault("extra", {})
+        if totals.get("closing_value") in (None, ""):
+            totals["closing_value"] = closing_value
+        if extra.get("closing_qty") in (None, ""):
+            extra["closing_qty"] = closing_qty
+    last = dict(last)
     last["closing_qty"] = 0.0
     last["closing_value"] = 0.0
     logger.info(
