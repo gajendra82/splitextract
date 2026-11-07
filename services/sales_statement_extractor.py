@@ -36003,7 +36003,10 @@ def _parse_packing_opstk_sps_statement(doc, filename: str) -> Optional[Dict[str,
             left: List[str] = []
             packing_parts: List[str] = []
             nums: Dict[str, List[str]] = {key: [] for key in value_keys}
-            for word in row["words"]:
+            # Boxed grids often print Item Cd a fraction above/below the name.
+            # Stream (y,x) order then puts the name before the code in `left`.
+            # Always walk the row left→right so code stays leftmost.
+            for word in sorted(row["words"], key=lambda item: float(item[0])):
                 token = str(word[4]).strip()
                 if not token:
                     continue
@@ -36088,6 +36091,14 @@ def _parse_packing_opstk_sps_statement(doc, filename: str) -> Optional[Dict[str,
     extra = result["totals"]["extra"]
     extra["extraction_method"] = "packing_opstk_sps_statement"
     extra["total_row_source"] = "packing_opstk_sps_footer"
+    logger.info(
+        "PACKING_OPSTK_SPS_OK file=%s items=%s stockist=%r period=%s..%s",
+        filename,
+        len(items),
+        result.get("stockist_name"),
+        result.get("period_from"),
+        result.get("period_to"),
+    )
     if printed_totals.get("purchase_value") is not None:
         extra["purchase_value"] = printed_totals["purchase_value"]
     if printed_totals.get("closing_qty") is not None:
