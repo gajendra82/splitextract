@@ -816,6 +816,147 @@ def _headers_look_like_ssa_oric_qty_grid(columns: Sequence[Dict[str, Any]]) -> b
         return False
     return bool(has_open and has_close and has_mid)
 
+def _missing_box_before_opstk_enabled() -> bool:
+    """STOCK_VISION_MISSING_BOX_BEFORE_OPSTK — insert ignore BOX when Vision drops it.
+
+    Default ON. Compact OPSTK|OPV|PURC|PURCV|SALE|SALEV|STOCK|STOCKV grids print
+    a BOX case-size column between Pack and OPSTK; omitting it left-shifts every
+    qty/value. Kill switch: STOCK_VISION_MISSING_BOX_BEFORE_OPSTK=false.
+    """
+    return os.getenv(
+        "STOCK_VISION_MISSING_BOX_BEFORE_OPSTK", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _headers_are_opstk_opv_pair_grid(columns: Sequence[Dict[str, Any]]) -> bool:
+    """True for compact OPSTK/OPV/…/STOCK/STOCKV paired headers (BOX optional)."""
+    texts = [
+        re.sub(r"\s+", "", normalize_header(c.get("header_text") or ""))
+        for c in columns
+        if isinstance(c, dict)
+    ]
+    joined = " ".join(texts)
+    compact = "".join(texts)
+    if "box" in texts:
+        return False
+    has_pair = (
+        ("opstk" in texts or "opstk" in compact)
+        and ("opv" in texts or re.search(r"(?:^|[^a-z])opv(?:[^a-z]|$)", joined))
+        and ("purcv" in texts or "purcv" in compact)
+        and ("salev" in texts or "salev" in compact)
+        and ("stockv" in texts or "stockv" in compact)
+    )
+    return bool(has_pair)
+
+
+def _box_shift_votes_on_opstk_grid(
+    columns: Sequence[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+) -> Tuple[int, int]:
+    """Return (shift_hits, checked) when OPV money sits under PURC after a BOX miss."""
+    oq_idx = next(
+        (
+            int(c["col_index"])
+            for c in columns
+            if isinstance(c, dict) and c.get("canonical") == "opening_qty"
+        ),
+        None,
+    )
+    if oq_idx is None:
+        return 0, 0
+    hits = 0
+    checked = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        # Need BOX + OPSTK + OPV under current oq, oq+1, oq+2.
+        if oq_idx + 2 >= len(cells):
+            continue
+        box_raw = cells[oq_idx]
+        opstk_raw = cells[oq_idx + 1]
+        opv_raw = cells[oq_idx + 2]
+        box_n = parse_number(box_raw, allow_internal_spaces=True)
+        opstk_n = parse_number(opstk_raw, allow_internal_spaces=True)
+        opv_n = parse_number(opv_raw, allow_internal_spaces=True)
+        if box_n is None or opstk_n is None or opv_n is None:
+            continue
+        checked += 1
+        box_whole = abs(box_n - int(box_n)) <= 0.001
+        opstk_whole = abs(opstk_n - int(opstk_n)) <= 0.001
+        opv_money = abs(opv_n - int(opv_n)) > 0.001 or (
+            opv_n >= 100 and opstk_n < opv_n
+        )
+        if box_whole and opstk_whole and opv_money and opstk_n < 5000:
+            hits += 1
+    return hits, checked
+
+
+def _repair_missing_box_before_opstk(
+    columns: List[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+    errors: List[str],
+) -> List[Dict[str, Any]]:
+    """When Vision drops BOX before OPSTK, shift qty/value canons one slot right.
+
+    Does not invent digits — only remaps headers so printed BOX sits on ignore
+    and OPSTK..STOCKV line up with the cells Vision already emitted.
+    """
+    if not _missing_box_before_opstk_enabled():
+        return columns
+    if not _headers_are_opstk_opv_pair_grid(columns):
+        return columns
+    if any(
+        isinstance(c, dict)
+        and re.sub(r"\s+", "", normalize_header(c.get("header_text") or ""))
+        == "box"
+        for c in columns
+    ):
+        return columns
+    hits, checked = _box_shift_votes_on_opstk_grid(columns, rows)
+    if checked < 2 or hits < max(2, int(0.6 * checked)):
+        return columns
+
+    ordered = sorted(
+        [dict(c) for c in columns if isinstance(c, dict)],
+        key=lambda c: int(c.get("col_index") or 0),
+    )
+    oq_pos = next(
+        (i for i, c in enumerate(ordered) if c.get("canonical") == "opening_qty"),
+        None,
+    )
+    if oq_pos is None:
+        return columns
+
+    tail = [c.get("canonical") for c in ordered[oq_pos:]]
+    ordered[oq_pos]["canonical"] = "ignore"
+    ordered[oq_pos]["is_value"] = False
+    ordered[oq_pos]["confidence"] = 0.9
+    ordered[oq_pos]["reason"] = "missing_box_before_opstk"
+    ordered[oq_pos]["source"] = "box_shift"
+    if not str(ordered[oq_pos].get("header_text") or "").strip():
+        ordered[oq_pos]["header_text"] = "BOX"
+
+    for offset, canon in enumerate(tail):
+        dest = oq_pos + 1 + offset
+        if dest >= len(ordered):
+            break
+        ordered[dest]["canonical"] = canon
+        ordered[dest]["is_value"] = str(canon).endswith("_value")
+        ordered[dest]["confidence"] = 0.85
+        ordered[dest]["reason"] = "missing_box_before_opstk"
+        ordered[dest]["source"] = "box_shift"
+
+    errors.append("MISSING_BOX_BEFORE_OPSTK")
+    logger.info(
+        "VISION_TABLE MISSING_BOX_BEFORE_OPSTK hits=%s/%s cols=%s",
+        hits,
+        checked,
+        [(c.get("col_index"), c.get("header_text"), c.get("canonical")) for c in ordered],
+    )
+    return ordered
+
+
 def _shift_pack_out_of_qty_headers(
     columns: List[Dict[str, Any]],
     rows: Sequence[Dict[str, Any]],
@@ -1265,6 +1406,8 @@ def build_table_prompt() -> str:
         "(not the red Company: line). If only a letterhead is printed and there "
         "is no \"Company :\" line, put that letterhead in stockist_name and "
         "leave company_name null — never put the letterhead into company_name.\n"
+        "- stockist_address: Branch Name: line, or the city in parentheses on the "
+        "letterhead (e.g. NOIDA from ARKAY … (NOIDA)), when printed; else null.\n"
         "- company_name: the printed \"Company :\" / division line when present.\n"
         "- statement_period if printed.\n"
         "Rules: copy every number exactly as printed, including decimals and "
@@ -1379,7 +1522,14 @@ def build_table_prompt() -> str:
         "number is that column's value. AMOUNT is the closing money beside "
         "Cl. Stock. Packing (30ML, 10TAB, 1PC) is packing, never a quantity. "
         "Emit one row per product. Never join several products, or several "
-        "products' numbers, into one row.\n"
+        "products' numbers, into one row. "
+        "PCode|Product Name|Pack|BOX|OPSTK|OPV|PURC|PURCV|SALE|SALEV|STOCK|"
+        "STOCKV|Manufacturer: keep PCode and Product Name as SEPARATE columns "
+        "(never put the pack token into Product Name). BOX is case size "
+        "(ignore) between Pack and OPSTK — never opening_qty. OPSTK/PURC/SALE/"
+        "STOCK are qty; OPV/PURCV/SALEV/STOCKV are the paired money columns. "
+        "Emit one cell per printed header including BOX even when blank, so "
+        "OPSTK..STOCKV never shift left.\n"
         "Qty-only Sales & Stock (Op.Bal. Qty. | Receipt Qty. | Total Qty. | "
         "Issue Qty. | Closing Balance | MSR Price): Op.Bal. Qty. is opening_qty, "
         "never closing. Closing Balance is one closing_qty column — if Closing "
@@ -1498,6 +1648,7 @@ TABLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             },
         },
         "stockist_name": {"type": "string", "nullable": True},
+        "stockist_address": {"type": "string", "nullable": True},
         "company_name": {"type": "string", "nullable": True},
         "statement_period": {"type": "string", "nullable": True},
     },
@@ -5170,6 +5321,201 @@ def _is_whole_qty(val: Optional[float]) -> bool:
     return val >= -0.001 and abs(val - int(val)) <= 0.001
 
 
+def _dropped_pair_value_shift_enabled() -> bool:
+    """STOCK_VISION_DROPPED_PAIR_VALUE_SHIFT — blank PURCV/SALEV left-shift repair.
+
+    Default ON. When Vision drops a blank pair-value cell (0.00), SALE qty lands
+    under PURCV and money under SALE, with manufacturer text under STOCKV.
+    Kill switch: STOCK_VISION_DROPPED_PAIR_VALUE_SHIFT=false.
+    """
+    return os.getenv(
+        "STOCK_VISION_DROPPED_PAIR_VALUE_SHIFT", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _cell_text_is_manufacturer(text: Any) -> bool:
+    s = str(text or "").strip()
+    if not s:
+        return False
+    if parse_number(s, allow_internal_spaces=True) is not None and not re.search(
+        r"[A-Za-z]{3,}", s
+    ):
+        return False
+    return bool(
+        re.search(
+            r"(?i)HIMALAYA|DRUG|WELLNESS|MANUFACTUR|DIVISION|COMPANY|OTX|ZEAL|ZANDRA",
+            s,
+        )
+    )
+
+
+def _canon_col_index(columns: Sequence[Dict[str, Any]], canon: str) -> Optional[int]:
+    for c in columns:
+        if isinstance(c, dict) and c.get("canonical") == canon:
+            try:
+                return int(c["col_index"])
+            except (TypeError, ValueError, KeyError):
+                return None
+    return None
+
+
+def _repair_cells_dropped_pair_value_shift(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], bool]:
+    """Insert a blank at PURCV when Vision dropped 0.00 and left-shifted SALE+.
+
+    Operates on printed cell strings only — never invents quantity digits.
+    """
+    if not _dropped_pair_value_shift_enabled():
+        return cells, False
+    pv_i = _canon_col_index(columns, "purchase_value")
+    sq_i = _canon_col_index(columns, "sales_qty")
+    sv_i = _canon_col_index(columns, "sales_value")
+    cq_i = _canon_col_index(columns, "closing_qty")
+    cv_i = _canon_col_index(columns, "closing_value")
+    if None in (pv_i, sq_i, sv_i, cq_i, cv_i):
+        return cells, False
+    if not (pv_i + 1 == sq_i == sv_i - 1 and sv_i + 1 == cq_i and cq_i + 1 == cv_i):
+        # Require contiguous PURCV|SALE|SALEV|STOCK|STOCKV.
+        if not (pv_i < sq_i < sv_i < cq_i < cv_i):
+            return cells, False
+    out = list(cells)
+    if len(out) < cv_i + 1:
+        out = out + [None] * (cv_i + 1 - len(out))
+    pv_raw, sq_raw, sv_raw, cq_raw, cv_raw = (
+        out[pv_i],
+        out[sq_i],
+        out[sv_i],
+        out[cq_i],
+        out[cv_i],
+    )
+    pv_n = parse_number(pv_raw, allow_internal_spaces=True)
+    sq_n = parse_number(sq_raw, allow_internal_spaces=True)
+    sv_n = parse_number(sv_raw, allow_internal_spaces=True)
+    cq_n = parse_number(cq_raw, allow_internal_spaces=True)
+    if pv_n is None or sq_n is None or sv_n is None or cq_n is None:
+        return cells, False
+    mfr_in_stockv = _cell_text_is_manufacturer(cv_raw)
+    if not (
+        _is_whole_qty(pv_n)
+        and _has_paisa(sq_n)
+        and _is_whole_qty(sv_n)
+        and _has_paisa(cq_n)
+        and (mfr_in_stockv or cv_raw is None or str(cv_raw).strip() == "")
+    ):
+        return cells, False
+    # Insert blank PURCV; shift SALE..STOCKV one right; keep manufacturer if present.
+    shifted = out[:pv_i] + [None] + out[pv_i:]
+    if len(shifted) > column_count:
+        # Prefer keeping manufacturer on the last header slot when present.
+        if mfr_in_stockv and column_count > 0:
+            shifted[column_count - 1] = cv_raw
+        shifted = shifted[:column_count]
+    elif len(shifted) < column_count:
+        shifted = shifted + [None] * (column_count - len(shifted))
+    logger.info(
+        "VISION_TABLE DROPPED_PAIR_VALUE_SHIFT cells "
+        "purcv_was=%r sale_was=%r salev_was=%r stock_was=%r",
+        pv_raw,
+        sq_raw,
+        sv_raw,
+        cq_raw,
+    )
+    return shifted, True
+
+
+def _repair_dropped_pair_value_left_shift(item: Dict[str, Any]) -> bool:
+    """Field-level fallback when PURCV blank was dropped (money under sales_qty).
+
+    Does not require identity balance — printed closing may disagree with
+    opening+purchase-sales. Only re-slots already printed numbers.
+    """
+    if not _dropped_pair_value_shift_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    ov = _printed_float(item, "opening_value")
+    rq = _printed_float(item, "purchase_qty")
+    if rq is None:
+        rq = _printed_float(item, "receipts_qty")
+    pv = _printed_float(item, "purchase_value")
+    sq = _printed_float(item, "sales_qty")
+    sv = _printed_float(item, "sales_value")
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+    if oq is None or pv is None or sq is None or sv is None:
+        return False
+    # Already balanced with money in the right places — leave alone.
+    if (
+        cq is not None
+        and not _has_paisa(sq)
+        and _has_paisa(sv)
+        and abs((oq + (rq or 0.0) - sq) - cq) <= 0.51
+    ):
+        return False
+    # Pre-paisa: purchase_value=sale qty, sales_qty=money, sales_value=close qty,
+    # closing_qty=money, closing_value missing.
+    pre = (
+        _is_whole_qty(pv)
+        and _has_paisa(sq)
+        and _is_whole_qty(sv)
+        and cq is not None
+        and _has_paisa(cq)
+        and cv is None
+    )
+    # Post-paisa: closing money already parked in closing_value, qty cleared.
+    post = (
+        _is_whole_qty(pv)
+        and _has_paisa(sq)
+        and _is_whole_qty(sv)
+        and (cq is None or abs(cq) <= 0.001)
+        and cv is not None
+        and _has_paisa(cv)
+    )
+    if not (pre or post):
+        return False
+    # Prefer paired opening value present (OPSTK/OPV grids).
+    if ov is not None and not (_has_paisa(ov) or ov == 0):
+        if ov > 0 and _is_whole_qty(ov) and ov < 20:
+            # Tiny whole "opening value" is suspicious; still allow shift.
+            pass
+
+    new_sales = float(pv)
+    new_sales_value = float(sq)
+    new_close = float(sv)
+    new_close_value = float(cq) if pre else float(cv)  # type: ignore[arg-type]
+
+    item["sales_qty"] = new_sales
+    item["sales_value"] = new_sales_value
+    item["closing_qty"] = new_close
+    item["closing_value"] = new_close_value
+    extra["purchase_value"] = None
+    fs["sales_qty"] = "printed"
+    fs["sales_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "printed"
+    fs["purchase_value"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "DROPPED_PAIR_VALUE_SHIFT" not in flags:
+        flags.append("DROPPED_PAIR_VALUE_SHIFT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE DROPPED_PAIR_VALUE_SHIFT product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        str(item.get("product_name") or "")[:60],
+        new_sales,
+        new_sales_value,
+        new_close,
+        new_close_value,
+    )
+    return True
+
+
 def _repair_qty_value_pair_left_shift(item: Dict[str, Any]) -> bool:
     """Re-slot qty/value when receipt VALUE absorbed the next qty column.
 
@@ -6156,11 +6502,16 @@ def _apply_fields_to_item(
     for canon, raw in fields.items():
         if canon == "ignore":
             continue
-        is_name = canon in {"product_name", "pack", "batch"}
+        is_name = canon in {"product_name", "pack", "batch", "product_code"}
         missing = raw is None or str(raw).strip() == ""
 
         if is_name:
             text = None if missing else str(raw).strip()
+            if canon == "product_code":
+                if text:
+                    item["product_code"] = text
+                field_source["product_code"] = "missing" if missing else "printed"
+                continue
             if canon == "product_name" and text:
                 # Division banner glued into first Item cell:
                 # "HIMALAYA ZANDRA\nARJUNA TAB" → keep SKU only.
@@ -6402,11 +6753,12 @@ def _recover_product_name_from_serial_cell(
 ) -> bool:
     """When Vision glues '38 SPEMAN TABS 60' into the SNO cell and leaves ITEM blank.
 
-    Does not invent a name — only peels a leading serial off an ignore/SNO cell.
+    Also recovers when Pack text sits in product_name and PCode holds
+    '5006587 ASHWAGANDHA 120TAB'. Does not invent a name — only peels a
+    leading code/serial off an ignore/PCode/SNO cell.
     """
     existing = str(fields.get("product_name") or "").strip()
-    if existing:
-        return False
+    pack_parked = bool(existing) and _classify_layout_cell(existing) == "pack"
     serial_idxs = [
         int(c.get("col_index") or 0)
         for c in columns
@@ -6415,18 +6767,20 @@ def _recover_product_name_from_serial_cell(
             c.get("canonical") == "ignore"
             or c.get("reason") == "serial_number_header"
             or re.match(
-                r"(?i)^\s*(?:#|s\.?\s*no\.?|sno\.?|sl\.?\s*no\.?)\s*$",
+                r"(?i)^\s*(?:#|s\.?\s*no\.?|sno\.?|sl\.?\s*no\.?|p.?code|product\s*code|item\s*code)\s*$",
                 str(c.get("header_text") or ""),
             )
         )
     ]
     if not serial_idxs and cells:
         serial_idxs = [0]
+    changed = False
     for idx in serial_idxs:
         if idx < 0 or idx >= len(cells):
             continue
         raw = str(cells[idx] or "").strip()
-        m = re.match(r"^(\d{1,4})\s+(.+\S)\s*$", raw)
+        # Short SNO (1-4) or longer PCode (5-12) before the product name.
+        m = re.match(r"^(\d{1,12})\s+(.+\S)\s*$", raw)
         if not m:
             continue
         name = m.group(2).strip()
@@ -6434,13 +6788,23 @@ def _recover_product_name_from_serial_cell(
             continue
         if _is_vision_total_row_name(name) or _is_division_banner_name(name):
             continue
-        fields["product_name"] = name
-        logger.info(
-            "VISION_TABLE SERIAL_PRODUCT_NAME_RECOVERED sno=%s name=%r",
-            m.group(1),
-            name[:60],
-        )
-        return True
+        code = m.group(1)
+        if pack_parked and not fields.get("pack"):
+            fields["pack"] = existing
+        if (not existing) or pack_parked:
+            fields["product_name"] = name
+            changed = True
+        if len(code) >= 4 and not fields.get("product_code"):
+            fields["product_code"] = code
+            changed = True
+        if changed:
+            logger.info(
+                "VISION_TABLE SERIAL_PRODUCT_NAME_RECOVERED sno=%s name=%r pack_parked=%s",
+                code,
+                (fields.get("product_name") or name)[:60],
+                pack_parked,
+            )
+            return True
     return False
 
 
@@ -7067,6 +7431,10 @@ def _map_single_table(
             columns = _shift_pack_out_of_qty_headers(
                 columns, table.get("rows") or [], errors
             )
+            # Compact OPSTK/OPV grids: Vision often drops BOX and left-shifts qtys.
+            columns = _repair_missing_box_before_opstk(
+                columns, table.get("rows") or [], errors
+            )
             force_layout = bool(
                 data_as_headers and _data_header_layout_repair_enabled()
             )
@@ -7205,6 +7573,11 @@ def _map_single_table(
             cells = cells + [None] * (column_count - len(cells))
         elif len(cells) > column_count:
             cells = cells[:column_count]
+        cells, _dropped_pair = _repair_cells_dropped_pair_value_shift(
+            cells, columns, column_count
+        )
+        if _dropped_pair:
+            errors.append("DROPPED_PAIR_VALUE_SHIFT")
 
         # TOTAL lines often skip packing; realign before column assignment.
         product_hint = None
@@ -7340,6 +7713,8 @@ def _map_single_table(
             # Pair-shift before paisa: blank receipt VALUE must not be cleared
             # as money-in-qty (issue value parked in sales_qty).
             _repair_qty_value_pair_left_shift(item)
+            # OPSTK/OPV grids: dropped blank PURCV left-shifts SALE into PURCV.
+            _repair_dropped_pair_value_left_shift(item)
             _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)
@@ -7422,6 +7797,7 @@ def _map_single_table(
         "header_used": header_used,
         "totals_rows": totals_rows,
         "stockist_name": table.get("stockist_name"),
+        "stockist_address": table.get("stockist_address"),
         "company_name": table.get("company_name"),
         "statement_period": table.get("statement_period"),
     }
@@ -7561,6 +7937,7 @@ def map_vision_table(
         "header_used": header_used,
         "totals_rows": all_totals,
         "stockist_name": normalized.get("stockist_name"),
+        "stockist_address": normalized.get("stockist_address"),
         "company_name": normalized.get("company_name"),
         "statement_period": normalized.get("statement_period"),
         "tables_found": len(expanded),
@@ -8825,6 +9202,7 @@ def _stamp_vision_result(
     gemini_calls: int,
     gemini_budget: int,
     stockist_name: Any = None,
+    stockist_address: Any = None,
     company_name: Any = None,
     statement_period: Any = None,
     totals_rows: Optional[List[Dict[str, Any]]] = None,
@@ -8837,6 +9215,8 @@ def _stamp_vision_result(
     totals_rows = extra_totals
     if stockist_name:
         result["stockist_name"] = stockist_name
+    if stockist_address:
+        result["stockist_address"] = stockist_address
     if company_name:
         result["company_name"] = company_name
     _correct_letterhead_stockist(result)
@@ -9322,6 +9702,7 @@ def run_vision_table_path(
         errors: List[str] = []
         carry = None
         stockist_name = None
+        stockist_address = None
         company_name = None
         statement_period = None
         calls = 0
@@ -9404,6 +9785,8 @@ def run_vision_table_path(
             errors.extend(str(e) for e in (mapped.get("errors") or []))
             if mapped.get("stockist_name") and not stockist_name:
                 stockist_name = mapped.get("stockist_name")
+            if mapped.get("stockist_address") and not stockist_address:
+                stockist_address = mapped.get("stockist_address")
             if mapped.get("company_name") and not company_name:
                 company_name = mapped.get("company_name")
             if mapped.get("statement_period") and not statement_period:
@@ -9460,6 +9843,7 @@ def run_vision_table_path(
             gemini_calls=calls,
             gemini_budget=gemini_budget,
             stockist_name=stockist_name,
+            stockist_address=stockist_address,
             company_name=company_name,
             statement_period=statement_period,
             totals_rows=all_totals,

@@ -2266,7 +2266,10 @@ def _items_from_resolved_word_columns(
 
         if name.startswith("[") or is_software_price_ad_name(name) or re.search(
             r"software by|end of report|stock qt|total amount|total quantity|"
-            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->",
+            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->|"
+            r"prepared\s+by|computer\s+generated|does\s+not\s+require\s+stamp|"
+            r"\bDSTK\b|days\s+stock\s+on|\bCIN\s*No\b|\bPAN\s*No\b|\bGSTIN\b|"
+            r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b",
             name,
             re.I,
         ):
@@ -2706,5 +2709,151 @@ def parse_pdf_free_column_statement(
         filename,
         len(result["line_items"]),
         result["totals"].get("closing_value"),
+    )
+    return result
+
+
+def parse_pdf_split_column_statement(
+    file_bytes: bytes, filename: str
+) -> Optional[Dict[str, Any]]:
+    """Text PDFs that print product/opening on left pages and sale/closing on right.
+
+    Wide STOCK & SALES sheets often emit every left half first, then every right
+    half. Uses PyMuPDF words + STOCK_PDF_SPLIT_COLUMN_PAGES stitch (0 Gemini).
+    Returns None unless at least one page pair was stitched.
+    """
+    if os.getenv("STOCK_PDF_SPLIT_COLUMN_PAGES", "true").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
+    from services.sales_statement_extractor import empty_result
+    from services.stock_native_tables import from_fitz_pdf_bytes
+
+    try:
+        built = from_fitz_pdf_bytes(file_bytes)
+    except Exception as exc:
+        logger.info(
+            "STOCK_PDF_SPLIT_COLUMN_PAGES file=%s status=skipped error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    page_results = built.get("page_results") or []
+    stitched = [
+        p
+        for p in page_results
+        if isinstance(p, dict) and p.get("split_column_pages")
+    ]
+    if len(stitched) < 1:
+        return None
+    parsed = _items_from_resolved_word_columns(stitched)
+    if not parsed or not parsed.get("line_items"):
+        items = build_items_from_pdf_page_results(stitched)
+        kept = [
+            it
+            for it in items
+            if isinstance(it, dict)
+            and str(it.get("product_name") or "").strip()
+            and not _is_total_row_name(it.get("product_name"))
+            and not _is_sheet_total_name(it.get("product_name"))
+        ]
+        if len(kept) < 3:
+            logger.info(
+                "STOCK_PDF_SPLIT_COLUMN_PAGES file=%s status=too_few items=%s",
+                filename,
+                len(kept),
+            )
+            return None
+        parsed = {"line_items": kept, "prefer_letterhead_stockist": True}
+    peek = ""
+    try:
+        import fitz
+        from services.stock_header_resolver import decode_pdf_pseudo_digits
+
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        try:
+            peek = decode_pdf_pseudo_digits(doc[0].get_text("text") or "")
+        finally:
+            doc.close()
+    except Exception:
+        peek = ""
+    result = empty_result(filename, "pdf")
+    result["line_items"] = list(parsed.get("line_items") or [])
+    if re.search(r"Stock\s+And\s+Sales\s+Statement", peek, re.I):
+        result["report_title"] = "Stock And Sales Statement"
+    elif re.search(r"STOCK\s+AND\s+SALES", peek, re.I):
+        result["report_title"] = "STOCK AND SALES STATEMENT"
+    first = next((ln.strip() for ln in peek.splitlines() if ln.strip()), "")
+    if first and re.search(r"[A-Za-z]", first) and not re.search(
+        r"PRODUCT\s+NAME|^PCode$|STOCK\s+AND\s+SALES", first, re.I
+    ):
+        result["stockist_name"] = first
+    period = re.search(
+        r"From\s+Date\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+        r"Upto\s+Date\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+        peek,
+        re.I,
+    )
+    if period:
+        def _iso(day: str, month: str, year: str) -> str:
+            yr = year if len(year) == 4 else ("20" + year)
+            return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+        result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
+        result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    mfgr = re.search(r"MFGR\s*:\s*(.+)", peek, re.I)
+    if mfgr:
+        result["company_name"] = mfgr.group(1).strip()
+    _apply_pdf_words_letterhead_meta(result, peek)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "pdf_split_column_pages"
+    extra["statement_count"] = 1
+    # Statement-level transfers (not printed per product row). Logged so
+    # identity gaps are not mistaken for column mis-assignment.
+    for label, key in (
+        ("TRFIN", "transfer_in_value"),
+        ("TRFOUT", "transfer_out_value"),
+        ("EXSTK", "excess_stock_value"),
+    ):
+        m = re.search(rf"\b{label}\s*:\s*([0-9,.]+)", peek, re.I)
+        if not m:
+            continue
+        from services.stock_header_resolver import parse_number
+
+        amount = parse_number(m.group(1))
+        if amount is not None:
+            extra[key] = amount
+            logger.info(
+                "STOCK_PDF_SPLIT_COLUMN_PAGES statement_%s=%s",
+                key,
+                amount,
+            )
+            extra["identity_note"] = (
+                "statement_has_trfin_trfout_not_printed_per_row"
+            )
+    footer = parsed.get("footer_totals") or _footer_totals_from_page_results(stitched)
+    if footer:
+        extra["total_row_source"] = "printed_footer"
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "opening_value",
+            "receipts_value",
+            "sales_value",
+            "closing_value",
+        ):
+            if footer.get(key) is not None:
+                result["totals"][key] = footer[key]
+                extra[key] = footer[key]
+    logger.info(
+        "STOCK_PDF_SPLIT_COLUMN_PAGES file=%s pairs=%s items=%s",
+        filename,
+        len(stitched),
+        len(result["line_items"]),
     )
     return result

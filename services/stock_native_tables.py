@@ -986,7 +986,12 @@ def _split_page_product_rows(
         if _is_footer_or_total_tokens(row) and not kind:
             continue
         texts = [str(t.get("text") or "") for t in row if isinstance(t, dict)]
-        has_num = any(parse_number(t) is not None for t in texts)
+        texts = [t for t in texts if t]
+        has_num = any(
+            parse_number(t) is not None
+            or re.match(r"^-?\d[\d,]*(?:\.\d+)?\b", t)
+            for t in texts
+        )
         blob = " ".join(texts)
         has_name = bool(re.search(r"[A-Za-z]{3,}", blob))
         if named:
@@ -994,6 +999,13 @@ def _split_page_product_rows(
                 out.append(row)
         elif has_num and not has_name:
             out.append(row)
+        elif has_num and has_name:
+            # Right halves often print manufacturer/division after qty/value.
+            first = texts[0]
+            if parse_number(first) is not None or re.match(
+                r"^-?\d[\d,]*(?:\.\d+)?\b", first
+            ):
+                out.append(row)
     return out
 
 
@@ -1014,6 +1026,31 @@ def _merge_split_headers(
     return merged
 
 
+def _peel_glued_amount_manufacturer(
+    token: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Split '1087.52 THE HIMALAYA…' into amount + trailing manufacturer text."""
+    text = str(token.get("text") or "").strip()
+    match = re.match(r"^(-?\d[\d,]*(?:\.\d+)?)\s+([A-Za-z].+)$", text)
+    if not match:
+        return [token]
+    amount = dict(token)
+    amount["text"] = match.group(1)
+    trail = dict(token)
+    trail["text"] = match.group(2)
+    if token.get("x") is not None:
+        # Clustered amount+manufacturer x sits near Manufacturer; pull the
+        # amount left toward STOCKV and keep manufacturer on the right.
+        x = float(token["x"])
+        amount["x"] = x - 0.15
+        trail["x"] = x + 0.02
+    logger.info(
+        "STOCK_PDF_SPLIT_COLUMN_PAGES peel_glued_amount text=%r",
+        text[:60],
+    )
+    return [amount, trail]
+
+
 def _merge_split_row(
     left: List[Dict[str, Any]], right: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
@@ -1024,8 +1061,115 @@ def _merge_split_row(
         tok = dict(token)
         if tok.get("x") is not None:
             tok["x"] = float(tok["x"]) + 1.0
-        out.append(tok)
+        for piece in _peel_glued_amount_manufacturer(tok):
+            out.append(piece)
     return out
+
+
+def _try_merge_split_page_pair(
+    left_page: Dict[str, Any], right_page: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """Merge one product/opening page with one sales/closing-only page."""
+    left_header = (left_page or {}).get("header_cells") or []
+    right_header = (right_page or {}).get("header_cells") or []
+    if not (
+        left_header
+        and right_header
+        and _is_left_split_header(_page_header_canons(left_header))
+        and _is_right_split_header(_page_header_canons(right_header))
+    ):
+        return None
+    left_rows = _split_page_product_rows(
+        left_page.get("data_rows") or [], named=True
+    )
+    right_rows = _split_page_product_rows(
+        right_page.get("data_rows") or [], named=False
+    )
+    n_left = len(left_rows)
+    n_right = len(right_rows)
+    slack = max(2, int(0.15 * max(n_left, n_right, 1)))
+    if not (n_left >= 3 and n_right >= 3 and abs(n_left - n_right) <= slack):
+        return None
+    n = min(n_left, n_right)
+    merged_rows = [
+        _merge_split_row(left_rows[i], right_rows[i]) for i in range(n)
+    ]
+    return {
+        "page_index": left_page.get("page_index"),
+        "header_cells": _merge_split_headers(left_header, right_header),
+        "data_rows": merged_rows,
+        "resolved": True,
+        "structural": False,
+        "group_qty_value_header": bool(
+            left_page.get("group_qty_value_header")
+            or right_page.get("group_qty_value_header")
+        ),
+        "split_column_pages": [
+            left_page.get("page_index"),
+            right_page.get("page_index"),
+        ],
+    }
+
+
+def _stitch_split_column_blocks(
+    page_results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Zip left-half pages with right-half pages when printed as L+ then R+.
+
+    Wide STOCK & SALES sheets sometimes emit every product/opening page first,
+    then every purchase/sales/closing page. Adjacent L/R pairing misses that.
+    """
+    if not _split_column_pages_enabled() or len(page_results) < 4:
+        return page_results
+    if any(
+        isinstance(p, dict) and p.get("split_column_pages") for p in page_results
+    ):
+        return page_results
+
+    kinds: List[str] = []
+    for page in page_results:
+        canons = _page_header_canons((page or {}).get("header_cells") or [])
+        if _is_left_split_header(canons):
+            kinds.append("L")
+        elif _is_right_split_header(canons):
+            kinds.append("R")
+        else:
+            kinds.append("O")
+
+    try:
+        first_l = kinds.index("L")
+        first_r = kinds.index("R")
+    except ValueError:
+        return page_results
+    if first_r <= first_l:
+        return page_results
+    if any(k != "L" for k in kinds[first_l:first_r]):
+        return page_results
+    last_r = first_r
+    while last_r + 1 < len(kinds) and kinds[last_r + 1] == "R":
+        last_r += 1
+    left_pages = page_results[first_l:first_r]
+    right_pages = page_results[first_r : last_r + 1]
+    if len(left_pages) < 2 or len(left_pages) != len(right_pages):
+        return page_results
+
+    merged_pages: List[Dict[str, Any]] = []
+    for left_page, right_page in zip(left_pages, right_pages):
+        merged = _try_merge_split_page_pair(left_page, right_page)
+        if merged is None:
+            return page_results
+        merged_pages.append(merged)
+        logger.info(
+            "STOCK_PDF_SPLIT_COLUMN_PAGES block left=%s right=%s rows=%s",
+            left_page.get("page_index"),
+            right_page.get("page_index"),
+            len(merged.get("data_rows") or []),
+        )
+    return (
+        list(page_results[:first_l])
+        + merged_pages
+        + list(page_results[last_r + 1 :])
+    )
 
 
 def _stitch_split_column_pages(
@@ -1039,57 +1183,22 @@ def _stitch_split_column_pages(
     while index < len(page_results):
         current = page_results[index]
         nxt = page_results[index + 1] if index + 1 < len(page_results) else None
-        left_header = (current or {}).get("header_cells") or []
-        right_header = (nxt or {}).get("header_cells") or [] if nxt else []
-        if (
-            nxt is not None
-            and left_header
-            and right_header
-            and _is_left_split_header(_page_header_canons(left_header))
-            and _is_right_split_header(_page_header_canons(right_header))
-        ):
-            left_rows = _split_page_product_rows(
-                current.get("data_rows") or [], named=True
+        merged = (
+            _try_merge_split_page_pair(current, nxt) if nxt is not None else None
+        )
+        if merged is not None:
+            out.append(merged)
+            logger.info(
+                "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
+                current.get("page_index"),
+                nxt.get("page_index"),
+                len(merged.get("data_rows") or []),
             )
-            right_rows = _split_page_product_rows(
-                nxt.get("data_rows") or [], named=False
-            )
-            n_left = len(left_rows)
-            n_right = len(right_rows)
-            slack = max(2, int(0.15 * max(n_left, n_right, 1)))
-            if n_left >= 3 and n_right >= 3 and abs(n_left - n_right) <= slack:
-                n = min(n_left, n_right)
-                merged_rows = [
-                    _merge_split_row(left_rows[i], right_rows[i]) for i in range(n)
-                ]
-                out.append(
-                    {
-                        "page_index": current.get("page_index"),
-                        "header_cells": _merge_split_headers(left_header, right_header),
-                        "data_rows": merged_rows,
-                        "resolved": True,
-                        "structural": False,
-                        "group_qty_value_header": bool(
-                            current.get("group_qty_value_header")
-                            or nxt.get("group_qty_value_header")
-                        ),
-                        "split_column_pages": [
-                            current.get("page_index"),
-                            nxt.get("page_index"),
-                        ],
-                    }
-                )
-                logger.info(
-                    "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
-                    current.get("page_index"),
-                    nxt.get("page_index"),
-                    n,
-                )
-                index += 2
-                continue
+            index += 2
+            continue
         out.append(current)
         index += 1
-    return out
+    return _stitch_split_column_blocks(out)
 
 
 def _absorb_nearby_header_rows(
@@ -1245,6 +1354,30 @@ def is_software_price_ad_name(name: Any) -> bool:
     return bool(_SOFTWARE_PRICE_AD_NAME.search(text))
 
 
+def _looks_like_legend_or_footer_header(cells: List[Dict[str, Any]]) -> bool:
+    """True for DSTK legends / PURC: n SALE: n summaries that must not be headers."""
+    texts = [
+        str(c.get("text") or "").strip()
+        for c in (cells or [])
+        if isinstance(c, dict)
+    ]
+    texts = [t for t in texts if t]
+    if not texts:
+        return False
+    blob = " ".join(texts)
+    if re.search(
+        r"Prepared\s+by|Computer\s+Generated|Does\s+Not\s+Require\s+Stamp|"
+        r"Days\s+Stock\s+on|No\s+Sale\s+No\s+Stock|\bDSTK\b",
+        blob,
+        re.I,
+    ):
+        return True
+    # Sheet summary strip: "PURC : 331488 SALE : 316204 STOCK : 486430".
+    if len(re.findall(r"[A-Za-z]{2,}\s*:\s*-?\d", blob)) >= 2:
+        return True
+    return False
+
+
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     texts = [str(t.get("text") or "").strip() for t in tokens if isinstance(t, dict)]
     if not texts:
@@ -1252,6 +1385,10 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     joined = " ".join(texts)
     if is_software_price_ad_name(joined):
         logger.info("STOCK_SOFTWARE_AD_SKIP blob=%s", joined[:80])
+        return True
+    if _looks_like_legend_or_footer_header(
+        [{"text": t} for t in texts]
+    ):
         return True
     # Company / page / grand footers only. Product "Total :" rows with movement
     # numbers must stay so multi-lot sheets can fold printed totals.
@@ -1875,6 +2012,8 @@ def _extract_pdf_page_rows(
     for i, cells in enumerate(clustered):
         if _looks_like_value_summary_header(cells):
             continue
+        if _looks_like_legend_or_footer_header(cells):
+            continue
         hits, has_closing = _score_header_cells(cells)
         left_half = (
             _split_column_pages_enabled()
@@ -1992,6 +2131,16 @@ def from_pdf_words(
         page_header: List[Dict[str, Any]] = []
         resolved = False
         structural = False
+
+        if local_header and carried_header and _looks_like_legend_or_footer_header(
+            local_header
+        ):
+            # DSTK / PURC:n SALE:n legends must not replace a carried stock header.
+            local_header = []
+            logger.info(
+                "STOCK_PDF_WORDS_SKIP_LEGEND_HEADER page=%s",
+                page_index,
+            )
 
         if local_header:
             if carried_header and _headers_align(carried_header, local_header):

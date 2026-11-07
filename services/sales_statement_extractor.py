@@ -536,6 +536,7 @@ def _statement_period_content_only_enabled() -> bool:
 _REPORT_PERIOD_RANGE_RE = re.compile(
     r"(?:STOCK\s*&\s*SALES\s*(?:ANALYSIS)?|Sales\s*&\s*Stock\s*Statement|"
     r"STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|Sales\s+and\s+Stock\s+Statement|"
+    r"Stock\s+and\s+Sale\s+Statement|"
     r"Period\s*:?|FOR\s+THE\s+PERIOD|"
     r"Statement\s+Period|Report\s+Period|Monthly\s+Stock)"
     r"[^\n]{0,120}?"
@@ -580,8 +581,11 @@ def _extract_report_period_from_content(
     """
     if not text:
         return None, None, None
-    # Prefer the first ~40 lines (title/header band).
-    header_band = "\n".join((text or "").splitlines()[:40])
+    # Prefer the first ~40 lines (title/header band). Some PDFs dump the
+    # letterhead at the end of get_text(), so also scan a trailing band.
+    lines = (text or "").splitlines()
+    header_band = "\n".join(lines[:40])
+    trailer_band = "\n".join(lines[-40:]) if len(lines) > 40 else ""
     for pattern, source in (
         (_REPORT_PERIOD_OF_RE, "report_period_of"),
         (_REPORT_PERIOD_INLINE_RE, "report_header"),
@@ -589,7 +593,11 @@ def _extract_report_period_from_content(
         (_REPORT_PERIOD_FROM_TO_RE, "report_from_to"),
         (_REPORT_PERIOD_MON_RANGE_RE, "report_mon_range"),
     ):
-        m = pattern.search(header_band) or pattern.search(text[:4000])
+        m = (
+            pattern.search(header_band)
+            or pattern.search(trailer_band)
+            or pattern.search(text[:8000])
+        )
         if not m:
             continue
         pf = _normalize_date(m.group(1))
@@ -20205,6 +20213,10 @@ _ZANDRA_STOCK_SALE_VISION_PROMPT = """
 This image is a Himalaya ZANDRA "Stock and Sale Statement" grid.
 It is NOT a Product Stock Report and NOT an OpBal sheet.
 
+period_from / period_to MUST come from the printed header line
+"Stock and Sale Statement From <date> to <date>" (e.g. 01-Sep-26 to 30-Sep-26).
+Never invent a calendar month from a filename, upload stamp, or print date.
+
 Columns LEFT TO RIGHT. A blank cell is 0. NEVER shift a later number left into a blank cell.
 
 1 Item Cd -> product_code
@@ -20510,6 +20522,16 @@ def _enrich_stock_statement_header_from_ocr(
         result["stockist_name"] = None
     elif sn_norm and "_" in sn:
         result["stockist_name"] = sn_norm
+
+    # Generic Branch Name: line → stockist_address when Vision left address null.
+    if not str(result.get("stockist_address") or "").strip():
+        m_br = re.search(r"Branch\s*Name\s*:\s*([^\n|;]+)", blob, re.I)
+        if m_br:
+            branch = _clean_name(m_br.group(1))
+            if branch and len(branch) >= 2 and not re.search(
+                r"^(MFGR|Company|From|Page|Date)\b", branch, re.I
+            ):
+                result["stockist_address"] = branch
 
     logger.info(
         "STOCK_HEADER_OCR_ENRICH stockist=%r company=%r title=%r party_from_title=%s",
@@ -23159,6 +23181,11 @@ def _extract_statement_from_pdf_group(
 
     if combined_text:
         result = _apply_total_row_to_result(result, combined_text)
+        # Printed "From … to …" / report-header range beats Vision (and never
+        # invents from the upload filename, e.g. 20261030_… → October).
+        result = _finalize_statement_period_fields(
+            result, content_text=combined_text
+        )
     return result
 
 
@@ -28975,12 +29002,37 @@ def _finalize_medivision_op_wsale(result: Dict[str, Any]) -> Optional[Dict[str, 
     return result
 
 
+def _looks_like_opstk_opv_pair_text(text: str) -> bool:
+    """Compact OPSTK|OPV|PURC|…|STOCK|STOCKV grids — not MediVision Op/WSale."""
+    if not text:
+        return False
+    if not re.search(r"\bOPSTK\b", text, re.I):
+        return False
+    # MediVision Op/Purc/WSale sheets never print OPSTK/OPV/STOCKV.
+    if re.search(r"\bW\s*Sale\b", text, re.I):
+        return False
+    return bool(
+        re.search(r"\bOPV\b", text, re.I)
+        or re.search(r"\bPURCV\b", text, re.I)
+        or re.search(r"\bSTOCKV\b", text, re.I)
+        or (
+            re.search(r"\bPURC\b", text, re.I)
+            and re.search(r"\bSTOCK\b", text, re.I)
+            and not re.search(r"\bPURCH\b", text, re.I)
+        )
+    )
+
+
 def _medivision_op_wsale_needs_reread(result: Dict[str, Any]) -> bool:
     """True when a Stock and Sales photo left Jul/Jun/WSale in sales_qty."""
     if not isinstance(result, dict):
         return False
     title = str(result.get("report_title") or "")
-    if re.search(r"ANALYSIS|DETAIL|VALUATION|ORDER\s*FORM", title, re.I):
+    # MediVision title is bare "Stock and Sales". OPSTK|OPV sheets print
+    # "STOCK AND SALES STATEMENT" — never force the WSale column prompt on them.
+    if re.search(
+        r"ANALYSIS|DETAIL|VALUATION|ORDER\s*FORM|\bSTATEMENT\b", title, re.I
+    ):
         return False
     company = str(result.get("company_name") or "")
     if not (
@@ -29092,13 +29144,19 @@ def _extract_medivision_op_wsale_photo(
 
     from services.vertex_gemini_client import generate_content_via_vertex
 
-    if not force:
-        try:
-            preview = _ocr_image_to_text(file_bytes)
-        except Exception:
-            preview = ""
-        if not _is_medivision_op_wsale_header(preview):
-            return None
+    try:
+        preview = _ocr_image_to_text(file_bytes)
+    except Exception:
+        preview = ""
+    # Even force=True must not remap OPSTK|OPV|PURC|STOCKV onto Op/WSale/NE.
+    if _looks_like_opstk_opv_pair_text(preview):
+        logger.info(
+            "MediVision Op/WSale skipped file=%s reason=opstk_opv_pair_grid",
+            filename,
+        )
+        return None
+    if not force and not _is_medivision_op_wsale_header(preview):
+        return None
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
@@ -38781,6 +38839,30 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             except Exception as exc:
                 logger.info(
                     "STOCK_PDF_GROUP_QTY_VALUE file=%s status=skipped error=%s",
+                    filename,
+                    type(exc).__name__,
+                )
+
+        # Wide STOCK & SALES: product/opening pages then sale/closing pages.
+        # Must win before page-image OCR — unstitched halves invent junk rows.
+        if os.getenv("STOCK_PDF_SPLIT_COLUMN_PAGES", "true").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            try:
+                from services.stock_native_resolver import (
+                    parse_pdf_split_column_statement,
+                )
+
+                split_cols = parse_pdf_split_column_statement(file_bytes, filename)
+                if split_cols and split_cols.get("line_items"):
+                    split_cols["totals"]["extra"]["statement_count"] = 1
+                    return split_cols
+            except Exception as exc:
+                logger.info(
+                    "STOCK_PDF_SPLIT_COLUMN_PAGES file=%s status=skipped error=%s",
                     filename,
                     type(exc).__name__,
                 )

@@ -145,6 +145,7 @@ ALIASES: Dict[str, List[str]] = {
         "dump qty",
         "scrap",
         "scrap qty",
+        "box",  # case size beside Pack / before OPSTK
     ],
     "opening": [
         "op",
@@ -493,6 +494,11 @@ ALIASES: Dict[str, List[str]] = {
         "opening value",
         "op val",
         "opval",
+        "opv",  # OPSTK / OPV paired sheets
+        "purcv",
+        "purc val",
+        "salev",
+        "stockv",
         "receive value",
         "issue value",
         "amount-i",
@@ -664,16 +670,21 @@ _DIRECT_VALUE_FIELDS = {
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
+    "opv": "opening_value",  # OPSTK/OPV — compact opening value
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
+    "purcv": "purchase_value",  # PURC/PURCV — compact purchase value
+    "purc val": "purchase_value",
     "purchase value": "purchase_value",
     "purch bill amt": "purchase_value",
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
+    "salev": "sales_value",  # SALE/SALEV — compact sales value
     "issue value": "sales_value",
+    "stockv": "closing_value",  # STOCK/STOCKV — compact closing value
 }
 
 
@@ -696,6 +707,9 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
     if compact_early in {"itemcode", "itemcd"} or norm == "item code":
         return "non_stock_qty", 0.95, "item_code"
+    # BOX / Box is case-size between Pack and OPSTK — never opening_qty.
+    if compact_early == "box" or norm == "box":
+        return "non_stock_qty", 0.95, "box_case_size"
     # BLM / LM qty are last-month history, never opening or sales.
     _blm_lm_tokens = _tokens(norm)
     if compact_early in {
