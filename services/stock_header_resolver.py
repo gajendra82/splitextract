@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 CANONICAL_FIELDS = (
     "product_name",
+    "product_code",
     "pack",
     "batch",
     "rate",
@@ -68,6 +69,15 @@ ALIASES: Dict[str, List[str]] = {
         "desc",
         "name",
     ],
+    # Catalogue / SKU code column (never product_name, never a qty).
+    "product_code": [
+        "mat code",
+        "material code",
+        "product code",
+        "sku code",
+        "pcode",
+        "p code",
+    ],
     "pack": [
         "pack",
         "packing",
@@ -97,6 +107,12 @@ ALIASES: Dict[str, List[str]] = {
         "price",
         "purchase cost",
         "stock cost",
+        # Secondary Rate (and OCR truncations) beat bare Mrp when both print.
+        "secondary rate",
+        "secondary ra",
+        "secondary rat",
+        "sec rate",
+        "sec. rate",
     ],
     # Last-month-sale (LMS) is its own column — never opening/receipts.
     "lms": [
@@ -259,6 +275,14 @@ ALIASES: Dict[str, List[str]] = {
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
+        # Secondary Qty Total (customer secondary-sale grids).
+        "secondary qty total",
+        "secondary qty tota",
+        "secondary qty",
+        "secondary quantity total",
+        "secondary quantity",
+        "sec qty total",
+        "sec qty",
     ],
     "sales_return": [
         "saleret",
@@ -665,6 +689,11 @@ _DIRECT_VALUE_FIELDS = {
     "sal. val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
+    "secondary value": "sales_value",
+    "secondary val": "sales_value",
+    "secondary valu": "sales_value",
+    "sec value": "sales_value",
+    "sec val": "sales_value",
     "sales bill amt": "sales_value",
     "sale bill amt": "sales_value",
     "salesbillamt": "sales_value",
@@ -704,7 +733,45 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         return None, 0.0, "empty"
 
     compact_early = re.sub(r"\s+", "", norm)
+    # Customer / party name is never the product column (alias "name" alone).
+    if compact_early in {
+        "customername",
+        "customer",
+        "custname",
+        "partyname",
+        "party",
+        "clientname",
+        "buyername",
+    } or (
+        set(_tokens(norm)) & {"customer", "party", "cust", "client", "buyer"}
+        and "name" in set(_tokens(norm))
+    ):
+        return "non_stock_qty", 0.95, "customer_party_name"
+    # Cust Code / customer code — ignore (not Mat Code / product_code).
+    if compact_early in {
+        "custcode",
+        "customercode",
+        "partycode",
+        "clientcode",
+    } or norm in {"cust code", "customer code", "party code"}:
+        return "non_stock_qty", 0.95, "customer_code"
+    # Mat Code / product code — catalogue key, not product_name.
+    if compact_early in {
+        "matcode",
+        "materialcode",
+        "productcode",
+        "skucode",
+        "pcode",
+    } or norm in {
+        "mat code",
+        "material code",
+        "product code",
+        "sku code",
+        "p code",
+    }:
+        return "product_code", 0.95, "product_code"
     # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
+    # Kept as ignore for legacy sheets that park ITEMCODE after CLOSING.
     if compact_early in {"itemcode", "itemcd"} or norm == "item code":
         return "non_stock_qty", 0.95, "item_code"
     # BOX / Box is case-size between Pack and OPSTK — never opening_qty.
@@ -731,7 +798,13 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         return f"direct:{direct}", 0.95, f"direct_value:{direct}"
 
     if _is_rate(norm) and not _has_value_marker(norm):
-        return "rate", 0.95, "rate_alias"
+        # Secondary Rate / PTR beat bare Mrp when both print as rate columns.
+        rate_conf = 0.95
+        if "secondary" in set(_tokens(norm)) or compact_early.startswith("sec"):
+            rate_conf = 0.99
+        elif compact_early in {"mrp", "tomrp", "maxretailprice"}:
+            rate_conf = 0.9
+        return "rate", rate_conf, "rate_alias"
 
     # "Cl Panaji" / "Cl Mapusa" are branch closing splits, not statement closing.
     # Keep real closing aliases (Cl Qty / Cl.Qnt / Cl Stock / Cl Val).
@@ -810,6 +883,13 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 "total receive",
                 "total received",
             }:
+                continue
+        # "Secondary Qty Total" is sales qty, never the stock-total band.
+        if group == "total" and "secondary" in tokens:
+            continue
+        # Bare "name" must not claim Customer Name / Party Name.
+        if group == "product_name" and alias in {"name", "desc", "description"}:
+            if set(tokens) & {"customer", "party", "cust", "client", "buyer"}:
                 continue
         # Short "op" must not beat a multi-token total alias like "op rec".
         # Keep Op.Value / Op.Qnt / Op.Value Expiry (qty-value or glued date label).
@@ -899,6 +979,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # aliases within the same priority band so "op rec" (total) beats "op".
     priority = {
         "product_name": 100,
+        "product_code": 98,
         "pack": 95,
         "batch": 94,
         "rate": 93,
@@ -918,6 +999,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     }
     filtered.sort(key=lambda h: (-len(h[1]), -priority.get(h[0], 0), -h[2]))
     group, alias, conf = filtered[0]
+    # Prefer Secondary Rate over bare Mrp when both print as rate columns.
+    if group == "rate" and (
+        "secondary" in set(_tokens(norm)) or alias.startswith("secondary")
+    ):
+        conf = max(float(conf), 0.99)
     return group, conf, f"alias:{alias}"
 
 
@@ -2497,7 +2583,7 @@ def resolve_columns(
                 idx,
                 text,
             )
-        elif group in {"product_name", "pack", "batch", "lms"}:
+        elif group in {"product_name", "product_code", "pack", "batch", "lms"}:
             canonical = group
         elif group == "value_marker":
             canonical = "value_marker"  # inherit later

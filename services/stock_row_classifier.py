@@ -847,6 +847,31 @@ def classify_row(
         info["checks"] = list(info.get("checks") or []) + ["sale_closing_only"]
         return RowStatus.VALID, info
 
+    # Opening unread/dropped (often Ob=0) but purchase+sales+closing printed and
+    # identity holds with opening=0 — keep VALID; do not invent a non-zero open.
+    if (
+        opening is None
+        and purchase is not None
+        and sales is not None
+        and closing is not None
+    ):
+        trial = dict(fields)
+        trial["opening"] = 0.0
+        expected_open0 = expected_closing(trial)
+        if expected_open0 is not None:
+            diff0 = abs(float(expected_open0) - float(closing))
+            if diff0 <= _valid_tolerance(0.0, float(closing)):
+                info["reason"] = "opening_absent_zero_identity"
+                info["assumed_opening"] = 0.0
+                info["expected_closing"] = expected_open0
+                info["diff"] = round(diff0, 4)
+                info["checks"] = list(info.get("checks") or []) + [
+                    "opening_absent_zero_identity"
+                ]
+                return RowStatus.VALID, info
+        info["reason"] = "missing_required_field"
+        return RowStatus.MISSING_VALUE, info
+
     if opening is None or (purchase is None and sales is None):
         info["reason"] = "missing_required_field"
         return RowStatus.MISSING_VALUE, info
@@ -1009,6 +1034,23 @@ def apply_closing_derived(
             extra["row_status"] = RowStatus.COLUMN_ASSIGNMENT_SUSPECTED.value
     else:
         status = _soften_document_qty_gap(line_item, status, info)
+        # Ob column dropped but identity holds with opening=0 — surface 0 without
+        # inventing a non-zero opening.
+        if (
+            status == RowStatus.VALID
+            and info.get("reason") == "opening_absent_zero_identity"
+            and info.get("assumed_opening") == 0.0
+            and fs.get("opening_qty") != "printed"
+            and line_item.get("opening_qty") in (None, "")
+        ):
+            line_item["opening_qty"] = 0.0
+            fs["opening_qty"] = "missing"
+            import logging
+
+            logging.getLogger(__name__).info(
+                "ROW_CLASSIFY_OPENING_ABSENT_ZERO product=%s",
+                str(line_item.get("product_name") or "")[:60],
+            )
         extra["row_status"] = status.value
         if status not in {
             RowStatus.VALID,

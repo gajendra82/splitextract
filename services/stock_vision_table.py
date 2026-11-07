@@ -1536,9 +1536,17 @@ def build_table_prompt() -> str:
         "and Balance are two stacked lines, emit one header cell 'Closing "
         "Balance', not two columns. MSR Price is rate, never closing. Total Qty. "
         "is not closing. There is no closing_value on these sheets. "
-        "Keep a leading serial/Sr column and a packing column when printed. "
-        "Never put the serial number into product_name. Never freely reorder "
-        "numbers across columns — each cell stays under its printed column. "
+        "Cust Code|Customer Name|Mat Code|Mat Name|Mrp|Secondary Rate|Ob (Qty)|"
+        "Primary (Qty)|Cb (Qty)|Secondary Qty Total|Secondary Value grids: emit "
+        "ONE header cell per printed column — never merge Primary (Qty) with "
+        "Cb (Qty) into one header, and never glue Ob (Qty) (including 0) onto "
+        "Secondary Rate. Ob is opening_qty, Primary is purchase_qty, Cb is "
+        "closing_qty, Secondary Qty Total is sales_qty, Secondary Value is "
+        "sales_value, Mat Code is product_code, Secondary Rate is rate (prefer "
+        "over Mrp). Keep a leading serial/Sr column and a packing column when "
+        "printed. Never put the serial number into product_name. Never freely "
+        "reorder numbers across columns — each cell stays under its printed "
+        "column. "
         "A company/division title in the header band (e.g. 'HIMALAYA DRUG "
         "WELLNESS (ZANDRA)') is not a Packing column — map it to ignore and "
         "still emit Pack/Size when a real packing header is printed. "
@@ -2139,6 +2147,340 @@ def _normalize_one_table(
             )
         rows_out.append(item)
     out["rows"] = rows_out
+    out["column_count"] = column_count
+    repaired = _unglue_ob_primary_cb_table(out, coercions)
+    return repaired
+
+
+def _unglue_ob_primary_cb_enabled() -> bool:
+    """STOCK_VISION_UNGLUE_OB_PRIMARY_CB — peel Ob glued onto Secondary Rate.
+
+    When Vision merges Primary+Cb headers and parks Ob (incl. 0) on the rate
+    cell as ``176.51 0``, restore printed columns without inventing digits.
+    Default ON. Set STOCK_VISION_UNGLUE_OB_PRIMARY_CB=false to disable.
+    """
+    return os.getenv("STOCK_VISION_UNGLUE_OB_PRIMARY_CB", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+# Secondary Rate + Ob glued by Vision, e.g. "176.51 0", "176.51.0", "139 14:0".
+_RATE_OB_GLUE_RE = re.compile(
+    r"^\s*"
+    r"(?:"
+    r"([+-]?\d+[.,]\d+)\s+([+-]?\d+)"  # 176.51 0
+    r"|([+-]?\d+[.,]\d+)\.([+-]?\d+)"  # 176.51.0
+    r"|([+-]?\d+)[.,\s]+(\d+)[:.]([+-]?\d+)"  # 139 14:0 / 139.14:0
+    r")"
+    r"\s*$"
+)
+
+
+def _split_rate_ob_glue(raw: Any) -> Optional[Tuple[str, str]]:
+    """Return (rate_text, ob_text) when Vision glued Ob onto Secondary Rate."""
+    if raw is None:
+        return None
+    text = str(raw).replace(",", ".")
+    m = _RATE_OB_GLUE_RE.match(text)
+    if not m:
+        return None
+    if m.group(1) is not None:
+        return m.group(1), m.group(2)
+    if m.group(3) is not None:
+        return m.group(3), m.group(4)
+    # 139 14:0 → 139.14 + Ob
+    return f"{m.group(5)}.{m.group(6)}", m.group(7)
+_PRIMARY_CB_MERGED_RE = re.compile(
+    r"(?i)primary.{0,12}\bcb\b|primary\s*\(?\s*q\s*cb|primary\s*\(qcb"
+)
+
+
+def _unglue_ob_primary_cb_table(
+    table: Dict[str, Any],
+    coercions: Dict[str, int],
+) -> Dict[str, Any]:
+    """Peel Ob glued onto Secondary Rate; restore Primary/Cb when shifted.
+
+    Two Vision failure modes (never invents digits — only peels/shifts printed
+    tokens):
+
+    1) Merged ``Primary (QCb`` header + rate cell ``176.51 0`` → insert Ob and
+       split Primary/Cb headers.
+    2) Separate Ob|Primary|Cb headers but Ob digit glued onto rate so qty cells
+       left-shift (Ob holds Primary, Primary holds Cb, Cb holds Secondary, and
+       Secondary is often duplicated). Peel in place when the candidate
+       identity balances and the Ob slot is already non-zero (shifted Primary).
+    """
+    if not _unglue_ob_primary_cb_enabled():
+        return table
+    try:
+        column_count = int(table.get("column_count") or 0)
+    except (TypeError, ValueError):
+        column_count = 0
+    if column_count < 4:
+        return table
+
+    header_rows = table.get("header_rows") or []
+    flat = _flatten_header_cells(header_rows, column_count)
+    if not flat:
+        return table
+    by_idx = {int(c.get("col_index") or 0): c for c in flat if isinstance(c, dict)}
+    texts = {
+        i: normalize_header(c.get("text") or c.get("header_text") or "")
+        for i, c in by_idx.items()
+    }
+
+    rate_i = ob_i = primary_i = cb_i = merged_i = None
+    for i in sorted(texts):
+        ht = texts[i]
+        compact = re.sub(r"\s+", "", ht)
+        raw_text = str(by_idx[i].get("text") or by_idx[i].get("header_text") or "")
+        if rate_i is None and (
+            "secondary" in ht and ("ra" in compact or "rate" in compact)
+        ):
+            rate_i = i
+        if ob_i is None and (
+            compact in {"ob", "obqty", "ob(qty)"}
+            or ht in {"ob", "ob qty", "ob (qty)", "o b qty"}
+            or (ht.startswith("ob") and "qty" in ht)
+        ):
+            ob_i = i
+        if primary_i is None and compact.startswith("primary") and "cb" not in compact:
+            primary_i = i
+        if cb_i is None and (
+            compact in {"cb", "cbqty", "cb(qty)"}
+            or ht in {"cb", "cb qty", "cb (qty)"}
+            or (ht.startswith("cb") and "qty" in ht)
+        ):
+            cb_i = i
+        if merged_i is None and _PRIMARY_CB_MERGED_RE.search(raw_text):
+            merged_i = i
+
+    rows = [r for r in (table.get("rows") or []) if isinstance(r, dict)]
+
+    # --- Mode 2: separate Ob|Primary|Cb, Ob digit glued onto rate (in place) ---
+    if (
+        rate_i is not None
+        and ob_i is not None
+        and primary_i is not None
+        and cb_i is not None
+        and rate_i + 1 == ob_i
+        and ob_i + 1 == primary_i
+        and primary_i + 1 == cb_i
+        and merged_i is None
+    ):
+        sale_i = cb_i + 1 if (cb_i + 1) in texts else None
+        sval_i = sale_i + 1 if sale_i is not None and (sale_i + 1) in texts else None
+        fixed = 0
+        new_rows: List[Dict[str, Any]] = []
+        for row in rows:
+            cells = list(row.get("cells") or [])
+            need = (sval_i if sval_i is not None else (sale_i if sale_i is not None else cb_i)) + 1
+            if len(cells) < need:
+                cells = cells + [None] * (need - len(cells))
+            rate_raw = cells[rate_i]
+            peeled = _split_rate_ob_glue(rate_raw)
+            nr = dict(row)
+            if not peeled:
+                nr["cells"] = cells
+                new_rows.append(nr)
+                continue
+            rate_part, ob_text = peeled
+            old_ob_raw = cells[ob_i]
+            old_pur_raw = cells[primary_i]
+            old_cb_raw = cells[cb_i]
+            old_sale_raw = cells[sale_i] if sale_i is not None else None
+            old_sval_raw = cells[sval_i] if sval_i is not None else None
+            try:
+                ob_part = float(ob_text)
+                old_ob = float(old_ob_raw or 0)
+                old_pur = float(old_pur_raw or 0)
+                old_cb = float(old_cb_raw or 0)
+                old_sale = (
+                    float(old_sale_raw or 0) if old_sale_raw not in (None, "") else None
+                )
+            except (TypeError, ValueError):
+                nr["cells"] = cells
+                new_rows.append(nr)
+                continue
+            # Ob slot already holds shifted Primary (non-zero). Skip when Ob is
+            # already 0 — glued digit may be Primary, not Ob.
+            if abs(old_ob) < 0.001:
+                nr["cells"] = cells
+                new_rows.append(nr)
+                continue
+
+            def _looks_money_token(raw: Any) -> bool:
+                if raw in (None, ""):
+                    return False
+                try:
+                    val = float(str(raw).replace(",", ""))
+                except (TypeError, ValueError):
+                    return False
+                text = str(raw)
+                return ("." in text or "," in text) and abs(val - round(val)) > 0.001
+
+            # Secondary Value slid into Secondary Qty when Ob was glued away.
+            sale_is_money = _looks_money_token(old_sale_raw)
+            cand_sale_raw = old_cb_raw if sale_is_money else (
+                old_sale_raw if old_sale_raw not in (None, "") else old_cb_raw
+            )
+            try:
+                cand_sale = float(cand_sale_raw or 0)
+            except (TypeError, ValueError):
+                nr["cells"] = cells
+                new_rows.append(nr)
+                continue
+            # Current left-shift fails identity; candidate peel must balance.
+            cur_sale = old_cb if sale_is_money else (
+                old_sale if old_sale is not None else old_cb
+            )
+            if abs((old_ob + old_pur - cur_sale) - old_cb) <= 0.51:
+                nr["cells"] = cells
+                new_rows.append(nr)
+                continue
+            if abs((ob_part + old_ob - cand_sale) - old_pur) > 0.51:
+                if abs((ob_part + old_ob - old_cb) - old_pur) > 0.51:
+                    nr["cells"] = cells
+                    new_rows.append(nr)
+                    continue
+                cand_sale_raw = old_cb_raw
+                sale_is_money = False
+            cells[rate_i] = rate_part
+            cells[ob_i] = ob_text
+            cells[primary_i] = old_ob_raw
+            cells[cb_i] = old_pur_raw
+            if sale_i is not None:
+                cells[sale_i] = cand_sale_raw
+            if sale_is_money and sval_i is not None and old_sval_raw in (None, ""):
+                cells[sval_i] = old_sale_raw
+            nr["cells"] = cells
+            new_rows.append(nr)
+            fixed += 1
+        if fixed:
+            out = dict(table)
+            out["rows"] = new_rows
+            coercions["ob_primary_cb_unglue_shift"] = (
+                coercions.get("ob_primary_cb_unglue_shift", 0) + fixed
+            )
+            logger.info(
+                "STOCK_VISION_UNGLUE_OB_PRIMARY_CB mode=shift rate_col=%s "
+                "fixed_rows=%s",
+                rate_i,
+                fixed,
+            )
+            return out
+        return table
+
+    # --- Mode 1: merged Primary+Cb header (insert column) ---
+    if rate_i is None or ob_i is None or merged_i is None:
+        return table
+    if not (rate_i + 1 == ob_i and ob_i + 1 == merged_i):
+        return table
+
+    glue_hits = 0
+    for row in rows:
+        cells = list(row.get("cells") or [])
+        if rate_i >= len(cells):
+            continue
+        raw = cells[rate_i]
+        if raw is None:
+            continue
+        if _split_rate_ob_glue(raw):
+            glue_hits += 1
+    if glue_hits < 1:
+        return table
+
+    # Rebuild headers: Secondary Rate | Ob (Qty) | Primary (Qty) | Cb (Qty)
+    new_header_rows: List[List[Dict[str, Any]]] = []
+    for row in header_rows:
+        if not isinstance(row, list):
+            continue
+        new_row: List[Dict[str, Any]] = []
+        for cell in row:
+            if not isinstance(cell, dict):
+                continue
+            try:
+                idx = int(cell.get("col_index"))
+            except (TypeError, ValueError):
+                continue
+            if idx < rate_i:
+                new_row.append(dict(cell))
+            elif idx == rate_i:
+                nc = dict(cell)
+                nc["text"] = "Secondary Rate"
+                nc["col_index"] = rate_i
+                new_row.append(nc)
+                new_row.append(
+                    {
+                        "text": "Ob (Qty)",
+                        "col_index": rate_i + 1,
+                        "x_center": cell.get("x_center"),
+                    }
+                )
+                new_row.append(
+                    {
+                        "text": "Primary (Qty)",
+                        "col_index": rate_i + 2,
+                        "x_center": cell.get("x_center"),
+                    }
+                )
+                new_row.append(
+                    {
+                        "text": "Cb (Qty)",
+                        "col_index": rate_i + 3,
+                        "x_center": cell.get("x_center"),
+                    }
+                )
+            elif idx == ob_i or idx == merged_i:
+                continue
+            else:
+                nc = dict(cell)
+                nc["col_index"] = idx + 1
+                new_row.append(nc)
+        if new_row:
+            new_header_rows.append(new_row)
+
+    new_rows = []
+    for row in rows:
+        cells = list(row.get("cells") or [])
+        if len(cells) < merged_i + 1:
+            cells = cells + [None] * (merged_i + 1 - len(cells))
+        rate_raw = cells[rate_i]
+        peeled = _split_rate_ob_glue(rate_raw)
+        if peeled:
+            rate_part, ob_from_rate = peeled
+        else:
+            rate_part, ob_from_rate = rate_raw, None
+        primary_val = cells[ob_i]
+        cb_val = cells[merged_i]
+        new_cells = (
+            list(cells[:rate_i])
+            + [rate_part, ob_from_rate, primary_val, cb_val]
+            + list(cells[merged_i + 1 :])
+        )
+        nr = dict(row)
+        nr["cells"] = new_cells
+        new_rows.append(nr)
+
+    out = dict(table)
+    out["header_rows"] = new_header_rows
+    out["rows"] = new_rows
+    out["column_count"] = column_count + 1
+    out["proposed_mapping"] = []
+    coercions["ob_primary_cb_unglue"] = coercions.get("ob_primary_cb_unglue", 0) + 1
+    logger.info(
+        "STOCK_VISION_UNGLUE_OB_PRIMARY_CB mode=merge rate_col=%s ob_col=%s "
+        "merged_col=%s glue_rows=%s new_columns=%s",
+        rate_i,
+        ob_i,
+        merged_i,
+        glue_hits,
+        out["column_count"],
+    )
     return out
 
 
