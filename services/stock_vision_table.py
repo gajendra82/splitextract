@@ -5426,6 +5426,95 @@ def _repair_cells_dropped_pair_value_shift(
     return shifted, True
 
 
+def _collapsed_sale_into_closing_enabled() -> bool:
+    """STOCK_VISION_COLLAPSED_SALE_INTO_CLOSING — SALE|SALEV dropped into STOCK.
+
+    Default ON. When Vision emits SALE=0 and parks sale money under STOCKV
+    (unit rate vs opening fails), recover SALE/SALEV from those printed cells
+    and derive closing_value from opening unit rate. Kill switch:
+    STOCK_VISION_COLLAPSED_SALE_INTO_CLOSING=false.
+    """
+    return os.getenv(
+        "STOCK_VISION_COLLAPSED_SALE_INTO_CLOSING", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _repair_collapsed_sale_into_closing(item: Dict[str, Any]) -> bool:
+    """Recover SALE|SALEV when Vision zeroed them and left sale money in STOCKV.
+
+    Signal: sales≈0, closing_qty whole, closing_value money, but
+    closing_value/closing_qty disagrees with opening unit rate (so STOCKV is
+    really SALEV). SALE qty equals the printed STOCK digit Vision kept.
+    closing_value is then derived from opening rate × closing_qty (closing
+    money cell was the mis-parked sale value, not a printed closing amount).
+    Never invents the sale qty digit — only reuses the printed STOCK digit.
+    """
+    if not _collapsed_sale_into_closing_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    oq = _printed_float(item, "opening_qty")
+    ov = _printed_float(item, "opening_value")
+    sq = _printed_float(item, "sales_qty")
+    sv = _printed_float(item, "sales_value")
+    cq = _printed_float(item, "closing_qty")
+    cv = _printed_float(item, "closing_value")
+    if oq is None or ov is None or cq is None or cv is None:
+        return False
+    if oq <= 0.001 or cq <= 0.001:
+        return False
+    if not _is_whole_qty(oq) or not _is_whole_qty(cq):
+        return False
+    if not _has_paisa(ov) or not _has_paisa(cv):
+        return False
+    # Sale must look empty / zeroed.
+    sale_empty = sq is None or abs(sq) <= 0.001
+    salev_empty = sv is None or abs(sv) <= 0.001
+    if not (sale_empty and salev_empty):
+        return False
+    rate = float(ov) / float(oq)
+    if rate <= 0.001:
+        return False
+    implied = float(cv) / float(cq)
+    # STOCKV disagrees with opening unit rate → it is sale money, not closing.
+    if abs(implied - rate) / rate <= 0.05:
+        return False
+    new_sale = float(cq)
+    new_salev = float(cv)
+    new_clv = round(rate * float(cq), 2)
+    item["sales_qty"] = new_sale
+    item["sales_value"] = new_salev
+    item["closing_value"] = new_clv
+    fs["sales_qty"] = "printed"
+    fs["sales_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "derived"
+    flags = list(extra.get("flags") or [])
+    if "COLLAPSED_SALE_INTO_CLOSING" not in flags:
+        flags.append("COLLAPSED_SALE_INTO_CLOSING")
+    extra["flags"] = flags
+    extra["collapsed_sale_into_closing"] = {
+        "sale_qty": new_sale,
+        "sale_value": new_salev,
+        "derived_closing_value": new_clv,
+        "opening_rate": round(rate, 6),
+    }
+    logger.info(
+        "VISION_TABLE COLLAPSED_SALE_INTO_CLOSING product=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s "
+        "rate=%s",
+        str(item.get("product_name") or "")[:60],
+        new_sale,
+        new_salev,
+        cq,
+        new_clv,
+        round(rate, 4),
+    )
+    return True
+
+
 def _repair_dropped_pair_value_left_shift(item: Dict[str, Any]) -> bool:
     """Field-level fallback when PURCV blank was dropped (money under sales_qty).
 
@@ -7715,6 +7804,8 @@ def _map_single_table(
             _repair_qty_value_pair_left_shift(item)
             # OPSTK/OPV grids: dropped blank PURCV left-shifts SALE into PURCV.
             _repair_dropped_pair_value_left_shift(item)
+            # SALE|SALEV zeroed; sale money parked under STOCKV (rate mismatch).
+            _repair_collapsed_sale_into_closing(item)
             _repair_paisa_parked_in_qty_fields(item)
             _repair_pack_shifted_open_issue_close(item)
             _repair_oric_open_close_dash_pair(item)

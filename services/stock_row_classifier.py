@@ -301,7 +301,8 @@ def record_candidate(
 
     # row_status from UNCHANGED printed fields (after optional derived fills).
     try:
-        status, _ = classify_row(read_row_fields(line_item))
+        status, info = classify_row(read_row_fields(line_item))
+        status = _soften_document_qty_gap(line_item, status, info)
         extra["row_status"] = status.value
     except Exception:
         extra["row_status"] = RowStatus.COLUMN_ASSIGNMENT_SUSPECTED.value
@@ -1007,6 +1008,7 @@ def apply_closing_derived(
             line_item["closing_qty"] = None
             extra["row_status"] = RowStatus.COLUMN_ASSIGNMENT_SUSPECTED.value
     else:
+        status = _soften_document_qty_gap(line_item, status, info)
         extra["row_status"] = status.value
         if status not in {
             RowStatus.VALID,
@@ -1049,6 +1051,94 @@ def _iter_line_items(result: Dict[str, Any]) -> List[Dict[str, Any]]:
     return rows
 
 
+def _line_item_unit_rates_consistent(
+    line_item: Dict[str, Any], *, rel_tol: float = 0.05
+) -> bool:
+    """True when opening/closing (and purchase) money match the same unit rate.
+
+    Used when qty identity fails but value columns are coherent — typical of
+    printed ledger adjustments, not column swaps. Does not rewrite numbers.
+    """
+    if not isinstance(line_item, dict):
+        return False
+    extra = line_item.get("extra") if isinstance(line_item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+
+    def _num(key: str, *, extra_key: Optional[str] = None) -> Optional[float]:
+        if fs.get(key) == "missing":
+            return None
+        raw = line_item.get(key)
+        if raw is None and extra_key:
+            raw = extra.get(extra_key)
+        if raw is None and key.endswith("_value"):
+            raw = extra.get(key)
+        try:
+            if raw is None or raw == "":
+                return None
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    oq = _num("opening_qty")
+    ov = _num("opening_value")
+    cq = _num("closing_qty")
+    cv = _num("closing_value")
+    if oq is None or ov is None or cq is None or cv is None:
+        return False
+    if oq <= 0.001 or cq <= 0.001:
+        return False
+    rate = ov / oq
+    if rate <= 0.001:
+        return False
+    if abs((cv / cq) - rate) / rate > rel_tol:
+        return False
+    pq = _num("receipts_qty")
+    if pq is None:
+        pq = _num("purchase_qty")
+    pv = _num("purchase_value", extra_key="purchase_value")
+    if pq is not None and pv is not None and pq > 0.001:
+        if abs((pv / pq) - rate) / rate > rel_tol:
+            return False
+    return True
+
+
+def _soften_document_qty_gap(
+    line_item: Dict[str, Any],
+    status: RowStatus,
+    info: Optional[Dict[str, Any]] = None,
+) -> RowStatus:
+    """Downgrade column/OCR suspects to MINOR when unit rates still match."""
+    if status not in {
+        RowStatus.COLUMN_ASSIGNMENT_SUSPECTED,
+        RowStatus.OCR_VALUE_SUSPECTED,
+    }:
+        return status
+    if _line_item_unit_rates_consistent(line_item):
+        if isinstance(info, dict):
+            info["reason"] = "rate_consistent_qty_gap"
+            info["document_qty_gap"] = True
+        return RowStatus.MINOR_DISCREPANCY
+    # Zero movement but positive closing — printed stock appeared / carried.
+    fields = read_row_fields(line_item)
+    oq = fields.get("opening")
+    pq = fields.get("purchase")
+    sq = fields.get("sales")
+    cq = fields.get("closing")
+    if (
+        oq is not None
+        and abs(float(oq)) <= 0.001
+        and (pq is None or abs(float(pq)) <= 0.001)
+        and (sq is None or abs(float(sq)) <= 0.001)
+        and cq is not None
+        and float(cq) > 0.001
+    ):
+        if isinstance(info, dict):
+            info["reason"] = "zero_movement_positive_closing"
+            info["document_qty_gap"] = True
+        return RowStatus.MINOR_DISCREPANCY
+    return status
+
+
 def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
     """Classify all product rows. Does not mutate ``result`` or its items."""
     counts = {status.value: 0 for status in RowStatus}
@@ -1059,6 +1149,7 @@ def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
             continue
         fields = read_row_fields(item)
         status, info = classify_row(fields)
+        status = _soften_document_qty_gap(item, status, info)
         counts[status.value] = counts.get(status.value, 0) + 1
         row_details.append(
             {
