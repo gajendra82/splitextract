@@ -22,6 +22,9 @@ STOCK_MULTI_PAGE_FLAG = "STOCK_MULTI_PAGE_CAMERA_PDF_ENABLED"
 # When on: exact_duplicate requires a full row fingerprint (name+pack+qty+value),
 # not product name alone. Same name with different stock/sales figures stays.
 STOCK_MULTIPAGE_ROW_FINGERPRINT_FLAG = "STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP"
+# When on: drop OCR junk packs (1X00 / 0) when the same product name already has a
+# real pack on an earlier/better row. Camera dual-panel re-reads only.
+STOCK_MULTIPAGE_DROP_GARBAGE_PACK_FLAG = "STOCK_MULTIPAGE_DROP_GARBAGE_PACK"
 
 # Top-level qty fields + extra aliases used for conflict / continuation checks.
 _TOP_QTY = (
@@ -67,6 +70,29 @@ def is_row_fingerprint_dedup_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def is_drop_garbage_pack_enabled() -> bool:
+    """Drop same-name rows whose packing is OCR garbage when a real pack exists."""
+    return os.getenv(STOCK_MULTIPAGE_DROP_GARBAGE_PACK_FLAG, "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def is_garbage_pack(pack: Any) -> bool:
+    """True for OCR junk packs like 1X00 / 0 that are not real case sizes."""
+    key = normalize_pack_key(pack)
+    if not key:
+        return True
+    core = pack_numeric_core(key)
+    if core in {"", "0", "00"}:
+        return True
+    if re.fullmatch(r"1?x?0+", key):
+        return True
+    return False
 
 
 # Cyrillic lookalikes Vision sometimes emits instead of Latin (e.g. ТАВ → TAB).
@@ -410,6 +436,67 @@ def _prefer_earlier_packing(
     early_core = pack_numeric_core(earliest_pack)
     if base_core and early_core and base_core != early_core:
         merged["packing"] = earliest_pack
+
+
+def _drop_same_name_garbage_pack_rows(
+    items: Sequence[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Drop OCR junk-pack twins when the same product already has a real pack.
+
+    Example: BRESOL TAB 1x60 (good) + BRESOL TAB 1X00 (dual-panel OCR junk).
+    Does not touch same-name rows that all have real packs (e.g. 100ml vs 200ml
+    only when the size lives in the product name — those have different name keys).
+    """
+    ordered = [
+        deepcopy(it) for it in items if isinstance(it, dict)
+    ]
+    if len(ordered) < 2 or not is_drop_garbage_pack_enabled():
+        return ordered, []
+
+    by_name: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for it in ordered:
+        name = normalize_product_name_key(it.get("product_name"))
+        if name:
+            by_name[name].append(it)
+
+    drop_ids: set = set()
+    removed: List[Dict[str, Any]] = []
+    for name, group in by_name.items():
+        if len(group) < 2:
+            continue
+        real = [g for g in group if not is_garbage_pack(g.get("packing"))]
+        junk = [g for g in group if is_garbage_pack(g.get("packing"))]
+        if not real or not junk:
+            continue
+        # Prefer keeping the identity-balancing real row; drop every junk twin.
+        keep = max(real, key=_exact_duplicate_rank)
+        for bad in junk:
+            drop_ids.add(id(bad))
+            removed.append(
+                {
+                    "product_name": str(bad.get("product_name") or ""),
+                    "kept_product_name": str(keep.get("product_name") or ""),
+                    "reason": "garbage_pack_same_name",
+                    "page": int(
+                        bad.get("page_number")
+                        or _extra(bad).get("page_number")
+                        or 0
+                    ),
+                }
+            )
+            logger.info(
+                "MULTIPAGE EXTRACTION duplicate_removed product=%s kept=%s "
+                "reason=garbage_pack_same_name page=%s pack=%s",
+                bad.get("product_name"),
+                keep.get("product_name"),
+                removed[-1]["page"],
+                bad.get("packing"),
+            )
+
+    if not drop_ids:
+        return ordered, []
+    kept = [it for it in ordered if id(it) not in drop_ids]
+    return kept, removed
 
 
 def _collapse_cross_pack_core_near_dups(
@@ -965,6 +1052,15 @@ def resolve_cross_page_product_rows(
                 _prefer_earlier_packing(merged, bucket)
                 diagnostics["merged_rows"] += 1
                 resolved.append(merged)
+
+    # Camera dual-panel OCR sometimes invents a junk pack (1X00) for a product
+    # already kept with a real pack — drop the junk twin (earlier page wins).
+    resolved, garbage_removed = _drop_same_name_garbage_pack_rows(resolved)
+    if garbage_removed:
+        diagnostics["exact_duplicates_collapsed"] += len(garbage_removed)
+        diagnostics["duplicates_removed"] += len(garbage_removed)
+        diagnostics["merged_rows"] += len(garbage_removed)
+        removed_log.extend(garbage_removed)
 
     # Stable order: first page_number, then product name.
     def _sort_key(it: Dict[str, Any]) -> Tuple[int, str]:

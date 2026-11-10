@@ -37462,6 +37462,23 @@ def _parse_product_wise_stock_statement_photo_panel(
         receipts_total = receipts + receipts_free
         sales_total = sales + sales_free + goods
 
+        # Dual-panel camera crops: exact qty re-read → skip. OCR junk pack
+        # (1X00) for a name that already has a real pack → skip. Do NOT key by
+        # name alone — HIORA K MOUTH WASH and HIORA-K MOUTHWASH share a norm key.
+        name_key = re.sub(r"[^a-z0-9]", "", product_name.lower())
+        pack_key = re.sub(r"[^a-z0-9]", "", str(packing or "").lower())
+        pack_core = re.sub(r"[^0-9.]", "", pack_key)
+        garbage_pack = (
+            not pack_key
+            or pack_core in {"", "0", "00"}
+            or bool(re.fullmatch(r"1?x?0+", pack_key))
+        )
+        if (
+            garbage_pack
+            and name_key
+            and ("pwss_real", name_key) in seen
+        ):
+            continue
         key = (
             product_name.upper(),
             str(packing).upper(),
@@ -37473,6 +37490,8 @@ def _parse_product_wise_stock_statement_photo_panel(
         if key in seen:
             continue
         seen.add(key)
+        if name_key and not garbage_pack:
+            seen.add(("pwss_real", name_key))
 
         item = empty_line_item()
         item["product_name"] = product_name
