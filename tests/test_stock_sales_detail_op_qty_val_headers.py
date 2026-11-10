@@ -27,6 +27,27 @@ class StockSalesDetailOpQtyValHeaderTests(unittest.TestCase):
         )
         self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
 
+    def test_opstk_opv_stock_and_sales_statement(self):
+        text = (
+            "ARKAY MEDICOS PVT. LTD.\n"
+            "STOCK AND SALES STATEMENT\n"
+            "PCode Product Name Packi BOX OPSTK OPV PURC PURCV SALE SALEV "
+            "STOCK STOCKV Manufacturer / Division\n"
+        )
+        self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
+
+    def test_medica_opstk_purch_not_matched(self):
+        text = "STOCK STATEMENT\nOPSTK PURCH SALE SALE VAL IN/OT STOCK STK VAL\n"
+        self.assertFalse(_has_stock_sales_op_qty_val_headers(text))
+
+    def test_prompt_ignores_box_before_opstk(self):
+        prompt = STOCK_SALES_OP_QTY_VAL_VISION_PROMPT
+        self.assertIn("BOX", prompt)
+        self.assertIn("OPSTK", prompt)
+        self.assertIn("OPV", prompt)
+        self.assertIn("STOCKV", prompt)
+        self.assertIn("NOT 36", prompt)
+
     def test_saleable_opn_rec_issue_not_matched(self):
         text = (
             "Saleable Stock Report\n"

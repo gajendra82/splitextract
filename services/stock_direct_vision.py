@@ -192,14 +192,17 @@ If this image is clearly a different statement layout, return line_items=[].
 
 Printed columns left → right after Item / Pack (names may be abbreviated).
 Core movement (ALWAYS map these):
-  Op.Qty / Op Qty   -> opening_qty   ← FIRST qty after Item (never receipts_qty)
-  Op.Val / Op Val   -> opening_value
-  P.Qty  / P Qty    -> receipts_qty  ← purchase only; 0 when the cell is 0
-  P.Val  / P Val    -> receipts_value
-  S.Qty  / S Qty    -> sales_qty
-  S.Val  / S Val    -> sales_value
-  Cls.Qty / Cl.Qty / Cls Qty -> closing_qty
-  Cls.Val / Cl.Val / Cls Val -> closing_value
+  Op.Qty / Op Qty / OPSTK  -> opening_qty   ← FIRST stock qty after Pack/BOX
+  Op.Val / Op Val / OPV    -> opening_value
+  P.Qty  / P Qty / PURC    -> receipts_qty  ← purchase only; 0 when the cell is 0
+  P.Val  / P Val / PURCV   -> receipts_value
+  S.Qty  / S Qty / SALE    -> sales_qty
+  S.Val  / S Val / SALEV   -> sales_value
+  Cls.Qty / Cl.Qty / Cls Qty / STOCK  -> closing_qty
+  Cls.Val / Cl.Val / Cls Val / STOCKV -> closing_value
+
+BOX (between Pack and OPSTK) is NOT opening_qty and NOT opening_value — ignore it.
+PCode / Manufacturer / Division are ignore columns.
 
 Stock and Sales Detail often inserts scheme / return columns BETWEEN S and Cl.
 Map returns; ignore scheme-only qty:
@@ -231,6 +234,10 @@ Examples when visible:
 - ASHWAGANDHA GUMMIES 60S: Op.Qty 316, Op.Val 189600.0, P 0, S.Qty 7,
   S.Val 4200.0, Cr.Qty 2, Cl.Qty 311, Cl.Val 186600.0
   (Op.Qty→opening_qty NOT receipts_qty; Cl.Val≠S.Val; Sl.No is not Op.Qty)
+- ASHWAGANDHA 120TAB Pack 120 TAB BOX 36 OPSTK 9 OPV 3028.14 PURC 0
+  PURCV 0 SALE 3 SALEV 1064.25 STOCK 6 STOCKV 2018.76
+  → opening_qty=9 (NOT 36), opening_value=3028.14, sales_qty=3,
+    closing_qty=6, closing_value=2018.76 (BOX ignored)
 
 Stockist vs company (do not swap these):
   stockist_name = Seller: / letterhead distributor
@@ -847,6 +854,8 @@ def _has_stock_sales_op_qty_val_headers(text: str) -> bool:
     Must beat filename _ZA_ → SaleRet routing: that schema forces sales_value=0
     and has no opening/receipt value fields, which mis-files Op.Val/S.Val.
     Also matches Stock and Sales Detail Report (P.Sch / Cl.Qty phone scans).
+    Also matches STOCK AND SALES STATEMENT grids that print OPSTK/OPV/PURC/
+    PURCV/SALEV/STOCKV (BOX between Pack and OPSTK is ignore — not opening).
     """
     blob = text or ""
     if not blob.strip():
@@ -894,6 +903,20 @@ def _has_stock_sales_op_qty_val_headers(text: str) -> bool:
     # even when P.Sch / return headers are garbled.
     if re.search(r"Stock\s+and\s+Sales\s+Detail", blob, re.I) and (
         (has_op_qty and has_cls) or (has_op_qty and has_op_val)
+    ):
+        return True
+    # Compact STOCK AND SALES STATEMENT: OPSTK|OPV|PURC|PURCV|SALE|SALEV|STOCK|STOCKV.
+    # BOX sits before OPSTK and must not be read as opening_qty/opening_value.
+    has_opstk = bool(re.search(r"\bOPSTK\b", blob, re.I))
+    has_opv = bool(re.search(r"\bOPV\b", blob, re.I))
+    has_stockv = bool(re.search(r"\bSTOCKV\b", blob, re.I))
+    has_purcv_or_salev = bool(re.search(r"\bPURCV\b|\bSALEV\b", blob, re.I))
+    if has_opstk and has_opv and (has_stockv or has_purcv_or_salev):
+        return True
+    if (
+        re.search(r"STOCK\s+AND\s+SALES\s+STATEMENT", blob, re.I)
+        and has_opstk
+        and has_opv
     ):
         return True
     return False
@@ -4371,6 +4394,23 @@ def try_stock_direct_vision(
                         layout_peek = f"{layout_peek}\n{taller}".strip()
             except Exception:
                 pass
+
+    # Recover OPSTK|OPV|STOCKV when peek already hints at that grid but is
+    # incomplete — so STOCK AND SALES STATEMENT is not stolen by Code/Item Vision.
+    _opstk_hint = layout_peek or peek_text or ""
+    if not _has_stock_sales_op_qty_val_headers(_opstk_hint) and re.search(
+        r"STOCK\s+AND\s+SALES|\bOPSTK\b|\bOPV\b|\bPURCV\b|\bSALEV\b|\bSTOCKV\b",
+        _opstk_hint,
+        re.I,
+    ):
+        opval_probe = _layout_header_text_op_qty_val(file_bytes)
+        if opval_probe and opval_probe not in (layout_peek or ""):
+            layout_peek = f"{layout_peek}\n{opval_probe}".strip()
+            logger.info(
+                "STOCK_DIRECT_VISION_OPSTK_OPV_HEADER_PROBE chars=%s file=%s",
+                len(opval_probe),
+                filename,
+            )
 
     decision = classify_stock_direct_vision(
         layout_peek or peek_text, filename, handwriting=hw

@@ -24727,6 +24727,14 @@ def _is_code_item_stock_statement_photo_text(text: str) -> bool:
     """
     if not (text or "").strip():
         return False
+    # STOCK AND SALES STATEMENT with OPSTK/OPV/PURCV/STOCKV (and BOX before
+    # OPSTK) is the paired qty/value Vision layout — not Code/Item Opening.
+    if re.search(r"\bOPSTK\b", text, re.I) and re.search(r"\bOPV\b", text, re.I):
+        return False
+    if re.search(r"\bPURCV\b|\bSALEV\b|\bSTOCKV\b", text, re.I) and re.search(
+        r"STOCK\s+AND\s+SALES", text, re.I
+    ):
+        return False
     if _is_code_item_stock_statement_text(text):
         return True
     if not re.search(r"Stock\s+Stat(?:e)?ment", text, re.I):
@@ -25111,6 +25119,80 @@ def _extract_code_item_stock_statement_vision(
         len(result.get("line_items") or []),
     )
     return result
+
+
+def _looks_like_opstk_box_shift_misread(result: Optional[Dict[str, Any]]) -> bool:
+    """Code/Item Vision treated BOX as opening and dropped OPV/PURCV/STOCKV money.
+
+    STOCK AND SALES STATEMENT prints Pack|BOX|OPSTK|OPV|… — the Code/Item prompt
+    takes the first qty after Pack as Opening, so BOX becomes opening_qty and
+    opening_value stays empty. Identity then fails on most rows.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    missing_ov = sum(
+        1
+        for i in items
+        if i.get("opening_value") in (None, "")
+        and _to_float((i.get("extra") or {}).get("opening_value")) == 0.0
+    )
+    if missing_ov < max(4, int(len(items) * 0.7)):
+        return False
+    fails = 0
+    for item in items:
+        opening = _to_float(item.get("opening_qty"))
+        receipts = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        closing = _to_float(item.get("closing_qty"))
+        if not (opening or receipts or sales or closing):
+            continue
+        if abs(opening + receipts - sales - closing) > 0.51:
+            fails += 1
+    return fails >= max(3, int(len(items) * 0.45))
+
+
+def _repair_opstk_box_shift_via_op_qty_val(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    bad: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """Re-read BOX/OPSTK/OPV grids with the paired qty/value Vision prompt."""
+    if not _looks_like_opstk_box_shift_misread(bad):
+        return None
+    try:
+        from services.stock_direct_vision import (
+            extract_stock_sales_op_qty_val_direct_vision,
+        )
+
+        repaired = extract_stock_sales_op_qty_val_direct_vision(
+            file_bytes,
+            filename,
+            ext,
+            reason="opstk_box_shift_repair",
+        )
+    except Exception as exc:
+        logger.warning(
+            "OPSTK/OPV repair after BOX-shift misread failed for %s: %s",
+            filename,
+            exc,
+        )
+        return None
+    if not repaired or not repaired.get("line_items"):
+        return None
+    if _looks_like_opstk_box_shift_misread(repaired):
+        return None
+    extra = repaired.setdefault("totals", {}).setdefault("extra", {})
+    extra["early_vision_reason"] = "opstk_box_shift_repair"
+    logger.info(
+        "STOCK_OPSTK_BOX_SHIFT_REPAIR file=%s rows=%s",
+        filename,
+        len(repaired.get("line_items") or []),
+    )
+    return repaired
 
 
 def _looks_like_code_item_photo_misread(result: Optional[Dict[str, Any]]) -> bool:
@@ -55440,6 +55522,11 @@ def _maybe_early_vision_for_image(
             )
             code_item = None
         if code_item and code_item.get("line_items"):
+            repaired = _repair_opstk_box_shift_via_op_qty_val(
+                file_bytes, filename, ext, code_item
+            )
+            if repaired and repaired.get("line_items"):
+                return repaired, True
             extra = code_item.setdefault("totals", {}).setdefault("extra", {})
             extra["early_vision_reason"] = "code_item_stock_statement_photo"
             return code_item, True
@@ -58139,6 +58226,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         if hub and hub.get("line_items"):
             return hub
     if early_vision and early_vision.get("line_items"):
+        repaired = _repair_opstk_box_shift_via_op_qty_val(
+            file_bytes, filename, ext, early_vision
+        )
+        if repaired and repaired.get("line_items"):
+            return repaired
         return early_vision
 
     # Dedicated abbreviated Stock and Sale (pack/Op/Pur/Bal Val) photo reader.

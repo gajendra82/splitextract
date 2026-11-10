@@ -654,16 +654,23 @@ _DIRECT_VALUE_FIELDS = {
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
+    "opv": "opening_value",  # STOCK AND SALES STATEMENT OPV
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
+    "purcv": "purchase_value",  # STOCK AND SALES STATEMENT PURCV
     "purchase value": "purchase_value",
     "purch bill amt": "purchase_value",
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
     "issue value": "sales_value",
+    "salev": "sales_value",  # STOCK AND SALES STATEMENT SALEV
+    "sale v": "sales_value",
+    "stockv": "closing_value",  # STOCK AND SALES STATEMENT STOCKV
+    "stock v": "closing_value",
+    "stk v": "closing_value",
 }
 
 
@@ -927,6 +934,89 @@ def _adjacent_qty_value_pair_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _trailing_purchase_sale_stock_values_enabled() -> bool:
+    """Closing|Purchase|Sale|Stock money triad after qty columns.
+
+    Default ON. Stock and Sale sheets print Op/Pur/Sale/Closing qtys then
+    Purchase/Sale/Stock amounts. Without promotion, Purchase steals
+    purchase_qty from Pur and Sale/Stock drop as DUPLICATE_CANONICAL — values
+    never extract.
+    """
+    return os.getenv(
+        "STOCK_HEADER_TRAILING_PURCHASE_SALE_STOCK_VALUES", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _promote_trailing_purchase_sale_stock_values(
+    prelim: List[Dict[str, Any]],
+) -> bool:
+    """Map trailing Purchase|Sale|Stock after Closing qty onto value fields."""
+    if not _trailing_purchase_sale_stock_values_enabled() or len(prelim) < 4:
+        return False
+    closing_idxs = [
+        i
+        for i, col in enumerate(prelim)
+        if isinstance(col, dict) and col.get("canonical") == "closing_qty"
+    ]
+    if not closing_idxs:
+        return False
+    closing_i = closing_idxs[0]
+    # Need a qty Purchase/Pur/Sale already to the left of Closing.
+    left_blob = " ".join(
+        normalize_header(c.get("header_text"))
+        for c in prelim[:closing_i]
+        if isinstance(c, dict)
+    )
+    if not re.search(r"\b(?:pur|purch|purchase|sale|sales|op)\b", left_blob):
+        return False
+    trio: List[Dict[str, Any]] = []
+    for col in prelim[closing_i + 1 :]:
+        if not isinstance(col, dict):
+            continue
+        if col.get("reason") == "date_or_near_expiry":
+            continue
+        hdr = normalize_header(col.get("header_text"))
+        if re.search(r"(?i)\bnear\s*exp|\bexpir", hdr):
+            continue
+        trio.append(col)
+        if len(trio) >= 3:
+            break
+    if len(trio) < 3:
+        return False
+    norms = [
+        re.sub(r"\s+", "", normalize_header(c.get("header_text"))) for c in trio[:3]
+    ]
+    if norms[0] not in {"purchase", "purchases", "purch", "purc"}:
+        return False
+    if norms[1] not in {"sale", "sales"}:
+        return False
+    if norms[2] not in {"stock", "stk", "closingstock", "clstock", "stockvalue"}:
+        return False
+    mapping = (
+        ("purchase_value", "purchase"),
+        ("sales_value", "sales"),
+        ("closing_value", "closing"),
+    )
+    for col, (canon, group) in zip(trio[:3], mapping):
+        col["canonical"] = canon
+        col["group"] = group
+        col["is_value"] = True
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.92)
+        col["reason"] = "trailing_purchase_sale_stock_values"
+        logger.info(
+            "STOCK_HEADER_TRAILING_PURCHASE_SALE_STOCK col=%s %r -> %s",
+            col.get("col_index"),
+            col.get("header_text"),
+            canon,
+        )
+    return True
 
 
 def _promote_adjacent_same_group_qty_to_value(
@@ -2682,6 +2772,8 @@ def resolve_columns(
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)
+    # Stock and Sale: Closing | Purchase | Sale | Stock → value triad.
+    _promote_trailing_purchase_sale_stock_values(prelim)
 
     # Name + Product both → product_name: keep Product (SKU), demote Name.
     _apply_prefer_product_over_name(prelim, errors)
