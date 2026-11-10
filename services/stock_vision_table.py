@@ -957,6 +957,124 @@ def _repair_missing_box_before_opstk(
     return ordered
 
 
+def _headers_look_like_ssa_ori_amount_grid(columns: Sequence[Dict[str, Any]]) -> bool:
+    """Opening/Receipt/Issues/Closing with Sales/Closing amount (Box optional)."""
+    from services.stock_header_resolver import normalize_header
+
+    texts = [
+        normalize_header(c.get("header_text") or "")
+        for c in (columns or [])
+        if isinstance(c, dict)
+    ]
+    if not texts:
+        return False
+    if any(t == "box" for t in texts):
+        return False
+    has_open = any("opening" in t or t in {"op", "opn"} for t in texts)
+    has_receipt = any("receipt" in t for t in texts)
+    has_issue = any("issue" in t or "sale" in t for t in texts)
+    has_close = any("closing" in t or t in {"close", "cl"} for t in texts)
+    has_amount = any(
+        "amount" in t or t.endswith("value") or "val" in t for t in texts
+    )
+    return bool(has_open and has_receipt and has_issue and has_close and has_amount)
+
+
+def _box_shift_votes_on_ori_amount_grid(
+    columns: Sequence[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+) -> Tuple[int, int]:
+    """Vote when opening cells are Box=1 and Op+Rc−Sa≈Cl after a one-slot shift."""
+    oq_idx = next(
+        (
+            int(c["col_index"])
+            for c in columns
+            if isinstance(c, dict) and c.get("canonical") == "opening_qty"
+        ),
+        None,
+    )
+    if oq_idx is None:
+        return 0, 0
+    hits = 0
+    checked = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        # Need Box + Opening + Receipt + Issues + Closing under oq..oq+4.
+        if oq_idx + 4 >= len(cells):
+            continue
+        nums = [
+            parse_number(cells[oq_idx + i], allow_internal_spaces=True)
+            for i in range(5)
+        ]
+        if any(n is None for n in nums):
+            continue
+        box_n, open_n, rec_n, sale_n, close_n = nums  # type: ignore[misc]
+        checked += 1
+        box_whole = abs(box_n - int(box_n)) <= 0.001 and 0 <= box_n <= 24
+        if not box_whole:
+            continue
+        # Shifted identity: Opening+Receipt−Issues ≈ Closing
+        if abs((open_n + rec_n - sale_n) - close_n) <= 0.51:
+            hits += 1
+    return hits, checked
+
+
+def _repair_missing_box_before_opening(
+    columns: List[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+    errors: List[str],
+) -> List[Dict[str, Any]]:
+    """When Vision drops BOX before Opening, shift qty/value canons one slot right."""
+    if not _missing_box_before_opstk_enabled():
+        return columns
+    if not _headers_look_like_ssa_ori_amount_grid(columns):
+        return columns
+    hits, checked = _box_shift_votes_on_ori_amount_grid(columns, rows)
+    if checked < 2 or hits < max(2, int(0.6 * checked)):
+        return columns
+
+    ordered = sorted(
+        [dict(c) for c in columns if isinstance(c, dict)],
+        key=lambda c: int(c.get("col_index") or 0),
+    )
+    oq_pos = next(
+        (i for i, c in enumerate(ordered) if c.get("canonical") == "opening_qty"),
+        None,
+    )
+    if oq_pos is None:
+        return columns
+
+    tail = [c.get("canonical") for c in ordered[oq_pos:]]
+    ordered[oq_pos]["canonical"] = "ignore"
+    ordered[oq_pos]["is_value"] = False
+    ordered[oq_pos]["confidence"] = 0.9
+    ordered[oq_pos]["reason"] = "missing_box_before_opening"
+    ordered[oq_pos]["source"] = "box_shift"
+    if not str(ordered[oq_pos].get("header_text") or "").strip():
+        ordered[oq_pos]["header_text"] = "BOX"
+
+    for offset, canon in enumerate(tail):
+        dest = oq_pos + 1 + offset
+        if dest >= len(ordered):
+            break
+        ordered[dest]["canonical"] = canon
+        ordered[dest]["is_value"] = str(canon).endswith("_value")
+        ordered[dest]["confidence"] = 0.85
+        ordered[dest]["reason"] = "missing_box_before_opening"
+        ordered[dest]["source"] = "box_shift"
+
+    errors.append("MISSING_BOX_BEFORE_OPENING")
+    logger.info(
+        "VISION_TABLE MISSING_BOX_BEFORE_OPENING hits=%s/%s cols=%s",
+        hits,
+        checked,
+        [(c.get("col_index"), c.get("header_text"), c.get("canonical")) for c in ordered],
+    )
+    return ordered
+
+
 def _shift_pack_out_of_qty_headers(
     columns: List[Dict[str, Any]],
     rows: Sequence[Dict[str, Any]],
@@ -4260,6 +4378,118 @@ def _is_oric_whole_qty_token(val: Optional[float]) -> bool:
     return abs(val - round(val)) <= 0.001
 
 
+def _oric_qv_blank_receipt_qty_align_enabled() -> bool:
+    """STOCK_VISION_ORIC_QV_BLANK_RECEIPT_QTY — insert null when RECEIPT QTY omitted.
+
+    Default ON. Printed sheets often leave RECEIPT QTY blank and print only
+    RECEIPT VALUE 0.00; Vision then left-shifts ISSUE into purchase_value and
+    ISSUE VALUE into sales_qty. Insert a null qty slot only — never rewrite.
+    """
+    return os.getenv(
+        "STOCK_VISION_ORIC_QV_BLANK_RECEIPT_QTY", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _cell_text_looks_value_token(text: Any) -> bool:
+    """True when the printed token looks like VALUE (decimal / 0.00), not QTY."""
+    if text is None:
+        return False
+    s = str(text).strip().replace(",", "")
+    if s in {"", "-", "—", "–"}:
+        return False
+    return bool(re.fullmatch(r"-?\d+\.\d+", s))
+
+
+def _align_oric_qv_blank_receipt_qty(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], int]:
+    """Insert null RECEIPT QTY when Vision collapsed blank qty into VALUE 0.00.
+
+    Pattern (8 body nums, optional DUMP at col 9):
+      oq, ov, 0.00(rv), iq, iv, cq, cv [, dump]
+    → oq, ov, None, 0.00, iq, iv, cq, cv  and dump stays at col 9.
+    Only when opening + 0 − issue ≈ closing. Never invents digits.
+    """
+    if not _oric_qv_blank_receipt_qty_align_enabled():
+        return cells, column_count
+    if not _columns_are_oric_qty_value_grid(columns):
+        return cells, column_count
+    width = max(int(column_count or 0), 9)
+    out = list(cells)
+    if len(out) < width:
+        out = out + [None] * (width - len(out))
+    # Already has a receipt-qty-looking slot (whole / dash) before a value token.
+    rq_raw = out[3] if len(out) > 3 else None
+    if rq_raw is not None and not _cell_text_looks_value_token(rq_raw):
+        return cells, column_count
+    body = out[1:9]
+    filled_idx = [i for i, v in enumerate(body) if _cell_numeric_or_zero(v) is not None]
+    # 7 = no dump in body; 8 = dump sitting in closing_value slot or body[7].
+    if len(filled_idx) not in {7, 8}:
+        return cells, column_count
+    filled = [body[i] for i in filled_idx]
+    oq = _cell_numeric_or_zero(filled[0])
+    ov = _cell_numeric_or_zero(filled[1])
+    maybe_rv = filled[2]
+    iq = _cell_numeric_or_zero(filled[3])
+    iv = _cell_numeric_or_zero(filled[4])
+    cq = _cell_numeric_or_zero(filled[5])
+    cv = _cell_numeric_or_zero(filled[6])
+    if (
+        oq is None
+        or ov is None
+        or iq is None
+        or cq is None
+        or not _cell_text_looks_value_token(maybe_rv)
+        or not _is_oric_whole_qty_token(oq)
+        or not _is_oric_whole_qty_token(iq)
+        or not _is_oric_whole_qty_token(cq)
+        or not (_has_paisa(ov) or abs(ov) < 0.001)
+        or not (_has_paisa(iv) or (iv is not None and abs(iv) < 0.001))
+        or abs((oq + 0.0 - iq) - cq) > 0.51
+    ):
+        return cells, column_count
+    # Do not fire when receipt qty is already a real whole count.
+    if (
+        rq_raw is not None
+        and _is_oric_whole_qty_token(_cell_numeric_or_zero(rq_raw))
+        and not _cell_text_looks_value_token(rq_raw)
+    ):
+        return cells, column_count
+    new_body = [
+        filled[0],
+        filled[1],
+        None,
+        maybe_rv,
+        filled[3],
+        filled[4],
+        filled[5],
+        filled[6],
+    ]
+    out[1:9] = new_body
+    if len(filled) >= 8:
+        # Trailing dump that was sitting past closing_value.
+        dump_tok = filled[7]
+        if len(out) < 10:
+            out = out + [None] * (10 - len(out))
+        if out[9] is None:
+            out[9] = dump_tok
+        width = max(width, 10)
+    logger.info(
+        "VISION_TABLE ORIC_QV_BLANK_RECEIPT_QTY product=%r body=%s",
+        str(out[0] or "")[:40],
+        [str(v) if v is not None else None for v in new_body],
+    )
+    return out, width
+
+
 def _align_oric_qv_cells_after_pack_peel(
     cells: List[Any],
     columns: Sequence[Dict[str, Any]],
@@ -7116,7 +7346,9 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
     r"\bdivi\b|"
     r"\([^)]*\bdiv(?:i|ision)?\b[^)]*\)|"
     r"\bhimalaya\b\s*\(|"
-    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)"
+    r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)|"
+    # Packing / unit fragments mis-read as their own product row.
+    r"^\s*(?:GM|GMS|G|ML|MG|WA|TAB|CAP|PCS?|\d+\s*G(?:M)?)\s*$"
 )
 
 # LstSL / Open / Recd footer money labels — never SKUs.
@@ -7866,6 +8098,10 @@ def _map_single_table(
             columns = _repair_missing_box_before_opstk(
                 columns, table.get("rows") or [], errors
             )
+            # Product-wise Opening/Receipt/Issues: same BOX miss left-shifts Opening.
+            columns = _repair_missing_box_before_opening(
+                columns, table.get("rows") or [], errors
+            )
             force_layout = bool(
                 data_as_headers and _data_header_layout_repair_enabled()
             )
@@ -7999,6 +8235,9 @@ def _map_single_table(
             columns,
             column_count,
             peeled_pack=bool(unlabeled_pack) and not use_carry,
+        )
+        cells, column_count = _align_oric_qv_blank_receipt_qty(
+            cells, columns, column_count
         )
         if len(cells) < column_count:
             cells = cells + [None] * (column_count - len(cells))

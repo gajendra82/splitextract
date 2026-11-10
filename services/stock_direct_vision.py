@@ -797,20 +797,35 @@ def detect_stock_handwriting_signals(
 
 
 def _has_product_wise_stock_headers(text: str) -> bool:
-    """Product wise stock statement (Opening/Receipt/Issues + amounts)."""
+    """Product wise stock statement (Opening/Receipt/Issues + amounts).
+
+    Phone OCR often drops the title line but keeps Packing/Box/Opening/... and
+    Sales/Closing amount — still route to the Box-aware geometry reader.
+    """
     if not text:
         return False
-    if not re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
-        return False
-    if not (
+    has_cols = (
         re.search(r"\bOpening\b", text, re.I)
         and re.search(r"\bReceipt\b", text, re.I)
         and re.search(r"(?<![A-Za-z])Issues?(?![A-Za-z])", text, re.I)
         and re.search(r"\bClosing\b", text, re.I)
-    ):
+    )
+    if not has_cols:
         return False
+    has_amount = bool(
+        re.search(
+            r"Sales\s+Amount|Closing\s+Amount|Sh\.?\s*Exp|Liqudation|Liquidation",
+            text,
+            re.I,
+        )
+    )
+    if not has_amount:
+        return False
+    if re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
+        return True
+    # Title missing: Box + Packing + amount columns is still this layout.
     return bool(
-        re.search(r"Sales\s+Amount|Sh\.?\s*Exp|Liqudation|Liquidation", text, re.I)
+        re.search(r"\bBox\b", text, re.I) and re.search(r"\bPacking\b", text, re.I)
     )
 
 

@@ -286,17 +286,43 @@ def _numbers_nearly_equal(a: float, b: float) -> bool:
     return abs(a - b) / scale <= 0.02
 
 
+def _core_movement_qtys_align(
+    qa: Dict[str, Optional[float]], qb: Dict[str, Optional[float]]
+) -> bool:
+    """True when printed opening/receipts/sales match (same statement line).
+
+    Used to allow pack OCR digit drift (1x60 vs 1x50) without merging true
+    different packs (100ml vs 200ml) that only share a money field.
+    """
+    matched = 0
+    compared = 0
+    for field in ("opening_qty", "receipts_qty", "sales_qty"):
+        a, b = qa.get(field), qb.get(field)
+        if a is None or b is None:
+            continue
+        compared += 1
+        if _numbers_nearly_equal(float(a), float(b)):
+            matched += 1
+        else:
+            return False
+    return compared >= 2 and matched == compared
+
+
 def is_ocr_near_duplicate(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
     """True when two same-identity rows look like OCR re-reads of one statement line.
 
     Handles camera page-overlap where Vision remaps columns (e.g. sale/closing
     swap) or drifts a value slightly. Does NOT match complementary page-halves
     (disjoint columns) or truly different transaction figures.
+
+    Pack OCR digit drift (1x60 vs 1x50) is allowed only when opening/receipts/
+    sales movement quantities align on both rows.
     """
-    if not packs_compatible(left.get("packing"), right.get("packing")):
-        return False
+    pack_ok = packs_compatible(left.get("packing"), right.get("packing"))
     qa, qb = _printed_qty_map(left), _printed_qty_map(right)
     if not _same_column_shape(qa, qb):
+        return False
+    if not pack_ok and not _core_movement_qtys_align(qa, qb):
         return False
     bag_a = _printed_number_bag(left)
     bag_b = _printed_number_bag(right)
@@ -330,6 +356,124 @@ def _row_print_richness(item: Dict[str, Any]) -> int:
     if normalize_pack_key(item.get("packing")):
         score += 2
     return score
+
+
+def _row_identity_balance_score(item: Dict[str, Any]) -> float:
+    """Prefer the OCR re-read whose Op+Rc−Sa ≈ Closing (never invents values)."""
+    op = printed_qty(item, "opening_qty")
+    rc = printed_qty(item, "receipts_qty")
+    sa = printed_qty(item, "sales_qty")
+    cl = printed_qty(item, "closing_qty")
+    if op is None or sa is None or cl is None:
+        return -1e9
+    rc_v = 0.0 if rc is None else float(rc)
+    expected = float(op) + rc_v - float(sa)
+    diff = abs(expected - float(cl))
+    if diff <= 0.51:
+        return 1000.0 - diff
+    # Sale/closing qty swap still balances as Op+Rc−Cl ≈ Sa.
+    alt = abs((float(op) + rc_v - float(cl)) - float(sa))
+    if alt <= 0.51:
+        return 500.0 - alt
+    return -diff
+
+
+def _exact_duplicate_rank(item: Dict[str, Any]) -> Tuple[float, int, int]:
+    """Sort key for exact-duplicate collapse: balance → richness → earlier page."""
+    page = int(item.get("page_number") or _extra(item).get("page_number") or 0)
+    return (
+        _row_identity_balance_score(item),
+        _row_print_richness(item),
+        -page,
+    )
+
+
+def _prefer_earlier_packing(
+    merged: Dict[str, Any], rows: Sequence[Dict[str, Any]]
+) -> None:
+    """On pack-core OCR drift, keep the earliest page's packing (1x60 over 1x50)."""
+    by_page = sorted(
+        [r for r in rows if isinstance(r, dict)],
+        key=lambda r: int(
+            r.get("page_number") or _extra(r).get("page_number") or 0
+        ),
+    )
+    if not by_page:
+        return
+    earliest_pack = next(
+        (r.get("packing") for r in by_page if str(r.get("packing") or "").strip()),
+        None,
+    )
+    if not earliest_pack:
+        return
+    base_core = pack_numeric_core(merged.get("packing"))
+    early_core = pack_numeric_core(earliest_pack)
+    if base_core and early_core and base_core != early_core:
+        merged["packing"] = earliest_pack
+
+
+def _collapse_cross_pack_core_near_dups(
+    items: Sequence[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Collapse same-name rows split only by pack-core OCR drift (60 vs 50).
+
+    Pack-core buckets keep 100ml vs 200ml separate for continuation safety; this
+    pass only merges when is_ocr_near_duplicate says the figures are one line.
+    Prefers the identity-balancing / earlier-page row for printed values.
+    """
+    ordered = sorted(
+        [deepcopy(it) for it in items if isinstance(it, dict)],
+        key=lambda r: int(
+            r.get("page_number") or _extra(r).get("page_number") or 0
+        ),
+    )
+    if len(ordered) < 2:
+        return ordered, []
+
+    keep: List[Dict[str, Any]] = []
+    removed: List[Dict[str, Any]] = []
+    for nxt in ordered:
+        placed = False
+        for idx, prev in enumerate(keep):
+            ca = pack_numeric_core(prev.get("packing"))
+            cb = pack_numeric_core(nxt.get("packing"))
+            # Same pack core already reconciled inside the subgroup.
+            if ca and cb and ca == cb:
+                continue
+            if not is_ocr_near_duplicate(prev, nxt):
+                continue
+            bucket = [prev, nxt]
+            bucket.sort(key=_exact_duplicate_rank, reverse=True)
+            keep[idx] = merge_line_items(
+                bucket, identity_method="name", resolution="merged"
+            )
+            _prefer_earlier_packing(keep[idx], bucket)
+            drop_name = str(nxt.get("product_name") or "")
+            kept_name = str(keep[idx].get("product_name") or "")
+            removed.append(
+                {
+                    "product_name": drop_name,
+                    "kept_product_name": kept_name,
+                    "reason": "cross_pack_core_ocr_near_duplicate",
+                    "page": int(
+                        nxt.get("page_number")
+                        or _extra(nxt).get("page_number")
+                        or 0
+                    ),
+                }
+            )
+            logger.info(
+                "MULTIPAGE EXTRACTION duplicate_removed product=%s kept=%s "
+                "reason=cross_pack_core_ocr_near_duplicate page=%s",
+                drop_name,
+                kept_name,
+                removed[-1]["page"],
+            )
+            placed = True
+            break
+        if not placed:
+            keep.append(nxt)
+    return keep, removed
 
 
 def is_weak_ocr_fragment(left: Dict[str, Any], right: Dict[str, Any]) -> bool:
@@ -687,6 +831,7 @@ def resolve_cross_page_product_rows(
                 # on a flat local list — fall through with group_sorted replaced
                 # only when a single core remains; otherwise handle each subgroup.
                 if len(split_groups) > 1 and _pack_split:
+                    sub_resolved: List[Dict[str, Any]] = []
                     for sub in split_groups:
                         sub_out, sub_diag = resolve_cross_page_product_rows(
                             sub,
@@ -694,7 +839,7 @@ def resolve_cross_page_product_rows(
                             _pack_split=False,
                             _log_pages=False,
                         )
-                        resolved.extend(sub_out)
+                        sub_resolved.extend(sub_out)
                         for dk in (
                             "dedup_candidates",
                             "merged_rows",
@@ -706,6 +851,19 @@ def resolve_cross_page_product_rows(
                         ):
                             diagnostics[dk] += int(sub_diag.get(dk) or 0)
                         removed_log.extend(sub_diag.get("removed_duplicates") or [])
+                    # Pack-core split keeps 100ml vs 200ml apart, but camera
+                    # overlap often re-reads the same line as 1x60 / 1x50.
+                    collapsed, cross_removed = _collapse_cross_pack_core_near_dups(
+                        sub_resolved
+                    )
+                    if cross_removed:
+                        diagnostics["exact_duplicates_collapsed"] += len(
+                            cross_removed
+                        )
+                        diagnostics["duplicates_removed"] += len(cross_removed)
+                        diagnostics["merged_rows"] += len(cross_removed)
+                        removed_log.extend(cross_removed)
+                    resolved.extend(collapsed)
                     continue
 
         # Greedy merge chain: try to fold each next row into an accumulator bucket.
@@ -726,18 +884,8 @@ def resolve_cross_page_product_rows(
                         kind = kind2
                 if kind == "exact_duplicate":
                     bucket.append(nxt)
-                    # Richer OCR row becomes merge base (keeps real pack/values).
-                    bucket.sort(
-                        key=lambda r: (
-                            _row_print_richness(r),
-                            -int(
-                                r.get("page_number")
-                                or _extra(r).get("page_number")
-                                or 0
-                            ),
-                        ),
-                        reverse=True,
-                    )
+                    # Prefer identity-balancing OCR row, then richer, then earlier page.
+                    bucket.sort(key=_exact_duplicate_rank, reverse=True)
                     placed = True
                     diagnostics["exact_duplicates_collapsed"] += 1
                     diagnostics["duplicates_removed"] += 1
@@ -814,6 +962,7 @@ def resolve_cross_page_product_rows(
                 merged = merge_line_items(
                     bucket, identity_method=method, resolution="merged"
                 )
+                _prefer_earlier_packing(merged, bucket)
                 diagnostics["merged_rows"] += 1
                 resolved.append(merged)
 
@@ -1175,6 +1324,105 @@ def _rows_from_page_entry(page: Dict[str, Any]) -> List[Dict[str, Any]]:
     return [r for r in items if isinstance(r, dict)]
 
 
+def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Combine printed TOTAL sales/closing values across pages.
+
+    Identical values repeated on every page stay one grand total. Distinct
+    page/section subtotals are summed. Prefer explicit printed section amount
+    lists when present. Never invent — only use non-null printed totals.
+    """
+    sales_vals: List[float] = []
+    closing_vals: List[float] = []
+    section_sales: List[float] = []
+    section_closing: List[float] = []
+    extra_bits: Dict[str, Any] = {}
+    method = None
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        totals = page.get("totals") if isinstance(page.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        # Prefer manufacturer section amount rows when the page already summed them.
+        sections = extra.get("printed_section_amount_totals")
+        if isinstance(sections, list) and sections:
+            for sec in sections:
+                if not isinstance(sec, dict):
+                    continue
+                try:
+                    if sec.get("sales_value") is not None:
+                        section_sales.append(float(sec.get("sales_value")))
+                    if sec.get("closing_value") is not None:
+                        section_closing.append(float(sec.get("closing_value")))
+                except (TypeError, ValueError):
+                    pass
+        sv = totals.get("sales_value")
+        cv = totals.get("closing_value")
+        if sv is not None:
+            try:
+                sales_vals.append(float(sv))
+            except (TypeError, ValueError):
+                pass
+        if cv is not None:
+            try:
+                closing_vals.append(float(cv))
+            except (TypeError, ValueError):
+                pass
+        for key in (
+            "opening_qty",
+            "opening_value",
+            "receipts_qty",
+            "receipts_value",
+            "sales_qty",
+            "closing_qty",
+            "printed_amount_total_sales_value",
+            "printed_amount_total_closing_value",
+        ):
+            if extra.get(key) is not None:
+                extra_bits[key] = extra.get(key)
+        if isinstance(sections, list) and sections:
+            prev = list(extra_bits.get("printed_section_amount_totals") or [])
+            prev.extend(sec for sec in sections if isinstance(sec, dict))
+            extra_bits["printed_section_amount_totals"] = prev
+        if extra.get("extraction_method"):
+            method = extra.get("extraction_method")
+        elif page.get("extraction_method"):
+            method = page.get("extraction_method")
+
+    def _combine(vals: List[float]) -> Optional[float]:
+        if not vals:
+            return None
+        rounded = [round(v, 2) for v in vals]
+        if len(set(rounded)) == 1:
+            return rounded[0]
+        return round(sum(rounded), 2)
+
+    # Section rows are the printed manufacturer subtotals — prefer their sum.
+    sales_value = _combine(section_sales) if section_sales else _combine(sales_vals)
+    closing_value = (
+        _combine(section_closing) if section_closing else _combine(closing_vals)
+    )
+    if section_sales:
+        extra_bits["printed_amount_total_sales_value"] = round(sum(section_sales), 2)
+    if section_closing:
+        extra_bits["printed_amount_total_closing_value"] = round(
+            sum(section_closing), 2
+        )
+    logger.info(
+        "MULTIPAGE EXTRACTION printed_totals sales=%s closing=%s "
+        "section_rows=%s page_totals=%s",
+        sales_value,
+        closing_value,
+        len(section_sales),
+        len(sales_vals),
+    )
+    return {
+        "sales_value": sales_value,
+        "closing_value": closing_value,
+        "extra": extra_bits,
+        "extraction_method": method,
+    }
+
+
 def build_statement_from_page_group(
     group: Dict[str, Any],
     *,
@@ -1195,6 +1443,18 @@ def build_statement_from_page_group(
         all_items, page_count=page_span
     )
     meta = _metadata_from_pages(pages)
+    printed_totals = _pick_printed_page_totals(pages)
+    extra = {
+        "statement_month": group.get("period"),
+        "multipage_group_pages": list(page_numbers),
+        "cross_page_dedup": dedup_diag,
+    }
+    for key, value in (printed_totals.get("extra") or {}).items():
+        if value is not None:
+            extra[key] = value
+    if printed_totals.get("extraction_method"):
+        extra["extraction_method"] = printed_totals["extraction_method"]
+        extra["layout"] = "ssa_opening_receipt_issue_value"
     statement: Dict[str, Any] = {
         "source_file": source_file,
         "source_format": source_format,
@@ -1206,22 +1466,20 @@ def build_statement_from_page_group(
         "report_title": meta.get("report_title"),
         "line_items": resolved,
         "totals": {
-            "sales_value": None,
-            "closing_value": None,
-            "extra": {
-                "statement_month": group.get("period"),
-                "multipage_group_pages": list(page_numbers),
-                "cross_page_dedup": dedup_diag,
-            },
+            "sales_value": printed_totals.get("sales_value"),
+            "closing_value": printed_totals.get("closing_value"),
+            "extra": extra,
         },
     }
     logger.info(
         "MULTI_PAGE_GROUP_BUILT request_id=%s period=%s pages=%s "
-        "line_items=%s",
+        "line_items=%s sales_value=%s closing_value=%s",
         request_id or "-",
         group.get("period") or "none",
         page_numbers,
         len(resolved),
+        printed_totals.get("sales_value"),
+        printed_totals.get("closing_value"),
     )
     return statement
 
@@ -1401,6 +1659,11 @@ def extract_multipage_image_stock_statement(
             all_items.append(stamped)
 
         page_duration = time.perf_counter() - page_t0
+        page_totals = (
+            page_result.get("totals")
+            if isinstance(page_result.get("totals"), dict)
+            else {}
+        )
         page_entry = {
             "page_number": page_no,
             "filename": safe_name,
@@ -1414,6 +1677,12 @@ def extract_multipage_image_stock_statement(
             "period_to": page_result.get("period_to"),
             "report_title": page_result.get("report_title"),
             "stockist_address": page_result.get("stockist_address"),
+            # Keep printed TOTAL footer so group merge can surface sales/closing.
+            "totals": {
+                "sales_value": page_totals.get("sales_value"),
+                "closing_value": page_totals.get("closing_value"),
+                "extra": dict(extra) if isinstance(extra, dict) else {},
+            },
         }
         page_results.append(page_entry)
         logger.info(
@@ -1559,9 +1828,41 @@ def extract_multipage_image_stock_statement(
         "totals": {"extra": {}},
     }
     resolved = list(primary.get("line_items") or [])
-    dedup_diag = ((primary.get("totals") or {}).get("extra") or {}).get(
-        "cross_page_dedup"
-    ) or {}
+    primary_totals = (
+        primary.get("totals") if isinstance(primary.get("totals"), dict) else {}
+    )
+    primary_extra = (
+        primary_totals.get("extra")
+        if isinstance(primary_totals.get("extra"), dict)
+        else {}
+    )
+    dedup_diag = primary_extra.get("cross_page_dedup") or {}
+    method = primary_extra.get("extraction_method") or shared_extra.get(
+        "extraction_method"
+    )
+    if method and str(method).startswith("ssa_"):
+        engine = "ssa_qty_value_vision"
+        shared_extra["extraction_method"] = method
+        shared_extra["extraction_engine"] = engine
+        shared_extra["vision_table_final"] = False
+    merged_extra = {
+        **shared_extra,
+        "statement_count": 1,
+        "final_statement_count": 1,
+        "external_extraction_request_count": 1,
+        "cross_page_dedup": dedup_diag,
+    }
+    for key in (
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "receipts_value",
+        "sales_qty",
+        "closing_qty",
+        "layout",
+    ):
+        if primary_extra.get(key) is not None:
+            merged_extra[key] = primary_extra.get(key)
     merged: Dict[str, Any] = {
         "success": True,
         "is_multi_page": True,
@@ -1581,15 +1882,9 @@ def extract_multipage_image_stock_statement(
         "line_items": resolved,
         "page_results": page_results,
         "totals": {
-            "sales_value": None,
-            "closing_value": None,
-            "extra": {
-                **shared_extra,
-                "statement_count": 1,
-                "final_statement_count": 1,
-                "external_extraction_request_count": 1,
-                "cross_page_dedup": dedup_diag,
-            },
+            "sales_value": primary_totals.get("sales_value"),
+            "closing_value": primary_totals.get("closing_value"),
+            "extra": merged_extra,
         },
     }
     logger.info(

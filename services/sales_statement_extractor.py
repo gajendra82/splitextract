@@ -36643,21 +36643,35 @@ def _parse_product_wise_stock_statement_pdf(
 
 
 def _is_product_wise_stock_statement_photo_text(text: str) -> bool:
-    """Modi/Bindal-style Product wise stock statement photo (Sh.Exp Liqudation)."""
+    """Modi/Bindal/Amit-style Product wise stock statement photo.
+
+    Requires Opening/Receipt/Issues/Closing + amount/Sh.Exp. Title is preferred
+    but phone OCR may miss it; Packing+Box+amount still identifies the layout.
+    """
     if not text:
         return False
-    if not re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
-        return False
-    if not (
+    has_cols = (
         re.search(r"\bOpening\b", text, re.I)
         and re.search(r"\bClosing\b", text, re.I)
         and re.search(r"\bReceipt\b", text, re.I)
         # OCR noise: "__Issues" has no word-boundary before I.
         and re.search(r"(?<![A-Za-z])Issues?(?![A-Za-z])", text, re.I)
-    ):
+    )
+    if not has_cols:
         return False
+    has_amount = bool(
+        re.search(
+            r"Sh\.?\s*Exp|Liqudation|Liquidation|Sales\s+Amount|Closing\s+Amount",
+            text,
+            re.I,
+        )
+    )
+    if not has_amount:
+        return False
+    if re.search(r"Product\s+wise\s+stock\s+statement", text, re.I):
+        return True
     return bool(
-        re.search(r"Sh\.?\s*Exp|Liqudation|Liquidation", text, re.I)
+        re.search(r"\bBox\b", text, re.I) and re.search(r"\bPacking\b", text, re.I)
     )
 
 
@@ -36713,6 +36727,9 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
             low = re.sub(r"[^a-z0-9]", "", tok.lower())
             if low == "packing":
                 found["packing"] = xc
+            elif low == "box":
+                # Case-size column between Packing and Opening — never stock qty.
+                found["box"] = xc
             elif low == "opening":
                 found["opening"] = xc
             elif low == "qty":
@@ -36795,6 +36812,7 @@ def _pwss_photo_header_centers(words: List[Tuple[Any, ...]]) -> Optional[Dict[st
 def _pwss_photo_nearest_col(x: float, centers: Dict[str, float]) -> Optional[str]:
     keys = (
         "packing",
+        "box",
         "opening",
         "receipts",
         "receipts_free",
@@ -37068,11 +37086,16 @@ def _parse_product_wise_stock_statement_photo_panel(
     text: str,
     result: Dict[str, Any],
     seen: set,
-) -> List[Dict[str, Any]]:
-    """Parse one page panel of a Product wise stock statement photo."""
-    centers = _pwss_photo_header_centers(words)
+    carry_centers: Optional[Dict[str, float]] = None,
+) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, float]]]:
+    """Parse one page panel of a Product wise stock statement photo.
+
+    Continuation panels (page-2 crop without a header row) reuse carry_centers
+    from the prior panel so ZEAL/ZANDRA rows below the fold are not dropped.
+    """
+    centers = _pwss_photo_header_centers(words) or carry_centers
     if not centers:
-        return []
+        return [], carry_centers
 
     # Cluster words into rows
     sorted_words = sorted(words, key=lambda w: (float(w[1]), float(w[0])))
@@ -37085,6 +37108,7 @@ def _parse_product_wise_stock_statement_photo_panel(
             clusters.append([w])
 
     items: List[Dict[str, Any]] = []
+    section_amount_totals: List[Dict[str, float]] = []
     pack_left = centers.get("packing", 400.0) - 40.0
 
     for row_words in clusters:
@@ -37134,7 +37158,8 @@ def _parse_product_wise_stock_statement_photo_panel(
                     continue
             if re.fullmatch(r"-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?", tok):
                 col = _pwss_photo_nearest_col(xc, centers)
-                if col and col != "packing":
+                # Box case-size is never opening/receipt/issues qty.
+                if col and col not in {"packing", "box"}:
                     _pwss_photo_assign_number(bands, col, _to_float(tok))
                 continue
             # OCR glue like "27s50" spanning Opening+Receipt Qty.
@@ -37147,7 +37172,25 @@ def _parse_product_wise_stock_statement_photo_panel(
                 continue
 
         product_name = _clean_name(" ".join(name_parts))
+        # Manufacturer section amount total: money only, no product/packing.
+        if (not product_name or len(product_name) < 3) and not packing:
+            sa = bands.get("sales_amount")
+            ca = bands.get("closing_amount")
+            if (sa not in (None, 0.0)) or (ca not in (None, 0.0)):
+                section_amount_totals.append(
+                    {
+                        "sales_value": float(sa or 0.0),
+                        "closing_value": float(ca or 0.0),
+                    }
+                )
+            continue
         if not product_name or len(product_name) < 3:
+            continue
+        # Pack/unit OCR fragments (GM, WA, 30G) are never products.
+        if re.fullmatch(
+            r"(?i)(?:GM|GMS|G|ML|MG|WA|TAB|CAP|PCS?|\d+\s*G(?:M)?)",
+            product_name,
+        ):
             continue
         if re.match(r"(?i)^(HIMALAYA|Page\s*No|Product\s*Name|MODI)", product_name):
             if re.search(r"HIMALAYA|ZANDRA|DRUG", product_name, re.I) and not packing:
@@ -37233,6 +37276,25 @@ def _parse_product_wise_stock_statement_photo_panel(
             extra["liquidation_days"] = bands["liq"]
         items.append(item)
 
+    # Sum printed manufacturer section amount subtotals (OTX + ZANDRA + ZEAL).
+    if section_amount_totals:
+        extra_t = result["totals"].setdefault("extra", {})
+        prev = list(extra_t.get("printed_section_amount_totals") or [])
+        prev.extend(section_amount_totals)
+        extra_t["printed_section_amount_totals"] = prev
+        printed_sales = round(
+            sum(_to_float(t.get("sales_value")) for t in prev), 2
+        )
+        printed_closing = round(
+            sum(_to_float(t.get("closing_value")) for t in prev), 2
+        )
+        extra_t["printed_amount_total_sales_value"] = printed_sales
+        extra_t["printed_amount_total_closing_value"] = printed_closing
+        if result["totals"].get("sales_value") is None and printed_sales:
+            result["totals"]["sales_value"] = printed_sales
+        if result["totals"].get("closing_value") is None and printed_closing:
+            result["totals"]["closing_value"] = printed_closing
+
     # Footer totals from panel text when labels split across lines.
     if result["totals"].get("sales_value") is None:
         m = re.search(
@@ -37250,7 +37312,7 @@ def _parse_product_wise_stock_statement_photo_panel(
         )
         if m:
             result["totals"]["closing_value"] = _to_float(m.group(1))
-    return items
+    return items, centers
 
 
 def _extract_product_wise_stock_statement_image(
@@ -37279,10 +37341,17 @@ def _extract_product_wise_stock_statement_image(
 
     pytesseract = _a2z_tesseract()
     w, h = image.size
-    # Dual-page phone captures: split near mid when a second header appears.
+    # Dual-page phone captures: split near mid when page footers/headers repeat.
     panels: List[Any] = []
-    if h > w * 1.4 and re.search(r"Page\s*No\.?\s*1", peek, re.I):
-        panels = [image.crop((0, 0, w, int(h * 0.52))), image.crop((0, int(h * 0.48), w, h))]
+    if h > w * 1.4 and re.search(
+        r"Page\s*No\.?\s*[12]|Product\s+wise\s+stock\s+statement", peek, re.I
+    ):
+        # Prefer mid-split when both page markers appear, else still split tall
+        # captures that reprint the statement title (camera page overlap).
+        panels = [
+            image.crop((0, 0, w, int(h * 0.52))),
+            image.crop((0, int(h * 0.48), w, h)),
+        ]
     else:
         panels = [image]
 
@@ -37290,6 +37359,7 @@ def _extract_product_wise_stock_statement_image(
     result["report_title"] = "Product wise stock statement"
     items: List[Dict[str, Any]] = []
     seen: set = set()
+    carry_centers: Optional[Dict[str, float]] = None
 
     for panel in panels:
         wide = panel.resize((panel.width * 2, panel.height * 2), Image.Resampling.LANCZOS)
@@ -37313,11 +37383,10 @@ def _extract_product_wise_stock_statement_image(
                     tok,
                 )
             )
-        items.extend(
-            _parse_product_wise_stock_statement_photo_panel(
-                words, " ".join(text_parts), result, seen
-            )
+        panel_items, carry_centers = _parse_product_wise_stock_statement_photo_panel(
+            words, " ".join(text_parts), result, seen, carry_centers=carry_centers
         )
+        items.extend(panel_items)
 
     if len(items) < 5:
         return None
@@ -44675,9 +44744,31 @@ def _apply_ssa_qty_value_fields(
                 # Laravel reads top-level opening_value / receipts_value.
                 if key in {"opening_value", "receipts_value"}:
                     item[key] = number
-    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
-    extra_t["extraction_method"] = "ssa_qty_value_vision"
-    extra_t["layout"] = "ssa_opening_receipt_issue_value"
+    totals = result.setdefault("totals", {})
+    raw_totals = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+    raw_extra = (
+        raw_totals.get("extra") if isinstance(raw_totals.get("extra"), dict) else {}
+    )
+    # Printed TOTAL footer → top-level sales/closing value (never invent).
+    for key in ("sales_value", "closing_value"):
+        if totals.get(key) is None and raw_totals.get(key) is not None:
+            totals[key] = _to_float(raw_totals.get(key))
+    extra_t = totals.setdefault("extra", {})
+    if isinstance(extra_t, dict):
+        for key in (
+            "opening_qty",
+            "opening_value",
+            "receipts_qty",
+            "receipts_value",
+            "sales_qty",
+            "closing_qty",
+        ):
+            if extra_t.get(key) is None and raw_extra.get(key) is not None:
+                extra_t[key] = _to_float(raw_extra.get(key))
+            elif extra_t.get(key) is None and raw_totals.get(key) is not None:
+                extra_t[key] = _to_float(raw_totals.get(key))
+        extra_t["extraction_method"] = "ssa_qty_value_vision"
+        extra_t["layout"] = "ssa_opening_receipt_issue_value"
     return result
 
 
@@ -45309,6 +45400,12 @@ Read EVERY product row on this page before the TOTAL / Continued footer.
 CLOSING QTY and CLOSING VALUE are the rightmost stock columns — never leave
 them 0 when the printed Closing cell is non-zero (e.g. ARJUNA Opening 26 /
 Issue 0 / Closing 26).
+If a TOTAL / GRAND TOTAL footer row is printed, copy its ISSUE VALUE into
+totals.sales_value and its CLOSING VALUE into totals.closing_value, and put
+OPENING/RECEIPT/ISSUE/CLOSING qty+value into totals.extra. Never invent
+totals when the footer is absent or unreadable.
+Keep each product on its own row. Do not move one product's CLOSING onto the
+next product. Negative OPENING is allowed when printed (e.g. -3 / -610.98).
 """
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     payload = {
@@ -45347,7 +45444,18 @@ Issue 0 / Closing 26).
             skip_ocr_gate,
         )
         return None
-    parsed["line_items"] = _ssa_dump_repair_items(parsed.get("line_items") or [])
+    # Drop TOTAL / Continued / company banner rows mistaken for products.
+    cleaned_raw: List[Dict[str, Any]] = []
+    for raw in parsed.get("line_items") or []:
+        if not isinstance(raw, dict):
+            continue
+        name = str(raw.get("product_name") or "")
+        if re.match(r"^\s*(?:TOTAL|GRAND\s+TOTAL|CONTINUED)\b", name, re.I):
+            continue
+        if re.search(r"HIMALAYA\s+WELLNESS|END\s+OF\s+REPORT|PAGE\s*NO", name, re.I):
+            continue
+        cleaned_raw.append(raw)
+    parsed["line_items"] = _ssa_dump_repair_items(cleaned_raw)
     result = empty_result(filename, ext.lstrip(".") or "jpg")
     result = _apply_ssa_qty_value_fields(result, parsed)
     # Repair before the quality gate — scanned sheets often omit opening_value.
@@ -45556,6 +45664,113 @@ def _ssa_dump_sales_closing_cascade_enabled() -> bool:
     }
 
 
+def _ssa_dump_unreadable_ocr_skip_enabled() -> bool:
+    """STOCK_SSA_DUMP_UNREADABLE_OCR_SKIP — SSA dump before VT when OCR is noise.
+
+    Default ON. Phone photos of OPENING/RECEIPT/ISSUE/CLOSING qty+value sheets
+    often OCR as gibberish, so the SSA dump gate never fires and vision_table
+    parks VALUE money under qty. Skip the Tesseract title gate and let the
+    dedicated qty/value reader claim usable rows. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_SSA_DUMP_UNREADABLE_OCR_SKIP", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
+    """True when a phone photo likely hides an SSA qty/value grid from OCR.
+
+    Portrait buffers and EXIF 6/8 sideways shots OCR as noise while the pixels
+    still hold OPENING/RECEIPT/ISSUE/CLOSING × QTY/VALUE. Does not claim Medica
+    OPSTK / OPBAL sheets.
+    """
+    if re.search(r"\bOPSTK\b|\bOPBAL\b|\bPURCH\b|\bSALE\s*VAL\b", peek or "", re.I):
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", peek or "", re.I):
+        return True
+    if _is_ssa_opening_receipt_issue_dump_text_fuzzy(peek or ""):
+        return True
+    try:
+        from PIL import Image, ImageOps
+
+        img = Image.open(io.BytesIO(file_bytes))
+        exif = img.getexif()
+        orientation = int(exif.get(274) or 1) if exif else 1
+        img = ImageOps.exif_transpose(img)
+        width, height = img.size
+    except Exception:
+        return False
+    portrait = height >= int(width * 1.15)
+    sideways_exif = orientation in {5, 6, 7, 8}
+    if not (portrait or sideways_exif):
+        return False
+    # Need some letter noise so blank/non-statement photos stay out.
+    letters = len(re.findall(r"[A-Za-z]{3,}", peek or ""))
+    money = bool(re.search(r"\d+\.\d{2}", peek or ""))
+    return letters >= 3 or money or sideways_exif
+
+
+def _ssa_dump_dump_as_closing_enabled() -> bool:
+    """STOCK_SSA_DUMP_DUMP_AS_CLOSING — DUMP QTY holds printed CLOSING QTY."""
+    return os.getenv(
+        "STOCK_SSA_DUMP_DUMP_AS_CLOSING", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_money_in_qty_row_count(result: Optional[Dict[str, Any]]) -> int:
+    """Count rows where a core qty slot holds rupee-like money (paisa)."""
+    if not isinstance(result, dict):
+        return 0
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+            try:
+                val = float(item.get(key))
+            except (TypeError, ValueError):
+                continue
+            if abs(val) >= 1.0 and abs(val - int(val)) > 0.001:
+                hits += 1
+                break
+    return hits
+
+
+def _ssa_dump_vision_table_needs_rescue(result: Optional[Dict[str, Any]]) -> bool:
+    """True when VT parked VALUE money into qty on an SSA-like page."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    money_rows = _ssa_dump_money_in_qty_row_count(result)
+    if money_rows < max(3, len(items) // 4):
+        return False
+    title = str(result.get("report_title") or "")
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I):
+        return True
+    # VT often leaves a generic title; money-in-qty plus DUMP/opening_value cues.
+    dump_hits = 0
+    open_val_hits = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if abs(_to_float(extra.get("dump_qty"))) > 0:
+            dump_hits += 1
+        if abs(_ssa_dump_item_opening_value(item)) > 0:
+            open_val_hits += 1
+    return dump_hits >= 2 or open_val_hits >= 2
+
+
 def _ssa_dump_row_balances(
     opening: float, receipt: float, sales: float, closing: float
 ) -> bool:
@@ -45611,8 +45826,9 @@ def _ssa_dump_shift_sales_closing_cascade(
         r_n = _to_float(nxt.get("receipts_qty"))
         s_n = _to_float(nxt.get("sales_qty"))
         c_n = _ssa_dump_effective_closing_qty(nxt)
-        # Donor must carry a non-trivial sales/closing block.
-        if s_c == 0 and c_c == 0:
+        # Donor must carry a real ISSUE qty. Zero-sale rows with a printed
+        # closing are normal on these sheets — never cascade them downward.
+        if abs(s_c) < 0.01:
             continue
         if _ssa_dump_row_balances(o_c, r_c, s_c, c_c):
             continue
@@ -45666,6 +45882,60 @@ def _ssa_dump_shift_sales_closing_cascade(
     return items
 
 
+def _ssa_dump_repair_dump_holds_closing(item: Dict[str, Any]) -> bool:
+    """When DUMP QTY is the printed CLOSING QTY, move it back (no invented digits).
+
+    Vision sometimes parks CLOSING under DUMP and puts the next row's opening
+    into CLOSING. If opening+receipt-sales equals DUMP and not CLOSING, re-slot
+    DUMP→closing_qty and clear the contaminated closing_value.
+    Only when CLOSING looks contaminated (money, or next-row negative open).
+    """
+    if not _ssa_dump_dump_as_closing_enabled() or not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return False
+    opening = _to_float(item.get("opening_qty"))
+    receipt = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _to_float(item.get("closing_qty"))
+    dump = _to_float(extra.get("dump_qty"))
+    if abs(dump) < 0.001:
+        return False
+    # DUMP is often equal to CLOSING on these sheets — leave alone when balanced.
+    if _ssa_dump_row_balances(opening, receipt, sales, closing):
+        return False
+    if not _ssa_dump_row_balances(opening, receipt, sales, dump):
+        return False
+    # Prefer whole DUMP counts (qty), never money.
+    if abs(dump - int(dump)) > 0.001:
+        return False
+    closing_value = _to_float(item.get("closing_value"))
+    closing_looks_money = abs(closing) >= 1.0 and abs(closing - int(closing)) > 0.001
+    closing_value_looks_next_open = closing < -0.01 and closing_value < -0.01
+    if not (closing_looks_money or closing_value_looks_next_open):
+        return False
+    logger.info(
+        "SSA_DUMP_DUMP_AS_CLOSING product=%s dump=%s was_closing=%s",
+        str(item.get("product_name") or "")[:50],
+        dump,
+        closing,
+    )
+    item["closing_qty"] = float(dump)
+    item["closing_value"] = None
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["closing_qty"] = "printed"
+        fs["closing_value"] = "missing"
+        fs["dump_qty"] = "missing"
+    extra["dump_qty"] = None
+    flags = list(extra.get("flags") or [])
+    if "SSA_DUMP_DUMP_AS_CLOSING" not in flags:
+        flags.append("SSA_DUMP_DUMP_AS_CLOSING")
+    extra["flags"] = flags
+    return True
+
+
 def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Fill missing opening_qty/value and move a shifted 100ML block off the BIG row."""
     repaired: List[Dict[str, Any]] = []
@@ -45683,6 +45953,7 @@ def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             inferred = _ssa_dump_infer_opening_qty(item)
             if inferred > 0:
                 item["opening_qty"] = inferred
+        _ssa_dump_repair_dump_holds_closing(item)
         repaired.append(item)
     repaired = _ssa_dump_move_opening_row_up(repaired)
     repaired = _ssa_dump_shift_sales_closing_cascade(repaired)
@@ -59325,6 +59596,30 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             type(exc).__name__,
         )
 
+    # Product wise stock statement photos (Packing|Box|Opening|Receipt|Issues|
+    # Closing|Sales amount). Must beat STOCK_VISION_TABLE — Vision parks Box=1
+    # in opening_qty, zeros sales_value, and drops section totals.
+    try:
+        _pwss_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+        if _is_product_wise_stock_statement_photo_text(_pwss_peek):
+            pwss_img = _extract_product_wise_stock_statement_image(
+                file_bytes, filename, ext, peek_text=_pwss_peek
+            )
+            if pwss_img and pwss_img.get("line_items"):
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=product_wise_photo "
+                    "file=%s rows=%s path=PRODUCT_WISE_OCR",
+                    filename,
+                    len(pwss_img.get("line_items") or []),
+                )
+                return pwss_img
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s product_wise photo OCR skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+
     # Phase 2b-2: schema-agnostic Vision table as PRIMARY path (flag OFF = no-op).
     try:
         from services.stock_vision_table import (
@@ -59532,6 +59827,58 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=ssa_qty_value_sheets",
                 filename,
             )
+        # SSA OPENING/RECEIPT/ISSUE/CLOSING qty+value photos: prefer dump reader
+        # before VT (VT parks VALUE under qty). Runs for unreadable OCR, phone
+        # sideways shots, AND when peek already sees the ANALYSIS title.
+        _ssa_phone = _ssa_dump_phone_photo_candidate(file_bytes, _op_stk_peek or "")
+        if (
+            _ssa_dump_unreadable_ocr_skip_enabled()
+            and not _skip_vt_for_op_stk
+            and not _opbal_excess_peek
+            and (_peek_unreadable or _ssa_phone or _ssa_sheets_qty_value)
+        ):
+            try:
+                ssa_unread = _extract_ssa_opening_receipt_issue_dump_image(
+                    file_bytes,
+                    filename,
+                    ext,
+                    skip_ocr_gate=bool(
+                        _peek_unreadable or _ssa_phone or not _ssa_sheets_qty_value
+                    ),
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s SSA dump unreadable-OCR skip failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                ssa_unread = None
+            if ssa_unread and ssa_unread.get("line_items"):
+                money_u = _ssa_dump_money_in_qty_row_count(ssa_unread)
+                rows_u = len(ssa_unread.get("line_items") or [])
+                # Reject dump results that still park money in qty (wrong layout).
+                if money_u <= max(2, rows_u // 5):
+                    extra_u = ssa_unread.setdefault("totals", {}).setdefault("extra", {})
+                    if isinstance(extra_u, dict):
+                        extra_u["early_vision_reason"] = "ssa_dump_unreadable_ocr_skip"
+                        extra_u["ssa_phone_photo_candidate"] = bool(_ssa_phone)
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_unreadable_ocr "
+                        "file=%s line_items=%s money_in_qty=%s phone=%s sheets=%s",
+                        filename,
+                        rows_u,
+                        money_u,
+                        bool(_ssa_phone),
+                        bool(_ssa_sheets_qty_value),
+                    )
+                    return ssa_unread
+                logger.info(
+                    "[SalesStatement] file=%s SSA dump unreadable-OCR rejected "
+                    "money_in_qty=%s rows=%s continuing",
+                    filename,
+                    money_u,
+                    rows_u,
+                )
         if _try_medica_before_vt:
             logger.info(
                 "[SalesStatement] file=%s medica probe before VT "
@@ -59644,6 +59991,50 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         "gemini_budget": outcome.get("gemini_budget") or 2,
                     }
                 else:
+                    # VT money-in-qty on OPENING/RECEIPT/ISSUE/CLOSING → SSA dump.
+                    if (
+                        _ssa_dump_unreadable_ocr_skip_enabled()
+                        and _ssa_dump_vision_table_needs_rescue(result)
+                    ):
+                        logger.info(
+                            "[SalesStatement] file=%s VISION_TABLE ssa_qty_value "
+                            "money_in_qty rescue=ssa_dump rows=%s money_rows=%s",
+                            filename,
+                            len(result.get("line_items") or []),
+                            _ssa_dump_money_in_qty_row_count(result),
+                        )
+                        try:
+                            ssa_rescue = _extract_ssa_opening_receipt_issue_dump_image(
+                                file_bytes, filename, ext, skip_ocr_gate=True
+                            )
+                        except Exception as exc:
+                            logger.info(
+                                "[SalesStatement] file=%s SSA dump VT rescue failed: %s",
+                                filename,
+                                type(exc).__name__,
+                            )
+                            ssa_rescue = None
+                        if ssa_rescue and ssa_rescue.get("line_items"):
+                            rescue_money = _ssa_dump_money_in_qty_row_count(ssa_rescue)
+                            vt_money = _ssa_dump_money_in_qty_row_count(result)
+                            if rescue_money < vt_money:
+                                extra_r = ssa_rescue.setdefault("totals", {}).setdefault(
+                                    "extra", {}
+                                )
+                                if isinstance(extra_r, dict):
+                                    extra_r["early_vision_reason"] = (
+                                        "ssa_dump_after_vt_money_in_qty"
+                                    )
+                                    extra_r["vision_table_ssa_rescue"] = True
+                                logger.info(
+                                    "[STOCK_EXTRACTION_PATH] stage=ssa_dump_vt_rescue "
+                                    "file=%s line_items=%s vt_money=%s rescue_money=%s",
+                                    filename,
+                                    len(ssa_rescue.get("line_items") or []),
+                                    vt_money,
+                                    rescue_money,
+                                )
+                                return ssa_rescue
                     _diag["selected_path"] = "VISION_TABLE"
                     extra = result.setdefault("totals", {}).setdefault("extra", {})
                     if isinstance(extra, dict):
@@ -59731,6 +60122,57 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 request_id,
                 outcome.get("reason"),
             )
+            # VT valid_ratio_low on SSA qty/value photos: try dump before legacy
+            # gemini_extraction_fallback (which also parks VALUE under qty).
+            _vt_fb = (
+                outcome.get("result") if isinstance(outcome.get("result"), dict) else {}
+            )
+            if (
+                _ssa_dump_unreadable_ocr_skip_enabled()
+                and (
+                    _ssa_dump_vision_table_needs_rescue(_vt_fb)
+                    or str(outcome.get("reason") or "") == "valid_ratio_low"
+                )
+                and (
+                    _ssa_dump_phone_photo_candidate(file_bytes, _op_stk_peek or "")
+                    or _peek_unreadable
+                    or _ssa_dump_vision_table_needs_rescue(_vt_fb)
+                )
+            ):
+                try:
+                    ssa_fb = _extract_ssa_opening_receipt_issue_dump_image(
+                        file_bytes, filename, ext, skip_ocr_gate=True
+                    )
+                except Exception as exc:
+                    logger.info(
+                        "[SalesStatement] file=%s SSA dump after VT fallback failed: %s",
+                        filename,
+                        type(exc).__name__,
+                    )
+                    ssa_fb = None
+                if ssa_fb and ssa_fb.get("line_items"):
+                    fb_money = _ssa_dump_money_in_qty_row_count(ssa_fb)
+                    vt_money = _ssa_dump_money_in_qty_row_count(_vt_fb)
+                    if fb_money <= max(2, len(ssa_fb.get("line_items") or []) // 5) and (
+                        vt_money == 0 or fb_money < vt_money or vt_money >= 3
+                    ):
+                        extra_fb = ssa_fb.setdefault("totals", {}).setdefault("extra", {})
+                        if isinstance(extra_fb, dict):
+                            extra_fb["early_vision_reason"] = (
+                                "ssa_dump_after_vt_fallback"
+                            )
+                            extra_fb["vision_table_fallback_reason"] = outcome.get(
+                                "reason"
+                            )
+                        logger.info(
+                            "[STOCK_EXTRACTION_PATH] stage=ssa_dump_vt_fallback "
+                            "file=%s line_items=%s vt_money=%s dump_money=%s",
+                            filename,
+                            len(ssa_fb.get("line_items") or []),
+                            vt_money,
+                            fb_money,
+                        )
+                        return ssa_fb
             if str(outcome.get("reason") or "") == "medica_columns_collapsed":
                 try:
                     medica_fb = _extract_medica_stock_statement_vision(
