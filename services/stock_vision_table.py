@@ -247,8 +247,9 @@ def _classify_layout_cell(text: Any) -> str:
     # is not shifted and CLOSING is not filled with ISSUE VALUE money.
     # STOCK_VISION_RATE_PACK_PEEL (default ON) also matches RATE-column packs
     # like 30,S CAP / 1PACK / L SIZE / JAR that otherwise shift OPENING left.
+    # GH = common phone-OCR slip for GM (ALITHEA 30GH etc.).
     pack_core = (
-        r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
+        r"\d+\s*(?:GM|GMS|GR|GH|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G)\.?"
         r"|\d+\s*'"  # 30' / 60' tablet pack (OCR of 60'S without S)
         r"|\d+\s*[,']?\s*[Ss]\.?"
         r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?"
@@ -256,7 +257,7 @@ def _classify_layout_cell(text: Any) -> str:
     )
     if _rate_pack_peel_enabled():
         pack_core = (
-            r"\d+\s*(?:GM|GMS|GR|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G|L|LTR|LITRE)\.?"
+            r"\d+\s*(?:GM|GMS|GR|GH|ML|MG|TAB|TABS|CAP|CAPS|PCS?|NOS?|KG|G|L|LTR|LITRE)\.?"
             r"|\d+\s*'"  # 30' / 60' tablet pack
             r"|\d+\s*[,']?\s*[Ss]\.?(?:\s*(?:CAP|CAPS|TAB|TABS|TABLETS?))?"
             r"|\d+\s*[xX*×+]\s*\d+(?:\s*'?S)?(?:\s*(?:TAB|TABS|CAP|CAPS|ML|GM|G))?"
@@ -2482,16 +2483,41 @@ def _try_fanout_group_qty_value_header_rows(
         if len(qv_children) < 2 * len(group_parents):
             continue
         qv_children = qv_children[: 2 * len(group_parents)]
+        first_parent_idx = int(
+            group_parents[0].get("col_index")
+            if group_parents[0].get("col_index") is not None
+            else 0
+        )
         leading = [
             p
             for p in parents
             if int(p.get("col_index") if p.get("col_index") is not None else -1)
-            < int(
-                group_parents[0].get("col_index")
-                if group_parents[0].get("col_index") is not None
+            < first_parent_idx
+        ]
+        # Vision often emits ITEM DESCRIPTION on the QTY/VALUE child row at
+        # col 0 while OPENING/RECEIPT parents start at col 1. Parent-only
+        # leading then drops the product column and maps QTY→col 0.
+        if not leading and os.getenv(
+            "STOCK_VISION_FANOUT_CHILD_LEADING", "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}:
+            first_qv_idx = int(
+                qv_children[0].get("col_index")
+                if qv_children[0].get("col_index") is not None
                 else 0
             )
-        ]
+            leading = [
+                c
+                for c in children
+                if int(c.get("col_index") if c.get("col_index") is not None else -1)
+                < first_qv_idx
+                and not _header_cell_is_qty_value_child(c.get("text"))
+                and not _header_cell_movement_group(c.get("text"))
+            ]
+            if leading:
+                logger.info(
+                    "VISION_TABLE GROUP_QTY_VALUE_FANOUT_CHILD_LEADING cols=%s",
+                    [str(c.get("text") or "") for c in leading],
+                )
         out: List[Dict[str, Any]] = []
         col_i = 0
         for cell in leading:
@@ -3089,6 +3115,61 @@ def _vision_result_is_qty_only_op_pur_sales_cl(result: Dict[str, Any]) -> bool:
     return bool(has_open and has_pur and has_sale and has_close)
 
 
+def _vision_result_is_oric_qty_value_grid(result: Dict[str, Any]) -> bool:
+    """OPENING|RECEIPT|ISSUE|CLOSING × QTY|VALUE (STOCK & SALES ANALYSIS)."""
+    extra = (result.get("totals") or {}).get("extra") or {}
+    column_map = extra.get("column_map") or []
+    canons: set = set()
+    if isinstance(column_map, list):
+        for col in column_map:
+            if not isinstance(col, dict):
+                continue
+            c = str(col.get("canonical") or "").strip()
+            if c:
+                canons.add(c)
+    needed = {
+        "opening_qty",
+        "opening_value",
+        "purchase_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }
+    return needed.issubset(canons)
+
+
+def _vision_result_oric_qv_money_hits(result: Dict[str, Any]) -> int:
+    """Rows with a printed opening_value or closing_value money cell."""
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        fs = (item.get("extra") or {}).get("field_source") or {}
+        money = False
+        for field in ("opening_value", "closing_value", "sales_value"):
+            if fs.get(field) != "printed":
+                continue
+            try:
+                if abs(float(item.get(field) or 0)) > 0.01:
+                    money = True
+                    break
+            except (TypeError, ValueError):
+                continue
+        if not money:
+            ex = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            if fs.get("purchase_value") == "printed":
+                try:
+                    if abs(float((ex or {}).get("purchase_value") or 0)) > 0.01:
+                        money = True
+                except (TypeError, ValueError):
+                    pass
+        if money:
+            hits += 1
+    return hits
+
+
 def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
     """True when Vision headers are qty-only movement cols (no VALUE).
 
@@ -3108,6 +3189,32 @@ def _vision_headers_qty_only_oric(item: Dict[str, Any]) -> bool:
         re.search(r"\b(?:RECEIPT|ISSUE|SALE|PURCH)", blob)
     )
     return has_open and has_close and has_mid
+
+
+def _vision_headers_look_like_oric_qty_value(item: Dict[str, Any]) -> bool:
+    """True when Vision headers are OPENING…CLOSING × QTY|VALUE (SSA ANALYSIS)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    money_printed = bool(
+        fs.get("opening_value") == "printed"
+        or fs.get("closing_value") == "printed"
+        or fs.get("sales_value") == "printed"
+        or fs.get("purchase_value") == "printed"
+    )
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)) or not headers:
+        return money_printed
+    blob = " ".join(str(h or "").upper() for h in headers)
+    if not re.search(r"\bVAL(?:UE)?\b", blob):
+        return False
+    has_open = bool(re.search(r"\bOPEN", blob))
+    has_close = bool(re.search(r"\bCLOS", blob))
+    has_mid = bool(re.search(r"\b(?:RECEIPT|ISSUE|SALE|PURCH)", blob))
+    if has_open and has_close and has_mid:
+        return True
+    # Child-only QTY/VALUE fanout headers omit OPEN/CLOS parent text.
+    qty_hits = len(re.findall(r"\bQTY\.?\b", blob))
+    return money_printed and qty_hits >= 3
 
 
 def _repair_closing_qty_parked_in_value(item: Dict[str, Any]) -> bool:
@@ -4040,12 +4147,47 @@ def _align_oric_qv_cells_after_pack_peel(
         out = out + [None] * (width - len(out))
     body = out[1:9]
     filled_idx = [i for i, v in enumerate(body) if _cell_numeric_or_zero(v) is not None]
-    if len(filled_idx) not in {6, 7}:
+    # 5 = dash OPENING pair + blank ISSUE qty (rq|rv|iv|cq|cv).
+    # 6–7 = existing blank ISSUE / blank receipt-VALUE pads.
+    if len(filled_idx) not in {5, 6, 7}:
         return cells, column_count
     filled = [body[i] for i in filled_idx]
     new_body: Optional[List[Any]] = None
 
-    if len(filled) == 6:
+    lead_open_blank = _cell_numeric_or_zero(body[0]) is None
+
+    if len(filled) == 5:
+        # D) Dash OPENING pair + blank ISSUE qty: rq|rv|iv|cq|cv.
+        # Common on STOCK & SALES ANALYSIS photos when open is "-" / 0.00
+        # omitted and ISSUE qty is "-". Identity: receipt ≈ closing.
+        rq = _cell_numeric_or_zero(filled[0])
+        rv = _cell_numeric_or_zero(filled[1])
+        iv = _cell_numeric_or_zero(filled[2])
+        cq = _cell_numeric_or_zero(filled[3])
+        cv = _cell_numeric_or_zero(filled[4])
+        if (
+            lead_open_blank
+            and rq is not None
+            and cq is not None
+            and _is_oric_whole_qty_token(rq)
+            and _is_oric_whole_qty_token(cq)
+            and abs(rq - cq) <= 0.51
+            and rv is not None
+            and cv is not None
+            and (_has_paisa(rv) or abs(rv) >= 1.0)
+            and (_has_paisa(cv) or abs(cv) >= 1.0)
+        ):
+            new_body = [
+                None,
+                None,
+                filled[0],
+                filled[1],
+                None,
+                filled[2],
+                filled[3],
+                filled[4],
+            ]
+    elif len(filled) == 6:
         oq = _cell_numeric_or_zero(filled[0])
         ov = _cell_numeric_or_zero(filled[1])
         a = _cell_numeric_or_zero(filled[2])
@@ -4099,6 +4241,36 @@ def _align_oric_qv_cells_after_pack_peel(
                 filled[3],
                 filled[4],
             ]
+        # F) Dash OPENING qty only; blank ISSUE qty: ov|rq|rv|iv|cq|cv.
+        elif lead_open_blank:
+            ov_f = _cell_numeric_or_zero(filled[0])
+            rq_f = _cell_numeric_or_zero(filled[1])
+            rv_f = _cell_numeric_or_zero(filled[2])
+            iv_f = _cell_numeric_or_zero(filled[3])
+            cq_f = _cell_numeric_or_zero(filled[4])
+            cv_f = _cell_numeric_or_zero(filled[5])
+            if (
+                ov_f is not None
+                and rq_f is not None
+                and cq_f is not None
+                and _is_oric_whole_qty_token(rq_f)
+                and _is_oric_whole_qty_token(cq_f)
+                and abs(rq_f - cq_f) <= 0.51
+                and rv_f is not None
+                and cv_f is not None
+                and (_has_paisa(rv_f) or abs(rv_f) >= 1.0)
+                and (_has_paisa(cv_f) or abs(cv_f) >= 1.0)
+            ):
+                new_body = [
+                    None,
+                    filled[0],
+                    filled[1],
+                    filled[2],
+                    None,
+                    filled[3],
+                    filled[4],
+                    filled[5],
+                ]
     elif len(filled) == 7:
         # Blank receipt VALUE: oq,ov,rq,iq,iv,cq,cv — insert null after rq.
         oq = _cell_numeric_or_zero(filled[0])
@@ -4116,6 +4288,67 @@ def _align_oric_qv_cells_after_pack_peel(
             and abs((oq + rq - iq) - cq) <= 0.51
         ):
             new_body = list(filled[:3]) + [None] + list(filled[3:7])
+        # G) Dash OPENING qty + blank RECEIPT value:
+        #    ov|rq|iq|iv|cq|cv|dump with rq often 0.00 — pad rq→rv null.
+        elif lead_open_blank:
+            ov = _cell_numeric_or_zero(filled[0])
+            rq = _cell_numeric_or_zero(filled[1])
+            iq = _cell_numeric_or_zero(filled[2])
+            iv = _cell_numeric_or_zero(filled[3])
+            cq = _cell_numeric_or_zero(filled[4])
+            cv = _cell_numeric_or_zero(filled[5])
+            if (
+                ov is not None
+                and rq is not None
+                and iq is not None
+                and cq is not None
+                and _is_oric_whole_qty_token(iq)
+                and (_has_paisa(iv) or (iv is not None and abs(iv) >= 1.0))
+                and abs((0.0 + rq - iq) - cq) <= 0.51
+            ):
+                new_body = [
+                    None,
+                    filled[0],
+                    filled[1],
+                    None,
+                    filled[2],
+                    filled[3],
+                    filled[4],
+                    filled[5],
+                ]
+        # H) Pack peel dropped OPENING qty: ov|rq|rv|iq|iv|cq|cv (first is money).
+        # Alternating money/qty after peel — do not require open=0 identity
+        # (printed close may include DUMP/free and fail rq-iq≈cq).
+        elif oq is not None and _has_paisa(oq):
+            rq_h = _cell_numeric_or_zero(filled[1])
+            rv_h = _cell_numeric_or_zero(filled[2])
+            iq_h = _cell_numeric_or_zero(filled[3])
+            iv_h = _cell_numeric_or_zero(filled[4])
+            cq_h = _cell_numeric_or_zero(filled[5])
+            cv_h = _cell_numeric_or_zero(filled[6])
+            if (
+                rq_h is not None
+                and iq_h is not None
+                and cq_h is not None
+                and _is_oric_whole_qty_token(rq_h)
+                and _is_oric_whole_qty_token(iq_h)
+                and _is_oric_whole_qty_token(cq_h)
+                and rv_h is not None
+                and cv_h is not None
+                and (_has_paisa(rv_h) or abs(rv_h) >= 1.0)
+                and (_has_paisa(iv_h) or (iv_h is not None and abs(iv_h) >= 1.0))
+                and (_has_paisa(cv_h) or abs(cv_h) >= 1.0)
+            ):
+                new_body = [
+                    None,
+                    filled[0],
+                    filled[1],
+                    filled[2],
+                    filled[3],
+                    filled[4],
+                    filled[5],
+                    filled[6],
+                ]
 
     if new_body is None or len(new_body) != 8:
         return cells, column_count
@@ -8901,6 +9134,39 @@ def merge_reread(
                 str(item.get("product_name") or "")[:80],
             )
             accept = False
+        # ORIC qty|value: never replace a printed CLOSING with a reread that
+        # dropped it (pack-column shift on recovery crops).
+        try:
+            _first_cq = abs(float(item.get("closing_qty") or 0))
+        except (TypeError, ValueError):
+            _first_cq = 0.0
+        try:
+            _first_cv = abs(float(item.get("closing_value") or 0))
+        except (TypeError, ValueError):
+            _first_cv = 0.0
+        _first_has_close = (
+            (fs.get("closing_qty") == "printed" and _first_cq > 0.01)
+            or (fs.get("closing_value") == "printed" and _first_cv > 0.01)
+        )
+        if (
+            accept
+            and os.getenv(
+                "STOCK_VISION_ORIC_QV_KEEP_PRINTED_CLOSING", "true"
+            ).strip().lower()
+            in {"1", "true", "yes", "on"}
+            and _first_has_close
+            and cfs.get("closing_qty") != "printed"
+            and cfs.get("closing_value") != "printed"
+            and _vision_headers_look_like_oric_qty_value(item)
+        ):
+            logger.info(
+                "VISION_REREAD_ORIC_QV_KEEP_CLOSING product=%s "
+                "first_cq=%s first_cv=%s",
+                str(item.get("product_name") or "")[:60],
+                item.get("closing_qty"),
+                item.get("closing_value"),
+            )
+            accept = False
         if accept:
             out.append(candidate)
         else:
@@ -9405,7 +9671,34 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
             valid_ratio,
         )
         return None
+
+    def _keep_oric_qty_value_money() -> bool:
+        if not (
+            _vision_result_is_oric_qty_value_grid(result)
+            and os.getenv(
+                "STOCK_VISION_KEEP_ORIC_QTY_VALUE", "true"
+            ).strip().lower()
+            in {"1", "true", "yes", "on"}
+        ):
+            return False
+        money_hits = _vision_result_oric_qv_money_hits(result)
+        if money_hits < 3:
+            return False
+        logger.info(
+            "VISION_TABLE quality_fallback skip "
+            "reason=keep_oric_qty_value_money "
+            "valid_ratio=%s money_hits=%s rows=%s",
+            valid_ratio,
+            money_hits,
+            len(items),
+        )
+        return True
+
     if missing / max(len(items), 1) >= 0.50:
+        # Same ORIC qty|value keep as valid_ratio_low — header-driven zeroes
+        # every VALUE column on STOCK & SALES ANALYSIS photos.
+        if _keep_oric_qty_value_money():
+            return None
         return "missing_value_ratio_high"
     nonzero = False
     for item in items:
@@ -9449,6 +9742,10 @@ def _vision_table_quality_fallback_reason(result: Dict[str, Any]) -> Optional[st
                     len(items),
                 )
                 return None
+        # STOCK & SALES ANALYSIS qty|value: pack/dash align recovers many rows;
+        # falling through to header-driven zeroes every VALUE column.
+        if _keep_oric_qty_value_money():
+            return None
         return "valid_ratio_low"
     return None
 

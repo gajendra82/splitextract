@@ -21233,18 +21233,66 @@ def _product_wise_is_company_banner(name: str) -> bool:
     return bool(re.fullmatch(r"HIMALAYA\s*-?\s*ZEAL", text, re.I))
 
 
+def _product_wise_banner_has_stock_sku_payload(item: Dict[str, Any]) -> bool:
+    """Bare 'HIMALAYA ZEAL' can be a real SKU on STOCK & SALES ANALYSIS grids."""
+    if not isinstance(item, dict):
+        return False
+    if os.getenv("STOCK_KEEP_HIMALAYA_ZEAL_SKU", "true").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return False
+    name = str(item.get("product_name") or "").strip()
+    # Only the bare SKU form — never keep DRUG/INZMAM division banners.
+    if not re.fullmatch(r"HIMALAYA\s*-?\s*ZEAL", name, re.I):
+        return False
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    for field in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "opening_value",
+        "sales_value",
+        "closing_value",
+        "purchase_value",
+    ):
+        if fs.get(field) != "printed":
+            continue
+        try:
+            if field == "purchase_value":
+                val = extra.get("purchase_value")
+            else:
+                val = item.get(field)
+            if val is not None and abs(float(val)) > 0.01:
+                logger.info(
+                    "STOCK_KEEP_HIMALAYA_ZEAL_SKU product=%r field=%s",
+                    name[:40],
+                    field,
+                )
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
 def _product_wise_drop_banner_items(result: Dict[str, Any]) -> Dict[str, Any]:
     """HIMALAYA DRUG(ZEAL)--(INZMAM) is a division line, never ITEM NAME."""
     if not isinstance(result, dict):
         return result
-    result["line_items"] = [
-        item
-        for item in (result.get("line_items") or [])
-        if not (
-            isinstance(item, dict)
-            and _product_wise_is_company_banner(item.get("product_name"))
-        )
-    ]
+    kept: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        if _product_wise_is_company_banner(item.get("product_name")):
+            if _product_wise_banner_has_stock_sku_payload(item):
+                kept.append(item)
+            continue
+        kept.append(item)
+    result["line_items"] = kept
     for stmt in result.get("statements") or []:
         if isinstance(stmt, dict):
             _product_wise_drop_banner_items(stmt)
@@ -56148,6 +56196,81 @@ def _header_driven_stock_qty_blank(result: Optional[Dict[str, Any]]) -> bool:
     return blank / len(items) >= 0.9
 
 
+def _header_driven_lacks_qty_value_money(result: Optional[Dict[str, Any]]) -> bool:
+    """True when header-driven kept qty columns but dropped OPENING/…/CLOSING VALUE.
+
+    STOCK & SALES ANALYSIS qty|value sheets must not stay on this path — it
+    zeroes every money field. Qty-only ORIC sheets (no VALUE band) stay put.
+    """
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if str(extra.get("extraction_method") or "") != "header_driven_stock_photo":
+        return False
+    roles = set(extra.get("column_roles") or [])
+    money_roles = {
+        "opening_value",
+        "purchase_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+    }
+    if roles & money_roles:
+        return False
+    items = [item for item in (result.get("line_items") or []) if isinstance(item, dict)]
+    if len(items) < 8:
+        return False
+    money_hits = 0
+    for item in items:
+        ex = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        for key in ("opening_value", "closing_value", "sales_value"):
+            try:
+                if abs(float(item.get(key) or 0)) > 0.01:
+                    money_hits += 1
+                    break
+            except (TypeError, ValueError):
+                pass
+        if money_hits:
+            break
+        for key in ("purchase_value", "receipts_value", "opening_value"):
+            try:
+                if abs(float((ex or {}).get(key) or 0)) > 0.01:
+                    money_hits += 1
+                    break
+            except (TypeError, ValueError):
+                pass
+        if money_hits:
+            break
+    return money_hits == 0
+
+
+def _ssa_dump_result_has_printed_money(result: Optional[Dict[str, Any]]) -> bool:
+    """SSA dump Vision kept at least some OPENING/CLOSING VALUE cells."""
+    if not isinstance(result, dict):
+        return False
+    hits = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        ex = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        for raw in (
+            item.get("opening_value"),
+            item.get("closing_value"),
+            item.get("sales_value"),
+            (ex or {}).get("purchase_value"),
+            (ex or {}).get("receipts_value"),
+        ):
+            try:
+                if abs(float(raw or 0)) > 0.01:
+                    hits += 1
+                    break
+            except (TypeError, ValueError):
+                continue
+        if hits >= 3:
+            return True
+    return hits >= 3
+
+
 def _opbal_issue_closing_photo_usable(result: Optional[Dict[str, Any]]) -> bool:
     """Op.Bal + Receipt - Issue = Closing, with real quantities on the page."""
     if not isinstance(result, dict):
@@ -58210,7 +58333,52 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     5, int(len(driven.get("line_items") or []) * 0.7)
                 ):
                     return marg_mexp
-            return driven
+            # OPENING|RECEIPT|ISSUE|CLOSING × QTY|VALUE sheets: header-driven
+            # often keeps qty only and zeroes every VALUE column. Prefer the
+            # dedicated SSA dump Vision reader (OCR gate optional).
+            if _header_driven_lacks_qty_value_money(driven):
+                try:
+                    ssa_dump = _extract_ssa_opening_receipt_issue_dump_image(
+                        file_bytes, filename, ext
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "SSA dump after header-driven skipped: %s", exc
+                    )
+                    ssa_dump = None
+                if not (ssa_dump and ssa_dump.get("line_items")):
+                    try:
+                        ssa_dump = _extract_ssa_opening_receipt_issue_dump_image(
+                            file_bytes, filename, ext, skip_ocr_gate=True
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "SSA dump skip-ocr after header-driven skipped: %s",
+                            exc,
+                        )
+                        ssa_dump = None
+                if (
+                    ssa_dump
+                    and ssa_dump.get("line_items")
+                    and _ssa_dump_result_has_printed_money(ssa_dump)
+                ):
+                    logger.info(
+                        "[SalesStatement] file=%s decision=HEADER_DRIVEN_DEFER_SSA_DUMP "
+                        "rows=%s money_rows=yes",
+                        filename,
+                        len(ssa_dump.get("line_items") or []),
+                    )
+                    return ssa_dump
+                # Dump unavailable / weak: do not lock qty-only header-driven.
+                logger.info(
+                    "[SalesStatement] file=%s decision=HEADER_DRIVEN_SKIP_NO_VALUE "
+                    "rows=%s",
+                    filename,
+                    len(driven.get("line_items") or []),
+                )
+                driven = None
+            if driven and driven.get("line_items"):
+                return driven
     if (
         not early_is_jr_shah
         and (
@@ -58448,6 +58616,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         file_bytes, filename, ext
                     ),
                 )
+                # Phone photos without Tesseract fail the OCR title gate even
+                # when OPENING|RECEIPT|ISSUE|CLOSING|DUMP is clearly printed —
+                # retry once with the gate skipped (same Vision reader).
+                if not (ssa_dump and ssa_dump.get("line_items")):
+                    ssa_dump = _probe_or_none(
+                        "SSA opening/receipt/issue dump photo skip-ocr-gate",
+                        lambda: _extract_ssa_opening_receipt_issue_dump_image(
+                            file_bytes, filename, ext, skip_ocr_gate=True
+                        ),
+                    )
                 if ssa_dump and ssa_dump.get("line_items"):
                     return ssa_dump
                 marg_mexp = _probe_or_none(
