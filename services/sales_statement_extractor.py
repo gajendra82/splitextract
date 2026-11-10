@@ -20305,27 +20305,49 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
 _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT = """
 This image is a printed "STOCK & SALES STATEMENT" grid (not Marg OPENING/RECEIVE/ISSUE).
 
-Printed columns LEFT TO RIGHT (names may vary slightly):
-Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
+Printed columns LEFT TO RIGHT (names may vary slightly). Two common header sets:
+
+A) Code | Item | Packing | LMS1 | LMS | OP.STK | RCPTS | SALES | SL.VALUE | FREE | CL.STK | CL.VALUE
+B) Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
 
 Qty mapping ONLY (blank cell = 0). NEVER shift a later number left into a blank cell.
-- Op_Stk -> opening_qty
-- Rcpts -> receipts_qty
-- Sales -> sales_qty
-- Cl_Stk -> closing_qty
-- Value -> closing_value
-- LMS -> extra.lms (NOT opening_qty)
+- OP.STK / Op_Stk -> opening_qty
+- RCPTS / Rcpts -> receipts_qty
+- SALES / Sales -> sales_qty
+- SL.VALUE -> sales_value (money; never a qty)
+- FREE -> ignore for opening/receipts/sales/closing (optional free qty only)
+- CL.STK / Cl_Stk -> closing_qty
+- CL.VALUE / Value -> closing_value
+- LMS1 and LMS -> extra.lms1 / extra.lms ONLY. NEVER opening_qty or receipts_qty.
 - Rate -> extra.rate (NOT a qty)
 - P.Ret / Hos.Sal / Brk / Repl -> ignore for opening/receipts/sales/closing
 
-Do not put Value or Rate into opening_qty. Do not put Op_Stk into closing_qty.
-Packing (200ml / 30ml / 60) belongs in packing, not product_name.
+Critical: LMS1/LMS sit LEFT of OP.STK. Do not treat LMS1 as opening or LMS as receipts.
+Do not put SL.VALUE / CL.VALUE / Rate into opening_qty. Do not put Op_Stk into closing_qty.
+Packing (200ml / 30ml / 60 S) belongs in packing, not product_name.
 
-If Item mixes a division banner with the SKU ("HIMALAYA ZANDRA" + product on next line),
-product_name is ONLY the SKU. company_name is the banner. Include that first SKU row
-even when every Op_Stk/Rcpts/Sales/Cl_Stk cell is blank (use 0).
+Worked example (layout A). Printed cells left→right after packing:
+LMS1=10, LMS=20, OP.STK=30, RCPTS=40, SALES=15, SL.VALUE=100.50, FREE=0, CL.STK=55, CL.VALUE=200.00
+Correct mapping:
+  lms1=10, lms=20, opening_qty=30, receipts_qty=40, sales_qty=15,
+  sales_value=100.50, closing_qty=55, closing_value=200.00
+WRONG mapping (never do this):
+  opening_qty=10, receipts_qty=20  ← those are LMS1/LMS
 
-stockist_name = distributor above the title. period from the statement date line.
+Identity check after mapping: opening_qty + receipts_qty - sales_qty = closing_qty
+(30+40-15=55). If that fails, you used LMS1/LMS as stock qtys — re-read OP.STK/RCPTS.
+
+Item cell rules:
+- A real SKU whose name contains "HIMALAYA ZANDRA" (e.g. "AY HIMALAYA ZANDRA") is still
+  product_name — keep the full printed item text and its row numbers.
+- Only when ONE cell stacks a bare company banner above a different SKU
+  ("HIMALAYA ZANDRA" then "ARJUNA TAB"), product_name is the SKU and company_name
+  is the banner. Include that SKU row even when qty cells are blank (use 0).
+
+stockist_name = distributor above the title (e.g. … PRIVATE LIMITED).
+company_name = Company: line when printed (e.g. HIMALAYA ZANDRA).
+period from "For The Month Of: MonYY" → first/last day of that month (Oct26 → 2026-10-01..2026-10-31)
+or the statement date line.
 Include EVERY product row. Skip TOTAL lines.
 
 Skip TOTAL / Grand Total lines. Skip page chrome and stamps.
@@ -20343,6 +20365,8 @@ Return ONLY JSON:
       "product_code": null,
       "product_name": string,
       "packing": string|null,
+      "lms1": number,
+      "lms": number,
       "opening_qty": number,
       "receipts_qty": number,
       "sales_qty": number,
@@ -20352,6 +20376,25 @@ Return ONLY JSON:
     }
   ]
 }
+""".strip()
+
+_OP_STK_LMS1_STRICT_RETRY_ADDON = """
+RETRY — previous read put LMS1/LMS into opening_qty/receipts_qty.
+
+On this page the numeric columns after packing are ALWAYS:
+LMS1 | LMS | OP.STK | RCPTS | SALES | SL.VALUE | FREE | CL.STK | CL.VALUE
+
+For EVERY row:
+- Copy LMS1 into lms1 and LMS into lms (not into opening/receipts).
+- opening_qty = OP.STK only
+- receipts_qty = RCPTS only
+- sales_qty = SALES only
+- sales_value = SL.VALUE only
+- closing_qty = CL.STK only
+- closing_value = CL.VALUE only
+
+Verify opening_qty + receipts_qty - sales_qty == closing_qty before emitting the row.
+Re-read the grid; do not reuse the wrong LMS→opening mapping.
 """.strip()
 
 
@@ -20388,8 +20431,11 @@ def _repair_stockist_company_from_statement_header(
 
 
 def _stock_header_ocr_enrich_enabled() -> bool:
-    """STOCK_HEADER_OCR_ENRICH — correct stockist/company from page OCR after vision."""
-    return os.getenv("STOCK_HEADER_OCR_ENRICH", "false").strip().lower() in {
+    """STOCK_HEADER_OCR_ENRICH — correct stockist/company from page OCR after vision.
+
+    Default ON. Kill switch: false.
+    """
+    return os.getenv("STOCK_HEADER_OCR_ENRICH", "true").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -20533,6 +20579,54 @@ def _enrich_stock_statement_header_from_ocr(
             ):
                 result["stockist_address"] = branch
 
+    # Company fallback when "Company :" OCR failed but the division banner prints.
+    if not str(result.get("company_name") or "").strip():
+        m_hz = re.search(
+            r"\b(HIMALAYA\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?|"
+            r"HIMALAYA\s*\([^)]{2,40}\))\b",
+            blob,
+            re.I,
+        )
+        if m_hz:
+            result["company_name"] = _clean_name(m_hz.group(1))
+    if not str(result.get("company_name") or "").strip():
+        for item in result.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            pname = str(item.get("product_name") or "")
+            m_item = re.search(
+                r"\b(HIMALAYA\s+ZANDRA|HIMALAYA\s*\([^)]{2,40}\))\b",
+                pname,
+                re.I,
+            )
+            if m_item:
+                result["company_name"] = _clean_name(m_item.group(1))
+                break
+
+    # For The Month Of: Oct26 → calendar month bounds when From/To absent.
+    if not str(result.get("period_from") or "").strip():
+        m_mon = re.search(
+            r"For\s+The\s+Month\s+Of\s*:?\s*([A-Za-z]{3,9})\s*'?(\d{2,4})",
+            blob,
+            re.I,
+        )
+        if m_mon:
+            mo = _MONTH_MAP.get(m_mon.group(1).lower()[:3]) or _MONTH_MAP.get(
+                m_mon.group(1).lower()
+            )
+            try:
+                y = int(m_mon.group(2))
+            except ValueError:
+                y = 0
+            if y and y < 100:
+                y += 2000
+            if mo and 2000 <= y <= 2099:
+                import calendar as _cal
+
+                last = _cal.monthrange(y, mo)[1]
+                result["period_from"] = f"{y:04d}-{mo:02d}-01"
+                result["period_to"] = f"{y:04d}-{mo:02d}-{last:02d}"
+
     logger.info(
         "STOCK_HEADER_OCR_ENRICH stockist=%r company=%r title=%r party_from_title=%s",
         result.get("stockist_name"),
@@ -20543,7 +20637,10 @@ def _enrich_stock_statement_header_from_ocr(
 
 
 def _op_stk_clean_product_name(name: str) -> str:
-    """Strip division banner glued into the first Item cell (HIMALAYA ZANDRA\\nSKU)."""
+    """Strip division banner glued into the first Item cell (HIMALAYA ZANDRA\\nSKU).
+
+    Keep SKUs that are themselves named like the company (e.g. AY HIMALAYA ZANDRA).
+    """
     text = str(name or "").replace("\r", "\n")
     # Prefer the last non-banner line when Vision stacks banner + SKU.
     parts = [p.strip() for p in text.split("\n") if p.strip()]
@@ -20560,18 +20657,28 @@ def _op_stk_clean_product_name(name: str) -> str:
         if cleaned_parts:
             text = " ".join(cleaned_parts)
     text = text.replace("\n", " ")
-    # Same-line glue: "HIMALAYA ZANDRA ARJUNA TAB" → "ARJUNA TAB".
-    text = re.sub(
-        r"(?i)^\s*HIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?\s+",
-        "",
-        text,
-    )
-    text = re.sub(
-        r"(?i)\bHIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?\b",
-        " ",
-        text,
-    )
     text = re.sub(r"\s+", " ", text).strip(" -|/\\")
+    # Bare company banner alone → empty (not a SKU). Prefixed SKU stays intact.
+    if re.fullmatch(
+        r"HIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?",
+        text,
+        re.I,
+    ):
+        return ""
+    # Same-line glue only when a distinct SKU token follows the banner.
+    glued = re.match(
+        r"(?i)^\s*HIMALAYA(?:\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?)?\s+"
+        r"(.+)$",
+        text,
+    )
+    if glued:
+        rest = glued.group(1).strip()
+        if re.search(
+            r"(?i)\b(?:TAB|CAP|SYP|SYR|DROP|LIQ|GEL|CREAM|OIL|WASH|GRAN|"
+            r"SOLUTION|NASAL|FORTE|POWDER|GUMMI)\b",
+            rest,
+        ):
+            text = rest
     return _clean_name(text)
 
 
@@ -20611,7 +20718,8 @@ def _op_stk_ocr_product_name_lines(file_bytes: bytes, ocr_hint: str = "") -> Lis
             if re.search(
                 r"TOTAL|PRODUCT|STOCK|SALES|OPENING|RECEIVE|ISSUE|CLOSING|PAGE|"
                 r"Op[_\s.]*Stk|Rcpts?|Cl[_\s.]*Stk|\bValue\b|DISTRIBUT|"
-                r"MOHAN|BENGALURU|STATEMENT|COMPANY",
+                r"MOHAN|BENGALURU|STATEMENT|COMPANY|"
+                r"PRIVATE\s+LIMITED|PVT\.?\s*LTD|MEDICARE\s+SOLUTIONS",
                 line,
                 re.I,
             ):
@@ -20623,9 +20731,17 @@ def _op_stk_ocr_product_name_lines(file_bytes: bytes, ocr_hint: str = "") -> Lis
             name = _clean_name(name)
             if not name or _is_non_product_line_name(name) or _main_stock_is_garbage_name(name):
                 continue
+            # Word-boundary form tokens — avoid matching SOLUTIONS in stockist names.
             if not re.search(
-                r"(?i)TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LOTION|WASH|GRAN|GUMMI|"
-                r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL|BIG",
+                r"(?i)\b(?:TAB|CAP|SYP|SYR|DROP|ML|GM|GEL|LOTION|WASH|GRAN|GUMMI|"
+                r"HANDS|FORTE|LIQ|PEST|SOLUTION|NASAL|CREAM|OIL|BIG)\b",
+                name,
+            ):
+                continue
+            # Bare form/pack tokens from wrapped lines are not lead SKUs.
+            if re.fullmatch(
+                r"(?i)TAB|TABS|CAP|CAPS|SYP|SYR|DROP|DROPS|ML|GM|GEL|LIQ|"
+                r"SOLUTION|NASAL|CREAM|OIL|FORTE|POWDER|WASH",
                 name,
             ):
                 continue
@@ -20635,6 +20751,43 @@ def _op_stk_ocr_product_name_lines(file_bytes: bytes, ocr_hint: str = "") -> Lis
             seen.add(key)
             names.append(name)
     return names
+
+
+def _op_stk_lms1_identity_fail_rate(result: Optional[Dict[str, Any]]) -> float:
+    """Fraction of non-empty rows where opening+receipts-sales != closing."""
+    if not isinstance(result, dict):
+        return 1.0
+    checked = 0
+    fails = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if abs(oq) + abs(rq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        expected = oq + rq - sq
+        if abs(expected - cq) > max(1.0, 0.02 * max(abs(expected), abs(cq), 1.0)):
+            fails += 1
+    if checked < 3:
+        return 1.0
+    return fails / checked
+
+
+def _op_stk_lms1_strict_retry_enabled() -> bool:
+    """STOCK_OP_STK_LMS1_STRICT_RETRY — second Vision pass when LMS1 stole OP.STK.
+
+    Default ON. Kill switch: false.
+    """
+    return os.getenv("STOCK_OP_STK_LMS1_STRICT_RETRY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _op_stk_zero_lead_item(name: str, packing: Optional[str] = None) -> Dict[str, Any]:
@@ -20798,6 +20951,28 @@ def _finalize_op_stk_rcpts_stock_sale(
     return result
 
 
+def _op_stk_apply_lms_fields(
+    result: Dict[str, Any], parsed: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Copy printed LMS1/LMS off the qty fields into item.extra when present."""
+    raw_items = [
+        r for r in (parsed.get("line_items") or []) if isinstance(r, dict)
+    ]
+    out_items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    for item, raw in zip(out_items, raw_items):
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            continue
+        for src, dst in (("lms1", "lms1"), ("lms", "lms"), ("lms", "lms_qty")):
+            if raw.get(src) is None:
+                continue
+            val = _to_float(raw.get(src))
+            if dst == "lms_qty" and extra.get("lms_qty") is not None:
+                continue
+            extra[dst] = val
+    return result
+
+
 def _extract_op_stk_rcpts_stock_sale_vision(
     file_bytes: bytes,
     filename: str,
@@ -20805,8 +20980,6 @@ def _extract_op_stk_rcpts_stock_sale_vision(
     ocr_hint: str = "",
 ) -> Optional[Dict[str, Any]]:
     """Op_Stk | Rcpts | Sales | Cl_Stk abbreviated STOCK & SALES photo grid."""
-    import os
-
     if os.getenv("STOCK_OP_STK_RCPTS_EARLY_VISION", "true").strip().lower() not in {
         "1",
         "true",
@@ -20820,43 +20993,99 @@ def _extract_op_stk_rcpts_stock_sale_vision(
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT},
-                    {"inline_data": {"mime_type": mime, "data": b64}},
-                ],
-            }
-        ],
-        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 8192},
-    }
-    parsed = None
-    last_err: Optional[Exception] = None
-    for attempt in range(3):
-        try:
-            response = generate_content_via_vertex(
-                model=model, payload=payload, timeout=120
+
+    def _call(prompt_text: str, *, attempts: int = 2) -> Optional[Dict[str, Any]]:
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt_text},
+                        {"inline_data": {"mime_type": mime, "data": b64}},
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        parsed_local = None
+        last_err: Optional[Exception] = None
+        for attempt in range(max(1, attempts)):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=payload, timeout=120
+                )
+                parsed_local = _extract_json_object(_gemini_response_text(response))
+                if parsed_local and parsed_local.get("line_items"):
+                    return parsed_local
+            except Exception as exc:
+                last_err = exc
+                time.sleep(min(2 ** attempt, 8))
+        if last_err:
+            logger.warning(
+                "OP_STK_RCPTS vision failed for %s: %s", filename, last_err
             )
-            parsed = _extract_json_object(_gemini_response_text(response))
-            if parsed and parsed.get("line_items"):
-                break
-        except Exception as exc:
-            last_err = exc
-            time.sleep(min(2 ** attempt, 8))
-    if last_err and not (parsed and parsed.get("line_items")):
-        logger.warning(
-            "OP_STK_RCPTS vision failed for %s: %s", filename, last_err
-        )
-        return None
+        return parsed_local
+
+    # Budget: at most 2 Gemini calls (first pass + empty-retry OR LMS1 strict).
+    parsed = _call(_OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT, attempts=1)
+    gemini_calls = 1
+    if not parsed or not parsed.get("line_items"):
+        parsed = _call(_OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT, attempts=1)
+        gemini_calls = 2
     if not parsed or not parsed.get("line_items"):
         return None
     result = empty_result(filename, ext.lstrip(".") or "jpg")
     result = _apply_parsed_sales_json(result, parsed)
-    return _finalize_op_stk_rcpts_stock_sale(
+    result = _op_stk_apply_lms_fields(result, parsed)
+    result = _finalize_op_stk_rcpts_stock_sale(
         result, ocr_hint, file_bytes=file_bytes
     )
+    fail_rate = _op_stk_lms1_identity_fail_rate(result)
+    if (
+        gemini_calls < 2
+        and _op_stk_lms1_strict_retry_enabled()
+        and fail_rate >= 0.35
+        and len(result.get("line_items") or []) >= 5
+    ):
+        logger.info(
+            "OP_STK_LMS1_STRICT_RETRY file=%s fail_rate=%.2f",
+            filename,
+            fail_rate,
+        )
+        parsed2 = _call(
+            _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT
+            + "\n\n"
+            + _OP_STK_LMS1_STRICT_RETRY_ADDON,
+            attempts=1,
+        )
+        if parsed2 and parsed2.get("line_items"):
+            result2 = empty_result(filename, ext.lstrip(".") or "jpg")
+            result2 = _apply_parsed_sales_json(result2, parsed2)
+            result2 = _op_stk_apply_lms_fields(result2, parsed2)
+            result2 = _finalize_op_stk_rcpts_stock_sale(
+                result2, ocr_hint, file_bytes=file_bytes
+            )
+            fail2 = _op_stk_lms1_identity_fail_rate(result2)
+            if fail2 < fail_rate:
+                extra2 = result2.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra2, dict):
+                    extra2["op_stk_lms1_strict_retry"] = True
+                    extra2["op_stk_lms1_fail_rate_before"] = round(fail_rate, 3)
+                    extra2["op_stk_lms1_fail_rate_after"] = round(fail2, 3)
+                logger.info(
+                    "OP_STK_LMS1_STRICT_RETRY file=%s kept fail_rate %.2f -> %.2f",
+                    filename,
+                    fail_rate,
+                    fail2,
+                )
+                return result2
+            logger.info(
+                "OP_STK_LMS1_STRICT_RETRY file=%s discarded fail_rate %.2f -> %.2f",
+                filename,
+                fail_rate,
+                fail2,
+            )
+    return result
 
 
 def _extract_zandra_stock_sale_vision(
@@ -45687,9 +45916,17 @@ def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
 
     Portrait buffers and EXIF 6/8 sideways shots OCR as noise while the pixels
     still hold OPENING/RECEIPT/ISSUE/CLOSING × QTY/VALUE. Does not claim Medica
-    OPSTK / OPBAL sheets.
+    OPSTK / OPBAL sheets, or Op.Stk|Rcpts|LMS1|SL.VALUE stock grids.
     """
     if re.search(r"\bOPSTK\b|\bOPBAL\b|\bPURCH\b|\bSALE\s*VAL\b", peek or "", re.I):
+        return False
+    # Abbreviated Op.Stk / LMS1 stockist grids are owned by op_stk_rcpts vision.
+    if re.search(
+        r"\bOp[_\s.]*Stk\b|\bOP[_\s.]*STK\b|\bRcpts?\b|\bCl[_\s.]*Stk\b|"
+        r"\bSL[_\s.]*Val(?:ue)?\b|\bLMS1?\b|\bCL[_\s.]*Val(?:ue)?\b",
+        peek or "",
+        re.I,
+    ):
         return False
     if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", peek or "", re.I):
         return True
@@ -45709,10 +45946,76 @@ def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
     sideways_exif = orientation in {5, 6, 7, 8}
     if not (portrait or sideways_exif):
         return False
+    # Portrait alone is not enough — require an SSA band token so Op.Stk /
+    # monthly stock photos are not claimed as OPENING/RECEIPT/ISSUE dumps.
+    blob = (peek or "").upper()
+    if not re.search(
+        r"ANALYSIS|OPEN(?:ING)?|RECE(?:IPT)?|ISSUE|\bDUMP\b|CLOS(?:ING)?",
+        blob,
+    ):
+        return False
     # Need some letter noise so blank/non-statement photos stay out.
     letters = len(re.findall(r"[A-Za-z]{3,}", peek or ""))
     money = bool(re.search(r"\d+\.\d{2}", peek or ""))
     return letters >= 3 or money or sideways_exif
+
+
+def _op_stk_before_ssa_phone_enabled() -> bool:
+    """STOCK_OP_STK_BEFORE_SSA_PHONE — Op.Stk/LMS vision before SSA dump on photos.
+
+    Default ON. Kill switch: false.
+    """
+    return os.getenv("STOCK_OP_STK_BEFORE_SSA_PHONE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_result_looks_like_op_stk_misfile(result: Optional[Dict[str, Any]]) -> bool:
+    """SSA dump reader applied to LMS1|OP.STK|RCPTS|SL.VALUE grids.
+
+    Runs before reconciliation, so identity is computed from printed qty cells.
+    """
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    pack_rows = 0
+    identity_fail = 0
+    checked = 0
+    closing_value_only = 0
+    for item in items:
+        if str(item.get("packing") or "").strip():
+            pack_rows += 1
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        cv = _to_float(item.get("closing_value"))
+        if cv > 0.05 and oq == 0 and rq == 0 and sq == 0 and abs(cq) < 0.05:
+            closing_value_only += 1
+        # Skip empty shells when scoring identity.
+        if abs(oq) + abs(rq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        expected = oq + rq - sq
+        if abs(expected - cq) > max(1.0, 0.02 * max(abs(expected), abs(cq), 1.0)):
+            identity_fail += 1
+    if checked < 3:
+        return closing_value_only >= 1 and pack_rows >= max(5, len(items) // 4)
+    fail_rate = identity_fail / checked
+    if pack_rows >= max(5, len(items) // 4) and fail_rate >= 0.25:
+        return True
+    if (
+        closing_value_only >= 1
+        and pack_rows >= max(5, len(items) // 4)
+        and fail_rate >= 0.20
+    ):
+        return True
+    return False
 
 
 def _ssa_dump_dump_as_closing_enabled() -> bool:
@@ -59831,6 +60134,71 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # before VT (VT parks VALUE under qty). Runs for unreadable OCR, phone
         # sideways shots, AND when peek already sees the ANALYSIS title.
         _ssa_phone = _ssa_dump_phone_photo_candidate(file_bytes, _op_stk_peek or "")
+        _clearly_ssa_peek = bool(
+            _ssa_sheets_qty_value
+            or re.search(
+                r"STOCK\s*&\s*SALES\s*ANALYSIS|OPENING\s+RECEIPT\s+ISSUE",
+                _op_stk_peek or "",
+                re.I,
+            )
+        )
+        _monthly_op_stk_photo = bool(
+            not _clearly_ssa_peek
+            and re.search(
+                r"For\s+The\s+Month\s+Of|PRIVATE\s+LIMITED|MEDICARE|"
+                r"MEDICA\s+SOLUTION",
+                _op_stk_peek or "",
+                re.I,
+            )
+        )
+        # LMS1|OP.STK|RCPTS|SL.VALUE phone photos OCR as noise; try Op.Stk
+        # before the SSA dump reader invents OPENING/RECEIPT/ISSUE columns.
+        if (
+            _op_stk_before_ssa_phone_enabled()
+            and not _skip_vt_for_op_stk
+            and not _opbal_excess_peek
+            and not _clearly_ssa_peek
+            and (_peek_unreadable or _ssa_phone or _monthly_op_stk_photo)
+        ):
+            try:
+                op_stk_pre = _extract_op_stk_rcpts_stock_sale_vision(
+                    file_bytes, filename, ext, ocr_hint=_op_stk_peek or ""
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s Op_Stk before SSA phone failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                op_stk_pre = None
+            if (
+                op_stk_pre
+                and op_stk_pre.get("line_items")
+                and not _main_stock_result_is_all_zero_shell(op_stk_pre)
+            ):
+                fail_pre = _op_stk_lms1_identity_fail_rate(op_stk_pre)
+                extra_pre = op_stk_pre.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra_pre, dict):
+                    extra_pre["early_vision_reason"] = "op_stk_before_ssa_phone"
+                    extra_pre["op_stk_identity_fail_rate"] = round(fail_pre, 3)
+                # Keep only when LMS1→OP.STK mapping largely balances; otherwise
+                # fall through so STOCK_VISION_TABLE / later readers can try.
+                if fail_pre <= 0.35:
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
+                        "file=%s line_items=%s fail_rate=%.2f",
+                        filename,
+                        len(op_stk_pre.get("line_items") or []),
+                        fail_pre,
+                    )
+                    return op_stk_pre
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
+                    "file=%s status=continue_high_fail fail_rate=%.2f rows=%s",
+                    filename,
+                    fail_pre,
+                    len(op_stk_pre.get("line_items") or []),
+                )
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk
@@ -59858,20 +60226,64 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 rows_u = len(ssa_unread.get("line_items") or [])
                 # Reject dump results that still park money in qty (wrong layout).
                 if money_u <= max(2, rows_u // 5):
-                    extra_u = ssa_unread.setdefault("totals", {}).setdefault("extra", {})
-                    if isinstance(extra_u, dict):
-                        extra_u["early_vision_reason"] = "ssa_dump_unreadable_ocr_skip"
-                        extra_u["ssa_phone_photo_candidate"] = bool(_ssa_phone)
-                    logger.info(
-                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_unreadable_ocr "
-                        "file=%s line_items=%s money_in_qty=%s phone=%s sheets=%s",
-                        filename,
-                        rows_u,
-                        money_u,
-                        bool(_ssa_phone),
-                        bool(_ssa_sheets_qty_value),
-                    )
-                    return ssa_unread
+                    if _ssa_dump_result_looks_like_op_stk_misfile(ssa_unread):
+                        logger.info(
+                            "[SalesStatement] file=%s SSA dump unreadable-OCR "
+                            "rejected reason=op_stk_misfile rows=%s continuing",
+                            filename,
+                            rows_u,
+                        )
+                        if _op_stk_before_ssa_phone_enabled():
+                            try:
+                                op_stk_rescue = _extract_op_stk_rcpts_stock_sale_vision(
+                                    file_bytes,
+                                    filename,
+                                    ext,
+                                    ocr_hint=_op_stk_peek or "",
+                                )
+                            except Exception:
+                                op_stk_rescue = None
+                            if (
+                                op_stk_rescue
+                                and op_stk_rescue.get("line_items")
+                                and not _main_stock_result_is_all_zero_shell(
+                                    op_stk_rescue
+                                )
+                            ):
+                                extra_r = op_stk_rescue.setdefault(
+                                    "totals", {}
+                                ).setdefault("extra", {})
+                                if isinstance(extra_r, dict):
+                                    extra_r["early_vision_reason"] = (
+                                        "op_stk_after_ssa_misfile"
+                                    )
+                                logger.info(
+                                    "[STOCK_EXTRACTION_PATH] "
+                                    "stage=op_stk_after_ssa_misfile "
+                                    "file=%s line_items=%s",
+                                    filename,
+                                    len(op_stk_rescue.get("line_items") or []),
+                                )
+                                return op_stk_rescue
+                    else:
+                        extra_u = ssa_unread.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        if isinstance(extra_u, dict):
+                            extra_u["early_vision_reason"] = (
+                                "ssa_dump_unreadable_ocr_skip"
+                            )
+                            extra_u["ssa_phone_photo_candidate"] = bool(_ssa_phone)
+                        logger.info(
+                            "[STOCK_EXTRACTION_PATH] stage=ssa_dump_unreadable_ocr "
+                            "file=%s line_items=%s money_in_qty=%s phone=%s sheets=%s",
+                            filename,
+                            rows_u,
+                            money_u,
+                            bool(_ssa_phone),
+                            bool(_ssa_sheets_qty_value),
+                        )
+                        return ssa_unread
                 logger.info(
                     "[SalesStatement] file=%s SSA dump unreadable-OCR rejected "
                     "money_in_qty=%s rows=%s continuing",

@@ -874,13 +874,20 @@ def apply_direct_stock_image_gemini(
             _looks_like_op_stk_rcpts_grid_text,
             _looks_like_ostk_qoh_stock_sales_text,
             _main_stock_result_is_op_stk_misfiled,
+            _op_stk_before_ssa_phone_enabled,
+            _ssa_dump_result_looks_like_op_stk_misfile,
         )
 
+        ssa_misfile = (
+            method in {"ssa_qty_value_vision", "ssa_qty_value_vision_pdf"}
+            or layout == "ssa_opening_receipt_issue_value"
+        ) and _ssa_dump_result_looks_like_op_stk_misfile(result)
         want_op_stk = (
             not _looks_like_ostk_qoh_stock_sales_text(peek_text)
             and (
                 _looks_like_op_stk_rcpts_grid_text(peek_text)
                 or _main_stock_result_is_op_stk_misfiled(result, peek_text)
+                or (ssa_misfile and _op_stk_before_ssa_phone_enabled())
             )
         )
         if want_op_stk and _enabled():

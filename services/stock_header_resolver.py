@@ -77,11 +77,13 @@ ALIASES: Dict[str, List[str]] = {
         "sku code",
         "pcode",
         "p code",
+        "code",  # Code | ITEM | PACKING grids
     ],
     "pack": [
         "pack",
         "packing",
         "packg",
+        "packin",  # OCR split PACKIN before G joins to PACKING
         "pack size",
         "packing size",
         "size",
@@ -117,6 +119,8 @@ ALIASES: Dict[str, List[str]] = {
     # Last-month-sale (LMS) is its own column — never opening/receipts.
     "lms": [
         "lms",
+        "lms1",  # LMS1 | LMS pair left of OP.STK
+        "lms 1",
         "lm sale",
         "lm sales",
         "last month sale",
@@ -220,6 +224,7 @@ ALIASES: Dict[str, List[str]] = {
         "recd",
         "rec",
         "rcpt",
+        "rcpts",  # OP.STK | RCPTS | SALES grids
         "recpt",
         "receipt",
         "receipts",
@@ -511,6 +516,9 @@ ALIASES: Dict[str, List[str]] = {
         "sale val",
         "sales value",
         "sale value",
+        "sl value",  # SL.VALUE on Op.Stk|Rcpts grids
+        "sl val",
+        "slvalue",
         "sval",
         "sa val",
         "pur val",
