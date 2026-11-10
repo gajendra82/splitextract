@@ -1345,6 +1345,12 @@ def build_table_prompt() -> str:
         "map to extra.lms, never this period's sales_qty. Tot Sales is "
         "sales_qty; Tot Closing is closing_qty (quantity); Stock Value is "
         "closing_value (money) — never put Stock Value into Tot Closing. "
+        "Stock and Sale grids with Op|Pur|Gd.In|Tot In|Sale|Gd.Out|Closing|"
+        "Purchase|Sale|Stock: Closing is closing_qty; trailing Purchase|Sale|"
+        "Stock are purchase_value|sales_value|closing_value money — never put "
+        "Purchase/Sale/Stock money into Closing, and never leave Stock empty "
+        "when a Stock money digit is printed. Keep blank Gd.Out as 0/null so "
+        "Closing qty does not shift left into Out. "
         "Do not invent a branch column (Pharmacy, city names) that is not "
         "printed. stockist_name is the letterhead, never a column header. "
         "Closing Stock QTY and VALUE are "
@@ -3463,6 +3469,259 @@ def _apply_closing_qty_from_header_pass(
             fixed += 1
     if fixed:
         logger.info("VISION_TABLE CLOSING_QTY_FROM_HEADER_PASS fixed=%s", fixed)
+    return fixed
+
+
+def _purchase_sale_stock_left_shift_enabled() -> bool:
+    """Right-shift Closing|Purchase|Sale|Stock when Closing qty slid into Out.
+
+    Default ON. Stock and Sale sheets print qty columns then trailing
+    Purchase|Sale|Stock money; Vision often parks Closing qty under Gd.Out
+    and slides the money triad one cell left so Stock is empty.
+    """
+    return os.getenv(
+        "STOCK_VISION_PURCHASE_SALE_STOCK_LEFT_SHIFT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _column_index_for_canonical(
+    columns: Sequence[Dict[str, Any]], canonical: str
+) -> Optional[int]:
+    for col in columns or []:
+        if not isinstance(col, dict):
+            continue
+        if col.get("canonical") != canonical:
+            continue
+        try:
+            return int(col.get("col_index"))
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _columns_have_trailing_purchase_sale_stock(
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """True when resolver promoted trailing Purchase|Sale|Stock to values."""
+    found = set()
+    for col in columns or []:
+        if not isinstance(col, dict):
+            continue
+        if col.get("reason") != "trailing_purchase_sale_stock_values":
+            continue
+        canon = col.get("canonical")
+        if canon in {"purchase_value", "sales_value", "closing_value"}:
+            found.add(canon)
+    return found == {"purchase_value", "sales_value", "closing_value"}
+
+
+def _repair_purchase_sale_stock_left_shift(
+    item: Dict[str, Any],
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """Re-slot Closing qty + Purchase|Sale|Stock after a one-cell left shift.
+
+    Printed: …|Out|Closing(qty)|Purchase(val)|Sale(val)|Stock(val)|…
+    Vision often emits Closing qty under Out, Purchase money under Closing,
+    Sale under Purchase, Stock under Sale, and leaves Stock empty.
+    Copies printed physical cells only when opening+purchase−sales matches
+    the Out cell. Never invents a digit.
+    """
+    if not _purchase_sale_stock_left_shift_enabled():
+        return False
+    if not isinstance(item, dict) or not columns:
+        return False
+    if not _columns_have_trailing_purchase_sale_stock(columns):
+        return False
+    close_idx = _column_index_for_canonical(columns, "closing_qty")
+    pv_idx = _column_index_for_canonical(columns, "purchase_value")
+    sv_idx = _column_index_for_canonical(columns, "sales_value")
+    cv_idx = _column_index_for_canonical(columns, "closing_value")
+    if None in (close_idx, pv_idx, sv_idx, cv_idx):
+        return False
+    if not (close_idx < pv_idx < sv_idx < cv_idx):
+        return False
+    prev_idx = close_idx - 1
+    if prev_idx < 0:
+        return False
+
+    prev_raw = _physical_cell_at(item, prev_idx)
+    close_raw = _physical_cell_at(item, close_idx)
+    pv_raw = _physical_cell_at(item, pv_idx)
+    sv_raw = _physical_cell_at(item, sv_idx)
+    cv_raw = _physical_cell_at(item, cv_idx)
+
+    prev_qty = parse_number(prev_raw, allow_internal_spaces=True)
+    if prev_qty is None or not _looks_small_qty(prev_qty):
+        return False
+    if abs(float(prev_qty)) <= 0.001:
+        return False
+
+    opening = _printed_float(item, "opening_qty")
+    if opening is None:
+        try:
+            opening = float(item.get("opening_qty") or 0)
+        except (TypeError, ValueError):
+            return False
+    receipt = _printed_float(item, "purchase_qty")
+    if receipt is None:
+        receipt = _printed_float(item, "receipts_qty")
+    if receipt is None:
+        try:
+            receipt = float(
+                item.get("receipts_qty")
+                if item.get("receipts_qty") not in (None, "")
+                else (item.get("purchase_qty") or 0)
+            )
+        except (TypeError, ValueError):
+            receipt = 0.0
+    sales = _printed_float(item, "sales_qty")
+    if sales is None:
+        try:
+            sales = float(item.get("sales_qty") or 0)
+        except (TypeError, ValueError):
+            return False
+    if abs((float(opening) + float(receipt) - float(sales)) - float(prev_qty)) > 0.51:
+        return False
+
+    close_money = parse_number(close_raw, allow_internal_spaces=True)
+    pv_num = parse_number(pv_raw, allow_internal_spaces=True)
+    sv_num = parse_number(sv_raw, allow_internal_spaces=True)
+    cv_num = parse_number(cv_raw, allow_internal_spaces=True)
+
+    close_is_money = close_money is not None and _looks_money(
+        close_money, raw_text=str(close_raw) if close_raw is not None else None
+    )
+    cv_missing = cv_num is None or abs(float(cv_num)) <= 0.001
+    close_blank = close_money is None or abs(float(close_money)) <= 0.001
+
+    # Case A: full triad left-shift — Closing holds purchase money, Stock empty.
+    case_a = close_is_money and cv_missing
+    # Case B: qty only under Out; Stock already in closing_value cell.
+    case_b = (
+        not case_a
+        and close_blank
+        and cv_num is not None
+        and _looks_money(
+            cv_num, raw_text=str(cv_raw) if cv_raw is not None else None
+        )
+    )
+    if not case_a and not case_b:
+        return False
+
+    # Already correct closing qty — do not reshuffle values.
+    current_cq = item.get("closing_qty")
+    try:
+        current_cq_f = float(current_cq) if current_cq not in (None, "") else None
+    except (TypeError, ValueError):
+        current_cq_f = None
+    if (
+        case_b
+        and current_cq_f is not None
+        and abs(current_cq_f - float(prev_qty)) <= 0.51
+    ):
+        return False
+
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+
+    item["closing_qty"] = float(prev_qty)
+    fs["closing_qty"] = "printed"
+
+    if case_a:
+        # Right-shift printed money: Closing→Purchase, Purchase→Sale, Sale→Stock.
+        def _money_or_none(num: Any, raw: Any) -> Optional[float]:
+            if num is None:
+                return None
+            try:
+                if abs(float(num)) <= 0.001:
+                    return None
+            except (TypeError, ValueError):
+                return None
+            if _looks_money(num, raw_text=str(raw) if raw is not None else None):
+                return float(num)
+            return None
+
+        purchase_slot_blank = _money_or_none(pv_num, pv_raw) is None
+        # Zero purchase qty often leaves the Purchase money column blank, so
+        # Closing holds Sale and Sale holds Stock (Purchase slot skipped).
+        if purchase_slot_blank and abs(float(receipt)) <= 0.001:
+            new_pv = None
+            new_sv = _money_or_none(close_money, close_raw)
+            new_cv = _money_or_none(sv_num, sv_raw)
+        else:
+            new_pv = _money_or_none(close_money, close_raw)
+            new_sv = _money_or_none(pv_num, pv_raw)
+            new_cv = _money_or_none(sv_num, sv_raw)
+
+        if new_pv is None:
+            extra["purchase_value"] = None
+            fs["purchase_value"] = "missing"
+        else:
+            extra["purchase_value"] = new_pv
+            fs["purchase_value"] = "printed"
+        if new_sv is None:
+            item["sales_value"] = None
+            fs["sales_value"] = "missing"
+        else:
+            item["sales_value"] = new_sv
+            fs["sales_value"] = "printed"
+        if new_cv is None:
+            item["closing_value"] = None
+            fs["closing_value"] = "missing"
+        else:
+            item["closing_value"] = new_cv
+            fs["closing_value"] = "printed"
+    # Case B: only restore closing_qty from Out; values already aligned.
+
+    flags = list(extra.get("flags") or [])
+    if "PURCHASE_SALE_STOCK_LEFT_SHIFT" not in flags:
+        flags.append("PURCHASE_SALE_STOCK_LEFT_SHIFT")
+    flags = [f for f in flags if f != "CLOSING_VALUE_PARKED_IN_QTY"]
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PURCHASE_SALE_STOCK_LEFT_SHIFT product=%s "
+        "closing_qty=%s purchase_value=%s sales_value=%s closing_value=%s case=%s",
+        str(item.get("product_name") or "")[:60],
+        item.get("closing_qty"),
+        extra.get("purchase_value"),
+        item.get("sales_value"),
+        item.get("closing_value"),
+        "A" if case_a else "B",
+    )
+    return True
+
+
+def _apply_purchase_sale_stock_left_shift_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+    columns: Sequence[Dict[str, Any]],
+) -> int:
+    """Re-slot Purchase|Sale|Stock left-shift across Vision line items."""
+    fixed = 0
+    cols = list(columns or [])
+    for item in line_items or []:
+        if not isinstance(item, dict):
+            continue
+        item_cols = cols
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if not item_cols and isinstance(extra.get("column_map"), list):
+            item_cols = extra.get("column_map") or []
+        if isinstance(item, dict) and _repair_purchase_sale_stock_left_shift(
+            item, item_cols
+        ):
+            fixed += 1
+    if fixed:
+        logger.info(
+            "VISION_TABLE PURCHASE_SALE_STOCK_LEFT_SHIFT_PASS fixed=%s",
+            fixed,
+        )
     return fixed
 
 
@@ -7339,6 +7598,9 @@ def _map_single_table(
             _repair_missing_pair_null_shift(item)
             _repair_qty_value_pair_left_shift(item)
             _repair_issue_value_left_shift(item)
+            # Stock and Sale Purchase|Sale|Stock before money-in-qty park —
+            # Closing often holds purchase money while Stock is empty.
+            _repair_purchase_sale_stock_left_shift(item, columns)
             _repair_closing_money_parked_in_qty(item)
             _repair_closing_qty_parked_in_value(item)
             _repair_closing_pair_interchanged(item)
@@ -7351,6 +7613,7 @@ def _map_single_table(
                 item, printed_fields=printed_fields, request_id=request_id
             )
             # After derive: money still in qty (whole-rupee / missed earlier) → re-slot.
+            _repair_purchase_sale_stock_left_shift(item, columns)
             _repair_closing_money_parked_in_qty(item)
             # Inverse: qty-only ORIC closing parked in value after money pass.
             _repair_closing_qty_parked_in_value(item)
@@ -7535,6 +7798,7 @@ def map_vision_table(
                 item.setdefault("extra", {})["total_in_layout"] = True
                 item["extra"]["column_map"] = column_map
 
+    _apply_purchase_sale_stock_left_shift_pass(all_items, column_map or [])
     _apply_closing_money_parked_in_qty_pass(all_items)
     _apply_closing_qty_parked_in_value_pass(all_items)
     _apply_issue_value_left_shift_pass(all_items)
@@ -9428,6 +9692,7 @@ def run_vision_table_path(
             _log("vertical_split_deduped", rows=len(all_items))
 
         # Final pass before stamp/classify — catches money still parked in qty.
+        _apply_purchase_sale_stock_left_shift_pass(all_items, column_map or [])
         _apply_closing_money_parked_in_qty_pass(all_items)
         _apply_closing_qty_parked_in_value_pass(all_items)
         _apply_issue_value_left_shift_pass(all_items)
@@ -9777,14 +10042,6 @@ def run_vision_table_path(
             result["totals"]["extra"]["reread_skipped"] = "budget"
 
         # After recon/reread merges: money must not remain in closing_qty.
-        _apply_closing_money_parked_in_qty_pass(result.get("line_items") or [])
-        _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
-        _apply_issue_value_left_shift_pass(result.get("line_items") or [])
-        _apply_closing_pair_unswap_pass(result.get("line_items") or [])
-        _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
-        _apply_negative_qty_unread_pass(result.get("line_items") or [])
-        _apply_unread_zero_opening_pass(result.get("line_items") or [])
-        _apply_unread_zero_closing_pass(result.get("line_items") or [])
         _post_cols = (
             ((result.get("totals") or {}).get("extra") or {}).get("column_map")
             or []
@@ -9796,6 +10053,17 @@ def run_vision_table_path(
                 if isinstance(_ex, dict) and _ex.get("column_map"):
                     _post_cols = _ex.get("column_map") or []
                     break
+        _apply_purchase_sale_stock_left_shift_pass(
+            result.get("line_items") or [], _post_cols
+        )
+        _apply_closing_money_parked_in_qty_pass(result.get("line_items") or [])
+        _apply_closing_qty_parked_in_value_pass(result.get("line_items") or [])
+        _apply_issue_value_left_shift_pass(result.get("line_items") or [])
+        _apply_closing_pair_unswap_pass(result.get("line_items") or [])
+        _apply_tot_qty_value_header_shift_pass(result.get("line_items") or [])
+        _apply_negative_qty_unread_pass(result.get("line_items") or [])
+        _apply_unread_zero_opening_pass(result.get("line_items") or [])
+        _apply_unread_zero_closing_pass(result.get("line_items") or [])
         _apply_closing_qty_from_header_pass(
             result.get("line_items") or [], _post_cols
         )
