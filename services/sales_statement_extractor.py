@@ -545,7 +545,9 @@ _REPORT_PERIOD_RANGE_RE = re.compile(
     re.I,
 )
 _REPORT_PERIOD_FROM_TO_RE = re.compile(
-    r"(?:FROM|FORM|From|w\.e\.f\.?)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
+    # "From 01-10-26 to 31-10-26" and "From Date 01-10-26 to 31-10-26"
+    r"(?:FROM|FORM|From|w\.e\.f\.?)\s*(?:Date\s*)?:?\s*"
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*"
     r"(?:TO|Upto|upto|and|to|-|–|—)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
     re.I,
 )
@@ -5035,6 +5037,19 @@ def _sanitize_rows_and_text(result: Dict[str, Any]) -> Dict[str, Any]:
     return _drop_promotional_footer_line_items(result)
 
 
+def _fill_null_value_totals_from_lines_enabled() -> bool:
+    """STOCK_FILL_NULL_VALUE_TOTALS_FROM_LINES — promote line money sums when totals are null.
+
+    Default ON. Kill switch STOCK_FILL_NULL_VALUE_TOTALS_FROM_LINES=false.
+    """
+    return os.getenv("STOCK_FILL_NULL_VALUE_TOTALS_FROM_LINES", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     """(b) Top-level / statement totals and fields derived from line items."""
     if not isinstance(result, dict):
@@ -5055,6 +5070,24 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
 
     totals["extra"]["line_sales_value_sum"] = sum_sales_value
     totals["extra"]["line_closing_value_sum"] = sum_closing_value
+
+    # When a printed Stock Value column exists on rows but no footer money total was
+    # captured, surface the line sum at top-level so totals.closing_value is not null.
+    if _fill_null_value_totals_from_lines_enabled():
+        if totals.get("closing_value") is None and sum_closing_value > 0:
+            totals["closing_value"] = round(sum_closing_value, 2)
+            totals["extra"]["closing_value_source"] = "line_item_sum"
+            logger.info(
+                "STOCK_FILL_NULL_VALUE_TOTALS field=closing_value value=%s source=line_item_sum",
+                totals["closing_value"],
+            )
+        if totals.get("sales_value") is None and sum_sales_value > 0:
+            totals["sales_value"] = round(sum_sales_value, 2)
+            totals["extra"]["sales_value_source"] = "line_item_sum"
+            logger.info(
+                "STOCK_FILL_NULL_VALUE_TOTALS field=sales_value value=%s source=line_item_sum",
+                totals["sales_value"],
+            )
 
     # Prefer footer TOTAL-row qty when present (P.S.PHARMACEUTICALS etc.)
     has_footer_qty = totals.get("extra", {}).get("total_row_source") == "footer_total"
@@ -17331,6 +17364,26 @@ def _page_text_looks_like_continuation(text: str) -> bool:
     return False
 
 
+def _stockist_name_looks_like_column_headers(name: str) -> bool:
+    """True when Vision parked table column labels into stockist_name."""
+    s = re.sub(r"\s+", " ", (name or "").strip())
+    if not s:
+        return False
+    hits = 0
+    for pat in (
+        r"\bItem\s+Name\b",
+        r"\bOp\.?\s*Qty\b",
+        r"\bPur\.?\s*Qty\b",
+        r"\bSale\s*Qty\b",
+        r"\bBal\.?\s*Qty\b",
+        r"\bTotal\s+Qty\b",
+        r"\bPack(?:ing)?\b",
+    ):
+        if re.search(pat, s, re.I):
+            hits += 1
+    return hits >= 2
+
+
 def _looks_like_stockist_header(line: str) -> bool:
     s = (line or "").strip()
     if len(s) < 4 or len(s) > 90:
@@ -17345,6 +17398,9 @@ def _looks_like_stockist_header(line: str) -> bool:
         return False
     if re.match(r"(?:QUANTITY|VALUE)\s+[-+]?\d", s, re.I):
         return False
+    # Table column labels must never become stockist_name.
+    if _stockist_name_looks_like_column_headers(s):
+        return False
     # Marg landscape column labels (RECEIVE / EXPIRY / QUANTITY) are not stockists.
     if re.match(
         r"^(RECEIVE|QUANTITY|ISSUE|EXPIRY|VALUE|STOCK|CLOSING|OPENING|"
@@ -17354,10 +17410,11 @@ def _looks_like_stockist_header(line: str) -> bool:
     ):
         return False
     if re.search(
-        r"PRODUCT|PACKING|ITEM\s+DESCRIPT|OpBal|OPENING|CLOSING|GSTIN|Phone\s*:|"
+        r"PRODUCT|PACKING|ITEM\s+DESCRIPT|ITEM\s+NAME|OpBal|OPENING|CLOSING|GSTIN|Phone\s*:|"
         r"E-Mail|Page\s*No|Continued|"
         # OCR often replaces '&' with '©' on STOCK & SALES ANALYSIS titles.
-        r"STOCK\s*[&©]\s*SALES|STOCK\s+AND\s+SALES|Sales\s*&\s*Stock",
+        r"STOCK\s*[&©]\s*SALES|STOCK\s+AND\s+SALES|Stock\s+and\s+Sale|"
+        r"Sales\s*&\s*Stock",
         s,
         re.I,
     ):
@@ -18618,12 +18675,36 @@ def _detect_stockist_from_page_text(text: str) -> Optional[str]:
     if ssa_party:
         return ssa_party
 
+    # Stock and Sale Report: letterhead often lands after the product grid in
+    # PDF text order. Prefer a DISTRIBUTORS/AGENCY line over first SKU caps.
+    if re.search(r"Stock\s+and\s+Sale\s+Report", text or "", re.I):
+        for ln in lines:
+            if _stockist_name_looks_like_column_headers(ln):
+                continue
+            if re.search(r"\bHIMALAYA\b|Stock\s+and\s+Sale", ln, re.I):
+                continue
+            if not _STRONG_STOCKIST_HINT.search(ln):
+                continue
+            if not _looks_like_stockist_header(ln):
+                continue
+            name = _clean_stockist_label(ln)
+            name = re.sub(r"\s*\(\d{4}\s*[-–]\s*\d{2,4}\)\s*$", "", name or "").strip()
+            if name:
+                logger.info(
+                    "[STOCKIST_MATCH] matching_method=stock_and_sale_report_letterhead "
+                    "final_stockist_name=%r",
+                    name[:120],
+                )
+                return name
+
     # Score candidates in the header band; prefer distributor/pharma banners
     # over portal nav chrome (e.g. "Home Profile Agency … Contact us").
     scored: List[Tuple[int, int, str]] = []
     # When Op.Qty table headers lead the stream, skip product-like ALL-CAPS
     # rows in the first band (they are SKUs, not stockists).
-    skip_product_caps = _page_has_op_qty_val_table_headers(text)
+    skip_product_caps = _page_has_op_qty_val_table_headers(text) or bool(
+        re.search(r"Stock\s+and\s+Sale\s+Report", text or "", re.I)
+    )
     for i, ln in enumerate(lines[:15]):
         if skip_product_caps and not (
             _STRONG_STOCKIST_HINT.search(ln)
@@ -20469,6 +20550,9 @@ def _enrich_stock_statement_header_from_ocr(
     if re.search(r"STOCK\s*[&©]\s*SALES\s*ANALYSIS|STOCK\s+AND\s+SALES\s*ANALYSIS", blob, re.I):
         if not str(result.get("report_title") or "").strip():
             result["report_title"] = "STOCK & SALES ANALYSIS"
+    if re.search(r"Stock\s+and\s+Sale\s+Report", blob, re.I):
+        if not str(result.get("report_title") or "").strip():
+            result["report_title"] = "Stock and Sale Report"
 
     company = None
     m_co = re.search(r"Company\s*:\s*([^\n]+)", blob, re.I)
@@ -20509,13 +20593,34 @@ def _enrich_stock_statement_header_from_ocr(
         ):
             stockist = cand
             party_from_title = True
+    # Letterhead immediately above "Stock and Sale Report From Date …".
+    if not stockist:
+        m_sale_report = re.search(
+            r"(?im)^([A-Z0-9][A-Z0-9 _./&\-]{4,80}?)\s*\n\s*"
+            r"Stock\s+and\s+Sale\s+Report\b",
+            blob,
+        )
+        if m_sale_report:
+            cand = _clean_stockist_label(m_sale_report.group(1).replace("_", " "))
+            cand = re.sub(r"\s*\(\d{4}\s*[-–]\s*\d{2,4}\)\s*$", "", cand or "").strip()
+            if (
+                cand
+                and not _stockist_name_looks_like_column_headers(cand)
+                and not re.search(
+                    r"^(From|Page|Company|Date|Generated|Report|HIMALAYA)\b",
+                    cand,
+                    re.I,
+                )
+            ):
+                stockist = cand
+                party_from_title = True
     if not stockist:
         for line in blob.splitlines():
             cleaned = _clean_name(str(line or "").replace("_", " "))
             if not cleaned or len(cleaned) < 8:
                 continue
             if re.search(
-                r"Stock\s*&\s*Sales|Company\s*:|From\s+\d|Page\s*:|"
+                r"Stock\s*&\s*Sales|Stock\s+and\s+Sale|Company\s*:|From\s+(?:Date\s+)?\d|Page\s*:|"
                 r"Generated\s+in|PROFITMAKER|Daxinsoft|Product\s+Name|"
                 r"^Run\s*Date\b|ITEM\s+NAME|^\d{1,2}:\d{2}",
                 cleaned,
@@ -20526,13 +20631,17 @@ def _enrich_stock_statement_header_from_ocr(
                 continue
             if _stockist_name_is_manufacturer_or_title(cleaned):
                 continue
+            if _stockist_name_looks_like_column_headers(cleaned):
+                continue
             # Product/qty rows are often ALL-CAPS; require an agency hint.
             if not _STRONG_STOCKIST_HINT.search(cleaned):
                 continue
             if not _looks_like_stockist_header(cleaned):
                 continue
             if re.search(r"[A-Za-z]{3,}", cleaned):
-                stockist = cleaned
+                stockist = re.sub(
+                    r"\s*\(\d{4}\s*[-–]\s*\d{2,4}\)\s*$", "", cleaned
+                ).strip()
                 break
 
     sn = str(result.get("stockist_name") or "").strip()
@@ -20548,21 +20657,25 @@ def _enrich_stock_statement_header_from_ocr(
     vision_looks_like_title = bool(
         sn_norm
         and re.search(
-            r"STOCK\s*[&©]\s*SALES|STOCK\s+AND\s+SALES|\bANALYSIS\b",
+            r"STOCK\s*[&©]\s*SALES|STOCK\s+AND\s+SALES|Stock\s+and\s+Sale|\bANALYSIS\b",
             sn_norm,
             re.I,
         )
     )
+    vision_looks_like_headers = _stockist_name_looks_like_column_headers(sn_norm)
     # Title-band party line is authoritative for this layout; otherwise only
-    # fill missing / company-confused / title-confused vision stockist.
+    # fill missing / company-confused / title-confused / header-confused vision stockist.
     if stockist and (
         party_from_title
         or not sn_norm
         or vision_looks_like_company
         or vision_looks_like_title
+        or vision_looks_like_headers
     ):
         result["stockist_name"] = stockist
-    elif (vision_looks_like_company or vision_looks_like_title) and not stockist:
+    elif (
+        vision_looks_like_company or vision_looks_like_title or vision_looks_like_headers
+    ) and not stockist:
         if vision_looks_like_company and not str(result.get("company_name") or "").strip():
             result["company_name"] = sn_norm
         result["stockist_name"] = None
@@ -20580,10 +20693,11 @@ def _enrich_stock_statement_header_from_ocr(
                 result["stockist_address"] = branch
 
     # Company fallback when "Company :" OCR failed but the division banner prints.
+    # Trailing [10183] after HIMALAYA (ZEAL) is not a word boundary — do not require \b.
     if not str(result.get("company_name") or "").strip():
         m_hz = re.search(
             r"\b(HIMALAYA\s+ZANDRA(?:\s+DIV(?:ISION|\.)?)?|"
-            r"HIMALAYA\s*\([^)]{2,40}\))\b",
+            r"HIMALAYA\s*\([^)]{2,40}\))(?:\s*\[[^\]]+\])?",
             blob,
             re.I,
         )
@@ -20595,13 +20709,23 @@ def _enrich_stock_statement_header_from_ocr(
                 continue
             pname = str(item.get("product_name") or "")
             m_item = re.search(
-                r"\b(HIMALAYA\s+ZANDRA|HIMALAYA\s*\([^)]{2,40}\))\b",
+                r"\b(HIMALAYA\s+ZANDRA|HIMALAYA\s*\([^)]{2,40}\))",
                 pname,
                 re.I,
             )
             if m_item:
                 result["company_name"] = _clean_name(m_item.group(1))
                 break
+
+    # Printed From/To (including "From Date … to …") when Vision left period null.
+    if not str(result.get("period_from") or "").strip() or not str(
+        result.get("period_to") or ""
+    ).strip():
+        pf, pt, _src = _extract_report_period_from_content(blob)
+        if pf and not str(result.get("period_from") or "").strip():
+            result["period_from"] = pf
+        if pt and not str(result.get("period_to") or "").strip():
+            result["period_to"] = pt
 
     # For The Month Of: Oct26 → calendar month bounds when From/To absent.
     if not str(result.get("period_from") or "").strip():
@@ -45295,6 +45419,49 @@ def _ssa_qty_value_vision_bytes(file_bytes: bytes) -> bytes:
     return cropped or file_bytes
 
 
+def _ssa_peek_exclude_sale_period_enabled() -> bool:
+    """STOCK_SSA_PEEK_EXCLUDE_SALE_PERIOD — do not claim SALE-n grids as SSA dump.
+
+    Default OFF. When on, peeks with SALE-1 / SALE VALUE / NET SALE VALUE /
+    PUR.RETURN (and no RECEIPT+ISSUE) skip the OPENING/RECEIPT/ISSUE qty+value
+    reader so vision_table can map the printed sale columns.
+    """
+    return os.getenv(
+        "STOCK_SSA_PEEK_EXCLUDE_SALE_PERIOD", "false"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _peek_has_sale_period_movement_headers(text: str) -> bool:
+    """True for OPENING STOCK + SALE-n / SALE VALUE / NET SALE / PUR.RETURN grids.
+
+    Distinct from OPENING/RECEIPT/ISSUE/CLOSING qty+value SSA dumps. Does not
+    claim Medica OPSTK / SALE VAL sheets.
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"\bRECEIPT\b", blob, re.I) and re.search(r"\bISSUE\b", blob, re.I):
+        return False
+    if re.search(r"\bOPSTK\b", blob, re.I):
+        return False
+    sale_period = bool(
+        re.search(r"\bSALE\s*[-_]?\s*\d\b", blob, re.I)
+        or re.search(r"\bSALE\s*VALUE\s*[-_]?\s*\d\b", blob, re.I)
+        or re.search(r"\bNET\s*SALE\s*VALUE\b", blob, re.I)
+    )
+    pur_return_sale = bool(
+        re.search(r"\bPUR\.?\s*RETURN\b", blob, re.I)
+        and re.search(r"\bSALE\b", blob, re.I)
+        and re.search(r"\bOPENING\s+STOCK\b", blob, re.I)
+    )
+    return sale_period or pur_return_sale
+
+
 def _peek_suggests_ssa_qty_value(text: str) -> bool:
     """STOCK & SALES ANALYSIS qty/value grids — not Medica OPSTK / SALE VAL."""
     if not (text or "").strip():
@@ -45305,6 +45472,15 @@ def _peek_suggests_ssa_qty_value(text: str) -> bool:
         return False
     # Qty-only OPENING|RECEIPT|ISSUE|CLOSING (dashes, no VALUE) is not this reader.
     if _is_ssa_oric_qty_only_text(text):
+        return False
+    if (
+        _ssa_peek_exclude_sale_period_enabled()
+        and _peek_has_sale_period_movement_headers(text)
+    ):
+        logger.info(
+            "SSA_PEEK_EXCLUDE_SALE_PERIOD reason=sale_period_headers "
+            "action=skip_ssa_qty_value_claim"
+        )
         return False
     if re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
         return True
@@ -45947,10 +46123,20 @@ def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
         re.I,
     ):
         return False
+    if (
+        _ssa_peek_exclude_sale_period_enabled()
+        and _peek_has_sale_period_movement_headers(peek or "")
+    ):
+        logger.info(
+            "SSA_PHONE_EXCLUDE_SALE_PERIOD reason=sale_period_headers "
+            "action=skip_ssa_phone_claim"
+        )
+        return False
     if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", peek or "", re.I):
         return True
     if _is_ssa_opening_receipt_issue_dump_text_fuzzy(peek or ""):
         return True
+
     try:
         from PIL import Image, ImageOps
 
@@ -60153,14 +60339,28 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # before VT (VT parks VALUE under qty). Runs for unreadable OCR, phone
         # sideways shots, AND when peek already sees the ANALYSIS title.
         _ssa_phone = _ssa_dump_phone_photo_candidate(file_bytes, _op_stk_peek or "")
+        _sale_period_peek = bool(
+            _ssa_peek_exclude_sale_period_enabled()
+            and _peek_has_sale_period_movement_headers(_op_stk_peek or "")
+        )
         _clearly_ssa_peek = bool(
             _ssa_sheets_qty_value
-            or re.search(
-                r"STOCK\s*&\s*SALES\s*ANALYSIS|OPENING\s+RECEIPT\s+ISSUE",
-                _op_stk_peek or "",
-                re.I,
+            or (
+                not _sale_period_peek
+                and re.search(
+                    r"STOCK\s*&\s*SALES\s*ANALYSIS|OPENING\s+RECEIPT\s+ISSUE",
+                    _op_stk_peek or "",
+                    re.I,
+                )
             )
         )
+        if _sale_period_peek:
+            logger.info(
+                "[SalesStatement] file=%s SSA clearly-peek cleared "
+                "reason=sale_period_headers",
+                filename,
+            )
+
         _monthly_op_stk_photo = bool(
             not _clearly_ssa_peek
             and re.search(
@@ -60172,11 +60372,35 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         )
         # LMS1|OP.STK|RCPTS|SL.VALUE phone photos OCR as noise; try Op.Stk
         # before the SSA dump reader invents OPENING/RECEIPT/ISSUE columns.
+        # SALE-1 / SALE VALUE period grids must reach vision_table — Op.Stk
+        # parks sale qty and shifts closing when OCR is noisy.
+        _op_stk_peek_tokens = bool(
+            re.search(
+                r"\bOp[_\s.]*Stk\b|\bOP[_\s.]*STK\b|\bRcpts?\b|\bLMS1?\b|"
+                r"\bSL[_\s.]*Val(?:ue)?\b|\bCL[_\s.]*Val(?:ue)?\b",
+                _op_stk_peek or "",
+                re.I,
+            )
+        )
+        _allow_op_stk_before_ssa = not _sale_period_peek
+        if _ssa_peek_exclude_sale_period_enabled():
+            _allow_op_stk_before_ssa = _allow_op_stk_before_ssa and (
+                _op_stk_peek_tokens or _monthly_op_stk_photo
+            )
+            if not _allow_op_stk_before_ssa and (
+                _peek_unreadable or _ssa_phone or _monthly_op_stk_photo
+            ):
+                logger.info(
+                    "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                    "reason=sale_period_or_no_op_stk_tokens",
+                    filename,
+                )
         if (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _clearly_ssa_peek
+            and _allow_op_stk_before_ssa
             and (_peek_unreadable or _ssa_phone or _monthly_op_stk_photo)
         ):
             try:

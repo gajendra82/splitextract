@@ -1470,6 +1470,7 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
             "receipts_value",
             "sales_qty",
             "closing_qty",
+            "layout",
             "printed_amount_total_sales_value",
             "printed_amount_total_closing_value",
         ):
@@ -1550,7 +1551,14 @@ def build_statement_from_page_group(
             extra[key] = value
     if printed_totals.get("extraction_method"):
         extra["extraction_method"] = printed_totals["extraction_method"]
-        extra["layout"] = "ssa_opening_receipt_issue_value"
+        # Only stamp the SSA dump layout when a page actually used an SSA method.
+        # SALE-1 / vision_table multipage merges must keep their own layout.
+        _printed_method = str(printed_totals.get("extraction_method") or "")
+        if _printed_method.startswith("ssa_"):
+            extra["layout"] = "ssa_opening_receipt_issue_value"
+        elif printed_totals.get("extra", {}).get("layout"):
+            extra["layout"] = printed_totals["extra"]["layout"]
+
     statement: Dict[str, Any] = {
         "source_file": source_file,
         "source_format": source_format,
