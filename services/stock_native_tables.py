@@ -974,6 +974,11 @@ def _is_right_split_header(canons: set) -> bool:
     )
 
 
+def _split_right_row_numeric_count(row: List[Dict[str, Any]]) -> int:
+    texts = [str(t.get("text") or "") for t in row if isinstance(t, dict)]
+    return sum(1 for t in texts if parse_number(t) is not None)
+
+
 def _split_page_product_rows(
     rows: List[List[Dict[str, Any]]], *, named: bool
 ) -> List[List[Dict[str, Any]]]:
@@ -1006,7 +1011,109 @@ def _split_page_product_rows(
                 r"^-?\d[\d,]*(?:\.\d+)?\b", first
             ):
                 out.append(row)
+        elif (
+            not named
+            and has_num
+            and _split_right_row_numeric_count(row) >= 4
+        ):
+            # Right half often prints Manufacturer/Division on every row, so
+            # alpha text is present but there is still no product_name column.
+            out.append(row)
     return out
+
+
+def _merge_one_split_page_pair(
+    left: Dict[str, Any], right: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    left_header = (left or {}).get("header_cells") or []
+    right_header = (right or {}).get("header_cells") or []
+    if not (
+        left_header
+        and right_header
+        and _is_left_split_header(_page_header_canons(left_header))
+        and _is_right_split_header(_page_header_canons(right_header))
+    ):
+        return None
+    left_rows = _split_page_product_rows(left.get("data_rows") or [], named=True)
+    right_rows = _split_page_product_rows(right.get("data_rows") or [], named=False)
+    n_left = len(left_rows)
+    n_right = len(right_rows)
+    slack = max(2, int(0.15 * max(n_left, n_right, 1)))
+    if n_left < 3 or n_right < 3 or abs(n_left - n_right) > slack:
+        return None
+    n = min(n_left, n_right)
+    left_width = len(left_header)
+    right_width = len(right_header)
+    merged_rows = [
+        _merge_split_row(
+            left_rows[i],
+            right_rows[i],
+            left_width=left_width,
+            right_width=right_width,
+        )
+        for i in range(n)
+    ]
+    return {
+        "page_index": left.get("page_index"),
+        "header_cells": _merge_split_headers(left_header, right_header),
+        "data_rows": merged_rows,
+        "resolved": True,
+        "structural": False,
+        "group_qty_value_header": bool(
+            left.get("group_qty_value_header") or right.get("group_qty_value_header")
+        ),
+        "split_column_pages": [left.get("page_index"), right.get("page_index")],
+    }
+
+
+def _stitch_split_column_page_blocks(
+    page_results: List[Dict[str, Any]],
+) -> Optional[List[Dict[str, Any]]]:
+    """Zip a run of left-half pages with a following run of right-half pages.
+
+    Some printers emit all product/opening pages first, then all sales/closing
+    pages (1..N left, N+1..2N right) instead of interleaved pairs.
+    """
+    if len(page_results) < 4:
+        return None
+    roles: List[str] = []
+    for page in page_results:
+        canons = _page_header_canons((page or {}).get("header_cells") or [])
+        if _is_left_split_header(canons):
+            roles.append("left")
+        elif _is_right_split_header(canons):
+            roles.append("right")
+        else:
+            roles.append("other")
+    if "other" in roles:
+        return None
+    if not roles or roles[0] != "left" or roles[-1] != "right":
+        return None
+    # Must be one contiguous left block then one contiguous right block.
+    first_right = next((i for i, r in enumerate(roles) if r == "right"), -1)
+    if first_right <= 0:
+        return None
+    if any(r != "left" for r in roles[:first_right]):
+        return None
+    if any(r != "right" for r in roles[first_right:]):
+        return None
+    lefts = page_results[:first_right]
+    rights = page_results[first_right:]
+    if len(lefts) < 2 or len(lefts) != len(rights):
+        return None
+    merged: List[Dict[str, Any]] = []
+    for left, right in zip(lefts, rights):
+        pair = _merge_one_split_page_pair(left, right)
+        if pair is None:
+            return None
+        merged.append(pair)
+        logger.info(
+            "STOCK_PDF_SPLIT_COLUMN_PAGES mode=block left=%s right=%s rows=%s",
+            left.get("page_index"),
+            right.get("page_index"),
+            len(pair.get("data_rows") or []),
+        )
+    return merged
 
 
 def _merge_split_headers(
@@ -1016,12 +1123,18 @@ def _merge_split_headers(
     for cell in left or []:
         entry = dict(cell)
         entry["col_index"] = len(merged)
+        # Drop page-local geometry: left/right halves share no common x scale
+        # after stitch, so assign_cells must use renumbered col_index.
+        entry.pop("x_center", None)
+        entry.pop("x0", None)
+        entry.pop("x1", None)
         merged.append(entry)
     for cell in right or []:
         entry = dict(cell)
         entry["col_index"] = len(merged)
-        if entry.get("x_center") is not None:
-            entry["x_center"] = float(entry["x_center"]) + 1.0
+        entry.pop("x_center", None)
+        entry.pop("x0", None)
+        entry.pop("x1", None)
         merged.append(entry)
     return merged
 
@@ -1051,18 +1164,241 @@ def _peel_glued_amount_manufacturer(
     return [amount, trail]
 
 
-def _merge_split_row(
-    left: List[Dict[str, Any]], right: List[Dict[str, Any]]
+def _peel_leading_product_code_token(
+    tokens: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    out = [dict(t) for t in left if isinstance(t, dict)]
-    for token in right or []:
-        if not isinstance(token, dict):
+    """Split '664903 AACTARIL SOAP' into PCode + Product Name tokens."""
+    if not tokens:
+        return tokens
+    first = tokens[0]
+    if not isinstance(first, dict):
+        return tokens
+    text = str(first.get("text") or "").strip()
+    match = re.match(r"^(\d{4,})\s+(.+)$", text)
+    if not match:
+        return tokens
+    code_tok = dict(first)
+    code_tok["text"] = match.group(1)
+    name_tok = dict(first)
+    name_tok["text"] = match.group(2).strip()
+    if name_tok.get("x") is not None:
+        name_tok["x"] = float(name_tok["x"]) + 0.03
+    return [code_tok, name_tok, *[dict(t) for t in tokens[1:] if isinstance(t, dict)]]
+
+
+def _peel_trailing_manufacturer_token(
+    tokens: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Split '1087.52 THE HIMALAYA DRUG - OTX' into STOCKV + Manufacturer."""
+    if not tokens:
+        return tokens
+    last = tokens[-1]
+    if not isinstance(last, dict):
+        return tokens
+    text = str(last.get("text") or "").strip()
+    match = re.match(r"^([0-9][0-9,]*(?:\.[0-9]+)?)\s+(.+)$", text)
+    if not match:
+        return tokens
+    trail = match.group(2).strip()
+    if not re.search(
+        r"(?i)\b(?:drug|pvt\.?\s*ltd|ltd|division|manufacturer|company)\b",
+        trail,
+    ):
+        return tokens
+    value_tok = dict(last)
+    value_tok["text"] = match.group(1)
+    mfr_tok = dict(last)
+    mfr_tok["text"] = trail
+    if mfr_tok.get("x") is not None:
+        mfr_tok["x"] = float(mfr_tok["x"]) + 0.03
+    body = [dict(t) for t in tokens[:-1] if isinstance(t, dict)]
+    return body + [value_tok, mfr_tok]
+
+
+# Size units only — bare SYR/TAB/CAP are product-form words (LIV 52 SYR),
+# not packing, and must not steal the "52" into the pack column.
+_SPLIT_SIZE_UNIT_RE = re.compile(r"(?i)^(ml|mg|gm|grm|gr|g)$")
+
+
+def _split_pack_fragment(text: Any) -> bool:
+    """True when a split-half word belongs to packing (75GM / 200ML / ML)."""
+    raw = str(text or "").strip().rstrip(".,-_")
+    if not raw:
+        return False
+    if _SPLIT_SIZE_UNIT_RE.fullmatch(raw):
+        return True
+    if re.fullmatch(r"\d+(?:\.\d+)?\s*[xX*]\s*\S+", raw):
+        return True
+    if re.fullmatch(
+        r"\(?\d+(?:\.\d+)?\s*(?:\*\s*\d+(?:\.\d+)?)?\s*"
+        r"(?:TAB|TABS|ML|MG|CAP|CAPS|SYP|SYR|INJ|DS|S|'S|GR|GM|GRM|G|UNT)\)?",
+        raw,
+        re.I,
+    ):
+        return True
+    return bool(re.fullmatch(r"\d+\s*`?S\b", raw, re.I))
+
+
+def _join_token_texts(tokens: Sequence[Dict[str, Any]]) -> str:
+    return " ".join(
+        str(t.get("text") or "").strip()
+        for t in tokens
+        if isinstance(t, dict) and str(t.get("text") or "").strip()
+    ).strip()
+
+
+def _collapse_split_half_tokens(
+    tokens: List[Dict[str, Any]],
+    width: int,
+    *,
+    trailing_numeric: int,
+) -> List[Dict[str, Any]]:
+    """Fit overflow words into ``width`` slots so BOX/pack cannot shift opening.
+
+    Multi-word product/packing rows emit more tokens than header cells. Naive
+    col_index then maps pack size (200) onto OPV. Keep the trailing numeric
+    movement cells, peel BOX + pack fragments, collapse the rest into name.
+    """
+    toks = [dict(t) for t in tokens if isinstance(t, dict)]
+    if width <= 0 or len(toks) <= width:
+        return toks
+    trail_n = max(0, min(int(trailing_numeric), width, len(toks)))
+    trail = [dict(t) for t in toks[-trail_n:]] if trail_n else []
+    head = [dict(t) for t in toks[:-trail_n]] if trail_n else [dict(t) for t in toks]
+    head_slots = width - trail_n
+    if head_slots <= 0:
+        return [dict(t) for t in toks[-width:]]
+    if len(head) <= head_slots:
+        return head + trail
+
+    box: Optional[Dict[str, Any]] = None
+    # BOX sits just before opening qty/value — usually a bare integer.
+    if head_slots >= 2 and head:
+        box_text = str(head[-1].get("text") or "").strip()
+        if re.fullmatch(r"\d{1,6}", box_text):
+            box = dict(head[-1])
+            head = head[:-1]
+
+    code: Optional[Dict[str, Any]] = None
+    if head_slots >= 2 and head:
+        code_text = str(head[0].get("text") or "").strip()
+        if re.fullmatch(r"\d{4,}", code_text):
+            code = dict(head[0])
+            head = head[1:]
+
+    pack_parts: List[Dict[str, Any]] = []
+    while head:
+        cur = str(head[-1].get("text") or "").strip()
+        if _split_pack_fragment(cur):
+            pack_parts.insert(0, dict(head.pop()))
             continue
-        tok = dict(token)
+        # "200" + "ML" — keep the bare size with its size unit only.
+        if (
+            pack_parts
+            and _SPLIT_SIZE_UNIT_RE.fullmatch(
+                str(pack_parts[0].get("text") or "").strip()
+            )
+            and re.fullmatch(r"\d+(?:\.\d+)?", cur)
+        ):
+            pack_parts.insert(0, dict(head.pop()))
+            continue
+        break
+
+    name_text = _join_token_texts(head)
+    pack_text = _join_token_texts(pack_parts)
+
+    # Emit exactly head_slots cells: [code] [name] [pack] [box…] so a missing
+    # pack cannot slide BOX into OPSTK/OPV.
+    template = dict(toks[0]) if toks else {}
+    for key in ("text", "col_index", "x"):
+        template.pop(key, None)
+
+    def _empty(text: str = "") -> Dict[str, Any]:
+        tok = dict(template)
+        tok["text"] = text
+        return tok
+
+    # Prefer a stable product block: code | name | pack | box.
+    filled = [
+        code if code is not None else _empty(),
+        _empty(name_text),
+        _empty(pack_text),
+        box if box is not None else _empty(),
+    ]
+    if len(filled) > head_slots:
+        # Narrow left header: glue pack onto name, drop empty code if needed.
+        name_bit = name_text
+        if pack_text:
+            name_bit = f"{name_text} {pack_text}".strip()
+        narrow = []
+        if code is not None and head_slots >= 3:
+            narrow.append(code)
+        narrow.append(_empty(name_bit))
+        if box is not None and len(narrow) < head_slots:
+            narrow.append(box)
+        filled = narrow
+    while len(filled) < head_slots:
+        filled.insert(-1 if box is not None else len(filled), _empty())
+    filled = filled[:head_slots]
+
+    out = filled + trail
+    logger.info(
+        "STOCK_PDF_SPLIT_COLUMN_PAGES collapse width=%s in=%s out=%s name=%r pack=%r",
+        width,
+        len(toks),
+        len(out),
+        name_text[:40],
+        pack_text[:20],
+    )
+    return out
+
+
+def _merge_split_row(
+    left: List[Dict[str, Any]],
+    right: List[Dict[str, Any]],
+    *,
+    left_width: Optional[int] = None,
+    right_width: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    left_tokens = _peel_leading_product_code_token(
+        [dict(t) for t in left if isinstance(t, dict)]
+    )
+    right_tokens = _peel_trailing_manufacturer_token(
+        [dict(t) for t in right if isinstance(t, dict)]
+    )
+    if left_width and left_width > 0:
+        # Left half ends with OPSTK + OPV.
+        left_tokens = _collapse_split_half_tokens(
+            left_tokens, int(left_width), trailing_numeric=2
+        )
+    if right_width and right_width > 0 and len(right_tokens) > int(right_width):
+        has_mfr = bool(
+            re.search(
+                r"(?i)\b(?:drug|pvt\.?\s*ltd|ltd|division|manufacturer|company)\b",
+                str(right_tokens[-1].get("text") or ""),
+            )
+        )
+        # Keep STOCK…STOCKV (+ mfr) intact; collapse any overflow on the left.
+        trailing = int(right_width) - 1 if has_mfr else int(right_width)
+        right_tokens = _collapse_split_half_tokens(
+            right_tokens,
+            int(right_width),
+            trailing_numeric=max(2, trailing),
+        )
+    out: List[Dict[str, Any]] = []
+    for tok in left_tokens:
+        out.append(tok)
+    for tok in right_tokens:
         if tok.get("x") is not None:
             tok["x"] = float(tok["x"]) + 1.0
         for piece in _peel_glued_amount_manufacturer(tok):
             out.append(piece)
+    # Left and right pages both restart col_index at 0; renumber so
+    # assign_cells does not collide product/opening with sales/closing.
+    # Drop x so geometry bands cannot override the renumbered indexes.
+    for idx, tok in enumerate(out):
+        tok["col_index"] = idx
+        tok.pop("x", None)
     return out
 
 
@@ -1178,21 +1514,25 @@ def _stitch_split_column_pages(
     """Zip a product/opening page with the following sales/closing-only page."""
     if not _split_column_pages_enabled() or len(page_results) < 2:
         return page_results
+    # Prefer block pairing (all lefts then all rights) when that layout fits.
+    blocked = _stitch_split_column_page_blocks(page_results)
+    if blocked:
+        return blocked
     out: List[Dict[str, Any]] = []
     index = 0
     while index < len(page_results):
         current = page_results[index]
         nxt = page_results[index + 1] if index + 1 < len(page_results) else None
-        merged = (
-            _try_merge_split_page_pair(current, nxt) if nxt is not None else None
-        )
-        if merged is not None:
-            out.append(merged)
+        pair = _merge_one_split_page_pair(current, nxt) if nxt is not None else None
+        if pair is None and nxt is not None:
+            pair = _try_merge_split_page_pair(current, nxt)
+        if pair is not None:
+            out.append(pair)
             logger.info(
-                "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
+                "STOCK_PDF_SPLIT_COLUMN_PAGES mode=pair left=%s right=%s rows=%s",
                 current.get("page_index"),
                 nxt.get("page_index"),
-                len(merged.get("data_rows") or []),
+                len(pair.get("data_rows") or []),
             )
             index += 2
             continue
@@ -1290,6 +1630,108 @@ def _absorb_nearby_header_rows(
         [c.get("text") for c in header],
     )
     return consumed
+
+
+def _merge_split_stock_headers_enabled() -> bool:
+    """STOCK_PDF_WORDS_MERGE_SPLIT_STOCK_HEADERS — join Op.+Stock / Stock+Value.
+
+    pdfplumber often emits Op. and Stock as separate words with a 2–4pt gap.
+    Bare Stock then maps to closing_qty (medica_stock) and steals Cl.Stock.
+    Default ON — only glues adjacent printed fragments (gap ≤ 8pt).
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_MERGE_SPLIT_STOCK_HEADERS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _merge_split_stock_header_cells(
+    header: List[Dict[str, Any]],
+    page_width: Optional[float] = None,
+) -> List[Dict[str, Any]]:
+    """Join adjacent Op.+Stock and Stock+Value fragments into one header cell.
+
+    Does not invent columns — only glues printed fragments that belong to one
+    label so alias resolution sees Op.Stock / Stock Value.
+    """
+    if not _merge_split_stock_headers_enabled() or len(header) < 2:
+        return header
+
+    def _norm(cell: Dict[str, Any]) -> str:
+        return normalize_header(cell.get("text"))
+
+    def _is_op_frag(norm: str) -> bool:
+        return norm in {"op", "op."} or bool(re.fullmatch(r"op\.?", norm or ""))
+
+    def _is_stock_frag(norm: str) -> bool:
+        return norm == "stock"
+
+    def _is_value_frag(norm: str) -> bool:
+        return norm in {"value", "val"}
+
+    def _is_product_frag(norm: str) -> bool:
+        return norm in {"product", "product name", "item"}
+
+    def _is_name_frag(norm: str) -> bool:
+        return norm == "name"
+
+    max_gap = 8.0
+    merged: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(header):
+        cur = dict(header[i])
+        if i + 1 < len(header):
+            nxt = header[i + 1]
+            gap = float(nxt.get("x0") or 0) - float(cur.get("x1") or 0)
+            n0 = _norm(cur)
+            n1 = _norm(nxt)
+            join = False
+            label = ""
+            if gap <= max_gap and _is_op_frag(n0) and _is_stock_frag(n1):
+                join = True
+                label = "op_stock"
+            elif gap <= max_gap and _is_stock_frag(n0) and _is_value_frag(n1):
+                join = True
+                label = "stock_value"
+            elif gap <= max_gap and _is_product_frag(n0) and _is_name_frag(n1):
+                join = True
+                label = "product_name"
+            if join:
+                cur["text"] = (
+                    str(cur.get("text") or "").strip()
+                    + " "
+                    + str(nxt.get("text") or "").strip()
+                ).strip()
+                cur["x1"] = max(float(cur.get("x1") or 0), float(nxt.get("x1") or 0))
+                cur["x0"] = min(
+                    float(cur.get("x0") or 0), float(nxt.get("x0") or 0)
+                )
+                logger.info(
+                    "STOCK_PDF_WORDS_MERGE_SPLIT_STOCK pair=%s text=%r",
+                    label,
+                    cur["text"],
+                )
+                i += 2
+                merged.append(cur)
+                continue
+        merged.append(cur)
+        i += 1
+
+    width = float(page_width or 0) or None
+    if width is None:
+        for cell in merged:
+            xc = cell.get("x_center")
+            if xc not in (None, 0, 0.0):
+                mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+                if mid and float(xc):
+                    width = mid / float(xc)
+                    break
+    if not width or width <= 0:
+        width = 1.0
+    for idx, cell in enumerate(merged):
+        cell["col_index"] = idx
+        mid = (float(cell.get("x0") or 0) + float(cell.get("x1") or 0)) / 2.0
+        cell["x_center"] = mid / width
+    return merged
 
 
 def _merge_qualifier_subheader(
@@ -1996,6 +2438,21 @@ def _extract_pdf_page_rows(
         blob = " ".join(str(c.get("text") or "") for c in cells)
         if re.search(r"Value\s*->|Qnt\s*->", blob, re.I):
             return True
+        # Days-stock legend / prepared-by footer: "Sale"/"Stock" words score as
+        # qty headers and steal the real table header on continuation pages.
+        if re.search(
+            r"(?i)\bDSTK\b|Days\s+Stock\s+on|No\s+Sale\s+No\s+Stock|"
+            r"Prepared\s+by|Computer\s+Generated\s+Report",
+            blob,
+        ):
+            return True
+        # Totals strip "PURC : 331488 SALE : 316204 STOCK : …" is not a header.
+        if (
+            re.search(r"(?i)\bPURC\s*:", blob)
+            and re.search(r"(?i)\bSALE\s*:", blob)
+            and re.search(r"(?i)\bSTOCK\s*:", blob)
+        ):
+            return True
         colon_amts = sum(
             1
             for c in cells
@@ -2041,6 +2498,9 @@ def _extract_pdf_page_rows(
         and _merge_qualifier_subheader(best_header, clustered[best_i + 1])
     ):
         skip_row_indexes.append(best_i + 1)
+
+    if best_header:
+        best_header = _merge_split_stock_header_cells(best_header, width)
 
     group_qty_value = False
     expanded = _expand_group_qty_value_header(

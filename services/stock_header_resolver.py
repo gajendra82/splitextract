@@ -42,7 +42,23 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "pq", "sq"}
+    {
+        "op",
+        "in",
+        "out",
+        "sr",
+        "cb",
+        "rec",
+        "sl",
+        "pi",
+        "dn",
+        "cn",
+        "tot",
+        "pq",
+        "sq",
+        "code",
+        "sku",
+    }
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -71,13 +87,17 @@ ALIASES: Dict[str, List[str]] = {
     ],
     # Catalogue / SKU code column (never product_name, never a qty).
     "product_code": [
+        "code",
+        "item code",
+        "product code",
+        "prod code",
+        "sku",
+        "itemcode",
+        "sku code",
         "mat code",
         "material code",
-        "product code",
-        "sku code",
         "pcode",
         "p code",
-        "code",  # Code | ITEM | PACKING grids
     ],
     "pack": [
         "pack",
@@ -200,6 +220,8 @@ ALIASES: Dict[str, List[str]] = {
         "opening stock qty",
         "opening qty",
         "opening quantity",
+        "op qty",
+        "op.qty",
         "op stock",
         "op.",
         "op.bal",
@@ -707,12 +729,12 @@ _DIRECT_VALUE_FIELDS = {
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
-    "opv": "opening_value",  # OPSTK/OPV — compact opening value
+    "opv": "opening_value",  # OPSTK/OPV and STOCK AND SALES STATEMENT OPV
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
-    "purcv": "purchase_value",  # PURC/PURCV — compact purchase value
+    "purcv": "purchase_value",  # PURC/PURCV compact purchase value
     "purc val": "purchase_value",
     "purchase value": "purchase_value",
     "purch bill amt": "purchase_value",
@@ -720,8 +742,11 @@ _DIRECT_VALUE_FIELDS = {
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
     "salev": "sales_value",  # SALE/SALEV — compact sales value
+    "sale v": "sales_value",
     "issue value": "sales_value",
     "stockv": "closing_value",  # STOCK/STOCKV — compact closing value
+    "stock v": "closing_value",
+    "stk v": "closing_value",
 }
 
 
@@ -1047,6 +1072,89 @@ def _adjacent_qty_value_pair_enabled() -> bool:
     }
 
 
+def _trailing_purchase_sale_stock_values_enabled() -> bool:
+    """Closing|Purchase|Sale|Stock money triad after qty columns.
+
+    Default ON. Stock and Sale sheets print Op/Pur/Sale/Closing qtys then
+    Purchase/Sale/Stock amounts. Without promotion, Purchase steals
+    purchase_qty from Pur and Sale/Stock drop as DUPLICATE_CANONICAL — values
+    never extract.
+    """
+    return os.getenv(
+        "STOCK_HEADER_TRAILING_PURCHASE_SALE_STOCK_VALUES", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _promote_trailing_purchase_sale_stock_values(
+    prelim: List[Dict[str, Any]],
+) -> bool:
+    """Map trailing Purchase|Sale|Stock after Closing qty onto value fields."""
+    if not _trailing_purchase_sale_stock_values_enabled() or len(prelim) < 4:
+        return False
+    closing_idxs = [
+        i
+        for i, col in enumerate(prelim)
+        if isinstance(col, dict) and col.get("canonical") == "closing_qty"
+    ]
+    if not closing_idxs:
+        return False
+    closing_i = closing_idxs[0]
+    # Need a qty Purchase/Pur/Sale already to the left of Closing.
+    left_blob = " ".join(
+        normalize_header(c.get("header_text"))
+        for c in prelim[:closing_i]
+        if isinstance(c, dict)
+    )
+    if not re.search(r"\b(?:pur|purch|purchase|sale|sales|op)\b", left_blob):
+        return False
+    trio: List[Dict[str, Any]] = []
+    for col in prelim[closing_i + 1 :]:
+        if not isinstance(col, dict):
+            continue
+        if col.get("reason") == "date_or_near_expiry":
+            continue
+        hdr = normalize_header(col.get("header_text"))
+        if re.search(r"(?i)\bnear\s*exp|\bexpir", hdr):
+            continue
+        trio.append(col)
+        if len(trio) >= 3:
+            break
+    if len(trio) < 3:
+        return False
+    norms = [
+        re.sub(r"\s+", "", normalize_header(c.get("header_text"))) for c in trio[:3]
+    ]
+    if norms[0] not in {"purchase", "purchases", "purch", "purc"}:
+        return False
+    if norms[1] not in {"sale", "sales"}:
+        return False
+    if norms[2] not in {"stock", "stk", "closingstock", "clstock", "stockvalue"}:
+        return False
+    mapping = (
+        ("purchase_value", "purchase"),
+        ("sales_value", "sales"),
+        ("closing_value", "closing"),
+    )
+    for col, (canon, group) in zip(trio[:3], mapping):
+        col["canonical"] = canon
+        col["group"] = group
+        col["is_value"] = True
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.92)
+        col["reason"] = "trailing_purchase_sale_stock_values"
+        logger.info(
+            "STOCK_HEADER_TRAILING_PURCHASE_SALE_STOCK col=%s %r -> %s",
+            col.get("col_index"),
+            col.get("header_text"),
+            canon,
+        )
+    return True
+
+
 def _promote_adjacent_same_group_qty_to_value(
     prelim: List[Dict[str, Any]],
 ) -> bool:
@@ -1325,6 +1433,97 @@ def _absorb_ignore_geometry_enabled() -> bool:
     }
 
 
+def _absorb_interior_ignore_enabled() -> bool:
+    """STOCK_HEADER_ABSORB_INTERIOR_IGNORE — ignore cols between kept cols absorb.
+
+    Op.Stock | … | Cl.Stock | Stock Value sheets print BLM/LM/QtyPur/Box between
+    movement columns. Dropping those ignores widens Op/Cl/Value bands so LM qty
+    collides with opening and Box pack collides with closing value. Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_ABSORB_INTERIOR_IGNORE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _prefer_non_ignore_dead_zone_enabled() -> bool:
+    """STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE — Cl.Stock|Box midpoint → qty.
+
+    Tokens on the dead-zone between a movement column and an ignore absorber
+    (closing qty vs Box Pack) used to null both. Prefer the non-ignore side.
+    Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _prefer_product_over_name_enabled() -> bool:
+    """STOCK_HEADER_PREFER_PRODUCT_OVER_NAME — Product wins over bare Name.
+
+    StockStatement Report prints company under Name and SKU under Product.
+    Both alias to product_name; first-wins dedupe keeps Name and drops Product,
+    so qty rows lose their product label. Default ON.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PREFER_PRODUCT_OVER_NAME", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _apply_prefer_product_over_name(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Demote bare Name when a Product column also claims product_name."""
+    if not _prefer_product_over_name_enabled():
+        return False
+    name_idxs: List[int] = []
+    product_idxs: List[int] = []
+    for i, col in enumerate(prelim):
+        if str(col.get("canonical") or "") != "product_name":
+            continue
+        norm = normalize_header(col.get("header_text"))
+        if norm == "name":
+            name_idxs.append(i)
+        elif norm in {
+            "product",
+            "product name",
+            "item",
+            "item name",
+            "particular",
+            "particulars",
+        } or norm.startswith("product "):
+            product_idxs.append(i)
+    if not name_idxs or not product_idxs:
+        return False
+    for i in name_idxs:
+        prelim[i]["canonical"] = "ignore"
+        prelim[i]["group"] = None
+        prelim[i]["confidence"] = 0.0
+        prelim[i]["reason"] = "name_before_product"
+        logger.info(
+            "STOCK_HEADER_PREFER_PRODUCT_OVER_NAME demote_name col_index=%s "
+            "keep_product_col=%s",
+            prelim[i].get("col_index"),
+            prelim[product_idxs[0]].get("col_index"),
+        )
+        errors.append(
+            {
+                "code": "PREFER_PRODUCT_OVER_NAME",
+                "message": (
+                    f"Demoted Name col_index={prelim[i].get('col_index')} to ignore; "
+                    f"kept Product col_index={prelim[product_idxs[0]].get('col_index')}"
+                ),
+                "col_index": prelim[i].get("col_index"),
+            }
+        )
+    for i in product_idxs:
+        prelim[i]["canonical"] = "product_name"
+        prelim[i]["group"] = "product_name"
+        prelim[i]["confidence"] = max(float(prelim[i].get("confidence") or 0.0), 0.95)
+        prelim[i]["reason"] = "prefer_product_over_name"
+    return True
+
+
 def _medica_in_ot_as_free_in_enabled() -> bool:
     """STOCK_MEDICA_IN_OT_AS_FREE_IN — Medica printed IN/OT is free_in_qty. Default OFF."""
     return os.getenv("STOCK_MEDICA_IN_OT_AS_FREE_IN", "false").strip().lower() in {
@@ -1358,6 +1557,21 @@ def _group_wise_sales_sequence_enabled() -> bool:
     real Sales Qty column. Default OFF.
     """
     return os.getenv("STOCK_HEADER_GROUP_WISE_SEQUENCE", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _free_skip_ignore_neighbour_enabled() -> bool:
+    """STOCK_HEADER_FREE_SKIP_IGNORE — Free looks past one ignore neighbour.
+
+    Pur. Qty | Pur. Free often becomes Pur. | QtyPur. | Free; QtyPur. is
+    unknown/ignore so Free would otherwise take the Sales neighbour as
+    free_out. Default ON — only skips one ignore cell to the immediate left.
+    """
+    return os.getenv("STOCK_HEADER_FREE_SKIP_IGNORE", "true").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -2187,11 +2401,25 @@ def _assign_cells_by_column_bands(
                 right_b = b
                 break
         if left_b is not None and right_b is not None:
-            chosen = _disambiguate_gap_token(raw, left_b, right_b, tx)
-            if chosen is not None:
-                bucket[int(chosen["col_index"])].append(raw)
-                assigned += 1
-                continue
+            # Cl.Stock | Box Pack: qty on the midpoint should keep closing_qty,
+            # not null both sides. Same for Pur. | QtyPur. purchase zeros.
+            if _prefer_non_ignore_dead_zone_enabled():
+                non_ignore = [
+                    b
+                    for b in (left_b, right_b)
+                    if str(b.get("canonical") or "") != "ignore"
+                ]
+                if len(non_ignore) == 1:
+                    bucket[int(non_ignore[0]["col_index"])].append(raw)
+                    assigned += 1
+                    logger.info(
+                        "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE token=%r "
+                        "col_index=%s canonical=%s",
+                        raw,
+                        non_ignore[0].get("col_index"),
+                        non_ignore[0].get("canonical"),
+                    )
+                    continue
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -2802,6 +3030,19 @@ def resolve_columns(
         left_group = prelim[i - 1].get("group") if i > 0 else None
         right_group = prelim[i + 1].get("group") if i + 1 < len(prelim) else None
         left_canon = prelim[i - 1]["canonical"] if i > 0 else None
+        # Pur. | QtyPur. | Free: glued QtyPur. is ignore; look one cell further.
+        if (
+            left_canon == "ignore"
+            and i >= 2
+            and _free_skip_ignore_neighbour_enabled()
+        ):
+            left_group = prelim[i - 2].get("group") or left_group
+            left_canon = prelim[i - 2].get("canonical") or left_canon
+            logger.info(
+                "STOCK_HEADER_FREE_SKIP_IGNORE col_index=%s via=%s",
+                col.get("col_index"),
+                prelim[i - 2].get("header_text"),
+            )
         if re.search(r"\b(?:pur|purchase|rec|receipt)\b", hdr_free):
             col["canonical"] = "free_in_qty"
             col["confidence"] = 0.75
@@ -2924,6 +3165,10 @@ def resolve_columns(
     _promote_sales_free_before_value(prelim)
     # Op-St.|amount, Receipt|amount, Sale|amount, Cl. Stock|AMOUNT.
     _promote_movement_value_followers(prelim)
+    # Stock and Sale: Closing | Purchase | Sale | Stock → value triad.
+    _promote_trailing_purchase_sale_stock_values(prelim)
+    # Name + Product both → product_name: keep Product (SKU), demote Name.
+    _apply_prefer_product_over_name(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}
@@ -3044,44 +3289,90 @@ def assign_cells(
     # always absorb — otherwise Op.Value|Expiry|Pur.Qnt bands collapse and
     # amounts land in the wrong movement field.
     absorb_ignore = _absorb_ignore_geometry_enabled()
+    absorb_interior = _absorb_interior_ignore_enabled()
+    kept_xs: List[float] = []
+    if absorb_interior and not absorb_ignore:
+        for c in columns:
+            if c.get("x_center") is None:
+                continue
+            canon = str(c.get("canonical") or "ignore")
+            if canon != "ignore":
+                kept_xs.append(float(c["x_center"]))
+    interior_lo = min(kept_xs) if kept_xs else None
+    interior_hi = max(kept_xs) if kept_xs else None
     centers: List[Tuple[int, float, str]] = []
     date_ignore_absorbers = 0
-    geo_cols = [c for c in columns if c.get("x_center") is not None]
-    non_ignore_xs = [
-        float(c["x_center"])
-        for c in geo_cols
-        if str(c.get("canonical") or "ignore") != "ignore"
-    ]
-    left_anchor = min(non_ignore_xs) if non_ignore_xs else None
-    for c in geo_cols:
+    interior_ignore_absorbers = 0
+    for c in columns:
+        if c.get("x_center") is None:
+            continue
         canon = str(c.get("canonical") or "ignore")
         reason = str(c.get("reason") or "")
+        xc = float(c["x_center"])
         is_date_ignore = canon == "ignore" and reason == "date_or_near_expiry"
-        # OTHERS / ITEMCODE sit right of the product column. Dropping them
-        # spills their tokens into closing/order (CELL_COLLISION → None).
-        is_right_ignore = (
+        is_serial_ignore = canon == "ignore" and reason == "serial_number_header"
+        # Company/stockist Name left of Product must absorb (ZEAL / HIMALAYA-).
+        is_name_before_product = (
+            canon == "ignore" and reason == "name_before_product"
+        )
+        hdr_norm = normalize_header(c.get("header_text") or c.get("text"))
+        is_code_ignore = canon == "ignore" and hdr_norm in {
+            "code",
+            "item code",
+            "product code",
+            "sku",
+            "itemcode",
+            "prod code",
+        }
+        is_interior_ignore = (
             canon == "ignore"
-            and left_anchor is not None
-            and float(c["x_center"]) > left_anchor
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
+            and interior_lo is not None
+            and interior_hi is not None
+            and interior_lo < xc < interior_hi
+        )
+        # Transit / Transit.Val sit right of CL.Value; dropping them spills 0.00
+        # into closing_value and CELL_COLLISION-nulls the printed amount.
+        is_trailing_ignore = (
+            canon == "ignore"
+            and not absorb_ignore
+            and not is_date_ignore
+            and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
+            and not is_interior_ignore
+            and interior_hi is not None
+            and xc > interior_hi
+            and _absorb_interior_ignore_enabled()
         )
         if (
             canon == "ignore"
             and not absorb_ignore
             and not is_date_ignore
-            and not is_right_ignore
+            and not is_serial_ignore
+            and not is_name_before_product
+            and not is_code_ignore
         ):
-            continue
-        if is_date_ignore or is_right_ignore:
+            if is_interior_ignore or is_trailing_ignore:
+                interior_ignore_absorbers += 1
+            else:
+                continue
+        if is_date_ignore:
             date_ignore_absorbers += 1
-        centers.append((int(c["col_index"]), float(c["x_center"]), canon))
+        centers.append((int(c["col_index"]), xc, canon))
     centers.sort(key=lambda t: t[1])
-    if absorb_ignore or date_ignore_absorbers:
+    if absorb_ignore or date_ignore_absorbers or interior_ignore_absorbers:
         logger.info(
             "STOCK_HEADER_ABSORB_IGNORE_GEOMETRY centers=%s ignore_absorbers=%s "
-            "date_ignore=%s flag=%s",
+            "date_ignore=%s interior_ignore=%s flag=%s",
             len(centers),
             sum(1 for _i, _x, c in centers if c == "ignore"),
             date_ignore_absorbers,
+            interior_ignore_absorbers,
             absorb_ignore,
         )
     if len(centers) < 2:
@@ -3203,6 +3494,28 @@ def decode_pdf_word_tokens(words: Any) -> Any:
     return decoded
 
 
+def _peel_trailing_expiry_enabled() -> bool:
+    """STOCK_PARSE_PEEL_TRAILING_EXPIRY — peel date glued onto amount cells.
+
+    Default ON. Vision often merges CLOSING VALUE + EXPIRY into one cell
+    ("81.56 01-Nov-28"). Digits are kept; the date token is dropped.
+    """
+    return os.getenv(
+        "STOCK_PARSE_PEEL_TRAILING_EXPIRY", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
+    r"^(?P<num>-?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s+"
+    r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?\s*$"
+)
+
+
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
     """Parse a printed quantity/amount into float|None.
 
@@ -3230,8 +3543,27 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
         negative = True
         text = text[:-1].strip()
 
+    # Peel BEFORE digit-space collapse — otherwise "81.56 01-Nov-28" becomes
+    # "81.5601-Nov-28" and fails. Pipe gutter peel handles "|" forms below.
+    if _peel_trailing_expiry_enabled():
+        peeled = _TRAILING_EXPIRY_AFTER_AMOUNT.match(text)
+        if peeled:
+            logger.info(
+                "STOCK_PARSE_PEEL_TRAILING_EXPIRY raw=%r num=%s",
+                text[:48],
+                peeled.group("num"),
+            )
+            text = peeled.group("num")
+
     if allow_internal_spaces:
-        text = re.sub(r"(?<=\d)\s+(?=\d)", "", text)
+        # OCR space standing in for a decimal point: "28 00"→28.00, "176 51"→176.51.
+        # Only when the right side is exactly 2 digits (paisa / Primary_qty style).
+        # Do NOT collapse "1 234" (3+ digit group) this way.
+        dec_space = re.fullmatch(r"(-?\d+)\s+(\d{2})", text)
+        if dec_space:
+            text = f"{dec_space.group(1)}.{dec_space.group(2)}"
+        else:
+            text = re.sub(r"(?<=\d)\s+(?=\d)", "", text)
 
     # Strip currency markers.
     text = text.replace("₹", "").replace("Rs.", "").replace("Rs", "").strip()

@@ -8,6 +8,8 @@ from pathlib import Path
 from services.sales_statement_extractor import (
     _is_saleable_stock_report_text,
     _parse_saleable_stock_report,
+    _saleable_amt_pair_layout,
+    _saleable_match_row,
     extract_sales_statement,
 )
 
