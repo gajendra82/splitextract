@@ -26873,6 +26873,24 @@ def _saleable_parse_qty_cell(token: str) -> Tuple[Optional[float], str]:
     return None, "uncertain"
 
 
+def _saleable_leading_pack_cell(cell: str) -> bool:
+    """True when the first metric cell is Packing, not Opn qty."""
+    tok = (cell or "").strip()
+    if not tok:
+        return False
+    if re.fullmatch(r"\d{1,4}", tok):
+        return True
+    if re.fullmatch(
+        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S)\b.*",
+        tok,
+        re.I,
+    ):
+        return True
+    if re.fullmatch(r"\d+\s*[xX*]\s*\d+.*", tok):
+        return True
+    return False
+
+
 def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]:
     """Metric cells aligned to the pair header. Empty cells keep their column."""
     if raw.count("|") < len(fields):
@@ -26883,6 +26901,9 @@ def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]
     cells = parts[1:]
     while cells and not cells[-1]:
         cells.pop()
+    # Particular|Packing|Opn|… → drop Packing so qty/value pairs stay aligned.
+    if len(cells) == len(fields) + 1 and _saleable_leading_pack_cell(cells[0]):
+        cells = cells[1:]
     if len(cells) < len(fields):
         return None
     return cells[: len(fields)]
@@ -26983,6 +27004,16 @@ def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, A
     values, sources = _saleable_pair_assignment(cells, fields)
     pack = None
     name, pack = _saleable_split_packing(name)
+    parts = [part.strip() for part in raw.split("|")]
+    metric = parts[1:]
+    while metric and not metric[-1]:
+        metric.pop()
+    if (
+        not pack
+        and len(metric) == len(fields) + 1
+        and _saleable_leading_pack_cell(metric[0])
+    ):
+        pack = _clean_name(metric[0]) or None
     item = empty_line_item()
     item["product_name"] = name
     item["packing"] = pack
@@ -27120,7 +27151,7 @@ def _parse_saleable_stock_report(
                 items.append(paired)
             continue
 
-        matched = _saleable_match_row(raw)
+        matched = _saleable_match_row(raw, amt_pairs=amt_pairs)
         if not matched:
             continue
         name = _clean_name(matched["name"])
@@ -27163,10 +27194,10 @@ def _parse_saleable_stock_report(
         "saleable_opn_rec_issue_bal_qty_value"
         if pair_fields
         else (
-        "saleable_opn_rec_issue_bal_amt"
-        if amt_pairs
-        else "saleable_opn_rec_issue_bal"
-    )
+            "saleable_opn_rec_issue_bal_amt"
+            if amt_pairs
+            else "saleable_opn_rec_issue_bal"
+        )
     )
     extra["rows_detected"] = len(items)
     extra["fallback_used"] = False
