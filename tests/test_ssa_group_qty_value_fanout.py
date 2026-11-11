@@ -790,6 +790,503 @@ class SsaGroupQtyValueFanoutTests(unittest.TestCase):
         self.assertEqual(out[0].get("closing_qty"), 89.0)
         self.assertEqual(out[0].get("closing_value"), 15168.68)
 
+    def test_rate_opening_glue_peels_secondaryrate_opening(self):
+        """Secondaryrate '176 51 38' + Opening '0.00' → open=38, primary=0, close=30."""
+        from services.stock_vision_table import (
+            _repair_cells_rate_opening_glue,
+            _split_rate_opening_glued_token,
+            map_vision_table,
+        )
+
+        self.assertEqual(
+            _split_rate_opening_glued_token("176 51 38"), ("176.51", "38")
+        )
+        self.assertEqual(
+            _split_rate_opening_glued_token("101.31 0"), ("101.31", "0")
+        )
+        self.assertEqual(
+            _split_rate_opening_glued_token("79.02 49"), ("79.02", "49")
+        )
+        columns = [
+            {"col_index": i, "canonical": c, "header_text": h}
+            for i, (c, h) in enumerate(
+                [
+                    ("ignore", "Customer name"),
+                    ("product_code", "Material code"),
+                    ("product_name", "Material name"),
+                    ("rate", "Mrp"),
+                    ("ignore", "Secondaryrate"),
+                    ("opening_qty", "Opening balqty"),
+                    ("purchase_qty", "Primary qty"),
+                    ("closing_qty", "Closing balqty"),
+                ]
+            )
+        ]
+        cells = [
+            "ANIL MEDICAL AGENCY",
+            "7002304",
+            "ASHWAGANDHA TABLETS 60 S INDIA",
+            "260",
+            "176 51 38",
+            "0.00",
+            "30",
+            "30",
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_RATE_OPENING_GLUE": "true"}, clear=False
+        ):
+            out, width = _repair_cells_rate_opening_glue(cells, columns, 8)
+        self.assertEqual(width, 8)
+        self.assertEqual(out[4], "176.51")
+        self.assertEqual(out[5], "38")
+        self.assertEqual(out[6], "0.00")
+        self.assertEqual(out[7], "30")
+
+        headers = [
+            {"col_index": i, "text": t}
+            for i, t in enumerate(
+                [
+                    "Customer name",
+                    "Material code",
+                    "Material name",
+                    "Mrp",
+                    "Secondaryrate",
+                    "Opening balqty",
+                    "Primary qty",
+                    "Closing balqty",
+                ]
+            )
+        ]
+        table = {
+            "tables": [
+                {
+                    "column_count": 8,
+                    "header_rows": [headers],
+                    "rows": [
+                        {
+                            "row_index": 0,
+                            "cells": [
+                                "ANIL MEDICAL AGENCY",
+                                "7002304",
+                                "ASHWAGANDHA TABLETS 60 S INDIA",
+                                "260",
+                                "176 51 38",
+                                "0.00",
+                                "30",
+                                "30",
+                            ],
+                        },
+                        {
+                            "row_index": 1,
+                            "cells": [
+                                "ANIL MEDICAL AGENCY",
+                                "7000143",
+                                "GASEX SYRUP ELAICHI FLVR 200ml",
+                                "150",
+                                "101.31 0",
+                                "28 00",
+                                "20",
+                                "20",
+                            ],
+                        },
+                    ],
+                }
+            ]
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_RATE_OPENING_GLUE": "true",
+            },
+            clear=False,
+        ):
+            mapped = map_vision_table(table, request_id="rate-open-glue")
+        items = mapped.get("line_items") or []
+        self.assertEqual(len(items), 2)
+        ash = items[0]
+        self.assertEqual(ash.get("opening_qty"), 38.0)
+        self.assertEqual(ash.get("receipts_qty"), 0.0)
+        self.assertEqual(ash.get("closing_qty"), 30.0)
+        gas = items[1]
+        self.assertEqual(gas.get("opening_qty"), 0.0)
+        self.assertEqual(gas.get("receipts_qty"), 28.0)
+        self.assertEqual(gas.get("closing_qty"), 20.0)
+
+    def test_map_vision_closing_value_glued_to_expiry_date(self):
+        """CLOSING VALUE cell '1904.62 01-Dec-28' must parse money, not go missing."""
+        from services.stock_vision_table import map_vision_table
+
+        headers = [
+            {"col_index": i, "text": t}
+            for i, t in enumerate(
+                [
+                    "PRODUCT DESCRIPTION",
+                    "OPENING STOCK",
+                    "OPENING VALUE",
+                    "RECEIVE QUANTITY",
+                    "RECEIVE VALUE",
+                    "ISSUE QUANTITY",
+                    "ISSUE VALUE",
+                    "CLOSING STOCK",
+                    "CLOSING VALUE",
+                    "EXPIRY STOCK",
+                ]
+            )
+        ]
+        table = {
+            "tables": [
+                {
+                    "column_count": 10,
+                    "header_rows": [headers],
+                    "rows": [
+                        {
+                            "row_index": 0,
+                            "cells": [
+                                "BLEMINOR CREAM 30ML",
+                                "5",
+                                "865.73",
+                                "10",
+                                "1649.01",
+                                "4",
+                                "760.29",
+                                "11",
+                                "1904.62 01-Dec-28",
+                                None,
+                            ],
+                        },
+                        {
+                            "row_index": 1,
+                            "cells": [
+                                "CLARINA ANTI ACNE CREAM 30GM",
+                                "11",
+                                "1422.9",
+                                "0",
+                                "0",
+                                "0",
+                                "0",
+                                "11",
+                                "1422.9 01-Nov-28",
+                                None,
+                            ],
+                        },
+                    ],
+                }
+            ]
+        }
+        with patch.dict(
+            os.environ, {"STOCK_PARSE_PEEL_TRAILING_EXPIRY": "true"}, clear=False
+        ):
+            mapped = map_vision_table(table, request_id="cv-expiry-glue")
+        items = mapped.get("line_items") or []
+        self.assertEqual(len(items), 2)
+        self.assertEqual(items[0].get("closing_qty"), 11.0)
+        self.assertEqual(items[0].get("closing_value"), 1904.62)
+        self.assertEqual(items[1].get("closing_qty"), 11.0)
+        self.assertEqual(items[1].get("closing_value"), 1422.9)
+
+    def test_pcs_oric_null_pad_densifies_arctic_row(self):
+        """Phone ORIC: UNIT/PCS + null between each printed digit → re-slot money."""
+        from services.stock_vision_table import _repair_pcs_unit_oric_null_pad
+
+        item = {
+            "product_name": "ARCTIC BAR SOAP 75GM",
+            "opening_qty": 148.0,
+            "opening_value": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 21.0,
+            "sales_value": 0.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "packing": "PCS",
+            "extra": {
+                "purchase_value": None,
+                "field_source": {
+                    "opening_qty": "printed",
+                    "opening_value": "missing",
+                    "purchase_qty": "printed",
+                    "purchase_value": "missing",
+                    "sales_qty": "printed",
+                    "sales_value": "missing",
+                    "closing_qty": "missing",
+                    "closing_value": "missing",
+                    "pack": "printed",
+                },
+                "physical_cells": {
+                    "0": "ARCTIC BAR SOAP 75GM",
+                    "1": "PCS",
+                    "2": "148",
+                    "3": None,
+                    "4": "10921.87",
+                    "5": None,
+                    "6": "0",
+                    "7": None,
+                    "8": "0",
+                    "9": None,
+                    "10": "21",
+                    "11": None,
+                    "12": "3476.70",
+                    "13": None,
+                    "14": "158",
+                    "15": None,
+                    "16": "10185.85",
+                    "17": None,
+                    "18": "01-Jan",
+                },
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PCS_ORIC_NULL_PAD": "true"}, clear=False
+        ):
+            self.assertTrue(_repair_pcs_unit_oric_null_pad(item))
+        self.assertEqual(item["opening_qty"], 148.0)
+        self.assertEqual(item["opening_value"], 10921.87)
+        self.assertEqual(item["receipts_qty"], 0.0)
+        self.assertEqual(item["extra"]["purchase_value"], 0.0)
+        self.assertEqual(item["sales_qty"], 21.0)
+        self.assertEqual(item["sales_value"], 3476.70)
+        self.assertEqual(item["closing_qty"], 158.0)
+        self.assertEqual(item["closing_value"], 10185.85)
+        self.assertEqual(item["extra"]["expiry_stock"], "01-Jan")
+        self.assertIn("PCS_ORIC_NULL_PAD", item["extra"]["flags"])
+
+    def test_pcs_oric_null_pad_skips_when_values_already_printed(self):
+        from services.stock_vision_table import _repair_pcs_unit_oric_null_pad
+
+        item = {
+            "product_name": "ARCTIC BAR SOAP 75GM",
+            "opening_qty": 148.0,
+            "opening_value": 10921.87,
+            "receipts_qty": 0.0,
+            "sales_qty": 21.0,
+            "sales_value": 3476.70,
+            "closing_qty": 158.0,
+            "closing_value": 10185.85,
+            "extra": {
+                "purchase_value": 0.0,
+                "field_source": {
+                    "opening_value": "printed",
+                    "sales_value": "printed",
+                    "closing_value": "printed",
+                    "purchase_value": "printed",
+                },
+                "physical_cells": {
+                    "0": "ARCTIC BAR SOAP 75GM",
+                    "1": "PCS",
+                    "2": "148",
+                    "3": None,
+                    "4": "10921.87",
+                    "5": None,
+                    "6": "0",
+                    "7": None,
+                    "8": "0",
+                    "9": None,
+                    "10": "21",
+                    "11": None,
+                    "12": "3476.70",
+                    "13": None,
+                    "14": "158",
+                    "15": None,
+                    "16": "10185.85",
+                    "17": None,
+                    "18": "01-Jan",
+                },
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PCS_ORIC_NULL_PAD": "true"}, clear=False
+        ):
+            self.assertFalse(_repair_pcs_unit_oric_null_pad(item))
+
+    def test_pcs_oric_null_pad_six_nums_when_closing_unread(self):
+        """EXP parked where CLOSING should be → keep oq|ov|rq|rv|iq|iv only."""
+        from services.stock_vision_table import _repair_pcs_unit_oric_null_pad
+
+        item = {
+            "product_name": "CLARINA ANTI-ACNE CREAM 50GM",
+            "opening_qty": 71.0,
+            "opening_value": 0.0,
+            "receipts_qty": 44.0,
+            "sales_qty": 190.0,
+            "sales_value": 0.0,
+            "closing_qty": None,
+            "closing_value": 0.0,
+            "packing": "PCS",
+            "extra": {
+                "field_source": {
+                    "opening_qty": "printed",
+                    "opening_value": "missing",
+                    "purchase_qty": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "missing",
+                    "closing_qty": "missing",
+                    "closing_value": "missing",
+                },
+                "physical_cells": {
+                    "0": "CLARINA ANTI-ACNE CREAM 50GM",
+                    "1": "PCS",
+                    "2": "71",
+                    "3": None,
+                    "4": "6911.14",
+                    "5": None,
+                    "6": "44",
+                    "7": None,
+                    "8": "8013.42",
+                    "9": None,
+                    "10": "190",
+                    "11": None,
+                    "12": "117655.01",
+                    "13": None,
+                    "14": "01-Nov",
+                    "15": None,
+                    "16": None,
+                    "17": None,
+                    "18": None,
+                },
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PCS_ORIC_NULL_PAD": "true"}, clear=False
+        ):
+            self.assertTrue(_repair_pcs_unit_oric_null_pad(item))
+        self.assertEqual(item["opening_value"], 6911.14)
+        self.assertEqual(item["extra"]["purchase_value"], 8013.42)
+        self.assertEqual(item["sales_value"], 117655.01)
+        self.assertEqual(item["extra"]["expiry_stock"], "01-Nov")
+        self.assertIsNone(item.get("closing_qty"))
+
+    def test_merge_reread_pcs_name_mismatch_still_fills_values(self):
+        """Index-matched recovery with OCR-typo SKU still fills hollow first row."""
+        from services.stock_vision_table import merge_reread
+
+        first = {
+            "product_name": "BLEMINOR ANTIBACTERIA CREAM 50ML",
+            "opening_qty": 0.0,
+            "opening_value": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "sales_value": 0.0,
+            "closing_qty": None,
+            "closing_value": 0.0,
+            "extra": {
+                "vision_row_index": 4,
+                "field_source": {
+                    "opening_qty": "missing",
+                    "opening_value": "missing",
+                    "purchase_qty": "missing",
+                    "sales_qty": "missing",
+                    "sales_value": "missing",
+                    "closing_qty": "missing",
+                    "closing_value": "missing",
+                },
+            },
+        }
+        recovery = {
+            "product_name": "BLEMINOR ANTIBACTERIL CREAM 50ML",
+            "opening_qty": 14.0,
+            "opening_value": 2300.67,
+            "receipts_qty": 50.0,
+            "sales_qty": 19.0,
+            "sales_value": 2152.42,
+            "closing_qty": 45.0,
+            "closing_value": 29063.29,
+            "extra": {
+                "vision_row_index": 4,
+                "purchase_value": 6758.8,
+                "flags": ["PCS_ORIC_NULL_PAD"],
+                "field_source": {
+                    "opening_qty": "printed",
+                    "opening_value": "printed",
+                    "purchase_qty": "printed",
+                    "purchase_value": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "printed",
+                },
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PCS_ORIC_NULL_PAD": "true"}, clear=False
+        ):
+            out = merge_reread([first], [recovery], prefer_reconciled=True)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0].get("product_name"), "BLEMINOR ANTIBACTERIA CREAM 50ML")
+        self.assertEqual(out[0].get("opening_qty"), 14.0)
+        self.assertEqual(out[0].get("opening_value"), 2300.67)
+        self.assertEqual(out[0].get("sales_value"), 2152.42)
+        self.assertEqual(out[0].get("closing_value"), 29063.29)
+
+    def test_map_vision_word_split_oric_null_pad_recovers_values(self):
+        """Recovery-shaped word-split headers + null pads → VALUES not zero."""
+        from services.stock_vision_table import map_vision_table
+
+        headers = [
+            {"col_index": 0, "text": "PRODUCT DESCRIPTION"},
+            {"col_index": 1, "text": "UNIT"},
+            {"col_index": 2, "text": "OPENING"},
+            {"col_index": 3, "text": "STOCK"},
+            {"col_index": 4, "text": "OPENING"},
+            {"col_index": 5, "text": "VALUE"},
+            {"col_index": 6, "text": "RECEIVE"},
+            {"col_index": 7, "text": "QUANTITY"},
+            {"col_index": 8, "text": "RECEIVE"},
+            {"col_index": 9, "text": "VALUE"},
+            {"col_index": 10, "text": "ISSUE"},
+            {"col_index": 11, "text": "QUANTITY"},
+            {"col_index": 12, "text": "ISSUE"},
+            {"col_index": 13, "text": "VALUE"},
+            {"col_index": 14, "text": "CLOSING"},
+            {"col_index": 15, "text": "STOCK"},
+            {"col_index": 16, "text": "CLOSING"},
+            {"col_index": 17, "text": "VALUE"},
+            {"col_index": 18, "text": "EX-STO"},
+        ]
+        cells = [
+            "ARCTIC BAR SOAP 75GM",
+            "PCS",
+            "148",
+            None,
+            "10921.87",
+            None,
+            "0",
+            None,
+            "0",
+            None,
+            "21",
+            None,
+            "3476.70",
+            None,
+            "158",
+            None,
+            "10185.85",
+            None,
+            "01-Jan",
+        ]
+        table = {
+            "tables": [
+                {
+                    "column_count": 19,
+                    "header_rows": [headers],
+                    "rows": [{"row_index": 0, "cells": cells}],
+                }
+            ]
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PCS_ORIC_NULL_PAD": "true"}, clear=False
+        ):
+            mapped = map_vision_table(table, request_id="pcs-null-pad")
+        items = mapped.get("line_items") or []
+        self.assertEqual(len(items), 1)
+        item = items[0]
+        self.assertEqual(item.get("opening_qty"), 148.0)
+        self.assertEqual(item.get("opening_value"), 10921.87)
+        self.assertEqual(item.get("receipts_qty"), 0.0)
+        self.assertEqual(item.get("sales_qty"), 21.0)
+        self.assertEqual(item.get("sales_value"), 3476.70)
+        self.assertEqual(item.get("closing_qty"), 158.0)
+        self.assertEqual(item.get("closing_value"), 10185.85)
+        self.assertIn("PCS_ORIC_NULL_PAD", (item.get("extra") or {}).get("flags") or [])
+
 
 if __name__ == "__main__":
     unittest.main()

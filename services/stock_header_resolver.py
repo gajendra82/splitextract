@@ -3098,6 +3098,28 @@ def decode_pdf_word_tokens(words: Any) -> Any:
     return decoded
 
 
+def _peel_trailing_expiry_enabled() -> bool:
+    """STOCK_PARSE_PEEL_TRAILING_EXPIRY — peel date glued onto amount cells.
+
+    Default ON. Vision often merges CLOSING VALUE + EXPIRY into one cell
+    ("81.56 01-Nov-28"). Digits are kept; the date token is dropped.
+    """
+    return os.getenv(
+        "STOCK_PARSE_PEEL_TRAILING_EXPIRY", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
+    r"^(?P<num>-?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s+"
+    r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?\s*$"
+)
+
+
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
     """Parse a printed quantity/amount into float|None.
 
@@ -3125,8 +3147,27 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
         negative = True
         text = text[:-1].strip()
 
+    # Peel BEFORE digit-space collapse — otherwise "81.56 01-Nov-28" becomes
+    # "81.5601-Nov-28" and fails. Pipe gutter peel handles "|" forms below.
+    if _peel_trailing_expiry_enabled():
+        peeled = _TRAILING_EXPIRY_AFTER_AMOUNT.match(text)
+        if peeled:
+            logger.info(
+                "STOCK_PARSE_PEEL_TRAILING_EXPIRY raw=%r num=%s",
+                text[:48],
+                peeled.group("num"),
+            )
+            text = peeled.group("num")
+
     if allow_internal_spaces:
-        text = re.sub(r"(?<=\d)\s+(?=\d)", "", text)
+        # OCR space standing in for a decimal point: "28 00"→28.00, "176 51"→176.51.
+        # Only when the right side is exactly 2 digits (paisa / Primary_qty style).
+        # Do NOT collapse "1 234" (3+ digit group) this way.
+        dec_space = re.fullmatch(r"(-?\d+)\s+(\d{2})", text)
+        if dec_space:
+            text = f"{dec_space.group(1)}.{dec_space.group(2)}"
+        else:
+            text = re.sub(r"(?<=\d)\s+(?=\d)", "", text)
 
     # Strip currency markers.
     text = text.replace("₹", "").replace("Rs.", "").replace("Rs", "").strip()
