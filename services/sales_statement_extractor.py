@@ -641,6 +641,52 @@ def _accept_vision_statement_period(
     return None, None
 
 
+def _period_year_ocr_align_enabled() -> bool:
+    """STOCK_PERIOD_YEAR_OCR_ALIGN — fix impossible OCR years like 0202.
+
+    Default ON. When period_from is a sane 20xx year and period_to's year is
+    below 1900 (e.g. 31/10/0202 → 0202-10-31), copy period_from's year onto
+    period_to. Never invents month/day.
+    """
+    return os.getenv("STOCK_PERIOD_YEAR_OCR_ALIGN", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _align_period_to_year_from_from(
+    period_from: Optional[str], period_to: Optional[str]
+) -> Optional[str]:
+    """If period_to year is OCR-garbage (<1900), reuse period_from's year."""
+    if not _period_year_ocr_align_enabled():
+        return period_to
+    pf = _normalize_date(str(period_from)) if period_from else None
+    pt = _normalize_date(str(period_to)) if period_to else None
+    if not pf or not pt:
+        return period_to
+    m_from = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", pf)
+    m_to = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", pt)
+    if not m_from or not m_to:
+        return period_to
+    y_from, y_to = int(m_from.group(1)), int(m_to.group(1))
+    if y_to >= 1900 or not (2000 <= y_from <= 2099):
+        return period_to
+    fixed = f"{y_from:04d}-{m_to.group(2)}-{m_to.group(3)}"
+    try:
+        datetime(y_from, int(m_to.group(2)), int(m_to.group(3)))
+    except ValueError:
+        return period_to
+    logger.info(
+        "STATEMENT_PERIOD_YEAR_OCR_ALIGN period_to %s -> %s (from year=%s)",
+        pt,
+        fixed,
+        y_from,
+    )
+    return fixed
+
+
 def _finalize_statement_period_fields(
     result: Dict[str, Any],
     *,
@@ -667,6 +713,7 @@ def _finalize_statement_period_fields(
         # Printed report-header range is the statement period. Use it when
         # Vision left the field empty or filed a different window.
         if c_from and c_to:
+            c_to = _align_period_to_year_from_from(c_from, c_to) or c_to
             if pf != c_from or pt != c_to:
                 result["period_from"] = c_from
                 result["period_to"] = c_to
@@ -695,7 +742,12 @@ def _finalize_statement_period_fields(
     else:
         result["period_from"] = None
     if pt is not None:
-        result["period_to"] = _normalize_date(str(pt)) or result.get("period_to")
+        aligned = _align_period_to_year_from_from(
+            result.get("period_from"), str(pt)
+        )
+        result["period_to"] = (
+            _normalize_date(str(aligned or pt)) or result.get("period_to")
+        )
     else:
         result["period_to"] = None
 

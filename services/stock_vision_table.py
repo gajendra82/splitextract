@@ -381,6 +381,9 @@ def _classify_layout_cell(text: Any) -> str:
         )
     if re.fullmatch(rf"(?:{pack_core})", s, re.I):
         return "pack"
+    # Box-count glued onto pack: "1 60'S", "1 200ML", "1 30GM".
+    if re.fullmatch(rf"\d{{1,3}}\s+(?:{pack_core})", s, re.I):
+        return "pack"
     if re.search(r"[A-Za-z]{3,}", s):
         return "product"
     return "other"
@@ -2326,6 +2329,15 @@ def _normalize_row_cells(
                 and lead_kind == "product"
                 and tail_kind in {"number", "serial_or_small_int"}
             )
+            # Header missed Sales Value / Cl.Value: keep the trailing money cell
+            # even when the pack slot is odd ("1 60'S") so INSERT_MISSING_SALES_VALUE
+            # can still see closing_value.
+            money_tail_overflow = (
+                width >= 6
+                and len(cells) == width + 1
+                and tail_kind == "number"
+                and ("." in str(cells[-1] or "") or "," in str(cells[-1] or ""))
+            )
             # Pack slot left blank (pack is in the product name, or a TOTAL
             # line). Drop that empty cell so the qty/value tail stays aligned.
             blank_pack_slot = (
@@ -2341,12 +2353,18 @@ def _normalize_row_cells(
                 coercions["total_blank_pack_dropped"] = (
                     coercions.get("total_blank_pack_dropped", 0) + 1
                 )
-            elif not pack_overflow and not numeric_pack_overflow:
+            elif not (
+                pack_overflow or numeric_pack_overflow or money_tail_overflow
+            ):
                 cells = cells[:width]
             else:
                 coercions["pack_qty_overflow_kept"] = (
                     coercions.get("pack_qty_overflow_kept", 0) + 1
                 )
+                if money_tail_overflow and not pack_overflow:
+                    coercions["money_tail_overflow_kept"] = (
+                        coercions.get("money_tail_overflow_kept", 0) + 1
+                    )
     return cells
 
 
@@ -5044,6 +5062,78 @@ def _pur_free_sale_closing_shift_enabled() -> bool:
     }
 
 
+def _sales_qty_in_free_out_enabled() -> bool:
+    """Sales Qty parked under Sales Free while Sales Qty reads 0. Default ON."""
+    return os.getenv(
+        "STOCK_VISION_SALES_QTY_IN_FREE_OUT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_sales_qty_parked_in_free_out(item: Dict[str, Any]) -> bool:
+    """Move Sales Qty out of free_out when Sales Qty is blank/0.
+
+    Group Wise grids sometimes emit Sales Qty as 0 and park the real sales
+    count under Sales Free (free_out). Only moves the printed free_out digit
+    when opening + purchase − free_out ≈ closing and sales_value looks like
+    money. Never invents a quantity.
+    """
+    if not _sales_qty_in_free_out_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if fs.get("free_out_qty") != "printed":
+        return False
+    free_out = extra.get("free_out_qty")
+    if not _looks_small_qty(free_out):
+        return False
+    sq = item.get("sales_qty")
+    if not (
+        sq is None
+        or fs.get("sales_qty") == "missing"
+        or _qty_is_blank_zero(sq)
+    ):
+        return False
+    sv = item.get("sales_value")
+    if not _looks_money(sv):
+        return False
+    cq = item.get("closing_qty")
+    if cq is None or fs.get("closing_qty") == "missing":
+        return False
+    try:
+        oq = float(item.get("opening_qty") or 0)
+        rq = float(item.get("receipts_qty") or 0)
+        fo = float(free_out)
+        close_n = float(cq)
+    except (TypeError, ValueError):
+        return False
+    if abs((oq + rq - fo) - close_n) > 0.51:
+        return False
+    item["sales_qty"] = fo
+    extra["free_out_qty"] = None
+    fs["sales_qty"] = "printed"
+    fs["free_out_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "SALES_QTY_IN_FREE_OUT" not in flags:
+        flags.append("SALES_QTY_IN_FREE_OUT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE SALES_QTY_IN_FREE_OUT product=%s sales_qty=%s "
+        "sales_value=%s closing_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        fo,
+        item.get("sales_value"),
+        item.get("closing_qty"),
+    )
+    return True
+
+
 def _repair_pur_free_sale_closing_left_shift(item: Dict[str, Any]) -> bool:
     """Re-slot when blank PUR FREE (or SALE FREE) was dropped and columns slid left.
 
@@ -6380,6 +6470,150 @@ def _canon_col_index(columns: Sequence[Dict[str, Any]], canon: str) -> Optional[
             except (TypeError, ValueError, KeyError):
                 return None
     return None
+
+
+def _insert_missing_sales_value_enabled() -> bool:
+    """When Vision drops Sales Value from headers but keeps it in row cells.
+
+    Default ON. Group Wise / OpValue grids often emit
+    …|Sales|Sales|Cl.Stock|Cl.Value while rows still carry
+    …|sales_qty|free|sales_value|closing_qty|closing_value. Truncating to
+    header width parks sales money under closing. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_VISION_INSERT_MISSING_SALES_VALUE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _insert_missing_sales_value_column(
+    columns: List[Dict[str, Any]],
+    rows: Sequence[Dict[str, Any]],
+    column_count: int,
+    errors: List[str],
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Insert sales_value before closing when rows are one cell wider.
+
+    Does not invent digits — only renames/shifts header slots so the printed
+    sales-value cell is no longer truncated or mapped to closing_qty.
+    """
+    if not _insert_missing_sales_value_enabled():
+        return columns, column_count
+    if not columns or column_count < 6:
+        return columns, column_count
+
+    canons = {
+        str(c.get("canonical"))
+        for c in columns
+        if isinstance(c, dict) and c.get("canonical") not in {None, "ignore"}
+    }
+    if "sales_value" in canons:
+        return columns, column_count
+    if not {"sales_qty", "closing_qty", "closing_value"}.issubset(canons):
+        return columns, column_count
+    if "opening_value" not in canons and "purchase_value" not in canons:
+        return columns, column_count
+
+    cq_i = _canon_col_index(columns, "closing_qty")
+    cv_i = _canon_col_index(columns, "closing_value")
+    sq_i = _canon_col_index(columns, "sales_qty")
+    fo_i = _canon_col_index(columns, "free_out_qty")
+    oq_i = _canon_col_index(columns, "opening_qty")
+    pq_i = _canon_col_index(columns, "purchase_qty")
+    if cq_i is None or cv_i is None or sq_i is None:
+        return columns, column_count
+    if cv_i != cq_i + 1:
+        return columns, column_count
+    # Sales Free (or Sales Qty) must sit immediately before the mislabeled Cl.Stock.
+    if fo_i is not None:
+        if fo_i != cq_i - 1:
+            return columns, column_count
+    elif sq_i != cq_i - 1:
+        return columns, column_count
+
+    checked = 0
+    votes = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if len(cells) < cq_i + 3:
+            continue
+        sv_n = parse_number(cells[cq_i], allow_internal_spaces=True)
+        clq_n = parse_number(cells[cq_i + 1], allow_internal_spaces=True)
+        clv_n = parse_number(cells[cq_i + 2], allow_internal_spaces=True)
+        if sv_n is None or clq_n is None or clv_n is None:
+            continue
+        checked += 1
+        sale_money_ok = (
+            abs(sv_n) < 0.001
+            or _has_paisa(sv_n)
+            or (not _is_whole_qty(sv_n) and abs(sv_n) >= 1.0)
+        )
+        close_qty_ok = abs(clq_n) < 0.001 or _is_whole_qty(clq_n)
+        close_val_ok = (
+            abs(clv_n) < 0.001
+            or _has_paisa(clv_n)
+            or (not _is_whole_qty(clv_n) and abs(clv_n) >= 1.0)
+        )
+        if not (sale_money_ok and close_qty_ok and close_val_ok):
+            continue
+        # Prefer identity when opening/purchase/sales qty cells are readable.
+        if oq_i is not None and pq_i is not None and sq_i is not None:
+            oq = parse_number(cells[oq_i], allow_internal_spaces=True)
+            pq = parse_number(cells[pq_i], allow_internal_spaces=True)
+            sq = parse_number(cells[sq_i], allow_internal_spaces=True)
+            if oq is not None and pq is not None and sq is not None:
+                if abs((float(oq) + float(pq) - float(sq)) - float(clq_n)) > 0.51:
+                    continue
+        votes += 1
+
+    if checked < 2 or votes < max(2, (checked + 1) // 2):
+        return columns, column_count
+
+    widened: List[Dict[str, Any]] = []
+    for col in columns:
+        if not isinstance(col, dict):
+            continue
+        entry = dict(col)
+        try:
+            idx = int(entry.get("col_index"))
+        except (TypeError, ValueError):
+            widened.append(entry)
+            continue
+        if idx >= cq_i:
+            entry["col_index"] = idx + 1
+        widened.append(entry)
+    widened.append(
+        {
+            "col_index": cq_i,
+            "header_text": "Sales Value",
+            "canonical": "sales_value",
+            "group": "sales",
+            "is_value": True,
+            "confidence": 0.91,
+            "reason": "insert_missing_sales_value",
+        }
+    )
+    widened.sort(
+        key=lambda c: int(c.get("col_index") or 0) if isinstance(c, dict) else 0
+    )
+    new_count = max(int(column_count or 0) + 1, cq_i + 3)
+    errors.append("INSERT_MISSING_SALES_VALUE")
+    logger.info(
+        "VISION_TABLE INSERT_MISSING_SALES_VALUE at_col=%s "
+        "column_count %s->%s votes=%s/%s",
+        cq_i,
+        column_count,
+        new_count,
+        votes,
+        checked,
+    )
+    return widened, new_count
 
 
 def _repair_cells_dropped_pair_value_shift(
@@ -8594,6 +8828,12 @@ def _map_single_table(
             if force_layout:
                 errors.append("DATA_HEADER_LAYOUT_REPAIR")
             columns = _repair_ssa_missing_sales_after_total(columns, errors)
+            # Vision dropped Sales Value from headers but kept it in row cells
+            # (…|Sales Free|Sales Value|Cl.Stock|Cl.Value). Insert the missing
+            # sales_value slot before truncating overflow cells.
+            columns, column_count = _insert_missing_sales_value_column(
+                columns, table.get("rows") or [], column_count, errors
+            )
             # Fanout ORIC qty+value uses cols 0..8; Vision often reports
             # column_count=8 (pack ate a slot). Widen so CLOSING VALUE maps.
             if _columns_are_oric_qty_value_grid(columns):
@@ -8862,6 +9102,8 @@ def _map_single_table(
             # those qty slots and block PUR_FREE_SALE_CLOSING_SHIFT.
             _repair_free_in_issue_closing_shift(item)
             _repair_pur_free_sale_closing_left_shift(item)
+            # Sales Qty=0 with the real count under Sales Free (free_out).
+            _repair_sales_qty_parked_in_free_out(item)
             # Pair-shift before paisa: blank receipt VALUE must not be cleared
             # as money-in-qty (issue value parked in sales_qty).
             _repair_qty_value_pair_left_shift(item)

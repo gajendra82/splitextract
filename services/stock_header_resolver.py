@@ -1115,6 +1115,43 @@ def _promote_adjacent_same_group_qty_to_value(
             and not _has_value_marker(norm_right)
         ):
             continue
+        # Purchase|Purchase|Purchase (Qty|Free|Value): do not collapse Free
+        # into purchase_value — that parks Purchase Value under ignore and
+        # later Sales Free under ignore.
+        if bare_same_band and group == "purchase" and i + 1 < len(prelim):
+            third = prelim[i + 1]
+            if isinstance(third, dict):
+                norm_third = normalize_header(third.get("header_text"))
+                if norm_third in {
+                    "purchase",
+                    "purchases",
+                    "pur",
+                    "purc",
+                    "purch",
+                }:
+                    right["canonical"] = "free_in_qty"
+                    right["group"] = "free"
+                    right["is_value"] = False
+                    right["confidence"] = max(
+                        float(right.get("confidence") or 0.0), 0.9
+                    )
+                    right["reason"] = "purchase_qty_free_value_triplet"
+                    third["canonical"] = "purchase_value"
+                    third["group"] = "purchase"
+                    third["is_value"] = True
+                    third["confidence"] = max(
+                        float(third.get("confidence") or 0.0), 0.9
+                    )
+                    third["reason"] = "purchase_qty_free_value_triplet"
+                    logger.info(
+                        "STOCK_HEADER_PURCHASE_QTY_FREE_VALUE col=%s/%s "
+                        "free_in + purchase_value (left=%r)",
+                        right.get("col_index"),
+                        third.get("col_index"),
+                        left.get("header_text"),
+                    )
+                    changed = True
+                    continue
         right["canonical"] = val_field
         right["is_value"] = True
         right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
@@ -1125,6 +1162,46 @@ def _promote_adjacent_same_group_qty_to_value(
             right.get("header_text"),
             val_field,
             left.get("header_text"),
+        )
+        changed = True
+    return changed
+
+
+def _promote_sales_free_before_value(prelim: List[Dict[str, Any]]) -> bool:
+    """Sales|Sales|Sales Value → sales_qty|free_out_qty|sales_value.
+
+    Duplicate bare Sales otherwise collapses to ignore and parks Sales Qty
+    under the ignored Free column. Only renames headers — never invents digits.
+    """
+    changed = False
+    for i in range(len(prelim) - 2):
+        left = prelim[i]
+        mid = prelim[i + 1]
+        right = prelim[i + 2]
+        if not all(isinstance(c, dict) for c in (left, mid, right)):
+            continue
+        if left.get("canonical") != "sales_qty" or left.get("is_value"):
+            continue
+        if right.get("canonical") != "sales_value":
+            continue
+        mid_canon = str(mid.get("canonical") or "ignore")
+        mid_norm = normalize_header(mid.get("header_text"))
+        allow_mid = mid_canon in {"sales_qty", "ignore", "free_out_qty"} or (
+            mid_norm in {"sales", "sale", "sales free", "sale free"}
+        )
+        if not allow_mid:
+            continue
+        if mid_canon == "free_out_qty" and mid.get("reason") == "sales_free_before_value":
+            continue
+        mid["canonical"] = "free_out_qty"
+        mid["group"] = "free"
+        mid["is_value"] = False
+        mid["confidence"] = max(float(mid.get("confidence") or 0.0), 0.9)
+        mid["reason"] = "sales_free_before_value"
+        logger.info(
+            "STOCK_HEADER_SALES_FREE_BEFORE_VALUE col=%s %r -> free_out_qty",
+            mid.get("col_index"),
+            mid.get("header_text"),
         )
         changed = True
     return changed
@@ -2843,6 +2920,8 @@ def resolve_columns(
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)
+    # Sales|Sales|Sales Value → free_out between sales_qty and sales_value.
+    _promote_sales_free_before_value(prelim)
     # Op-St.|amount, Receipt|amount, Sale|amount, Cl. Stock|AMOUNT.
     _promote_movement_value_followers(prelim)
 
