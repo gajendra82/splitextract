@@ -178,41 +178,72 @@ Include every visible product row. Blank Pur/Sale/Bal cells are 0.
 
 
 STOCK_SALES_OP_QTY_VAL_VISION_PROMPT = """
-You are reading a "STOCK AND SALES" statement photo/screenshot with paired
-Qty and Val columns (NOT a SaleRet/ClosStock Product Stock Report).
+You are reading a "STOCK AND SALES" or "Stock and Sales Detail Report"
+photo/screenshot with paired Qty and Val columns (NOT a SaleRet/ClosStock
+Product Stock Report, NOT Saleable Stock Report Opn/Rec/Issue).
 
 Read the TABLE VISUALLY from the supplied image pixels.
 Do NOT invent numbers. Do NOT calculate or balance anything.
 Do NOT shift a value into a neighboring column.
 Do NOT treat packing (200'S, 30ML, 60'S, 100GM) as stock quantities.
+Do NOT treat the left Sl.No / serial column as opening_qty.
 Hyphen "-" or blank cells are 0.
+If this image is clearly a different statement layout, return line_items=[].
 
-Printed columns left → right after Item / Pack (names may be abbreviated):
-  Op.Qty / Op Qty   -> opening_qty
-  Op.Val / Op Val   -> opening_value
-  P.Qty  / P Qty    -> receipts_qty
-  P.Val  / P Val    -> receipts_value
-  S.Qty  / S Qty    -> sales_qty
-  S.Val  / S Val    -> sales_value
-  Cls.Qty / Cl.Qty / Cls Qty -> closing_qty
-  Cls.Val / Cl.Val / Cls Val -> closing_value
+Printed columns left → right after Item / Pack (names may be abbreviated).
+Core movement (ALWAYS map these):
+  Op.Qty / Op Qty / OPSTK  -> opening_qty   ← FIRST stock qty after Pack/BOX
+  Op.Val / Op Val / OPV    -> opening_value
+  P.Qty  / P Qty / PURC    -> receipts_qty  ← purchase only; 0 when the cell is 0
+  P.Val  / P Val / PURCV   -> receipts_value
+  S.Qty  / S Qty / SALE    -> sales_qty
+  S.Val  / S Val / SALEV   -> sales_value
+  Cls.Qty / Cl.Qty / Cls Qty / STOCK  -> closing_qty
+  Cls.Val / Cl.Val / Cls Val / STOCKV -> closing_value
 
-Map EVERY value column. opening_value and receipts_value are money amounts
+BOX (between Pack and OPSTK) is NOT opening_qty and NOT opening_value — ignore it.
+PCode / Manufacturer / Division are ignore columns.
+
+Stock and Sales Detail often inserts scheme / return columns BETWEEN S and Cl.
+Map returns; ignore scheme-only qty:
+  P.Sch / P Sch / S.Sch / S Sch -> ignore (do not put into receipts/sales qty)
+  Cr.Qty / Cr.S.Qty / Re.S.Qty / Rt.S.Qty -> sales_return_qty
+  Cr.Val / matching return Val -> sales_return_value (money; NOT closing_value)
+  Br.S.Qty / Br Qty (breakage/expiry) -> expiry_damage_qty
+  Br.S.Val -> ignore as money extra (not closing_value)
+  Db.Qty / Db.Sch.Qty / Db.Val -> ignore
+Keep reading rightward until Cl.Qty / Cl.Val (RIGHTMOST stock pair).
+
+Map EVERY core value column. opening_value and receipts_value are money
 (usually two decimal places). Never put Op.Val or S.Val into closing_value.
 Never force sales_value to 0 when S.Val is printed.
+Never put Bal Amt / Cl.Val into closing_qty.
+Never copy Op.Val, P.Val, Db.Val, Cr.Val, Rt.S.Val, or S.Val into closing_value.
+Never copy Op.Qty into closing_qty.
+Cl.Qty/Cl.Val are ONLY the rightmost pair (after Db.*). If a red ZOOM panel
+shows Cl.Qty|Cl.Val, copy closing fields from that panel per product row.
+Never leave closing_value null/0 when Cl.Val is printed for that row.
+product_name MUST be the FULL printed item text including pack
+(e.g. "ASHWAGANDHA GUMMIES 60S", "BONNISAN DROPS (30ML)"), not a single word.
 
 Examples when visible:
 - #KOFLET LOZENGES JAR: Op.Qty 1, Op.Val 253.29, P blank, S.Qty 1,
   S.Val 253.29, Cls blank → closing_qty 0, closing_value 0
-- BONNISAN DROPS 30ML: Op.Qty 43, P.Qty 100, P.Val 7466.00, S.Qty 66,
-  Cls.Qty 77, Cls.Val 5748.82 (also copy Op.Val and S.Val when printed)
+- BONNISAN DROPS (30ML): Op.Qty 0, P.Qty 300, P.Val 18864.0, S.Qty 167,
+  S.Val 12468.22, Cr.Qty 5, Cl.Qty 138, Cl.Val 10303.08
+- ASHWAGANDHA GUMMIES 60S: Op.Qty 316, Op.Val 189600.0, P 0, S.Qty 7,
+  S.Val 4200.0, Cr.Qty 2, Cl.Qty 311, Cl.Val 186600.0
+  (Op.Qty→opening_qty NOT receipts_qty; Cl.Val≠S.Val; Sl.No is not Op.Qty)
+- ASHWAGANDHA 120TAB Pack 120 TAB BOX 36 OPSTK 9 OPV 3028.14 PURC 0
+  PURCV 0 SALE 3 SALEV 1064.25 STOCK 6 STOCKV 2018.76
+  → opening_qty=9 (NOT 36), opening_value=3028.14, sales_qty=3,
+    closing_qty=6, closing_value=2018.76 (BOX ignored)
 
 Stockist vs company (do not swap these):
-  stockist_name = the letterhead distributor at the top
-    (e.g. VARDHMAN MEDISALES PRIVATE LIMITED). Never Himalaya.
-  company_name = the printed "Company:" line
-    (e.g. HIMALAYA WELLNESS-1). Never the letterhead.
-Period from "From DD-Mon-YYYY To DD-Mon-YYYY".
+  stockist_name = Seller: / letterhead distributor
+    (e.g. RSM PHARMA PVT LTD). Never Himalaya.
+  company_name = HIMALAYA DRUG CO-ZENITH / ZEAL / Company line.
+Period from "From DD-Mon-YYYY To DD-Mon-YYYY" or "01-OCT-2026 to 31-OCT-2026".
 
 Return ONLY valid JSON:
 {
@@ -233,6 +264,9 @@ Return ONLY valid JSON:
       "receipts_value": number|null,
       "sales_qty": number|null,
       "sales_value": number|null,
+      "sales_return_qty": number|null,
+      "sales_return_value": number|null,
+      "expiry_damage_qty": number|null,
       "closing_qty": number|null,
       "closing_value": number|null
     }
@@ -241,7 +275,7 @@ Return ONLY valid JSON:
 }
 
 Include every visible product row top to bottom across both page panels.
-Skip the Total footer row.
+Skip the Total / header Total row.
 """.strip()
 
 
@@ -819,6 +853,9 @@ def _has_stock_sales_op_qty_val_headers(text: str) -> bool:
 
     Must beat filename _ZA_ → SaleRet routing: that schema forces sales_value=0
     and has no opening/receipt value fields, which mis-files Op.Val/S.Val.
+    Also matches Stock and Sales Detail Report (P.Sch / Cl.Qty phone scans).
+    Also matches STOCK AND SALES STATEMENT grids that print OPSTK/OPV/PURC/
+    PURCV/SALEV/STOCKV (BOX between Pack and OPSTK is ignore — not opening).
     """
     blob = text or ""
     if not blob.strip():
@@ -861,6 +898,26 @@ def _has_stock_sales_op_qty_val_headers(text: str) -> bool:
         return True
     # Blue-header OCR often drops spaces: "Pack Opty OpVal Ply PVal ... ClsVel"
     if has_op_val and has_cls and re.search(r"\bPack\b", blob, re.I):
+        return True
+    # Phone OCR of Stock and Sales Detail often keeps the title + Op.Qty/Cl.Qty
+    # even when P.Sch / return headers are garbled.
+    if re.search(r"Stock\s+and\s+Sales\s+Detail", blob, re.I) and (
+        (has_op_qty and has_cls) or (has_op_qty and has_op_val)
+    ):
+        return True
+    # Compact STOCK AND SALES STATEMENT: OPSTK|OPV|PURC|PURCV|SALE|SALEV|STOCK|STOCKV.
+    # BOX sits before OPSTK and must not be read as opening_qty/opening_value.
+    has_opstk = bool(re.search(r"\bOPSTK\b", blob, re.I))
+    has_opv = bool(re.search(r"\bOPV\b", blob, re.I))
+    has_stockv = bool(re.search(r"\bSTOCKV\b", blob, re.I))
+    has_purcv_or_salev = bool(re.search(r"\bPURCV\b|\bSALEV\b", blob, re.I))
+    if has_opstk and has_opv and (has_stockv or has_purcv_or_salev):
+        return True
+    if (
+        re.search(r"STOCK\s+AND\s+SALES\s+STATEMENT", blob, re.I)
+        and has_opstk
+        and has_opv
+    ):
         return True
     return False
 
@@ -1547,6 +1604,8 @@ def _coerce_vision_payload(parsed: Dict[str, Any]) -> Dict[str, Any]:
             extra["sale_return"] = raw.get("sale_return")
         if raw.get("exp_damage") is not None and extra.get("exp_damage") is None:
             extra["exp_damage"] = raw.get("exp_damage")
+        if raw.get("sales_return_value") is not None and extra.get("sales_return_value") is None:
+            extra["sales_return_value"] = raw.get("sales_return_value")
         # Op.Qty/Op.Val layouts: keep money fields in extra for finalize promote.
         for money_key in ("opening_value", "receipts_value", "purchase_value"):
             if raw.get(money_key) is not None and extra.get(money_key) is None:
@@ -1627,16 +1686,29 @@ def validate_stock_direct_vision(
             continue
 
         if pharmassist or op_qty_val or normal_open_recp:
-            # Op + Pur/Recp - Sale ≈ Bal/Cls/Clsg. No SaleRet/Exp columns.
+            # Op + Pur/Recp - Sale - Br/SS + Cr/SaleRet ≈ Bal/Cls/Cl.Qty.
             opening = float(item.get("opening_qty") or 0)
             receipts = float(item.get("receipts_qty") or 0)
             sales = float(item.get("sales_qty") or 0)
             closing = float(item.get("closing_qty") or 0)
             br = float(extra.get("br_qty") or 0)
+            if not br:
+                br = float(
+                    extra.get("exp_damage")
+                    if extra.get("exp_damage") is not None
+                    else (item.get("expiry_damage_qty") or 0)
+                )
             ss = float(extra.get("sales_scheme_qty") or 0)
-            expected = round(opening + receipts - sales - br - ss, 2)
+            sale_ret = 0.0
+            if op_qty_val:
+                sale_ret = float(
+                    extra.get("sale_return")
+                    if extra.get("sale_return") is not None
+                    else (item.get("sales_return_qty") or 0)
+                )
+            expected = round(opening + receipts - sales - br - ss + sale_ret, 2)
             if abs(expected - closing) > 1.01 and (
-                opening or receipts or sales or closing
+                opening or receipts or sales or closing or sale_ret
             ):
                 identity_fail += 1
                 extra["stock_identity_ok"] = False
@@ -2820,10 +2892,14 @@ def extract_stock_sales_op_qty_val_direct_vision(
     ext: str,
     *,
     reason: str = "stock_sales_op_qty_val_headers",
+    max_attempts: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Original-image Vision for STOCK AND SALES Op.Qty/Op.Val paired columns."""
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
-    max_attempts = _max_attempts()
+    if max_attempts is None:
+        max_attempts = _max_attempts()
+    else:
+        max_attempts = max(1, min(2, int(max_attempts)))
     layout = "stock_sales_op_qty_val"
     schema = "stock_sales_op_qty_val"
     _log(
@@ -2981,6 +3057,526 @@ def extract_stock_sales_op_qty_val_direct_vision(
         identity_score=best_score,
     )
     return best
+
+
+STOCK_SALES_DETAIL_CLOSING_REPAIR_PROMPT = """
+You are re-reading a Stock and Sales Detail Report photo.
+Focus on Op/P/S and the RIGHTMOST Cl columns of each product row.
+
+For every product row (skip Total), return the printed:
+  product_name — FULL item text including pack
+  opening_qty (Op.Qty) — first qty after Item; never Sl.No
+  opening_value (Op.Val) — money
+  receipts_qty (P.Qty) — 0 when printed 0; never copy Op.Qty here
+  sales_qty (S.Qty)
+  sales_value (S.Val) — money
+  sales_return_qty (Cr.Qty / Rt.S.Qty) — 0 when blank
+  closing_qty (Cl.Qty) — second-to-last stock column
+  closing_value (Cl.Val) — RIGHTMOST money column after all Rt/Cr/Db cols
+
+Do NOT invent numbers. Do NOT balance equations.
+Do NOT copy S.Val / Db.Val / Cr.Val into closing_value.
+Do NOT treat Sl.No as opening_qty.
+If Cl.Val is printed, closing_value must not be null or 0 unless the cell is 0.
+
+Return ONLY JSON:
+{
+  "line_items": [
+    {
+      "product_name": string,
+      "opening_qty": number|null,
+      "opening_value": number|null,
+      "receipts_qty": number|null,
+      "sales_qty": number|null,
+      "sales_value": number|null,
+      "sales_return_qty": number|null,
+      "closing_qty": number|null,
+      "closing_value": number|null
+    }
+  ]
+}
+""".strip()
+
+
+def _render_pdf_page_pngs(
+    file_bytes: bytes, *, max_pages: int = 2, zoom: float = 3.5
+) -> List[bytes]:
+    """Higher-DPI page renders for dense Stock and Sales Detail phone scans."""
+    try:
+        import fitz
+    except Exception:
+        return []
+    images: List[bytes] = []
+    try:
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+    except Exception:
+        return []
+    try:
+        limit = min(int(max_pages), int(getattr(doc, "page_count", 0) or 0))
+        matrix = fitz.Matrix(float(zoom), float(zoom))
+        for page_index in range(limit):
+            try:
+                pix = doc[page_index].get_pixmap(matrix=matrix, alpha=False)
+                images.append(pix.tobytes("png"))
+            except Exception:
+                continue
+    finally:
+        try:
+            doc.close()
+        except Exception:
+            pass
+    return images
+
+
+def _norm_detail_product_key(name: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+
+
+def _merge_detail_closing_repair(
+    base: Dict[str, Any], repair: Dict[str, Any]
+) -> int:
+    """Overwrite printed Op/Sales/Closing fields from a Cl.Val-focused re-read.
+
+    When several base rows share a truncated product key, match by encounter
+    order within that key so one repair row cannot smash every variant.
+    """
+    repair_items = [
+        item
+        for item in (repair.get("line_items") or [])
+        if isinstance(item, dict) and _norm_detail_product_key(item.get("product_name"))
+    ]
+    if not repair_items:
+        return 0
+    by_key_list: Dict[str, List[Dict[str, Any]]] = {}
+    for item in repair_items:
+        key = _norm_detail_product_key(item.get("product_name"))
+        by_key_list.setdefault(key, []).append(item)
+    key_cursor: Dict[str, int] = {}
+    patched = 0
+    fields = (
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "sales_qty",
+        "sales_value",
+        "sales_return_qty",
+        "closing_qty",
+        "closing_value",
+    )
+    for item in base.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        key = _norm_detail_product_key(item.get("product_name"))
+        bucket = by_key_list.get(key) or []
+        if not bucket:
+            continue
+        idx = key_cursor.get(key, 0)
+        if idx >= len(bucket):
+            continue
+        src = bucket[idx]
+        key_cursor[key] = idx + 1
+        changed = False
+        for field in fields:
+            if field not in src or src.get(field) is None:
+                continue
+            if item.get(field) != src.get(field):
+                item[field] = src.get(field)
+                changed = True
+        if src.get("sales_return_qty") is not None:
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict) and extra.get("sale_return") is None:
+                extra["sale_return"] = src.get("sales_return_qty")
+                changed = True
+        if changed:
+            extra = item.setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["detail_closing_repair"] = True
+            patched += 1
+    return patched
+
+
+def _stock_sales_detail_scan_per_page_enabled() -> bool:
+    """Prefer per-page Vision over vertical stitch (env, default ON)."""
+    raw = os.getenv("STOCK_SALES_DETAIL_SCAN_PER_PAGE", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _stock_sales_detail_widen_cl_enabled() -> bool:
+    """Append a zoomed Cl.Qty/Cl.Val strip so Vision does not steal Cr/Db (default ON)."""
+    raw = os.getenv("STOCK_SALES_DETAIL_WIDEN_CL", "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _widen_detail_closing_columns(page_png: bytes) -> bytes:
+    """Paste an enlarged rightmost Cl.Qty|Cl.Val band beside the page image.
+
+    Dense Stock and Sales Detail scans pack Cr/Db next to Cl; models often copy
+    Op.Val/Cr.Val into closing_value. A labeled zoom of only the closing pair
+    keeps Cl.Qty/Cl.Val aligned to the printed rightmost cells.
+    """
+    if not page_png:
+        return page_png
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return page_png
+    try:
+        img = Image.open(io.BytesIO(page_png)).convert("RGB")
+    except Exception:
+        return page_png
+    try:
+        width, height = img.size
+        if width < 200 or height < 200:
+            return page_png
+        # 0.70 includes full Cl.Val digits (narrower crops clip thousands).
+        cl_left = int(width * 0.70)
+        cl = img.crop((cl_left, 0, width, height))
+        zoom_w = max(cl.width + 1, int(cl.width * 1.55))
+        cl_zoom = cl.resize((zoom_w, height), Image.Resampling.LANCZOS)
+        gap = 8
+        canvas = Image.new(
+            "RGB", (width + gap + cl_zoom.width, height), (255, 255, 255)
+        )
+        canvas.paste(img, (0, 0))
+        canvas.paste(cl_zoom, (width + gap, 0))
+        draw = ImageDraw.Draw(canvas)
+        draw.rectangle(
+            [width + gap, 0, canvas.width - 1, height - 1],
+            outline=(200, 0, 0),
+            width=3,
+        )
+        draw.rectangle(
+            [cl_left, int(height * 0.08), width - 2, height - 2],
+            outline=(200, 0, 0),
+            width=3,
+        )
+        draw.text(
+            (width + gap + 4, 6),
+            "ZOOM Cl.Qty | Cl.Val (rightmost pair ONLY)",
+            fill=(200, 0, 0),
+        )
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return page_png
+    finally:
+        try:
+            img.close()
+        except Exception:
+            pass
+
+
+def _call_op_qty_val_multi_image(
+    images: List[bytes],
+    filename: str,
+    *,
+    prompt: str,
+    reason: str,
+    candidate: int = 1,
+) -> Optional[Dict[str, Any]]:
+    """One Gemini call with one or more page PNGs (Stock and Sales Detail)."""
+    if not images:
+        return None
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+    from services.sales_statement_extractor import (
+        _apply_parsed_sales_json,
+        _extract_json_object,
+        _gemini_response_text,
+        empty_result,
+    )
+
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    parts: List[Dict[str, Any]] = [{"text": prompt}]
+    for image in images:
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": base64.b64encode(image).decode("ascii"),
+                }
+            }
+        )
+    payload = {
+        "contents": [{"role": "user", "parts": parts}],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    started = time.time()
+    _log(
+        "STOCK_DIRECT_VISION_START",
+        filename=filename,
+        mime="image/png",
+        byte_size=sum(len(img) for img in images),
+        route="stock_sales_op_qty_val",
+        reason=reason,
+        gemini_model=model,
+        candidate=candidate,
+        pages=len(images),
+        gemini_input="image_original",
+        numeric_source="gemini_vision",
+    )
+    try:
+        response = generate_content_via_vertex(
+            model=model,
+            payload=payload,
+            timeout=120,
+            label="stock_direct_vision",
+        )
+        parsed = _extract_json_object(_gemini_response_text(response))
+    except Exception as exc:
+        _log(
+            "STOCK_DIRECT_VISION_END",
+            filename=filename,
+            route="stock_sales_op_qty_val",
+            reason=reason,
+            status="error",
+            error_type=type(exc).__name__,
+            elapsed_ms=int((time.time() - started) * 1000),
+        )
+        return None
+    if not parsed or not parsed.get("line_items"):
+        _log(
+            "STOCK_DIRECT_VISION_END",
+            filename=filename,
+            route="stock_sales_op_qty_val",
+            reason=reason,
+            status="empty",
+            elapsed_ms=int((time.time() - started) * 1000),
+        )
+        return None
+    result = empty_result(filename, "pdf")
+    result = _apply_parsed_sales_json(result, parsed)
+    kept = [
+        item
+        for item in (result.get("line_items") or [])
+        if isinstance(item, dict)
+        and _stock_vision_product_name_ok(str(item.get("product_name") or ""))
+    ]
+    if len(kept) < 3:
+        return None
+    result["line_items"] = kept
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "stock_sales_op_qty_val_vision"
+    extra["layout"] = "stock_sales_op_qty_val"
+    _log(
+        "STOCK_DIRECT_VISION_END",
+        filename=filename,
+        route="stock_sales_op_qty_val",
+        reason=reason,
+        status="ok",
+        row_count=len(kept),
+        elapsed_ms=int((time.time() - started) * 1000),
+    )
+    return result
+
+
+def _stitch_png_pages_vertical(images: List[bytes]) -> Optional[bytes]:
+    """Stack page PNGs into one tall image for a single Vision call."""
+    if not images:
+        return None
+    if len(images) == 1:
+        return images[0]
+    try:
+        from PIL import Image
+    except Exception:
+        return images[0]
+    opened: List[Any] = []
+    try:
+        for raw in images:
+            opened.append(Image.open(io.BytesIO(raw)).convert("RGB"))
+        width = max(img.width for img in opened)
+        height = sum(img.height for img in opened)
+        canvas = Image.new("RGB", (width, height), (255, 255, 255))
+        y = 0
+        for img in opened:
+            canvas.paste(img, (0, y))
+            y += img.height
+        # Cap width so the Vertex payload stays manageable.
+        if canvas.width > 2200:
+            ratio = 2200 / float(canvas.width)
+            canvas = canvas.resize(
+                (2200, max(1, int(canvas.height * ratio))),
+                Image.Resampling.LANCZOS,
+            )
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return images[0]
+    finally:
+        for img in opened:
+            try:
+                img.close()
+            except Exception:
+                pass
+
+
+def extract_stock_sales_op_qty_val_scanned_pdf(
+    file_bytes: bytes,
+    filename: str,
+) -> Optional[Dict[str, Any]]:
+    """Render image-only PDF pages and run Op.Qty/Op.Val Detail vision.
+
+    Used before generic scanned_pdf vision_table so P.Sch / return columns
+    do not steal sales_qty / closing_qty. Budget: max 2 Gemini calls.
+    Prefer per-page Vision (STOCK_SALES_DETAIL_SCAN_PER_PAGE, default ON) —
+    vertical stitch downscales dense Cl.Val columns and shifts values.
+    """
+    images = _render_pdf_page_pngs(file_bytes, max_pages=2, zoom=2.8)
+    if not images:
+        try:
+            from services.gemini_extraction_fallback import _pdf_images
+
+            images = _pdf_images(file_bytes, max_pages=2) or []
+        except Exception:
+            images = []
+    if not images:
+        return None
+
+    seed: Optional[Dict[str, Any]] = None
+    calls = 0
+    stitched = _stitch_png_pages_vertical(images) or images[0]
+
+    if _stock_sales_detail_scan_per_page_enabled():
+        merged_items: List[Dict[str, Any]] = []
+        widen_cl = _stock_sales_detail_widen_cl_enabled()
+        for page_index, image in enumerate(images[:2]):
+            vision_image = (
+                _widen_detail_closing_columns(image) if widen_cl else image
+            )
+            page = extract_stock_sales_op_qty_val_direct_vision(
+                vision_image,
+                filename,
+                ".png",
+                reason=(
+                    f"scanned_pdf_op_qty_val_page{page_index + 1}"
+                    + ("_widen_cl" if widen_cl else "")
+                ),
+                max_attempts=1,
+            )
+            calls += 1
+            if not page or not page.get("line_items"):
+                continue
+            if seed is None:
+                seed = page
+            for item in page.get("line_items") or []:
+                if isinstance(item, dict):
+                    merged_items.append(item)
+            logger.info(
+                "STOCK_SALES_DETAIL_SCAN_PER_PAGE file=%s page=%s rows=%s "
+                "widen_cl=%s",
+                filename,
+                page_index + 1,
+                len(page.get("line_items") or []),
+                widen_cl,
+            )
+        if seed is not None:
+            seed["line_items"] = merged_items
+
+    # Fallback: one stitched call (+ optional repair when a call remains).
+    if seed is None or len(seed.get("line_items") or []) < 5:
+        seed = _call_op_qty_val_multi_image(
+            [stitched],
+            filename,
+            prompt=STOCK_SALES_OP_QTY_VAL_VISION_PROMPT,
+            reason="scanned_pdf_op_qty_val_stitched",
+            candidate=1,
+        )
+        calls = 1
+        logger.info(
+            "STOCK_SALES_DETAIL_SCAN_STITCH file=%s rows=%s",
+            filename,
+            len((seed or {}).get("line_items") or []),
+        )
+
+    if seed is None or len(seed.get("line_items") or []) < 5:
+        logger.info(
+            "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s status=skip rows=%s",
+            filename,
+            len((seed or {}).get("line_items") or []),
+        )
+        return None
+
+    validation = validate_stock_direct_vision(
+        seed, layout="stock_sales_op_qty_val"
+    )
+    items = seed.get("line_items") or []
+    missing_cv = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        cl = item.get("closing_qty")
+        cv = item.get("closing_value")
+        try:
+            cl_f = float(cl) if cl not in (None, "") else 0.0
+        except (TypeError, ValueError):
+            cl_f = 0.0
+        try:
+            cv_f = float(cv) if cv not in (None, "") else 0.0
+        except (TypeError, ValueError):
+            cv_f = 0.0
+        if cl_f > 0 and cv_f <= 0:
+            missing_cv += 1
+    needs_closing_repair = calls < 2 and (
+        missing_cv >= max(2, len(items) // 5)
+        or int(validation.get("identity_fail_count") or 0)
+        > max(2, len(items) // 4)
+    )
+
+    if needs_closing_repair and calls < 2:
+        repair = _call_op_qty_val_multi_image(
+            [stitched],
+            filename,
+            prompt=STOCK_SALES_DETAIL_CLOSING_REPAIR_PROMPT,
+            reason="scanned_pdf_op_qty_val_closing_repair",
+            candidate=2,
+        )
+        calls += 1
+        if repair and repair.get("line_items"):
+            patched = _merge_detail_closing_repair(seed, repair)
+            logger.info(
+                "STOCK_SALES_DETAIL_CLOSING_REPAIR file=%s patched=%s",
+                filename,
+                patched,
+            )
+            validation = validate_stock_direct_vision(
+                seed, layout="stock_sales_op_qty_val"
+            )
+
+    if not validation.get("ok"):
+        logger.info(
+            "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s status=reject reasons=%s",
+            filename,
+            ",".join(validation.get("reasons") or []) or "none",
+        )
+        return None
+    extra = seed.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "stock_sales_op_qty_val_vision"
+    extra["layout"] = "stock_sales_op_qty_val"
+    extra["stock_sales_detail_scanned_pdf"] = True
+    extra["stock_sales_detail_scan_per_page"] = (
+        _stock_sales_detail_scan_per_page_enabled()
+    )
+    extra["stock_sales_detail_widen_cl"] = _stock_sales_detail_widen_cl_enabled()
+    lock_stock_vision_result(
+        seed,
+        early_vision_reason="stock_sales_op_qty_val_scanned_pdf",
+        stock_direct_vision_route="stock_sales_op_qty_val",
+        stock_direct_vision_candidate=1,
+        gemini_calls=calls,
+    )
+    logger.info(
+        "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s status=ok rows=%s "
+        "identity_fail=%s soft_ok=%s calls=%s",
+        filename,
+        len(seed.get("line_items") or []),
+        validation.get("identity_fail_count"),
+        validation.get("soft_ok"),
+        calls,
+    )
+    return seed
 
 
 def extract_opqty_qoh_direct_vision(
@@ -3798,6 +4394,23 @@ def try_stock_direct_vision(
                         layout_peek = f"{layout_peek}\n{taller}".strip()
             except Exception:
                 pass
+
+    # Recover OPSTK|OPV|STOCKV when peek already hints at that grid but is
+    # incomplete — so STOCK AND SALES STATEMENT is not stolen by Code/Item Vision.
+    _opstk_hint = layout_peek or peek_text or ""
+    if not _has_stock_sales_op_qty_val_headers(_opstk_hint) and re.search(
+        r"STOCK\s+AND\s+SALES|\bOPSTK\b|\bOPV\b|\bPURCV\b|\bSALEV\b|\bSTOCKV\b",
+        _opstk_hint,
+        re.I,
+    ):
+        opval_probe = _layout_header_text_op_qty_val(file_bytes)
+        if opval_probe and opval_probe not in (layout_peek or ""):
+            layout_peek = f"{layout_peek}\n{opval_probe}".strip()
+            logger.info(
+                "STOCK_DIRECT_VISION_OPSTK_OPV_HEADER_PROBE chars=%s file=%s",
+                len(opval_probe),
+                filename,
+            )
 
     decision = classify_stock_direct_vision(
         layout_peek or peek_text, filename, handwriting=hw

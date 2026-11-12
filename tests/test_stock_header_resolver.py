@@ -380,6 +380,40 @@ class ResolveColumnsUnitTests(unittest.TestCase):
         self.assertEqual(parse_number("1884.14|05/2029|"), 1884.14)
         self.assertIsNone(parse_number("05/2029"))
 
+    def test_parse_number_peels_trailing_expiry_date(self):
+        """Vision merges CLOSING VALUE + EXPIRY: keep money, drop date."""
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(
+            os.environ, {"STOCK_PARSE_PEEL_TRAILING_EXPIRY": "true"}, clear=False
+        ):
+            self.assertEqual(parse_number("81.56 01-Nov-28"), 81.56)
+            self.assertEqual(
+                parse_number("1904.62 01-Dec-28", allow_internal_spaces=True),
+                1904.62,
+            )
+            self.assertEqual(parse_number("1,904.62 01-Dec-28"), 1904.62)
+            self.assertEqual(parse_number("2805.13 01-Aug-27"), 2805.13)
+            # Bare date still unreadable as money.
+            self.assertIsNone(parse_number("01-Nov-28"))
+            # Digit-group spaces still require the allow flag.
+            self.assertIsNone(parse_number("1 234"))
+            self.assertEqual(
+                parse_number("1 234", allow_internal_spaces=True), 1234.0
+            )
+            # OCR space for decimal point (Primary_qty / rate paisa).
+            self.assertEqual(
+                parse_number("28 00", allow_internal_spaces=True), 28.0
+            )
+            self.assertEqual(
+                parse_number("176 51", allow_internal_spaces=True), 176.51
+            )
+        with patch.dict(
+            os.environ, {"STOCK_PARSE_PEEL_TRAILING_EXPIRY": "false"}, clear=False
+        ):
+            self.assertIsNone(parse_number("81.56 01-Nov-28"))
+
     def test_two_row_header(self):
         cells = [
             {"text": "Opening", "x_center": None, "col_index": 0, "subheader_text": "Qty"},

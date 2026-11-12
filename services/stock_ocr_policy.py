@@ -186,6 +186,12 @@ def resolve_stock_ocr_region_key(
         return pixel_key or f"cell:{page_id}:{region_id}:{op}"
     if region_id != "page":
         return f"named:{page_id}:{region_id}:{op}"
+    # Include a content fingerprint so a later upload on the same worker cannot
+    # region_shared_reuse another document's page OCR (page:1 alone is not
+    # document-safe when request_id is missing/unknown).
+    pix = (pixel_key or "").strip()
+    if pix:
+        return f"page:{page_id}:{op}:{pix[:32]}"
     return f"page:{page_id}:{op}"
 
 
