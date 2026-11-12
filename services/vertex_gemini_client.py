@@ -474,9 +474,11 @@ def generate_content_via_vertex(
 ) -> GeminiRestResponse:
     """Invoke Vertex AI generate_content and return REST-shaped response."""
     use_api_key_fallback = (
-        _api_key_fallback_enabled()
-        and _vertex_credentials_missing()
-        and bool(os.getenv("GEMINI_API_KEY", "").strip())
+        bool(os.getenv("GEMINI_API_KEY", "").strip())
+        and (
+            not GOOGLE_GENAI_USE_VERTEXAI
+            or (_api_key_fallback_enabled() and _vertex_credentials_missing())
+        )
     )
     if use_api_key_fallback:
         client = _get_api_key_gemini_client()
