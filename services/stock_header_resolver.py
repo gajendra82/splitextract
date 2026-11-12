@@ -163,6 +163,10 @@ ALIASES: Dict[str, List[str]] = {
         "prev. sale",
         "previous sale",
         "previous sales",
+        # STOCK & SALES STATEMENT: SALES band subheader LAST (history, not period sales).
+        "sales last",
+        "sale last",
+        "last",
     ],
     # Descriptive / commercial columns that can sit before Opening in stock
     # statements. They must never claim movement qty semantics.
@@ -474,6 +478,10 @@ ALIASES: Dict[str, List[str]] = {
         "other qty",
         "adj",
         "adj qty",
+        "adjmt",
+        "adjmt stock",
+        "adjustment",
+        "adjustment stock",
         "repl other",
         "repl/other",
         "repl / other",
@@ -1027,6 +1035,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         "free": 70,
         "opening": 65,
         "purchase": 60,
+        "others": 58,
         "sales": 55,
         "closing": 50,
         "total": 45,
@@ -3060,6 +3069,58 @@ def resolve_columns(
                     "is_value": False,
                     "reason": "serial_number_header",
                 }
+            )
+            continue
+
+        # SALES + LAST (or bare LAST under the SALES band) is last-month history.
+        if (
+            (norm in {"sales", "sale"} and sub_norm == "last")
+            or combined in {"sales last", "sale last"}
+            or norm == "last"
+        ):
+            prelim.append(
+                {
+                    "col_index": idx,
+                    "header_text": text,
+                    "subheader_text": sub_s or None,
+                    "group": "lms",
+                    "canonical": "lms",
+                    "confidence": 0.95,
+                    "is_value": False,
+                    "reason": "sales_last_lms",
+                }
+            )
+            logger.info(
+                "STOCK_HEADER_SALES_LAST_LMS col_index=%s text=%r sub=%r -> lms",
+                idx,
+                text,
+                sub_s,
+            )
+            continue
+
+        # ADJMT / ADJMT STOCK sits between sales and closing — not closing stock.
+        if (
+            compact_hdr in {"adjmt", "adjmtstock"}
+            or combined in {"adjmt", "adjmt stock", "adjustment", "adjustment stock"}
+            or norm in {"adjmt", "adjustment"}
+        ):
+            prelim.append(
+                {
+                    "col_index": idx,
+                    "header_text": text,
+                    "subheader_text": sub_s or None,
+                    "group": "others",
+                    "canonical": "other_outward_qty",
+                    "confidence": 0.95,
+                    "is_value": False,
+                    "reason": "adjmt_stock",
+                }
+            )
+            logger.info(
+                "STOCK_HEADER_ADJMT_STOCK col_index=%s text=%r sub=%r -> other_outward_qty",
+                idx,
+                text,
+                sub_s,
             )
             continue
 

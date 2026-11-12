@@ -19756,6 +19756,355 @@ def _drop_promotional_footer_line_items(result: Dict[str, Any]) -> Dict[str, Any
     return result
 
 
+def _opening_receipt_sales_last_adjmt_enabled() -> bool:
+    """Native words path for OPENING/RECEIPT/SALES LAST/QTY/ADJMT/CLOSING."""
+    return os.getenv(
+        "STOCK_OPENING_RECEIPT_SALES_LAST_ADJMT", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_opening_receipt_sales_last_adjmt_text(text: str) -> bool:
+    """STOCK & SALES STATEMENT with OPENING/RECEIPT/SALES LAST/ADJMT/CLOSING.
+
+    Period sales are under SALES QTY. SALES LAST is history (LMS), not sales_qty.
+    Distinct from Op Stk / Item Cd ZANDRA grids and from OPBAL/EXCESS sheets.
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", blob, re.I):
+        return False
+    if not re.search(r"\bOPENING\b", blob, re.I):
+        return False
+    if not re.search(r"\bRECEIPT\b", blob, re.I):
+        return False
+    if not re.search(r"\bLAST\b", blob, re.I):
+        return False
+    if not re.search(r"\bADJMT\b|\bADJUST", blob, re.I):
+        return False
+    if not re.search(r"\bCLOSING\b", blob, re.I):
+        return False
+    # Classic ZANDRA Op Stk / Item Cd grids keep their own vision path.
+    if re.search(r"\bItem\s*Cd\b|\bOp[_\s.]*Stk\b|\bCl[_\s.]*Stk\b", blob, re.I):
+        return False
+    if re.search(r"\bOPBAL\b", blob, re.I) and re.search(r"\bEXCESS\b", blob, re.I):
+        return False
+    return True
+
+
+def _opening_receipt_sales_last_header_centres(
+    rows: List[List[Tuple[Any, ...]]],
+) -> Optional[Dict[str, float]]:
+    """Map qty/value roles from the two-line OPENING/RECEIPT/SALES/ADJMT header."""
+    centres: Dict[str, float] = {}
+    for row in rows:
+        labels = [
+            (
+                re.sub(r"[^A-Za-z]", "", str(w[4])).upper(),
+                (float(w[0]) + float(w[2])) / 2.0,
+            )
+            for w in row
+            if str(w[4]).strip()
+        ]
+        texts = [t for t, _ in labels]
+        if "PACKG" in texts or texts == ["PACKING"] or "PACKING" in texts:
+            for tok, cx in labels:
+                if tok in {"PACKG", "PACKING", "PACK"}:
+                    centres["packing"] = cx
+                    break
+        if "OPENING" in texts and "RECEIPT" in texts and (
+            "SALES" in texts or any("SALES" in t for t in texts)
+        ):
+            for tok, cx in labels:
+                if tok == "OPENING":
+                    centres["opening_parent"] = cx
+                elif tok == "RECEIPT":
+                    centres["receipt_parent"] = cx
+                elif "SALES" in tok:
+                    centres["sales_parent"] = cx
+                elif tok == "ADJMT" or tok.startswith("ADJUST"):
+                    centres["adjmt_parent"] = cx
+                elif tok == "CLOSING" and "closing_parent" not in centres:
+                    centres["closing_parent"] = cx
+                elif tok == "AGE":
+                    centres["age_parent"] = cx
+                elif tok in {"PRODUCT", "NAME"} and "product_name" not in centres:
+                    centres["product_name"] = cx
+        # Subheader: QTY QTY FREE LAST QTY FREE STOCK QTY FREE VALUE DAYS
+        if "LAST" not in texts or texts.count("QTY") < 3:
+            continue
+        if "VALUE" not in texts:
+            continue
+        seq = [
+            ("opening_qty", {"QTY"}),
+            ("receipts_qty", {"QTY"}),
+            ("free_in_qty", {"FREE"}),
+            ("last_sales_qty", {"LAST"}),
+            ("sales_qty", {"QTY"}),
+            ("free_out_qty", {"FREE"}),
+            ("other_outward_qty", {"STOCK"}),
+            ("closing_qty", {"QTY"}),
+            ("closing_free_qty", {"FREE"}),
+            ("closing_value", {"VALUE"}),
+            ("age_days", {"DAYS"}),
+        ]
+        si = 0
+        local: Dict[str, float] = {}
+        for tok, cx in labels:
+            if si >= len(seq):
+                break
+            key, accept = seq[si]
+            if tok in accept:
+                local[key] = cx
+                si += 1
+        if all(
+            k in local
+            for k in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty")
+        ):
+            centres.update(local)
+            return centres
+    return None
+
+
+def _assign_opening_receipt_sales_last_row(
+    row: List[Tuple[Any, ...]], centres: Dict[str, float]
+) -> Optional[Dict[str, Any]]:
+    """Assign one product row by nearest printed header x-centre."""
+    if not row or not centres:
+        return None
+    joined = " ".join(str(w[4]) for w in row)
+    if re.search(
+        r"PRODUCT\s*NAME|PACKG|OPENING|RECEIPT|SALES|ADJMT|CLOSING\s+VALUE|"
+        r"Non\s+Moving|OPENING\s+VALUE|SALES\s+VALUE|LAST\s+MONTH|"
+        r"EXPIRES\s+ON|BATCH\s*NO|Page\s*No|COMPANY\s*:",
+        joined,
+        re.I,
+    ):
+        return None
+    if re.search(r"^-{5,}$", joined.strip()):
+        return None
+
+    open_x = centres["opening_qty"]
+    pack_x = centres.get("packing")
+    name_hi = (pack_x - 8.0) if pack_x is not None else (open_x - 35.0)
+    pack_lo = (pack_x - 35.0) if pack_x is not None else (open_x - 90.0)
+    pack_hi = open_x - 8.0
+
+    role_xs = [
+        (k, centres[k])
+        for k in (
+            "opening_qty",
+            "receipts_qty",
+            "free_in_qty",
+            "last_sales_qty",
+            "sales_qty",
+            "free_out_qty",
+            "other_outward_qty",
+            "closing_qty",
+            "closing_free_qty",
+            "closing_value",
+            "age_days",
+        )
+        if k in centres
+    ]
+    if len(role_xs) < 4:
+        return None
+
+    name_parts: List[str] = []
+    pack_parts: List[str] = []
+    values: Dict[str, Optional[float]] = {k: None for k, _ in role_xs}
+
+    for w in row:
+        tok = str(w[4]).strip()
+        if not tok:
+            continue
+        cx = (float(w[0]) + float(w[2])) / 2.0
+        if cx < name_hi and re.search(r"[A-Za-z]", tok):
+            name_parts.append(tok)
+            continue
+        if pack_lo <= cx < pack_hi:
+            pack_parts.append(tok)
+            continue
+        if cx < pack_hi:
+            if re.search(r"[A-Za-z]", tok):
+                name_parts.append(tok)
+            continue
+        nearest = min(role_xs, key=lambda item: abs(cx - item[1]))
+        role = nearest[0]
+        if tok in {"-", "–", "—", "--", "."}:
+            if values[role] is None:
+                values[role] = 0.0
+            continue
+        cleaned = tok.replace(",", "")
+        if not re.fullmatch(r"-?\d+(?:\.\d+)?", cleaned):
+            continue
+        values[role] = _to_float(cleaned)
+
+    product_name = _clean_name(" ".join(name_parts))
+    if len(product_name) < 3:
+        return None
+    if re.search(
+        r"^(TOTAL|VALUE|PAGE|STOCK|COMPANY|PRODUCT|OPENING|CLOSING)\b",
+        product_name,
+        re.I,
+    ):
+        return None
+
+    packing = _clean_name(" ".join(pack_parts)) or None
+    item = empty_line_item()
+    item["product_name"] = product_name
+    item["packing"] = packing
+    item["opening_qty"] = float(values.get("opening_qty") or 0.0)
+    item["receipts_qty"] = float(values.get("receipts_qty") or 0.0)
+    item["sales_qty"] = float(values.get("sales_qty") or 0.0)
+    item["closing_qty"] = float(values.get("closing_qty") or 0.0)
+    # No per-line sales value on this layout — only CLOSING VALUE is printed.
+    item["sales_value"] = None
+    cv = values.get("closing_value")
+    item["closing_value"] = float(cv) if cv is not None else None
+    extra = item.setdefault("extra", {})
+    if values.get("free_in_qty") is not None:
+        extra["free_in_qty"] = float(values["free_in_qty"] or 0.0)
+    if values.get("free_out_qty") is not None:
+        extra["free_out_qty"] = float(values["free_out_qty"] or 0.0)
+    if values.get("last_sales_qty") is not None:
+        extra["last_sales_qty"] = float(values["last_sales_qty"] or 0.0)
+        extra["lms"] = float(values["last_sales_qty"] or 0.0)
+    if values.get("other_outward_qty") is not None:
+        extra["other_outward_qty"] = float(values["other_outward_qty"] or 0.0)
+    if values.get("closing_free_qty") is not None:
+        extra["closing_free_qty"] = float(values["closing_free_qty"] or 0.0)
+    fs = extra.setdefault("field_source", {})
+    for field in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        fs[field] = "printed"
+    fs["sales_value"] = "missing"
+    if item["closing_value"] is not None:
+        fs["closing_value"] = "printed"
+    else:
+        fs["closing_value"] = "missing"
+    if "last_sales_qty" in extra:
+        fs["last_sales_qty"] = "printed"
+    return item
+
+
+def _parse_opening_receipt_sales_last_words_pages(
+    page_infos: List[Dict[str, Any]], filename: str
+) -> Optional[Dict[str, Any]]:
+    """Parse OPENING/RECEIPT/SALES LAST/QTY/FREE/ADJMT/CLOSING via word x-centres."""
+    if not _opening_receipt_sales_last_adjmt_enabled():
+        return None
+    combined = "\n".join(str(p.get("text") or "") for p in page_infos)
+    if not _is_opening_receipt_sales_last_adjmt_text(combined):
+        return None
+
+    items: List[Dict[str, Any]] = []
+    centres: Optional[Dict[str, float]] = None
+    for info in page_infos:
+        words = list(info.get("words") or [])
+        if not words:
+            continue
+        rows = _cluster_words_by_y(words, y_tol=5.0)
+        page_centres = _opening_receipt_sales_last_header_centres(rows)
+        if page_centres:
+            centres = page_centres
+            logger.info(
+                "OPENING_RECEIPT_SALES_LAST file=%s header_centres=%s",
+                filename,
+                {k: round(v, 1) for k, v in sorted(centres.items())},
+            )
+        if not centres:
+            continue
+        for row in rows:
+            joined = " ".join(str(w[4]) for w in row)
+            # Near-expiry / batch appendix is not the movement grid.
+            if re.search(r"BATCH\s*NO|EXPIRES\s+ON", joined, re.I):
+                break
+            parsed = _assign_opening_receipt_sales_last_row(row, centres)
+            if parsed:
+                items.append(parsed)
+
+    if len(items) < 3:
+        logger.info(
+            "OPENING_RECEIPT_SALES_LAST file=%s status=too_few items=%s",
+            filename,
+            len(items),
+        )
+        return None
+
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "STOCK & SALES STATEMENT"
+    result["line_items"] = items
+
+    for ln in combined.splitlines()[:6]:
+        if re.search(r"COMPANY\s*:", ln, re.I):
+            parts = re.split(r"COMPANY\s*:", ln, maxsplit=1, flags=re.I)
+            if len(parts) == 2:
+                stockist = _clean_name(parts[0])
+                company = _clean_name(parts[1])
+                if stockist:
+                    result["stockist_name"] = stockist
+                if company:
+                    result["company_name"] = company
+            break
+    if not result.get("stockist_name"):
+        for ln in combined.splitlines()[:8]:
+            if re.search(r"STOCK\s*&\s*SALES|PRODUCT\s*NAME|Page\s*No", ln, re.I):
+                continue
+            cand = _clean_name(ln)
+            if len(re.sub(r"[^A-Za-z]", "", cand)) >= 4:
+                result["stockist_name"] = cand
+                break
+
+    as_on = re.search(
+        r"AS\s+ON\s+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", combined, re.I
+    )
+    if as_on:
+        period_to = _normalize_date(as_on.group(1))
+        result["period_to"] = period_to
+        if period_to and len(period_to) >= 7:
+            # Month of the AS ON date (statement month).
+            y, m = period_to[:4], period_to[5:7]
+            result["period_from"] = f"{y}-{m}-01"
+
+    def _labeled_money(label: str) -> Optional[float]:
+        match = re.search(
+            label + r"\s*:\s*([0-9][0-9,]*(?:\.\d+)?)",
+            combined,
+            re.I,
+        )
+        if not match:
+            return None
+        return _to_float(match.group(1))
+
+    result["totals"]["sales_value"] = _labeled_money(r"SALES\s+VALUE")
+    result["totals"]["closing_value"] = _labeled_money(r"CLOSING\s+VALUE")
+    if result["totals"]["closing_value"] is None:
+        row_vals = [
+            float(i.get("closing_value") or 0)
+            for i in items
+            if i.get("closing_value") not in (None, "")
+        ]
+        if row_vals:
+            result["totals"]["closing_value"] = round(sum(row_vals), 2)
+
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "opening_receipt_sales_last_adjmt_words"
+    extra["layout"] = "opening_receipt_sales_last_adjmt"
+    # Footer money is printed; line rows have closing value only (no sales value col).
+    extra["total_row_source"] = "printed_footer"
+    extra["opening_value"] = _labeled_money(r"OPENING\s+VALUE")
+    extra["purchase_value"] = _labeled_money(r"PURCHASE\s+VALUE")
+    extra["receipts_value"] = extra.get("purchase_value")
+    extra["last_month_sales_value"] = _labeled_money(r"LAST\s+MONTH\s+SALES")
+    logger.info(
+        "SECONDARY_SALES_READER file=%s engine=pdf_words "
+        "method=opening_receipt_sales_last_adjmt_words items=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
 def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     blob = text or ""
     # Medica Ultimate prints OPSTK and IN/OT. That is not the Zandra Op Stk grid.
@@ -19767,6 +20116,9 @@ def _looks_like_zandra_stock_sale_text(text: str) -> bool:
     # OPBAL/REC + SALES TOTAL + STOCK EXCESS (LST MN/FOR MN history) is not
     # Op/Cl Stk — ZANDRA in the company banner must not steal this layout.
     if _is_opbal_rec_sales_excess_text(blob):
+        return False
+    # OPENING/RECEIPT/SALES LAST/ADJMT is not Item Cd / Op Stk.
+    if _is_opening_receipt_sales_last_adjmt_text(blob):
         return False
     if re.search(
         r"Stock\s+and\s+Sale\s+Statement|Op[_\s.]*Stk|Cl[_\s.]*Stk", blob, re.I
@@ -23241,6 +23593,20 @@ def _extract_statement_from_pdf_group(
                 if not opbal_excess.get("stockist_name"):
                     opbal_excess["stockist_name"] = group["stockist_name"]
             return opbal_excess
+
+    # OPENING/RECEIPT/SALES LAST/QTY/ADJMT/CLOSING — before Zandra Op Stk vision.
+    # SALES LAST is LMS history; period sales are SALES QTY.
+    if _is_opening_receipt_sales_last_adjmt_text(combined_text):
+        sales_last = _parse_opening_receipt_sales_last_words_pages(pages, filename)
+        if sales_last and sales_last.get("line_items"):
+            sales_last["totals"]["extra"]["split_pages"] = page_nos
+            sales_last["totals"]["extra"]["statement_count"] = 1
+            if group.get("stockist_name") and not re.search(
+                r"^Statement_\d+$", str(group.get("stockist_name") or "")
+            ):
+                if not sales_last.get("stockist_name"):
+                    sales_last["stockist_name"] = group["stockist_name"]
+            return sales_last
 
     # Generic Op.Qty/Op.Val/P.Qty/…/Cls.Val(+Br.Trf) CONSOLIDATED (no ItemCode).
     # Native words parser — avoids Gemini inventing products / dropping P.Val.
