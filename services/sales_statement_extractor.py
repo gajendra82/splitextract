@@ -571,6 +571,78 @@ _REPORT_PERIOD_MON_RANGE_RE = re.compile(
     r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
     re.I,
 )
+# ORDER FORM / header "Date: October, 2026" or bare "October 2026".
+_REPORT_PERIOD_MONTH_YEAR_RE = re.compile(
+    r"(?:Date\s*:?\s*|Period\s*:?\s*|Month\s*(?:of|:)\s*)?"
+    r"(January|February|March|April|May|June|July|August|September|"
+    r"October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|"
+    r"Oct|Nov|Dec)\.?\s*[,\-/]?\s*('?\d{2,4})\b",
+    re.I,
+)
+
+
+def _parse_month_year_period_text(
+    text: Optional[str],
+) -> Tuple[Optional[str], Optional[str]]:
+    """Map printed 'October, 2026' / 'Oct 2026' to first/last day of that month."""
+    if not text:
+        return None, None
+    m = _REPORT_PERIOD_MONTH_YEAR_RE.search(str(text))
+    if not m:
+        return None, None
+    year = int(str(m.group(2)).lstrip("'"))
+    if year < 100:
+        year += 2000
+    if not (2000 <= year <= 2099):
+        return None, None
+    return _month_period(m.group(1), year)
+
+
+def _coerce_month_year_period_fields(
+    result: Dict[str, Any],
+    *,
+    parsed: Optional[Dict[str, Any]] = None,
+    content_text: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Fill period_from/to from a printed month+year when ISO dates are absent.
+
+    Does not invent a day that was not printed — expands only the named month.
+    """
+    if not isinstance(result, dict):
+        return result
+    if _usable_period_date(result.get("period_from")) and _usable_period_date(
+        result.get("period_to")
+    ):
+        return result
+    blobs: List[str] = []
+    if isinstance(parsed, dict):
+        for key in ("period_from", "period_to", "statement_period", "report_title"):
+            raw = parsed.get(key)
+            if raw:
+                blobs.append(str(raw))
+    for key in ("period_from", "period_to", "report_title"):
+        raw = result.get(key)
+        if raw:
+            blobs.append(str(raw))
+    if content_text:
+        blobs.append(content_text[:4000])
+    for blob in blobs:
+        pf, pt = _parse_month_year_period_text(blob)
+        if pf and pt:
+            result["period_from"] = pf
+            result["period_to"] = pt
+            extra = result.setdefault("totals", {}).setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["statement_period_source"] = (
+                    extra.get("statement_period_source") or "header_month_year"
+                )
+            logger.info(
+                "STATEMENT_PERIOD source=header_month_year period_from=%s period_to=%s",
+                pf,
+                pt,
+            )
+            break
+    return result
 
 
 def _extract_report_period_from_content(
@@ -606,6 +678,11 @@ def _extract_report_period_from_content(
         pt = _normalize_date(m.group(2))
         if pf and pt:
             return pf, pt, source
+    # Month+year only (ORDER FORM Date field, "Month of Oct26", etc.).
+    for band in (header_band, trailer_band, text[:4000]):
+        pf, pt = _parse_month_year_period_text(band)
+        if pf and pt:
+            return pf, pt, "report_month_year"
     return None, None, None
 
 
@@ -5742,6 +5819,54 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
             "extracted_closing": closing_sum,
             "is_valid": True,
         }
+        return result
+
+    # ORDER FORM Qty-only: opening/receipts/closing are not printed columns.
+    # Do not score with closing=opening+receipts-sales (naturally fails).
+    if _is_order_form_qty_result(result) or prior_kind == STOCK_IDENTITY_ORDER_FORM_QTY:
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            row_extra["stock_identity_ok"] = True
+            fs = row_extra.setdefault("field_source", {})
+            if isinstance(fs, dict):
+                for field in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "closing_qty",
+                    "sales_return_qty",
+                    "expiry_damage_qty",
+                ):
+                    fs.setdefault(field, "missing")
+                if item.get("sales_qty") not in (None, ""):
+                    fs.setdefault("sales_qty", "printed")
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["stock_identity_kind"] = STOCK_IDENTITY_ORDER_FORM_QTY
+        totals["extra"]["psr_column_layout"] = (
+            totals["extra"].get("psr_column_layout") or "order_form_qty"
+        )
+        totals["extra"]["stock_identity_formula"] = (
+            "sales_qty=Qty; opening/receipts/closing not printed on ORDER FORM"
+        )
+        if _allow_force_zero_fail:
+            totals["extra"]["stock_identity_fail_count"] = 0
+        totals["extra"]["stock_validation"] = {
+            "extracted_sales_qty": sales_sum,
+            "is_valid": True,
+        }
+        logger.info(
+            "STOCK_ORDER_FORM_IDENTITY_SKIP method=%s rows=%s sales_qty=%s",
+            totals["extra"].get("extraction_method"),
+            len(items),
+            sales_sum,
+        )
         return result
 
     kind = _stock_identity_kind(result)
@@ -32983,6 +33108,20 @@ def _parse_stock_sales_opstk_curstk_stkval_doc(
     return _parse_stock_sales_opstk_curstk_stkval_statement(blob, filename, "pdf")
 
 
+def _sas_month_cl_st_age_enabled() -> bool:
+    """STOCK_SAS_MONTH_CL_ST_AGE — Sale/Cl.St/SaleValue/AgeStockValue headers.
+
+    Default OFF. Same Stock And Sales Report(Month) family as Cl.Stk/SalesValue,
+    but abbreviated Sale/Cl.St plus AgeStockValue (age, not closing).
+    """
+    return os.getenv("STOCK_SAS_MONTH_CL_ST_AGE", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_stock_and_sales_report_month_text(text: str) -> bool:
     """Srinath-style Stock And Sales Report(Month) with OpStk/Rcpt/Cl.Stk.
 
@@ -32996,7 +33135,11 @@ def _is_stock_and_sales_report_month_text(text: str) -> bool:
         return False
     if not re.search(r"\bOpStk\b", text):
         return False
-    if not re.search(r"Cl\.?\s*Stk", text, re.I):
+    # Cl.Stk (classic) or Cl.St (abbreviated, flag-gated).
+    has_cl = bool(re.search(r"Cl\.?\s*Stk", text, re.I))
+    if not has_cl and _sas_month_cl_st_age_enabled():
+        has_cl = bool(re.search(r"\bCl\.St\b", text, re.I))
+    if not has_cl:
         return False
     compact = re.sub(r"[^a-z0-9]", "", text.lower())
     # Zenith layout — leave _parse_zenith_opstk_statement alone.
@@ -33018,27 +33161,58 @@ def _stock_and_sales_month_header_plan(header_line: str) -> Optional[Dict[str, i
 
     opstk = at("OpStk")
     rcpt = at("Rcpt")
+    pret = at("P.ret", "P.Ret", "Pret")
+    presa = at("Pre.Sa", "Pre.SA", "PreSa")
     sales = at("Sales")
+    if sales is None and _sas_month_cl_st_age_enabled():
+        # "Sale" before "SaleValue" — find() returns the leftmost hit.
+        sales = at("Sale")
     fre = at("Fre")
     sales_value = at("SalesValue")
+    if sales_value is None and _sas_month_cl_st_age_enabled():
+        sales_value = at("SaleValue")
     adj = at("Adj")
-    clstk = at("Cl.Stk", "Cl.Stk", "ClStk")
+    clstk = at("Cl.Stk", "ClStk")
+    if clstk is None and _sas_month_cl_st_age_enabled():
+        clstk = at("Cl.St")
+    age = None
+    if _sas_month_cl_st_age_enabled():
+        age = at("AgeStockValue", "AgeStock")
     net = at("NetStockVa", "NetStock")
     stock_value = at("StockValue")
+    # AgeStockValue is aged-stock history, never Net/closing value.
+    if age is not None and stock_value is not None and stock_value >= age:
+        stock_value = None
     if None in (opstk, rcpt, sales, clstk):
         return None
+    # When AgeStock prints and Net/StockValue do not, closing_value is absent.
+    if age is not None and net is None and stock_value is None:
+        net = sales_value if sales_value is not None else (clstk + 8)
+        stock_value = age
+        ignore_closing_value = True
+    else:
+        ignore_closing_value = False
+        net = net if net is not None else (stock_value or (clstk + 8))
+        stock_value = stock_value if stock_value is not None else (
+            (net + 10) if net is not None else (clstk + 18)
+        )
+    # Receipts end before P.ret / Pre.Sa so those columns do not mash into Rcpt.
+    rcpt_end = pret if pret is not None else (presa if presa is not None else sales)
     return {
         "opstk": opstk,
         "rcpt": rcpt,
+        "rcpt_end": rcpt_end,
+        "pret": pret,
+        "presa": presa,
         "sales": sales,
         "fre": fre if fre is not None else sales_value or (sales + 6),
         "sales_value": sales_value if sales_value is not None else (adj or clstk),
-        "adj": adj if adj is not None else clstk,
+        "adj": adj if adj is not None else (age if age is not None else clstk),
         "clstk": clstk,
-        "net": net if net is not None else (stock_value or (clstk + 8)),
-        "stock_value": stock_value if stock_value is not None else (
-            (net + 10) if net is not None else (clstk + 18)
-        ),
+        "net": net,
+        "stock_value": stock_value,
+        "age": age,
+        "ignore_closing_value": ignore_closing_value,
     }
 
 
@@ -33120,6 +33294,15 @@ def _parse_stock_and_sales_report_month(
                 )
                 result["period_from"] = pf
                 result["period_to"] = pt
+    company_for = re.search(
+        r"of\s+[A-Za-z]{3,9}\s*[-/]?\s*\d{4}\s+for\s+(.+)$",
+        blob,
+        re.I | re.M,
+    )
+    if company_for and not result.get("company_name"):
+        company = _clean_name(company_for.group(1))
+        if company:
+            result["company_name"] = company
 
     def _cell(line: str, start: int, end: int) -> str:
         if start >= len(line):
@@ -33138,8 +33321,13 @@ def _parse_stock_and_sales_report_month(
     skip = re.compile(
         r"ProductName|^\s*-{5,}|Continued|Automatically\s+Generated|"
         r"End\s+Of\s+Report|Page\s+\d|^\s*OpStk\s+PurVal|"
-        r"Stock\s+And\s+Sales|Admin\s*-|^\s*of\s+[A-Za-z]{3}",
+        r"Stock\s+And\s+Sales|Admin\s*-|^\s*of\s+[A-Za-z]{3}|"
+        r"Document\s+Footer|REG\.?\s*OFFICE|Op\.?\s*Stk\s*Val|"
+        r"Cl\.?\s*Stk\.?\s*Val|Training\s*-|LastSal|Net\s*Sal",
         re.I,
+    )
+    stockist_norm = re.sub(
+        r"\s+", " ", str(result.get("stockist_name") or "").strip().upper()
     )
     for ln in blob.splitlines():
         raw = ln.rstrip("\n")
@@ -33149,18 +33337,25 @@ def _parse_stock_and_sales_report_month(
         name, packing = _stock_and_sales_month_split_name_pack(left)
         if not name or not re.search(r"[A-Za-z]{2,}", name):
             continue
+        if stockist_norm and re.sub(r"\s+", " ", name).strip().upper() == stockist_norm:
+            continue
         if re.search(
-            r"SRINATH|MEDICAL\s+AGENC|STREET|HIMALAYA|WELLNESS|PurVal|SalVal",
+            r"SRINATH|MEDICAL\s+AGENC|STREET|HIMALAYA|WELLNESS|PurVal|SalVal|"
+            r"Document\s+Footer",
             name,
             re.I,
         ):
             continue
         opening = _qty(raw, plan["opstk"], plan["rcpt"])
-        receipts = _qty(raw, plan["rcpt"], plan["sales"])
+        receipts = _qty(raw, plan["rcpt"], plan.get("rcpt_end", plan["sales"]))
         sales_qty = _qty(raw, plan["sales"], plan["fre"])
         sales_value = _qty(raw, plan["sales_value"], plan["adj"])
         closing = _qty(raw, plan["clstk"], plan["net"])
-        closing_value = _qty(raw, plan["net"], plan["stock_value"])
+        if plan.get("ignore_closing_value"):
+            # AgeStockValue is not printed closing value — leave missing.
+            closing_value = None
+        else:
+            closing_value = _qty(raw, plan["net"], plan["stock_value"])
         if None in (opening, receipts, sales_qty, closing):
             continue
         item = empty_line_item()
@@ -33171,14 +33366,31 @@ def _parse_stock_and_sales_report_month(
         item["sales_qty"] = sales_qty
         item["sales_value"] = sales_value if sales_value is not None else 0.0
         item["closing_qty"] = closing
-        item["closing_value"] = closing_value if closing_value is not None else 0.0
+        if closing_value is None and plan.get("ignore_closing_value"):
+            item["closing_value"] = None
+            item.setdefault("extra", {}).setdefault("field_source", {})[
+                "closing_value"
+            ] = "missing"
+        else:
+            item["closing_value"] = (
+                closing_value if closing_value is not None else 0.0
+            )
         item["extra"]["layout"] = "stock_and_sales_report_month"
+        if plan.get("age") is not None:
+            item["extra"]["age_stock_ignored"] = True
         items.append(item)
 
     if len(items) < 3:
         return None
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "stock_and_sales_report_month"
+    if plan.get("age") is not None:
+        result["totals"]["extra"]["sas_month_age_stock_ignored"] = True
+        logger.info(
+            "STOCK_SAS_MONTH_CL_ST_AGE file=%s items=%s age_stock=ignored",
+            filename,
+            len(items),
+        )
     return result
 
 
@@ -40270,6 +40482,42 @@ STOCK_IDENTITY_SALERET = "opening_purchase_sale_saleret_expdmg"
 STOCK_IDENTITY_SAMPLE = "opening_purchase_sale_sample_expclos"
 STOCK_IDENTITY_OPBAL = "opening_receipt_issue_closing"
 STOCK_IDENTITY_GENERIC = "opening_receipts_sales_closing"
+STOCK_IDENTITY_ORDER_FORM_QTY = "order_form_qty"
+
+
+def _is_order_form_qty_result(result: Dict[str, Any]) -> bool:
+    """True for Qty-only ORDER FORM extracts (no opening/receipts/closing columns)."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if not isinstance(extra, dict):
+        extra = {}
+    method = str(extra.get("extraction_method") or "")
+    layout = str(extra.get("layout") or "")
+    kind = str(extra.get("stock_identity_kind") or extra.get("psr_column_layout") or "")
+    if kind == STOCK_IDENTITY_ORDER_FORM_QTY or kind == "order_form_qty":
+        return True
+    if method in {
+        "zandra_two_column_order_form",
+        "handwritten_stock_vision",
+        "sap_order_form",
+        "sap_order_form_vision",
+        "sap_right_qty_order_form",
+    }:
+        if method == "handwritten_stock_vision":
+            return layout == "handwritten_order_form" or str(
+                extra.get("psr_column_layout") or ""
+            ) == "order_form_qty"
+        return True
+    if layout in {
+        "zandra_two_column_order_form",
+        "handwritten_order_form",
+        "sap_order_form",
+        "sap_right_qty_order_form",
+        "order_form",
+    }:
+        return True
+    return False
 
 
 def _is_product_stock_report_text(text: str) -> bool:
@@ -40358,6 +40606,10 @@ def _stock_identity_kind(result: Dict[str, Any]) -> str:
         return STOCK_IDENTITY_SALERET
     if explicit == "sample" or explicit == STOCK_IDENTITY_SAMPLE:
         return STOCK_IDENTITY_SAMPLE
+    if explicit in {STOCK_IDENTITY_ORDER_FORM_QTY, "order_form_qty"}:
+        return STOCK_IDENTITY_ORDER_FORM_QTY
+    if _is_order_form_qty_result(result):
+        return STOCK_IDENTITY_ORDER_FORM_QTY
     if explicit in {"zl_opening_primary_closing", "zl_secondary_xlsx"}:
         return str(explicit)
     method = str(extra_t.get("extraction_method") or "")
@@ -44266,6 +44518,8 @@ def _apply_parsed_sales_json(
             if key in {"period_from", "period_to"}:
                 val = _normalize_date(str(val)) or val
             result[key] = val
+    # ORDER FORM Date "October, 2026" often lands in period_* before ISO normalize.
+    result = _coerce_month_year_period_fields(result, parsed=parsed)
 
     # Common vision mix-up: manufacturer vs stockist agency name
     stockist = (result.get("stockist_name") or "").upper()
@@ -51697,25 +51951,36 @@ def _zandra_order_form_stockist(
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert("RGB")
     width, height = image.size
     # A title near the top leaves the handwritten From line a little lower.
+    # party_lines also needs the Date field, which sits beside the title band.
     if anchor < 0.20:
-        top = max(0.0, anchor + 0.02)
-        bottom = min(0.95, anchor + (0.18 if party_lines else 0.14))
+        top = max(0.0, (anchor - 0.02) if party_lines else (anchor + 0.02))
+        bottom = min(0.95, anchor + (0.20 if party_lines else 0.14))
     else:
-        top = max(0.0, anchor + 0.045)
-        bottom = min(0.95, anchor + (0.16 if party_lines else 0.10))
+        top = max(0.0, (anchor - 0.02) if party_lines else (anchor + 0.045))
+        bottom = min(0.95, anchor + (0.18 if party_lines else 0.10))
+    # Full-width when reading party lines so the Date field (right side) is visible.
+    right_frac = 0.99 if party_lines else 0.55
     crop = image.crop(
-        (int(width * 0.04), int(height * top), int(width * 0.55), int(height * bottom))
+        (
+            int(width * 0.04),
+            int(height * top),
+            int(width * right_frac),
+            int(height * bottom),
+        )
     )
     if crop.width < 1400:
         crop = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.LANCZOS)
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     if party_lines:
         prompt = (
-            "This crop is the From box of a Zeal order form. "
-            "stockist_name is the handwritten party on the first line. "
-            "stockist_address is the handwritten place on the next line. "
+            "This crop is the header of a Zeal order form. "
+            "stockist_name is the handwritten party on the first line under From. "
+            "stockist_address is the handwritten place on the next line under From. "
             "Do not include the word From. "
-            'Return ONLY JSON {"stockist_name": string|null, "stockist_address": string|null}.'
+            "date_text is the handwritten month/year (or date) in the Date field, "
+            "e.g. 'October, 2026'. Blank Date is null. Do not invent a day. "
+            'Return ONLY JSON {"stockist_name": string|null, '
+            '"stockist_address": string|null, "date_text": string|null}.'
         )
     else:
         prompt = (
@@ -51740,14 +52005,16 @@ def _zandra_order_form_stockist(
                 ],
             }
         ],
-        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 256},
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 512},
     }
     try:
         response = generate_content_via_vertex(model=model, payload=payload, timeout=60)
         parsed = _extract_json_object(_gemini_response_text(response)) or {}
     except Exception as exc:
         logger.warning("Zandra order form stockist read failed: %s", exc)
-        return (None, None) if party_lines else None
+        return (None, None, None) if party_lines else None
+    if not isinstance(parsed, dict):
+        parsed = {}
     name = _clean_name(str(parsed.get("stockist_name") or ""))
     name = re.sub(r"\s+\d+\s*$", "", name).strip(" .")
     name = " ".join(part[:1].upper() + part[1:] for part in name.split())
@@ -51768,7 +52035,10 @@ def _zandra_order_form_stockist(
     address = _clean_name(str(parsed.get("stockist_address") or ""))
     if address and re.search(r"ORDER\s*FORM|ZANDRA|\bZEAL\b|^FROM$", address, re.I):
         address = ""
-    return name, address or None
+    date_text = _clean_name(str(parsed.get("date_text") or "")) or None
+    if date_text and re.search(r"ORDER\s*FORM|ZANDRA|\bZEAL\b|^FROM$", date_text, re.I):
+        date_text = None
+    return name, address or None, date_text
 
 
 _ZANDRA_ORDER_SIDE_PROMPT = (
@@ -51778,6 +52048,11 @@ _ZANDRA_ORDER_SIDE_PROMPT = (
     "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
     "A separate stroke after a number is not an extra zero. "
     "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "A handwritten 5 often looks like a capital S or a curved hook — still read it "
+    "as 5 when it sits alone in that row's Qty cell. Do not treat that ink as blank. "
+    "Ink hanging down from the row above is not a digit of this row. "
+    "A descending stroke, hook, or tail that belongs to the last digit of this Qty "
+    "is not an extra digit — handwritten 25 with a long tail on the 5 is 25, not 259. "
     "Do not copy a number onto another row. "
     "Do not add a row for the blank lines under the last printed product, "
     "even when a number is written there. Skip the header and Total. "
@@ -51792,7 +52067,11 @@ _ZEAL_ORDER_SIDE_PROMPT = (
     "The Pack column is not the Qty. Do not copy 60s, 200 ml, or 30s into qty. "
     "A separate stroke after a number is not an extra zero. "
     "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "A handwritten 5 often looks like a capital S or a curved hook — still read it "
+    "as 5 when it sits alone in that row's Qty cell. Do not treat that ink as blank. "
     "Ink hanging down from the row above is not a digit of this row. "
+    "A descending stroke, hook, or tail that belongs to the last digit of this Qty "
+    "is not an extra digit — handwritten 25 with a long tail on the 5 is 25, not 259. "
     "67 written under another number is 67, not 967. "
     "76 written under another number is 76, not 876. "
     "A line or hook under a number is not an extra digit. "
@@ -51810,14 +52089,25 @@ _ZEAL_ORDER_SIDE_PROMPT = (
 _ZEAL_ORDER_VALUE_SIDE_PROMPT = (
     "This crop is one side of a Zeal ORDER FORM. "
     "Columns left to right: SAP Code, Product, Pack, Qty, Value. "
-    "The handwriting on this sheet is in the Value Rs cell, not in Qty. "
-    "qty is the handwritten number in that row's Qty cell. A blank Qty cell is null. "
-    "value is the handwritten number in that row's Value Rs cell. A blank Value cell is null. "
+    "qty is the handwritten number in that row's Qty cell only. A blank Qty cell is null. "
+    "value is the handwritten number in that row's Value Rs cell only. A blank Value cell is null. "
+    "Some rows have ink only in Qty; some have ink in both Qty and Value. "
+    "When both cells have numbers, keep them separate — e.g. Qty 200 and Value 150 "
+    "must return qty=200 and value=150, never qty=150. "
     "The Pack column is not the Qty and is not the Value. Do not copy 60s, 200 ml, or 30s into qty or value. "
     "Do not copy a Value number into qty. Do not copy a Qty number into value. "
+    "A handwritten 5 often looks like a capital S or a curved hook — still read it "
+    "as 5 when it sits alone in that row's Qty cell. Do not treat that ink as blank. "
     "A separate stroke after a number is not an extra zero. "
     "Read both digits of a handwritten 10. Do not reduce 10 to 1. "
+    "Ink hanging down from the row above is not a digit of this row. "
+    "A descending stroke, hook, or tail that belongs to the last digit of this Qty "
+    "is not an extra digit — handwritten 25 with a long tail on the 5 is 25, not 259. "
+    "67 written under another number is 67, not 967. "
+    "76 written under another number is 76, not 876. "
     "A line or hook under a number is not an extra digit. "
+    "112 with a line under it is 112, not 1120. "
+    "129 with a hook is 129, not 1299. "
     "Do not copy a number onto another row. "
     "Do not add a row for the blank lines under the last printed product. "
     "Skip the header and Total. "
@@ -51826,13 +52116,26 @@ _ZEAL_ORDER_VALUE_SIDE_PROMPT = (
 )
 
 
+def _upright_two_column_order_form_pixel_enabled() -> bool:
+    """STOCK_UPRIGHT_TWO_COLUMN_ORDER_FORM — upright dual-table ORDER FORM photos.
+
+    Default ON. Sideways Zeal forms already matched via EXIF quarter-turn.
+    Upright phone photos of the same two-table ORDER FORM share the center
+    gutter + dense row rules and must not require a ZA/ZL filename or Tesseract.
+    """
+    return os.getenv(
+        "STOCK_UPRIGHT_TWO_COLUMN_ORDER_FORM", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _zeal_printed_order_form_anchor(file_bytes: bytes) -> Optional[float]:
-    """Title position of a sideways two-table Zeal ORDER FORM.
+    """Title position of a two-table ORDER FORM (sideways or upright).
 
     Stock statements photographed on the same phone do not share this center
-    rule and row pitch. Screenshots are not stored sideways and stay out.
+    rule and row pitch. Screenshots without the dual-table gutter stay out.
     """
-    if not _jpeg_needs_quarter_turn(file_bytes):
+    sideways = _jpeg_needs_quarter_turn(file_bytes)
+    if not sideways and not _upright_two_column_order_form_pixel_enabled():
         return None
     try:
         from PIL import Image, ImageOps
@@ -51884,12 +52187,20 @@ def _zeal_printed_order_form_anchor(file_bytes: bytes) -> Optional[float]:
         return None
     gaps = [peaks[i + 1][0] - peaks[i][0] for i in range(len(peaks) - 1)]
     median = sorted(gaps)[len(gaps) // 2]
-    if not (0.012 * height <= median <= 0.028 * height):
+    # Sideways Zeal forms sit near 0.012–0.028 of height. Upright dual-table
+    # ORDER FORMs are denser (often ~0.008) and still have a clear pitch.
+    gap_lo = 0.012 * height if sideways else 0.007 * height
+    gap_hi = 0.028 * height
+    if not (gap_lo <= median <= gap_hi):
         return None
     title = [y for y, _score in peaks if y < height * 0.22]
     if not title:
         return None
-    return max(0.08, min(0.19, title[0] / float(height)))
+    anchor = title[0] / float(height)
+    if sideways:
+        return max(0.08, min(0.19, anchor))
+    # Upright title can sit higher; keep a usable crop origin for the tables.
+    return max(0.05, min(0.22, anchor))
 
 
 def _zeal_order_value_column_has_ink(file_bytes: bytes) -> bool:
@@ -51967,7 +52278,18 @@ def _zandra_order_side_items(
             item["sales_value"] = _to_float(written_value)
         else:
             item["sales_value"] = 0.0
-        item["extra"] = {"layout": "zandra_two_column_order_form"}
+        item["extra"] = {
+            "layout": "zandra_two_column_order_form",
+            "psr_column_layout": "order_form_qty",
+            "field_source": {
+                "sales_qty": "printed",
+                "opening_qty": "missing",
+                "receipts_qty": "missing",
+                "closing_qty": "missing",
+                "sales_return_qty": "missing",
+                "expiry_damage_qty": "missing",
+            },
+        }
         items.append(item)
     return items
 
@@ -51984,6 +52306,48 @@ def _zandra_put_lasuna_qty_on_its_row(items: List[Dict[str, Any]]) -> None:
         ):
             item["sales_qty"] = 600.0
             nxt["sales_qty"] = 0.0
+
+
+def _order_form_refile_lone_values_as_qty(items: List[Dict[str, Any]]) -> int:
+    """Qty-primary ORDER FORM: a lone Value with blank Qty is a mis-filed Qty.
+
+    Does not touch rows that already have both qty and value (true Value Rs ink).
+    Does not invent digits — only moves a printed number from value → sales_qty.
+    """
+    if not items:
+        return 0
+    both = sum(
+        1
+        for item in items
+        if _to_float(item.get("sales_qty")) > 0
+        and _to_float(item.get("sales_value")) > 0
+    )
+    lone = [
+        item
+        for item in items
+        if _to_float(item.get("sales_qty")) == 0
+        and _to_float(item.get("sales_value")) > 0
+    ]
+    if not lone:
+        return 0
+    # Many dual qty+value rows ⇒ Value column is intentional; leave alone.
+    if both >= max(3, len(lone)):
+        return 0
+    moved = 0
+    for item in lone:
+        item["sales_qty"] = float(_to_float(item.get("sales_value")))
+        item["sales_value"] = 0.0
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra["qty_refiled_from_value_cell"] = True
+        item["extra"] = extra
+        moved += 1
+    if moved:
+        logger.info(
+            "ORDER_FORM_QTY_REFILED_FROM_VALUE moved=%s both_qty_value_rows=%s",
+            moved,
+            both,
+        )
+    return moved
 
 
 def _zandra_order_form_items(
@@ -52077,9 +52441,12 @@ def _zandra_order_form_handwritten_header(
         "stockist_address is the handwritten address under that party. "
         "period_from and period_to are the handwritten range after To, as YYYY-MM-DD. "
         "The range looks like 01-08-2026 to 31-08-2026. "
-        "Do not use the Date field. A single date such as 5/8/2026 is not the period. "
+        "If To has no range but Date shows only a month and year (e.g. October, 2026), "
+        "put that text in date_text and leave period_from/period_to null. "
+        "A lone calendar day such as 5/8/2026 is not the period. "
         'Return ONLY JSON {"stockist_name": string|null, "stockist_address": string|null, '
-        '"period_from": "YYYY-MM-DD"|null, "period_to": "YYYY-MM-DD"|null}.'
+        '"period_from": "YYYY-MM-DD"|null, "period_to": "YYYY-MM-DD"|null, '
+        '"date_text": string|null}.'
     )
     payload = {
         "contents": [
@@ -52185,11 +52552,14 @@ def _extract_zandra_two_column_order_photo(
     # existing prompt.
     if not zeal_form and re.search(r"(?:^|_)ZL(?:_|\.)", filename, re.I):
         zeal_form = True
-    keep_value = value_ink and zeal_form
-    if keep_value:
+    # Zeal forms often write Qty and sometimes Value on the same row. Always
+    # read both columns so a Value figure is not copied into qty (e.g. 200 Qty
+    # + 150 Value must not become sales_qty=150).
+    keep_value = bool(zeal_form) or value_ink
+    if zeal_form:
         side_prompt = _ZEAL_ORDER_VALUE_SIDE_PROMPT
     else:
-        side_prompt = _ZEAL_ORDER_SIDE_PROMPT if zeal_form else _ZANDRA_ORDER_SIDE_PROMPT
+        side_prompt = _ZANDRA_ORDER_SIDE_PROMPT
     logger.info(
         "SECONDARY_SALES_READER file=%s engine=paid_gemini_vision stage=zandra_two_column_order_form",
         filename,
@@ -52215,18 +52585,26 @@ def _extract_zandra_two_column_order_photo(
         return None
     if keep_handwritten_qty:
         _zandra_put_lasuna_qty_on_its_row(items)
+    # Qty-primary Zeal/Zandra forms: Vision sometimes drops a Qty digit into
+    # Value. Refile only when Value-ink mode is off (numbers belong in Qty).
+    if keep_value and not value_ink:
+        _order_form_refile_lone_values_as_qty(items)
     result = empty_result(filename, (ext or ".jpg").lstrip("."))
     result["report_title"] = "ORDER FORM"
     result["line_items"] = items
     result["period_from"] = None
     result["period_to"] = None
     if not keep_handwritten_qty and zeal_form:
-        party_name, party_address = _zandra_order_form_stockist(
+        party_name, party_address, date_text = _zandra_order_form_stockist(
             file_bytes, anchor, party_lines=True
         )
         result["stockist_name"] = party_name
         if party_address:
             result["stockist_address"] = party_address
+        if date_text:
+            result = _coerce_month_year_period_fields(
+                result, content_text=str(date_text)
+            )
     elif not keep_handwritten_qty:
         result["stockist_name"] = _zandra_order_form_stockist(file_bytes, anchor)
     if keep_handwritten_qty:
@@ -52242,6 +52620,17 @@ def _extract_zandra_two_column_order_photo(
         if period_from and period_to and period_from <= period_to:
             result["period_from"] = period_from
             result["period_to"] = period_to
+        elif header.get("date_text") or header.get("period_from") or header.get(
+            "period_to"
+        ):
+            result = _coerce_month_year_period_fields(
+                result,
+                parsed=header,
+                content_text=" ".join(
+                    str(header.get(k) or "")
+                    for k in ("date_text", "period_from", "period_to")
+                ),
+            )
         result["company_name"] = "Zandra"
     if keep_value:
         result["totals"]["sales_value"] = round(
@@ -52252,8 +52641,12 @@ def _extract_zandra_two_column_order_photo(
     result["totals"]["extra"] = {
         "extraction_method": "zandra_two_column_order_form",
         "layout": "zandra_two_column_order_form",
+        "stock_identity_kind": STOCK_IDENTITY_ORDER_FORM_QTY,
+        "psr_column_layout": "order_form_qty",
     }
-    return result
+    if zeal_form and not result.get("company_name"):
+        result["company_name"] = "Zeal"
+    return _finalize_statement_period_fields(result)
 
 
 def _extract_sap_order_form_vision(
@@ -52323,6 +52716,8 @@ def _extract_sap_order_form_vision(
     result["totals"]["extra"] = {
         "extraction_method": "sap_order_form_vision",
         "layout": "sap_right_qty_order_form",
+        "stock_identity_kind": STOCK_IDENTITY_ORDER_FORM_QTY,
+        "psr_column_layout": "order_form_qty",
     }
     return result
 
@@ -62028,7 +62423,29 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             type(exc).__name__,
         )
 
-    # Handwritten / ORDER FORM Vision-first before sideways RATE / Zeal crop paths.
+    # Dual-table ORDER FORM side-crops before full-page handwritten Vision.
+    # Side crops keep Qty on the printed row; full-page Vision often drops
+    # sparse S-shaped handwritten 5s or mis-aligns the right table. Works for
+    # upright and sideways photos when the center-gutter pixel anchor matches
+    # (no ZA/ZL filename and no Tesseract required).
+    if not _sideways_full_width_stock_grid(file_bytes):
+        try:
+            order_form = _extract_zandra_two_column_order_photo(
+                file_bytes, filename, ext
+            )
+        except Exception as exc:
+            logger.warning("Two-column order form photo skipped: %s", exc)
+            order_form = None
+        if order_form and order_form.get("line_items"):
+            logger.info(
+                "[SalesStatement] file=%s decision=TWO_COLUMN_ORDER_FORM "
+                "rows=%s",
+                filename,
+                len(order_form.get("line_items") or []),
+            )
+            return order_form
+
+    # Handwritten / ORDER FORM Vision-first before sideways RATE paths.
     # Tall phone ORDER FORM photos can also trip the sideways center-rule probe and
     # waste Gemini on the wrong reader (missing products / zero Qty).
     try:
@@ -62075,19 +62492,6 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             sideways_rate = None
         if sideways_rate and sideways_rate.get("line_items"):
             return sideways_rate
-
-    # Sideways Zeal ORDER FORM. The stock-statement reader does not apply,
-    # and the OCR probe is skipped when Tesseract is not installed.
-    if _zeal_printed_order_form_anchor(file_bytes) is not None:
-        try:
-            zeal_order = _extract_zandra_two_column_order_photo(
-                file_bytes, filename, ext
-            )
-        except Exception as exc:
-            logger.warning("Zeal order form photo skipped: %s", exc)
-            zeal_order = None
-        if zeal_order and zeal_order.get("line_items"):
-            return zeal_order
 
     early_vision, skip_ocr_probes = _maybe_early_vision_for_image(
         file_bytes, filename, ext

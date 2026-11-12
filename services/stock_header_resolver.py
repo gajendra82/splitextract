@@ -410,6 +410,7 @@ ALIASES: Dict[str, List[str]] = {
         "bal qty",
         "clstk",
         "cl stk",
+        "cl st",  # Cl.St abbreviated closing stock
         "cistk",  # OCR of Cl.Stk → CI.Stk
         "ci stk",
         "cb",
@@ -850,7 +851,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         return "rate", rate_conf, "rate_alias"
 
     # "Cl Panaji" / "Cl Mapusa" are branch closing splits, not statement closing.
-    # Keep real closing aliases (Cl Qty / Cl.Qnt / Cl Stock / Cl Val).
+    # Keep real closing aliases (Cl Qty / Cl.Qnt / Cl Stock / Cl Val / Cl.St).
     cl_tokens = _tokens(norm)
     if (
         len(cl_tokens) == 2
@@ -864,6 +865,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
             "qoh",
             "stock",
             "stk",
+            "st",  # Cl.St abbreviated closing stock
             "bal",
             "balance",
             "val",
@@ -873,6 +875,18 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         }
     ):
         return "non_stock_qty", 0.9, "branch_split_header"
+
+    # AgeStock / AgeStockValue is aged-stock history, never closing qty/value.
+    if _ignore_age_stock_header_enabled():
+        compact_age = re.sub(r"\s+", "", norm)
+        if compact_age.startswith("age") and (
+            "stock" in compact_age or "stk" in compact_age
+        ):
+            logger.info(
+                "STOCK_HEADER_IGNORE_AGE_STOCK ignored header text=%r",
+                norm,
+            )
+            return "non_stock_qty", 0.99, "age_stock_header"
 
     # Vision sometimes glues Sales+Close into one header; keep sales_qty and
     # recover Close from the following Order column in the Vision table path.
@@ -1421,6 +1435,20 @@ def _column_bands_enabled() -> bool:
 def _ignore_non_qty_headers_enabled() -> bool:
     """STOCK_HEADER_IGNORE_NON_QTY — keep NRV/Age/etc. out of qty fields."""
     return os.getenv("STOCK_HEADER_IGNORE_NON_QTY", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ignore_age_stock_header_enabled() -> bool:
+    """STOCK_HEADER_IGNORE_AGE_STOCK — AgeStock(Value) is never closing.
+
+    Default OFF. When ON, AgeStock / AgeStockValue map to ignore so Cl.St
+    keeps closing_qty and age digits do not land in closing_value.
+    """
+    return os.getenv("STOCK_HEADER_IGNORE_AGE_STOCK", "false").strip().lower() in {
         "1",
         "true",
         "yes",

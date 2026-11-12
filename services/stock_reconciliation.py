@@ -465,6 +465,23 @@ def _sale_closing_only_row(item: Dict[str, Any], fs: Dict[str, Any]) -> bool:
     return bool(opening_missing and purchase_missing and sales_printed and closing_printed)
 
 
+def _order_form_qty_only_row(item: Dict[str, Any]) -> bool:
+    """True for ORDER FORM Qty-only rows (no opening/receipts/closing printed)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    if layout in {
+        "zandra_two_column_order_form",
+        "handwritten_order_form",
+        "sap_order_form",
+        "sap_right_qty_order_form",
+        "order_form",
+    }:
+        return True
+    if str(extra.get("psr_column_layout") or "") == "order_form_qty":
+        return True
+    return False
+
+
 def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     """Return reconciliation dict; does not mutate quantities."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -474,6 +491,32 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     purchase = _printed_or_zero(item, "receipts_qty", "purchase_qty")
     sales = _printed_or_zero(item, "sales_qty")
     closing = item.get("closing_qty")
+
+    # ORDER FORM Qty-only: closing identity does not apply.
+    if _order_form_qty_only_row(item):
+        logger.info(
+            "STOCK_RECONCILIATION_SKIP reason=order_form_qty product=%s sales_qty=%s",
+            str(item.get("product_name") or "")[:80],
+            sales,
+        )
+        return {
+            "expected_total_qty": None,
+            "expected_closing_qty": None,
+            "actual_closing_qty": None,
+            "quantity_difference": 0.0,
+            "total_ok": True,
+            "closing_ok": True,
+            "valid": True,
+            "skipped": "order_form_qty",
+            "opening_qty": None,
+            "purchase_qty": None,
+            "sales_qty": sales,
+            "extracted_closing_qty": None,
+            "base_source": "order_form_qty",
+            "sales_return_in_total": False,
+            "base_qty": None,
+            "adjustments": {},
+        }
 
     # SALE+CLOSING-only sheets: identity formula is not applicable.
     if _sale_closing_only_row(item, fs):

@@ -1181,17 +1181,56 @@ def _soften_document_qty_gap(
     return status
 
 
+def _is_order_form_qty_document(result: Dict[str, Any]) -> bool:
+    """Qty-only ORDER FORM — closing identity does not apply."""
+    if not isinstance(result, dict):
+        return False
+    extra = ((result.get("totals") or {}).get("extra") or {})
+    if not isinstance(extra, dict):
+        extra = {}
+    kind = str(extra.get("stock_identity_kind") or extra.get("psr_column_layout") or "")
+    if kind in {"order_form_qty"}:
+        return True
+    method = str(extra.get("extraction_method") or "")
+    layout = str(extra.get("layout") or "")
+    if method in {
+        "zandra_two_column_order_form",
+        "sap_order_form",
+        "sap_order_form_vision",
+        "sap_right_qty_order_form",
+    }:
+        return True
+    if method == "handwritten_stock_vision" and (
+        layout == "handwritten_order_form" or kind == "order_form_qty"
+    ):
+        return True
+    if layout in {
+        "zandra_two_column_order_form",
+        "handwritten_order_form",
+        "sap_order_form",
+        "sap_right_qty_order_form",
+        "order_form",
+    }:
+        return True
+    return False
+
+
 def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
     """Classify all product rows. Does not mutate ``result`` or its items."""
     counts = {status.value: 0 for status in RowStatus}
     row_details: List[Dict[str, Any]] = []
     items = _iter_line_items(result)
+    order_form = _is_order_form_qty_document(result)
     for index, item in enumerate(items):
         if _is_total_row(item):
             continue
-        fields = read_row_fields(item)
-        status, info = classify_row(fields)
-        status = _soften_document_qty_gap(item, status, info)
+        if order_form:
+            status = RowStatus.VALID
+            info = {"reason": "order_form_qty", "diff": None, "candidates": []}
+        else:
+            fields = read_row_fields(item)
+            status, info = classify_row(fields)
+            status = _soften_document_qty_gap(item, status, info)
         counts[status.value] = counts.get(status.value, 0) + 1
         row_details.append(
             {

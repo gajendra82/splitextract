@@ -140,6 +140,8 @@ _TRUSTED_METHODS = frozenset(
         "stock_valuation_stock_rate",
         "batchwise_stock_summary",
         "op_stk_rcpts_stock_sale_vision",
+        "zandra_two_column_order_form",
+        "sap_order_form_vision",
     }
 )
 _TRUSTED_LAYOUTS = frozenset(
@@ -154,6 +156,9 @@ _TRUSTED_LAYOUTS = frozenset(
         "product_wise_stock_statement_photo",
         "medica_stock_statement",
         "branch_opening_receipt_closing_balance",
+        "zandra_two_column_order_form",
+        "handwritten_order_form",
+        "order_form_qty",
     }
 )
 _WEAK_METHODS = frozenset(

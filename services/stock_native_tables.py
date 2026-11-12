@@ -2846,6 +2846,42 @@ def pdf_built_has_nul_digits(built: Dict[str, Any]) -> bool:
     return False
 
 
+def _plumber_drop_clone_pages_enabled() -> bool:
+    """STOCK_PDF_PLUMBER_DROP_CLONE_PAGES — identical plumber pages → fitz.
+
+    Default OFF. Some text PDFs make pdfplumber replay page-1 words on a
+    nearly empty page-2, doubling every product row.
+    """
+    return os.getenv(
+        "STOCK_PDF_PLUMBER_DROP_CLONE_PAGES", "false"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def pdf_built_has_clone_pages(built: Dict[str, Any]) -> bool:
+    """True when two pages share the same non-empty data-row text fingerprint."""
+    if not _plumber_drop_clone_pages_enabled():
+        return False
+    seen: List[Tuple[Tuple[str, ...], ...]] = []
+    for page in (built or {}).get("page_results") or []:
+        rows = page.get("data_rows") or []
+        if not rows:
+            continue
+        sig = tuple(
+            tuple(str(tok.get("text") or "") for tok in (row or []) if isinstance(tok, dict))
+            for row in rows
+        )
+        if not any(sig):
+            continue
+        if sig in seen:
+            logger.info(
+                "STOCK_PDF_PLUMBER_DROP_CLONE_PAGES detected clone rows=%s",
+                len(rows),
+            )
+            return True
+        seen.append(sig)
+    return False
+
+
 _MASHED_HEADER = re.compile(r"[a-z][A-Z]")
 
 

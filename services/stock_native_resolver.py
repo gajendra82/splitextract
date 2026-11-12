@@ -2537,6 +2537,7 @@ def parse_pdf_free_column_statement(
     from services.stock_native_tables import (
         from_fitz_pdf_bytes,
         from_pdf_words,
+        pdf_built_has_clone_pages,
         pdf_built_has_mashed_headers,
         pdf_built_has_nul_digits,
     )
@@ -2554,11 +2555,13 @@ def parse_pdf_free_column_statement(
             built = from_pdf_words(pdf)
             nul = pdf_built_has_nul_digits(built)
             mashed = pdf_built_has_mashed_headers(built)
-            if nul or mashed:
+            clone = pdf_built_has_clone_pages(built)
+            if nul or mashed or clone:
                 logger.info(
-                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s fallback=fitz",
+                    "STOCK_PDF_PSEUDO_DIGITS plumber_nul=%s mashed=%s clone=%s fallback=fitz",
                     int(nul),
                     int(mashed),
+                    int(clone),
                 )
                 built = from_fitz_pdf_bytes(file_bytes)
             peek = ""

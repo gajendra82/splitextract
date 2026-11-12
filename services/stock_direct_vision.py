@@ -435,6 +435,13 @@ Qty cell is blank — those are sales_qty 0. Do not drop a product merely becaus
 its Qty is empty. Sparse blue handwritten digits in Qty are still quantities.
 A single handwritten digit (including "1") in a Qty cell is that quantity —
 never treat visible ink as blank.
+A handwritten digit 5 often looks like a capital "S" or a curved hook — still read
+it as 5 when it sits alone in the Qty cell. Do not treat that ink as blank or as
+the letter S. Keep each Qty on its own printed product row (left table then right).
+Ink hanging down from the row above is not a digit of this row.
+A descending stroke, hook, or tail that belongs to the last digit of a Qty cell
+is not an extra digit — handwritten 25 with a long tail on the 5 is 25, not 259.
+A line or hook under a number is not an extra digit.
 
 For every handwritten quantity:
 1. Visually inspect the cell.
@@ -447,6 +454,11 @@ Stock identity is VALIDATION ONLY (never invent digits to balance):
   total_qty should equal opening_qty + receipts_qty
   closing_qty should equal total_qty - sales_qty - sales_return_qty - expiry_damage_qty
 Skip these checks mentally for ORDER FORM Qty-only sheets.
+
+Header period on ORDER FORMs: when Date shows only a month and year
+(e.g. "October, 2026" / "Oct 2026"), set period_from to the first calendar day
+of that month and period_to to the last calendar day (YYYY-MM-DD). Do not invent
+a day that is not printed. Blank Date stays null.
 
 Return ONLY valid JSON (no markdown, no prose):
 {
@@ -781,13 +793,17 @@ def detect_stock_handwriting_signals(
     blue = _blue_ink_fraction(file_bytes)
     header_text = ""
     fname = filename or ""
-    # Layout header OCR when ZA/ZL portal files are ambiguous (ORDER FORM /
-    # Product-wise vs SaleRet/Medica). Not Tesseract numeric-cell recovery.
+    # Layout header OCR when ORDER FORM vs SaleRet is ambiguous. Blue-ink phone
+    # photos need this even without portal ZA/ZL codes in the filename — those
+    # codes must not gate layout detection. Not Tesseract numeric-cell recovery.
     needs_header = (
-        bool(re.search(r"_ZA_\d+|_ZL_\d+", fname, re.I))
-        and not order_form
+        not order_form
         and not saleret
         and bool(file_bytes)
+        and (
+            bool(re.search(r"_ZA_\d+|_ZL_\d+", fname, re.I))
+            or blue >= 0.0008
+        )
     )
     if needs_header:
         header_text = _layout_header_text(file_bytes)
@@ -2232,6 +2248,7 @@ def _call_handwritten_vision(
         sales_generate_content_via_vertex as generate_content_via_vertex,
     )
     from services.sales_statement_extractor import (
+        STOCK_IDENTITY_ORDER_FORM_QTY,
         STOCK_IDENTITY_SALERET,
         _apply_parsed_sales_json,
         _extract_json_object,
@@ -2329,6 +2346,14 @@ def _call_handwritten_vision(
     source_format = (ext or ".png").lstrip(".") or "png"
     result = empty_result(filename, source_format)
     result = _apply_parsed_sales_json(result, parsed)
+    try:
+        from services.sales_statement_extractor import (
+            _coerce_month_year_period_fields,
+        )
+
+        result = _coerce_month_year_period_fields(result, parsed=parsed)
+    except Exception:
+        pass
     if str(result.get("stockist_name") or "").strip().lower() in {
         "done",
         "try out the tools first",
@@ -2403,16 +2428,15 @@ def _call_handwritten_vision(
     if image_meta.get("overlines_cleared_px") is not None:
         gemini_input["overlines_cleared_px"] = image_meta.get("overlines_cleared_px")
 
+    order_form_route = route.startswith("handwritten_order_form")
     lock_stock_vision_result(
         result,
         extraction_method="handwritten_stock_vision",
         layout=kept[0]["extra"].get("layout") if kept else route,
-        psr_column_layout=(
-            "order_form_qty"
-            if route.startswith("handwritten_order_form")
-            else "saleret"
+        psr_column_layout=("order_form_qty" if order_form_route else "saleret"),
+        stock_identity_kind=(
+            STOCK_IDENTITY_ORDER_FORM_QTY if order_form_route else STOCK_IDENTITY_SALERET
         ),
-        stock_identity_kind=STOCK_IDENTITY_SALERET,
         gemini_input=gemini_input,
         gemini_input_kind=gemini_input_kind,
         numeric_source="gemini_vision",
