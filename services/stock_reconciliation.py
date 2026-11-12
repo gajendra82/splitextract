@@ -68,6 +68,11 @@ def _sales_return_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     if sales_return == 0.0 and extra.get("sale_return") is not None:
         sales_return = _f(extra.get("sale_return"))
+    # Stock and Sales Detail Report: Cr.Qty (+ Cr.Sch.Qty) is the printed return.
+    if sales_return == 0.0 and (
+        extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None
+    ):
+        sales_return = _f(extra.get("credit_qty")) + _f(extra.get("credit_scheme_qty"))
     return sales_return
 
 
@@ -78,6 +83,11 @@ def _purchase_return_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     if purchase_return == 0.0 and extra.get("purchase_return") is not None:
         purchase_return = _f(extra.get("purchase_return"))
+    # Stock and Sales Detail Report: Db.Qty (+ Db.Sch.Qty) is purchase return.
+    if purchase_return == 0.0 and (
+        extra.get("debit_qty") is not None or extra.get("debit_scheme_qty") is not None
+    ):
+        purchase_return = _f(extra.get("debit_qty")) + _f(extra.get("debit_scheme_qty"))
     return purchase_return
 
 
@@ -153,6 +163,10 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
         other += br
     if extra.get("sales_scheme_qty") is not None:
         other += _f(extra.get("sales_scheme_qty"))
+    # Stock and Sales Detail: Br.S.Qty (branch/break sales) is an outward.
+    # Skip when already mirrored into other_outward_qty above.
+    if extra.get("break_sales_qty") is not None and extra.get("other_outward_qty") is None:
+        other += _f(extra.get("break_sales_qty"))
     # Busy SSA trailing out-columns when printed (STOCK T/F, P/R, REPL/OTHER).
     for key in ("stock_tf_qty", "pr_qty", "repl_other_out"):
         if extra.get(key) is not None:
@@ -175,6 +189,8 @@ def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     if fs.get("sales_return_qty") == "printed":
         return True
     if extra.get("sale_return") is not None or extra.get("sales_return") is not None:
+        return True
+    if extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None:
         return True
     if item.get("sales_return_qty") is not None:
         return True
@@ -502,10 +518,21 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     qty_diff = None
     closing_f: Optional[float] = None
     # Missing closing must not be treated as printed 0.0 from empty defaults.
+    # Use _qty_tolerance (same as TOTAL / classifier VALID): allow off-by-1
+    # printed ledger noise without rewriting qty cells. Stock-and-Sales Detail
+    # (Cr.Qty layout) also allows classifier MINOR floor (±2) — a few printed
+    # rows on that sheet are off-by-1/2 with every column correctly assigned.
+    def _closing_tol(actual: float) -> float:
+        tol = _qty_tolerance(opening, purchase, sales, actual, exp_closing)
+        layout = str(extra.get("layout") or "")
+        if layout == "stock_sales_detail_opval" or extra.get("credit_qty") is not None:
+            tol = max(tol, 2.0)
+        return tol
+
     if fs.get("closing_qty") == "derived":
         closing_f = _f(item.get("closing_qty"))
-        closing_ok = abs(closing_f - exp_closing) <= _TOL
         qty_diff = round(closing_f - exp_closing, 4)
+        closing_ok = abs(closing_f - exp_closing) <= _closing_tol(closing_f)
     elif fs.get("closing_qty") == "missing" or closing is None:
         closing_f = None
         closing_ok = False
@@ -513,7 +540,7 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     else:
         closing_f = _f(closing)
         qty_diff = round(float(closing_f) - exp_closing, 4)
-        closing_ok = abs(float(closing_f) - exp_closing) <= _TOL
+        closing_ok = abs(float(closing_f) - exp_closing) <= _closing_tol(closing_f)
 
     # Never accept a negative stock closing as reconciled.
     if closing_f is not None and float(closing_f) < -_TOL:

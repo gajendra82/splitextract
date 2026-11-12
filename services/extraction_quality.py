@@ -488,12 +488,22 @@ def evaluate_extraction_quality(
     _keep_on_identity = method in {
         "stock_sales_op_qty_val_words",
         "stock_sales_consolidated_opval",
+        # Stock and Sales Detail: a few printed rows are off-by-1/2 on the
+        # sheet itself; keep header-aligned Cr/Db columns, do not Gemini-overwrite.
+        "stock_sales_detail_opval",
+        "docx_stock_sales_detail",
     } and os.getenv(
         "STOCK_OP_QTY_VAL_KEEP_ON_IDENTITY_FAIL", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
     # Purchase Free / Sales Free / Exp text PDFs: printed closing often does
     # not subtract Exp/Dmg. Keep the word-aligned rows; do not Gemini-overwrite.
-    _keep_pdf_words = method == "pdf_words_free_columns" and os.getenv(
+    # Split-column OPSTK|PURC|SALE|STOCK pages: TRFIN/TRFOUT exist only as
+    # statement totals, so many printed rows fail Opening+Purc−Sale=Stock
+    # while header assignment is correct — keep native stitch, no Gemini rewrite.
+    _keep_pdf_words = method in {
+        "pdf_words_free_columns",
+        "pdf_split_column_pages",
+    } and os.getenv(
         "STOCK_PDF_WORDS_FREE_COLUMNS_KEEP", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
     if (

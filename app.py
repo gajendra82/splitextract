@@ -92,7 +92,7 @@ try:
     PDFPLUMBER_AVAILABLE = True
 except ImportError:
     PDFPLUMBER_AVAILABLE = False
-    print("⚠️ pdfplumber not installed. Run: pip install pdfplumber")
+    print("WARNING: pdfplumber not installed. Run: pip install pdfplumber")
 
 # ✅ Tesseract OCR
 try:
@@ -103,7 +103,12 @@ try:
     TESSERACT_AVAILABLE = True
 except ImportError:
     TESSERACT_AVAILABLE = False
-    print("⚠️ Tesseract/OpenCV not installed. Run: pip install pytesseract opencv-python pillow")
+    # ASCII-only: Windows cp1252 consoles raise UnicodeEncodeError on emoji and
+    # that abort can break cold imports of call_gemini_with_quota (Vision table).
+    print(
+        "WARNING: Tesseract/OpenCV not installed. "
+        "Run: pip install pytesseract opencv-python pillow"
+    )
 
 # Azure Blob Storage
 try:
@@ -228,8 +233,18 @@ async def _track_extract_inflight(request: Request, call_next):
 # ============================================================================
 
 
-# Load .env file (only works locally, ignored on Hugging Face)
+# Load .env file (only works locally, ignored on Hugging Face).
+# tests/.env is a local fallback when the repo root has no .env — fills
+# STOCK_VISION_TABLE / Vertex credentials without overriding real env/.env.
 load_dotenv()
+try:
+    from pathlib import Path as _EnvPath
+
+    _tests_env = _EnvPath(__file__).resolve().parent / "tests" / ".env"
+    if _tests_env.is_file():
+        load_dotenv(_tests_env, override=False)
+except Exception:
+    pass
 
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv(

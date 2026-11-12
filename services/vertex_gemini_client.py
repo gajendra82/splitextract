@@ -10,12 +10,19 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 
+# Root .env first; tests/.env fills local gaps (STOCK_VISION_TABLE, Vertex creds)
+# without overriding an already-exported production environment.
 load_dotenv()
+_tests_env = Path(__file__).resolve().parents[1] / "tests" / ".env"
+if _tests_env.is_file():
+    load_dotenv(_tests_env, override=False)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +37,10 @@ GOOGLE_CLOUD_LOCATION = os.getenv(
 ).strip()
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv(
     "GOOGLE_APPLICATION_CREDENTIALS", ""
-).strip()
+).strip().strip('"').strip("'")
+if GOOGLE_APPLICATION_CREDENTIALS:
+    # Keep ADC path quote-clean for google-auth.
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
 
 # Hard cap on a single Vertex HTTP round-trip (seconds). future.result uses the
 # caller timeout; HttpOptions enforces the same bound inside httpx.

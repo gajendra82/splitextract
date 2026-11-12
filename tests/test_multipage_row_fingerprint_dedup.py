@@ -271,6 +271,75 @@ def test_pack_ocr_drift_100_vs_100ml_collapses(monkeypatch):
     assert diag["duplicates_removed"] == 1
 
 
+def test_pack_digit_drift_1x60_vs_1x50_page_overlap_collapses(monkeypatch):
+    """Camera overlap: same line re-read as pack 1x60 then 1x50 must collapse.
+
+    Prefer the identity-balancing OCR row (Op+Rc−Sa≈Cl) so sales/closing
+    values stay the printed ones, not the column-shifted twin.
+    """
+    monkeypatch.setenv("STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP", "true")
+    page1 = _item(
+        "LUKOL TAB",
+        page=1,
+        pack="1x60",
+        opening=10,
+        receipts=50,
+        sales=15,
+        closing=15,  # column-shifted; does not balance
+        sales_value=9545.4,
+        closing_value=9545.4,
+    )
+    page2 = _item(
+        "LUKOL TAB",
+        page=2,
+        pack="1x50",  # OCR digit drift from 1x60
+        opening=10,
+        receipts=50,
+        sales=15,
+        closing=45,  # balances 10+50-15
+        sales_value=2868.07,
+        closing_value=9545.4,
+    )
+    assert is_ocr_near_duplicate(page1, page2) is True
+    out, diag = resolve_cross_page_product_rows([page1, page2], page_count=2)
+    assert len(out) == 1
+    assert diag["duplicates_removed"] >= 1
+    assert float(out[0].get("sales_value") or 0) == 2868.07
+    assert float(out[0].get("closing_qty") or 0) == 45.0
+    # Earliest page pack wins over OCR digit drift on the later re-read.
+    assert str(out[0].get("packing") or "").lower().replace(" ", "") == "1x60"
+
+
+def test_different_pack_sizes_with_different_qtys_stay_separate(monkeypatch):
+    """100ml vs 200ml of same bare name must not collapse across pages."""
+    monkeypatch.setenv("STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP", "true")
+    a = _item(
+        "RENALKA SYP",
+        page=1,
+        pack="100ml",
+        opening=27,
+        receipts=0,
+        sales=1,
+        closing=26,
+        sales_value=83.33,
+        closing_value=2331.16,
+    )
+    b = _item(
+        "RENALKA SYP",
+        page=2,
+        pack="200ml",
+        opening=21,
+        receipts=0,
+        sales=3,
+        closing=18,
+        sales_value=463.68,
+        closing_value=3025.80,
+    )
+    assert is_ocr_near_duplicate(a, b) is False
+    out, _ = resolve_cross_page_product_rows([a, b], page_count=2)
+    assert len(out) == 2
+
+
 def test_cyrillic_tab_confusable_collapses(monkeypatch):
     monkeypatch.setenv("STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP", "true")
     a = _item(

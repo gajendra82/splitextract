@@ -564,6 +564,108 @@ def _unglue_header_enabled() -> bool:
     }
 
 
+def _right_align_qty_enabled() -> bool:
+    """STOCK_PDF_RIGHT_ALIGN_QTY — right-aligned qtys under left-aligned headers.
+
+    Default ON. Kill switch STOCK_PDF_RIGHT_ALIGN_QTY=false.
+    A qty printed at the right edge of its column sits closer to the next
+    header centre. Snap it back when it is still left of that next header.
+    Also keeps a following expiry date, and a pack size, as their own cells.
+    """
+    return os.getenv("STOCK_PDF_RIGHT_ALIGN_QTY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_unit_pack(text: str) -> bool:
+    from services.stock_header_resolver import _unit_pack_token
+
+    token = str(text or "").replace("`", "'").replace("’", "'").replace("´", "'")
+    return _unit_pack_token(token)
+
+
+_EXPIRY_DATE_TOKEN_RE = re.compile(r"^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$")
+
+
+def _snap_right_aligned_qty_tokens(
+    header_cells: List[Dict[str, Any]],
+    rows: List[List[Dict[str, Any]]],
+) -> int:
+    """Move a right-aligned qty onto its header centre.
+
+    Owner is the header whose text starts at or before the number's right
+    edge and before the next header. Snap only when that number sits past
+    the header glyph and nearest-centre would pick a different column.
+    """
+    if not _right_align_qty_enabled():
+        return 0
+    spans = [
+        h
+        for h in header_cells or []
+        if isinstance(h, dict)
+        and h.get("x0") is not None
+        and h.get("x_center") is not None
+    ]
+    spans.sort(key=lambda h: float(h["x0"]))
+    if len(spans) < 3:
+        return 0
+    snapped = 0
+    for row in rows or []:
+        for tok in row:
+            if not isinstance(tok, dict):
+                continue
+            raw = str(tok.get("text") or "").strip()
+            # Plain qtys only. Parenthetical codes such as (078) are not amounts.
+            if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw.replace(",", "")):
+                continue
+            if parse_number(raw) is None:
+                continue
+            if tok.get("x0") is None or tok.get("x1") is None:
+                continue
+            right = float(tok["x1"])
+            center = (float(tok["x0"]) + right) / 2.0
+            owner = None
+            for i, header in enumerate(spans):
+                nxt = (
+                    float(spans[i + 1]["x0"]) if i + 1 < len(spans) else 1e12
+                )
+                if float(header["x0"]) - 1.0 <= right < nxt - 0.5:
+                    owner = header
+                    break
+            if owner is None:
+                continue
+            owner_right = float(owner.get("x1") or owner["x0"])
+            if center <= owner_right + 2.0:
+                continue
+            nearest = min(
+                spans,
+                key=lambda h: abs(
+                    (
+                        (float(h["x0"]) + float(h.get("x1") or h["x0"]))
+                        / 2.0
+                    )
+                    - center
+                ),
+            )
+            if int(nearest.get("col_index") or -1) == int(
+                owner.get("col_index") or -2
+            ):
+                continue
+            tok["x"] = float(owner["x_center"])
+            snapped += 1
+            logger.info(
+                "STOCK_PDF_RIGHT_ALIGN_QTY token=%s header=%s",
+                raw,
+                owner.get("text"),
+            )
+    if snapped:
+        logger.info("STOCK_PDF_RIGHT_ALIGN_QTY snapped=%s", snapped)
+    return snapped
+
+
 def _split_qty_pack_cluster_enabled() -> bool:
     """STOCK_PDF_SPLIT_QTY_PACK_CLUSTER — keep Cl.Stock qty off Box Pack.
 
@@ -816,6 +918,9 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         joined,
     ):
         return "quantity"
+    # "Total For: All Items" — qty under the movement columns, money under value.
+    if re.search(r"(?i)total\s+for\b", joined):
+        return "quantity"
     if re.search(
         r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
         r"total\s+value\b",
@@ -886,7 +991,12 @@ def _split_page_product_rows(
         if _is_footer_or_total_tokens(row) and not kind:
             continue
         texts = [str(t.get("text") or "") for t in row if isinstance(t, dict)]
-        has_num = any(parse_number(t) is not None for t in texts)
+        texts = [t for t in texts if t]
+        has_num = any(
+            parse_number(t) is not None
+            or re.match(r"^-?\d[\d,]*(?:\.\d+)?\b", t)
+            for t in texts
+        )
         blob = " ".join(texts)
         has_name = bool(re.search(r"[A-Za-z]{3,}", blob))
         if named:
@@ -899,9 +1009,13 @@ def _split_page_product_rows(
             and has_num
             and _split_right_row_numeric_count(row) >= 4
         ):
-            # Right half often prints Manufacturer/Division on every row, so
-            # alpha text is present but there is still no product_name column.
             out.append(row)
+        elif has_num and has_name:
+            first = texts[0]
+            if parse_number(first) is not None or re.match(
+                r"^-?\d[\d,]*(?:\.\d+)?\b", first
+            ):
+                out.append(row)
     return out
 
 
@@ -1020,6 +1134,29 @@ def _merge_split_headers(
         entry.pop("x1", None)
         merged.append(entry)
     return merged
+
+
+def _peel_glued_amount_manufacturer(
+    token: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Split '1087.52 THE HIMALAYA…' into amount + trailing manufacturer text."""
+    text = str(token.get("text") or "").strip()
+    match = re.match(r"^(-?\d[\d,]*(?:\.\d+)?)\s+([A-Za-z].+)$", text)
+    if not match:
+        return [token]
+    amount = dict(token)
+    amount["text"] = match.group(1)
+    trail = dict(token)
+    trail["text"] = match.group(2)
+    if token.get("x") is not None:
+        x = float(token["x"])
+        amount["x"] = x - 0.15
+        trail["x"] = x + 0.02
+    logger.info(
+        "STOCK_PDF_SPLIT_COLUMN_PAGES peel_glued_amount text=%r",
+        text[:60],
+    )
+    return [amount, trail]
 
 
 def _peel_leading_product_code_token(
@@ -1249,14 +1386,118 @@ def _merge_split_row(
     for tok in right_tokens:
         if tok.get("x") is not None:
             tok["x"] = float(tok["x"]) + 1.0
-        out.append(tok)
-    # Left and right pages both restart col_index at 0; renumber so
-    # assign_cells does not collide product/opening with sales/closing.
-    # Drop x so geometry bands cannot override the renumbered indexes.
+        for piece in _peel_glued_amount_manufacturer(tok):
+            out.append(piece)
     for idx, tok in enumerate(out):
         tok["col_index"] = idx
         tok.pop("x", None)
     return out
+
+
+def _try_merge_split_page_pair(
+    left_page: Dict[str, Any], right_page: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    """Merge one product/opening page with one sales/closing-only page."""
+    left_header = (left_page or {}).get("header_cells") or []
+    right_header = (right_page or {}).get("header_cells") or []
+    if not (
+        left_header
+        and right_header
+        and _is_left_split_header(_page_header_canons(left_header))
+        and _is_right_split_header(_page_header_canons(right_header))
+    ):
+        return None
+    left_rows = _split_page_product_rows(
+        left_page.get("data_rows") or [], named=True
+    )
+    right_rows = _split_page_product_rows(
+        right_page.get("data_rows") or [], named=False
+    )
+    n_left = len(left_rows)
+    n_right = len(right_rows)
+    slack = max(2, int(0.15 * max(n_left, n_right, 1)))
+    if not (n_left >= 3 and n_right >= 3 and abs(n_left - n_right) <= slack):
+        return None
+    n = min(n_left, n_right)
+    merged_rows = [
+        _merge_split_row(left_rows[i], right_rows[i]) for i in range(n)
+    ]
+    return {
+        "page_index": left_page.get("page_index"),
+        "header_cells": _merge_split_headers(left_header, right_header),
+        "data_rows": merged_rows,
+        "resolved": True,
+        "structural": False,
+        "group_qty_value_header": bool(
+            left_page.get("group_qty_value_header")
+            or right_page.get("group_qty_value_header")
+        ),
+        "split_column_pages": [
+            left_page.get("page_index"),
+            right_page.get("page_index"),
+        ],
+    }
+
+
+def _stitch_split_column_blocks(
+    page_results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Zip left-half pages with right-half pages when printed as L+ then R+.
+
+    Wide STOCK & SALES sheets sometimes emit every product/opening page first,
+    then every purchase/sales/closing page. Adjacent L/R pairing misses that.
+    """
+    if not _split_column_pages_enabled() or len(page_results) < 4:
+        return page_results
+    if any(
+        isinstance(p, dict) and p.get("split_column_pages") for p in page_results
+    ):
+        return page_results
+
+    kinds: List[str] = []
+    for page in page_results:
+        canons = _page_header_canons((page or {}).get("header_cells") or [])
+        if _is_left_split_header(canons):
+            kinds.append("L")
+        elif _is_right_split_header(canons):
+            kinds.append("R")
+        else:
+            kinds.append("O")
+
+    try:
+        first_l = kinds.index("L")
+        first_r = kinds.index("R")
+    except ValueError:
+        return page_results
+    if first_r <= first_l:
+        return page_results
+    if any(k != "L" for k in kinds[first_l:first_r]):
+        return page_results
+    last_r = first_r
+    while last_r + 1 < len(kinds) and kinds[last_r + 1] == "R":
+        last_r += 1
+    left_pages = page_results[first_l:first_r]
+    right_pages = page_results[first_r : last_r + 1]
+    if len(left_pages) < 2 or len(left_pages) != len(right_pages):
+        return page_results
+
+    merged_pages: List[Dict[str, Any]] = []
+    for left_page, right_page in zip(left_pages, right_pages):
+        merged = _try_merge_split_page_pair(left_page, right_page)
+        if merged is None:
+            return page_results
+        merged_pages.append(merged)
+        logger.info(
+            "STOCK_PDF_SPLIT_COLUMN_PAGES block left=%s right=%s rows=%s",
+            left_page.get("page_index"),
+            right_page.get("page_index"),
+            len(merged.get("data_rows") or []),
+        )
+    return (
+        list(page_results[:first_l])
+        + merged_pages
+        + list(page_results[last_r + 1 :])
+    )
 
 
 def _stitch_split_column_pages(
@@ -1274,20 +1515,24 @@ def _stitch_split_column_pages(
     while index < len(page_results):
         current = page_results[index]
         nxt = page_results[index + 1] if index + 1 < len(page_results) else None
-        pair = _merge_one_split_page_pair(current, nxt) if nxt is not None else None
-        if pair is not None:
-            out.append(pair)
+        merged = (
+            _try_merge_split_page_pair(current, nxt) if nxt is not None else None
+        )
+        if merged is None and nxt is not None:
+            merged = _merge_one_split_page_pair(current, nxt)
+        if merged is not None:
+            out.append(merged)
             logger.info(
-                "STOCK_PDF_SPLIT_COLUMN_PAGES mode=pair left=%s right=%s rows=%s",
+                "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
                 current.get("page_index"),
                 nxt.get("page_index"),
-                len(pair.get("data_rows") or []),
+                len(merged.get("data_rows") or []),
             )
             index += 2
             continue
         out.append(current)
         index += 1
-    return out
+    return _stitch_split_column_blocks(out)
 
 
 def _absorb_nearby_header_rows(
@@ -1545,6 +1790,30 @@ def is_software_price_ad_name(name: Any) -> bool:
     return bool(_SOFTWARE_PRICE_AD_NAME.search(text))
 
 
+def _looks_like_legend_or_footer_header(cells: List[Dict[str, Any]]) -> bool:
+    """True for DSTK legends / PURC: n SALE: n summaries that must not be headers."""
+    texts = [
+        str(c.get("text") or "").strip()
+        for c in (cells or [])
+        if isinstance(c, dict)
+    ]
+    texts = [t for t in texts if t]
+    if not texts:
+        return False
+    blob = " ".join(texts)
+    if re.search(
+        r"Prepared\s+by|Computer\s+Generated|Does\s+Not\s+Require\s+Stamp|"
+        r"Days\s+Stock\s+on|No\s+Sale\s+No\s+Stock|\bDSTK\b",
+        blob,
+        re.I,
+    ):
+        return True
+    # Sheet summary strip: "PURC : 331488 SALE : 316204 STOCK : 486430".
+    if len(re.findall(r"[A-Za-z]{2,}\s*:\s*-?\d", blob)) >= 2:
+        return True
+    return False
+
+
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     texts = [str(t.get("text") or "").strip() for t in tokens if isinstance(t, dict)]
     if not texts:
@@ -1552,6 +1821,10 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
     joined = " ".join(texts)
     if is_software_price_ad_name(joined):
         logger.info("STOCK_SOFTWARE_AD_SKIP blob=%s", joined[:80])
+        return True
+    if _looks_like_legend_or_footer_header(
+        [{"text": t} for t in texts]
+    ):
         return True
     # Company / page / grand footers only. Product "Total :" rows with movement
     # numbers must stay so multi-lot sheets can fold printed totals.
@@ -1592,6 +1865,9 @@ def _is_repeated_header_tokens(
 ) -> bool:
     """True when a data row looks like a reprinted column header."""
     if not tokens or not header_cells:
+        return False
+    # A printed amount means this is a value footer, not a reprinted header.
+    if any(parse_number(t.get("text")) is not None for t in tokens):
         return False
     hits = sum(1 for t in tokens if _alias_hit(t.get("text")))
     has_closing = any(_is_closing_alias(t.get("text")) for t in tokens)
@@ -2054,6 +2330,47 @@ def _extract_pdf_page_rows(
                         }
                     )
                     continue
+                # Closing qty and the expiry date beside it are two cells.
+                if (
+                    _right_align_qty_enabled()
+                    and parse_number(prev_text) is not None
+                    and _EXPIRY_DATE_TOKEN_RE.fullmatch(text)
+                ):
+                    logger.info(
+                        "STOCK_PDF_RIGHT_ALIGN_QTY split_date left=%r right=%r",
+                        prev_text,
+                        text,
+                    )
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
+                # Pack size after the product name is the packing column.
+                if (
+                    _right_align_qty_enabled()
+                    and _looks_like_unit_pack(text)
+                    and re.search(r"[A-Za-z]", prev_text)
+                    and not _looks_like_unit_pack(prev_text)
+                ):
+                    logger.info(
+                        "STOCK_PDF_RIGHT_ALIGN_QTY split_pack left=%r right=%r",
+                        prev_text,
+                        text,
+                    )
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
                 # Qty and neighbouring box-pack are two cells, not "89 100x60'S".
                 if _qty_and_pack_cluster_split(prev_text, text):
                     logger.info(
@@ -2146,6 +2463,8 @@ def _extract_pdf_page_rows(
     for i, cells in enumerate(clustered):
         if _looks_like_value_summary_header(cells):
             continue
+        if _looks_like_legend_or_footer_header(cells):
+            continue
         hits, has_closing = _score_header_cells(cells)
         left_half = (
             _split_column_pages_enabled()
@@ -2193,6 +2512,8 @@ def _extract_pdf_page_rows(
                 "text": c["text"],
                 "col_index": c["col_index"],
                 "x": c["x_center"],
+                "x0": c.get("x0"),
+                "x1": c.get("x1"),
             }
             for c in cells
         ]
@@ -2265,6 +2586,16 @@ def from_pdf_words(
         resolved = False
         structural = False
 
+        if local_header and carried_header and _looks_like_legend_or_footer_header(
+            local_header
+        ):
+            # DSTK / PURC:n SALE:n legends must not replace a carried stock header.
+            local_header = []
+            logger.info(
+                "STOCK_PDF_WORDS_SKIP_LEGEND_HEADER page=%s",
+                page_index,
+            )
+
         if local_header:
             if carried_header and _headers_align(carried_header, local_header):
                 page_header = carried_header
@@ -2321,6 +2652,8 @@ def from_pdf_words(
             else:
                 page_data.append(tokens)
 
+        if page_header and page_data:
+            _snap_right_aligned_qty_tokens(page_header, page_data)
         if resolved:
             pages_resolved += 1
         combined_rows.extend(page_data)

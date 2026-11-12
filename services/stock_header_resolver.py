@@ -42,7 +42,7 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "code", "sku"}
+    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "code", "sku", "pq", "sq"}
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -79,11 +79,14 @@ ALIASES: Dict[str, List[str]] = {
         "sku code",
         "mat code",
         "material code",
+        "pcode",
+        "p code",
     ],
     "pack": [
         "pack",
         "packing",
         "packg",
+        "packin",  # OCR split PACKIN before G joins to PACKING
         "pack size",
         "packing size",
         "size",
@@ -109,10 +112,18 @@ ALIASES: Dict[str, List[str]] = {
         "price",
         "purchase cost",
         "stock cost",
+        # Secondary Rate (and OCR truncations) beat bare Mrp when both print.
+        "secondary rate",
+        "secondary ra",
+        "secondary rat",
+        "sec rate",
+        "sec. rate",
     ],
     # Last-month-sale (LMS) is its own column — never opening/receipts.
     "lms": [
         "lms",
+        "lms1",  # LMS1 | LMS pair left of OP.STK
+        "lms 1",
         "lm sale",
         "lm sales",
         "last month sale",
@@ -157,6 +168,7 @@ ALIASES: Dict[str, List[str]] = {
         "dump qty",
         "scrap",
         "scrap qty",
+        "box",  # case size beside Pack / before OPSTK
     ],
     "opening": [
         "op",
@@ -166,9 +178,15 @@ ALIASES: Dict[str, List[str]] = {
         "opening",
         "opstk",
         "op stk",
+        # Op-St. / Op-St (qty beside its amount). "op" alone is dropped when
+        # the extra token is "st", which is not in the short-alias keep set.
+        "op st",
+        "opst",
         "ostk",
         "o stk",  # O.Stk / O Stk (Profitmaker Stock & Sales)
         "ob",
+        # O/B normalises to "o b", so the compact alias "ob" does not match.
+        "o/b",
         "opbal",
         "op bal",
         # OpenBalQty — must beat closing "bal qty" infix inside openbalqty.
@@ -198,13 +216,20 @@ ALIASES: Dict[str, List[str]] = {
     ],
     "purchase": [
         "pur",
+        "pq",  # Purchase Qty (whole token; must not match inside other words)
         "purc",
         "purch",
         "purchase",
         "purchases",
+        # PurTot / Pur Tot — purchase total qty (OStk / PurTot / SaleTot / Qoh).
+        "purtot",
+        "pur tot",
+        "purchase tot",
+        "purchase total",
         "recd",
         "rec",
         "rcpt",
+        "rcpts",  # OP.STK | RCPTS | SALES grids
         "recpt",
         "receipt",
         "receipts",
@@ -235,6 +260,7 @@ ALIASES: Dict[str, List[str]] = {
         "sale",
         "sales",
         "sal",  # Sal. Val / Sal. Amt
+        "sq",  # Sales Qty (whole token)
         "sl",
         "issue",
         "iss",
@@ -250,9 +276,23 @@ ALIASES: Dict[str, List[str]] = {
         "issue/sales",
         "sales qty",
         "sale qty",
+        # SaleTot / Sale Tot — sale total qty beside Qoh.
+        "saletot",
+        "sale tot",
+        "sale total",
+        "sales tot",
+        "sales total",
         "sales bill qty",
         "sale bill qty",
         "salesbillqty",
+        # Secondary Qty Total (customer secondary-sale grids).
+        "secondary qty total",
+        "secondary qty tota",
+        "secondary qty",
+        "secondary quantity total",
+        "secondary quantity",
+        "sec qty total",
+        "sec qty",
     ],
     "sales_return": [
         "saleret",
@@ -481,6 +521,9 @@ ALIASES: Dict[str, List[str]] = {
         "sale val",
         "sales value",
         "sale value",
+        "sl value",  # SL.VALUE on Op.Stk|Rcpts grids
+        "sl val",
+        "slvalue",
         "sval",
         "sa val",
         "pur val",
@@ -488,6 +531,11 @@ ALIASES: Dict[str, List[str]] = {
         "opening value",
         "op val",
         "opval",
+        "opv",  # OPSTK / OPV paired sheets
+        "purcv",
+        "purc val",
+        "salev",
+        "stockv",
         "receive value",
         "issue value",
         "amount-i",
@@ -642,6 +690,11 @@ _DIRECT_VALUE_FIELDS = {
     "stk. value": "closing_value",
     "stock value": "closing_value",
     "stock-value": "closing_value",
+    # QohValue — closing money beside Qoh qty (Profitmaker / Daxinsoft).
+    "qoh value": "closing_value",
+    "qohvalue": "closing_value",
+    "qoh val": "closing_value",
+    "qohval": "closing_value",
     "sval": "sales_value",
     "sale val": "sales_value",
     "sa val": "sales_value",
@@ -649,26 +702,32 @@ _DIRECT_VALUE_FIELDS = {
     "sal. val": "sales_value",
     "sales value": "sales_value",
     "sale value": "sales_value",
+    "secondary value": "sales_value",
+    "secondary val": "sales_value",
+    "secondary valu": "sales_value",
+    "sec value": "sales_value",
+    "sec val": "sales_value",
     "sales bill amt": "sales_value",
     "sale bill amt": "sales_value",
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
-    "opv": "opening_value",  # STOCK AND SALES STATEMENT OPV
+    "opv": "opening_value",
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
-    "purcv": "purchase_value",  # STOCK AND SALES STATEMENT PURCV
+    "purcv": "purchase_value",
+    "purc val": "purchase_value",
     "purchase value": "purchase_value",
     "purch bill amt": "purchase_value",
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
-    "issue value": "sales_value",
-    "salev": "sales_value",  # STOCK AND SALES STATEMENT SALEV
+    "salev": "sales_value",
     "sale v": "sales_value",
-    "stockv": "closing_value",  # STOCK AND SALES STATEMENT STOCKV
+    "issue value": "sales_value",
+    "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
 }
@@ -690,9 +749,50 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         return None, 0.0, "empty"
 
     compact_early = re.sub(r"\s+", "", norm)
+    # Customer / party name is never the product column (alias "name" alone).
+    if compact_early in {
+        "customername",
+        "customer",
+        "custname",
+        "partyname",
+        "party",
+        "clientname",
+        "buyername",
+    } or (
+        set(_tokens(norm)) & {"customer", "party", "cust", "client", "buyer"}
+        and "name" in set(_tokens(norm))
+    ):
+        return "non_stock_qty", 0.95, "customer_party_name"
+    # Cust Code / customer code — ignore (not Mat Code / product_code).
+    if compact_early in {
+        "custcode",
+        "customercode",
+        "partycode",
+        "clientcode",
+    } or norm in {"cust code", "customer code", "party code"}:
+        return "non_stock_qty", 0.95, "customer_code"
+    # Mat Code / product code — catalogue key, not product_name.
+    if compact_early in {
+        "matcode",
+        "materialcode",
+        "productcode",
+        "skucode",
+        "pcode",
+    } or norm in {
+        "mat code",
+        "material code",
+        "product code",
+        "sku code",
+        "p code",
+    }:
+        return "product_code", 0.95, "product_code"
     # ITEMCODE is a catalogue key, never product_name (alias "item") or value.
+    # Kept as ignore for legacy sheets that park ITEMCODE after CLOSING.
     if compact_early in {"itemcode", "itemcd"} or norm == "item code":
         return "non_stock_qty", 0.95, "item_code"
+    # BOX / Box is case-size between Pack and OPSTK — never opening_qty.
+    if compact_early == "box" or norm == "box":
+        return "non_stock_qty", 0.95, "box_case_size"
     # BLM / LM qty are last-month history, never opening or sales.
     _blm_lm_tokens = _tokens(norm)
     if compact_early in {
@@ -714,7 +814,13 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         return f"direct:{direct}", 0.95, f"direct_value:{direct}"
 
     if _is_rate(norm) and not _has_value_marker(norm):
-        return "rate", 0.95, "rate_alias"
+        # Secondary Rate / PTR beat bare Mrp when both print as rate columns.
+        rate_conf = 0.95
+        if "secondary" in set(_tokens(norm)) or compact_early.startswith("sec"):
+            rate_conf = 0.99
+        elif compact_early in {"mrp", "tomrp", "maxretailprice"}:
+            rate_conf = 0.9
+        return "rate", rate_conf, "rate_alias"
 
     # "Cl Panaji" / "Cl Mapusa" are branch closing splits, not statement closing.
     # Keep real closing aliases (Cl Qty / Cl.Qnt / Cl Stock / Cl Val).
@@ -793,6 +899,13 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 "total receive",
                 "total received",
             }:
+                continue
+        # "Secondary Qty Total" is sales qty, never the stock-total band.
+        if group == "total" and "secondary" in tokens:
+            continue
+        # Bare "name" must not claim Customer Name / Party Name.
+        if group == "product_name" and alias in {"name", "desc", "description"}:
+            if set(tokens) & {"customer", "party", "cust", "client", "buyer"}:
                 continue
         # Short "op" must not beat a multi-token total alias like "op rec".
         # Keep Op.Value / Op.Qnt / Op.Value Expiry (qty-value or glued date label).
@@ -882,6 +995,7 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     # aliases within the same priority band so "op rec" (total) beats "op".
     priority = {
         "product_name": 100,
+        "product_code": 98,
         "pack": 95,
         "batch": 94,
         "rate": 93,
@@ -901,6 +1015,11 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
     }
     filtered.sort(key=lambda h: (-len(h[1]), -priority.get(h[0], 0), -h[2]))
     group, alias, conf = filtered[0]
+    # Prefer Secondary Rate over bare Mrp when both print as rate columns.
+    if group == "rate" and (
+        "secondary" in set(_tokens(norm)) or alias.startswith("secondary")
+    ):
+        conf = max(float(conf), 0.99)
     return group, conf, f"alias:{alias}"
 
 
@@ -1087,12 +1206,158 @@ def _promote_adjacent_same_group_qty_to_value(
             and not _has_value_marker(norm_right)
         ):
             continue
+        # Purchase|Purchase|Purchase (Qty|Free|Value): do not collapse Free
+        # into purchase_value — that parks Purchase Value under ignore and
+        # later Sales Free under ignore.
+        if bare_same_band and group == "purchase" and i + 1 < len(prelim):
+            third = prelim[i + 1]
+            if isinstance(third, dict):
+                norm_third = normalize_header(third.get("header_text"))
+                if norm_third in {
+                    "purchase",
+                    "purchases",
+                    "pur",
+                    "purc",
+                    "purch",
+                }:
+                    right["canonical"] = "free_in_qty"
+                    right["group"] = "free"
+                    right["is_value"] = False
+                    right["confidence"] = max(
+                        float(right.get("confidence") or 0.0), 0.9
+                    )
+                    right["reason"] = "purchase_qty_free_value_triplet"
+                    third["canonical"] = "purchase_value"
+                    third["group"] = "purchase"
+                    third["is_value"] = True
+                    third["confidence"] = max(
+                        float(third.get("confidence") or 0.0), 0.9
+                    )
+                    third["reason"] = "purchase_qty_free_value_triplet"
+                    logger.info(
+                        "STOCK_HEADER_PURCHASE_QTY_FREE_VALUE col=%s/%s "
+                        "free_in + purchase_value (left=%r)",
+                        right.get("col_index"),
+                        third.get("col_index"),
+                        left.get("header_text"),
+                    )
+                    changed = True
+                    continue
         right["canonical"] = val_field
         right["is_value"] = True
         right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
         right["reason"] = "adjacent_qty_value_pair"
         logger.info(
             "STOCK_HEADER_ADJACENT_QTY_VALUE_PAIR col=%s %r -> %s left=%s",
+            right.get("col_index"),
+            right.get("header_text"),
+            val_field,
+            left.get("header_text"),
+        )
+        changed = True
+    return changed
+
+
+def _promote_sales_free_before_value(prelim: List[Dict[str, Any]]) -> bool:
+    """Sales|Sales|Sales Value → sales_qty|free_out_qty|sales_value.
+
+    Duplicate bare Sales otherwise collapses to ignore and parks Sales Qty
+    under the ignored Free column. Only renames headers — never invents digits.
+    """
+    changed = False
+    for i in range(len(prelim) - 2):
+        left = prelim[i]
+        mid = prelim[i + 1]
+        right = prelim[i + 2]
+        if not all(isinstance(c, dict) for c in (left, mid, right)):
+            continue
+        if left.get("canonical") != "sales_qty" or left.get("is_value"):
+            continue
+        if right.get("canonical") != "sales_value":
+            continue
+        mid_canon = str(mid.get("canonical") or "ignore")
+        mid_norm = normalize_header(mid.get("header_text"))
+        allow_mid = mid_canon in {"sales_qty", "ignore", "free_out_qty"} or (
+            mid_norm in {"sales", "sale", "sales free", "sale free"}
+        )
+        if not allow_mid:
+            continue
+        if mid_canon == "free_out_qty" and mid.get("reason") == "sales_free_before_value":
+            continue
+        mid["canonical"] = "free_out_qty"
+        mid["group"] = "free"
+        mid["is_value"] = False
+        mid["confidence"] = max(float(mid.get("confidence") or 0.0), 0.9)
+        mid["reason"] = "sales_free_before_value"
+        logger.info(
+            "STOCK_HEADER_SALES_FREE_BEFORE_VALUE col=%s %r -> free_out_qty",
+            mid.get("col_index"),
+            mid.get("header_text"),
+        )
+        changed = True
+    return changed
+
+
+def _movement_value_follower_enabled() -> bool:
+    """Op-St.|<amount> Receipt|<amount> … Cl. Stock|AMOUNT.
+
+    Default ON. Only runs when those band headers are all printed, so other
+    layouts are unchanged. Does not invent digits.
+    """
+    return os.getenv(
+        "STOCK_HEADER_MOVEMENT_VALUE_FOLLOWER", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _promote_movement_value_followers(prelim: List[Dict[str, Any]]) -> bool:
+    """Right-hand money column under Op-St / Receipt / Sale / Cl. Stock.
+
+    The amount often has a blank header or a repeated band name. Map that
+    column to the band's value field. Sale-return and purchase-return have
+    no value field here, so their follower stays unmapped.
+    """
+    if not _movement_value_follower_enabled() or len(prelim) < 4:
+        return False
+    norms = [normalize_header(c.get("header_text")) for c in prelim]
+    compact = [re.sub(r"\s+", "", n) for n in norms]
+    blob = " ".join(n for n in norms if n)
+    compact_blob = "".join(compact)
+    has_op_st = bool(re.search(r"\bop st\b", blob)) or "opst" in compact_blob
+    has_receipt = bool(re.search(r"\breceipts?\b", blob))
+    has_sret = bool(re.search(r"\bs ret\b", blob)) or "sret" in compact_blob
+    has_pret = bool(re.search(r"\bpur ret\b", blob)) or "purret" in compact_blob
+    has_cl = bool(re.search(r"\bcl stock\b", blob)) or "clstock" in compact_blob
+    if not (has_op_st and has_receipt and has_sret and has_pret and has_cl):
+        return False
+    changed = False
+    for i in range(len(prelim) - 1):
+        left = prelim[i]
+        right = prelim[i + 1]
+        group = left.get("group")
+        val_field = _GROUP_TO_VALUE.get(group or "")
+        qty_field = _GROUP_TO_QTY.get(group or "")
+        if not val_field or not qty_field:
+            continue
+        if left.get("canonical") != qty_field or left.get("is_value"):
+            continue
+        right_canon = str(right.get("canonical") or "ignore")
+        left_norm = norms[i]
+        right_norm = norms[i + 1]
+        if right_canon == qty_field:
+            if not left_norm or left_norm != right_norm:
+                continue
+        elif right_canon in {"ignore", "unknown"}:
+            if right_norm and right_norm not in {"-", "—"}:
+                continue
+        else:
+            continue
+        right["canonical"] = val_field
+        right["group"] = group
+        right["is_value"] = True
+        right["confidence"] = max(float(right.get("confidence") or 0.0), 0.9)
+        right["reason"] = "movement_value_follower"
+        logger.info(
+            "STOCK_HEADER_MOVEMENT_VALUE_FOLLOWER col=%s %r -> %s left=%r",
             right.get("col_index"),
             right.get("header_text"),
             val_field,
@@ -1956,11 +2221,116 @@ def _disambiguate_gap_token(
     return None
 
 
+def _peel_leading_row_number(text: str) -> str:
+    """Drop a row index glued to the product name. Leave pack sizes (60S, 200ML)."""
+    token = str(text or "").strip()
+    spaced = re.match(r"^(\d+)\s+(.+)$", token)
+    if spaced and re.search(r"[A-Za-z]", spaced.group(2)):
+        return spaced.group(2).strip()
+    glued = re.match(r"^(\d+)([A-Za-z].+)$", token)
+    if glued and len(re.findall(r"[A-Za-z]", glued.group(2))) >= 3:
+        return glued.group(2).strip()
+    return token
+
+
+def _row_has_serial_header(columns: Sequence[Dict[str, Any]]) -> bool:
+    for col in columns or []:
+        if str(col.get("reason") or "") == "serial_number_header":
+            return True
+        if str(col.get("canonical") or "") != "ignore":
+            continue
+        if re.match(
+            r"^(?:#|s\.?\s*no\.?|sl\.?\s*no\.?|sr\.?\s*no\.?)$",
+            str(col.get("header_text") or "").strip(),
+            re.I,
+        ):
+            return True
+    return False
+
+
+def _rehome_serial_name_tokens(
+    bucket: Dict[int, List[str]],
+    bands: List[Dict[str, Any]],
+    *,
+    peel_serial: bool = False,
+) -> None:
+    """Move a product name that fell in the serial column back to product_name.
+
+    SNo is narrow and Item is centred in a wide name column, so left-aligned
+    names land in the serial band. A bare integer stays the row number. A
+    leading integer glued to letters is that same row number.
+    """
+    ordered = sorted(bands, key=lambda b: float(b.get("x_center") or 0))
+    for band, nxt in zip(ordered, ordered[1:]):
+        if str(band.get("canonical") or "") != "ignore":
+            continue
+        if str(nxt.get("canonical") or "") != "product_name":
+            continue
+        serial_idx = int(band["col_index"])
+        product_idx = int(nxt["col_index"])
+        kept: List[str] = []
+        moved: List[str] = []
+        for raw in bucket.get(serial_idx) or []:
+            text = str(raw or "").strip()
+            if not re.search(r"[A-Za-z]", text):
+                kept.append(raw)
+                continue
+            peeled = _peel_leading_row_number(text)
+            if not peeled or not re.search(r"[A-Za-z]", peeled):
+                kept.append(raw)
+                continue
+            if peeled != text:
+                logger.info(
+                    "STOCK_HEADER_SERIAL_NAME_PEEL from=%r to=%r",
+                    text,
+                    peeled,
+                )
+            moved.append(peeled)
+        bucket[serial_idx] = kept
+        if moved:
+            bucket[product_idx] = moved + list(bucket.get(product_idx) or [])
+        _peel_product_bucket_serial(bucket, product_idx, peel_serial=peel_serial)
+        return
+    if peel_serial:
+        for band in ordered:
+            if str(band.get("canonical") or "") == "product_name":
+                _peel_product_bucket_serial(
+                    bucket, int(band["col_index"]), peel_serial=True
+                )
+                return
+
+
+def _peel_product_bucket_serial(
+    bucket: Dict[int, List[str]],
+    product_idx: int,
+    *,
+    peel_serial: bool,
+) -> None:
+    if not peel_serial:
+        return
+    prod = list(bucket.get(product_idx) or [])
+    if not prod:
+        return
+    first = str(prod[0] or "")
+    peeled = _peel_leading_row_number(first)
+    if peeled == first.strip() or not re.search(r"[A-Za-z]", peeled):
+        return
+    logger.info(
+        "STOCK_HEADER_SERIAL_NAME_PEEL from=%r to=%r",
+        first.strip(),
+        peeled,
+    )
+    prod[0] = peeled
+    bucket[product_idx] = prod
+
+
 def _assign_cells_by_column_bands(
     row_tokens: List[Dict[str, Any]],
     centers: Sequence[Tuple[int, float, str]],
     pitch: float,
     fields: Dict[str, Optional[str]],
+    *,
+    peel_serial: bool = False,
 ) -> Dict[str, Any]:
     """Assign tokens by header x-bands (row tokens already Y-clustered by caller)."""
     errors: List[Dict[str, Any]] = []
@@ -2051,6 +2421,8 @@ def _assign_cells_by_column_bands(
         else:
             errors.append({"code": "UNASSIGNED_TOKEN", "message": raw, "x": tx})
             unassigned += 1
+
+    _rehome_serial_name_tokens(bucket, bands, peel_serial=peel_serial)
 
     for b in bands:
         idx = int(b["col_index"])
@@ -2778,6 +3150,11 @@ def resolve_columns(
     # Name + Product both → product_name: keep Product (SKU), demote Name.
     _apply_prefer_product_over_name(prelim, errors)
 
+    # Sales|Sales|Sales Value → free_out between sales_qty and sales_value.
+    _promote_sales_free_before_value(prelim)
+    # Op-St.|amount, Receipt|amount, Sale|amount, Cl. Stock|AMOUNT.
+    _promote_movement_value_followers(prelim)
+
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}
     for i, col in enumerate(prelim):
@@ -2995,7 +3372,11 @@ def assign_cells(
     # restores nearest-centre assign for rollback without code revert.
     if _column_bands_enabled():
         return _assign_cells_by_column_bands(
-            row_tokens, centers, pitch, fields
+            row_tokens,
+            centers,
+            pitch,
+            fields,
+            peel_serial=_row_has_serial_header(columns),
         )
 
     # Legacy nearest-centre assign (flag off).
