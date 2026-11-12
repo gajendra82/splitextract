@@ -5020,6 +5020,8 @@ def _allow_negative_stock_money(extraction_method: Any) -> bool:
     return method in {
         "swil_landscape_qty_value",
         "purc_sale_cl_layout",
+        # Same Purc/Sale/Cl family with printed Op / Op val (and negative Cl val).
+        "purc_sale_cl_op_val_layout",
         "profitmaker_ostk_docx",
         # PROMPT Datewise can print negative Op/Cl stock and closing amount.
         "prompt_datewise_layout",
@@ -29312,6 +29314,16 @@ def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict
     return result
 
 
+def _purc_sale_cl_op_val_enabled() -> bool:
+    """STOCK_PURC_SALE_CL_OP_VAL — map printed Op / Op val on Purc/Sale/Cl sheets."""
+    return os.getenv("STOCK_PURC_SALE_CL_OP_VAL", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_purc_sale_cl_header(blob: str) -> bool:
     """MediVision Stock and Sales: Purc / Purc val / Sale / Sa val / Cl qty / Cl val."""
     if not blob:
@@ -29329,8 +29341,10 @@ def _is_purc_sale_cl_header(blob: str) -> bool:
 def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[List[Tuple[str, float]]]:
     """Column starts from this header only. Other layouts never reach here."""
     starts: List[Tuple[str, float]] = []
+    seen_op = False
     seen_purc = False
     seen_cl = False
+    map_op = _purc_sale_cl_op_val_enabled()
     for x, token in header_words:
         norm = re.sub(r"[^a-z]", "", token.lower())
         field = None
@@ -29338,6 +29352,9 @@ def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[Lis
             field = "name"
         elif norm == "unit":
             field = "pack"
+        elif map_op and norm == "op":
+            field = "opening_value" if seen_op else "opening_qty"
+            seen_op = True
         elif norm == "purc":
             field = "receipts_value" if seen_purc else "receipts_qty"
             seen_purc = True
@@ -29362,10 +29379,32 @@ def _purc_sale_cl_columns(header_words: List[Tuple[float, str]]) -> Optional[Lis
     }
     if not needed.issubset({name for name, _x in starts}):
         return None
+    if map_op and "opening_qty" in {name for name, _x in starts}:
+        logger.info(
+            "PURC_SALE_CL_OP_VAL mapped_opening=true columns=%s",
+            [name for name, _x in starts],
+        )
     return starts
 
 
 def _purc_sale_cl_field(x: float, starts: List[Tuple[str, float]]) -> Optional[str]:
+    """Assign by left-edge walk, or midpoints when Op/Op val columns are mapped.
+
+    Qty/value pairs often print slightly left of the value header; midpoints keep
+    Sa val / Cl val out of the preceding qty column without guessing numbers.
+    """
+    names = {name for name, _x in starts}
+    if "opening_qty" in names and len(starts) >= 2:
+        for i, (name, start) in enumerate(starts):
+            left = -1e9 if i == 0 else (starts[i - 1][1] + start) / 2.0
+            right = (
+                1e9
+                if i + 1 >= len(starts)
+                else (start + starts[i + 1][1]) / 2.0
+            )
+            if left <= x < right:
+                return name
+        return None
     field = None
     for name, start in starts:
         if x + 0.5 >= start:
@@ -29379,6 +29418,8 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     """Parse Purc / Sale / Cl qty sheets from word positions.
 
     Returns None unless that header is printed, so other PDFs stay unchanged.
+    When STOCK_PURC_SALE_CL_OP_VAL is on and Op / Op val print, those columns
+    map to opening_qty / opening_value instead of being swallowed into packing.
     """
     page_texts = [(page.get_text("text") or "") for page in doc]
     if not any(_is_purc_sale_cl_header(text) for text in page_texts):
@@ -29392,7 +29433,7 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     for page, text in zip(doc, page_texts):
         if result["period_from"] is None:
             m = re.search(
-                r"(\d{1,2}-\d{1,2}-\d{2,4})\s+to\s+(\d{1,2}-\d{1,2}-\d{2,4})",
+                r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
                 text,
                 re.I,
             )
@@ -29446,13 +29487,22 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
                 if field:
                     cells.setdefault(field, []).append(token)
             name = _clean_name(" ".join(cells.get("name") or []))
-            if not name or re.match(r"^(Product|Unit|Total|Page)\b", name, re.I):
+            if not name or re.match(r"^(Product|Unit|Totals?|Page)\b", name, re.I):
                 continue
             item = empty_line_item()
             item["product_name"] = name
             pack = " ".join(cells.get("pack") or []).strip()
             item["packing"] = pack or None
-            item["opening_qty"] = 0.0
+            has_opening_col = "opening_qty" in {name for name, _x in columns}
+            if has_opening_col:
+                item["opening_qty"] = (
+                    _prompt_cell_number(cells.get("opening_qty") or []) or 0.0
+                )
+                op_val = _prompt_cell_number(cells.get("opening_value") or [])
+                if op_val is not None:
+                    item["opening_value"] = op_val
+            else:
+                item["opening_qty"] = 0.0
             item["receipts_qty"] = _prompt_cell_number(cells.get("receipts_qty") or []) or 0.0
             item["sales_qty"] = _prompt_cell_number(cells.get("sales_qty") or []) or 0.0
             item["sales_value"] = _prompt_cell_number(cells.get("sales_value") or []) or 0.0
@@ -29460,6 +29510,8 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
             item["closing_value"] = _prompt_cell_number(cells.get("closing_value") or []) or 0.0
             extra = item["extra"]
             extra["layout"] = "purc_sale_cl"
+            if has_opening_col:
+                extra["layout"] = "purc_sale_cl_op_val"
             pur_val = _prompt_cell_number(cells.get("receipts_value") or [])
             if pur_val is not None:
                 extra["purchase_value"] = pur_val
@@ -29470,6 +29522,11 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     result["line_items"] = items
     result["totals"]["extra"]["extraction_method"] = "purc_sale_cl_layout"
     result["totals"]["extra"]["layout"] = "purc_sale_cl"
+    if any(
+        (it.get("extra") or {}).get("layout") == "purc_sale_cl_op_val" for it in items
+    ):
+        result["totals"]["extra"]["layout"] = "purc_sale_cl_op_val"
+        result["totals"]["extra"]["extraction_method"] = "purc_sale_cl_op_val_layout"
     return result
 
 
