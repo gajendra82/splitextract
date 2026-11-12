@@ -18534,7 +18534,12 @@ def _repair_ssa_analysis_items_from_ocr(
 
 
 def _item_looks_like_group_wise_sales_headers(item: Dict[str, Any]) -> bool:
-    """True when Vision headers are Group Wise Sales (Strength + Cl.Stock + Sales*)."""
+    """True when Vision headers are Group Wise Sales (Strength + Cl.Stock + Sales*).
+
+    Also matches OpValue/ClValue money grids that emit only two bare Sales
+    labels (Sales Qty|Sales Free collapsed). Those must not hit SSA physical
+    remap (OPENING/RECEIPT/ISSUE), which parks Sales Value under free_out.
+    """
     hdrs = ((item or {}).get("extra") or {}).get("vision_column_headers") or []
     if not isinstance(hdrs, (list, tuple)) or len(hdrs) < 6:
         return False
@@ -18543,6 +18548,7 @@ def _item_looks_like_group_wise_sales_headers(item: Dict[str, Any]) -> bool:
     except Exception:
         return False
     norms = [normalize_header(h) for h in hdrs]
+    blob = " ".join(str(h or "") for h in hdrs)
     has_strength = any(n == "strength" for n in norms)
     has_cl = any(
         "cl.stock" in n or n in {"cl stock", "closing stock", "clstock"} for n in norms
@@ -18550,6 +18556,11 @@ def _item_looks_like_group_wise_sales_headers(item: Dict[str, Any]) -> bool:
     sales_like = sum(
         1 for n in norms if n == "sales" or n.startswith("sales ") or n.startswith("sale ")
     )
+    has_opvalue = bool(
+        re.search(r"(?i)op\s*value|opvalue|cl\s*value|clvalue", blob)
+    )
+    if has_strength and has_cl and has_opvalue and sales_like >= 2:
+        return True
     return bool(has_strength and has_cl and sales_like >= 3)
 
 
@@ -42553,6 +42564,16 @@ def _repair_lms_shifted_into_opening(result: Dict[str, Any], text: str = "") -> 
     return repaired
 
 
+def _lms_multiline_name_after_code_enabled() -> bool:
+    """STOCK_LMS_MULTILINE_NAME_AFTER_CODE — drop page-header/section bleed before Code."""
+    return os.getenv("STOCK_LMS_MULTILINE_NAME_AFTER_CODE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _parse_text_lms_opstock_rcpts(
     text: str, filename: str, source_format: str
 ) -> Optional[Dict[str, Any]]:
@@ -42827,9 +42848,15 @@ def _parse_text_lms_opstock_rcpts(
                     break
             code = None
             name_parts: List[str] = []
+            # Multiline PDF pages re-print column headers / division banners
+            # before Code+Product. Keep only tokens after the product code so
+            # "SALES SL.VALUE … DIABECON" / "HIMALAYA-ZEAL *PILEX" do not bleed.
+            strip_precode_bleed = _lms_multiline_name_after_code_enabled()
             for tok in pre:
                 if code is None and re.fullmatch(r"\d{4,}", tok or ""):
                     code = tok
+                    continue
+                if strip_precode_bleed and code is None:
                     continue
                 # Skip short Name-column serials between Code and Product.
                 if re.fullmatch(r"\d{1,3}", tok or "") and not name_parts:
@@ -42837,6 +42864,17 @@ def _parse_text_lms_opstock_rcpts(
                 if re.search(r"[A-Za-z]", tok or ""):
                     name_parts.append(tok)
             name = _clean_name(" ".join(name_parts))
+            if strip_precode_bleed and name:
+                # Printed markers (* / quotes) glued to the product stem.
+                stripped = name.lstrip("*\"'` ").strip()
+                if stripped != name:
+                    logger.info(
+                        "LMS_OPSTOCK_NAME_MARKER_STRIP file=%s before=%r after=%r",
+                        filename,
+                        name,
+                        stripped,
+                    )
+                    name = stripped
             nums: List[str] = []
             k = i + 1
             while k < len(tokens) and len(nums) < len(numeric_keys):
@@ -46321,13 +46359,13 @@ def _extract_ssa_opening_receipt_issue_dump_image(
     else:
         ext_for_mime = ext
 
-    if not skip_ocr_gate:
+    def _ssa_dump_header_preview(img_bytes: bytes) -> str:
         try:
             image = ImageOps.exif_transpose(
-                Image.open(io.BytesIO(vision_bytes))
+                Image.open(io.BytesIO(img_bytes))
             ).convert("RGB")
         except Exception:
-            return None
+            return ""
         wide = image.resize(
             (image.width * 2, image.height * 2), Image.Resampling.LANCZOS
         )
@@ -46337,14 +46375,31 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             # Avoid region-shared OCR cache: gate must see THIS crop/header.
             import pytesseract
 
-            preview = pytesseract.image_to_string(header, config="--psm 6") or ""
+            return pytesseract.image_to_string(header, config="--psm 6") or ""
         except Exception:
             try:
-                preview = _a2z_tesseract().image_to_string(
+                return _a2z_tesseract().image_to_string(
                     header, config="--psm 6"
                 ) or ""
             except Exception:
-                return None
+                return ""
+
+    # Always soft-reject Group Wise Sales — even when skip_ocr_gate is on.
+    # That path otherwise forces OPENING/RECEIPT/ISSUE onto OpValue/Free grids
+    # and slides numbers onto the next product row.
+    soft_preview = _ssa_dump_header_preview(vision_bytes) or _ssa_dump_header_preview(
+        file_bytes
+    )
+    if _ssa_dump_text_is_group_wise(soft_preview):
+        logger.info(
+            "SSA_DUMP_SKIP reason=group_wise_sales file=%s skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
+        return None
+
+    if not skip_ocr_gate:
+        preview = soft_preview
         if not (
             _is_ssa_opening_receipt_issue_dump_text(preview)
             or _is_ssa_opening_receipt_issue_dump_text_fuzzy(preview)
@@ -46353,19 +46408,14 @@ def _extract_ssa_opening_receipt_issue_dump_image(
                 return None
             # Crop OCR missed the title — fall back to full-image gate, keep crop
             # for the vision payload when the title is found on the full frame.
-            try:
-                full = ImageOps.exif_transpose(
-                    Image.open(io.BytesIO(file_bytes))
-                ).convert("RGB")
-                fwide = full.resize(
-                    (full.width * 2, full.height * 2), Image.Resampling.LANCZOS
+            preview = _ssa_dump_header_preview(file_bytes)
+            if _ssa_dump_text_is_group_wise(preview):
+                logger.info(
+                    "SSA_DUMP_SKIP reason=group_wise_sales file=%s "
+                    "skip_ocr_gate=%s stage=full_header",
+                    filename,
+                    skip_ocr_gate,
                 )
-                fwide = ImageEnhance.Contrast(fwide).enhance(1.3)
-                fheader = fwide.crop((0, 0, fwide.width, int(fwide.height * 0.42)))
-                import pytesseract
-
-                preview = pytesseract.image_to_string(fheader, config="--psm 6") or ""
-            except Exception:
                 return None
             if not (
                 _is_ssa_opening_receipt_issue_dump_text(preview)
@@ -46682,6 +46732,31 @@ def _ssa_dump_unreadable_ocr_skip_enabled() -> bool:
     }
 
 
+def _ssa_dump_text_is_group_wise(text: str) -> bool:
+    """True when OCR/peek is Group Wise Sales (not SSA OPENING/RECEIPT/ISSUE).
+
+    Group Wise prints Op.Stock|OpValue|Purchase|Free|Sales|Cl.Stock|ClValue.
+    The SSA dump Vision prompt maps that grid into OPENING/RECEIPT/ISSUE and
+    slides sibling-row numbers onto the next product. Detect before claiming.
+    """
+    if not (text or "").strip():
+        return False
+    if _is_group_wise_sales_opstock_format(text):
+        return True
+    if re.search(r"G?roup\s*Wise\s*Sales", text, re.I):
+        return True
+    # OpValue/ClValue + Free columns without STOCK & SALES ANALYSIS title.
+    if re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
+        return False
+    has_value_pair = bool(
+        re.search(r"\bOp\s*Value\b|\bOpValue\b|\bCl\s*Value\b|\bClValue\b", text, re.I)
+    )
+    has_free = bool(
+        re.search(r"Purchase\s*Free|Sales\s*Free|\bPur\.?\s*Free\b", text, re.I)
+    )
+    return has_value_pair and has_free
+
+
 def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
     """True when a phone photo likely hides an SSA qty/value grid from OCR.
 
@@ -46690,6 +46765,12 @@ def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
     OPSTK / OPBAL sheets, or Op.Stk|Rcpts|LMS1|SL.VALUE stock grids.
     """
     if re.search(r"\bOPSTK\b|\bOPBAL\b|\bPURCH\b|\bSALE\s*VAL\b", peek or "", re.I):
+        return False
+    if _ssa_dump_text_is_group_wise(peek or ""):
+        logger.info(
+            "SSA_PHONE_EXCLUDE_GROUP_WISE reason=group_wise_sales "
+            "action=skip_ssa_phone_claim"
+        )
         return False
     # Abbreviated Op.Stk / LMS1 stockist grids are owned by op_stk_rcpts vision.
     if re.search(
@@ -61102,6 +61183,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
+            and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
             and (_peek_unreadable or _ssa_phone or _ssa_sheets_qty_value)
         ):
             try:
@@ -61305,6 +61387,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     # VT money-in-qty on OPENING/RECEIPT/ISSUE/CLOSING → SSA dump.
                     if (
                         _ssa_dump_unreadable_ocr_skip_enabled()
+                        and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                         and _ssa_dump_vision_table_needs_rescue(result)
                     ):
                         logger.info(
@@ -61440,6 +61523,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
             if (
                 _ssa_dump_unreadable_ocr_skip_enabled()
+                and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                 and (
                     _ssa_dump_vision_table_needs_rescue(_vt_fb)
                     or str(outcome.get("reason") or "") == "valid_ratio_low"

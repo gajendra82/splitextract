@@ -686,6 +686,8 @@ _DIRECT_VALUE_FIELDS = {
     "closing value": "closing_value",
     "closing val": "closing_value",
     "cl val": "closing_value",
+    "cl value": "closing_value",
+    "clvalue": "closing_value",
     "clval": "closing_value",
     "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
     "cival": "closing_value",
@@ -1564,6 +1566,23 @@ def _group_wise_sales_sequence_enabled() -> bool:
     }
 
 
+def _group_wise_opvalue_sequence_enabled() -> bool:
+    """STOCK_HEADER_GROUP_WISE_OPVALUE_SEQUENCE — Op/OpValue/…/Cl/ClValue map.
+
+    Default ON. OpValue grids emit Purchase|Free|Purchase|Qty|Sales|Sales;
+    without this remap purchase_value/sales_value stay ignore and sales money
+    lands under closing_qty. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_HEADER_GROUP_WISE_OPVALUE_SEQUENCE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _free_skip_ignore_neighbour_enabled() -> bool:
     """STOCK_HEADER_FREE_SKIP_IGNORE — Free looks past one ignore neighbour.
 
@@ -1676,6 +1695,18 @@ _GROUP_WISE_MID_CANONICALS: Tuple[str, ...] = (
     "ignore",  # Sales Ret Free
     "sales_qty",
     "free_out_qty",
+)
+
+# Between OpValue and Cl.Stock on Group Wise Sales with printed money columns.
+# Vision flattens Purchase Qty|Free|Value and Sales Qty|Free|Value into bare
+# Purchase/Free/Purchase/Qty/Sales/Sales labels.
+_GROUP_WISE_OPVALUE_MID_CANONICALS: Tuple[str, ...] = (
+    "purchase_qty",
+    "free_in_qty",
+    "purchase_value",
+    "sales_qty",
+    "free_out_qty",
+    "sales_value",
 )
 
 
@@ -1822,6 +1853,238 @@ def _apply_group_wise_sales_sequence(
             ),
             "op_col": prelim[op_i].get("col_index"),
             "cl_col": prelim[cl_i].get("col_index"),
+        }
+    )
+    return True
+
+
+def _looks_like_group_wise_opvalue_headers(prelim: Sequence[Dict[str, Any]]) -> bool:
+    """True for Op.Stock|OpValue|…|Cl.Stock|ClValue Group Wise money grids."""
+    canons = [str(c.get("canonical") or "") for c in prelim if isinstance(c, dict)]
+    norms = [_header_norm_tokens(c.get("header_text")) for c in prelim]
+    has_opvalue_text = any(
+        n in {"opvalue", "op value"} or "opvalue" in n.replace(" ", "")
+        for n in norms
+    )
+    has_cl_stock_text = any(
+        n in {"cl stock", "cl.stock", "clstock", "closing stock"}
+        or ("cl stock" in n and "val" not in n)
+        for n in norms
+    )
+    has_cl_value_text = any(
+        n in {"cl value", "clvalue", "cl val", "clval", "cl. value"}
+        or (n.startswith("cl") and "val" in n)
+        for n in norms
+    )
+    # Text anchors are enough: Cl.Stock is sometimes mis-labeled closing_value
+    # and CL.Value ignore before this remap runs, so canon checks alone miss.
+    if not (
+        has_opvalue_text
+        or "opening_value" in canons
+    ):
+        return False
+    if not (
+        (has_cl_stock_text and has_cl_value_text)
+        or ("closing_qty" in canons and "closing_value" in canons)
+    ):
+        return False
+    if "opening_qty" not in canons and not any(
+        n in {"op stock", "op.stock", "opening stock", "opn"}
+        or n.startswith("op ")
+        for n in norms
+    ):
+        return False
+    has_strength = any(n == "strength" for n in norms)
+    purchase_like = sum(
+        1 for n in norms if "purchase" in n or n in {"free", "pur", "purc", "qty"}
+    )
+    sales_like = sum(
+        1
+        for n in norms
+        if n == "sales"
+        or n.startswith("sales ")
+        or n.startswith("sale ")
+        or n in {"sale", "sales qty", "sales free"}
+    )
+    return bool(has_strength or purchase_like >= 2) and sales_like >= 1
+
+
+def _apply_group_wise_opvalue_sequence(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map OpValue Group Wise mid columns: Purchase|Free|Value|Sales|Free|Value.
+
+    Vision flattens those into bare Purchase/Free/Purchase/Qty/Sales/Sales.
+    Only renames columns — never invents values.
+    """
+    if not _group_wise_opvalue_sequence_enabled():
+        return False
+    if not _looks_like_group_wise_opvalue_headers(prelim):
+        return False
+
+    ov_i = next(
+        (
+            i
+            for i, c in enumerate(prelim)
+            if c.get("canonical") == "opening_value" or (
+                c.get("group") == "opening" and c.get("is_value")
+            )
+        ),
+        None,
+    )
+    # Prefer printed Cl.Stock text over a trailing ClValue that sometimes
+    # inherits as closing_qty and pulls mid one column too far right.
+    cl_i = next(
+        (
+            i
+            for i, c in enumerate(prelim)
+            if _header_norm_tokens(c.get("header_text"))
+            in {"cl stock", "cl.stock", "clstock", "closing stock", "cls stock"}
+            or (
+                "cl stock" in _header_norm_tokens(c.get("header_text"))
+                and "val" not in _header_norm_tokens(c.get("header_text"))
+            )
+        ),
+        None,
+    )
+    if cl_i is None:
+        cl_i = next(
+            (
+                i
+                for i, c in enumerate(reversed(prelim))
+                if c.get("canonical") == "closing_qty"
+                or (c.get("group") == "closing" and not c.get("is_value"))
+            ),
+            None,
+        )
+        if cl_i is not None:
+            cl_i = len(prelim) - 1 - cl_i
+    if ov_i is None or cl_i is None or cl_i <= ov_i + 1:
+        return False
+    # Ensure Cl.Stock is qty and the following money header is closing_value.
+    if 0 <= cl_i < len(prelim):
+        prelim[cl_i]["canonical"] = "closing_qty"
+        prelim[cl_i]["group"] = "closing"
+        prelim[cl_i]["is_value"] = False
+        prelim[cl_i]["confidence"] = max(
+            float(prelim[cl_i].get("confidence") or 0.0), 0.93
+        )
+        prelim[cl_i]["reason"] = "group_wise_opvalue_sequence"
+    if cl_i + 1 < len(prelim):
+        right = prelim[cl_i + 1]
+        right_norm = _header_norm_tokens(right.get("header_text"))
+        if (
+            "val" in right_norm
+            or right.get("canonical")
+            in {"closing_value", "value_marker", "ignore"}
+            or right_norm in {"cl value", "clvalue", "cl val", "clval"}
+        ):
+            right["canonical"] = "closing_value"
+            right["group"] = "closing"
+            right["is_value"] = True
+            right["confidence"] = max(float(right.get("confidence") or 0.0), 0.93)
+            right["reason"] = "group_wise_opvalue_sequence"
+
+    mid = list(range(ov_i + 1, cl_i))
+    if len(mid) < 4:
+        return False
+    roles = list(_GROUP_WISE_OPVALUE_MID_CANONICALS)
+    dropped_i: Optional[int] = None
+    # Only drop an extra mid Purchase when headers are wider than the usual
+    # 12-col OpValue grid (Name|Pack|Op|OpV|Pur|Free|Val|Sales|Free|Val|Cl|ClV).
+    # Dropping on a 12-wide header list shifts Sales/Cl left of the printed
+    # cells and parks free qty under sales_qty / money under free_out.
+    if len(mid) == len(roles) + 1 and len(prelim) >= 13:
+        purchase_like = [
+            i
+            for i in mid
+            if "purchase" in _header_norm_tokens(prelim[i].get("header_text"))
+            or _header_norm_tokens(prelim[i].get("header_text"))
+            in {"pur", "purc", "qty"}
+        ]
+        if len(purchase_like) >= 4:
+            dropped_i = purchase_like[3]
+            mid = [i for i in mid if i != dropped_i]
+    if len(mid) > len(roles):
+        # Prefer Sales|Free|Value|… immediately left of Cl.Stock.
+        mid = mid[-len(roles) :]
+    elif len(mid) < len(roles):
+        # Prefer keeping sales_qty / free_out / sales_value at the end.
+        roles = roles[-len(mid) :]
+
+    for idx, canon in zip(mid, roles):
+        col = prelim[idx]
+        col["canonical"] = canon
+        col["is_value"] = canon.endswith("_value")
+        col["confidence"] = 0.93
+        col["reason"] = "group_wise_opvalue_sequence"
+        if canon == "purchase_qty":
+            col["group"] = "purchase"
+        elif canon == "purchase_value":
+            col["group"] = "purchase"
+        elif canon in {"sales_qty", "sales_value"}:
+            col["group"] = "sales"
+        elif canon in {"free_in_qty", "free_out_qty"}:
+            col["group"] = "free"
+        else:
+            col["group"] = None
+
+    # Drop extra Purchase and compact col_index so cells[i] stay aligned.
+    if dropped_i is not None:
+        drop_col = int(prelim[dropped_i].get("col_index") or dropped_i)
+        new_prelim: List[Dict[str, Any]] = []
+        for i, col in enumerate(prelim):
+            if i == dropped_i:
+                continue
+            entry = dict(col)
+            try:
+                ci = int(entry.get("col_index"))
+            except (TypeError, ValueError):
+                new_prelim.append(entry)
+                continue
+            if ci > drop_col:
+                entry["col_index"] = ci - 1
+            new_prelim.append(entry)
+        prelim[:] = new_prelim
+        logger.info(
+            "STOCK_HEADER_GROUP_WISE_OPVALUE_DROP_PURCHASE col=%s",
+            drop_col,
+        )
+        # Refresh anchors after compacting.
+        ov_i = next(
+            (
+                i
+                for i, c in enumerate(prelim)
+                if c.get("canonical") == "opening_value"
+            ),
+            ov_i,
+        )
+        cl_i = next(
+            (
+                i
+                for i, c in enumerate(prelim)
+                if c.get("canonical") == "closing_qty"
+            ),
+            cl_i,
+        )
+
+    logger.info(
+        "STOCK_HEADER_GROUP_WISE_OPVALUE_SEQUENCE ov_col=%s cl_col=%s mid=%s",
+        prelim[ov_i].get("col_index") if 0 <= ov_i < len(prelim) else None,
+        prelim[cl_i].get("col_index") if 0 <= cl_i < len(prelim) else None,
+        roles,
+    )
+    errors.append(
+        {
+            "code": "GROUP_WISE_OPVALUE_SEQUENCE",
+            "message": (
+                f"Assigned Group Wise OpValue mid columns "
+                f"ov={prelim[ov_i].get('col_index') if 0 <= ov_i < len(prelim) else None} "
+                f"cl={prelim[cl_i].get('col_index') if 0 <= cl_i < len(prelim) else None}"
+            ),
+            "ov_col": prelim[ov_i].get("col_index") if 0 <= ov_i < len(prelim) else None,
+            "cl_col": prelim[cl_i].get("col_index") if 0 <= cl_i < len(prelim) else None,
         }
     )
     return True
@@ -3156,6 +3419,8 @@ def resolve_columns(
     _apply_qf_qty_sequence(prelim, errors)
     # Group Wise Sales: Op/Purchase/Free/Ret/Sales Qty/Cl.Stock (before dedup).
     _apply_group_wise_sales_sequence(prelim, errors)
+    # Group Wise OpValue: Purchase|Free|Value|Sales|Free|Value mid columns.
+    _apply_group_wise_opvalue_sequence(prelim, errors)
     # LstSL|Open|Recd|Sales|Close: Close misread as Open. after Sales.
     _apply_lstsl_close_after_sales(prelim, errors)
 

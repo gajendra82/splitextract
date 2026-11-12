@@ -1329,7 +1329,9 @@ def _group_wise_row_closing_shift_enabled() -> bool:
 
 def _columns_use_group_wise_sequence(columns: Sequence[Dict[str, Any]]) -> bool:
     return any(
-        isinstance(c, dict) and c.get("reason") == "group_wise_sales_sequence"
+        isinstance(c, dict)
+        and c.get("reason")
+        in {"group_wise_sales_sequence", "group_wise_opvalue_sequence"}
         for c in columns
     )
 
@@ -1684,6 +1686,12 @@ def build_table_prompt() -> str:
         "Sales Free|Cl.Stock): emit one cell per header column even when Free/"
         "Ret Free cells are blank or 0 — never drop those columns or Cl.Stock "
         "shifts left into Sales. Strength/pack is not opening_qty. "
+        "Group Wise Sales with money (Product|Strength|Op.Stock|OpValue|"
+        "Purchase Qty|Purchase Free|Purchase Value|Sales Qty|Sales Free|"
+        "Sales Value|Cl.Stock|ClValue): emit OpValue and ClValue as their own "
+        "header cells. Never put Sales Value into Cl.Stock or Cl qty into "
+        "ClValue. Keep each product name on the same row as its own numbers — "
+        "do not slide one product's qty/value cells onto the next product. "
         "PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|FREE|S.RETURN|"
         "FREE|OTHERS|CLOSING: PACK (60, 30ML, 60 TAB) is packing, never "
         "opening_qty. Emit one cell per FREE/P.RETURN/S.RETURN/OTHERS column "
@@ -5845,6 +5853,18 @@ def _sales_qty_in_free_out_enabled() -> bool:
     }
 
 
+def _headers_look_like_opvalue_grid(item: Dict[str, Any]) -> bool:
+    """True when Vision headers carry OpValue/ClValue (Group Wise money grid)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    headers = extra.get("vision_column_headers") or []
+    if not isinstance(headers, (list, tuple)):
+        return False
+    return any(
+        re.search(r"(?i)op\s*value|opvalue|cl\s*value|clvalue", str(h or ""))
+        for h in headers
+    )
+
+
 def _repair_sales_qty_parked_in_free_out(item: Dict[str, Any]) -> bool:
     """Move Sales Qty out of free_out when Sales Qty is blank/0.
 
@@ -5862,6 +5882,9 @@ def _repair_sales_qty_parked_in_free_out(item: Dict[str, Any]) -> bool:
     if fs.get("free_out_qty") != "printed":
         return False
     free_out = extra.get("free_out_qty")
+    # Never promote money parked in free_out (OpValue shift residue).
+    if _looks_money(free_out):
+        return False
     if not _looks_small_qty(free_out):
         return False
     sq = item.get("sales_qty")
@@ -5901,6 +5924,142 @@ def _repair_sales_qty_parked_in_free_out(item: Dict[str, Any]) -> bool:
         fo,
         item.get("sales_value"),
         item.get("closing_qty"),
+    )
+    return True
+
+
+def _clear_money_duplicate_free_out_enabled() -> bool:
+    """Drop free_out when it is a copy of sales_value money. Default ON."""
+    return os.getenv(
+        "STOCK_VISION_CLEAR_MONEY_FREE_OUT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_clear_money_duplicate_free_out(item: Dict[str, Any]) -> bool:
+    """Clear free_out_qty when it holds the same money as sales_value.
+
+    OpValue grids sometimes leave Sales Value under both sales_value and
+    free_out after a reread/shift. Never invents — only drops the duplicate.
+    """
+    if not _clear_money_duplicate_free_out_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    fo = extra.get("free_out_qty")
+    sv = item.get("sales_value")
+    if not _looks_money(fo):
+        return False
+    if not _looks_money(sv):
+        return False
+    try:
+        if abs(float(fo) - float(sv)) > 0.05:
+            return False
+    except (TypeError, ValueError):
+        return False
+    extra["free_out_qty"] = None
+    fs["free_out_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "MONEY_DUPLICATE_FREE_OUT" not in flags:
+        flags.append("MONEY_DUPLICATE_FREE_OUT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE MONEY_DUPLICATE_FREE_OUT product=%s cleared_sales_value=%s",
+        str(item.get("product_name") or "")[:60],
+        sv,
+    )
+    return True
+
+
+def _repair_opvalue_opening_mirrored_in_sales(item: Dict[str, Any]) -> bool:
+    """Restore opening when Vision left Op blank and mirrored it under Sales/Cl.
+
+    No-movement OpValue rows print the same qty/value under Opening and Closing.
+    Vision sometimes emits Op=0 and parks the printed block under Sales Free /
+    Sales Value / Cl.Stock / ClValue. Re-slot those printed digits into opening
+    and clear the false sales movement. Never invents.
+    """
+    if not _headers_look_like_opvalue_grid(item):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    try:
+        oq = float(item.get("opening_qty") or 0)
+        ov = float(
+            item.get("opening_value")
+            if item.get("opening_value") is not None
+            else (extra.get("opening_value") or 0)
+        )
+        rq = float(
+            item.get("receipts_qty")
+            if item.get("receipts_qty") is not None
+            else (item.get("purchase_qty") or 0)
+        )
+        sq = float(item.get("sales_qty") or 0)
+        fo = float(extra.get("free_out_qty") or 0)
+        sv = float(item.get("sales_value") or 0)
+        cq = float(item.get("closing_qty") or 0)
+        cv = float(item.get("closing_value") or 0)
+    except (TypeError, ValueError):
+        return False
+    if abs(oq) > 0.001 or abs(ov) > 0.001:
+        return False
+    if abs(rq) > 0.001:
+        return False
+
+    open_qty = None
+    open_val = None
+    # Case A: Sales/Cl still hold qty|money mirrors (pre-damage).
+    if abs(cq) > 0.001 and _looks_money(cv):
+        sale_qty = sq if abs(sq) > 0.001 else fo
+        if abs(sale_qty - cq) <= 0.51 and abs(sv - cv) <= 0.05:
+            open_qty, open_val = cq, cv
+    # Case B: after parking — sale=qty, free_out=money, cq=0, cv=qty≈sale.
+    elif (
+        abs(cq) <= 0.001
+        and _looks_small_qty(sq)
+        and abs(sq) > 0.001
+        and _looks_money(fo)
+        and _looks_small_qty(cv)
+        and abs(sq - cv) <= 0.51
+    ):
+        open_qty, open_val = sq, fo
+
+    if open_qty is None or open_val is None:
+        return False
+    item["opening_qty"] = float(open_qty)
+    item["opening_value"] = float(open_val)
+    extra["opening_value"] = float(open_val)
+    item["closing_qty"] = float(open_qty)
+    item["closing_value"] = float(open_val)
+    item["sales_qty"] = 0.0
+    item["sales_value"] = 0.0
+    extra["free_out_qty"] = None
+    fs["opening_qty"] = "printed"
+    fs["opening_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "printed"
+    fs["sales_qty"] = "missing"
+    fs["sales_value"] = "missing"
+    fs["free_out_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "OPVALUE_OPENING_MIRRORED_IN_SALES" not in flags:
+        flags.append("OPVALUE_OPENING_MIRRORED_IN_SALES")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE OPVALUE_OPENING_MIRRORED_IN_SALES product=%s "
+        "opening_qty=%s opening_value=%s",
+        str(item.get("product_name") or "")[:60],
+        open_qty,
+        open_val,
     )
     return True
 
@@ -6350,6 +6509,14 @@ def _repair_rate_taken_as_opening_qty(item: Dict[str, Any]) -> bool:
     has_rate_header = isinstance(headers, (list, tuple)) and any(
         re.search(r"(?i)\bRATE\b", str(h or "")) for h in headers
     )
+    # Group Wise OpValue/ClValue grids have no RATE column — a large opening
+    # qty with zeroed closing is still opening, not a unit rate.
+    has_opvalue_grid = isinstance(headers, (list, tuple)) and any(
+        re.search(r"(?i)op\s*value|opvalue|cl\s*value|clvalue", str(h or ""))
+        for h in headers
+    )
+    if has_opvalue_grid and not has_rate_header:
+        return False
     max_move = max(abs(rq), abs(sq), abs(cq), 1.0)
     looks_like_rate = (
         _has_paisa(oq)
@@ -6492,6 +6659,93 @@ def _sales_value_slot_blank(item: Dict[str, Any]) -> bool:
         return abs(float(str(raw).replace(",", "").strip())) < 0.001
     except (TypeError, ValueError):
         return True
+
+
+def _sales_value_parked_in_closing_enabled() -> bool:
+    """STOCK_VISION_SALES_VALUE_IN_CLOSING_REPAIR — default ON.
+
+    Group Wise OpValue grids often drop ClValue and leave:
+    sales_value blank, closing_qty=sales money, closing_value=closing qty.
+    Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_VISION_SALES_VALUE_IN_CLOSING_REPAIR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _repair_sales_value_parked_in_closing(item: Dict[str, Any]) -> bool:
+    """Move sales money out of closing_qty when ClValue holds the closing qty.
+
+    Printed: …|Sales Free|Sales Value|Cl.Stock|ClValue. Vision drops ClValue
+    and slides Sales Value into Cl.Stock while Cl qty lands in ClValue.
+    Re-slots printed digits only — never invents closing money.
+    """
+    if not _sales_value_parked_in_closing_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if not _sales_value_slot_blank(item):
+        return False
+    cq = item.get("closing_qty")
+    cv = item.get("closing_value")
+    if not _looks_money(cq):
+        return False
+    if not _looks_small_qty(cv):
+        return False
+    try:
+        opening = float(item.get("opening_qty") or 0)
+        receipt = float(
+            item.get("receipts_qty")
+            if item.get("receipts_qty") is not None
+            else (item.get("purchase_qty") or 0)
+        )
+        sales = float(item.get("sales_qty") or 0)
+        free_out = float(extra.get("free_out_qty") or 0)
+        # Sales Free often holds the real out qty while Sales Qty reads 0.
+        sale_n = sales if abs(sales) > 0.001 else free_out
+        close_n = float(cv)
+        if abs((opening + receipt - sale_n) - close_n) > 0.51:
+            return False
+    except (TypeError, ValueError):
+        return False
+
+    money = float(cq)
+    item["sales_value"] = money
+    item["closing_qty"] = close_n
+    item["closing_value"] = None
+    fs["sales_value"] = "printed"
+    fs["closing_qty"] = "printed"
+    fs["closing_value"] = "missing"
+    # On OpValue grids free_out stays free_out (identity subtracts it).
+    # Elsewhere promote free_out → sales_qty only when sales_qty was blank.
+    if (
+        abs(sales) <= 0.001
+        and abs(free_out) > 0.001
+        and not _headers_look_like_opvalue_grid(item)
+    ):
+        item["sales_qty"] = free_out
+        extra["free_out_qty"] = None
+        fs["sales_qty"] = "printed"
+        fs["free_out_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "SALES_VALUE_PARKED_IN_CLOSING" not in flags:
+        flags.append("SALES_VALUE_PARKED_IN_CLOSING")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE SALES_VALUE_PARKED_IN_CLOSING product=%s "
+        "sales_value=%s closing_qty=%s closing_value=missing",
+        str(item.get("product_name") or "")[:60],
+        money,
+        close_n,
+    )
+    return True
 
 
 def _repair_sales_money_parked_in_qty(item: Dict[str, Any]) -> bool:
@@ -9880,6 +10134,12 @@ def _map_single_table(
             _repair_pur_free_sale_closing_left_shift(item)
             # Sales Qty=0 with the real count under Sales Free (free_out).
             _repair_sales_qty_parked_in_free_out(item)
+            # OpValue no-movement: Op blank, same digits under Sales/Cl.
+            _repair_opvalue_opening_mirrored_in_sales(item)
+            # Drop free_out when it is a duplicate of sales_value money.
+            _repair_clear_money_duplicate_free_out(item)
+            # Group Wise OpValue: Sales Value slid into Cl.Stock, Cl qty in ClValue.
+            _repair_sales_value_parked_in_closing(item)
             # Pair-shift before paisa: blank receipt VALUE must not be cleared
             # as money-in-qty (issue value parked in sales_qty).
             _repair_qty_value_pair_left_shift(item)
@@ -9906,6 +10166,9 @@ def _map_single_table(
             _repair_purchase_sale_stock_left_shift(item, columns)
             # After issue-value shift, a remaining lone money sale → value.
             _repair_sales_money_parked_in_qty(item)
+            _repair_sales_value_parked_in_closing(item)
+            _repair_clear_money_duplicate_free_out(item)
+            _repair_opvalue_opening_mirrored_in_sales(item)
             _repair_closing_money_parked_in_qty(item)
             _repair_closing_qty_parked_in_value(item)
             _repair_closing_pair_interchanged(item)
@@ -11023,6 +11286,10 @@ def _fill_zero_fields_from_reread(
         "closing_value",
         "opening_value",
     )
+    qty_keys = {"opening_qty", "receipts_qty", "sales_qty", "closing_qty"}
+    opvalue_grid = _headers_look_like_opvalue_grid(item) or _headers_look_like_opvalue_grid(
+        candidate
+    )
     for key in top_keys:
         src = candidate.get(key)
         if src is None and key == "opening_value":
@@ -11032,6 +11299,13 @@ def _fill_zero_fields_from_reread(
         except (TypeError, ValueError):
             src_f = None
         if src_f is None or abs(src_f) < 0.001:
+            continue
+        # Never copy rupees into a qty slot (or money into free_out via extra).
+        if key in qty_keys and _looks_money(src_f):
+            continue
+        # OpValue grids keep Sales Free as free_out; do not let a reread
+        # promote that digit into sales_qty (inflates Sales Qty vs footer).
+        if opvalue_grid and key == "sales_qty":
             continue
         dst = item.get(key)
         if key == "opening_value":
@@ -11046,6 +11320,23 @@ def _fill_zero_fields_from_reread(
         if isinstance(fs, dict):
             fs[key] = "printed"
         filled.append(key)
+    # free_out is extra-only; reject money copies from the reread candidate.
+    cand_fo = cand_extra.get("free_out_qty")
+    try:
+        cand_fo_f = float(cand_fo) if cand_fo not in (None, "") else None
+    except (TypeError, ValueError):
+        cand_fo_f = None
+    if (
+        cand_fo_f is not None
+        and abs(cand_fo_f) >= 0.001
+        and _looks_small_qty(cand_fo_f)
+        and not _looks_money(cand_fo_f)
+        and _qty_is_blank_zero(extra.get("free_out_qty"))
+    ):
+        extra["free_out_qty"] = cand_fo_f
+        if isinstance(fs, dict):
+            fs["free_out_qty"] = "printed"
+        filled.append("free_out_qty")
     if not filled:
         return False
     flags = list(extra.get("flags") or [])
@@ -12551,6 +12842,13 @@ def run_vision_table_path(
         _apply_closing_qty_from_header_pass(
             result.get("line_items") or [], _post_cols
         )
+        # OpValue Group Wise: after reread/SSA-adjacent merges, drop sales_value
+        # copies from free_out and restore mirrored opening on no-movement rows.
+        for _it in result.get("line_items") or []:
+            if not isinstance(_it, dict):
+                continue
+            _repair_clear_money_duplicate_free_out(_it)
+            _repair_opvalue_opening_mirrored_in_sales(_it)
 
         products, peeled = _peel_vision_total_named_items(result.get("line_items"))
         result["line_items"] = products
