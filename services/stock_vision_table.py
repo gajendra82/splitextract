@@ -70,6 +70,38 @@ _QTY_VALUE_LAYOUT_FIELDS: Tuple[str, ...] = (
     "closing_value",
 )
 
+# Pack|Rate|Prev*|Opening|Receipt|Sales|Sales RTN|Sale Value|Purchase R|Others|Closing|Cl Value
+# (qty mid-band + sale/closing money — not OpQty|OpVal pairs).
+_OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS: Tuple[str, ...] = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_qty",
+    "sales_return_qty",
+    "sales_value",
+    "purchase_return_qty",
+    "other_outward_qty",
+    "closing_qty",
+    "closing_value",
+)
+
+_OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN: Tuple[str, ...] = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_qty",
+    "sales_value",
+    "purchase_return_qty",
+    "other_outward_qty",
+    "closing_qty",
+    "closing_value",
+)
+
+_OPEN_RCPT_SALE_SVALUE_TRUNC: Tuple[str, ...] = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_qty",
+    "sales_value",
+)
+
 
 def _cell_layout_repair_enabled() -> bool:
     return os.getenv("STOCK_VISION_CELL_LAYOUT_REPAIR", "false").strip().lower() in {
@@ -539,6 +571,209 @@ def _total_qty_between_pairs_index(
     return int(num_idxs[4])
 
 
+def _col_looks_unit_rate(rows: Sequence[Dict[str, Any]], col_idx: int) -> bool:
+    """True when a column is mostly unit rates (decimals in a PTR-like band)."""
+    hits = 0
+    seen = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if col_idx >= len(cells):
+            continue
+        raw = cells[col_idx]
+        if raw is None or str(raw).strip() in {"", "-", "—", "–", "0", "0.0", "0.00"}:
+            continue
+        seen += 1
+        try:
+            v = abs(float(str(raw).replace(",", "")))
+        except (TypeError, ValueError):
+            continue
+        # Unit PTR/PTS style: paisa decimals in a typical rate band.
+        if abs(v - int(v)) > 0.001 and 1.0 <= v < 1000.0:
+            hits += 1
+        elif _looks_money(raw, raw_text=str(raw)) and 1.0 <= v < 1000.0:
+            hits += 1
+    return seen >= 2 and hits >= max(2, int(0.6 * seen))
+
+
+def _strip_trailing_empty_num_idxs(
+    rows: Sequence[Dict[str, Any]],
+    num_idxs: Sequence[int],
+) -> List[int]:
+    """Drop trailing numeric slots that are empty/zero on most product rows.
+
+    Mixed Vision truncations sometimes park a rare Cl Value in the last slot
+    while most rows are blank there — treat that as sparse and strip so
+    Opening|Receipt|Sales|Sale Value can align.
+    """
+    idxs = [int(i) for i in num_idxs]
+    product_rows = sum(
+        1
+        for row in (rows or [])
+        if isinstance(row, dict) and not row.get("is_total_row")
+    )
+    # Small samples: only strip fully empty tails. Larger pages: strip sparse
+    # tails (mixed Vision truncations parking a rare Cl Value in the last slot).
+    if product_rows >= 8:
+        min_fill = max(2, int(0.35 * product_rows))
+    else:
+        min_fill = 1
+    while idxs:
+        nonempty = 0
+        for row in rows or []:
+            if not isinstance(row, dict) or row.get("is_total_row"):
+                continue
+            cells = list(row.get("cells") or [])
+            if idxs[-1] >= len(cells):
+                continue
+            raw = cells[idxs[-1]]
+            if raw is None or str(raw).strip() in {"", "-", "—", "–", "0", "0.0", "0.00"}:
+                continue
+            nonempty += 1
+        if nonempty == 0:
+            idxs = idxs[:-1]
+            continue
+        # At most one sparse trailing Cl Value from mixed truncation.
+        if (
+            product_rows >= 8
+            and nonempty < min_fill
+            and (
+                _layout_numeric_role(rows, idxs[-1]) == "v"
+                or _col_has_sale_or_close_money(rows, idxs[-1])
+            )
+        ):
+            idxs = idxs[:-1]
+        break
+    return idxs
+
+
+def _peel_rate_and_prev_num_idxs(
+    rows: Sequence[Dict[str, Any]],
+    num_idxs: Sequence[int],
+) -> Tuple[List[int], List[int], List[int]]:
+    """Split numeric cols into (rate_idxs, prev/lms_idxs, movement_idxs)."""
+    idxs = _strip_trailing_empty_num_idxs(rows, num_idxs)
+    rate_idxs: List[int] = []
+    prev_idxs: List[int] = []
+    if not idxs:
+        return rate_idxs, prev_idxs, []
+    if _col_looks_unit_rate(rows, idxs[0]):
+        rate_idxs.append(idxs[0])
+        idxs = idxs[1:]
+    targets = {
+        len(_OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS),
+        len(_OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN),
+        len(_OPEN_RCPT_SALE_SVALUE_TRUNC),
+    }
+    # Prev Lz / Prev Sz sit between Rate and Opening (qty-like).
+    peeled = 0
+    while idxs and peeled < 3 and len(idxs) not in targets:
+        smaller = [t for t in targets if t < len(idxs)]
+        if not smaller:
+            break
+        # Before Rate is known, do not peel a money/rate column into Prev.
+        if not rate_idxs and (
+            _layout_numeric_role(rows, idxs[0]) == "v"
+            or _col_looks_unit_rate(rows, idxs[0])
+        ):
+            break
+        # After Rate, mixed pack/no-pack pages put rates in later slots for a
+        # minority of rows — still peel toward Opening|…|Sale Value.
+        prev_idxs.append(idxs[0])
+        idxs = idxs[1:]
+        peeled += 1
+    return rate_idxs, prev_idxs, idxs
+
+
+def _try_open_rcpt_sale_value_close_layout(
+    rows: Sequence[Dict[str, Any]],
+    num_idxs: Sequence[int],
+) -> Optional[Tuple[List[int], List[int], List[int], Tuple[str, ...]]]:
+    """Map Opening|Receipt|Sales|…|Sale Value|…|Closing|Cl Value mid-bands.
+
+    Returns (rate_idxs, prev_idxs, movement_idxs, field_tuple) or None.
+    Does not invent digits.
+    """
+    if not _pack_rate_sale_value_layout_enabled():
+        return None
+    rate_idxs, prev_idxs, movement = _peel_rate_and_prev_num_idxs(rows, num_idxs)
+    if len(movement) < 4:
+        return None
+    # Prefer not to steal classic OpQty|OpVal paired grids.
+    if _num_idxs_look_qty_value_paired(rows, movement):
+        return None
+    n9 = len(_OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS)
+    if len(movement) >= n9:
+        use = list(movement[-n9:])
+        lead = list(movement[:-n9])
+        if not _col_has_closing_money(rows, use[-1]):
+            return None
+        return rate_idxs, prev_idxs + lead, use, _OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS
+    if len(movement) == len(_OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN):
+        if not _col_has_closing_money(rows, movement[-1]):
+            return None
+        return rate_idxs, prev_idxs, list(movement), _OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN
+    if len(movement) == len(_OPEN_RCPT_SALE_SVALUE_TRUNC):
+        # Truncated Vision rows: Opening|Receipt|Sales|Sale Value (last is money).
+        if not _col_has_sale_or_close_money(rows, movement[-1]):
+            return None
+        if _col_looks_unit_rate(rows, movement[0]):
+            return None
+        return rate_idxs, prev_idxs, list(movement), _OPEN_RCPT_SALE_SVALUE_TRUNC
+    return None
+
+
+def _col_has_closing_money(rows: Sequence[Dict[str, Any]], col_idx: int) -> bool:
+    return _col_has_sale_or_close_money(rows, col_idx, min_abs=1.0)
+
+
+def _col_has_sale_or_close_money(
+    rows: Sequence[Dict[str, Any]],
+    col_idx: int,
+    *,
+    min_abs: float = 1.0,
+) -> bool:
+    hits = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if col_idx >= len(cells):
+            continue
+        raw = cells[col_idx]
+        if raw is None or str(raw).strip() in {"", "-", "—", "–", "0", "0.0", "0.00"}:
+            continue
+        if _looks_money(raw, raw_text=str(raw)):
+            hits += 1
+            continue
+        try:
+            v = abs(float(str(raw).replace(",", "")))
+        except (TypeError, ValueError):
+            continue
+        # Whole-rupee sale/closing values (1103, 6382, 7642).
+        if v >= max(min_abs, 100.0) and abs(v - int(v)) <= 0.001:
+            hits += 1
+    return hits >= 1
+
+
+def _pack_rate_sale_value_layout_enabled() -> bool:
+    """STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT — Opening/Receipt/Sale Value grid.
+
+    Default ON. Fixes data-as-header continuation pages where Pack|Rate|Prev*
+    precede Opening and Sale Value / Cl Value sit after Sales (not OpVal pairs).
+    Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _infer_qty_value_canons_from_rows(
     rows: Sequence[Dict[str, Any]],
     column_count: int,
@@ -627,6 +862,16 @@ def _infer_qty_value_canons_from_rows(
     if product_idx + 1 < column_count and maj[product_idx + 1] == "pack":
         canons[product_idx + 1] = "pack"
         num_start = product_idx + 2
+    elif (
+        product_idx + 2 < column_count
+        and maj[product_idx + 1] == "serial_or_small_int"
+        and not _col_looks_unit_rate(rows, product_idx + 1)
+        and _col_looks_unit_rate(rows, product_idx + 2)
+    ):
+        # Bare pack qtys like "60"/"30" classify as small-int; next col is Rate.
+        # Do not treat a Rate-majority column as pack (mixed pack/no-pack pages).
+        canons[product_idx + 1] = "pack"
+        num_start = product_idx + 2
 
     # Collect remaining columns that look numeric (or empty placeholders).
     # Skip Rate/NRV/Age headers so they never become opening_qty.
@@ -665,6 +910,29 @@ def _infer_qty_value_canons_from_rows(
     if total_between is not None:
         canons[total_between] = "total_qty"
         num_idxs = [i for i in num_idxs if i != total_between]
+
+    # Pack|Rate|Prev*|Opening|Receipt|Sales|Sale Value|…|Closing|Cl Value
+    # before classic OpQty|OpVal / ORIC guesses (continuation data-as-headers).
+    sale_value_layout = _try_open_rcpt_sale_value_close_layout(rows, num_idxs)
+    if sale_value_layout is not None:
+        rate_idxs, prev_idxs, move_idxs, fields = sale_value_layout
+        for col_i in rate_idxs:
+            canons[col_i] = "rate"
+        for col_i in prev_idxs:
+            canons[col_i] = "lms"
+        for fi, col_i in enumerate(move_idxs):
+            canons[col_i] = fields[fi]
+        assigned = {c for c in canons if c != "ignore"}
+        if "opening_qty" in assigned and "sales_value" in assigned:
+            logger.info(
+                "VISION_TABLE cell_layout_pack_rate_sale_value "
+                "rate=%s prev=%s move=%s fields=%s",
+                rate_idxs,
+                prev_idxs,
+                [(i, canons[i]) for i in move_idxs],
+                list(fields),
+            )
+            return canons
 
     # Four numeric columns: either qty/value SALE+CLOSING or qty-only ORIC.
     if len(num_idxs) == 4:
@@ -8538,6 +8806,122 @@ def _filter_lstsl_footer_total_rows(
     return kept, money
 
 
+def _money_from_total_raw_cells(
+    printed: Dict[str, Any],
+) -> Dict[str, float]:
+    """Read Sale Value / Cl Value from printed TOTAL raw cells when shifted.
+
+    TOTAL footers often omit Rate, so mapped slots drift. Prefer:
+    - rightmost paisa / large money → closing_value
+    - equal pair ``N, 0, N`` ahead of that → sales_value (=N)
+    Never invents digits — only parses printed cell strings.
+    """
+    if not _pack_rate_sale_value_layout_enabled():
+        return {}
+    extra = printed.get("extra") if isinstance(printed.get("extra"), dict) else {}
+    cells = extra.get("vision_raw_cells") or extra.get("physical_cells")
+    texts: List[str] = []
+    if isinstance(cells, dict):
+        try:
+            keys = sorted(int(k) for k in cells.keys())
+        except (TypeError, ValueError):
+            keys = []
+        texts = [str(cells.get(str(k), cells.get(k)) or "").strip() for k in keys]
+    elif isinstance(cells, (list, tuple)):
+        texts = [str(c or "").strip() for c in cells]
+    if len(texts) < 6:
+        return {}
+
+    def _parse(tok: str) -> Optional[float]:
+        if not tok or tok in {"-", "—", "–"}:
+            return None
+        return parse_number(tok, allow_internal_spaces=True)
+
+    parsed = [_parse(t) for t in texts]
+    found: Dict[str, float] = {}
+    # Rightmost money-with-paisa (or large whole) is Cl Value.
+    for i in range(len(parsed) - 1, 1, -1):
+        v = parsed[i]
+        if v is None:
+            continue
+        tok = texts[i]
+        if re.search(r"\.\d{1,2}\s*$", tok) and abs(float(v)) >= 1.0:
+            found["closing_value"] = float(v)
+            break
+        if abs(float(v)) >= 500.0 and abs(float(v) - int(float(v))) <= 0.001:
+            found["closing_value"] = float(v)
+            break
+    # Sales|Sales RTN|Sale Value often prints as N|0|N before Purchase R.
+    for i in range(1, len(parsed) - 3):
+        a, b, c = parsed[i], parsed[i + 1], parsed[i + 2]
+        if a is None or c is None:
+            continue
+        if abs(float(a) - float(c)) > 0.01:
+            continue
+        if abs(float(a)) < 1.0:
+            continue
+        if b is not None and abs(float(b)) > 0.01:
+            continue
+        # Next cell should look like a distinct money/qty (Purchase R / Others).
+        nxt = parsed[i + 3] if i + 3 < len(parsed) else None
+        if nxt is None:
+            continue
+        found["sales_value"] = float(a)
+        break
+    return found
+
+
+def _promote_printed_total_row_money(
+    totals: Dict[str, Any],
+    totals_rows: Sequence[Dict[str, Any]],
+) -> List[str]:
+    """Copy printed TOTAL-row sales/closing money into top-level totals.
+
+    Only fills null top-level fields from an already-mapped TOTAL row
+    (or from TOTAL raw cells when Rate omission shifted mapped slots).
+    """
+    if not isinstance(totals, dict):
+        return []
+    usable = [
+        t
+        for t in (totals_rows or [])
+        if isinstance(t, dict)
+        and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
+    ]
+    printed = next(
+        (
+            t
+            for t in usable
+            if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
+        ),
+        usable[0] if usable else None,
+    )
+    if not isinstance(printed, dict):
+        return []
+    candidates: Dict[str, float] = {}
+    for key in ("sales_value", "closing_value"):
+        raw = printed.get(key)
+        if raw is None and isinstance(printed.get("extra"), dict):
+            raw = printed["extra"].get(key)
+        try:
+            val = float(raw) if raw is not None else None
+        except (TypeError, ValueError):
+            val = None
+        if val is not None:
+            candidates[key] = val
+    # Prefer raw-cell Sale Value / Cl Value when present (handles Rate-less TOTAL).
+    raw_money = _money_from_total_raw_cells(printed)
+    for key, val in raw_money.items():
+        candidates[key] = val
+    promoted: List[str] = []
+    for key, val in candidates.items():
+        if totals.get(key) is not None:
+            continue
+        totals[key] = val
+        promoted.append(key)
+    return promoted
+
+
 def _compare_line_sums_to_printed_total(
     line_items: Sequence[Dict[str, Any]],
     totals_rows: Sequence[Dict[str, Any]],
@@ -11876,6 +12260,17 @@ def _stamp_vision_result(
             )
         if kept_totals:
             extra["vision_table_total_rows"] = kept_totals
+            # Promote printed TOTAL-row money when top-level totals are still null.
+            # Never invent — only copy values already mapped from the TOTAL row.
+            promoted = _promote_printed_total_row_money(
+                result["totals"], kept_totals
+            )
+            if promoted:
+                extra["printed_total_row_source"] = "vision_table_total_rows"
+                logger.info(
+                    "VISION_TABLE PRINTED_TOTAL_ROW_MONEY keys=%s",
+                    sorted(promoted),
+                )
             try:
                 extra["printed_total_validation"] = _compare_line_sums_to_printed_total(
                     products, kept_totals
