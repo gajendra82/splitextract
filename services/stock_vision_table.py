@@ -9980,8 +9980,6 @@ def _map_single_table(
             column_count,
             peeled_pack=bool(unlabeled_pack) and not use_carry,
         )
-        # Secondaryrate|Opening_bal glue ("176 51 38") before pad/truncate so
-        # Primary does not stay parked under opening_qty.
         cells, column_count = _repair_cells_rate_opening_glue(
             cells, columns, column_count
         )
@@ -10161,10 +10159,7 @@ def _map_single_table(
             _repair_missing_pair_null_shift(item)
             _repair_qty_value_pair_left_shift(item)
             _repair_issue_value_left_shift(item)
-            # Stock and Sale Purchase|Sale|Stock before money-in-qty park —
-            # Closing often holds purchase money while Stock is empty.
             _repair_purchase_sale_stock_left_shift(item, columns)
-            # After issue-value shift, a remaining lone money sale → value.
             _repair_sales_money_parked_in_qty(item)
             _repair_sales_value_parked_in_closing(item)
             _repair_clear_money_duplicate_free_out(item)

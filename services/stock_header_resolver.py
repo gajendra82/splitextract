@@ -42,23 +42,7 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {
-        "op",
-        "in",
-        "out",
-        "sr",
-        "cb",
-        "rec",
-        "sl",
-        "pi",
-        "dn",
-        "cn",
-        "tot",
-        "pq",
-        "sq",
-        "code",
-        "sku",
-    }
+    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "code", "sku", "pq", "sq"}
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -85,7 +69,6 @@ ALIASES: Dict[str, List[str]] = {
         "desc",
         "name",
     ],
-    # Catalogue / SKU code column (never product_name, never a qty).
     "product_code": [
         "code",
         "item code",
@@ -740,22 +723,22 @@ _DIRECT_VALUE_FIELDS = {
     "salesbillamt": "sales_value",
     "op val": "opening_value",
     "opval": "opening_value",
-    "opv": "opening_value",  # OPSTK/OPV and STOCK AND SALES STATEMENT OPV
+    "opv": "opening_value",
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
-    "purcv": "purchase_value",  # PURC/PURCV compact purchase value
+    "purcv": "purchase_value",
     "purc val": "purchase_value",
     "purchase value": "purchase_value",
     "purch bill amt": "purchase_value",
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
-    "salev": "sales_value",  # SALE/SALEV — compact sales value
+    "salev": "sales_value",
     "sale v": "sales_value",
     "issue value": "sales_value",
-    "stockv": "closing_value",  # STOCK/STOCKV — compact closing value
+    "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
 }
@@ -3515,14 +3498,16 @@ def resolve_columns(
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)
+    # Stock and Sale: Closing | Purchase | Sale | Stock → value triad.
+    _promote_trailing_purchase_sale_stock_values(prelim)
+
+    # Name + Product both → product_name: keep Product (SKU), demote Name.
+    _apply_prefer_product_over_name(prelim, errors)
+
     # Sales|Sales|Sales Value → free_out between sales_qty and sales_value.
     _promote_sales_free_before_value(prelim)
     # Op-St.|amount, Receipt|amount, Sale|amount, Cl. Stock|AMOUNT.
     _promote_movement_value_followers(prelim)
-    # Stock and Sale: Closing | Purchase | Sale | Stock → value triad.
-    _promote_trailing_purchase_sale_stock_values(prelim)
-    # Name + Product both → product_name: keep Product (SKU), demote Name.
-    _apply_prefer_product_over_name(prelim, errors)
 
     # Deduplicate canonical fields: keep higher confidence.
     best: Dict[str, int] = {}

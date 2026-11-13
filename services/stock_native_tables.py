@@ -1004,21 +1004,18 @@ def _split_page_product_rows(
                 out.append(row)
         elif has_num and not has_name:
             out.append(row)
-        elif has_num and has_name:
-            # Right halves often print manufacturer/division after qty/value.
-            first = texts[0]
-            if parse_number(first) is not None or re.match(
-                r"^-?\d[\d,]*(?:\.\d+)?\b", first
-            ):
-                out.append(row)
         elif (
             not named
             and has_num
             and _split_right_row_numeric_count(row) >= 4
         ):
-            # Right half often prints Manufacturer/Division on every row, so
-            # alpha text is present but there is still no product_name column.
             out.append(row)
+        elif has_num and has_name:
+            first = texts[0]
+            if parse_number(first) is not None or re.match(
+                r"^-?\d[\d,]*(?:\.\d+)?\b", first
+            ):
+                out.append(row)
     return out
 
 
@@ -1152,8 +1149,6 @@ def _peel_glued_amount_manufacturer(
     trail = dict(token)
     trail["text"] = match.group(2)
     if token.get("x") is not None:
-        # Clustered amount+manufacturer x sits near Manufacturer; pull the
-        # amount left toward STOCKV and keep manufacturer on the right.
         x = float(token["x"])
         amount["x"] = x - 0.15
         trail["x"] = x + 0.02
@@ -1393,9 +1388,6 @@ def _merge_split_row(
             tok["x"] = float(tok["x"]) + 1.0
         for piece in _peel_glued_amount_manufacturer(tok):
             out.append(piece)
-    # Left and right pages both restart col_index at 0; renumber so
-    # assign_cells does not collide product/opening with sales/closing.
-    # Drop x so geometry bands cannot override the renumbered indexes.
     for idx, tok in enumerate(out):
         tok["col_index"] = idx
         tok.pop("x", None)
@@ -1523,16 +1515,18 @@ def _stitch_split_column_pages(
     while index < len(page_results):
         current = page_results[index]
         nxt = page_results[index + 1] if index + 1 < len(page_results) else None
-        pair = _merge_one_split_page_pair(current, nxt) if nxt is not None else None
-        if pair is None and nxt is not None:
-            pair = _try_merge_split_page_pair(current, nxt)
-        if pair is not None:
-            out.append(pair)
+        merged = (
+            _try_merge_split_page_pair(current, nxt) if nxt is not None else None
+        )
+        if merged is None and nxt is not None:
+            merged = _merge_one_split_page_pair(current, nxt)
+        if merged is not None:
+            out.append(merged)
             logger.info(
-                "STOCK_PDF_SPLIT_COLUMN_PAGES mode=pair left=%s right=%s rows=%s",
+                "STOCK_PDF_SPLIT_COLUMN_PAGES left=%s right=%s rows=%s",
                 current.get("page_index"),
                 nxt.get("page_index"),
-                len(pair.get("data_rows") or []),
+                len(merged.get("data_rows") or []),
             )
             index += 2
             continue

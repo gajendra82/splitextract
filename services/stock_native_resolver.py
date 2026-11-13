@@ -2354,7 +2354,7 @@ def _items_from_resolved_word_columns(
 
         if name.startswith("[") or is_software_price_ad_name(name) or re.search(
             r"software by|end of report|stock qt|total amount|total quantity|"
-            r"company\s*total|value\s*->|qnt\s*->|"
+            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->|"
             r"prepared\s+by|computer\s+generated|does\s+not\s+require\s+stamp|"
             r"\bDSTK\b|days\s+stock\s+on|\bCIN\s*No\b|\bPAN\s*No\b|\bGSTIN\b|"
             r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b",
@@ -2362,14 +2362,14 @@ def _items_from_resolved_word_columns(
             re.I,
         ):
             continue
+        # Bare company banner (HIMALAYA / ZEAL) — not "HIMALAYA- 60306 AACTARIL…".
+        if re.match(r"^(?:himalaya|zeal)\s*-?\s*$", name, re.I):
+            continue
         if re.fullmatch(r"[\d][\d,.\s]*", name):
             logger.info("STOCK_PDF_WORDS_AMOUNT_NAME_SKIP name=%s", name[:40])
             continue
         if _is_section_banner_item(item):
             logger.info("STOCK_PDF_WORDS_SECTION_SKIP name=%s", name[:60])
-            continue
-        # Bare company banner (HIMALAYA / ZEAL) — not "HIMALAYA- 60306 AACTARIL…".
-        if re.match(r"^(?:himalaya|zeal)\s*-?\s*$", name, re.I):
             continue
         # Company / division banners have a name but no movement numbers.
         # Keep printed zero-stock SKUs that still have a packing column.
