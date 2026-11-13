@@ -913,7 +913,15 @@ def _fill_printed_report_period_from_ocr(
             text = ""
     if not text.strip():
         return result
-    return _finalize_statement_period_fields(result, content_text=text)
+    result = _finalize_statement_period_fields(result, content_text=text)
+    # Same OCR pass: labeled footer money (Opening/Sales/Closing stock value).
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    if totals.get("sales_value") in (None, "") or totals.get("closing_value") in (
+        None,
+        "",
+    ):
+        result = _apply_labeled_stock_value_footer(result, text)
+    return result
 
 
 def _grouping_stockist_key(stmt: Dict[str, Any]) -> str:
@@ -20978,7 +20986,15 @@ period from "For The Month Of: MonYY" → first/last day of that month (Oct26 �
 or the statement date line.
 Include EVERY product row. Skip TOTAL lines.
 
-Skip TOTAL / Grand Total lines. Skip page chrome and stamps.
+Skip TOTAL / Grand Total product lines. Skip page chrome and stamps.
+
+Stock in Tran / Transit qty|value is NOT total_stock and NOT closing_qty — put
+it in extra.transit only (or omit). Never shift Tran into Op/Sales/Cl.
+
+When the page footer prints labeled money ("Opening stock value", "Purchase
+value", "Sales value", "Closing stock value"), copy those into totals. Do not
+invent per-row sales_value when no SL.VALUE / Sale Val column is printed
+(leave sales_value null/0 for the row).
 
 Return ONLY JSON:
 {
@@ -20988,6 +21004,14 @@ Return ONLY JSON:
   "period_from": "YYYY-MM-DD"|null,
   "period_to": "YYYY-MM-DD"|null,
   "report_title": "STOCK & SALES STATEMENT",
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {
+      "opening_value": number|null,
+      "purchase_value": number|null
+    }
+  },
   "line_items": [
     {
       "product_code": null,
@@ -20998,9 +21022,10 @@ Return ONLY JSON:
       "opening_qty": number,
       "receipts_qty": number,
       "sales_qty": number,
-      "sales_value": number,
+      "sales_value": number|null,
       "closing_qty": number,
-      "closing_value": number
+      "closing_value": number,
+      "extra": {"transit": number|null}
     }
   ]
 }
@@ -21585,6 +21610,85 @@ def _op_stk_recover_lead_from_vision_table_hint(
     return _op_stk_prepend_name_list(result, leads, source="vision_table_fallback")
 
 
+def _parse_labeled_stock_value_footer(text: str) -> Dict[str, float]:
+    """Parse footer labels like 'Sales value: 10033.23' / 'Closing stock value'.
+
+    Returns only values that are printed next to those labels. Never invents.
+    """
+    found: Dict[str, float] = {}
+    if not (text or "").strip():
+        return found
+    blob = str(text).replace("\r", "\n")
+    patterns = (
+        (r"opening\s+stock\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
+        (r"purchase\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "purchase_value"),
+        (r"(?<!previous\s)sales\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "sales_value"),
+        (r"closing\s+stock\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
+        # Shorter labels when "stock" is omitted.
+        (r"opening\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
+        (r"closing\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
+    )
+    for pat, key in patterns:
+        if key in found:
+            continue
+        m = re.search(pat, blob, re.I)
+        if not m:
+            continue
+        parsed = _to_float(m.group(1))
+        if parsed is None:
+            continue
+        found[key] = float(parsed)
+    return found
+
+
+def _apply_labeled_stock_value_footer(
+    result: Dict[str, Any], ocr_text: str = ""
+) -> Dict[str, Any]:
+    """Fill null totals from labeled footer money when printed in OCR/vision text."""
+    if not isinstance(result, dict):
+        return result
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return result
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+    # Prefer OCR; also scan vision-returned totals.extra string blobs if any.
+    blob_parts = [ocr_text or ""]
+    for key in ("ocr_text", "page_text", "footer_text"):
+        val = extra.get(key)
+        if isinstance(val, str) and val.strip():
+            blob_parts.append(val)
+    footer = _parse_labeled_stock_value_footer("\n".join(blob_parts))
+    # Vision may already return totals.sales_value / closing_value / extra money.
+    for src_key, dest in (
+        ("sales_value", "sales_value"),
+        ("closing_value", "closing_value"),
+    ):
+        if totals.get(dest) in (None, "") and footer.get(src_key) is not None:
+            totals[dest] = footer[src_key]
+    for src_key in ("opening_value", "purchase_value"):
+        if extra.get(f"footer_{src_key}") in (None, "") and footer.get(src_key) is not None:
+            extra[f"footer_{src_key}"] = footer[src_key]
+        if extra.get(src_key) in (None, "") and footer.get(src_key) is not None:
+            extra[src_key] = footer[src_key]
+    if footer.get("sales_value") is not None and totals.get("sales_value") in (None, ""):
+        totals["sales_value"] = footer["sales_value"]
+    if footer.get("closing_value") is not None and totals.get("closing_value") in (None, ""):
+        totals["closing_value"] = footer["closing_value"]
+    if footer:
+        extra["total_row_source"] = extra.get("total_row_source") or "labeled_stock_value_footer"
+        logger.info(
+            "LABELED_STOCK_VALUE_FOOTER opening=%s purchase=%s sales=%s closing=%s",
+            footer.get("opening_value"),
+            footer.get("purchase_value"),
+            footer.get("sales_value"),
+            footer.get("closing_value"),
+        )
+    return result
+
+
 def _finalize_op_stk_rcpts_stock_sale(
     result: Dict[str, Any],
     ocr_text: str = "",
@@ -21602,6 +21706,46 @@ def _finalize_op_stk_rcpts_stock_sale(
             re.I,
         ):
             continue
+        # Transit mis-filed as total_stock breaks identity (Op - Tran as base).
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if extra.get("transit") in (None, "") and extra.get("total_stock") not in (
+            None,
+            "",
+        ):
+            # Keep transit aside when present under a transit alias from Vision.
+            pass
+        if isinstance(item.get("extra"), dict):
+            for bad_key in ("total_stock", "total_qty"):
+                # Drop only when Op+Sales≈Cl already and total≠Op+Pur (untrusted).
+                tot = item["extra"].get(bad_key)
+                if tot in (None, ""):
+                    continue
+                try:
+                    tot_f = float(tot)
+                    op = float(item.get("opening_qty") or 0)
+                    pur = float(
+                        item.get("receipts_qty")
+                        if item.get("receipts_qty") is not None
+                        else (item.get("purchase_qty") or 0)
+                    )
+                    sales = float(item.get("sales_qty") or 0)
+                    cl = float(item.get("closing_qty") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if abs((op + pur) - tot_f) <= 1.0:
+                    continue
+                if abs((op + pur - sales) - cl) <= 1.0:
+                    item["extra"].setdefault("transit", tot_f)
+                    item["extra"].pop(bad_key, None)
+                    fs = item["extra"].setdefault("field_source", {})
+                    if isinstance(fs, dict):
+                        fs.pop("total_qty", None)
+                    logger.info(
+                        "OP_STK_DROP_UNTRUSTED_TOTAL product=%s total=%s "
+                        "moved_to_transit=1",
+                        name[:80],
+                        tot_f,
+                    )
         items.append(item)
     result["line_items"] = _drop_trailing_statement_total_item(items)
     result["report_title"] = result.get("report_title") or "STOCK & SALES STATEMENT"
@@ -21613,6 +21757,16 @@ def _finalize_op_stk_rcpts_stock_sale(
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = "op_stk_rcpts_stock_sale_vision"
     result["totals"]["extra"]["layout"] = "op_stk_rcpts_sales_closing"
+    # Vision may already put footer money on totals; OCR labels fill gaps.
+    parsed_totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    vis_extra = parsed_totals.get("extra") if isinstance(parsed_totals.get("extra"), dict) else {}
+    for k in ("opening_value", "purchase_value"):
+        if vis_extra.get(k) not in (None, "") and result["totals"]["extra"].get(k) in (
+            None,
+            "",
+        ):
+            result["totals"]["extra"][k] = vis_extra.get(k)
+    result = _apply_labeled_stock_value_footer(result, ocr_text)
     logger.info(
         "OP_STK_RCPTS_VISION rows=%s stockist=%s company=%s",
         len(result.get("line_items") or []),

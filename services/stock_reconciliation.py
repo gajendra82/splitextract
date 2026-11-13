@@ -126,6 +126,46 @@ def stock_br_trf_adaptive_identity_enabled() -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def stock_recon_trust_total_only_if_op_pur_enabled() -> bool:
+    """Ignore extra.total_stock when it is not Op+Pur(+ret) / Total-In.
+
+    Default ON. Vision sometimes parks Stock-in-Transit qty into total_stock
+    (e.g. 37); using that as the closing base yields expected=-25 and
+    difference=180 while Op/Sales/Cl (217/62/155) are already correct.
+    Does not rewrite printed numbers — only refuses an untrusted base.
+    """
+    value = os.getenv("STOCK_RECON_TRUST_TOTAL_ONLY_IF_OP_PUR", "true")
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _trusted_printed_total(item: Dict[str, Any]) -> Optional[float]:
+    """Printed TOTAL STOCK only when it matches Op+Pur(+returns) or Total-In."""
+    total = _printed_total(item)
+    if total is None:
+        return None
+    if not stock_recon_trust_total_only_if_op_pur_enabled():
+        return total
+    if _header_marks_total_in(item):
+        return total
+    opening = _printed_or_zero(item, "opening_qty")
+    purchase = _printed_or_zero(item, "receipts_qty", "purchase_qty")
+    free_in = _free_in_qty(item)
+    open_pur = opening + purchase + free_in
+    sret = _sales_return_qty(item)
+    tol = _qty_tolerance(total, open_pur, sret)
+    if abs(total - open_pur) <= tol or abs(total - (open_pur + sret)) <= tol:
+        return total
+    logger.info(
+        "STOCK_RECON_IGNORE_UNTRUSTED_TOTAL total=%s open_pur=%s sales_return=%s "
+        "product=%s",
+        total,
+        open_pur,
+        sret,
+        str(item.get("product_name") or "")[:80],
+    )
+    return None
+
+
 def _br_trf_qty(item: Dict[str, Any]) -> float:
     """Printed branch-transfer qty (Br.Trf.), if present."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -275,7 +315,7 @@ def expected_total_qty(item: Dict[str, Any]) -> float:
     purchase = _printed_or_zero(item, "receipts_qty", "purchase_qty")
     free_in = _free_in_qty(item)
     base = opening + purchase + free_in
-    total = _printed_total(item)
+    total = _trusted_printed_total(item)
     sret = _sales_return_qty(item)
     total_in = _header_marks_total_in(item)
     if total is not None and _sales_return_included_in_total(
@@ -306,7 +346,7 @@ def compute_closing_formula(item: Dict[str, Any]) -> Tuple[float, Dict[str, Any]
     others_signed = _others_qty(item)
     free_in = _free_in_qty(item)
     open_pur = opening + purchase + free_in
-    total = _printed_total(item)
+    total = _trusted_printed_total(item)
     sret_present = _sales_return_column_present(item)
     total_in = _header_marks_total_in(item)
 
@@ -550,7 +590,7 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     exp_total = expected_total_qty(item)
     exp_closing, formula = compute_closing_formula(item)
 
-    total_printed = _printed_total(item)
+    total_printed = _trusted_printed_total(item)
     total_ok = True
     if total_printed is not None:
         total_ok = abs(total_printed - exp_total) <= _qty_tolerance(

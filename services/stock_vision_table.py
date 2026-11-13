@@ -8481,10 +8481,10 @@ def _extract_lstsl_footer_money(
     """Pull labeled footer money (Last Month Sales / Open. Value / …) from cells."""
     label_map = (
         (r"last\s*month\s*sales", "last_month_sales_value"),
-        (r"open\.?\s*value|opening\s*value", "opening_value"),
+        (r"open\.?\s*value|opening\s*(?:stock\s*)?value", "opening_value"),
         (r"receipt\s*value", "receipts_value"),
-        (r"sales\s*value", "sales_value"),
-        (r"closing\s*value", "closing_value"),
+        (r"sales\s*(?:stock\s*)?value", "sales_value"),
+        (r"closing\s*(?:stock\s*)?value", "closing_value"),
     )
     found: Dict[str, float] = {}
     money_re = re.compile(r"^[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.\d+)?$|^[0-9]+\.\d+$")
@@ -9094,10 +9094,10 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
     r"(?ix)^\s*(?:"
         r"last\s*month\s*sales?|"
     r"receipt\s*value|"
-    r"sales\s*value|"
-    r"closing\s*value|"
+    r"sales\s*(?:stock\s*)?value|"
+    r"closing\s*(?:stock\s*)?value|"
     r"open\.?\s*value|"
-    r"opening\s*value|"
+    r"opening\s*(?:stock\s*)?value|"
     r"order\s*value"
     r")\b"
 )

@@ -144,6 +144,8 @@ ALIASES: Dict[str, List[str]] = {
         "prev sale",
         "prev sales",
         "prev. sale",
+        "prev sls",
+        "prev. sls",
         "previous sale",
         "previous sales",
         # STOCK & SALES STATEMENT: SALES band subheader LAST (history, not period sales).
@@ -870,6 +872,38 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
                 norm,
             )
             return "non_stock_qty", 0.99, "age_stock_header"
+
+    # Stock in Tran / Transit qty|value — never closing via bare "stock" / "in".
+    # Otherwise "Stock in Tran Value" beats Cl Stk|Value (DUPLICATE_CANONICAL)
+    # and transit qty spills into the identity (e.g. Op 217 vs Tran 37 → diff 180).
+    _tran_tokens = set(_tokens(norm))
+    if (
+        "transit" in compact_early
+        or compact_early
+        in {
+            "tran",
+            "tranqty",
+            "tranq",
+            "tranval",
+            "tranvalue",
+            "stockintran",
+            "stockintranqty",
+            "stockintranvalue",
+            "stockintransit",
+            "stockintransitqty",
+            "stockintransitvalue",
+        }
+        or (
+            "tran" in _tran_tokens
+            and _tran_tokens
+            & {"stock", "stk", "qty", "quantity", "qnty", "value", "val", "in"}
+        )
+    ):
+        logger.info(
+            "STOCK_HEADER_IGNORE_TRANSIT ignored header text=%r",
+            norm,
+        )
+        return "non_stock_qty", 0.99, "stock_in_transit"
 
     # Vision sometimes glues Sales+Close into one header; keep sales_qty and
     # recover Close from the following Order column in the Vision table path.

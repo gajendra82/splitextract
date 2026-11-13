@@ -51,14 +51,19 @@ Example mapping when those headers are visible:
 - SALE / Sale -> sales_qty
 - SALE VAL -> sales_value
 - Total -> extra.total_stock (NOT closing_qty)
+- Stock in Tran / Transit / Tran Qty / Tran Value -> extra.transit / ignore
+  (NEVER total_stock, NEVER closing_qty, NEVER sales_qty)
 - SaleRet / Sale Ret / S.RETURN -> extra.sale_return (NOT sales_qty)
 - P.RETURN -> purchase_return_qty (NOT sales_qty)
-- Exp/Dmg -> expiry_damage_qty / extra.exp_damage
-- ClosStock / Closing Stock / Closing -> closing_qty
-- Clos.Amt / Cls Amt / Closing Amount -> closing_value
-- IN/OTSTOCK or N/O/STOCK or STOCK (stock-on-hand after SALE VAL) -> closing_qty
+- Exp/Dmg / Expired Stock -> expiry_damage_qty / extra.exp_damage
+- ClosStock / Closing Stock / Closing / Cl Stk -> closing_qty
+- Clos.Amt / Cls Amt / Closing Amount / Value beside Cl Stk -> closing_value
+- IN/OTSTOCK or N/O/STOCK or bare STOCK (stock-on-hand after SALE VAL) -> closing_qty
 - STK VAL -> closing_value
 - EXP3M -> expiry_damage_qty
+- Footer labels "Opening stock value" / "Sales value" / "Closing stock value"
+  -> totals.extra.opening_value / totals.sales_value / totals.closing_value
+  (not line-item fields; do not invent per-row sales_value when no SL.VALUE column)
 - PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|FREE|S.RETURN|FREE|OTHERS|CLOSING:
   PACK (60, 30ML, 60 TAB) is packing, never opening_qty. Keep one cell per FREE
   even when it is a dash so SALE/CLOSING do not shift. Period "01-Apr-26 To
@@ -717,6 +722,51 @@ def normalize_stock_gemini_extraction(
     result["totals"]["extra"]["detected_columns"] = columns
     result["totals"]["extra"]["extraction_method"] = "stock_image_gemini"
     result["totals"]["extra"]["layout"] = "stock_image_gemini"
+    # Drop transit mis-filed as total_stock when Op/Sales/Cl already balance.
+    for item in result["line_items"]:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else None
+        if not extra or extra.get("total_stock") in (None, ""):
+            continue
+        try:
+            tot_f = float(extra.get("total_stock"))
+            op = float(item.get("opening_qty") or 0)
+            pur = float(
+                item.get("receipts_qty")
+                if item.get("receipts_qty") is not None
+                else (item.get("purchase_qty") or 0)
+            )
+            sales = float(item.get("sales_qty") or 0)
+            cl = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        if abs((op + pur) - tot_f) <= 1.0:
+            continue
+        if abs((op + pur - sales) - cl) <= 1.0:
+            extra.setdefault("transit", tot_f)
+            extra.pop("total_stock", None)
+            logger.info(
+                "STOCK_IMAGE_DROP_UNTRUSTED_TOTAL product=%s total=%s",
+                str(item.get("product_name") or "")[:80],
+                tot_f,
+            )
+    # Vision totals from footer labels when present on the raw response.
+    raw_totals = raw.get("totals") if isinstance(raw.get("totals"), dict) else {}
+    if raw_totals:
+        if result["totals"].get("sales_value") in (None, "") and raw_totals.get(
+            "sales_value"
+        ) not in (None, ""):
+            result["totals"]["sales_value"] = raw_totals.get("sales_value")
+        if result["totals"].get("closing_value") in (None, "") and raw_totals.get(
+            "closing_value"
+        ) not in (None, ""):
+            result["totals"]["closing_value"] = raw_totals.get("closing_value")
+        raw_extra = raw_totals.get("extra") if isinstance(raw_totals.get("extra"), dict) else {}
+        for k in ("opening_value", "purchase_value"):
+            if raw_extra.get(k) not in (None, "") and result["totals"]["extra"].get(k) in (
+                None,
+                "",
+            ):
+                result["totals"]["extra"][k] = raw_extra.get(k)
     return result
 
 
