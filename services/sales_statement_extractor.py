@@ -13151,6 +13151,44 @@ def _xls_stock_column_as_closing_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _xls_totalstock_as_closing_enabled() -> bool:
+    """When no Closing column, TotalStock / StockValueatCostPrice → closing.
+
+    Default ON. Layouts that already print Closing / Cl.Stk keep those.
+    """
+    return os.getenv(
+        "STOCK_XLS_TOTALSTOCK_AS_CLOSING", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _xls_promote_totalstock_as_closing(colmap: Dict[str, int]) -> Dict[str, int]:
+    """Use TotalStock as bal only when a dedicated closing qty column is absent."""
+    if not colmap or not _xls_totalstock_as_closing_enabled():
+        return colmap
+    out = dict(colmap)
+    if "bal" not in out and "totalstock" in out:
+        out["bal"] = out["totalstock"]
+        logger.info(
+            "STOCK_XLS_TOTALSTOCK_AS_CLOSING bal_from=totalstock col=%s",
+            out["bal"],
+        )
+    if "bval" not in out:
+        for key in (
+            "stockvalueatcostprice",
+            "stockvalueatpurchaseprice",
+            "stockvalueatpurchase",
+        ):
+            if key in out:
+                out["bval"] = out[key]
+                logger.info(
+                    "STOCK_XLS_TOTALSTOCK_AS_CLOSING bval_from=%s col=%s",
+                    key,
+                    out["bval"],
+                )
+                break
+    return out
+
+
 def _xls_unlabeled_pack_peel_enabled() -> bool:
     """Peel a pack token parked in the first qty column when PACK is not a header.
 
@@ -17003,6 +17041,7 @@ def _xls_fill_from_rows(
 
     # Score title/blank rows away; do not assume row 1 is the header.
     header_idx, colmap, header_score = _xls_best_header(rows)
+    colmap = _xls_promote_totalstock_as_closing(colmap)
     # Himalaya ZL dump: Opening_bal_qty / Primary_qty / Closing_bal_qty / Secondaryrate.
     # No sales or amount column. Flag only this header so other layouts stay unchanged.
     zl_bal_layout = False
