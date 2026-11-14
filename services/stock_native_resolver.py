@@ -872,7 +872,8 @@ _TOTAL_LABEL = re.compile(
     r"(?i)^(qty|amount|amt)\s+(grand\s+)?total\b"
 )
 _SKIP_CONTINUATION = re.compile(
-    r"(?i)^(for\b|authorised\b|authorized\b|page\b|\d+\s*/\s*\d+$)"
+    r"(?i)^(for\b|authorised\b|authorized\b|page\b|\d+\s*/\s*\d+$|"
+    r"[\*\-#\s]*near\s+expiry|[\*\-#\s]*scheme\s+on\s+product)"
 )
 
 
@@ -2180,12 +2181,87 @@ _LABELED_VALUE_FOOTERS = (
     (re.compile(r"(?i)^sale\s+value$"), "sales_value"),
     (re.compile(r"(?i)^closing\s+stock\s+value$"), "closing_value"),
 )
+# LstSL / Open / Recd sheets print "Last Month Sales / Open. Value / …" footers.
+# Same labels as vision `_LSTSL_FOOTER_LABEL_NAME`; never product rows.
+# Printed lines often carry two labels (Last Month Sales + Open. Value) or
+# Closing Value plus Order/Pend chrome — peel every label+amount pair.
+_LSTSL_LABELED_VALUE_FOOTERS = (
+    (re.compile(r"(?i)^last\s*month\s*sales?$"), "last_month_sales_value"),
+    (re.compile(r"(?i)^open\.?\s*value$"), "opening_value"),
+    (re.compile(r"(?i)^opening\s*(?:stock\s*)?value$"), "opening_value"),
+    (re.compile(r"(?i)^receipt\s*value$"), "receipts_value"),
+    (re.compile(r"(?i)^sales?\s*(?:stock\s*)?value$"), "sales_value"),
+    (re.compile(r"(?i)^closing\s*(?:stock\s*)?value$"), "closing_value"),
+)
 _SKIP_VALUE_FOOTER_RE = re.compile(
     r"(?i)^(?:\((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\)\s+)?"
     r"(?:open(?:ing)?\s+stock\s+value|purchase\s+value|sale\s+value|"
     r"closing\s+stock\s+value|sale\s+return\s+value|"
     r"purchase\s+return\s+value|st\s+value)$"
 )
+# Prefix match (vision-style): "Closing Value * - Near Expiry" is still a footer.
+_SKIP_LSTSL_VALUE_FOOTER_RE = re.compile(
+    r"(?i)^(?:last\s*month\s*sales?|open\.?\s*value|"
+    r"opening\s*(?:stock\s*)?value|receipt\s*value|"
+    r"sales?\s*(?:stock\s*)?value|closing\s*(?:stock\s*)?value|"
+    r"order\s*value)\b"
+)
+_LSTSL_FOOTER_PAIR_RE = re.compile(
+    r"(?ix)"
+    r"(last\s*month\s*sales?|open\.?\s*value|opening\s*(?:stock\s*)?value|"
+    r"receipt\s*value|sales?\s*(?:stock\s*)?value|closing\s*(?:stock\s*)?value|"
+    r"order\s*value|pend\.?\s*value)"
+    r"\s*"
+    r"([+-]?[0-9][0-9,]*(?:\.\d+)?)"
+)
+_LSTSL_FOOTER_IGNORE_KEYS = frozenset({"order_value", "pend_value"})
+
+
+def _pdf_words_lstsl_value_footers_enabled() -> bool:
+    """STOCK_PDF_WORDS_LSTSL_VALUE_FOOTERS — peel LstSL money footers.
+
+    Default ON. Kill switch STOCK_PDF_WORDS_LSTSL_VALUE_FOOTERS=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_LSTSL_VALUE_FOOTERS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_labeled_value_footer_name(name: Any) -> bool:
+    """True for printed Sale/Closing/Open value footer labels (not SKUs)."""
+    label = re.sub(r"\s+", " ", str(name or "")).strip()
+    if not label:
+        return False
+    if _SKIP_VALUE_FOOTER_RE.match(label):
+        return True
+    return bool(
+        _pdf_words_lstsl_value_footers_enabled()
+        and _SKIP_LSTSL_VALUE_FOOTER_RE.match(label)
+    )
+
+
+def _labeled_value_footer_patterns() -> Tuple[
+    Tuple[re.Pattern[str], str], ...
+]:
+    patterns = list(_LABELED_VALUE_FOOTERS)
+    if _pdf_words_lstsl_value_footers_enabled():
+        patterns.extend(_LSTSL_LABELED_VALUE_FOOTERS)
+    return tuple(patterns)
+
+
+def _footer_label_to_key(label: str) -> Optional[str]:
+    """Map a printed footer label to totals key; Order/Pend are ignore-only."""
+    cleaned = re.sub(r"\s+", " ", str(label or "")).strip()
+    if not cleaned:
+        return None
+    if re.fullmatch(r"(?i)order\s*value", cleaned):
+        return "order_value"
+    if re.fullmatch(r"(?i)pend\.?\s*value", cleaned):
+        return "pend_value"
+    for pattern, key in _labeled_value_footer_patterns():
+        if pattern.match(cleaned):
+            return key
+    return None
 
 
 def _row_value_footer_parts(
@@ -2217,23 +2293,84 @@ def _row_value_footer_parts(
     return label, number
 
 
+def _extract_labeled_value_footer_pairs(
+    tokens: List[Dict[str, Any]],
+) -> Tuple[bool, Dict[str, float]]:
+    """Peel one or more label+amount pairs from an LstSL money footer row.
+
+    Returns (is_footer_row, totals_fragment). Dual-label lines and Closing Value
+    rows that also print Order/Pend chrome are dropped when only footer chrome
+    remains after the pairs.
+    """
+    from services.stock_header_resolver import parse_number
+
+    if not _pdf_words_lstsl_value_footers_enabled():
+        return False, {}
+    parts: List[str] = []
+    for tok in tokens or []:
+        if not isinstance(tok, dict):
+            continue
+        text = str(tok.get("text") or "").strip()
+        if text:
+            parts.append(text)
+    if not parts:
+        return False, {}
+    blob = re.sub(r"\s+", " ", " ".join(parts)).strip()
+    matches = list(_LSTSL_FOOTER_PAIR_RE.finditer(blob))
+    if not matches:
+        return False, {}
+    found: Dict[str, float] = {}
+    saw_footer = False
+    for match in matches:
+        key = _footer_label_to_key(match.group(1))
+        amount = parse_number(match.group(2))
+        if key is None or amount is None:
+            continue
+        saw_footer = True
+        if key in _LSTSL_FOOTER_IGNORE_KEYS:
+            continue
+        found[key] = float(amount)
+    if not saw_footer:
+        return False, {}
+    residual = _LSTSL_FOOTER_PAIR_RE.sub(" ", blob)
+    residual = re.sub(r"[\[\]()|:]", " ", residual)
+    residual = re.sub(
+        r"(?i)\b(?:order|pend|value|sales|month|last|open|opening|"
+        r"receipt|closing)\b",
+        " ",
+        residual,
+    )
+    residual = re.sub(r"[0-9,.\+\-]+", " ", residual)
+    residual = re.sub(r"\s+", " ", residual).strip()
+    if residual:
+        return False, {}
+    return True, found
+
+
 def _split_labeled_value_footers(
     page_results: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], Dict[str, float]]:
     """Drop printed Sale/Closing/Open value rows and keep their amounts."""
     totals: Dict[str, float] = {}
     cleaned: List[Dict[str, Any]] = []
+    patterns = _labeled_value_footer_patterns()
     for page in page_results or []:
         kept: List[List[Dict[str, Any]]] = []
         for row in page.get("data_rows") or []:
+            is_multi, multi_totals = _extract_labeled_value_footer_pairs(row)
+            if is_multi:
+                for key, number in multi_totals.items():
+                    totals[key] = float(number)
+                    logger.info(
+                        "STOCK_PDF_WORDS_VALUE_FOOTER field=%s value=%s",
+                        key,
+                        number,
+                    )
+                continue
             label, number = _row_value_footer_parts(row)
-            if (
-                label
-                and number is not None
-                and _SKIP_VALUE_FOOTER_RE.match(label)
-            ):
+            if label and number is not None and _is_labeled_value_footer_name(label):
                 stored = False
-                for pattern, key in _LABELED_VALUE_FOOTERS:
+                for pattern, key in patterns:
                     if pattern.match(label):
                         totals[key] = float(number)
                         logger.info(
@@ -2348,7 +2485,16 @@ def _items_from_resolved_word_columns(
                 "STOCK_PDF_WORDS_DIVISION_COMPANY company=%s", division
             )
             continue
-        if _SKIP_VALUE_FOOTER_RE.match(name):
+        if _is_labeled_value_footer_name(name):
+            logger.info(
+                "STOCK_PDF_WORDS_VALUE_FOOTER product_skip name=%s", name[:60]
+            )
+            continue
+        if re.match(
+            r"(?i)^[\*\-#\s]*(?:near\s+expiry|scheme\s+on\s+product)\b",
+            name,
+        ):
+            logger.info("STOCK_PDF_WORDS_LEGEND_SKIP name=%s", name[:60])
             continue
         from services.stock_native_tables import is_software_price_ad_name
 
@@ -2713,6 +2859,16 @@ def parse_pdf_free_column_statement(
     )
     if title_co:
         result["company_name"] = re.sub(r"\s+", " ", title_co.group(1)).strip()
+    # LstSL Stock & Sales Report: "... for : THE HIMALAYA DRUG CO. (DIV.: ZEAL)"
+    for_company = re.search(
+        r"\bfor\s*:\s*(.+?)(?:\s{2,}Page|\s+Page\s*:|$)",
+        peek,
+        re.I,
+    )
+    if for_company:
+        result["company_name"] = re.sub(
+            r"\s+", " ", for_company.group(1)
+        ).strip(" -")
     if parsed.get("prefer_letterhead_stockist") and not result.get("stockist_name"):
         for line in peek.splitlines():
             stripped = line.strip()
@@ -2790,6 +2946,24 @@ def parse_pdf_free_column_statement(
             result["period_to"] = _iso_compact(
                 compact.group(4), compact.group(5), compact.group(6)
             )
+    if not result.get("period_from"):
+        month_banner = re.search(
+            r"for\s+the\s+month\s+([A-Za-z]+)[\s\-/]+(\d{4})",
+            peek,
+            re.I,
+        )
+        if month_banner:
+            try:
+                from services.sales_statement_extractor import _month_period
+
+                pf, pt = _month_period(
+                    month_banner.group(1).strip(), int(month_banner.group(2))
+                )
+                if pf and pt:
+                    result["period_from"] = pf
+                    result["period_to"] = pt
+            except Exception:
+                pass
     if parsed.get("company_name"):
         result["company_name"] = parsed["company_name"]
         logger.info(
@@ -2831,9 +3005,18 @@ def parse_pdf_free_column_statement(
             "closing_qty",
             "opening_value",
             "receipts_value",
+            "last_month_sales_value",
         ):
             if footer.get(key) is not None:
-                result["totals"][key] = footer[key]
+                if key in {
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                    "opening_value",
+                    "receipts_value",
+                }:
+                    result["totals"][key] = footer[key]
                 extra[key] = footer[key]
         if footer.get("sales_value") is not None:
             result["totals"]["sales_value"] = footer["sales_value"]

@@ -27960,6 +27960,55 @@ def _try_saleable_stock_report_image(
     return None
 
 
+def _lstsl_image_upscale_enabled() -> bool:
+    """STOCK_LSTSL_IMAGE_UPSCALE — 2x contrast OCR for dense LstSL photo grids.
+
+    Default ON: phone photos of LstSL/Open/Recd/Sales/Close + Stk.Value drop
+    whole product rows at native resolution; upscale keeps printed digits.
+    """
+    return os.getenv("STOCK_LSTSL_IMAGE_UPSCALE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _lstsl_upscaled_ocr_text(file_bytes: bytes) -> str:
+    """2x contrast OCR of the statement body (counts as one Tesseract call)."""
+    try:
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+    except ImportError:
+        return ""
+    from services.stock_ocr_policy import stock_ocr_context
+
+    try:
+        image = Image.open(io.BytesIO(file_bytes))
+        try:
+            oriented = ImageOps.exif_transpose(image)
+            if oriented is not None:
+                image = oriented
+        except Exception:
+            pass
+        image = image.convert("L")
+        w, h = image.size
+        # Keep letterhead through Closing Value; drop pager chrome.
+        top = int(h * 0.08)
+        bottom = max(top + 1, int(h * 0.88))
+        body = image.crop((0, top, w, bottom))
+        big = body.resize(
+            (max(1, body.width * 2), max(1, body.height * 2)),
+            Image.Resampling.LANCZOS,
+        )
+        big = ImageEnhance.Contrast(big).enhance(1.6).filter(ImageFilter.SHARPEN)
+        pytesseract = _a2z_tesseract()
+        with stock_ocr_context(region="page", page="1", scope="page"):
+            return pytesseract.image_to_string(big, config="--psm 6") or ""
+    except Exception as exc:
+        logger.info("STOCK_LSTSL_IMAGE_UPSCALE failed: %s", type(exc).__name__)
+        return ""
+
+
 def _try_lstsl_open_recd_image(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -27968,19 +28017,46 @@ def _try_lstsl_open_recd_image(
     Terminal-style printouts (e.g. GUNWANT MEDICALS SEPTEMBER report) include a
     LstMove date + Stk.Value tail that generic vision parsers misread.
     """
-    # psm 4 (single column of text) handles the fixed-width terminal grid best;
-    # psm 6 is a cheap second pass only if the header isn't detected.
+    # Budget: at most 2 Tesseract calls. Peek at native psm6; if LstSL chrome is
+    # present, spend the second call on 2x upscale (recovers dropped product rows).
+    # If peek misses the chrome, keep the older psm4 pass so terminal printouts
+    # still route here.
     texts: List[str] = []
-    for psm, enhance in ((4, True), (6, False)):
-        try:
-            t = _ocr_image_to_text(file_bytes, psm=psm, enhance=enhance) or ""
-        except Exception:
-            t = ""
-        if not t.strip():
-            continue
-        texts.append(t)
-        if re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", t, re.I):
-            break
+    try:
+        peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+    except Exception:
+        peek = ""
+    if peek.strip():
+        texts.append(peek)
+    peek_has_lstsl = bool(
+        peek
+        and re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", peek, re.I)
+    )
+    if _lstsl_image_upscale_enabled() and peek_has_lstsl:
+        up = _lstsl_upscaled_ocr_text(file_bytes)
+        if up.strip():
+            texts.append(up)
+            logger.info(
+                "STOCK_LSTSL_IMAGE_UPSCALE file=%s chars=%s",
+                filename,
+                len(up),
+            )
+    elif not peek_has_lstsl:
+        # Second call (or both if peek empty): psm4 then optional psm6.
+        attempts = ((4, True), (6, False)) if not peek.strip() else ((4, True),)
+        for psm, enhance in attempts:
+            try:
+                t = _ocr_image_to_text(file_bytes, psm=psm, enhance=enhance) or ""
+            except Exception:
+                t = ""
+            if not t.strip():
+                continue
+            texts.append(t)
+            if re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", t, re.I):
+                break
+
+    best: Optional[Dict[str, Any]] = None
+    best_n = 0
     for text in texts:
         if not re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", text, re.I):
             continue
@@ -28000,18 +28076,22 @@ def _try_lstsl_open_recd_image(
         )
         if len(items) < 5 or not nonzero:
             continue
-        extra = parsed.setdefault("totals", {}).setdefault("extra", {})
-        extra["extraction_method"] = "lstsl_open_recd_image"
-        extra["lstsl_image_ocr"] = True
-        extra["vision_table_final"] = True
-        extra["stock_vision_locked"] = True
-        logger.info(
-            "lstsl_open_recd_image file=%s rows=%s",
-            filename,
-            len(items),
-        )
-        return parsed
-    return None
+        if len(items) > best_n:
+            best = parsed
+            best_n = len(items)
+    if not best:
+        return None
+    extra = best.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "lstsl_open_recd_image"
+    extra["lstsl_image_ocr"] = True
+    extra["vision_table_final"] = True
+    extra["stock_vision_locked"] = True
+    logger.info(
+        "lstsl_open_recd_image file=%s rows=%s",
+        filename,
+        best_n,
+    )
+    return best
 
 
 _ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
@@ -43209,17 +43289,50 @@ def _lstsl_expand_ocr_token(tok: str) -> List[str]:
         .replace("−", "-")
         .replace("~", "-")
     )
+    # Phone OCR prefixes digits/packs with « » “ ” / ASCII << >> junk.
+    t = re.sub(r"^[\u00ab\u00bb\u201c\u201d\u2018\u2019=<>_]+", "", t)
+    if not t:
+        return []
     if t in {"=", "_"}:
         return ["-"]
     # 27,031 is 27 and 31 (leading zero), not 27 thousand.
     m = re.fullmatch(r"(\d{1,3}),0(\d{1,2})", t)
     if m:
         return [m.group(1), str(int(m.group(2), 10))]
+    # 22,78 / 22,87: LstSL glued to Open (both small qty cells).
+    m = re.fullmatch(r"(\d{1,3}),(\d{1,3})", t)
+    if m:
+        return [m.group(1), m.group(2)]
+    # 74.5450: Open.Recd glued with a stray decimal (74 / 54 / 50).
+    m = re.fullmatch(r"(\d{1,3})\.(\d{2})(\d{2})", t)
+    if m:
+        return [m.group(1), m.group(2), str(int(m.group(3), 10))]
     # 40-20 / 117-86: Close glued to Order.
     m = re.fullmatch(r"(\d+)-(\d+)", t)
     if m:
         return [m.group(1), "-" + m.group(2)]
     return [t]
+
+
+def _lstsl_clean_packing(packing: Optional[str]) -> Optional[str]:
+    """Strip OCR dash/junk glued onto pack tokens (e.g. em-dash + 1JAR → 1JAR)."""
+    p = str(packing or "").strip()
+    if not p:
+        return packing
+    p = (
+        p.replace("\ufffd", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("−", "-")
+        .replace("~", "-")
+    )
+    p = re.sub(r"^[\u00ab\u00bb\u201c\u201d\u2018\u2019=<>_]+", "", p)
+    # Leading minus is almost never printed on Pack; Order "-" lands here in OCR.
+    if re.match(r"^-+(?=\d)", p) and re.search(
+        r"\d|JAR|ML|GM|TAB|CAP|T\b|M\b|'S|X", p, re.I
+    ):
+        p = p.lstrip("-")
+    return p or packing
 
 
 def _lstsl_qty_identity_ok(tokens: List[str]) -> bool:
@@ -43958,6 +44071,7 @@ def _parse_lstsl_open_recd_statement(
         else:
             packing = left[-1]
             name = " ".join(left[:-1])
+        packing = _lstsl_clean_packing(packing)
         name = _clean_name(name)
         name = re.sub(r"[\s\-]+$", "", name).strip()
         if not name or re.search(
