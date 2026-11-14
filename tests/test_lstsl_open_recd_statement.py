@@ -8,9 +8,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from services.sales_statement_extractor import (
+    _extract_lstsl_open_recd_vision,
+    _finalize_lstsl_open_recd_vision,
     _lstsl_clean_packing,
+    _op_stk_lms1_identity_fail_rate,
     _parse_lstsl_open_recd_statement,
+    _sanitize_compute_totals,
     _try_lstsl_open_recd_image,
+    empty_result,
     extract_sales_statement,
 )
 
@@ -386,6 +391,198 @@ Closing Value 1.00
         self.assertEqual(len(result["line_items"]), 5)
         self.assertEqual(
             result["totals"]["extra"]["extraction_method"], "lstsl_open_recd_image"
+        )
+
+    def test_lstsl_vision_locks_open_recd_not_order_as_close(self):
+        """Op_Stk-style shift (Recd→Open, Order→Close) must not survive finalize."""
+        parsed = {
+            "stockist_name": "SANJIVAN MEDICO TRADERS, CHANDRAPUR",
+            "company_name": "THE HIMALAYA DRUG CO. (DIV. HIMALAYA WELLNESS (OTX))",
+            "totals": {
+                "sales_value": 58507.22,
+                "closing_value": 73064.80,
+                "extra": {
+                    "opening_value": 94002.34,
+                    "receipts_value": 37607.76,
+                    "last_month_sales_value": 65166.80,
+                },
+            },
+            "line_items": [
+                {
+                    "product_name": "GOKSHURA TAB",
+                    "packing": "1*60'S",
+                    "opening_qty": 5,
+                    "receipts_qty": 60,
+                    "sales_qty": 13,
+                    "sales_value": 0,
+                    "closing_qty": 52,
+                    "closing_value": 10895.04,
+                    "extra": {"last_sales_qty": 7},
+                },
+                {
+                    "product_name": "RUMALAYA GEL-30GM",
+                    "packing": "1*30GM",
+                    "opening_qty": 87,
+                    "receipts_qty": 0,
+                    "sales_qty": 11,
+                    "sales_value": 0,
+                    "closing_qty": 76,
+                    "closing_value": 8092.44,
+                    "extra": {"last_sales_qty": 22},
+                },
+                {
+                    "product_name": "RUMALAYA LINIMENT",
+                    "packing": "1*60ML",
+                    "opening_qty": 54,
+                    "receipts_qty": 50,
+                    "sales_qty": 56,
+                    "sales_value": 0,
+                    "closing_qty": 48,
+                    "closing_value": 6144.00,
+                    "extra": {"last_sales_qty": 74},
+                },
+                {
+                    "product_name": "RUMALAYA TAB.",
+                    "packing": "1*60T",
+                    "opening_qty": 44,
+                    "receipts_qty": 0,
+                    "sales_qty": 2,
+                    "sales_value": 0,
+                    "closing_qty": 42,
+                    "closing_value": 6272.28,
+                    "extra": {"last_sales_qty": 2},
+                },
+                {
+                    "product_name": "TENTEX ROYAL CAP",
+                    "packing": "1*10T",
+                    "opening_qty": 83,
+                    "receipts_qty": 0,
+                    "sales_qty": 37,
+                    "sales_value": 0,
+                    "closing_qty": 46,
+                    "closing_value": 9848.60,
+                    "extra": {"last_sales_qty": 28},
+                },
+            ],
+        }
+        result = empty_result("1000570765.jpg", "jpg")
+        from services.sales_statement_extractor import _apply_parsed_sales_json
+
+        result = _apply_parsed_sales_json(result, parsed)
+        result = _finalize_lstsl_open_recd_vision(result, parsed)
+        result = _sanitize_compute_totals(result)
+        rows = {i["product_name"]: i for i in result["line_items"]}
+        self.assertEqual(rows["GOKSHURA TAB"]["opening_qty"], 5.0)
+        self.assertEqual(rows["GOKSHURA TAB"]["receipts_qty"], 60.0)
+        self.assertEqual(rows["GOKSHURA TAB"]["sales_qty"], 13.0)
+        self.assertEqual(rows["GOKSHURA TAB"]["closing_qty"], 52.0)
+        self.assertGreater(rows["GOKSHURA TAB"]["closing_qty"], 0)
+        self.assertEqual(rows["RUMALAYA GEL-30GM"]["closing_qty"], 76.0)
+        self.assertEqual(result["totals"]["sales_value"], 58507.22)
+        self.assertEqual(result["totals"]["closing_value"], 73064.80)
+        self.assertEqual(
+            result["totals"]["extra"]["extraction_method"], "lstsl_open_recd_vision"
+        )
+        self.assertEqual(
+            result["totals"]["extra"]["total_row_source"], "lstsl_open_recd_footer"
+        )
+        self.assertLessEqual(_op_stk_lms1_identity_fail_rate(result), 0.01)
+        # Qty-only line sales_value must not null out printed footer Sales Value.
+        overrides = result["totals"]["extra"].get("sanitize_top_level_overrides") or []
+        self.assertFalse(
+            any(
+                o.get("field") == "sales_value"
+                and o.get("reason") == "implausible_or_concatenated_sales_total"
+                for o in overrides
+                if isinstance(o, dict)
+            )
+        )
+
+    def test_lstsl_vision_extract_uses_locked_prompt(self):
+        fake_json = {
+            "stockist_name": "SANJIVAN MEDICO TRADERS",
+            "totals": {"sales_value": 58507.22, "closing_value": 73064.80, "extra": {}},
+            "line_items": [
+                {
+                    "product_name": "ASHVAGANDHA TABLET",
+                    "packing": "1*60T",
+                    "opening_qty": 30,
+                    "receipts_qty": 60,
+                    "sales_qty": 45,
+                    "closing_qty": 45,
+                    "closing_value": 8914.50,
+                    "extra": {"last_sales_qty": 41},
+                },
+                {
+                    "product_name": "GASEX SYRUP",
+                    "packing": "1*200M",
+                    "opening_qty": 29,
+                    "receipts_qty": 0,
+                    "sales_qty": 20,
+                    "closing_qty": 9,
+                    "closing_value": 1028.52,
+                    "extra": {"last_sales_qty": 2},
+                },
+                {
+                    "product_name": "GASEX TAB.",
+                    "packing": "1*100",
+                    "opening_qty": 109,
+                    "receipts_qty": 0,
+                    "sales_qty": 18,
+                    "closing_qty": 91,
+                    "closing_value": 14283.36,
+                    "extra": {"last_sales_qty": 82},
+                },
+                {
+                    "product_name": "GOKSHURA TAB",
+                    "packing": "1*60'S",
+                    "opening_qty": 5,
+                    "receipts_qty": 60,
+                    "sales_qty": 13,
+                    "closing_qty": 52,
+                    "closing_value": 10895.04,
+                    "extra": {"last_sales_qty": 7},
+                },
+                {
+                    "product_name": "HIMCOCID SUSPENSION",
+                    "packing": "1*200M",
+                    "opening_qty": 2,
+                    "receipts_qty": 28,
+                    "sales_qty": 8,
+                    "closing_qty": 22,
+                    "closing_value": 2430.56,
+                    "extra": {"last_sales_qty": 36},
+                },
+            ],
+        }
+
+        class _Resp:
+            text = ""
+
+        with patch.dict(os.environ, {"STOCK_LSTSL_OPEN_RECD_VISION": "true"}):
+            with patch(
+                "services.sales_extraction_runtime.sales_generate_content_via_vertex",
+                return_value=_Resp(),
+            ), patch(
+                "services.sales_statement_extractor._gemini_response_text",
+                return_value="{}",
+            ), patch(
+                "services.sales_statement_extractor._extract_json_object",
+                return_value=fake_json,
+            ):
+                result = _extract_lstsl_open_recd_vision(
+                    b"fake", "1000570765.jpg", "jpg"
+                )
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result["line_items"]), 5)
+        self.assertEqual(result["totals"]["sales_value"], 58507.22)
+        gok = next(
+            i for i in result["line_items"] if i["product_name"] == "GOKSHURA TAB"
+        )
+        self.assertEqual(gok["opening_qty"], 5.0)
+        self.assertEqual(gok["closing_qty"], 52.0)
+        self.assertEqual(
+            result["totals"]["extra"]["extraction_method"], "lstsl_open_recd_vision"
         )
 
 

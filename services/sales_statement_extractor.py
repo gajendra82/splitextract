@@ -5284,6 +5284,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "chopada_zandra_footer",
                 "stock_sales_detail_total",
                 "printed_footer",
+                "purc_sale_cl_value_footer",
             }
         )
     )
@@ -28094,6 +28095,232 @@ def _try_lstsl_open_recd_image(
     return best
 
 
+_LSTSL_OPEN_RECD_VISION_PROMPT = """
+You are reading a Stock & Sales Report photo with this EXACT column order after Pack:
+
+LstSL | Open | Recd. | Sales | Close | Order | Pend | LstMove | Stk.Value
+
+LOCKED mapping (never swap):
+- LstSL = last-month sales qty → extra.last_sales_qty (NOT opening_qty, NOT sales_qty)
+- Open = opening_qty
+- Recd. / Recd = receipts_qty
+- Sales = sales_qty (current month)
+- Close = closing_qty
+- Order / Pend / LstMove = ignore (never opening/receipts/sales/closing)
+- Stk.Value = closing_value (stock value, NOT sales_value)
+
+Identity: opening_qty + receipts_qty - sales_qty = closing_qty.
+Blank / dash cells are 0. Include EVERY product row. Skip footer label rows.
+
+Footer money labels (not products):
+Last Month Sales, Open. Value, Receipt Value, Sales Value, Closing Value
+→ copy into totals (Sales Value → totals.sales_value, Closing Value → totals.closing_value).
+
+Per-row sales_value is NOT printed — leave sales_value null/0 on line items.
+
+Return ONLY JSON:
+{
+  "stockist_name": string|null,
+  "company_name": string|null,
+  "period_from": "YYYY-MM-DD"|null,
+  "period_to": "YYYY-MM-DD"|null,
+  "report_title": "Stock & Sales",
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {
+      "opening_value": number|null,
+      "receipts_value": number|null,
+      "last_month_sales_value": number|null
+    }
+  },
+  "line_items": [
+    {
+      "product_name": string,
+      "packing": string|null,
+      "opening_qty": number,
+      "receipts_qty": number,
+      "sales_qty": number,
+      "sales_value": 0,
+      "closing_qty": number,
+      "closing_value": number|null,
+      "extra": {"last_sales_qty": number}
+    }
+  ]
+}
+""".strip()
+
+
+def _lstsl_open_recd_vision_enabled() -> bool:
+    """STOCK_LSTSL_OPEN_RECD_VISION — Gemini locked LstSL schema when OCR fails.
+
+    Default ON. Kill switch STOCK_LSTSL_OPEN_RECD_VISION=false.
+    """
+    return os.getenv("STOCK_LSTSL_OPEN_RECD_VISION", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_looks_like_lstsl_open_recd_chrome(text: str) -> bool:
+    """True when printed headers are LstSL|Open|Recd|Sales|Close."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", text, re.I)
+    )
+
+
+def _finalize_lstsl_open_recd_vision(
+    result: Dict[str, Any], parsed: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Normalize LstSL vision rows and lock footer totals metadata."""
+    items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = _clean_name(str(item.get("product_name") or ""))
+        name = re.sub(r"[\s\-]+$", "", name).strip()
+        if not name or re.search(
+            r"product\s*name|last\s+month|receipt\s+value|closing\s+value|"
+            r"open\.?\s*value|sales\s+value|^total\b",
+            name,
+            re.I,
+        ):
+            continue
+        item["product_name"] = name
+        item["packing"] = _lstsl_clean_packing(item.get("packing"))
+        # No per-line sales $ column on this layout.
+        if item.get("sales_value") in (None, ""):
+            item["sales_value"] = 0.0
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        # Accept last_sales_qty / lstsl / lms aliases from the model.
+        lstsl = extra.get("last_sales_qty")
+        if lstsl in (None, ""):
+            for key in ("lstsl", "lms", "lms1", "last_month_sales_qty"):
+                if item.get(key) not in (None, ""):
+                    lstsl = item.get(key)
+                    break
+                if extra.get(key) not in (None, ""):
+                    lstsl = extra.get(key)
+                    break
+        extra = dict(extra)
+        if lstsl not in (None, ""):
+            extra["last_sales_qty"] = _to_float(lstsl)
+        extra["layout"] = "lstsl_open_recd_sales"
+        item["extra"] = extra
+        items.append(item)
+    result["line_items"] = items
+    result["report_title"] = result.get("report_title") or "Stock & Sales"
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        totals = {"sales_value": None, "closing_value": None, "extra": {}}
+        result["totals"] = totals
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+    # Prefer model footer money; keep printed Sales Value / Closing Value.
+    src = parsed if isinstance(parsed, dict) else {}
+    src_totals = src.get("totals") if isinstance(src.get("totals"), dict) else {}
+    src_extra = (
+        src_totals.get("extra") if isinstance(src_totals.get("extra"), dict) else {}
+    )
+    if totals.get("sales_value") in (None, "") and src_totals.get("sales_value") not in (
+        None,
+        "",
+    ):
+        totals["sales_value"] = _to_float(src_totals.get("sales_value"))
+    if totals.get("closing_value") in (None, "") and src_totals.get(
+        "closing_value"
+    ) not in (None, ""):
+        totals["closing_value"] = _to_float(src_totals.get("closing_value"))
+    for key in ("opening_value", "receipts_value", "last_month_sales_value"):
+        if extra.get(key) in (None, "") and src_extra.get(key) not in (None, ""):
+            extra[key] = _to_float(src_extra.get(key))
+    if extra.get("receipts_value") not in (None, "") and extra.get(
+        "purchase_value"
+    ) in (None, ""):
+        extra["purchase_value"] = extra.get("receipts_value")
+    extra["extraction_method"] = "lstsl_open_recd_vision"
+    extra["layout"] = "lstsl_open_recd_sales"
+    extra["total_row_source"] = "lstsl_open_recd_footer"
+    extra["vision_table_final"] = True
+    extra["stock_vision_locked"] = True
+    logger.info(
+        "STOCK_LSTSL_OPEN_RECD_VISION rows=%s sales_value=%s closing_value=%s",
+        len(items),
+        totals.get("sales_value"),
+        totals.get("closing_value"),
+    )
+    return result
+
+
+def _extract_lstsl_open_recd_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str = ".jpg",
+) -> Optional[Dict[str, Any]]:
+    """Gemini read of LstSL|Open|Recd|Sales|Close with locked column map (1 call)."""
+    if not _lstsl_open_recd_vision_enabled():
+        return None
+    from services.sales_extraction_runtime import (
+        sales_generate_content_via_vertex as generate_content_via_vertex,
+    )
+
+    mime = _image_mime(ext)
+    b64 = base64.b64encode(file_bytes).decode("ascii")
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _LSTSL_OPEN_RECD_VISION_PROMPT},
+                    {"inline_data": {"mime_type": mime, "data": b64}},
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+    }
+    try:
+        response = generate_content_via_vertex(
+            model=model, payload=payload, timeout=120
+        )
+        parsed = _extract_json_object(_gemini_response_text(response))
+    except Exception as exc:
+        logger.info(
+            "STOCK_LSTSL_OPEN_RECD_VISION failed file=%s err=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+    if not parsed or not parsed.get("line_items"):
+        return None
+    result = empty_result(filename, (ext or "jpg").lstrip(".") or "jpg")
+    result = _apply_parsed_sales_json(result, parsed)
+    result = _finalize_lstsl_open_recd_vision(result, parsed)
+    items = result.get("line_items") or []
+    if len(items) < 5:
+        return None
+    fail = _op_stk_lms1_identity_fail_rate(result)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    if isinstance(extra, dict):
+        extra["lstsl_identity_fail_rate"] = round(fail, 3)
+    # Reject obvious column-shift reads (Order parked in Close).
+    if fail > 0.50:
+        logger.info(
+            "STOCK_LSTSL_OPEN_RECD_VISION rejected file=%s fail_rate=%.2f rows=%s",
+            filename,
+            fail,
+            len(items),
+        )
+        return None
+    return result
+
+
 _ORDER_FORM_NUM_RE = re.compile(r"-?\d+(?:,\d{3})*\.\d{2}")
 
 
@@ -29722,6 +29949,21 @@ def _purc_sale_cl_op_val_enabled() -> bool:
     }
 
 
+def _purc_sale_cl_value_footer_enabled() -> bool:
+    """STOCK_PURC_SALE_CL_VALUE_FOOTER — peel printed Totals money (never a SKU).
+
+    Default ON. Kill switch STOCK_PURC_SALE_CL_VALUE_FOOTER=false.
+    Prefer Op val / Purc val / Sa val / Cl val footer amounts for statement
+    totals so a shifted Sa val line sum cannot invent the wrong sales_value.
+    """
+    return os.getenv("STOCK_PURC_SALE_CL_VALUE_FOOTER", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_purc_sale_cl_header(blob: str) -> bool:
     """MediVision Stock and Sales: Purc / Purc val / Sale / Sa val / Cl qty / Cl val."""
     if not blob:
@@ -29733,6 +29975,19 @@ def _is_purc_sale_cl_header(blob: str) -> bool:
         and re.search(r"\bSale\b", blob, re.I)
         and re.search(r"Cl\s*qty", blob, re.I)
         and re.search(r"Cl\s*val", blob, re.I)
+    )
+
+
+def _is_purc_sale_cl_chrome_name(name: str) -> bool:
+    """Page chrome / report titles that must never become line_items."""
+    if not name:
+        return False
+    return bool(
+        re.match(
+            r"^(?:Stock\s+and\s+Sales(?:\s+Statement)?|Continued\.?|Page\s*No\.?)$",
+            name.strip(),
+            re.I,
+        )
     )
 
 
@@ -29818,6 +30073,9 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     Returns None unless that header is printed, so other PDFs stay unchanged.
     When STOCK_PURC_SALE_CL_OP_VAL is on and Op / Op val print, those columns
     map to opening_qty / opening_value instead of being swallowed into packing.
+    When STOCK_PURC_SALE_CL_VALUE_FOOTER is on, printed Totals money under
+    Op val / Purc val / Sa val / Cl val becomes statement totals (sales_value
+    fallback when line Sa val sums are shifted).
     """
     page_texts = [(page.get_text("text") or "") for page in doc]
     if not any(_is_purc_sale_cl_header(text) for text in page_texts):
@@ -29827,6 +30085,8 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     result["report_title"] = "Stock and Sales"
     items: List[Dict[str, Any]] = []
     columns: Optional[List[Tuple[str, float]]] = None
+    footer_money: Dict[str, float] = {}
+    peel_footer = _purc_sale_cl_value_footer_enabled()
 
     for page, text in zip(doc, page_texts):
         if result["period_from"] is None:
@@ -29885,7 +30145,49 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
                 if field:
                     cells.setdefault(field, []).append(token)
             name = _clean_name(" ".join(cells.get("name") or []))
+            if peel_footer and re.match(r"^Totals?\b", blob.strip(), re.I):
+                for field in (
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                ):
+                    val = _prompt_cell_number(cells.get(field) or [])
+                    if val is not None:
+                        footer_money[field] = float(val)
+                # Ordered fallback: printed Totals under Op val|Purc val|Sa val|Cl val
+                # when Op columns were not mapped (Sa val would otherwise shift).
+                if "sales_value" not in footer_money:
+                    money_tokens: List[float] = []
+                    for _x, token in sorted(row["words"], key=lambda t: t[0]):
+                        if re.match(r"^Totals?\b", token, re.I):
+                            continue
+                        num = _prompt_cell_number([token])
+                        if num is not None:
+                            money_tokens.append(float(num))
+                    if len(money_tokens) == 4 and re.search(
+                        r"\bOp\b[\s\S]{0,40}\bval\b[\s\S]{0,80}\bPurc\b[\s\S]{0,40}\bval\b"
+                        r"[\s\S]{0,80}\bSa\b[\s\S]{0,40}\bval\b",
+                        text,
+                        re.I,
+                    ):
+                        footer_money["opening_value"] = money_tokens[0]
+                        footer_money["receipts_value"] = money_tokens[1]
+                        footer_money["sales_value"] = money_tokens[2]
+                        footer_money["closing_value"] = money_tokens[3]
+                        logger.info(
+                            "PURC_SALE_CL_VALUE_FOOTER ordered_peel=true sales_value=%s",
+                            money_tokens[2],
+                        )
+                if footer_money:
+                    logger.info(
+                        "PURC_SALE_CL_VALUE_FOOTER peeled=%s",
+                        sorted(footer_money.keys()),
+                    )
+                continue
             if not name or re.match(r"^(Product|Unit|Totals?|Page)\b", name, re.I):
+                continue
+            if _is_purc_sale_cl_chrome_name(name):
                 continue
             item = empty_line_item()
             item["product_name"] = name
@@ -29912,6 +30214,7 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
                 extra["layout"] = "purc_sale_cl_op_val"
             pur_val = _prompt_cell_number(cells.get("receipts_value") or [])
             if pur_val is not None:
+                item["receipts_value"] = pur_val
                 extra["purchase_value"] = pur_val
             items.append(item)
 
@@ -29925,6 +30228,25 @@ def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]
     ):
         result["totals"]["extra"]["layout"] = "purc_sale_cl_op_val"
         result["totals"]["extra"]["extraction_method"] = "purc_sale_cl_op_val_layout"
+    if peel_footer and footer_money:
+        extra = result["totals"]["extra"]
+        extra["total_row_source"] = "purc_sale_cl_value_footer"
+        if "opening_value" in footer_money:
+            extra["opening_value"] = footer_money["opening_value"]
+        if "receipts_value" in footer_money:
+            extra["purchase_value"] = footer_money["receipts_value"]
+            extra["receipts_value"] = footer_money["receipts_value"]
+        if "sales_value" in footer_money:
+            result["totals"]["sales_value"] = footer_money["sales_value"]
+            extra["sales_value_source"] = "purc_sale_cl_value_footer"
+        if "closing_value" in footer_money:
+            result["totals"]["closing_value"] = footer_money["closing_value"]
+            extra["closing_value_source"] = "purc_sale_cl_value_footer"
+        logger.info(
+            "PURC_SALE_CL_VALUE_FOOTER applied sales_value=%s closing_value=%s",
+            result["totals"].get("sales_value"),
+            result["totals"].get("closing_value"),
+        )
     return result
 
 
@@ -61955,6 +62277,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     # Terminal-style Stock & Sales Report photos with LstSL/Open/Recd/Sales/Close
     # + LstMove date + Stk.Value tail (GUNWANT etc.). Vision was shifting LstSL
     # into opening_qty and Close into sales_value, so handle via OCR + grid parser.
+    # When Tesseract is missing, OCR returns empty — Vision locked schema is next.
     try:
         lstsl_img = _try_lstsl_open_recd_image(file_bytes, filename, ext)
         if lstsl_img and lstsl_img.get("line_items"):
@@ -61962,6 +62285,30 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     except Exception as exc:
         logger.info(
             "[SalesStatement] file=%s lstsl image OCR skipped: %s",
+            filename,
+            type(exc).__name__,
+        )
+        lstsl_img = None
+    # Peek may still show LstSL chrome even when the OCR grid parse failed.
+    try:
+        _lstsl_peek = ""
+        try:
+            _lstsl_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+        except Exception:
+            _lstsl_peek = ""
+        if _text_looks_like_lstsl_open_recd_chrome(_lstsl_peek):
+            lstsl_vis = _extract_lstsl_open_recd_vision(file_bytes, filename, ext)
+            if lstsl_vis and lstsl_vis.get("line_items"):
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=lstsl_open_recd_vision "
+                    "file=%s line_items=%s reason=ocr_chrome",
+                    filename,
+                    len(lstsl_vis.get("line_items") or []),
+                )
+                return lstsl_vis
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s lstsl vision after OCR skipped: %s",
             filename,
             type(exc).__name__,
         )
@@ -62257,11 +62604,32 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     "reason=sale_period_or_no_op_stk_tokens",
                     filename,
                 )
+        # LstSL|Open|Recd|Sales|Close must not enter Op_Stk / LMS1 mapping.
+        _lstsl_chrome_peek = _text_looks_like_lstsl_open_recd_chrome(
+            _op_stk_peek or ""
+        )
+        if _lstsl_chrome_peek:
+            _allow_op_stk_before_ssa = False
+            try:
+                lstsl_from_peek = _extract_lstsl_open_recd_vision(
+                    file_bytes, filename, ext
+                )
+            except Exception:
+                lstsl_from_peek = None
+            if lstsl_from_peek and lstsl_from_peek.get("line_items"):
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=lstsl_open_recd_vision "
+                    "file=%s line_items=%s reason=peek_chrome",
+                    filename,
+                    len(lstsl_from_peek.get("line_items") or []),
+                )
+                return lstsl_from_peek
         if (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _clearly_ssa_peek
+            and not _lstsl_chrome_peek
             and _allow_op_stk_before_ssa
             and (_peek_unreadable or _ssa_phone or _monthly_op_stk_photo)
         ):
@@ -62304,6 +62672,33 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     fail_pre,
                     len(op_stk_pre.get("line_items") or []),
                 )
+                # High Op_Stk fail often means LstSL|Open|Recd|Sales|Close with
+                # Order shifted into closing — try locked LstSL vision once.
+                try:
+                    lstsl_pre = _extract_lstsl_open_recd_vision(
+                        file_bytes, filename, ext
+                    )
+                except Exception:
+                    lstsl_pre = None
+                if lstsl_pre and lstsl_pre.get("line_items"):
+                    fail_lstsl = _op_stk_lms1_identity_fail_rate(lstsl_pre)
+                    if fail_lstsl < fail_pre and fail_lstsl <= 0.50:
+                        extra_l = lstsl_pre.setdefault("totals", {}).setdefault(
+                            "extra", {}
+                        )
+                        if isinstance(extra_l, dict):
+                            extra_l["early_vision_reason"] = (
+                                "lstsl_after_op_stk_high_fail"
+                            )
+                        logger.info(
+                            "[STOCK_EXTRACTION_PATH] "
+                            "stage=lstsl_after_op_stk_high_fail "
+                            "file=%s line_items=%s fail_rate=%.2f",
+                            filename,
+                            len(lstsl_pre.get("line_items") or []),
+                            fail_lstsl,
+                        )
+                        return lstsl_pre
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk
@@ -62339,6 +62734,43 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             filename,
                             rows_u,
                         )
+                        # Prefer locked LstSL schema before Op_Stk: without OCR,
+                        # Op_Stk maps Recd→Open and Order→Close on LstSL sheets.
+                        lstsl_rescue = None
+                        if _lstsl_open_recd_vision_enabled():
+                            try:
+                                lstsl_rescue = _extract_lstsl_open_recd_vision(
+                                    file_bytes, filename, ext
+                                )
+                            except Exception:
+                                lstsl_rescue = None
+                            if (
+                                lstsl_rescue
+                                and lstsl_rescue.get("line_items")
+                                and not _main_stock_result_is_all_zero_shell(
+                                    lstsl_rescue
+                                )
+                            ):
+                                fail_l = _op_stk_lms1_identity_fail_rate(
+                                    lstsl_rescue
+                                )
+                                if fail_l <= 0.35:
+                                    extra_l = lstsl_rescue.setdefault(
+                                        "totals", {}
+                                    ).setdefault("extra", {})
+                                    if isinstance(extra_l, dict):
+                                        extra_l["early_vision_reason"] = (
+                                            "lstsl_after_ssa_misfile"
+                                        )
+                                    logger.info(
+                                        "[STOCK_EXTRACTION_PATH] "
+                                        "stage=lstsl_after_ssa_misfile "
+                                        "file=%s line_items=%s fail_rate=%.2f",
+                                        filename,
+                                        len(lstsl_rescue.get("line_items") or []),
+                                        fail_l,
+                                    )
+                                    return lstsl_rescue
                         if _op_stk_before_ssa_phone_enabled():
                             try:
                                 op_stk_rescue = _extract_op_stk_rcpts_stock_sale_vision(
@@ -62356,6 +62788,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                     op_stk_rescue
                                 )
                             ):
+                                fail_r = _op_stk_lms1_identity_fail_rate(
+                                    op_stk_rescue
+                                )
                                 extra_r = op_stk_rescue.setdefault(
                                     "totals", {}
                                 ).setdefault("extra", {})
@@ -62363,14 +62798,51 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                     extra_r["early_vision_reason"] = (
                                         "op_stk_after_ssa_misfile"
                                     )
+                                    extra_r["op_stk_identity_fail_rate"] = round(
+                                        fail_r, 3
+                                    )
+                                # Never return a high-fail Op_Stk mapping that
+                                # parks Order in closing_qty on LstSL photos.
+                                if fail_r <= 0.35:
+                                    logger.info(
+                                        "[STOCK_EXTRACTION_PATH] "
+                                        "stage=op_stk_after_ssa_misfile "
+                                        "file=%s line_items=%s fail_rate=%.2f",
+                                        filename,
+                                        len(op_stk_rescue.get("line_items") or []),
+                                        fail_r,
+                                    )
+                                    return op_stk_rescue
+                                if (
+                                    lstsl_rescue
+                                    and lstsl_rescue.get("line_items")
+                                    and _op_stk_lms1_identity_fail_rate(lstsl_rescue)
+                                    < fail_r
+                                ):
+                                    extra_l = lstsl_rescue.setdefault(
+                                        "totals", {}
+                                    ).setdefault("extra", {})
+                                    if isinstance(extra_l, dict):
+                                        extra_l["early_vision_reason"] = (
+                                            "lstsl_beats_op_stk_after_ssa"
+                                        )
+                                    logger.info(
+                                        "[STOCK_EXTRACTION_PATH] "
+                                        "stage=lstsl_beats_op_stk_after_ssa "
+                                        "file=%s line_items=%s",
+                                        filename,
+                                        len(lstsl_rescue.get("line_items") or []),
+                                    )
+                                    return lstsl_rescue
                                 logger.info(
                                     "[STOCK_EXTRACTION_PATH] "
                                     "stage=op_stk_after_ssa_misfile "
-                                    "file=%s line_items=%s",
+                                    "file=%s status=continue_high_fail "
+                                    "fail_rate=%.2f rows=%s",
                                     filename,
+                                    fail_r,
                                     len(op_stk_rescue.get("line_items") or []),
                                 )
-                                return op_stk_rescue
                     else:
                         extra_u = ssa_unread.setdefault("totals", {}).setdefault(
                             "extra", {}
