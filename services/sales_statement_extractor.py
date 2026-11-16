@@ -5369,6 +5369,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "stock_sales_detail_total",
                 "printed_footer",
                 "purc_sale_cl_value_footer",
+                "labeled_stock_value_footer",
+                "op_stk_rcpts_footer",
             }
         )
     )
@@ -5426,6 +5428,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "stock_sales_detail_total",
             "marg_sale_purchase_value",
             "printed_footer",
+            "labeled_stock_value_footer",
+            "op_stk_rcpts_footer",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -21065,26 +21069,29 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
 _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT = """
 This image is a printed "STOCK & SALES STATEMENT" grid (not Marg OPENING/RECEIVE/ISSUE).
 
-Printed columns LEFT TO RIGHT (names may vary slightly). Two common header sets:
+Printed columns LEFT TO RIGHT (names may vary slightly). Three common header sets:
 
 A) Code | Item | Packing | LMS1 | LMS | OP.STK | RCPTS | SALES | SL.VALUE | FREE | CL.STK | CL.VALUE
 B) Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
+C) P.code | Product Name | Pack | LASTMON SALE | OPEN | COMP | FREE | REPL | CUST | SALE | FREE | REPL | E&B | T&S | Closing Stock | Order Qty | Cl.Stk Value
+   (Receipts band = OPEN/COMP/FREE/REPL/CUST; Issues band = SALE/FREE/REPL/E&B/T&S)
 
-Qty mapping ONLY (blank cell = 0). NEVER shift a later number left into a blank cell.
-- OP.STK / Op_Stk -> opening_qty
-- RCPTS / Rcpts -> receipts_qty
-- SALES / Sales -> sales_qty
-- SL.VALUE -> sales_value (money; never a qty)
-- FREE -> ignore for opening/receipts/sales/closing (optional free qty only)
-- CL.STK / Cl_Stk -> closing_qty
-- CL.VALUE / Value -> closing_value
-- LMS1 and LMS -> extra.lms1 / extra.lms ONLY. NEVER opening_qty or receipts_qty.
-- Rate -> extra.rate (NOT a qty)
-- P.Ret / Hos.Sal / Brk / Repl -> ignore for opening/receipts/sales/closing
+Qty mapping ONLY (blank cell / "-" = 0). NEVER shift a later number left into a blank cell.
+- OP.STK / Op_Stk / OPEN -> opening_qty
+- RCPTS / Rcpts / COMP -> receipts_qty (layout C: COMP + receipt FREE/REPL/CUST when printed)
+- SALES / Sales / SALE -> sales_qty
+  Layout C only: sales_qty = Issues SALE + Issues FREE (+ REPL/E&B/T&S when printed)
+- SL.VALUE -> sales_value (money; never a qty). Layout C has NO per-row sales money.
+- Layout A FREE (after SL.VALUE) -> ignore for opening/receipts/sales/closing
+- CL.STK / Cl_Stk / Closing Stock -> closing_qty
+- CL.VALUE / Value / Cl.Stk Value -> closing_value
+- LMS1 / LMS / LASTMON SALE -> lms1 / lms ONLY. NEVER opening_qty or receipts_qty.
+- Rate / Order Qty -> ignore for stock identity (optional extra.rate / extra.order_qty)
+- P.Ret / Hos.Sal / Brk / Repl (layout B) -> ignore for opening/receipts/sales/closing
 
-Critical: LMS1/LMS sit LEFT of OP.STK. Do not treat LMS1 as opening or LMS as receipts.
-Do not put SL.VALUE / CL.VALUE / Rate into opening_qty. Do not put Op_Stk into closing_qty.
-Packing (200ml / 30ml / 60 S) belongs in packing, not product_name.
+Critical: LMS1/LMS/LASTMON SALE sit LEFT of OPEN/OP.STK. Do not treat them as opening or receipts.
+Do not put SL.VALUE / CL.VALUE / Rate / Order Qty into opening_qty. Do not put Op_Stk into closing_qty.
+Packing (200ml / 30ml / 60 S / 1*60T) belongs in packing, not product_name.
 
 Worked example (layout A). Printed cells left→right after packing:
 LMS1=10, LMS=20, OP.STK=30, RCPTS=40, SALES=15, SL.VALUE=100.50, FREE=0, CL.STK=55, CL.VALUE=200.00
@@ -21116,9 +21123,21 @@ Stock in Tran / Transit qty|value is NOT total_stock and NOT closing_qty — put
 it in extra.transit only (or omit). Never shift Tran into Op/Sales/Cl.
 
 When the page footer prints labeled money ("Opening stock value", "Purchase
-value", "Sales value", "Closing stock value"), copy those into totals. Do not
-invent per-row sales_value when no SL.VALUE / Sale Val column is printed
+value", "Sales value", "Closing stock value", or layout-C labels
+"Last Month Sales", "Open. Value", "Receipt Value", "Sales Value",
+"Closing Value"), copy those into totals:
+  Sales Value -> totals.sales_value
+  Closing Value -> totals.closing_value
+  Open. Value / Opening stock value -> totals.extra.opening_value
+  Receipt Value / Purchase value -> totals.extra.purchase_value
+Do not invent per-row sales_value when no SL.VALUE / Sale Val column is printed
 (leave sales_value null/0 for the row).
+
+Layout C worked example:
+LASTMON=48, OPEN=71, COMP=-, SALE=41, Closing=30, Cl.Stk Value=5295.30
+→ lms=48, opening_qty=71, receipts_qty=0, sales_qty=41, closing_qty=30, closing_value=5295.30
+With Issues FREE: OPEN=78, COMP=100, SALE=73, FREE=1, Closing=104
+→ opening_qty=78, receipts_qty=100, sales_qty=74, closing_qty=104
 
 Return ONLY JSON:
 {
@@ -21249,6 +21268,9 @@ def _enrich_stock_statement_header_from_ocr(
     if re.search(r"Stock\s+and\s+Sale\s+Report", blob, re.I):
         if not str(result.get("report_title") or "").strip():
             result["report_title"] = "Stock and Sale Report"
+    if re.search(r"Stock\s+and\s+Sales\s+Detail\s+Report", blob, re.I):
+        if not str(result.get("report_title") or "").strip():
+            result["report_title"] = "Stock and Sales Detail Report"
 
     company = None
     m_co = re.search(r"Company\s*:\s*([^\n]+)", blob, re.I)
@@ -21377,6 +21399,56 @@ def _enrich_stock_statement_header_from_ocr(
         result["stockist_name"] = None
     elif sn_norm and "_" in sn:
         result["stockist_name"] = sn_norm
+
+    # Seller: NAME(CITY) on Stock and Sales Detail — fill name + city address.
+    m_seller = re.search(
+        r"Seller\s*:\s*([A-Z0-9][A-Z0-9 .,&'\-/]{2,80}?)(?:\(([^)]{2,40})\))?",
+        blob,
+        re.I,
+    )
+    if m_seller:
+        seller_name = _clean_name(m_seller.group(1))
+        seller_city = _clean_name(m_seller.group(2) or "")
+        if seller_name and not re.search(
+            r"HIMALAYA|Stock\s+and\s+Sales|Company\s*:", seller_name, re.I
+        ):
+            sn_now = str(result.get("stockist_name") or "").strip()
+            sn_weak = (
+                not sn_now
+                or len(sn_now) < 6
+                or vision_looks_like_company
+                or vision_looks_like_title
+                or vision_looks_like_headers
+                or re.search(r"HIMALAYA", sn_now, re.I)
+                or (
+                    len(seller_name) >= 8
+                    and seller_name.upper() not in sn_now.upper()
+                    and sn_now.upper() not in seller_name.upper()
+                )
+            )
+            if sn_weak:
+                result["stockist_name"] = seller_name
+                logger.info(
+                    "STOCK_HEADER_OCR_ENRICH seller_line stockist=%r city=%r",
+                    seller_name,
+                    seller_city or None,
+                )
+        if seller_city and not str(result.get("stockist_address") or "").strip():
+            result["stockist_address"] = seller_city
+
+    # Peel city from stockist_name like "GANGA DISTRIBUTORS(GULBARGA)".
+    sn_peel = str(result.get("stockist_name") or "").strip()
+    m_city = re.match(
+        r"^(.+?)\s*\(([A-Za-z][A-Za-z .'\-]{1,40})\)\s*$", sn_peel
+    )
+    if m_city and not str(result.get("stockist_address") or "").strip():
+        peeled_name = _clean_name(m_city.group(1))
+        peeled_city = _clean_name(m_city.group(2))
+        if peeled_name and peeled_city and not re.search(
+            r"HIMALAYA|ZEAL|ZENITH", peeled_city, re.I
+        ):
+            result["stockist_name"] = peeled_name
+            result["stockist_address"] = peeled_city
 
     # Generic Branch Name: line → stockist_address when Vision left address null.
     if not str(result.get("stockist_address") or "").strip():
@@ -21746,10 +21818,12 @@ def _parse_labeled_stock_value_footer(text: str) -> Dict[str, float]:
     patterns = (
         (r"opening\s+stock\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
         (r"purchase\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "purchase_value"),
-        (r"(?<!previous\s)sales\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "sales_value"),
+        (r"receipt\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "purchase_value"),
+        # Lookbehinds must be fixed-width (\s+ is illegal in (?<!...)).
+        (r"(?<!previous\s)(?<!last\smonth\s)sales\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "sales_value"),
         (r"closing\s+stock\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
-        # Shorter labels when "stock" is omitted.
-        (r"opening\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
+        # Shorter labels when "stock" is omitted (Open. Value / Closing Value).
+        (r"open(?:ing)?\.?\s*value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
         (r"closing\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
     )
     for pat, key in patterns:
@@ -21891,6 +21965,26 @@ def _finalize_op_stk_rcpts_stock_sale(
         ):
             result["totals"]["extra"][k] = vis_extra.get(k)
     result = _apply_labeled_stock_value_footer(result, ocr_text)
+    # Qty-only grids (no per-row sales $) still print footer Sales/Open/Receipt
+    # Value — keep that money through sanitize when Vision already returned it.
+    if _op_stk_trust_vision_footer_enabled():
+        tot = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+        tex = tot.get("extra") if isinstance(tot.get("extra"), dict) else {}
+        has_footer_money = any(
+            tot.get(k) not in (None, "") for k in ("sales_value", "closing_value")
+        ) or any(
+            tex.get(k) not in (None, "") for k in ("opening_value", "purchase_value")
+        )
+        if has_footer_money and not tex.get("total_row_source"):
+            tex["total_row_source"] = "op_stk_rcpts_footer"
+            logger.info(
+                "OP_STK_RCPTS_FOOTER file_totals sales=%s closing=%s "
+                "opening=%s purchase=%s",
+                tot.get("sales_value"),
+                tot.get("closing_value"),
+                tex.get("opening_value"),
+                tex.get("purchase_value"),
+            )
     logger.info(
         "OP_STK_RCPTS_VISION rows=%s stockist=%s company=%s",
         len(result.get("line_items") or []),
@@ -21900,10 +21994,23 @@ def _finalize_op_stk_rcpts_stock_sale(
     return result
 
 
+def _op_stk_trust_vision_footer_enabled() -> bool:
+    """Keep Vision footer Sales/Open/Receipt Value on qty-only Op_Stk grids.
+
+    Kill switch: STOCK_OP_STK_TRUST_VISION_FOOTER=false.
+    """
+    return os.getenv("STOCK_OP_STK_TRUST_VISION_FOOTER", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _op_stk_apply_lms_fields(
     result: Dict[str, Any], parsed: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Copy printed LMS1/LMS off the qty fields into item.extra when present."""
+    """Copy printed LMS1/LMS/LASTMON SALE off the qty fields into item.extra."""
     raw_items = [
         r for r in (parsed.get("line_items") or []) if isinstance(r, dict)
     ]
@@ -21912,6 +22019,25 @@ def _op_stk_apply_lms_fields(
         extra = item.setdefault("extra", {})
         if not isinstance(extra, dict):
             continue
+        raw_extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+        # LASTMON SALE aliases when the model does not use the lms key.
+        if raw.get("lms") is None and raw_extra.get("lms") is None:
+            for alt in (
+                "lastmon_sale",
+                "lastmon",
+                "last_month_sale",
+                "last_month_sales",
+                "last_sales_qty",
+                "lstsl",
+            ):
+                if raw.get(alt) not in (None, ""):
+                    raw = dict(raw)
+                    raw["lms"] = raw.get(alt)
+                    break
+                if raw_extra.get(alt) not in (None, ""):
+                    raw = dict(raw)
+                    raw["lms"] = raw_extra.get(alt)
+                    break
         for src, dst in (("lms1", "lms1"), ("lms", "lms"), ("lms", "lms_qty")):
             if raw.get(src) is None:
                 continue
@@ -28180,25 +28306,54 @@ def _try_lstsl_open_recd_image(
 
 
 _LSTSL_OPEN_RECD_VISION_PROMPT = """
-You are reading a Stock & Sales Report photo with this EXACT column order after Pack:
+You are reading a Stock & Sales Report photo. After Pack, columns are ONE of:
 
+Variant A (classic):
 LstSL | Open | Recd. | Sales | Close | Order | Pend | LstMove | Stk.Value
 
+Variant B (Receipts / Issues bands — common phone photo):
+LASTMON SALE | OPEN | COMP | FREE | REPL | CUST | SALE | FREE | REPL | E&B | T&S | Closing Stock | Order Qty | Cl.Stk Value
+(OPEN sits under the Receipts band but means opening stock, NOT a receipt.)
+
 LOCKED mapping (never swap):
-- LstSL = last-month sales qty → extra.last_sales_qty (NOT opening_qty, NOT sales_qty)
-- Open = opening_qty
-- Recd. / Recd = receipts_qty
-- Sales = sales_qty (current month)
-- Close = closing_qty
-- Order / Pend / LstMove = ignore (never opening/receipts/sales/closing)
-- Stk.Value = closing_value (stock value, NOT sales_value)
+Variant A:
+- LstSL → extra.last_sales_qty (NOT opening_qty, NOT sales_qty)
+- Open → opening_qty
+- Recd. / Recd → receipts_qty
+- Sales → sales_qty
+- Close → closing_qty
+- Order / Pend / LstMove → ignore
+- Stk.Value → closing_value
+
+Variant B:
+- LASTMON SALE → extra.last_sales_qty (NOT opening_qty)
+- OPEN → opening_qty
+- COMP (+ receipt FREE/REPL/CUST when printed) → receipts_qty
+- SALE (+ issue FREE/REPL/E&B/T&S when printed) → sales_qty
+- Closing Stock → closing_qty
+- Order Qty → ignore (never opening/receipts/sales/closing)
+- Cl.Stk Value → closing_value
+
+CRITICAL Variant B: OPEN and COMP are DIFFERENT columns.
+If OPEN=91 and COMP=100, then opening_qty=91 and receipts_qty=100.
+NEVER put COMP into opening_qty. NEVER skip OPEN when COMP is printed.
+Dashes between OPEN and SALE (FREE/REPL/CUST etc.) are 0 — do not left-shift COMP into Open.
+
+Worked examples (Variant B):
+LASTMON=48 OPEN=71 COMP=- SALE=41 Closing=30 Cl.Stk Value=5295.30
+→ last_sales_qty=48, opening_qty=71, receipts_qty=0, sales_qty=41, closing_qty=30, closing_value=5295.30
+LASTMON=41 OPEN=91 COMP=100 SALE=82 Closing=109 Cl.Stk Value=15166.26
+→ last_sales_qty=41, opening_qty=91, receipts_qty=100, sales_qty=82, closing_qty=109, closing_value=15166.26
+OPEN=78 COMP=100 SALE=73 FREE=1 Closing=104
+→ opening_qty=78, receipts_qty=100, sales_qty=74, closing_qty=104
 
 Identity: opening_qty + receipts_qty - sales_qty = closing_qty.
 Blank / dash cells are 0. Include EVERY product row. Skip footer label rows.
 
 Footer money labels (not products):
 Last Month Sales, Open. Value, Receipt Value, Sales Value, Closing Value
-→ copy into totals (Sales Value → totals.sales_value, Closing Value → totals.closing_value).
+→ copy into totals (Sales Value → totals.sales_value, Closing Value → totals.closing_value,
+Open. Value → extra.opening_value, Receipt Value → extra.receipts_value).
 
 Per-row sales_value is NOT printed — leave sales_value null/0 on line items.
 
@@ -28220,6 +28375,7 @@ Return ONLY JSON:
   },
   "line_items": [
     {
+      "product_code": string|null,
       "product_name": string,
       "packing": string|null,
       "opening_qty": number,
@@ -28228,7 +28384,7 @@ Return ONLY JSON:
       "sales_value": 0,
       "closing_qty": number,
       "closing_value": number|null,
-      "extra": {"last_sales_qty": number}
+      "extra": {"last_sales_qty": number, "free_issue_qty": number}
     }
   ]
 }
@@ -28248,12 +28404,55 @@ def _lstsl_open_recd_vision_enabled() -> bool:
     }
 
 
+def _lstsl_variant_b_issue_free_enabled() -> bool:
+    """Fold printed Issues FREE into sales_qty on LASTMON|OPEN|COMP grids.
+
+    Kill switch: STOCK_LSTSL_VARIANT_B_ISSUE_FREE=false.
+    """
+    return os.getenv("STOCK_LSTSL_VARIANT_B_ISSUE_FREE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _lstsl_vision_when_ocr_empty_enabled() -> bool:
+    """Try locked LstSL/LASTMON vision when image OCR peek is empty.
+
+    Kill switch: STOCK_LSTSL_VISION_WHEN_OCR_EMPTY=false.
+    """
+    return os.getenv("STOCK_LSTSL_VISION_WHEN_OCR_EMPTY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _text_looks_like_lstsl_open_recd_chrome(text: str) -> bool:
-    """True when printed headers are LstSL|Open|Recd|Sales|Close."""
+    """True when printed headers are LstSL|Open|Recd|Sales|Close (or LASTMON sibling)."""
     if not text:
         return False
+    # Op.Qty|Pur.Qty|Sale.Qty|Bal (Mfac SAS Summary) is a different family —
+    # never treat Bal/Sale.Qty chrome as LstSL|Open|Recd.
+    try:
+        from services.stock_direct_vision import _has_op_qty_pur_sale_bal_headers
+
+        if _has_op_qty_pur_sale_bal_headers(text):
+            return False
+    except Exception:
+        pass
+    if re.search(r"Mfac\s+SAS\s+Summary|SAS\s+Summary\s+Report", text, re.I):
+        return False
+    if re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", text, re.I):
+        return True
+    # Receipts/Issues band sibling: LASTMON SALE | OPEN | COMP | … | SALE | Closing
     return bool(
-        re.search(r"LstSL\s+Open\s+Recd\.?\s+Sales\s+Close", text, re.I)
+        re.search(r"LAST\s*MON(?:TH)?\s*SALE", text, re.I)
+        and re.search(r"\bOPEN\b", text, re.I)
+        and re.search(r"\bCOMP\b", text, re.I)
+        and re.search(r"Closing\s+Stock|Cl\.?\s*Stk", text, re.I)
     )
 
 
@@ -28280,10 +28479,20 @@ def _finalize_lstsl_open_recd_vision(
         if item.get("sales_value") in (None, ""):
             item["sales_value"] = 0.0
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
-        # Accept last_sales_qty / lstsl / lms aliases from the model.
+        # Accept last_sales_qty / lstsl / lms / LASTMON aliases from the model.
         lstsl = extra.get("last_sales_qty")
         if lstsl in (None, ""):
-            for key in ("lstsl", "lms", "lms1", "last_month_sales_qty"):
+            for key in (
+                "lstsl",
+                "lms",
+                "lms1",
+                "lms_qty",
+                "last_month_sales_qty",
+                "lastmon_sale",
+                "lastmon",
+                "last_month_sale",
+                "last_month_sales",
+            ):
                 if item.get(key) not in (None, ""):
                     lstsl = item.get(key)
                     break
@@ -28292,7 +28501,39 @@ def _finalize_lstsl_open_recd_vision(
                     break
         extra = dict(extra)
         if lstsl not in (None, ""):
-            extra["last_sales_qty"] = _to_float(lstsl)
+            lstsl_f = _to_float(lstsl)
+            extra["last_sales_qty"] = lstsl_f
+            extra.setdefault("lms", lstsl_f)
+            extra.setdefault("lms_qty", lstsl_f)
+        # Variant B Issues FREE is a printed outflow — fold into sales_qty when
+        # the model returned SALE alone (identity off by exactly free_issue_qty).
+        if _lstsl_variant_b_issue_free_enabled():
+            free_iss = extra.get("free_issue_qty")
+            if free_iss in (None, ""):
+                free_iss = item.get("free_issue_qty")
+            if free_iss not in (None, ""):
+                free_f = _to_float(free_iss)
+                if abs(free_f) > 0.01:
+                    extra["free_issue_qty"] = free_f
+                    try:
+                        op_f = float(item.get("opening_qty") or 0)
+                        rec_f = float(item.get("receipts_qty") or 0)
+                        sale_f = float(item.get("sales_qty") or 0)
+                        cl_f = float(item.get("closing_qty") or 0)
+                    except (TypeError, ValueError):
+                        op_f = rec_f = sale_f = cl_f = 0.0
+                    if (
+                        abs((op_f + rec_f - sale_f) - cl_f) > 0.51
+                        and abs((op_f + rec_f - (sale_f + free_f)) - cl_f)
+                        <= 0.51
+                    ):
+                        item["sales_qty"] = sale_f + free_f
+                        logger.info(
+                            "LSTSL_VARIANT_B_ISSUE_FREE product=%s sale=%s free=%s",
+                            name[:60],
+                            sale_f,
+                            free_f,
+                        )
         extra["layout"] = "lstsl_open_recd_sales"
         item["extra"] = extra
         items.append(item)
@@ -28328,6 +28569,28 @@ def _finalize_lstsl_open_recd_vision(
         "purchase_value"
     ) in (None, ""):
         extra["purchase_value"] = extra.get("receipts_value")
+    # Page/manufacturer Bal total must not sit on a product closing_value.
+    try:
+        page_cv = float(totals.get("closing_value") or 0)
+    except (TypeError, ValueError):
+        page_cv = 0.0
+    if page_cv >= 100000:
+        stripped = 0
+        for item in items:
+            try:
+                cv = float(item.get("closing_value") or 0)
+            except (TypeError, ValueError):
+                cv = 0.0
+            if cv >= 100000 or (page_cv and abs(cv - page_cv) < 0.05):
+                item["closing_value"] = None
+                stripped += 1
+                logger.info(
+                    "STOCK_LSTSL_STRIP_PAGE_CLOSING_VALUE product=%s value=%s",
+                    str(item.get("product_name") or "")[:60],
+                    cv,
+                )
+        if stripped:
+            extra["lstsl_page_closing_value_stripped"] = stripped
     extra["extraction_method"] = "lstsl_open_recd_vision"
     extra["layout"] = "lstsl_open_recd_sales"
     extra["total_row_source"] = "lstsl_open_recd_footer"
@@ -28393,8 +28656,10 @@ def _extract_lstsl_open_recd_vision(
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     if isinstance(extra, dict):
         extra["lstsl_identity_fail_rate"] = round(fail, 3)
-    # Reject obvious column-shift reads (Order parked in Close).
-    if fail > 0.50:
+    # Reject obvious column-shift reads (COMP parked in Open, Order in Close).
+    # Variant-B OPEN|COMP misreads often land ~0.46 fail — reject those.
+    reject_at = 0.40
+    if fail > reject_at:
         logger.info(
             "STOCK_LSTSL_OPEN_RECD_VISION rejected file=%s fail_rate=%.2f rows=%s",
             filename,
@@ -62364,6 +62629,55 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             type(exc).__name__,
         )
 
+    # Op.Qty|Pur.Qty|Sale.Qty|Bal (Mfac SAS Summary) must beat LstSL empty-OCR
+    # Vision steal — that path parks manufacturer Bal totals on the first SKU.
+    try:
+        from services.stock_direct_vision import (
+            _has_op_qty_pur_sale_bal_headers,
+            _op_qty_pur_sale_bal_before_vt_enabled,
+            extract_op_qty_pur_sale_bal_direct_vision,
+            is_stock_vision_locked,
+        )
+
+        _sas_peek = ""
+        try:
+            _sas_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=True) or ""
+        except Exception:
+            _sas_peek = ""
+        if _op_qty_pur_sale_bal_before_vt_enabled() and (
+            _has_op_qty_pur_sale_bal_headers(_sas_peek)
+            or re.search(
+                r"Mfac\s+SAS\s+Summary|SAS\s+Summary\s+Report",
+                _sas_peek,
+                re.I,
+            )
+        ):
+            sas_early = extract_op_qty_pur_sale_bal_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="op_qty_pur_sale_bal_before_lstsl",
+            )
+            if (
+                sas_early
+                and sas_early.get("line_items")
+                and is_stock_vision_locked(sas_early)
+            ):
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=op_qty_pur_sale_bal "
+                    "file=%s line_items=%s reason=before_lstsl",
+                    filename,
+                    len(sas_early.get("line_items") or []),
+                )
+                return sas_early
+    except Exception as _sas_early_exc:
+        logger.info(
+            "[SalesStatement] file=%s op_qty_pur_sale_bal before lstsl "
+            "skipped: %s",
+            filename,
+            type(_sas_early_exc).__name__,
+        )
+
     # Terminal-style Stock & Sales Report photos with LstSL/Open/Recd/Sales/Close
     # + LstMove date + Stk.Value tail (GUNWANT etc.). Vision was shifting LstSL
     # into opening_qty and Close into sales_value, so handle via OCR + grid parser.
@@ -62380,20 +62694,42 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         )
         lstsl_img = None
     # Peek may still show LstSL chrome even when the OCR grid parse failed.
+    # When Tesseract is missing, peek is empty — still try locked Vision once
+    # (covers LASTMON|OPEN|COMP Receipts/Issues siblings of LstSL|Open|Recd).
+    # Never use empty-OCR LstSL when SAS/Op.Qty|Bal chrome is already visible.
     try:
         _lstsl_peek = ""
         try:
             _lstsl_peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
         except Exception:
             _lstsl_peek = ""
-        if _text_looks_like_lstsl_open_recd_chrome(_lstsl_peek):
+        _lstsl_chrome = _text_looks_like_lstsl_open_recd_chrome(_lstsl_peek)
+        _lstsl_empty_ocr = not (_lstsl_peek or "").strip()
+        _sas_blocks_lstsl = bool(
+            re.search(
+                r"Mfac\s+SAS\s+Summary|SAS\s+Summary\s+Report|"
+                r"\bOp\.?\s*Qty\b.*\bSale\.?\s*Qty\b.*\bBal\b",
+                _lstsl_peek or "",
+                re.I | re.S,
+            )
+        )
+        if _sas_blocks_lstsl:
+            logger.info(
+                "STOCK_OP_QTY_PUR_SALE_BAL_BLOCKS_LSTSL file=%s",
+                filename,
+            )
+        if (not _sas_blocks_lstsl) and (
+            _lstsl_chrome
+            or (_lstsl_empty_ocr and _lstsl_vision_when_ocr_empty_enabled())
+        ):
             lstsl_vis = _extract_lstsl_open_recd_vision(file_bytes, filename, ext)
             if lstsl_vis and lstsl_vis.get("line_items"):
                 logger.info(
                     "[STOCK_EXTRACTION_PATH] stage=lstsl_open_recd_vision "
-                    "file=%s line_items=%s reason=ocr_chrome",
+                    "file=%s line_items=%s reason=%s",
                     filename,
                     len(lstsl_vis.get("line_items") or []),
+                    "ocr_chrome" if _lstsl_chrome else "ocr_empty",
                 )
                 return lstsl_vis
     except Exception as exc:
@@ -62959,6 +63295,105 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     money_u,
                     rows_u,
                 )
+        # Stock and Sales Detail / Op.Qty|Op.Val|C.Qty phone photos: dedicated
+        # Vision must beat generic VT (VT invents Cl from Op+P-S when C.Qty
+        # cells are dense next to Cr/Db, and drops Seller metadata).
+        try:
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers,
+                extract_stock_sales_op_qty_val_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            if _has_stock_sales_op_qty_val_headers(_op_stk_peek or ""):
+                detail_opval = extract_stock_sales_op_qty_val_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="stock_sales_detail_before_vt",
+                )
+                if (
+                    detail_opval
+                    and detail_opval.get("line_items")
+                    and is_stock_vision_locked(detail_opval)
+                ):
+                    try:
+                        _enrich_stock_statement_header_from_ocr(
+                            detail_opval, _op_stk_peek or ""
+                        )
+                    except Exception:
+                        pass
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=stock_sales_op_qty_val "
+                        "file=%s line_items=%s reason=before_vision_table",
+                        filename,
+                        len(detail_opval.get("line_items") or []),
+                    )
+                    return detail_opval
+        except Exception as _detail_exc:
+            logger.info(
+                "[SalesStatement] file=%s stock_sales_op_qty_val before VT "
+                "skipped: %s",
+                filename,
+                type(_detail_exc).__name__,
+            )
+
+        # Op.Qty|Pur.Qty|Sale.Qty|Bal (Mfac SAS Summary family): dedicated
+        # Vision must beat generic VT — VT parks manufacturer Indian-comma
+        # totals (e.g. 2,93,920.12) on the first SKU and misreads Bal qty.
+        try:
+            from services.stock_direct_vision import (
+                _has_op_qty_pur_sale_bal_headers,
+                _op_qty_pur_sale_bal_before_vt_enabled,
+                extract_op_qty_pur_sale_bal_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            _sas_bal_peek = _op_stk_peek or ""
+            if _op_qty_pur_sale_bal_before_vt_enabled() and (
+                _has_op_qty_pur_sale_bal_headers(_sas_bal_peek)
+                or re.search(r"Mfac\s+SAS\s+Summary|SAS\s+Summary\s+Report", _sas_bal_peek, re.I)
+            ):
+                # Title alone is enough to try; extractor validates structure.
+                if not _has_op_qty_pur_sale_bal_headers(_sas_bal_peek):
+                    # Letterboxed phones: title may be in peek while Op.Qty
+                    # lives lower — still attempt when SAS Summary is clear.
+                    logger.info(
+                        "STOCK_OP_QTY_PUR_SALE_BAL_TITLE_ROUTE file=%s",
+                        filename,
+                    )
+                sas_bal = extract_op_qty_pur_sale_bal_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="op_qty_pur_sale_bal_before_vt",
+                )
+                if (
+                    sas_bal
+                    and sas_bal.get("line_items")
+                    and is_stock_vision_locked(sas_bal)
+                ):
+                    try:
+                        _enrich_stock_statement_header_from_ocr(
+                            sas_bal, _sas_bal_peek
+                        )
+                    except Exception:
+                        pass
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=op_qty_pur_sale_bal "
+                        "file=%s line_items=%s reason=before_vision_table",
+                        filename,
+                        len(sas_bal.get("line_items") or []),
+                    )
+                    return sas_bal
+        except Exception as _sas_bal_exc:
+            logger.info(
+                "[SalesStatement] file=%s op_qty_pur_sale_bal before VT "
+                "skipped: %s",
+                filename,
+                type(_sas_bal_exc).__name__,
+            )
+
         if _try_medica_before_vt:
             logger.info(
                 "[SalesStatement] file=%s medica probe before VT "

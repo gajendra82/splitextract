@@ -129,6 +129,13 @@ ALIASES: Dict[str, List[str]] = {
         "last month sale",
         "last month sales",
         "last month sale qty",
+        # LASTMON SALE (Receipts/Issues band sheets) — never purchase/receipts.
+        "lastmon",
+        "lastmon sale",
+        "lastmon sales",
+        "last mon",
+        "last mon sale",
+        "last mon sales",
         "lstsl",
         "lst sl",
         "lst sale",
@@ -188,6 +195,11 @@ ALIASES: Dict[str, List[str]] = {
         "scrap",
         "scrap qty",
         "box",  # case size beside Pack / before OPSTK
+        # Stock and Sales Detail: P.Sch / S.Sch are scheme markers, not free qty.
+        "p sch",
+        "s sch",
+        "psch",
+        "ssch",
     ],
     "opening": [
         "op",
@@ -274,6 +286,14 @@ ALIASES: Dict[str, List[str]] = {
         "purchbillqty",
         "purch bill qty",
         "purchase bill qty",
+        # Stock and Sales Detail Report: P.Qty.
+        "p qty",
+        "pqty",
+        # LASTMON|OPEN|COMP Receipts band: COMP = Co. Receipt.
+        "comp",
+        "co receipt",
+        "co. receipt",
+        "company receipt",
     ],
     "sales": [
         "sale",
@@ -295,6 +315,9 @@ ALIASES: Dict[str, List[str]] = {
         "issue/sales",
         "sales qty",
         "sale qty",
+        # Stock and Sales Detail Report: S.Qty.
+        "s qty",
+        "sqty",
         # SaleTot / Sale Tot — sale total qty beside Qoh.
         "saletot",
         "sale tot",
@@ -339,6 +362,12 @@ ALIASES: Dict[str, List[str]] = {
         "return",
         "retrn",
         "sale ret.",
+        # Stock and Sales Detail Report: Cr.Qty / Cr.Sch.Qty.
+        "cr qty",
+        "crqty",
+        "cr s qty",
+        "cr sch qty",
+        "cr.sch qty",
     ],
     "purchase_return": [
         "pret",
@@ -366,6 +395,11 @@ ALIASES: Dict[str, List[str]] = {
         "purchase rtn qty",
         "purc ret qty",
         "dn",
+        # Stock and Sales Detail Report: Db.Qty / Db.Sch.Qty.
+        "db qty",
+        "dbqty",
+        "db sch qty",
+        "db.sch qty",
     ],
     "expiry_damage": [
         "exp",
@@ -384,6 +418,11 @@ ALIASES: Dict[str, List[str]] = {
         "expiry damage",
         "expired",
         "expired qty",
+        # Stock and Sales Detail Report: Br.S.Qty (breakage sales).
+        "br s qty",
+        "brs qty",
+        "br qty",
+        "brs.qty",
         # STOCK & SALES STATEMENT near-expiry band under STOCK.
         "nr exp",
         "nr. exp",
@@ -414,6 +453,11 @@ ALIASES: Dict[str, List[str]] = {
         "clstk",
         "cl stk",
         "cl st",  # Cl.St abbreviated closing stock
+        "cl.stk",
+        "clstkqty",  # Vision glue of Cl.Stk + Qty
+        "cl stk qty",
+        "cl.stk qty",
+        "cl.stkqty",
         "cistk",  # OCR of Cl.Stk → CI.Stk
         "ci stk",
         "cb",
@@ -434,6 +478,9 @@ ALIASES: Dict[str, List[str]] = {
         "cl qnty",
         "cl quantity",
         "clq",
+        # Stock and Sales Detail Report prints C.Qty (not Cl.Qty).
+        "c qty",
+        "cqty",
         "qoh",  # Qty on hand (Profitmaker / Daxinsoft)
         "qo h",
         "qty on hand",
@@ -452,10 +499,8 @@ ALIASES: Dict[str, List[str]] = {
         "bonus",
         "sp",
         "ss",
-        "p sch",
-        "s sch",
-        "psch",
-        "ssch",
+        # P.Sch / S.Sch on Stock and Sales Detail are scheme markers → ignore
+        # (not free_in/free_out). Keep longer "pur free" / "sale free" below.
         "receipt free",
         "rec free",
         "free replace",
@@ -545,6 +590,11 @@ ALIASES: Dict[str, List[str]] = {
         "closing val",
         "cl val",
         "clval",
+        "cl.stk value",
+        "cl stk value",
+        "clstk value",
+        "cl.stkvalue",
+        "clstkvalue",
         "bval",
         "bal val",
         "sale val",
@@ -701,6 +751,10 @@ _DIRECT_VALUE_FIELDS = {
     "cl value": "closing_value",
     "clvalue": "closing_value",
     "clval": "closing_value",
+    # Stock and Sales Detail Report prints C.Val (not Cl.Val).
+    "c val": "closing_value",
+    "c value": "closing_value",
+    "cval": "closing_value",
     "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
     "cival": "closing_value",
     "closing bal amt": "closing_value",
@@ -751,6 +805,9 @@ _DIRECT_VALUE_FIELDS = {
     "purcv": "purchase_value",
     "purc val": "purchase_value",
     "purchase value": "purchase_value",
+    # Stock and Sales Detail Report: P.Val.
+    "p val": "purchase_value",
+    "pval": "purchase_value",
     "purch bill amt": "purchase_value",
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
@@ -3155,6 +3212,32 @@ def resolve_columns(
             )
             logger.info(
                 "STOCK_HEADER_SALES_LAST_LMS col_index=%s text=%r sub=%r -> lms",
+                idx,
+                text,
+                sub_s,
+            )
+            continue
+
+        # LASTMON SALE often glues the Receipts band arrow into the same cell
+        # ("LASTMON SALE <-----Receipts----->") which would otherwise match
+        # purchase via "receipts". LASTMON always wins → lms.
+        if re.search(r"\blast\s*mon\b|\blastmon\b", combined, re.I) or re.search(
+            r"\blast\s*mon\b|\blastmon\b", norm, re.I
+        ):
+            prelim.append(
+                {
+                    "col_index": idx,
+                    "header_text": text,
+                    "subheader_text": sub_s or None,
+                    "group": "lms",
+                    "canonical": "lms",
+                    "confidence": 0.96,
+                    "is_value": False,
+                    "reason": "lastmon_sale_lms",
+                }
+            )
+            logger.info(
+                "STOCK_HEADER_LASTMON_LMS col_index=%s text=%r sub=%r -> lms",
                 idx,
                 text,
                 sub_s,

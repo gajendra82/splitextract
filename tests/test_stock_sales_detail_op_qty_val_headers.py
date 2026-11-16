@@ -27,6 +27,15 @@ class StockSalesDetailOpQtyValHeaderTests(unittest.TestCase):
         )
         self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
 
+    def test_detail_report_title_alone_routes_when_headers_garbled(self):
+        """Phone OCR often keeps only the title + Seller line."""
+        text = (
+            "Stock and Sales Detail Report\n"
+            "HIMALAYA DRUG ZEAL Report Date:02-NOV-2026\n"
+            "Seller: GANGA DISTRIBUTORS(GULBARGA) Stock And Sales From 01-OCT-2026\n"
+        )
+        self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
+
     def test_opstk_opv_stock_and_sales_statement(self):
         text = (
             "ARKAY MEDICOS PVT. LTD.\n"
