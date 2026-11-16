@@ -1909,6 +1909,21 @@ def _ps_pharma_orphan_qty_shift_enabled() -> bool:
     }
 
 
+def _ssa_oric_trailing_qty_column_enabled() -> bool:
+    """Qty-only ORIC rows with an unlabeled 5th qty after CLOSING.
+
+    Default ON. Phone OCR often prints a trailing LMS/order digit with no
+    header; when the first four tokens already balance as ORIC, keep those
+    four and park the 5th in extra — never shift ISSUE/CLOSING into it.
+    """
+    return os.getenv("STOCK_SSA_ORIC_TRAILING_QTY_COLUMN", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _ps_pharma_oric_balances(opening: float, receipt: float, issue: float, closing: float) -> bool:
     return abs((opening + receipt - issue) - closing) <= 0.51
 
@@ -2092,11 +2107,12 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
     nums_re = re.compile(
         rf"^({qty_tok})\s+({qty_tok})\s+({qty_tok})\s+({qty_tok})\s*$"
     )
-    pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)$", re.I)
+    # OCR keeps quotes/spaces: 60 'S, 60'S, 100 TA (truncated TAB).
+    pack_unit = re.compile(r"^(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)$", re.I)
     pack_token = re.compile(
-        r"^(?:\d+\*\d+S?|"
-        r"\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)?|"
-        r"\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|CAP|CAPS|SYP|S)|"
+        r"^(?:\d+\s*\*\s*\d+S?|"
+        r"\d+X\d+(?:\.\d+)?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)?|"
+        r"\d+(?:\.\d+)?[`']?(?:ML|MG|GM|G|TAB|TABS|TA|CAP|CAPS|SYP|S)|"
         r"\d+ML|\d+MG|\d+GM|0\.\d+ML)$",
         re.I,
     )
@@ -2161,21 +2177,43 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         tokens = _clean_name(left).split()
         packing = None
         name_tokens = tokens
-        if (
-            len(tokens) >= 2
-            and pack_unit.match(tokens[-1])
-            and re.match(r"^\d", tokens[-2])
-        ):
-            packing = f"{tokens[-2]} {tokens[-1]}"
-            name_tokens = tokens[:-2]
-        elif tokens and pack_token.match(
-            tokens[-1].replace("`", "").replace("'", "").rstrip(".,;:|")
+        if len(tokens) >= 2:
+            last_unit = (
+                tokens[-1]
+                .replace("`", "")
+                .replace("'", "")
+                .rstrip(".,;:|")
+            )
+            # 60 'S / 60 S / 100 TA (unit token may keep a quote in OCR).
+            if pack_unit.match(last_unit) and re.match(r"^\d", tokens[-2]):
+                packing = f"{tokens[-2]} {tokens[-1]}"
+                name_tokens = tokens[:-2]
+            # 3 *60 / 3 *60S — OCR splits the star pack across two tokens.
+            elif re.fullmatch(r"\d+", tokens[-2]) and re.fullmatch(
+                r"\*\d+S?", tokens[-1], re.I
+            ):
+                packing = f"{tokens[-2]}*{tokens[-1].lstrip('*')}"
+                name_tokens = tokens[:-2]
+        if packing is None and tokens and pack_token.match(
+            tokens[-1]
+            .replace("`", "")
+            .replace("'", "")
+            .replace(" ", "")
+            .rstrip(".,;:|")
         ):
             packing = tokens[-1].rstrip(".,;:|")
             name_tokens = tokens[:-1]
         return _clean_name(" ".join(name_tokens)), packing
 
-    def _ps_item(left: str, opening: str, receipt: str, issue: str, closing: str) -> Optional[Dict[str, Any]]:
+    def _ps_item(
+        left: str,
+        opening: str,
+        receipt: str,
+        issue: str,
+        closing: str,
+        *,
+        trailing: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
         product_name, packing = _ps_name_pack(left)
         product_name = re.sub(r"^[\s._\-–—|]+", "", product_name or "")
         product_name = re.sub(r"[\s:=|]+$", "", product_name)
@@ -2201,6 +2239,18 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
         item["closing_value"] = 0.0
         item["opening_value"] = None
         item["receipts_value"] = None
+        if trailing is not None:
+            trail_s = str(trailing).strip()
+            if trail_s and not (
+                trail_s.lower() in _ps_empty_qty or _ps_empty_qty_re.fullmatch(trail_s)
+            ):
+                trail_v = _ps_qty(trail_s)
+                extra = item.setdefault("extra", {})
+                if isinstance(extra, dict):
+                    extra["trailing_qty"] = trail_v
+                    fs = extra.setdefault("field_source", {})
+                    if isinstance(fs, dict):
+                        fs["trailing_qty"] = "printed"
         return item
 
     items: List[Dict[str, Any]] = []
@@ -2231,16 +2281,49 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
             pending_name = ""
             continue
         m5 = row5_re.match(ln)
-        if m5 and _ps_name_pack(m5.group(1))[1]:
-            o, r, i, c = _ps_pharma_pick_oric_tokens(
-                [m5.group(2), m5.group(3), m5.group(4), m5.group(5), m5.group(6)],
-                product_hint=m5.group(1),
+        if m5:
+            five = [
+                m5.group(2),
+                m5.group(3),
+                m5.group(4),
+                m5.group(5),
+                m5.group(6),
+            ]
+            left5 = m5.group(1)
+            has_pack = bool(_ps_name_pack(left5)[1])
+            first4_ok = _ps_pharma_oric_balances(
+                _ps_qty(five[0]),
+                _ps_qty(five[1]),
+                _ps_qty(five[2]),
+                _ps_qty(five[3]),
             )
-            row = _ps_item(m5.group(1), o, r, i, c)
-            if row:
-                items.append(row)
-            pending_name = ""
-            continue
+            # Unlabeled trailing qty after CLOSING: use 5-token pick when the
+            # pack peeled OR the first four already identity-balance.
+            use_five = has_pack or (
+                _ssa_oric_trailing_qty_column_enabled() and first4_ok
+            )
+            if use_five:
+                o, r, i, c = _ps_pharma_pick_oric_tokens(
+                    five,
+                    product_hint=left5,
+                )
+                trail = None
+                if (
+                    _ssa_oric_trailing_qty_column_enabled()
+                    and (o, r, i, c) == (five[0], five[1], five[2], five[3])
+                ):
+                    trail = five[4]
+                row = _ps_item(left5, o, r, i, c, trailing=trail)
+                if row:
+                    if trail is not None:
+                        logger.info(
+                            "SSA_ORIC_TRAILING_QTY product=%s trailing=%s",
+                            str(row.get("product_name") or "")[:48],
+                            five[4],
+                        )
+                    items.append(row)
+                pending_name = ""
+                continue
         m = row_re.match(ln)
         if m:
             row = _ps_item(m.group(1), m.group(2), m.group(3), m.group(4), m.group(5))
@@ -2852,7 +2935,8 @@ def _ssa_oric_clean_product_fields(item: Dict[str, Any]) -> None:
         item["product_name"] = "PILEX KIT"
         if not item.get("packing"):
             item["packing"] = "1X1"
-    if re.match(r"TENTEX\b", name, re.I):
+    # Only bare / TAB OCR crumbs — never rename TENTEX ROYAL / FORTE variants.
+    if re.fullmatch(r"TENTEX(?:\s+TAB)?", name, re.I):
         item["product_name"] = "TENTEX FORTE"
         if not item.get("packing"):
             item["packing"] = "1X10"
@@ -29940,8 +30024,14 @@ def _parse_opening_sales_purchase_statement(doc, filename: str) -> Optional[Dict
 
 
 def _purc_sale_cl_op_val_enabled() -> bool:
-    """STOCK_PURC_SALE_CL_OP_VAL — map printed Op / Op val on Purc/Sale/Cl sheets."""
-    return os.getenv("STOCK_PURC_SALE_CL_OP_VAL", "false").strip().lower() in {
+    """STOCK_PURC_SALE_CL_OP_VAL — map printed Op / Op val on Purc/Sale/Cl sheets.
+
+    Default ON. Kill switch STOCK_PURC_SALE_CL_OP_VAL=false.
+    When Op / Op val print beside Purc / Sale / Cl, leaving them unmapped
+    swallows opening into packing and slides Sa val / Cl val into qty columns.
+    Sheets without Op headers are unchanged (no Op tokens to map).
+    """
+    return os.getenv("STOCK_PURC_SALE_CL_OP_VAL", "true").strip().lower() in {
         "1",
         "true",
         "yes",

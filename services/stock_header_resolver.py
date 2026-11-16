@@ -3901,10 +3901,30 @@ def _peel_trailing_expiry_enabled() -> bool:
     }
 
 
+def _eu_decimal_comma_enabled() -> bool:
+    """STOCK_PARSE_EU_DECIMAL_COMMA — treat NNNN,DD as decimal (not thousands).
+
+    Default ON. OCR/Vision often emits 4814,00 for printed 4814.00; stripping
+    the comma alone yields 481400. Indian 1,234 / 1,23,456 stay thousands.
+    Kill switch: STOCK_PARSE_EU_DECIMAL_COMMA=false.
+    """
+    return os.getenv(
+        "STOCK_PARSE_EU_DECIMAL_COMMA", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 _TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
     r"^(?P<num>-?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s+"
     r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?\s*$"
 )
+
+# Single comma + 1–2 fraction digits, no other separators → decimal comma.
+_EU_DECIMAL_COMMA = re.compile(r"^(-?\d+),(\d{1,2})$")
 
 
 def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[float]:
@@ -3958,6 +3978,18 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
 
     # Strip currency markers.
     text = text.replace("₹", "").replace("Rs.", "").replace("Rs", "").strip()
+    # OCR/European decimal comma BEFORE thousands strip: "4814,00" → "4814.00".
+    # Do not touch Indian thousands ("1,234", "1,23,456") or mixed "4,814.00".
+    if _eu_decimal_comma_enabled():
+        eu = _EU_DECIMAL_COMMA.fullmatch(text)
+        if eu:
+            logger.info(
+                "STOCK_PARSE_EU_DECIMAL_COMMA raw=%r -> %s.%s",
+                text[:48],
+                eu.group(1),
+                eu.group(2),
+            )
+            text = f"{eu.group(1)}.{eu.group(2)}"
     text = text.replace(",", "")
     # Pipe-ruled PDFs glue gutters / expiry onto amounts ("33.00|", "1884.14|05/2029|").
     if "|" in text:

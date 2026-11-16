@@ -7088,12 +7088,59 @@ def _looks_decimal_dropped_whole(val: float) -> bool:
     return abs(val - round(val)) <= 0.001
 
 
+def _unit_money_rate(qty: Any, value: Any) -> Optional[float]:
+    """Absolute unit rate from printed qty/value, or None when unusable."""
+    try:
+        q = float(qty)
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    if abs(q) < 0.001 or abs(v) < 0.01:
+        return None
+    rate = abs(v / q)
+    if rate < 0.01:
+        return None
+    return rate
+
+
+def _item_stock_unit_rates(item: Dict[str, Any]) -> List[float]:
+    """Closing / opening / purchase unit rates for decimal-drop scale checks.
+
+    Unique Op/Op val sheets price Sa val at sale rate and Cl val at cost, so
+    sale≈100×close alone can miss; open/purc rates recover 4814,00→481400.
+    """
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    opening_value = item.get("opening_value")
+    if opening_value is None:
+        opening_value = extra.get("opening_value")
+    purchase_value = item.get("receipts_value")
+    if purchase_value is None:
+        purchase_value = extra.get("purchase_value")
+    pairs = (
+        (item.get("closing_qty"), item.get("closing_value")),
+        (item.get("opening_qty"), opening_value),
+        (
+            item.get("receipts_qty")
+            if item.get("receipts_qty") is not None
+            else item.get("purchase_qty"),
+            purchase_value,
+        ),
+    )
+    rates: List[float] = []
+    for qty, value in pairs:
+        rate = _unit_money_rate(qty, value)
+        if rate is not None:
+            rates.append(rate)
+    return rates
+
+
 def _repair_sales_value_hundredx_scale(item: Dict[str, Any]) -> bool:
     """Fix SL.VALUE when OCR dropped the decimal point (2457.00 → 245700).
 
     Fires only when qty identity already balances and the sale unit rate is
-    ~100× the closing unit rate; divides the printed sales_value by 100.
-    Never invents digits. Flag: STOCK_VISION_SALES_VALUE_SCALE_REPAIR.
+    ~100× a printed stock unit rate (closing, else opening/purchase); divides
+    the printed sales_value by 100. Never invents digits.
+    Flag: STOCK_VISION_SALES_VALUE_SCALE_REPAIR.
     """
     if not _sales_value_scale_repair_enabled():
         return False
@@ -7106,8 +7153,7 @@ def _repair_sales_value_hundredx_scale(item: Dict[str, Any]) -> bool:
     try:
         sv = float(item.get("sales_value"))
         sq = float(item.get("sales_qty"))
-        cq = float(item.get("closing_qty"))
-        cv = float(item.get("closing_value"))
+        cq = float(item.get("closing_qty") or 0)
         opening = float(item.get("opening_qty") or 0)
         receipt = float(
             item.get("receipts_qty")
@@ -7116,30 +7162,37 @@ def _repair_sales_value_hundredx_scale(item: Dict[str, Any]) -> bool:
         )
     except (TypeError, ValueError):
         return False
-    if abs(sq) < 0.001 or abs(cq) < 0.001 or abs(cv) < 0.001:
+    if abs(sq) < 0.001:
         return False
     if not _looks_decimal_dropped_whole(sv):
         return False
     # Qty identity must already hold; this is a value-scale fix only.
     if abs((opening + receipt - sq) - cq) > 0.51:
         return False
-    rate_close = abs(cv / cq)
     rate_sale = abs(sv / sq)
-    if rate_close < 0.01:
-        return False
-    ratio = rate_sale / rate_close
-    if abs(ratio - 100.0) > 2.0:
+    ref_rates = _item_stock_unit_rates(item)
+    if not ref_rates:
         return False
     fixed = float(sv) / 100.0
-    # Fixed rate must land on the closing rate.
-    if abs((fixed / sq) - rate_close) > max(0.51, rate_close * 0.02):
+    fixed_rate = abs(fixed / sq)
+    matched_ref: Optional[float] = None
+    for rate_ref in ref_rates:
+        ratio = rate_sale / rate_ref
+        if abs(ratio - 100.0) > 2.0:
+            continue
+        if abs(fixed_rate - rate_ref) > max(0.51, rate_ref * 0.02):
+            continue
+        matched_ref = rate_ref
+        break
+    if matched_ref is None:
         return False
     logger.info(
         "VISION_TABLE SALES_VALUE_HUNDREDX_SCALE product=%s "
-        "sales_value_was=%s sales_value=%s",
+        "sales_value_was=%s sales_value=%s ref_rate=%s",
         str(item.get("product_name") or "")[:60],
         sv,
         fixed,
+        matched_ref,
     )
     item["sales_value"] = fixed
     fs["sales_value"] = "printed"
