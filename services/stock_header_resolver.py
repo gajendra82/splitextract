@@ -167,6 +167,9 @@ ALIASES: Dict[str, List[str]] = {
         "sales last",
         "sale last",
         "last",
+        # L.Sales is remapped to lms only when Cur.Sls also prints
+        # (see _apply_l_sales_cur_sls_pair) so a lone L.Sales column can
+        # still mean period sales via the sales alias.
     ],
     # Descriptive / commercial columns that can sit before Opening in stock
     # statements. They must never claim movement qty semantics.
@@ -335,6 +338,14 @@ ALIASES: Dict[str, List[str]] = {
         "secondary quantity",
         "sec qty total",
         "sec qty",
+        # Stock Report grids: Cur.Sls / Current Sales (period sales, not L.Sales).
+        "cur sls",
+        "cur.sls",
+        "cursls",
+        "cur sales",
+        "cur.sales",
+        "current sls",
+        "current sales",
     ],
     "sales_return": [
         "saleret",
@@ -351,6 +362,10 @@ ALIASES: Dict[str, List[str]] = {
         "sale rtn",
         "sales rtn",
         "sales rtn qty",
+        # Stock Report: Sls.Rtn beside Cur.Sls / Pur.Rtn.
+        "sls rtn",
+        "sls.rtn",
+        "slsrtn",
         "free retn",
         "free/retn",
         "retn",
@@ -1741,6 +1756,85 @@ def _lstsl_close_after_sales_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _l_sales_cur_sls_pair_enabled() -> bool:
+    """STOCK_HEADER_L_SALES_CUR_SLS — L.Sales=LMS when Cur.Sls also prints.
+
+    Default ON. Kill switch STOCK_HEADER_L_SALES_CUR_SLS=false.
+    """
+    return os.getenv("STOCK_HEADER_L_SALES_CUR_SLS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _header_is_l_sales(norm: str) -> bool:
+    compact = re.sub(r"\s+", "", norm or "")
+    return compact in {"lsales", "lsale"} or norm in {"l sales", "l sale"}
+
+
+def _header_is_cur_sls(norm: str) -> bool:
+    compact = re.sub(r"\s+", "", norm or "")
+    return compact in {
+        "cursls",
+        "cursales",
+        "currentsls",
+        "currentsales",
+    } or norm in {
+        "cur sls",
+        "cur sales",
+        "current sls",
+        "current sales",
+    }
+
+
+def _apply_l_sales_cur_sls_pair(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """When L.Sales and Cur.Sls both print, L.Sales is LMS and Cur.Sls is sales.
+
+    Bare L.Sales alone still follows alias scoring (may remain sales_qty).
+    Never invents columns; only rewrites printed headers that match.
+    """
+    del errors  # signature matches neighbouring apply_* helpers
+    if not _l_sales_cur_sls_pair_enabled() or not prelim:
+        return False
+    l_idxs = [
+        i
+        for i, c in enumerate(prelim)
+        if _header_is_l_sales(normalize_header(c.get("header_text")))
+    ]
+    cur_idxs = [
+        i
+        for i, c in enumerate(prelim)
+        if _header_is_cur_sls(normalize_header(c.get("header_text")))
+    ]
+    if not l_idxs or not cur_idxs:
+        return False
+    for i in l_idxs:
+        col = prelim[i]
+        col["group"] = "lms"
+        col["canonical"] = "lms"
+        col["is_value"] = False
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.95)
+        col["reason"] = "l_sales_cur_sls_pair_lms"
+    for i in cur_idxs:
+        col = prelim[i]
+        col["group"] = "sales"
+        col["canonical"] = "sales_qty"
+        col["is_value"] = False
+        col["confidence"] = max(float(col.get("confidence") or 0.0), 0.95)
+        col["reason"] = "l_sales_cur_sls_pair_sales"
+    logger.info(
+        "STOCK_HEADER_L_SALES_CUR_SLS l_sales=%s cur_sls=%s -> lms+sales_qty",
+        [prelim[i].get("col_index") for i in l_idxs],
+        [prelim[i].get("col_index") for i in cur_idxs],
+    )
+    return True
 
 
 def _looks_like_lstsl_open_recd_headers(prelim: List[Dict[str, Any]]) -> bool:
@@ -3630,6 +3724,8 @@ def resolve_columns(
     _apply_group_wise_opvalue_sequence(prelim, errors)
     # LstSL|Open|Recd|Sales|Close: Close misread as Open. after Sales.
     _apply_lstsl_close_after_sales(prelim, errors)
+    # Stock Report: L.Sales|Cur.Sls → lms|sales_qty (never L.Sales as period sales).
+    _apply_l_sales_cur_sls_pair(prelim, errors)
 
     # Receipt|Receipt/Pur and Closing|Closing Bala: right column is VALUE.
     _promote_adjacent_same_group_qty_to_value(prelim)

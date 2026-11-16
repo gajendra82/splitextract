@@ -2633,6 +2633,24 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
         company = ""
         changed = True
     if not company:
+        # Stock Report from … (HIMALAYA(ZANDRA)) — paren division, not stockist.
+        for ln in header_lines:
+            m_co = re.search(r"Stock\s+Report.*?\((.+)\)\s*$", ln, re.I)
+            if not m_co:
+                continue
+            company_from_report = re.sub(r"\s+", " ", m_co.group(1)).strip(" -")
+            if company_from_report and (
+                not stockist or company_from_report.upper() != stockist.upper()
+            ):
+                result["company_name"] = company_from_report
+                logger.info(
+                    "STOCK_PDF_WORDS_LETTERHEAD_META stock_report_company=%r",
+                    result["company_name"],
+                )
+                changed = True
+                company = company_from_report
+                break
+    if not company:
         for ln in header_lines:
             if stockist and ln.upper() == stockist.upper():
                 continue

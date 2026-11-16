@@ -5371,6 +5371,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "purc_sale_cl_value_footer",
                 "labeled_stock_value_footer",
                 "op_stk_rcpts_footer",
+                "item_packg_open_stk_value_footer",
             }
         )
     )
@@ -8119,6 +8120,25 @@ def _text_stock_families():
             ),
             False,
         ),
+        (
+            # Item Name|Packg|Open.Stk|Receipt|L.Sales|Cur.Sls|Pur.Rtn|Sls.Rtn|Clos.Stk|Above 60|Above 90
+            # Dot-matrix Stock Report TXT. L.Sales = LMS; Cur.Sls = sales_qty.
+            "item_packg_open_stk_lsales",
+            r"Item\s*Name.{0,40}Packg",
+            r"Open\.?\s*Stk\.?\s+Receipt\s+L\.?\s*Sales",
+            (
+                "opening_qty",
+                "receipts_qty",
+                "last_sales_qty",
+                "sales_qty",
+                "purchase_return_qty",
+                "sales_return_qty",
+                "closing_qty",
+                "above_60_qty",
+                "above_90_qty",
+            ),
+            False,
+        ),
     )
 
 
@@ -8152,12 +8172,130 @@ _OSTK_PURC_SALE_QOH_ROLES = (
 )
 
 
+def _txt_item_packg_open_stk_lsales_enabled() -> bool:
+    """STOCK_TXT_ITEM_PACKG_OPEN_STK_LSALES — Item Name|Packg|Open.Stk|L.Sales|Cur.Sls TXT.
+
+    Default ON. Kill switch STOCK_TXT_ITEM_PACKG_OPEN_STK_LSALES=false.
+    Header tokens cannot be SKUs; Grand Total on this layout is column value.
+    """
+    return os.getenv("STOCK_TXT_ITEM_PACKG_OPEN_STK_LSALES", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _pdf_item_packg_open_stk_lsales_enabled() -> bool:
+    """STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES — same Stock Report family on PDF text.
+
+    Default ON. Kill switch STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES=false.
+    Reuses the TXT family roles (Cur.Sls=sales_qty, L.Sales=last_sales) so
+    pdf_words_free_columns cannot park L.Sales under sales_qty.
+    """
+    return os.getenv("STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _parse_pdf_item_packg_open_stk_lsales(
+    file_bytes: bytes,
+    filename: str,
+    doc=None,
+) -> Optional[Dict[str, Any]]:
+    """PDF Stock Report with Item Name|Packg|Open.Stk|L.Sales|Cur.Sls headers.
+
+    Layout-family fallback: pdfplumber (or fitz) text → existing TXT family
+    parser. Prefer plumber so headers stay on one line; fitz often emits one
+    token per line which breaks the family regex. No stockist/filename branch.
+    """
+    if not _pdf_item_packg_open_stk_lsales_enabled():
+        return None
+    text = ""
+    try:
+        import io
+
+        import pdfplumber
+
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            text = "\n".join((page.extract_text() or "") for page in pdf.pages)
+    except Exception as exc:
+        logger.info(
+            "STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES file=%s status=plumber_skip error=%s",
+            filename,
+            type(exc).__name__,
+        )
+        text = ""
+    if (not text or len(re.sub(r"\s+", "", text)) < 40) and doc is not None:
+        try:
+            text = "\n".join((page.get_text("text") or "") for page in doc)
+            # fitz often emits one header/token per line; collapse for family match.
+            text = re.sub(r"\n+", "\n", text)
+        except Exception as exc:
+            logger.info(
+                "STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES file=%s status=fitz_skip error=%s",
+                filename,
+                type(exc).__name__,
+            )
+            return None
+    if not text or not re.search(r"L\.?\s*Sales", text, re.I):
+        return None
+    if not re.search(r"Cur\.?\s*Sls", text, re.I):
+        return None
+    # Family regex expects Packg on the same line as Item Name; plumber does.
+    matched = _match_text_stock_family(text)
+    if not matched or matched[0] != "item_packg_open_stk_lsales":
+        # One-token-per-line fitz: join for detection only, parse still needs rows.
+        collapsed = re.sub(r"[ \t]*\n[ \t]*", " ", text)
+        matched = _match_text_stock_family(collapsed)
+        if matched and matched[0] == "item_packg_open_stk_lsales":
+            text = collapsed
+        else:
+            return None
+    parsed = _parse_text_stock_fallback(text, filename)
+    if not parsed or not parsed.get("line_items"):
+        return None
+    parsed["source_format"] = "pdf"
+    extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "pdf_text_item_packg_open_stk_lsales"
+    extra["pdf_family"] = "item_packg_open_stk_lsales"
+    extra["txt_family"] = "item_packg_open_stk_lsales"
+    logger.info(
+        "STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES file=%s items=%s company=%s",
+        filename,
+        len(parsed.get("line_items") or []),
+        parsed.get("company_name"),
+    )
+    return parsed
+
+
+_ITEM_PACKG_OPEN_STK_VALUE_FOOTER = {
+    "opening_qty": "opening_value",
+    "receipts_qty": "receipts_value",
+    "last_sales_qty": "last_sales_value",
+    "sales_qty": "sales_value",
+    "purchase_return_qty": "purchase_return_value",
+    "sales_return_qty": "sales_return_value",
+    "closing_qty": "closing_value",
+    "above_60_qty": "above_60_value",
+    "above_90_qty": "above_90_value",
+}
+
+
 def _match_text_stock_family(text: str):
     # This header includes the word Opening in the footer ("Opening Value").
     # That must not select a shorter column list that reads Tot as Sale.
     if _is_ostk_purc_sale_qoh_text(text):
         return "ps_global_qoh", _OSTK_PURC_SALE_QOH_ROLES, False
     for name, left_pat, right_pat, roles, has_code in _text_stock_families():
+        if name == "item_packg_open_stk_lsales" and not (
+            _txt_item_packg_open_stk_lsales_enabled()
+            or _pdf_item_packg_open_stk_lsales_enabled()
+        ):
+            continue
         if re.search(left_pat, text, re.I) and re.search(right_pat, text, re.I):
             if not re.search(
                 r"STOCK|SALES\s*&\s*STOCK|S\.S\.REPORT|STOCK\s+STATEMENT",
@@ -8208,6 +8346,17 @@ def _apply_stock_metrics(item: Dict[str, Any], roles, metrics) -> None:
             item["extra"]["receipts_value"] = number
         elif role == "opening_value":
             item["extra"]["opening_value"] = number
+        elif role == "sales_return_qty":
+            # Printed Sls.Rtn / sales return — top-level for identity/reconciliation.
+            item["sales_return_qty"] = number
+            item["sale_return"] = number
+            item["extra"]["sales_return_qty"] = number
+        elif role == "purchase_return_qty":
+            item["purchase_return_qty"] = number
+            item["extra"]["purchase_return_qty"] = number
+        elif role == "last_sales_qty":
+            item["extra"]["last_sales_qty"] = number
+            item["extra"]["lms"] = number
         else:
             item["extra"][role] = number
     if item.get("sales_value") not in (None, "") and "issue_value" not in item["extra"]:
@@ -8444,7 +8593,11 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             result["company_name"] = _clean_name(company).rstrip(" :")
         elif not result.get("company_name") and re.search(
             r"HIMALAYA", raw, re.I
-        ) and not re.search(r"PRODUCT|DESCRIPTION|MEDICINE|Page\s*No", raw, re.I):
+        ) and not re.search(
+            r"PRODUCT|DESCRIPTION|MEDICINE|Page\s*No|Stock\s+Report",
+            raw,
+            re.I,
+        ):
             if len(raw) < 80:
                 result["company_name"] = _clean_name(raw.strip("* "))
         m_period = re.search(
@@ -8469,12 +8622,16 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                 result["period_to"] = _normalize_date(m_to.group(1))
         if re.search(
             r"SALES\s*&\s*STOCK|STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|"
-            r"STOCK.{0,40}STATEMENT|S\.S\.REPORT",
+            r"STOCK.{0,40}STATEMENT|S\.S\.REPORT|STOCK\s+REPORT",
             raw,
             re.I,
         ):
             if not result.get("report_title"):
                 result["report_title"] = _clean_name(raw)[:80]
+            if not result.get("company_name"):
+                m_co = re.search(r"Stock\s+Report.*?\((.+)\)\s*$", raw, re.I)
+                if m_co:
+                    result["company_name"] = _clean_name(m_co.group(1))
         if '"' in raw or re.search(r"\bSlrt\b", raw, re.I):
             continue
         split = _trailing_metrics(raw, len(roles))
@@ -8493,7 +8650,8 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
         left, metrics = split
         label = _clean_name(" ".join(left))
         if not label or re.search(
-            r"PRODUCT|DESCRIPTION|PACKING|OPENING|MEDICINE|QTY\.|VALUE|STOCK\b",
+            r"PRODUCT|DESCRIPTION|PACKING|OPENING|MEDICINE|QTY\.|VALUE|STOCK\b|"
+            r"Item\s*Name|Packg|Open\.?\s*Stk",
             label,
             re.I,
         ):
@@ -8511,6 +8669,26 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                     result["totals"]["sales_value"] = parsed.get("sales_qty")
                 result["totals"]["closing_value"] = parsed.get("closing_value", parsed.get("closing_qty"))
                 result["totals"]["extra"]["amount_row"] = parsed
+            elif family == "item_packg_open_stk_lsales":
+                # Printed Grand Total is stock value by column, never qty.
+                for qty_role, value_role in _ITEM_PACKG_OPEN_STK_VALUE_FOOTER.items():
+                    if qty_role not in parsed:
+                        continue
+                    amount = parsed[qty_role]
+                    if value_role in {"sales_value", "closing_value"}:
+                        result["totals"][value_role] = amount
+                    else:
+                        result["totals"]["extra"][value_role] = amount
+                result["totals"]["extra"]["total_row_source"] = (
+                    "item_packg_open_stk_value_footer"
+                )
+                logger.info(
+                    "STOCK_TXT_ITEM_PACKG_OPEN_STK_LSALES value_footer "
+                    "opening_value=%s sales_value=%s closing_value=%s",
+                    result["totals"]["extra"].get("opening_value"),
+                    result["totals"].get("sales_value"),
+                    result["totals"].get("closing_value"),
+                )
             else:
                 for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
                     if key in parsed:
@@ -8545,6 +8723,12 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
         item["closing_value"] = None
         item["extra"]["layout"] = "sales_stock_issue_qty"
         item["extra"]["txt_family"] = family
+        if family == "item_packg_open_stk_lsales":
+            item["extra"]["layout"] = "item_packg_open_stk_lsales"
+            item["extra"]["field_source"] = {
+                "sales_value": "missing",
+                "closing_value": "missing",
+            }
         _apply_stock_metrics(item, roles, metrics)
         items.append(item)
     if not items:
@@ -41302,6 +41486,23 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                     type(exc).__name__,
                 )
 
+        # Stock Report PDF: Item Name|Packg|Open.Stk|L.Sales|Cur.Sls family.
+        # Prefer TXT-family roles (Cur.Sls=sales) before free-column words path
+        # that can park L.Sales under sales_qty when Cur.Sls is unresolved.
+        try:
+            packg_lsales = _parse_pdf_item_packg_open_stk_lsales(
+                file_bytes, filename, doc=doc
+            )
+            if packg_lsales and packg_lsales.get("line_items"):
+                packg_lsales["totals"]["extra"]["statement_count"] = 1
+                return packg_lsales
+        except Exception as exc:
+            logger.info(
+                "STOCK_PDF_ITEM_PACKG_OPEN_STK_LSALES file=%s status=skipped error=%s",
+                filename,
+                type(exc).__name__,
+            )
+
         # Text PDFs that print Purchase Free and Sales Free as their own columns.
         # Word positions, no Gemini. Runs only after the named parsers miss.
         if os.getenv("STOCK_PDF_WORDS_FREE_COLUMNS", "true").strip().lower() in {
@@ -47416,6 +47617,13 @@ def _apply_ssa_qty_value_fields(
                 extra_t[key] = _to_float(raw_totals.get(key))
         extra_t["extraction_method"] = "ssa_qty_value_vision"
         extra_t["layout"] = "ssa_opening_receipt_issue_value"
+    # OPENING|RECEIVE|ISSUE|CLOSING: undo CLOSING→ISSUE copies via printed rates.
+    try:
+        from services.stock_vision_table import _apply_issue_from_header_pass
+
+        _apply_issue_from_header_pass(result.get("line_items") or [], [])
+    except Exception:
+        logger.exception("SSA_QTY_VALUE ISSUE_FROM_HEADER_PASS failed")
     return result
 
 
