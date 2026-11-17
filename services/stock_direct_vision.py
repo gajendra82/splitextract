@@ -4637,15 +4637,12 @@ def extract_op_stock_pur_sales_cl_scanned_pdf(
     # scans are not stolen when OCR chrome is blank.
     peek_blank = not (header_peek or "").strip()
     if peek_blank:
+        # soft_ok alone must not override a high identity-fail rate — that
+        # steals OPENING|RECEIVE|ISSUE multipage sheets when OCR chrome is blank.
         ok_empty = (
             items_n >= 5
-            and (
-                validation.get("soft_ok")
-                or (
-                    validation.get("ok")
-                    and identity_fail <= max(2, items_n // 5)
-                )
-            )
+            and identity_fail <= max(2, items_n // 5)
+            and bool(validation.get("soft_ok") or validation.get("ok"))
         )
         if not ok_empty:
             logger.info(
@@ -4726,6 +4723,16 @@ def extract_stock_sales_op_qty_val_scanned_pdf(
             filename,
         )
         return None
+    # Multipage + blank header OCR: do not early-claim before camera multipage.
+    # Without Tesseract, OPENING STOCK|RECEIVE sheets were stolen by Op.Stock /
+    # Detail Vision (page 1 only, sales→0).
+    if len(images) >= 2 and not (header_peek or "").strip():
+        logger.info(
+            "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s status=skip "
+            "reason=multipage_empty_header_peek",
+            filename,
+        )
+        return None
 
     # Pack|Op.Stock|Pur.Qty|Sales Qty|Cl.Stock|Stock Value scans must not use
     # the Op.Qty/Op.Val Detail prompt (Pack digits leak into opening_qty).
@@ -4741,11 +4748,15 @@ def extract_stock_sales_op_qty_val_scanned_pdf(
     )
     # Empty OCR peek: still try Op.Stock Vision once when Detail headers are
     # absent (Statement scans often OCR blank on blue/dense chrome).
+    # Multipage image PDFs must not take this diversion — OPENING STOCK|
+    # RECEIVE|ISSUE|CLOSING sheets (and other families) belong to camera
+    # multipage / SSA dump when chrome OCR is blank (no Tesseract).
     if (
         not _op_stock_hit
         and _op_stock_pur_sales_cl_vision_enabled()
         and not (header_peek or "").strip()
         and not _has_stock_sales_op_qty_val_headers(header_peek or "")
+        and len(images) < 2
     ):
         _op_stock_hit = True
         logger.info(

@@ -53,6 +53,7 @@ ALIASES: Dict[str, List[str]] = {
         "product",
         "item",
         "item name",
+        "tem name",  # OCR of "Item Name" with leading I dropped
         "item description",
         "product description",
         "product desc",
@@ -790,6 +791,14 @@ _DIRECT_VALUE_FIELDS = {
     "closing value (pur rate)": "closing_value",
     "closing value pur rate": "closing_value",
     "closing value (purchase rate)": "closing_value",
+    # Months SS Report: Closing Amt (PTR) / Closing (PTR) — money, not qty/rate.
+    "closing (ptr)": "closing_value",
+    "closing ptr": "closing_value",
+    "closing amt": "closing_value",
+    "closing amount": "closing_value",
+    "closing amt (ptr)": "closing_value",
+    "closing amount (ptr)": "closing_value",
+    "cls amt (ptr)": "closing_value",
     "stk val": "closing_value",
     "stkval": "closing_value",
     "stk value": "closing_value",
@@ -1641,6 +1650,7 @@ def _apply_prefer_product_over_name(
             "product name",
             "item",
             "item name",
+            "tem name",
             "particular",
             "particulars",
         } or norm.startswith("product "):
@@ -1674,6 +1684,85 @@ def _apply_prefer_product_over_name(
         prelim[i]["confidence"] = max(float(prelim[i].get("confidence") or 0.0), 0.95)
         prelim[i]["reason"] = "prefer_product_over_name"
     return True
+
+
+def _item_code_before_name_enabled() -> bool:
+    """STOCK_HEADER_ITEM_CODE_BEFORE_NAME — bare Item left of Item Name → code.
+
+    Months SS Report prints Item | Item Name (OCR: tem Name). Bare Item aliases
+    to product_name and wins the duplicate, so SKU codes land in names. Default ON.
+    Kill switch STOCK_HEADER_ITEM_CODE_BEFORE_NAME=false.
+    """
+    return os.getenv(
+        "STOCK_HEADER_ITEM_CODE_BEFORE_NAME", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _apply_item_code_before_name(
+    prelim: List[Dict[str, Any]],
+    errors: List[Dict[str, Any]],
+) -> bool:
+    """Map leftmost bare Item to product_code when a name column follows."""
+    if not _item_code_before_name_enabled() or len(prelim) < 2:
+        return False
+    changed = False
+    name_norms = {
+        "item name",
+        "tem name",
+        "product name",
+        "product",
+        "name",
+        "particular",
+        "particulars",
+        "description",
+        "desc",
+    }
+    for i in range(len(prelim) - 1):
+        left = prelim[i]
+        right = prelim[i + 1]
+        if str(left.get("canonical") or "") != "product_name":
+            continue
+        if str(right.get("canonical") or "") not in {"product_name", "ignore"}:
+            # Right may already be demoted to ignore as DUPLICATE; still check text.
+            pass
+        left_norm = normalize_header(left.get("header_text"))
+        right_norm = normalize_header(right.get("header_text"))
+        if left_norm not in {"item", "item cd", "itemcd", "item no", "itemno"}:
+            continue
+        right_is_name = (
+            right_norm in name_norms
+            or right_norm.endswith(" name")
+            or str(right.get("canonical") or "") == "product_name"
+        )
+        if not right_is_name:
+            continue
+        left["canonical"] = "product_code"
+        left["group"] = "product_code"
+        left["confidence"] = max(float(left.get("confidence") or 0.0), 0.96)
+        left["reason"] = "item_code_before_name"
+        right["canonical"] = "product_name"
+        right["group"] = "product_name"
+        right["confidence"] = max(float(right.get("confidence") or 0.0), 0.95)
+        right["reason"] = "item_code_before_name"
+        logger.info(
+            "STOCK_HEADER_ITEM_CODE_BEFORE_NAME left=%r -> product_code "
+            "right=%r -> product_name",
+            left.get("header_text"),
+            right.get("header_text"),
+        )
+        errors.append(
+            {
+                "code": "ITEM_CODE_BEFORE_NAME",
+                "message": (
+                    f"Bare Item col_index={left.get('col_index')} -> product_code; "
+                    f"name col_index={right.get('col_index')} -> product_name"
+                ),
+                "col_index": left.get("col_index"),
+            }
+        )
+        changed = True
+        break
+    return changed
 
 
 def _medica_in_ot_as_free_in_enabled() -> bool:
@@ -2615,15 +2704,30 @@ def _finalize_qty_bucket(
         return
     # Right-aligned Cl.Stock: a short Sal.Amt can sit in the left of this
     # band. Keep the rightmost printed number; do not blank the column.
-    if canon == "closing_qty":
+    # Opening/Purchase/Sales: PTR rate bleed + real qty collide — keep the
+    # rightmost whole qty (215), not the decimal rate (106.66).
+    if canon in {
+        "closing_qty",
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+    }:
         nums = [t for t in texts if parse_number(t) is not None]
         if nums:
-            fields[canon] = nums[-1]
+            whole = [
+                t
+                for t in nums
+                if re.fullmatch(
+                    r"-?\d+", str(t).replace(",", "").strip()
+                )
+            ]
+            kept = whole[-1] if whole else nums[-1]
+            fields[canon] = kept
             logger.info(
                 "STOCK_HEADER_RIGHTMOST_IN_BAND canon=%s kept=%r dropped=%s",
                 canon,
-                nums[-1],
-                [t for t in texts if t != nums[-1]],
+                kept,
+                [t for t in texts if t != kept],
             )
             return
     fields[canon] = None
@@ -2902,6 +3006,17 @@ def _assign_cells_by_column_bands(
                     if str(b.get("canonical") or "") != "ignore"
                 ]
                 if len(non_ignore) == 1:
+                    target_canon = str(non_ignore[0].get("canonical") or "")
+                    # PTR/rate ignore | Opening: drop a decimal rate instead of
+                    # marking opening_qty ambiguous (which would wipe a later qty).
+                    if "." in str(raw) and target_canon.endswith("_qty"):
+                        logger.info(
+                            "STOCK_HEADER_DEAD_ZONE_DROP_RATE token=%r "
+                            "qty_canon=%s",
+                            raw,
+                            target_canon,
+                        )
+                        continue
                     bucket[int(non_ignore[0]["col_index"])].append(raw)
                     assigned += 1
                     logger.info(
@@ -2912,6 +3027,7 @@ def _assign_cells_by_column_bands(
                         non_ignore[0].get("canonical"),
                     )
                     continue
+
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -2943,6 +3059,8 @@ def _assign_cells_by_column_bands(
             fields[canon] = None
             continue
         _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
+
+    _rehome_shifted_sale_free_return(fields)
 
     logger.info(
         "HEADER_COLUMN_BANDS mode=bands assigned=%s ambiguous=%s unassigned=%s "
@@ -3740,6 +3858,8 @@ def resolve_columns(
 
     # Name + Product both → product_name: keep Product (SKU), demote Name.
     _apply_prefer_product_over_name(prelim, errors)
+    # Item | Item Name → product_code | product_name (Months SS Report family).
+    _apply_item_code_before_name(prelim, errors)
 
     # Sales|Sales|Sales Value → free_out between sales_qty and sales_value.
     _promote_sales_free_before_value(prelim)
@@ -3857,6 +3977,7 @@ def assign_cells(
                 )
             else:
                 fields[canon] = raw_s
+        _rehome_shifted_sale_free_return(fields)
         return {"fields": fields, "errors": errors}
 
     # Geometry assignment.
@@ -4024,7 +4145,54 @@ def assign_cells(
             continue
         _finalize_qty_bucket(bucket.get(idx) or [], canon, fields, errors, idx)
 
+    _rehome_shifted_sale_free_return(fields)
     return {"fields": fields, "errors": errors}
+
+
+def _sale_shift_from_free_return_enabled() -> bool:
+    """STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET — Sale Qty under Free, Value under Ret.
+
+    Default ON. Months SS Report prints Sale Qty/Value right-shifted onto
+    Sale F.Qty / Sale Ret when Free/Ret are blank. Remaps headers only.
+    Kill switch: STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET=false.
+    """
+    return os.getenv(
+        "STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _rehome_shifted_sale_free_return(fields: Dict[str, Optional[str]]) -> bool:
+    """Move free_out→sales_qty and sales_return→sales_value when sale cols empty."""
+    if not _sale_shift_from_free_return_enabled() or not isinstance(fields, dict):
+        return False
+    if fields.get("sales_qty") not in (None, ""):
+        return False
+    if fields.get("sales_value") not in (None, ""):
+        return False
+    free = fields.get("free_out_qty")
+    sret = fields.get("sales_return_qty")
+    if free in (None, "") or sret in (None, ""):
+        return False
+    free_n = parse_number(free)
+    sret_n = parse_number(sret)
+    if free_n is None or sret_n is None:
+        return False
+    sret_raw = str(sret).replace(",", "")
+    looks_like_money = bool(re.search(r"\.\d", sret_raw)) or (
+        abs(sret_n) >= 100 and abs(sret_n) > abs(free_n)
+    )
+    if not looks_like_money:
+        return False
+    fields["sales_qty"] = free
+    fields["sales_value"] = sret
+    fields["free_out_qty"] = None
+    fields["sales_return_qty"] = None
+    logger.info(
+        "STOCK_HEADER_SALE_SHIFT_FROM_FREE_RET sales_qty=%r sales_value=%r",
+        free,
+        sret,
+    )
+    return True
 
 
 # Consecutive Greek τ..ύ (U+03C4..U+03CD) are a common PDF ToUnicode miss
@@ -4103,6 +4271,23 @@ def _eu_decimal_comma_enabled() -> bool:
     }
 
 
+def _dollar_as_five_ocr_enabled() -> bool:
+    """STOCK_PARSE_DOLLAR_AS_FIVE — \"$952\" OCR of 5952 (5→$).
+
+    Default ON. Months SS Report Closing Amt sometimes prints \"$952\" next to
+    a clean 5952 Stock Amt; bare \"$\" strip would keep the wrong 952.
+    Kill switch: STOCK_PARSE_DOLLAR_AS_FIVE=false.
+    """
+    return os.getenv(
+        "STOCK_PARSE_DOLLAR_AS_FIVE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 _TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
     r"^(?P<num>-?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s+"
     r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?\s*$"
@@ -4163,6 +4348,17 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
 
     # Strip currency markers.
     text = text.replace("₹", "").replace("Rs.", "").replace("Rs", "").strip()
+    # OCR: leading "$" on a 3-digit integer is often a misread "5" ("$952"→5952).
+    # Real currency "$12.50" / "$1234" is handled by stripping "$" below.
+    if _dollar_as_five_ocr_enabled():
+        dollar_ocr = re.fullmatch(r"\$(\d{3})$", text)
+        if dollar_ocr:
+            repaired = f"5{dollar_ocr.group(1)}"
+            logger.info(
+                "STOCK_PARSE_DOLLAR_AS_FIVE raw=%r -> %s", text[:48], repaired
+            )
+            text = repaired
+    text = text.replace("$", "").strip()
     # OCR/European decimal comma BEFORE thousands strip: "4814,00" → "4814.00".
     # Do not touch Indian thousands ("1,234", "1,23,456") or mixed "4,814.00".
     if _eu_decimal_comma_enabled():

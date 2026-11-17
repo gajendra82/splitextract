@@ -82,7 +82,9 @@ _SHEET_TOTAL_NAME = re.compile(
     r"|^\s*(?:amount|qty|quantity)\s+(?:grand\s+)?total\b"
     r"|^\s*(?:division|company)\s+total\b"
     r"|^\s*grand\s+total\b"
-    r"|total\s+for\b",
+    r"|total\s+for\b"
+    r"|^\s*total\s*count\b"
+    r"|^\s*total\s*:-",
     re.I,
 )
 
@@ -406,6 +408,7 @@ def fields_to_line_item(
             if any(k in field_source and field_source[k] == "missing" for k in qty_keys):
                 extra.setdefault("row_status", RowStatus.MISSING_VALUE.value)
     _peel_leading_product_code(item)
+    _peel_trailing_pack_from_product_code(item)
     return item
 
 
@@ -422,7 +425,8 @@ def _peel_product_code_enabled() -> bool:
 
 _LEADING_PRODUCT_CODE = re.compile(
     r"^(?:(?P<co>[A-Za-z][A-Za-z0-9 .&']{0,24}?)\s*-\s+)?"
-    r"(?P<code>\d{4,8})\s+(?P<rest>.+)$"
+    r"(?P<code>(?:S[O0]\d{4,}|\d{4,8}|PROD\d+))\s+(?P<rest>.+)$",
+    re.I,
 )
 
 
@@ -450,6 +454,48 @@ def _peel_leading_product_code(item: Dict[str, Any]) -> None:
     )
 
 
+_TRAILING_CODE_PACK = re.compile(
+    r"^(?P<code>(?:S[O0]\d{4,}|\d{4,8}|PROD\d+))\s+"
+    r"(?P<pack>\d{2,4}S?|\d+\s*(?:ML|GM|G|MG|TAB|TABS|CAP|CAPS)?)$",
+    re.I,
+)
+
+
+def _peel_trailing_pack_from_product_code_enabled() -> bool:
+    """STOCK_PDF_WORDS_PEEL_CODE_PACK — split \"SO39037 105\" into code + pack.
+
+    Months SS Report often glues a pack fragment into the Item/code cell.
+    Default ON. Kill switch STOCK_PDF_WORDS_PEEL_CODE_PACK=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_PEEL_CODE_PACK", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _peel_trailing_pack_from_product_code(item: Dict[str, Any]) -> None:
+    """Move a trailing pack token off product_code (keep existing packing)."""
+    if not _peel_trailing_pack_from_product_code_enabled() or not isinstance(
+        item, dict
+    ):
+        return
+    raw = str(item.get("product_code") or "").strip()
+    match = _TRAILING_CODE_PACK.match(raw)
+    if not match:
+        return
+    code = str(match.group("code") or "").strip()
+    pack = str(match.group("pack") or "").strip()
+    if not code or not pack:
+        return
+    item["product_code"] = code
+    if not str(item.get("packing") or "").strip():
+        item["packing"] = pack
+    logger.info(
+        "STOCK_PDF_WORDS_PEEL_CODE_PACK code=%s pack=%s",
+        code,
+        pack,
+    )
+
+
 def build_line_items_from_tokens(
     columns: List[Dict[str, Any]],
     token_rows: List[List[Dict[str, Any]]],
@@ -460,6 +506,7 @@ def build_line_items_from_tokens(
     from services.stock_native_tables import is_software_price_ad_name
 
     items: List[Dict[str, Any]] = []
+    pending_name: Optional[str] = None
     for tokens in token_rows:
         blob = " ".join(
             str(t.get("text") or "").strip()
@@ -505,7 +552,13 @@ def build_line_items_from_tokens(
                 token_blob[:60],
             )
             continue
-        is_product_total = bool(re.search(r"\bTotal\s*:", token_blob, re.I))
+        # Product lot totals print "Total :" — not sheet "Total Count:" / "Total:-".
+        is_product_total = bool(
+            re.search(r"\bTotal\s*:", token_blob, re.I)
+            and not re.search(
+                r"\bTotal\s*Count\b|\bTotal\s*:-", token_blob, re.I
+            )
+        )
         assign_tokens = tokens
         if is_product_total:
             # Drop the "Total :" label so amounts keep Op/Pur/Sl/Cl geometry.
@@ -575,9 +628,23 @@ def build_line_items_from_tokens(
                 (total_label or token_blob)[:40],
             )
             continue
-        if not name or not re.search(r"[A-Za-z]", str(name)):
+        if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name or ""), re.I):
             continue
-        if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I):
+        # Letterhead / address chrome on continuation pages is not a product.
+        _name_for_skip = f"{name or ''} {item.get('product_code') or ''}"
+        if re.search(
+            r"(?i)\b(?:private\s+limited|pvt\.?\s*ltd|fssai|gstin|email|"
+            r"pharmaceuticals?\s+private|contact:|mobile:-|"
+            r"akkamahadev|vijayapura|vjayapura|karnataka|arnataka|"
+            r"banashankari|suprabhat)\b",
+            _name_for_skip,
+        ) or re.match(
+            r"(?i)^(?:cts\s*n[o0]\.?|year\s*:)", str(name or "")
+        ):
+            logger.info(
+                "STOCK_PDF_WORDS_LETTERHEAD_SKIP name=%s", str(name or "")[:60]
+            )
+            pending_name = None
             continue
         # Wrapped product-name fragment with no movement numbers → append.
         # Only short letter-only wraps (CREAM / GEL ANTI ACNE), never codes or
@@ -593,32 +660,79 @@ def build_line_items_from_tokens(
                 "closing_value",
             )
         )
-        frag = str(name).strip()
+        has_code = bool(re.search(r"[A-Za-z0-9]", str(item.get("product_code") or "")))
+        frag = str(name or "").strip()
+        # Code+qty row with name on the line above: apply pending before the
+        # empty-name skip (Item|Item Name layouts park the SKU in product_code).
+        if pending_name and (has_code or not qty_empty):
+            cur = frag
+            if not cur or cur.upper() in pending_name.upper():
+                item["product_name"] = pending_name
+            elif pending_name.lower() not in cur.lower():
+                item["product_name"] = f"{pending_name} {cur}".strip()
+            else:
+                item["product_name"] = cur
+            logger.info(
+                "STOCK_PDF_WORDS_NAME_PENDING_APPLY name=%s",
+                str(item.get("product_name") or "")[:60],
+            )
+            pending_name = None
+            name = item.get("product_name")
+            frag = str(name or "").strip()
+        # Name printed above the code/qty row (Months SS Report wraps).
         if (
-            items
-            and qty_empty
-            and not item.get("packing")
+            qty_empty
             and frag
+            and not has_code
             and not _SKIP_CONTINUATION.search(frag)
             and re.search(r"[A-Za-z]{2,}", frag)
-            and not re.search(r"\d", frag)
-            and len(frag.split()) <= 4
-            and not re.fullmatch(
-                r"(?i)\d+(?:\.\d+)?(?:\s*(?:gm|ml|mg|s))?$", frag
-            )
+            and len(frag.split()) <= 6
             and not re.search(
-                r"(?i)\b(?:company|total|page|software|report)\b", frag
+                r"(?i)\b(?:company|total|page|software|report|manufacturer|"
+                r"division|period|months?\s+ss|private\s+limited)\b",
+                frag,
             )
         ):
-            prev = str(items[-1].get("product_name") or "").strip()
-            if frag.lower() not in prev.lower():
-                items[-1]["product_name"] = (prev + " " + frag).strip()
-                logger.info(
-                    "STOCK_PDF_WORDS_NAME_CONTINUATION prev=%s frag=%s",
-                    prev[:40],
-                    frag[:40],
+            letter_only = not re.search(r"\d", frag)
+            if letter_only or item.get("packing"):
+                # Single-token wraps (CREAM / INDIA) may glue to the previous
+                # SKU; multi-word lines are the next product's title banner.
+                if (
+                    items
+                    and letter_only
+                    and not item.get("packing")
+                    and not pending_name
+                    and len(frag.split()) == 1
+                ):
+                    prev = str(items[-1].get("product_name") or "").strip()
+                    if frag.lower() not in prev.lower():
+                        items[-1]["product_name"] = (prev + " " + frag).strip()
+                        logger.info(
+                            "STOCK_PDF_WORDS_NAME_CONTINUATION prev=%s frag=%s",
+                            prev[:40],
+                            frag[:40],
+                        )
+                    continue
+                if re.search(
+                    r"(?i)\b(?:akkamahadev|vijayapura|vjayapura|karnataka|"
+                    r"suprabhat|private|limited|fssai)\b",
+                    frag,
+                ):
+                    pending_name = None
+                    continue
+                pending_name = (
+                    f"{pending_name} {frag}".strip() if pending_name else frag
                 )
+                logger.info(
+                    "STOCK_PDF_WORDS_NAME_PENDING name=%s", pending_name[:60]
+                )
+                continue
+        if not frag and not has_code:
             continue
+        if frag and not re.search(r"[A-Za-z]", frag) and not has_code:
+            continue
+        if not frag and has_code:
+            item["product_name"] = str(item.get("product_code") or "").strip()
         _peel_trailing_pack_into_packing(item, columns)
         items.append(item)
     return items
@@ -2631,8 +2745,10 @@ _LETTERHEAD_TABLE_RE = re.compile(
 )
 _LETTERHEAD_ADDRESS_RE = re.compile(
     r"(?i)\bgstin\b|\bgst\s*:|\bpin(?:code)?\b|\bdist(?:rict)?\b|"
-    r"\broad\b|\bstreet\b|\bnagar\b|\bplot\b|\bat/?po\b|"
-    r"\b\d{6}\b|\bphone\b|\bmobile\b|\be-?mail\b|\bstate\b"
+    r"\broad\b|\boad\b|\bstreet\b|\bnagar\b|\bplot\b|\bat/?po\b|"
+    r"\b\d{6}\b|\bphone\b|\bmobile\b|\be-?mail\b|\bstate\b|"
+    r"\bkarnataka\b|\barnataka\b|\bmaharashtra\b|\btamil\s*nadu\b|"
+    r"\bandhra\b|\btelangana\b|\bgujarat\b|\bdelhi\b|\bfssai\b"
 )
 _LETTERHEAD_DISTRIBUTOR_RE = re.compile(
     r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|"
@@ -2677,6 +2793,31 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
         company = ""
         changed = True
     if not company:
+        # Manufacturer Name : HIMALAYA / Division Name:-HIMALAYA(ZEAL)
+        for ln in header_lines:
+            m_div = re.search(
+                r"Division\s*Name\s*[:-]+\s*(.+)$", ln, re.I
+            )
+            m_mfr = re.search(
+                r"Manufacturer\s*Name\s*:\s*(.+?)(?:\s+Division\b|$)", ln, re.I
+            )
+            picked = None
+            if m_div and m_div.group(1).strip():
+                picked = re.sub(r"\s+", " ", m_div.group(1)).strip(" -")
+            elif m_mfr and m_mfr.group(1).strip():
+                picked = re.sub(r"\s+", " ", m_mfr.group(1)).strip(" -")
+            if picked and (
+                not stockist or picked.upper() != stockist.upper()
+            ):
+                result["company_name"] = picked
+                logger.info(
+                    "STOCK_PDF_WORDS_LETTERHEAD_META manufacturer_company=%r",
+                    result["company_name"],
+                )
+                changed = True
+                company = picked
+                break
+    if not company:
         # Stock Report from … (HIMALAYA(ZANDRA)) — paren division, not stockist.
         for ln in header_lines:
             m_co = re.search(r"Stock\s+Report.*?\((.+)\)\s*$", ln, re.I)
@@ -2699,6 +2840,8 @@ def _apply_pdf_words_letterhead_meta(result: Dict[str, Any], peek: str) -> bool:
             if stockist and ln.upper() == stockist.upper():
                 continue
             if _LETTERHEAD_TITLE_RE.search(ln):
+                continue
+            if _LETTERHEAD_ADDRESS_RE.search(ln):
                 continue
             if _looks_like_division_banner(ln):
                 result["company_name"] = re.sub(r"\s+", " ", ln)
@@ -3026,6 +3169,23 @@ def parse_pdf_free_column_statement(
                     result["period_to"] = pt
             except Exception:
                 pass
+    if not result.get("period_from"):
+        # Months SS Report: "for The period of 2026-10-01 to 2026-10-31"
+        iso_period = re.search(
+            r"(?:for\s+the\s+)?period(?:\s+of)?\s*:?\s*"
+            r"(\d{4}-\d{2}-\d{2})\s*(?:to|upto|-|–|—)\s*"
+            r"(\d{4}-\d{2}-\d{2})",
+            peek,
+            re.I,
+        )
+        if iso_period:
+            result["period_from"] = iso_period.group(1)
+            result["period_to"] = iso_period.group(2)
+            logger.info(
+                "STOCK_PDF_WORDS_ISO_PERIOD period_from=%s period_to=%s",
+                result["period_from"],
+                result["period_to"],
+            )
     if parsed.get("company_name"):
         result["company_name"] = parsed["company_name"]
         logger.info(
@@ -3042,6 +3202,33 @@ def parse_pdf_free_column_statement(
         ):
             result["stockist_address"] = lines[1]
     _apply_pdf_words_letterhead_meta(result, peek)
+    # Printed Manufacturer/Division beats a letterhead street line.
+    mfr_line = re.search(
+        r"Manufacturer\s*Name\s*:\s*(.+?)(?:\s+Division\b|$)",
+        peek,
+        re.I,
+    )
+    div_line = re.search(
+        r"Division\s*Name\s*[:-]+\s*([^\n]+)",
+        peek,
+        re.I,
+    )
+    if div_line and div_line.group(1).strip():
+        result["company_name"] = re.sub(
+            r"\s+", " ", div_line.group(1)
+        ).strip(" -")
+        logger.info(
+            "STOCK_PDF_WORDS_MANUFACTURER_DIVISION company=%s",
+            result["company_name"],
+        )
+    elif mfr_line and mfr_line.group(1).strip():
+        result["company_name"] = re.sub(
+            r"\s+", " ", mfr_line.group(1)
+        ).strip(" -")
+        logger.info(
+            "STOCK_PDF_WORDS_MANUFACTURER_NAME company=%s",
+            result["company_name"],
+        )
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1

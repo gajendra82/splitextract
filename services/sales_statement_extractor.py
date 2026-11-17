@@ -536,12 +536,16 @@ def _statement_period_content_only_enabled() -> bool:
 _REPORT_PERIOD_RANGE_RE = re.compile(
     r"(?:STOCK\s*&\s*SALES\s*(?:ANALYSIS)?|Sales\s*&\s*Stock\s*Statement|"
     r"STOCK\s+AND\s+SALES|STOCK\s+STATEMENT|Sales\s+and\s+Stock\s+Statement|"
-    r"Stock\s+and\s+Sale\s+Statement|"
+    r"Stock\s+and\s+Sale\s+Statement|Months?\s+SS\s+Report|"
     r"Period\s*:?|FOR\s+THE\s+PERIOD|"
     r"Statement\s+Period|Report\s+Period|Monthly\s+Stock)"
     r"[^\n]{0,120}?"
+    r"(?:"
+    r"(\d{4}-\d{2}-\d{2})\s*(?:to|upto|-|–|—)\s*(\d{4}-\d{2}-\d{2})"
+    r"|"
     r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|upto|-|–|—)\s*"
-    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})"
+    r")",
     re.I,
 )
 _REPORT_PERIOD_FROM_TO_RE = re.compile(
@@ -553,8 +557,12 @@ _REPORT_PERIOD_FROM_TO_RE = re.compile(
 )
 _REPORT_PERIOD_OF_RE = re.compile(
     r"(?:for\s+the\s+)?period(?:\s+of)?\s*:?\s*"
+    r"(?:"
+    r"(\d{4}-\d{2}-\d{2})\s*(?:to|upto|-|–|—)\s*(\d{4}-\d{2}-\d{2})"
+    r"|"
     r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|upto|-|–|—)\s*"
-    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+    r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})"
+    r")",
     re.I,
 )
 _REPORT_PERIOD_INLINE_RE = re.compile(
@@ -674,8 +682,12 @@ def _extract_report_period_from_content(
         )
         if not m:
             continue
-        pf = _normalize_date(m.group(1))
-        pt = _normalize_date(m.group(2))
+        # ISO and d/m/y alternatives leave unused groups as None.
+        date_bits = [g for g in m.groups() if g]
+        if len(date_bits) < 2:
+            continue
+        pf = _normalize_date(date_bits[0])
+        pt = _normalize_date(date_bits[1])
         if pf and pt:
             return pf, pt, source
     # Month+year only (ORDER FORM Date field, "Month of Oct26", etc.).
@@ -5484,6 +5496,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "printed_footer",
         "purc_sale_cl_value_footer",
         "labeled_stock_value_footer",
+        # Normal Stock Statement Excel: Opening/Purchase/Sales/Closing Rs.
+        "xls_labeled_rs_footer",
         "op_stk_rcpts_footer",
         "item_packg_open_stk_value_footer",
         "prompt_datewise_footer",
@@ -5579,6 +5593,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "marg_sale_purchase_value",
             "printed_footer",
             "labeled_stock_value_footer",
+            "xls_labeled_rs_footer",
             "op_stk_rcpts_footer",
             "printed_total",
         }
@@ -13610,6 +13625,18 @@ def _xls_totalstock_as_closing_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _xls_labeled_rs_footer_enabled() -> bool:
+    """STOCK_XLS_LABELED_RS_FOOTER — peel Opening/Purchase/Sales/Closing Rs money.
+
+    Normal Stock Statement (Open/Recp/Sales/Clsg) prints qty on the grid and
+    money only on footer labels such as ``Sales Rs : 453392.44``. Those strings
+    are never SKUs. Default ON; set false to restore prior totals-null behaviour.
+    """
+    return os.getenv(
+        "STOCK_XLS_LABELED_RS_FOOTER", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _xls_promote_totalstock_as_closing(colmap: Dict[str, int]) -> Dict[str, int]:
     """Use TotalStock as bal only when a dedicated closing qty column is absent."""
     if not colmap or not _xls_totalstock_as_closing_enabled():
@@ -17585,7 +17612,9 @@ def _xls_fill_from_rows(
             continue
         joined = " ".join(str(c) for _, c in texts)
         if re.search(
-            r"For Manufacturer|Opening Val|Closing Val|(?<!\()\bSales\s*:|Printed Using|Report Date|Page \d",
+            r"For Manufacturer|Opening Val|Closing Val|(?<!\()\bSales\s*:|"
+            r"Opening\s*Rs|Purchase\s*Rs|Sales\s*Rs|Closing\s*Rs|"
+            r"Printed Using|Report Date|Page \d",
             joined,
             re.I,
         ):
@@ -17606,6 +17635,37 @@ def _xls_fill_from_rows(
                     if re.fullmatch(r"Sales\s*:", label, re.I) and i + 1 < len(texts):
                         result["totals"]["sales_value"] = _to_float(texts[i + 1][1])
                         break
+            # Open/Recp/Sales/Clsg Normal Stock Statement: money lives in
+            # same-cell labels ("Sales Rs : 453392.44"), not value columns.
+            if _xls_labeled_rs_footer_enabled() and re.search(
+                r"(?:Opening|Purchase|Sales|Closing)\s*Rs", joined, re.I
+            ):
+                peeled = _parse_labeled_stock_value_footer(joined)
+                if peeled:
+                    if peeled.get("opening_value") is not None:
+                        result["totals"]["extra"]["opening_value"] = peeled[
+                            "opening_value"
+                        ]
+                    if peeled.get("purchase_value") is not None:
+                        result["totals"]["extra"]["purchase_value"] = peeled[
+                            "purchase_value"
+                        ]
+                    if peeled.get("sales_value") is not None:
+                        result["totals"]["sales_value"] = peeled["sales_value"]
+                    if peeled.get("closing_value") is not None:
+                        result["totals"]["closing_value"] = peeled["closing_value"]
+                    result["totals"]["extra"]["total_row_source"] = (
+                        result["totals"]["extra"].get("total_row_source")
+                        or "xls_labeled_rs_footer"
+                    )
+                    logger.info(
+                        "STOCK_XLS_LABELED_RS_FOOTER opening=%s purchase=%s "
+                        "sales=%s closing=%s",
+                        peeled.get("opening_value"),
+                        peeled.get("purchase_value"),
+                        peeled.get("sales_value"),
+                        peeled.get("closing_value"),
+                    )
             continue
         _hdr_hits = {
             m_.group(0).lower()
@@ -17960,6 +18020,34 @@ def _xls_fill_from_rows(
         "detected_fields": sorted(colmap.keys()),
         "extraction_warning": extra.get("extraction_warning"),
     }
+    # Qty-only Open/Recp/Sales/Clsg grids still print Opening/Sales/Closing Rs
+    # on the footer band — fill null totals from those labels only.
+    if _xls_labeled_rs_footer_enabled() and (
+        result.get("totals", {}).get("sales_value") in (None, "")
+        or result.get("totals", {}).get("closing_value") in (None, "")
+    ):
+        blob = "\n".join(
+            " ".join(str(c) for c in row if c not in (None, ""))
+            for row in rows
+            if isinstance(row, list)
+        )
+        before_sv = result.get("totals", {}).get("sales_value")
+        before_cv = result.get("totals", {}).get("closing_value")
+        result = _apply_labeled_stock_value_footer(result, blob)
+        after_sv = result.get("totals", {}).get("sales_value")
+        after_cv = result.get("totals", {}).get("closing_value")
+        if (after_sv not in (None, "") and after_sv != before_sv) or (
+            after_cv not in (None, "") and after_cv != before_cv
+        ):
+            extra = result.setdefault("totals", {}).setdefault("extra", {})
+            extra["total_row_source"] = (
+                extra.get("total_row_source") or "xls_labeled_rs_footer"
+            )
+            logger.info(
+                "STOCK_XLS_LABELED_RS_FOOTER applied sales=%s closing=%s",
+                after_sv,
+                after_cv,
+            )
     return result
 
 
@@ -22185,6 +22273,15 @@ def _parse_labeled_stock_value_footer(text: str) -> Dict[str, float]:
         # Shorter labels when "stock" is omitted (Open. Value / Closing Value).
         (r"open(?:ing)?\.?\s*value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
         (r"closing\s+value\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
+        # Normal Stock Statement Excel footer: "Opening Rs : 48620.22".
+        (r"opening\s*rs\.?\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "opening_value"),
+        (r"purchase\s*rs\.?\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "purchase_value"),
+        (
+            r"(?<!previous\s)(?<!last\smonth\s)sales\s*rs\.?\s*[:\-–—]?\s*"
+            r"([0-9][0-9,]*(?:\.\d+)?)",
+            "sales_value",
+        ),
+        (r"closing\s*rs\.?\s*[:\-–—]?\s*([0-9][0-9,]*(?:\.\d+)?)", "closing_value"),
     )
     for pat, key in patterns:
         if key in found:
@@ -28338,12 +28435,36 @@ def _saleable_parse_qty_cell(token: str) -> Tuple[Optional[float], str]:
     return None, "uncertain"
 
 
+def _saleable_combo_pack_peel_enabled() -> bool:
+    """Peel combo Packing cells (60+30GM) before Opn/Rec/Issue/Bal qty|amt pairs.
+
+    Default ON: these tokens contain '+' and a unit, so they can never be a
+    printed stock qty. Kill with STOCK_SALEABLE_COMBO_PACK_PEEL=false.
+    """
+    return os.getenv("STOCK_SALEABLE_COMBO_PACK_PEEL", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _saleable_leading_pack_cell(cell: str) -> bool:
     """True when the first metric cell is Packing, not Opn qty."""
     tok = (cell or "").strip()
     if not tok:
         return False
     if re.fullmatch(r"\d{1,4}", tok):
+        return True
+    # Combo packs printed as 60+30GM / 10+10 TAB — never Opn qty.
+    if _saleable_combo_pack_peel_enabled() and re.fullmatch(
+        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S|SET)?\s*"
+        r"(?:\+\s*\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S|SET)?)+"
+        r"(?:\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S|SET))?\b.*",
+        tok,
+        re.I,
+    ):
+        logger.info("SALEABLE_COMBO_PACK_PEEL cell=%r", tok[:40])
         return True
     if re.fullmatch(
         r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S)\b.*",
@@ -48646,6 +48767,36 @@ def _peek_has_sale_period_movement_headers(text: str) -> bool:
     return sale_period or pur_return_sale
 
 
+def _peek_is_main_stock_oric_statement(text: str) -> bool:
+    """PRODUCT DESCRIPTION | OPENING STOCK|VALUE | RECEIVE|ISSUE|CLOSING STATEMENT.
+
+    Distinct from SSA ANALYSIS ITEM DESCRIPTION + RECEIPT/DUMP. Marg/Excel
+    screenshots of this family must not enter SSA dump Vision (row shift +
+    LAST MONTH SALE parked as closing).
+    """
+    if not (text or "").strip():
+        return False
+    if _is_opening_receive_issue_closing_stock_text(text):
+        return True
+    if re.search(r"ITEM\s+DESCRIPTION", text, re.I) and re.search(
+        r"\bDUMP\b", text, re.I
+    ):
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+STATEMENT", text, re.I):
+        return False
+    # Excel/Marg row-index column on STATEMENT body — same ORIC family.
+    if _main_stock_looks_like_numbered_oric_grid(text):
+        return True
+    if not re.search(r"PRODUCT\s+DESC", text, re.I):
+        return False
+    has_open = bool(re.search(r"OPENING\s+STOCK", text, re.I))
+    has_recv = bool(re.search(r"RECEIVE\s+QUANT|RECEIVE\s+QTY", text, re.I))
+    has_issue = bool(re.search(r"ISSUE\s+QUANT|ISSUE\s+QTY", text, re.I))
+    has_close = bool(re.search(r"CLOSING\s+STOCK", text, re.I))
+    has_lms = bool(re.search(r"LAST\s*MONTH\s*SALE", text, re.I))
+    return bool((has_open and has_recv and has_issue and has_close) or (has_open and has_lms))
+
+
 def _peek_suggests_ssa_qty_value(text: str) -> bool:
     """STOCK & SALES ANALYSIS qty/value grids — not Medica OPSTK / SALE VAL."""
     if not (text or "").strip():
@@ -48656,6 +48807,9 @@ def _peek_suggests_ssa_qty_value(text: str) -> bool:
         return False
     # Qty-only OPENING|RECEIPT|ISSUE|CLOSING (dashes, no VALUE) is not this reader.
     if _is_ssa_oric_qty_only_text(text):
+        return False
+    # Marg PRODUCT DESCRIPTION OPENING/RECEIVE STATEMENT (+ LMS) is main_stock.
+    if _peek_is_main_stock_oric_statement(text):
         return False
     if (
         _ssa_peek_exclude_sale_period_enabled()
@@ -49032,37 +49186,97 @@ next product. Negative OPENING is allowed when printed (e.g. -3 / -610.98).
 DUMP QTY often repeats CLOSING QTY — still copy ISSUE and CLOSING from their
 own columns; never swap them. Period day 31 in 01-10-2026 - 31-10-2026 is 31,
 never 11.
+Continuation / page-2 grids: never slide one product's OPENING/RECEIVE/ISSUE/
+CLOSING block onto the next product name. An all-zero printed row stays all
+zero — do not copy the previous row's quantities onto it. If OPENING is blank
+or 0 and RECEIVE holds the stock, keep opening_qty=0 and put the digit in
+receipts_qty (do not park RECEIVE under OPENING).
 """
+    anti_slide_prompt = (
+        prompt
+        + "\nRETRY FOCUS: prior read slid whole qty blocks onto neighbour rows. "
+        "Re-read every product row independently. Match digits only to the "
+        "printed cells on that same horizontal line. Empty/zero rows must stay "
+        "empty/zero."
+    )
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": prompt},
-                    {
-                        "inline_data": {
-                            "mime_type": _image_mime(ext_for_mime),
-                            "data": base64.b64encode(vision_bytes).decode("ascii"),
-                        }
-                    },
-                ],
-            }
-        ],
-        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
-    }
-    parsed = None
-    for attempt in range(2):
-        try:
-            response = generate_content_via_vertex(
-                model=model, payload=payload, timeout=90
-            )
-            parsed = _extract_json_object(_gemini_response_text(response))
-            if parsed and parsed.get("line_items"):
-                break
-        except Exception as exc:
-            logger.warning("SSA dump photo vision failed for %s: %s", filename, exc)
-            time.sleep(min(2 ** attempt, 4))
+
+    def _ssa_dump_vision_parse(prompt_text: str) -> Optional[Dict[str, Any]]:
+        local_payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt_text},
+                        {
+                            "inline_data": {
+                                "mime_type": _image_mime(ext_for_mime),
+                                "data": base64.b64encode(vision_bytes).decode(
+                                    "ascii"
+                                ),
+                            }
+                        },
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 16384},
+        }
+        local_parsed = None
+        for attempt in range(2):
+            try:
+                response = generate_content_via_vertex(
+                    model=model, payload=local_payload, timeout=90
+                )
+                local_parsed = _extract_json_object(
+                    _gemini_response_text(response)
+                )
+                if local_parsed and local_parsed.get("line_items"):
+                    return local_parsed
+            except Exception as exc:
+                logger.warning(
+                    "SSA dump photo vision failed for %s: %s", filename, exc
+                )
+                time.sleep(min(2 ** attempt, 4))
+        return local_parsed if local_parsed and local_parsed.get("line_items") else None
+
+    def _ssa_dump_clean_and_repair(
+        raw_parsed: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        cleaned_raw: List[Dict[str, Any]] = []
+        for raw in raw_parsed.get("line_items") or []:
+            if not isinstance(raw, dict):
+                continue
+            name = str(raw.get("product_name") or "")
+            if re.match(r"^\s*(?:TOTAL|GRAND\s+TOTAL|CONTINUED)\b", name, re.I):
+                continue
+            if re.search(
+                r"HIMALAYA\s+WELLNESS|END\s+OF\s+REPORT|PAGE\s*NO", name, re.I
+            ):
+                continue
+            cleaned_raw.append(raw)
+        return _ssa_dump_repair_items(cleaned_raw)
+
+    def _ssa_dump_identity_fail_count(items: List[Dict[str, Any]]) -> int:
+        fails = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            opening = _to_float(item.get("opening_qty"))
+            receipt = _to_float(item.get("receipts_qty"))
+            sales = _to_float(item.get("sales_qty"))
+            closing = _ssa_dump_effective_closing_qty(item)
+            if (
+                abs(opening) < 0.01
+                and abs(receipt) < 0.01
+                and abs(sales) < 0.01
+                and abs(closing) < 0.01
+            ):
+                continue
+            if not _ssa_dump_row_balances(opening, receipt, sales, closing):
+                fails += 1
+        return fails
+
+    parsed = _ssa_dump_vision_parse(prompt)
     if not parsed or not parsed.get("line_items"):
         logger.info(
             "ssa_dump_vision_empty file=%s skip_ocr_gate=%s",
@@ -49070,18 +49284,31 @@ never 11.
             skip_ocr_gate,
         )
         return None
-    # Drop TOTAL / Continued / company banner rows mistaken for products.
-    cleaned_raw: List[Dict[str, Any]] = []
-    for raw in parsed.get("line_items") or []:
-        if not isinstance(raw, dict):
-            continue
-        name = str(raw.get("product_name") or "")
-        if re.match(r"^\s*(?:TOTAL|GRAND\s+TOTAL|CONTINUED)\b", name, re.I):
-            continue
-        if re.search(r"HIMALAYA\s+WELLNESS|END\s+OF\s+REPORT|PAGE\s*NO", name, re.I):
-            continue
-        cleaned_raw.append(raw)
-    parsed["line_items"] = _ssa_dump_repair_items(cleaned_raw)
+    repaired_items = _ssa_dump_clean_and_repair(parsed)
+    # One anti-slide retry when association repairs still leave broken rows.
+    # Forward-absorb sheets retry on a single remaining fail (continuation
+    # pages often leave one hollow duplicate after the cascade unwinds).
+    _fail_n = _ssa_dump_identity_fail_count(repaired_items)
+    _had_forward = any(
+        isinstance(it, dict) and _ssa_dump_item_has_forward_flag(it)
+        for it in repaired_items
+    )
+    if _ssa_dump_identity_retry_enabled() and _fail_n >= (1 if _had_forward else 2):
+        logger.info(
+            "SSA_DUMP_IDENTITY_RETRY file=%s fails=%s forward=%s",
+            filename,
+            _fail_n,
+            _had_forward,
+        )
+        retry_parsed = _ssa_dump_vision_parse(anti_slide_prompt)
+        if retry_parsed and retry_parsed.get("line_items"):
+            retry_items = _ssa_dump_clean_and_repair(retry_parsed)
+            if _ssa_dump_identity_fail_count(retry_items) <= _ssa_dump_identity_fail_count(
+                repaired_items
+            ):
+                repaired_items = retry_items
+                parsed = retry_parsed
+    parsed["line_items"] = repaired_items
     result = empty_result(filename, ext.lstrip(".") or "jpg")
     result = _apply_ssa_qty_value_fields(result, parsed)
     # Repair before the quality gate — scanned sheets often omit opening_value.
@@ -49094,6 +49321,12 @@ never 11.
             skip_ocr_gate,
         )
         return None
+    if _ssa_dump_identity_retry_enabled():
+        extra_retry = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra_retry, dict):
+            extra_retry["ssa_dump_identity_fails"] = _ssa_dump_identity_fail_count(
+                result.get("line_items") or []
+            )
     if cropped:
         extra = result.setdefault("totals", {}).setdefault("extra", {})
         if isinstance(extra, dict):
@@ -49326,6 +49559,40 @@ def _ssa_dump_sales_closing_cascade_enabled() -> bool:
     """Shift mis-aligned sales/closing qty down when identity proves the move."""
     return os.getenv(
         "STOCK_SSA_DUMP_SALES_CLOSING_CASCADE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_forward_hollow_absorb_enabled() -> bool:
+    """STOCK_SSA_DUMP_FORWARD_HOLLOW_ABSORB — pull sales/closing back from next row.
+
+    Default ON. Continuation OPENING|RECEIVE|ISSUE|CLOSING pages often leave
+    row N with opening only (closing unread/0) while row N+1 holds N's
+    sales+closing (sometimes with a duplicated opening). Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_SSA_DUMP_FORWARD_HOLLOW_ABSORB", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ssa_dump_identity_retry_enabled() -> bool:
+    """STOCK_SSA_DUMP_IDENTITY_RETRY — second Vision pass when rows still fail.
+
+    Default ON. After hollow-absorb/cascade repairs, a dense continuation page
+    may still slide whole blocks onto empty neighbours. One extra Gemini call
+    with an anti-slide prompt re-reads the same page. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_SSA_DUMP_IDENTITY_RETRY", "true"
     ).strip().lower() in {
         "1",
         "true",
@@ -49877,6 +50144,436 @@ def _ssa_dump_effective_closing_qty(item: Dict[str, Any]) -> float:
     return float(cv_f)
 
 
+def _ssa_dump_item_sales_value(item: Dict[str, Any]) -> float:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for candidate in (item.get("sales_value"), extra.get("sales_value")):
+        if candidate not in (None, ""):
+            return _to_float(candidate)
+    return 0.0
+
+
+def _ssa_dump_row_is_empty_qty(item: Dict[str, Any]) -> bool:
+    if not isinstance(item, dict):
+        return True
+    return not (
+        abs(_to_float(item.get("opening_qty"))) >= 0.01
+        or abs(_to_float(item.get("receipts_qty"))) >= 0.01
+        or abs(_to_float(item.get("sales_qty"))) >= 0.01
+        or abs(_ssa_dump_effective_closing_qty(item)) >= 0.01
+    )
+
+
+def _ssa_dump_row_is_static_block(item: Dict[str, Any]) -> bool:
+    """True when opening≈closing>0 with no receipt/sales (no-movement block)."""
+    if not isinstance(item, dict):
+        return False
+    opening = _to_float(item.get("opening_qty"))
+    receipt = _to_float(item.get("receipts_qty"))
+    sales = _to_float(item.get("sales_qty"))
+    closing = _ssa_dump_effective_closing_qty(item)
+    if opening < 1.0 or abs(opening - closing) > 0.51:
+        return False
+    if abs(receipt) >= 0.01 or abs(sales) >= 0.01:
+        return False
+    return True
+
+
+def _ssa_dump_copy_qty_value_block(
+    src: Dict[str, Any],
+    dst: Dict[str, Any],
+    *,
+    clear_src: bool,
+    flag: str,
+) -> None:
+    """Copy printed qty/value fields from src onto dst; optionally zero src."""
+    fields = (
+        "opening_qty",
+        "opening_value",
+        "receipts_qty",
+        "receipts_value",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    )
+    for field in fields:
+        dst[field] = src.get(field)
+    src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
+    dst_extra = dst.setdefault("extra", {})
+    if not isinstance(dst_extra, dict):
+        dst_extra = {}
+        dst["extra"] = dst_extra
+    for key in ("opening_value", "receipts_value", "sales_value", "dump_qty"):
+        if src_extra.get(key) not in (None, ""):
+            dst_extra[key] = src_extra.get(key)
+    dst_fs = dst_extra.setdefault("field_source", {})
+    if isinstance(dst_fs, dict):
+        for field in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+            "opening_value",
+            "receipts_value",
+            "sales_value",
+            "closing_value",
+        ):
+            if dst.get(field) not in (None, ""):
+                dst_fs[field] = "printed"
+    dst_flags = list(dst_extra.get("flags") or [])
+    if flag not in dst_flags:
+        dst_flags.append(flag)
+    dst_extra["flags"] = dst_flags
+    if not clear_src:
+        return
+    for field in fields:
+        src[field] = 0.0
+    if isinstance(src_extra, dict):
+        for key in ("opening_value", "receipts_value", "sales_value", "dump_qty"):
+            if key in src_extra:
+                src_extra[key] = 0.0
+        src_flags = list(src_extra.get("flags") or [])
+        if flag not in src_flags:
+            src_flags.append(flag)
+        src_extra["flags"] = src_flags
+        src["extra"] = src_extra
+
+
+def _ssa_dump_pull_static_then_movement_across_empties(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Static block jumped over empty rows; movement block sits on the next name.
+
+    Pattern (continuation pages):
+      … empty … empty | STATIC(open=close) | MOVEMENT(balances) | …
+    Pull STATIC onto the earliest empty in the gap, then pull MOVEMENT onto the
+    vacated STATIC slot. Requires a following movement row so legitimate
+    static SKUs that simply follow empty zero-rows are not disturbed.
+    """
+    if not _ssa_dump_forward_hollow_absorb_enabled() or len(items) < 3:
+        return items
+    for index in range(len(items) - 1):
+        cur = items[index]
+        nxt = items[index + 1]
+        if not isinstance(cur, dict) or not isinstance(nxt, dict):
+            continue
+        if not _ssa_dump_row_is_static_block(cur):
+            continue
+        o_n = _to_float(nxt.get("opening_qty"))
+        r_n = _to_float(nxt.get("receipts_qty"))
+        s_n = _to_float(nxt.get("sales_qty"))
+        c_n = _ssa_dump_effective_closing_qty(nxt)
+        if abs(s_n) < 0.01:
+            continue
+        if not _ssa_dump_row_balances(o_n, r_n, s_n, c_n):
+            continue
+        empties: List[int] = []
+        k = index - 1
+        while k >= 0 and isinstance(items[k], dict) and _ssa_dump_row_is_empty_qty(
+            items[k]
+        ):
+            empties.append(k)
+            k -= 1
+        if not empties:
+            continue
+        # Prefer the empty that sits one zero-pad above the parked static
+        # (empty, empty-pad, STATIC, MOVEMENT). Earliest-in-gap would steal a
+        # legitimate leading zero row (e.g. REOSTO before RUMALAYA FORTE).
+        target_i = empties[0]  # closest empty above static (fallback)
+        for cand in empties:
+            if cand + 2 == index and _ssa_dump_row_is_empty_qty(items[cand + 1]):
+                target_i = cand
+                break
+        target = items[target_i]
+        if not isinstance(target, dict):
+            continue
+        logger.info(
+            "SSA_DUMP_FORWARD_HOLLOW_ABSORB kind=static_across_empty "
+            "from=%s to=%s then_movement=%s",
+            str(cur.get("product_name") or "")[:50],
+            str(target.get("product_name") or "")[:50],
+            str(nxt.get("product_name") or "")[:50],
+        )
+        _ssa_dump_copy_qty_value_block(
+            cur,
+            target,
+            clear_src=True,
+            flag="SSA_DUMP_FORWARD_HOLLOW_ABSORB",
+        )
+        # Vacated static slot now empty — pull the shifted movement row onto it.
+        _ssa_dump_copy_qty_value_block(
+            nxt,
+            cur,
+            clear_src=True,
+            flag="SSA_DUMP_FORWARD_HOLLOW_ABSORB",
+        )
+    return items
+
+
+def _ssa_dump_item_has_forward_flag(item: Dict[str, Any]) -> bool:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    flags = extra.get("flags") if isinstance(extra.get("flags"), list) else []
+    return "SSA_DUMP_FORWARD_HOLLOW_ABSORB" in flags
+
+
+def _ssa_dump_pull_orphaned_movement_after_hollow(
+    items: List[Dict[str, Any]],
+    *,
+    allow_flagged_donors: bool = False,
+) -> List[Dict[str, Any]]:
+    """After hollow/static pulls, reclaim a full block parked past an emptied row.
+
+    Only runs when this sheet already absorbed a forward slide (flag present),
+    so clean pages with legitimate empty SKUs before a real movement row are
+    untouched. Skips donors that were already re-slotted by earlier absorbs
+    unless ``allow_flagged_donors`` (second hop up the empty gap).
+    """
+    if not _ssa_dump_forward_hollow_absorb_enabled() or len(items) < 2:
+        return items
+    if not any(
+        isinstance(it, dict) and _ssa_dump_item_has_forward_flag(it) for it in items
+    ):
+        return items
+    for index in range(len(items) - 1):
+        cur = items[index]
+        nxt = items[index + 1]
+        if not isinstance(cur, dict) or not isinstance(nxt, dict):
+            continue
+        if not _ssa_dump_row_is_empty_qty(cur):
+            continue
+        if _ssa_dump_item_has_forward_flag(nxt) and not allow_flagged_donors:
+            continue
+        o_n = _to_float(nxt.get("opening_qty"))
+        r_n = _to_float(nxt.get("receipts_qty"))
+        s_n = _to_float(nxt.get("sales_qty"))
+        c_n = _ssa_dump_effective_closing_qty(nxt)
+        if o_n < 1.0 or abs(s_n) < 0.01:
+            continue
+        if not _ssa_dump_row_balances(o_n, r_n, s_n, c_n):
+            continue
+        trailing_empty = index + 2 >= len(items) or (
+            isinstance(items[index + 2], dict)
+            and _ssa_dump_row_is_empty_qty(items[index + 2])
+        )
+        if not trailing_empty:
+            continue
+        logger.info(
+            "SSA_DUMP_FORWARD_HOLLOW_ABSORB kind=orphaned_movement "
+            "from=%s to=%s flagged_donor=%s",
+            str(nxt.get("product_name") or "")[:50],
+            str(cur.get("product_name") or "")[:50],
+            allow_flagged_donors,
+        )
+        _ssa_dump_copy_qty_value_block(
+            nxt,
+            cur,
+            clear_src=True,
+            flag="SSA_DUMP_FORWARD_HOLLOW_ABSORB",
+        )
+    return items
+
+
+def _ssa_dump_pull_forward_hollow_absorb(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Pull sales/closing from row N+1 back onto hollow row N.
+
+    Pattern (continuation OPENING|RECEIVE|ISSUE|CLOSING pages):
+      N   : opening>0, receipts≈0, sales≈0, closing≈0  (fails identity)
+      N+1 : sales/closing that balance N's opening (+optional duplicated open)
+    Re-slot printed digits only — never invent. When N+1 opening≈N opening,
+    clear N+1's opening too (full row parked on the next product name).
+    Iterate top-down until stable so hybrid chains unwind (TAB→LUKOL→MENOSAN).
+    """
+    if not _ssa_dump_forward_hollow_absorb_enabled() or len(items) < 2:
+        return items
+    max_passes = max(2, len(items))
+    for _pass in range(max_passes):
+        moved = False
+        for index in range(len(items) - 1):
+            cur = items[index]
+            nxt = items[index + 1]
+            if not isinstance(cur, dict) or not isinstance(nxt, dict):
+                continue
+            o_c = _to_float(cur.get("opening_qty"))
+            r_c = _to_float(cur.get("receipts_qty"))
+            s_c = _to_float(cur.get("sales_qty"))
+            c_c = _ssa_dump_effective_closing_qty(cur)
+            o_n = _to_float(nxt.get("opening_qty"))
+            r_n = _to_float(nxt.get("receipts_qty"))
+            s_n = _to_float(nxt.get("sales_qty"))
+            c_n = _ssa_dump_effective_closing_qty(nxt)
+            # Hollow: kept opening, lost movement/closing.
+            if o_c < 1.0:
+                continue
+            if abs(s_c) >= 0.01 or abs(c_c) >= 0.01:
+                continue
+            if _ssa_dump_row_balances(o_c, r_c, s_c, c_c):
+                continue
+            # Next must donate real sales and/or closing that complete N.
+            if abs(s_n) < 0.01 and abs(c_n) < 0.01:
+                continue
+            if not _ssa_dump_row_balances(o_c, r_c, s_n, c_n):
+                continue
+            # When next already balances with its own distinct opening, the
+            # sales/closing still complete N — only safe if next opening is a
+            # duplicate of N (full-row park) OR next does not balance as-is.
+            next_balances_self = _ssa_dump_row_balances(o_n, r_n, s_n, c_n)
+            open_dup = abs(o_n - o_c) <= 0.51 and o_n >= 1.0
+            if next_balances_self and not open_dup:
+                # Distinct + self-balance + completes N ⇒ o_n≈o_c. Unreachable
+                # unless open_dup. Keep the guard for safety.
+                continue
+            # If the previous product is empty, the hollow opening itself was
+            # slid forward (TAB emptied, LUKOL wears TAB's opening). Assemble
+            # onto the empty previous row instead of completing the wrong SKU.
+            target = cur
+            clear_cur_opening = False
+            if index > 0 and isinstance(items[index - 1], dict):
+                prev = items[index - 1]
+                if _ssa_dump_row_is_empty_qty(prev):
+                    target = prev
+                    clear_cur_opening = True
+            logger.info(
+                "SSA_DUMP_FORWARD_HOLLOW_ABSORB from=%s to=%s "
+                "sales=%s closing=%s open_dup=%s via_empty_prev=%s",
+                str(nxt.get("product_name") or "")[:50],
+                str(target.get("product_name") or "")[:50],
+                s_n,
+                c_n,
+                open_dup,
+                clear_cur_opening,
+            )
+            if clear_cur_opening:
+                target["opening_qty"] = o_c
+                target["opening_value"] = cur.get("opening_value")
+                target["receipts_qty"] = r_c
+                target["receipts_value"] = cur.get("receipts_value")
+                cur_extra_src = (
+                    cur.get("extra") if isinstance(cur.get("extra"), dict) else {}
+                )
+                tgt_extra = target.setdefault("extra", {})
+                if not isinstance(tgt_extra, dict):
+                    tgt_extra = {}
+                    target["extra"] = tgt_extra
+                if cur_extra_src.get("opening_value") not in (None, ""):
+                    tgt_extra["opening_value"] = cur_extra_src.get("opening_value")
+                if cur_extra_src.get("receipts_value") not in (None, ""):
+                    tgt_extra["receipts_value"] = cur_extra_src.get("receipts_value")
+            target["sales_qty"] = s_n
+            target["closing_qty"] = c_n
+            sv = _ssa_dump_item_sales_value(nxt)
+            cv = _to_float(nxt.get("closing_value"))
+            if abs(sv) > 0.005:
+                target["sales_value"] = sv
+            if abs(cv) > 0.005:
+                target["closing_value"] = cv
+            tgt_extra = target.setdefault("extra", {})
+            if not isinstance(tgt_extra, dict):
+                tgt_extra = {}
+                target["extra"] = tgt_extra
+            tgt_fs = tgt_extra.setdefault("field_source", {})
+            if isinstance(tgt_fs, dict):
+                tgt_fs["sales_qty"] = "printed"
+                tgt_fs["closing_qty"] = "printed"
+                if clear_cur_opening:
+                    tgt_fs["opening_qty"] = "printed"
+                if abs(sv) > 0.005:
+                    tgt_fs["sales_value"] = "printed"
+                if abs(cv) > 0.005:
+                    tgt_fs["closing_value"] = "printed"
+            tgt_flags = list(tgt_extra.get("flags") or [])
+            if "SSA_DUMP_FORWARD_HOLLOW_ABSORB" not in tgt_flags:
+                tgt_flags.append("SSA_DUMP_FORWARD_HOLLOW_ABSORB")
+            tgt_extra["flags"] = tgt_flags
+
+            # Clear donor movement; clear duplicated opening on full-row park.
+            nxt["sales_qty"] = 0.0
+            nxt["closing_qty"] = 0.0
+            nxt["sales_value"] = 0.0
+            nxt["closing_value"] = 0.0
+            if open_dup:
+                nxt["opening_qty"] = 0.0
+                nxt["opening_value"] = 0.0
+                nxt["receipts_qty"] = 0.0
+                nxt["receipts_value"] = 0.0
+            if clear_cur_opening:
+                cur["opening_qty"] = 0.0
+                cur["opening_value"] = 0.0
+                cur["receipts_qty"] = 0.0
+                cur["receipts_value"] = 0.0
+                cur["sales_qty"] = 0.0
+                cur["closing_qty"] = 0.0
+                cur["sales_value"] = 0.0
+                cur["closing_value"] = 0.0
+            nxt_extra = nxt.setdefault("extra", {})
+            if not isinstance(nxt_extra, dict):
+                nxt_extra = {}
+                nxt["extra"] = nxt_extra
+            if open_dup:
+                nxt_extra["opening_value"] = 0.0
+                nxt_extra["receipts_value"] = 0.0
+            nxt_extra["sales_value"] = 0.0
+            nxt_fs = nxt_extra.setdefault("field_source", {})
+            if isinstance(nxt_fs, dict):
+                nxt_fs["sales_qty"] = "printed"
+                nxt_fs["closing_qty"] = "printed"
+                if open_dup:
+                    nxt_fs["opening_qty"] = "printed"
+                    nxt_fs["receipts_qty"] = "printed"
+            nxt_flags = list(nxt_extra.get("flags") or [])
+            if "SSA_DUMP_FORWARD_HOLLOW_ABSORB" not in nxt_flags:
+                nxt_flags.append("SSA_DUMP_FORWARD_HOLLOW_ABSORB")
+            nxt_extra["flags"] = nxt_flags
+            if clear_cur_opening:
+                cur_extra = cur.setdefault("extra", {})
+                if isinstance(cur_extra, dict):
+                    cur_flags = list(cur_extra.get("flags") or [])
+                    if "SSA_DUMP_FORWARD_HOLLOW_ABSORB" not in cur_flags:
+                        cur_flags.append("SSA_DUMP_FORWARD_HOLLOW_ABSORB")
+                    cur_extra["flags"] = cur_flags
+            moved = True
+        if not moved:
+            break
+    # Clear opening-only duplicates of a prior balanced row (200ML copies 100ML).
+    for index in range(len(items) - 1):
+        cur = items[index]
+        nxt = items[index + 1]
+        if not isinstance(cur, dict) or not isinstance(nxt, dict):
+            continue
+        o_c = _to_float(cur.get("opening_qty"))
+        r_c = _to_float(cur.get("receipts_qty"))
+        s_c = _to_float(cur.get("sales_qty"))
+        c_c = _ssa_dump_effective_closing_qty(cur)
+        o_n = _to_float(nxt.get("opening_qty"))
+        s_n = _to_float(nxt.get("sales_qty"))
+        c_n = _ssa_dump_effective_closing_qty(nxt)
+        if o_c < 1.0 or abs(o_n - o_c) > 0.51:
+            continue
+        if not _ssa_dump_row_balances(o_c, r_c, s_c, c_c):
+            continue
+        if abs(s_n) >= 0.01 or abs(c_n) >= 0.01:
+            continue
+        if abs(_to_float(nxt.get("receipts_qty"))) >= 0.01:
+            continue
+        logger.info(
+            "SSA_DUMP_FORWARD_HOLLOW_ABSORB kind=dup_opening_clear product=%s "
+            "opening=%s",
+            str(nxt.get("product_name") or "")[:50],
+            o_n,
+        )
+        nxt["opening_qty"] = 0.0
+        nxt["opening_value"] = 0.0
+        nxt_extra = nxt.setdefault("extra", {})
+        if isinstance(nxt_extra, dict):
+            nxt_extra["opening_value"] = 0.0
+            flags = list(nxt_extra.get("flags") or [])
+            if "SSA_DUMP_FORWARD_HOLLOW_ABSORB" not in flags:
+                flags.append("SSA_DUMP_FORWARD_HOLLOW_ABSORB")
+            nxt_extra["flags"] = flags
+    return items
+
+
 def _ssa_dump_shift_sales_closing_cascade(
     items: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -50070,6 +50767,10 @@ def _ssa_dump_repair_receipt_parked_as_opening(item: Dict[str, Any]) -> bool:
     Never invents digits — only moves printed opening → receipts.
     """
     if not _ssa_dump_receipt_as_opening_enabled() or not isinstance(item, dict):
+        return False
+    # Forward hollow/static re-slots already placed a true no-movement OPENING
+    # block (e.g. RUMALAYA FORTE open=close). Do not rewrite those as receipts.
+    if _ssa_dump_item_has_forward_flag(item):
         return False
     opening = _to_float(item.get("opening_qty"))
     receipt = _to_float(item.get("receipts_qty"))
@@ -50276,9 +50977,18 @@ def _ssa_dump_repair_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if isinstance(item, dict):
             _ssa_dump_repair_money_parked_in_qty(item)
             _ssa_dump_repair_sales_qty_from_value(item)
-            _ssa_dump_repair_receipt_parked_as_opening(item)
+    # Row-association repairs BEFORE receipt-as-opening: a static block parked
+    # on the next product (open==close) must not be rewritten as a receipt.
     repaired = _ssa_dump_move_opening_row_up(repaired)
+    # Hollow first so orphaned movement can use a still-empty trailing row
+    # (static-across-empty must not occupy that trailer beforehand).
+    repaired = _ssa_dump_pull_forward_hollow_absorb(repaired)
+    repaired = _ssa_dump_pull_orphaned_movement_after_hollow(repaired)
+    repaired = _ssa_dump_pull_static_then_movement_across_empties(repaired)
     repaired = _ssa_dump_shift_sales_closing_cascade(repaired)
+    for item in repaired:
+        if isinstance(item, dict):
+            _ssa_dump_repair_receipt_parked_as_opening(item)
     # Closing qty parked in closing_value (PILEX 70, CONFIDO 75, …) → qty slot.
     try:
         from services.stock_vision_table import (
@@ -56317,7 +57027,7 @@ def _extract_medica_stock_statement_vision(
 _MAIN_STOCK_SALES_PROMPT = """
 This image is a STOCK & SALES STATEMENT or STOCK & SALES ANALYSIS print/photo/screenshot.
 Use it only for this header, left to right:
-PRODUCT DESCRIPTION (or ITEM DESCRIPTION) | PACK (optional) | OPENING STOCK/QTY | OPENING VALUE | RECEIVE/RECEIPT QTY | RECEIVE/RECEIPT VALUE | ISSUE QTY | ISSUE VALUE | CLOSING STOCK/QTY | CLOSING VALUE | EXPIRY STOCK (optional)
+PRODUCT DESCRIPTION (or ITEM DESCRIPTION) | PACK (optional) | OPENING STOCK/QTY | OPENING VALUE | RECEIVE/RECEIPT QTY | RECEIVE/RECEIPT VALUE | ISSUE QTY | ISSUE VALUE | CLOSING STOCK/QTY | CLOSING VALUE | LAST MONTH SALE / LMS (optional) | EXPIRY STOCK (optional)
 
 Column mapping:
 - PRODUCT DESCRIPTION / ITEM DESCRIPTION -> product_name
@@ -56330,6 +57040,7 @@ Column mapping:
 - ISSUE VALUE -> sales_value
 - CLOSING STOCK or CLOSING QTY -> closing_qty
 - CLOSING VALUE -> closing_value
+- LAST MONTH SALE / LAST MONTH SALES / LMS -> extra.lms ONLY (never opening/closing/issue)
 - EXPIRY STOCK -> extra.expiry_stock (date string or null; "--" is null)
 
 RECEIVE VALUE is the money column immediately after RECEIVE QUANTITY.
@@ -56338,6 +57049,8 @@ Do not leave extra.receipts_value at 0 when that cell has a number.
 A printed 0 stays 0. Do not shift a later number left into a blank cell.
 Keep every number on the SAME physical product row. Never take OPENING/RECEIVE/ISSUE/CLOSING
 from the previous or next product.
+LAST MONTH SALE is a trailing history qty after CLOSING VALUE — copy it to extra.lms and
+never use it as closing_qty or closing_value.
 Skip the TOTAL row. Skip phone bars, stamps, and Excel row numbers.
 
 Return ONLY JSON:
@@ -56359,7 +57072,7 @@ Return ONLY JSON:
       "sales_value": number,
       "closing_qty": number,
       "closing_value": number,
-      "extra": {"opening_value": number, "receipts_value": number, "expiry_stock": string|null}
+      "extra": {"opening_value": number, "receipts_value": number, "lms": number|null, "expiry_stock": string|null}
     }
   ]
 }
@@ -56964,8 +57677,395 @@ def _main_stock_ocr_number(token: str) -> Optional[float]:
         return None
 
 
+def _main_stock_lms_trail_enabled() -> bool:
+    """STOCK_MAIN_ORIC_LMS_TRAIL — peel trailing LAST MONTH SALE after CLOSING VALUE.
+
+    Default ON. LMS/LAST MONTH SALE is never a stock qty/value column on this
+    PRODUCT DESCRIPTION | OPENING|RECEIVE|ISSUE|CLOSING qty|value family.
+    """
+    return os.getenv("STOCK_MAIN_ORIC_LMS_TRAIL", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _main_stock_ocr_quality_gate_enabled() -> bool:
+    """STOCK_MAIN_ORIC_OCR_QUALITY_GATE — reject LMS-shifted / glued OCR grids.
+
+    Default ON. Dense monitor photos often OCR LAST MONTH SALE into closing and
+    glue qty|value digits; Vision must own those captures.
+    """
+    return os.getenv("STOCK_MAIN_ORIC_OCR_QUALITY_GATE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _main_stock_lms_force_vision_enabled() -> bool:
+    """STOCK_MAIN_ORIC_LMS_FORCE_VISION — prefer Vision on numbered LMS grids.
+
+    Default ON. Excel/Marg screenshots with a row-index column + ORIC qty|value
+    rarely survive line OCR without column shift.
+    """
+    return os.getenv("STOCK_MAIN_ORIC_LMS_FORCE_VISION", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _main_stock_printed_totals_enabled() -> bool:
+    """STOCK_MAIN_ORIC_PRINTED_TOTALS — copy TOTALS footer into totals.
+
+    Default ON. Does not rewrite line items — only parks printed footer money/qty
+    on totals when the TOTALS row is readable.
+    """
+    return os.getenv("STOCK_MAIN_ORIC_PRINTED_TOTALS", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _main_stock_fix_footer_money_token(token: str) -> Optional[float]:
+    """Parse a TOTALS money/qty token; repair OCR that dropped the decimal point."""
+    raw = str(token or "").strip()
+    if not raw:
+        return None
+    raw = raw.replace(",", "").replace("|", " ").replace("]", " ").replace("[", " ")
+    raw = re.sub(r"[^0-9.\-]", "", raw)
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw or ""):
+        return None
+    # Dense monitor OCR often prints 58509082 for 585090.82.
+    if "." not in raw and len(raw.lstrip("-")) >= 7:
+        body = raw.lstrip("-")
+        fixed = body[:-2] + "." + body[-2:]
+        if raw.startswith("-"):
+            fixed = "-" + fixed
+        try:
+            return float(fixed)
+        except ValueError:
+            return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def _main_stock_footer_ocr_text(file_bytes: bytes) -> str:
+    """High-contrast bottom band OCR so the TOTALS row is readable."""
+    chunks: List[str] = []
+    try:
+        plain = _ocr_image_footer_text(file_bytes, top_ratio=0.78) or ""
+        if plain.strip():
+            chunks.append(plain)
+    except Exception:
+        pass
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+        from services.stock_ocr_policy import stock_ocr_context
+
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(file_bytes))).convert(
+            "RGB"
+        )
+        width, height = image.size
+        band = image.crop((0, int(height * 0.86), width, height))
+        band = ImageEnhance.Contrast(
+            band.resize(
+                (max(1, width * 3), max(1, band.height * 3)),
+                Image.Resampling.LANCZOS,
+            )
+        ).enhance(2.0)
+        tess = _a2z_tesseract()
+        with stock_ocr_context(region="main_stock_totals_footer", page="1"):
+            text = tess.image_to_string(band, config="--psm 6") or ""
+        if text.strip():
+            chunks.append(text)
+    except Exception as exc:
+        logger.info("MAIN_STOCK_PRINTED_TOTALS enhanced footer OCR skipped: %s", exc)
+    return "\n".join(chunks)
+
+
+def _main_stock_apply_printed_totals_footer(
+    result: Dict[str, Any], file_bytes: bytes
+) -> None:
+    """Peel PRODUCT DESCRIPTION ORIC TOTALS row into totals (printed numbers only)."""
+    if not _main_stock_printed_totals_enabled() or not isinstance(result, dict):
+        return
+    if not file_bytes:
+        return
+    footer = _main_stock_footer_ocr_text(file_bytes)
+    if not footer.strip():
+        return
+    # TOTAL / TOTALS with OCR junk between cells (| __ ] etc.).
+    match = re.search(
+        r"(?is)\bTOTALS?\b\s*[|\-_=:]*\s*"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)\D+"
+        r"(-?\d[\d,]*(?:\.\d+)?)"
+        r"(?:\D+(-?\d[\d,]*(?:\.\d+)?))?",
+        footer,
+    )
+    if not match:
+        logger.info("MAIN_STOCK_PRINTED_TOTALS status=no_match footer_len=%s", len(footer))
+        return
+    vals: List[float] = []
+    for g in match.groups():
+        if g is None:
+            continue
+        parsed = _main_stock_fix_footer_money_token(g)
+        if parsed is None:
+            return
+        vals.append(parsed)
+    if len(vals) < 8:
+        return
+    oq, ov, rq, rv, iq, iv, cq, cv = vals[:8]
+    # Qty cells stay whole; money cells that lost decimals were repaired above.
+    if abs(oq - round(oq)) > 0.05:
+        oq = float(int(round(oq)))
+    if abs(rq - round(rq)) > 0.05:
+        rq = float(int(round(rq)))
+    if abs(iq - round(iq)) > 0.05:
+        iq = float(int(round(iq)))
+    if abs(cq - round(cq)) > 0.05:
+        cq = float(int(round(cq)))
+    # Sanity: printed closing money should dwarf a single SKU and match qty scale.
+    if cv < 1000 or cq < 10:
+        return
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        return
+    totals["opening_qty"] = oq
+    totals["receipts_qty"] = rq
+    totals["sales_qty"] = iq
+    totals["closing_qty"] = cq
+    totals["sales_value"] = iv
+    totals["closing_value"] = cv
+    extra["opening_value"] = ov
+    extra["receipts_value"] = rv
+    extra["purchase_value"] = rv
+    extra["opening_qty"] = oq
+    extra["receipts_qty"] = rq
+    extra["sales_qty"] = iq
+    extra["closing_qty"] = cq
+    if len(vals) >= 9:
+        extra["last_month_sale"] = vals[8]
+        extra["lms"] = vals[8]
+    extra["total_row_source"] = "main_stock_printed_totals"
+    extra["closing_value_source"] = "main_stock_printed_totals"
+    extra["sales_value_source"] = "main_stock_printed_totals"
+    logger.info(
+        "MAIN_STOCK_PRINTED_TOTALS opening_qty=%s opening_value=%s "
+        "receive_qty=%s issue_qty=%s closing_qty=%s closing_value=%s",
+        oq,
+        ov,
+        rq,
+        iq,
+        cq,
+        cv,
+    )
+
+
+def _main_stock_ocr_money_plausible(o_cv: float, v_cv: float) -> bool:
+    """Reject glued OCR money (130768 for 13076.8) before merging onto Vision."""
+    if o_cv < 0 or o_cv >= 200000:
+        return False
+    # Whole large money with Vision ~10x smaller → dropped decimal.
+    if (
+        abs(o_cv - round(o_cv)) <= 0.05
+        and o_cv >= 10000
+        and v_cv > 0
+        and abs(o_cv / 10.0 - v_cv) <= max(1.0, 0.02 * v_cv)
+    ):
+        return False
+    if v_cv > 100 and o_cv > 0 and abs(o_cv - v_cv) > max(500.0, 1.5 * v_cv):
+        return False
+    return True
+
+
+def _main_stock_merge_balanced_ocr_rows(
+    vision: Dict[str, Any], ocr: Optional[Dict[str, Any]]
+) -> int:
+    """Prefer identity-balanced OCR cells when Vision inflated/shifted money.
+
+    Re-slots printed OCR numbers onto matching product keys only — never invents.
+    """
+    if not isinstance(vision, dict) or not isinstance(ocr, dict):
+        return 0
+    v_items = [i for i in (vision.get("line_items") or []) if isinstance(i, dict)]
+    o_items = [i for i in (ocr.get("line_items") or []) if isinstance(i, dict)]
+    if not v_items or not o_items:
+        return 0
+    by_key: Dict[str, Dict[str, Any]] = {}
+    for item in o_items:
+        key = _main_stock_product_key(str(item.get("product_name") or ""))
+        if not key:
+            continue
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if not _main_stock_oric_qty_balances(oq, rq, sq, cq):
+            continue
+        cv = _to_float(item.get("closing_value"))
+        # Skip clearly glued money (OCR still bad on that row).
+        if cv >= 200000:
+            continue
+        prev = by_key.get(key)
+        if prev is None or _main_stock_row_score(item) >= _main_stock_row_score(prev):
+            by_key[key] = item
+    patched = 0
+    for item in v_items:
+        key = _main_stock_product_key(str(item.get("product_name") or ""))
+        src = by_key.get(key)
+        if not src:
+            # Fuzzy key match for OCR name noise.
+            for ok, cand in by_key.items():
+                if _main_stock_keys_match(ok, key):
+                    src = cand
+                    break
+        if not src:
+            continue
+        v_cv = _to_float(item.get("closing_value"))
+        o_cv = _to_float(src.get("closing_value"))
+        if not _main_stock_ocr_money_plausible(o_cv, v_cv):
+            continue
+        v_oq = _to_float(item.get("opening_qty"))
+        v_rq = _to_float(item.get("receipts_qty"))
+        v_sq = _to_float(item.get("sales_qty"))
+        v_cq = _to_float(item.get("closing_qty"))
+        o_oq = _to_float(src.get("opening_qty"))
+        o_rq = _to_float(src.get("receipts_qty"))
+        o_sq = _to_float(src.get("sales_qty"))
+        o_cq = _to_float(src.get("closing_qty"))
+        # Never blank a Vision movement row with an all-zero OCR miss.
+        if (
+            (v_oq or v_rq or v_sq or v_cq or v_cv)
+            and not (o_oq or o_rq or o_sq or o_cq or o_cv)
+        ):
+            continue
+        vision_ok = _main_stock_oric_qty_balances(v_oq, v_rq, v_sq, v_cq)
+        v_score = _main_stock_row_score(item)
+        o_score = _main_stock_row_score(src)
+        # Only overwrite when Vision qty identity fails, money is glued, or OCR
+        # clearly wins on score while money stays near Vision's scale.
+        take_ocr = (not vision_ok) or v_cv >= 100000 or (
+            o_score > v_score + 1000
+            and abs(o_cv - v_cv) <= max(100.0, 0.35 * max(v_cv, 1.0))
+        )
+        if not take_ocr:
+            continue
+        for field in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+            "opening_value",
+            "receipts_value",
+        ):
+            if src.get(field) is not None:
+                item[field] = src.get(field)
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
+        for ek in ("opening_value", "receipts_value", "lms", "last_month_sale"):
+            if src_extra.get(ek) is not None:
+                extra[ek] = src_extra.get(ek)
+            elif src.get(ek) is not None and ek in {"opening_value", "receipts_value"}:
+                extra[ek] = src.get(ek)
+        extra["main_stock_ocr_merge"] = True
+        patched += 1
+    if patched:
+        logger.info("MAIN_STOCK_OCR_MERGE patched_rows=%s", patched)
+    return patched
+
+
+def _main_stock_oric_qty_balances(
+    opening: float, receipts: float, sales: float, closing: float
+) -> bool:
+    return abs((opening + receipts - sales) - closing) <= 0.51
+
+
+def _main_stock_looks_like_numbered_oric_grid(text: str) -> bool:
+    """True when OCR shows Excel-style row indexes on an ORIC statement body."""
+    if not (text or "").strip():
+        return False
+    if not re.search(r"STOCK\s*&\s*SALES\s+(STATEMENT|ANALYSIS)", text, re.I):
+        return False
+    numbered = 0
+    for line in text.splitlines():
+        if re.match(r"^\s*\d{1,3}[.)]?\s+[A-Za-z*]{3,}", line or ""):
+            numbered += 1
+            if numbered >= 5:
+                return True
+    return False
+
+
+def _main_stock_ocr_looks_misaligned(result: Optional[Dict[str, Any]]) -> bool:
+    """LMS parked in closing_value / glued qty|value / identity collapse."""
+    if not _main_stock_ocr_quality_gate_enabled() or not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    lms_as_close = 0
+    glued = 0
+    identity_fail = 0
+    moved = 0
+    for item in items:
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        cv = _to_float(item.get("closing_value"))
+        ov = _to_float(
+            (item.get("extra") or {}).get("opening_value", item.get("opening_value"))
+            if isinstance(item.get("extra"), dict)
+            else item.get("opening_value")
+        )
+        if oq > 0 or rq > 0 or sq > 0 or cq > 0:
+            moved += 1
+            if not _main_stock_oric_qty_balances(oq, rq, sq, cq):
+                identity_fail += 1
+        # Trailing LMS (small whole qty) parked as closing_value while cq looks like money.
+        if (
+            cv >= 0
+            and abs(cv - round(cv)) <= 0.05
+            and cv <= 500
+            and (cq >= 1000 or (cq >= 100 and abs(cq - round(cq)) > 0.05))
+        ):
+            lms_as_close += 1
+        if oq >= 100000 or cq >= 100000 or ov >= 1000000:
+            glued += 1
+    if lms_as_close >= 3:
+        return True
+    if glued >= 3:
+        return True
+    if moved >= 8 and identity_fail >= max(5, int(0.55 * moved)):
+        return True
+    return False
+
+
 def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
-    """Map one PRODUCT DESCRIPTION row: 8 numeric cols + optional expiry.
+    """Map one PRODUCT DESCRIPTION row: 8 numeric cols + optional LMS/expiry.
 
     Keeps all-zero products and ISSUE (sales) rows — pad sparse OCR zeros.
     """
@@ -56993,12 +58093,13 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
             or token in {"0", "0.0", "0.00", "--", "-", "—", "+)", ")+", "(+", "+("}
         )
 
-    # Walk from the right collecting up to 8 numeric cells.
+    # Walk from the right collecting up to 8 ORIC cells (+ optional LMS).
+    max_cells = 9 if _main_stock_lms_trail_enabled() else 8
     values: List[float] = []
     consumed = 0
     soft_zeros = 0
     for token in reversed(tokens):
-        if len(values) >= 8:
+        if len(values) >= max_cells:
             break
         num = _main_stock_ocr_number(token)
         if num is None:
@@ -57048,7 +58149,32 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
             return None
     if len(values) < 8:
         return None
-    values = list(reversed(values[:8]))
+    lms_qty: Optional[float] = None
+    # values are right-first: [rightmost, ..., leftmost].
+    if len(values) >= 9 and _main_stock_lms_trail_enabled():
+        lms_candidate = values[0]
+        body_right_first = values[1:9]
+        body = list(reversed(body_right_first))
+        body_ok = _main_stock_oric_qty_balances(body[0], body[2], body[4], body[6])
+        # LMS is almost always a small whole qty; prefer peel when body balances
+        # or when keeping LMS as closing_value would clearly break qty identity.
+        keep8 = list(reversed(values[:8]))
+        keep8_ok = _main_stock_oric_qty_balances(
+            keep8[0], keep8[2], keep8[4], keep8[6]
+        )
+        lms_whole = abs(lms_candidate - round(lms_candidate)) <= 0.05 and lms_candidate <= 5000
+        if body_ok or (lms_whole and not keep8_ok):
+            lms_qty = lms_candidate
+            values = body
+            logger.info(
+                "MAIN_STOCK_LMS_TRAIL product_line=%r lms=%s",
+                " ".join(tokens[:6])[:60],
+                lms_qty,
+            )
+        else:
+            values = keep8
+    else:
+        values = list(reversed(values[:8]))
     # Zero-movement rows: closing value equals opening value. OCR sometimes
     # truncates the closing money token (e.g. "@.1" for 60.1).
     if (
@@ -57083,6 +58209,8 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
     name = re.sub(r"\s+[^\w\*°/]+$", "", name)
     name = re.sub(r"\s+[A-Za-z]?[\.\,]{1,3}$", "", name)
     name = re.sub(r"^[^A-Za-z0-9]+", "", name)
+    # Excel/Marg row-index column (8 AACTARIL… / 11. BONNISAN…) — never part of SKU.
+    name = re.sub(r"^\d{1,3}[.)]?\s+(?=[A-Za-z*]{3,})", "", name)
     name = _clean_name(name)
     if not _main_stock_name_ok(name):
         return None
@@ -57102,6 +58230,9 @@ def _main_stock_parse_ocr_line(line: str) -> Optional[Dict[str, Any]]:
         "expiry_stock": expiry,
         "layout": "opening_receive_issue_closing",
     }
+    if lms_qty is not None:
+        item["extra"]["lms"] = lms_qty
+        item["extra"]["last_month_sale"] = lms_qty
     return item
 
 
@@ -58060,6 +59191,17 @@ def _extract_opening_receive_issue_closing_photo(
             return op_stk
         return None
 
+    # Numbered Marg/Excel ORIC grids with trailing LMS: Vision keeps row alignment.
+    numbered_oric_grid = _main_stock_lms_force_vision_enabled() and (
+        _main_stock_looks_like_numbered_oric_grid(probe)
+        or bool(re.search(r"LAST\s*MONTH\s*SALE", probe or "", re.I))
+    )
+    if numbered_oric_grid and not spreadsheet_shot:
+        logger.info(
+            "MAIN_STOCK_LMS_FORCE_VISION file=%s reason=numbered_oric_or_lms_header",
+            filename,
+        )
+
     if not (
         _is_opening_receive_issue_closing_stock_text(text)
         or _is_opening_receive_issue_closing_stock_text(probe)
@@ -58129,7 +59271,8 @@ def _extract_opening_receive_issue_closing_photo(
                 return None
 
     ocr_result = None
-    # Spreadsheet screenshots: skip expensive OCR bands — Vision owns the grid.
+    # Spreadsheet screenshots: Vision owns the grid. Numbered LMS grids still run
+    # OCR bands as a merge source for identity-balanced rows.
     if not spreadsheet_shot:
         try:
             ocr_result = _extract_opening_receive_issue_closing_ocr(
@@ -58139,32 +59282,43 @@ def _extract_opening_receive_issue_closing_photo(
             logger.warning("Opening/receive/issue OCR parse skipped: %s", exc)
         if (
             ocr_result
+            and not numbered_oric_grid
             and len(ocr_result.get("line_items") or []) >= 8
             and not _main_stock_ocr_contaminated_by_ui(ocr_result, text)
+            and not _main_stock_ocr_looks_misaligned(ocr_result)
             and not _main_stock_result_is_all_zero_shell(ocr_result)
             and not _main_stock_result_is_op_stk_misfiled(ocr_result, probe)
         ):
+            _main_stock_apply_printed_totals_footer(ocr_result, file_bytes)
             return ocr_result
+        if ocr_result and _main_stock_ocr_looks_misaligned(ocr_result):
+            logger.info(
+                "MAIN_STOCK_OCR_QUALITY_GATE file=%s status=reject_misaligned rows=%s",
+                filename,
+                len(ocr_result.get("line_items") or []),
+            )
 
     fallback = empty_result(filename, (ext or ".jpg").lstrip(".") or "jpg")
     if (
         ocr_result
         and ocr_result.get("line_items")
         and not _main_stock_result_is_all_zero_shell(ocr_result)
+        and not _main_stock_ocr_looks_misaligned(ocr_result)
     ):
         fallback = ocr_result
-    # Seed meta from Sheets body text so Vision can inherit stockist/period.
-    if spreadsheet_shot:
+    # Seed meta from Sheets/body text so Vision can inherit stockist/period.
+    prefer_vision_grid = bool(spreadsheet_shot or numbered_oric_grid)
+    if prefer_vision_grid:
         _main_stock_enrich_spreadsheet_meta(fallback, full_text or text)
     vision = _extract_main_stock_sales_vision(
         file_bytes,
         filename,
         ext,
         fallback,
-        sheets_screenshot=spreadsheet_shot,
+        sheets_screenshot=prefer_vision_grid,
     )
     if vision and vision.get("line_items"):
-        if _main_stock_result_is_all_zero_shell(vision) and not spreadsheet_shot:
+        if _main_stock_result_is_all_zero_shell(vision) and not prefer_vision_grid:
             logger.info(
                 "MAIN_STOCK_SKIP file=%s reason=all_zero_shell_vision",
                 filename,
@@ -58177,29 +59331,41 @@ def _extract_opening_receive_issue_closing_photo(
                 filename,
             )
             vision = None
-        elif spreadsheet_shot:
+        elif prefer_vision_grid:
             _main_stock_enrich_spreadsheet_meta(vision, full_text or text)
             _main_stock_repair_clipped_himalaya_names(vision, full_text or text)
+            if numbered_oric_grid and ocr_result and ocr_result.get("line_items"):
+                _main_stock_merge_balanced_ocr_rows(vision, ocr_result)
             vision.setdefault("totals", {}).setdefault("extra", {})
-            vision["totals"]["extra"]["extraction_method"] = (
-                "main_stock_sales_statement_sheets"
-            )
+            if spreadsheet_shot:
+                vision["totals"]["extra"]["extraction_method"] = (
+                    "main_stock_sales_statement_sheets"
+                )
+                vision["totals"]["extra"]["capture"] = "excel_sheets_screenshot"
+            else:
+                vision["totals"]["extra"]["extraction_method"] = (
+                    "main_stock_sales_statement_lms_vision"
+                )
+                vision["totals"]["extra"]["capture"] = "numbered_oric_lms_grid"
             vision["totals"]["extra"]["layout"] = "opening_receive_issue_closing"
-            vision["totals"]["extra"]["capture"] = "excel_sheets_screenshot"
+            _main_stock_apply_printed_totals_footer(vision, file_bytes)
             logger.info(
-                "Opening/receive/issue Sheets screenshot used Vision for %s items=%s",
+                "Opening/receive/issue Vision grid used for %s items=%s capture=%s",
                 filename,
                 len(vision.get("line_items") or []),
+                vision["totals"]["extra"].get("capture"),
             )
             return vision
         elif len(vision.get("line_items") or []) >= len(
             (ocr_result or {}).get("line_items") or []
         ):
+            _main_stock_apply_printed_totals_footer(vision, file_bytes)
             return vision
     if spreadsheet_shot and ocr_result and ocr_result.get("line_items"):
         # Last resort: OCR numbers may still be usable after name repair.
         _main_stock_enrich_spreadsheet_meta(ocr_result, full_text or text)
         _main_stock_repair_clipped_himalaya_names(ocr_result, full_text or text)
+        _main_stock_apply_printed_totals_footer(ocr_result, file_bytes)
         return ocr_result
     if ocr_result and _main_stock_result_is_all_zero_shell(ocr_result):
         logger.info(
@@ -58214,6 +59380,11 @@ def _extract_opening_receive_issue_closing_photo(
         )
         ocr_result = None
     # Always try Op_Stk when Marg was rejected or produced misfiled columns.
+    # Numbered ORIC+LMS grids must not fall into Op_Stk (zeros + column shift).
+    if numbered_oric_grid:
+        if vision:
+            _main_stock_apply_printed_totals_footer(vision, file_bytes)
+        return vision or ocr_result
     if not vision and not ocr_result:
         op_stk = _extract_op_stk_rcpts_stock_sale_vision(
             file_bytes, filename, ext, ocr_hint=probe
@@ -64584,10 +65755,23 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     len(_oric_vt.get("line_items") or []),
                 )
                 return _oric_vt
+        _main_stock_oric_peek = _peek_is_main_stock_oric_statement(_op_stk_peek or "")
         _ssa_sheets_qty_value = bool(
+            (
+                _peek_suggests_ssa_qty_value(_op_stk_peek)
+                or _is_excel_sheets_stock_sales_screenshot(_op_stk_peek)
+            )
+            and not _main_stock_oric_peek
+        )
+        if _main_stock_oric_peek and (
             _peek_suggests_ssa_qty_value(_op_stk_peek)
             or _is_excel_sheets_stock_sales_screenshot(_op_stk_peek)
-        )
+        ):
+            logger.info(
+                "[SalesStatement] file=%s ssa_qty_value claim cleared "
+                "reason=main_stock_oric_statement",
+                filename,
+            )
         _peek_has_opstk = bool(
             re.search(r"\bOPSTK\b", _op_stk_peek or "", re.I)
             or _is_medica_opstk_statement(_op_stk_peek)
@@ -64827,10 +66011,47 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     if pack_rescue and pack_rescue.get("line_items"):
                         return pack_rescue
         _ssa_portrait_noise = bool(_ssa_portrait_noise_early)
+        # Marg PRODUCT DESCRIPTION OPENING/RECEIVE/ISSUE (+ LMS) STATEMENT photos:
+        # dedicated main_stock reader before SSA dump (dump shifts ISSUE→next row).
+        if _main_stock_oric_peek:
+            try:
+                main_oric = _extract_opening_receive_issue_closing_photo(
+                    file_bytes, filename, ext
+                )
+            except Exception as exc:
+                logger.info(
+                    "[SalesStatement] file=%s main_stock ORIC before SSA dump "
+                    "failed: %s",
+                    filename,
+                    type(exc).__name__,
+                )
+                main_oric = None
+            if (
+                main_oric
+                and main_oric.get("line_items")
+                and not _main_stock_result_is_all_zero_shell(main_oric)
+                and not _main_stock_result_is_op_stk_misfiled(
+                    main_oric, _op_stk_peek or ""
+                )
+            ):
+                extra_m = main_oric.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra_m, dict):
+                    extra_m["early_vision_reason"] = "main_stock_oric_before_ssa_dump"
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=main_stock_oric_before_ssa_dump "
+                    "file=%s line_items=%s method=%s",
+                    filename,
+                    len(main_oric.get("line_items") or []),
+                    extra_m.get("extraction_method")
+                    if isinstance(extra_m, dict)
+                    else None,
+                )
+                return main_oric
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
+            and not _main_stock_oric_peek
             and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
             and (
                 _peek_unreadable

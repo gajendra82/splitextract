@@ -958,6 +958,9 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
         joined,
     ):
         return "value"
+    # Months SS Report: "Total Count: 22 Total:- 4708 … 784354.04"
+    if re.search(r"(?i)\btotal\s*count\b|\btotal\s*:-", joined):
+        return "quantity"
     if re.match(r"(?i)^(?:grand\s+|page\s+|sub\s+)?total$", texts[0]):
         second = texts[1] if len(texts) > 1 else ""
         if re.match(r"(?i)^(quantity|qty|qnt)$", second):
@@ -2203,6 +2206,154 @@ def _expand_group_qty_value_header(
     return None
 
 
+def _absorb_numeric_orphans_enabled() -> bool:
+    """STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS — merge off-baseline money rows.
+
+    Months SS Report (and similar) prints Closing Amt / Sale Value slightly
+    above the Item-code baseline; 0.5*med_h y clustering leaves those numbers
+    as orphan rows and drops purchase/sales/closing values. Default ON.
+    Kill switch STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_NUMERIC_ORPHAN_TOKEN_RE = re.compile(
+    r"^[+-]?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?$|^[+-]?\d+(?:\.\d+)?$|^[+-]?\d+,\d{2}$"
+)
+# Catalogue-style codes only — bare 4–8 digit amounts are money, not SKUs.
+_PRODUCT_CODEISH_RE = re.compile(
+    r"^(?:S[O0]\d{4,}|PROD\d+|[A-Z]{2,4}\d{4,})$", re.I
+)
+
+
+def _row_anchor_top(row: Sequence[Dict[str, Any]]) -> float:
+    tops = [float(w.get("top") or 0) for w in row if isinstance(w, dict)]
+    return float(median(tops)) if tops else 0.0
+
+
+def _row_is_numeric_orphan(row: Sequence[Dict[str, Any]]) -> bool:
+    """True when a y-cluster is mostly money/qty with no product code/name."""
+    texts = [
+        decode_pdf_pseudo_digits(str(w.get("text") or "")).strip()
+        for w in row
+        if isinstance(w, dict)
+    ]
+    texts = [t for t in texts if t]
+    if not texts:
+        return False
+    if any(_PRODUCT_CODEISH_RE.fullmatch(t) for t in texts):
+        return False
+    alpha = [t for t in texts if re.search(r"[A-Za-z]{3,}", t)]
+    if alpha:
+        return False
+    nums = [t for t in texts if _NUMERIC_ORPHAN_TOKEN_RE.fullmatch(t)]
+    return len(nums) >= 1 and len(nums) >= max(1, len(texts) - 1)
+
+
+def _row_has_product_anchor(row: Sequence[Dict[str, Any]]) -> bool:
+    texts = [
+        decode_pdf_pseudo_digits(str(w.get("text") or "")).strip()
+        for w in row
+        if isinstance(w, dict)
+    ]
+    if any(_PRODUCT_CODEISH_RE.fullmatch(t) for t in texts if t):
+        return True
+    return any(re.search(r"[A-Za-z]{3,}", t) for t in texts if t)
+
+
+def _rows_x_overlap(a: Sequence[Dict[str, Any]], b: Sequence[Dict[str, Any]]) -> bool:
+    """True if any pair of tokens shares a horizontal centre band."""
+    for wa in a:
+        if not isinstance(wa, dict):
+            continue
+        a0 = float(wa.get("x0") or 0)
+        a1 = float(wa.get("x1") or a0)
+        if a1 <= a0:
+            a1 = a0 + 1.0
+        for wb in b:
+            if not isinstance(wb, dict):
+                continue
+            b0 = float(wb.get("x0") or 0)
+            b1 = float(wb.get("x1") or b0)
+            if b1 <= b0:
+                b1 = b0 + 1.0
+            # Overlap if intervals intersect by more than a thin edge.
+            overlap = min(a1, b1) - max(a0, b0)
+            if overlap > 2.0:
+                return True
+    return False
+
+
+def _absorb_numeric_orphan_rows(
+    rows: List[List[Dict[str, Any]]],
+    *,
+    med_h: float,
+) -> List[List[Dict[str, Any]]]:
+    """Fold pure-number y-fragments into the nearest product row."""
+    if not _absorb_numeric_orphans_enabled() or len(rows) < 2:
+        return rows
+    limit = max(float(med_h or 8.0) * 1.25, 4.0)
+    out: List[List[Dict[str, Any]]] = []
+    i = 0
+    absorbed = 0
+    while i < len(rows):
+        row = rows[i]
+        if not _row_is_numeric_orphan(row):
+            out.append(row)
+            i += 1
+            continue
+        # Prefer the next product row (money often prints slightly above codes),
+        # else the previous one.
+        target_idx: Optional[int] = None
+        target_dist = limit + 1.0
+        orphan_top = _row_anchor_top(row)
+        # Look ahead in remaining source rows / already-emitted out.
+        if i + 1 < len(rows) and _row_has_product_anchor(rows[i + 1]):
+            dist = abs(_row_anchor_top(rows[i + 1]) - orphan_top)
+            if dist <= limit and not _rows_x_overlap(row, rows[i + 1]):
+                target_idx = -1  # merge into next when we reach it
+                target_dist = dist
+        if out and _row_has_product_anchor(out[-1]):
+            dist = abs(_row_anchor_top(out[-1]) - orphan_top)
+            if dist <= limit and dist < target_dist and not _rows_x_overlap(
+                row, out[-1]
+            ):
+                out[-1].extend(row)
+                absorbed += 1
+                logger.info(
+                    "STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS into=prev n=%s dist=%.2f",
+                    len(row),
+                    dist,
+                )
+                i += 1
+                continue
+        if target_idx == -1:
+            # Defer: prepend orphan into the next product row.
+            nxt = list(rows[i + 1])
+            nxt = list(row) + nxt
+            rows[i + 1] = nxt
+            absorbed += 1
+            logger.info(
+                "STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS into=next n=%s dist=%.2f",
+                len(row),
+                target_dist,
+            )
+            i += 1
+            continue
+        out.append(row)
+        i += 1
+    if absorbed:
+        logger.info(
+            "STOCK_PDF_WORDS_ABSORB_NUMERIC_ORPHANS merged=%s rows_in=%s rows_out=%s",
+            absorbed,
+            len(rows),
+            len(out),
+        )
+    return out
+
+
 def _extract_pdf_page_rows(
     page: Any,
     *,
@@ -2236,6 +2387,8 @@ def _extract_pdf_page_rows(
                 rows[-1].append(w)
                 continue
         rows.append([w])
+
+    rows = _absorb_numeric_orphan_rows(rows, med_h=med_h)
 
     def _cluster_row(row_words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         row_words = sorted(row_words, key=lambda w: float(w.get("x0") or 0))
