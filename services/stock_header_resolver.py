@@ -449,6 +449,12 @@ ALIASES: Dict[str, List[str]] = {
         "b/e/pr",
         "bepr",
         "b e pr",
+        # Particulars / Open / Purch / Sales Ret / Sales & DC / Misc. Out /
+        # Cls. Stock family: Misc. Out is miscellaneous outward qty.
+        "misc",
+        "misc out",
+        "misc. out",
+        "miscout",
     ],
     "closing": [
         "cls",

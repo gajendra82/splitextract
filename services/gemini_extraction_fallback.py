@@ -919,6 +919,16 @@ def maybe_apply_gemini_fallback(
     ):
         return result
 
+    # Qty-only OPENING|RECEIPT|ISSUE|CLOSING|M.EXP header-x OCR is authoritative.
+    # LstSL / generic Vision shifts whole rows when blank dashes are misread.
+    if _allowlist_skip(
+        "pack_opening_receipt_issue_mexp",
+        str(extra.get("extraction_method") or "")
+        == "pack_opening_receipt_issue_mexp"
+        or str(extra.get("layout") or "") == "pack_opening_receipt_issue_mexp",
+    ):
+        return result
+
     # Marg SALE PURCHASES / PURCHASE SALES qty grid. SSA qty-value last-N
     # mapping glues printed qty onto the product name and zeros columns.
     if _allowlist_skip(

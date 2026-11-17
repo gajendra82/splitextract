@@ -133,6 +133,7 @@ _TRUSTED_METHODS = frozenset(
         "op_pur_sp_sale_bal_val",
         "medivision_op_purc_nm60d",
         "medivision_op_val_sr_nm60d",
+        "medivision_op_wsale_photo",
         "product_wise_stock_statement_image",
         "medica_opstk_columns",
         "medica_stock_statement_vision",
@@ -158,6 +159,7 @@ _TRUSTED_LAYOUTS = frozenset(
         "op_pur_sp_sale_bal_val",
         "medivision_op_purc_nm60d",
         "medivision_op_val_sr_nm60d",
+        "medivision_op_wsale",
         "product_wise_stock_statement_photo",
         "medica_stock_statement",
         "branch_opening_receipt_closing_balance",
@@ -925,13 +927,58 @@ def apply_direct_stock_image_gemini(
 
     try:
         from services.sales_statement_extractor import (
+            _extract_medivision_op_wsale_photo,
             _extract_op_stk_rcpts_stock_sale_vision,
+            _is_medivision_op_wsale_header,
             _looks_like_op_stk_rcpts_grid_text,
             _looks_like_ostk_qoh_stock_sales_text,
             _main_stock_result_is_op_stk_misfiled,
+            _medivision_op_wsale_early_enabled,
             _op_stk_before_ssa_phone_enabled,
             _ssa_dump_result_looks_like_op_stk_misfile,
         )
+
+        # MediVision Op/Purc/Sale/WSale before Op_Stk — SSA misfile + Cl val
+        # peek otherwise steals this chrome into Op_Stk/Rcpts column shift.
+        medivision = None
+        if (
+            _enabled()
+            and _medivision_op_wsale_early_enabled()
+            and _is_medivision_op_wsale_header(peek_text)
+        ):
+            try:
+                medivision = _extract_medivision_op_wsale_photo(
+                    file_bytes, filename, ext, force=False
+                )
+            except Exception as exc:
+                logger.info(
+                    "STOCK_IMAGE_GEMINI file=%s medivision_op_wsale preferred "
+                    "path failed: %s",
+                    filename,
+                    exc,
+                )
+                medivision = None
+        if medivision and medivision.get("line_items"):
+            selected_extra = medivision.setdefault("totals", {}).setdefault("extra", {})
+            selected_extra["quality_decision"] = decision
+            selected_extra["structured_extraction"] = {
+                "extraction_method": extra.get("extraction_method"),
+                "layout": layout,
+                "schema": decision.get("schema"),
+                "row_count": decision.get("row_count"),
+                "line_items": copy.deepcopy(result.get("line_items") or []),
+            }
+            selected_extra["final_selected_extraction"] = "gemini"
+            selected_extra["stock_image_vision_decided"] = True
+            selected_extra["stock_image_gemini_status"] = "medivision_op_wsale_preferred"
+            selected_extra["early_vision_reason"] = "medivision_op_wsale_before_op_stk"
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s status=medivision_op_wsale_preferred "
+                "rows=%s",
+                filename,
+                len(medivision.get("line_items") or []),
+            )
+            return medivision
 
         ssa_misfile = (
             method in {"ssa_qty_value_vision", "ssa_qty_value_vision_pdf"}
@@ -939,6 +986,7 @@ def apply_direct_stock_image_gemini(
         ) and _ssa_dump_result_looks_like_op_stk_misfile(result)
         want_op_stk = (
             not _looks_like_ostk_qoh_stock_sales_text(peek_text)
+            and not _is_medivision_op_wsale_header(peek_text)
             and (
                 _looks_like_op_stk_rcpts_grid_text(peek_text)
                 or _main_stock_result_is_op_stk_misfiled(result, peek_text)

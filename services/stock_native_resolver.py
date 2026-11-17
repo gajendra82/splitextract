@@ -275,6 +275,40 @@ def _empty_line_item() -> Dict[str, Any]:
     }
 
 
+_DASH_QTY_ZERO = frozenset({"-", "--", "—", "–"})
+_DASH_QTY_CANONS = frozenset(
+    {
+        "opening_qty",
+        "purchase_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "expiry_damage_qty",
+        "free_in_qty",
+        "free_out_qty",
+        "total_qty",
+        "order_qty",
+        "lms",
+        "other_outward_qty",
+    }
+)
+
+
+def _native_dash_qty_zero_enabled() -> bool:
+    """STOCK_NATIVE_DASH_QTY_ZERO — printed '-' in a qty column is 0.
+
+    Particulars/Open/Purch/Sales&DC/Misc Out/Cls Stock PDFs print '-' for a
+    zero movement. Kill switch: false. Default ON.
+    """
+    return os.getenv("STOCK_NATIVE_DASH_QTY_ZERO", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def fields_to_line_item(
     fields: Dict[str, Any],
     *,
@@ -288,6 +322,7 @@ def fields_to_line_item(
     extra = item["extra"]
     field_source: Dict[str, str] = {}
     formula_tokens = formula_tokens or []
+    dash_qty_zero = _native_dash_qty_zero_enabled()
 
     for canon, raw in (fields or {}).items():
         mapping = _CANON_TO_ITEM.get(canon)
@@ -313,8 +348,17 @@ def fields_to_line_item(
                 item[dest] = None
             field_source[dest] = "missing"
             continue
-        number = parse_number(raw)
-        if number is None and str(raw).strip().startswith("="):
+        raw_s = str(raw).strip()
+        if dash_qty_zero and canon in _DASH_QTY_CANONS and raw_s in _DASH_QTY_ZERO:
+            number = 0.0
+            logger.info(
+                "STOCK_NATIVE_DASH_QTY_ZERO canon=%s dest=%s",
+                canon,
+                dest,
+            )
+        else:
+            number = parse_number(raw)
+        if number is None and raw_s.startswith("="):
             # Uncached formula string in the cell text.
             if into_extra:
                 extra[dest] = None

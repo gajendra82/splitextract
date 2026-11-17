@@ -483,14 +483,45 @@ def _place_header_word(
     word = str(cell.get("text") or "").strip()
     if not word:
         return
+
+    def _overlapping_hosts(lo: float, hi: float) -> List[Dict[str, Any]]:
+        hits: List[Dict[str, Any]] = []
+        for host in header:
+            h0 = float(host.get("x0") or 0)
+            h1 = float(host.get("x1") or h0)
+            if min(h1, hi) < max(h0, lo) - 2:
+                continue
+            hits.append(host)
+        return hits
+
+    # Clustered second-line labels like "Out Stock" can span Misc.+Cls. If the
+    # glued cell is nearest only to Cls., Misc. Out is lost and the columns
+    # overlap. Place each word on its own x-slice when 2+ hosts overlap.
+    parts = [p for p in word.split() if p]
+    if len(parts) >= 2 and len(_overlapping_hosts(x0, x1)) >= 2:
+        span = max(x1 - x0, 1.0)
+        for i, part in enumerate(parts):
+            left = x0 + span * i / len(parts)
+            right = x0 + span * (i + 1) / len(parts)
+            frag = {
+                "text": part,
+                "x0": left,
+                "x1": right,
+            }
+            _place_header_word(header, frag, prepend=prepend)
+        logger.info(
+            "STOCK_PDF_WORDS_HEADER_SPLIT_MULTIWORD text=%r parts=%s",
+            word,
+            parts,
+        )
+        return
+
     xc = (x0 + x1) / 2.0
     best: Optional[Dict[str, Any]] = None
     best_dist: Optional[float] = None
-    for host in header:
+    for host in _overlapping_hosts(x0, x1):
         h0 = float(host.get("x0") or 0)
         h1 = float(host.get("x1") or h0)
-        if min(h1, x1) < max(h0, x0) - 2:
-            continue
         hc = (h0 + h1) / 2.0
         dist = abs(hc - xc)
         if best_dist is None or dist < best_dist:
