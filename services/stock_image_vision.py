@@ -980,6 +980,73 @@ def apply_direct_stock_image_gemini(
             )
             return medivision
 
+        # SSA dump / pack-Op-Pur-Bal misfile of Stock and Sales Detail → Op.Qty Vision.
+        try:
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers,
+                extract_stock_sales_op_qty_val_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            wrong_schema = method in {
+                "ssa_qty_value_vision",
+                "ssa_qty_value_vision_pdf",
+                "pack_op_pur_bal_stock_sale_vision",
+                "op_pur_sp_sale_bal_val_photo",
+            } or layout in {
+                "ssa_opening_receipt_issue_value",
+                "pack_op_pur_bal_stock_sale",
+                "op_pur_sp_sale_bal_val",
+            }
+            if (
+                _enabled()
+                and wrong_schema
+                and _has_stock_sales_op_qty_val_headers(peek_text)
+            ):
+                detail_fix = extract_stock_sales_op_qty_val_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="stock_sales_detail_after_wrong_schema",
+                )
+                if (
+                    detail_fix
+                    and detail_fix.get("line_items")
+                    and is_stock_vision_locked(detail_fix)
+                ):
+                    selected_extra = detail_fix.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )
+                    selected_extra["quality_decision"] = decision
+                    selected_extra["structured_extraction"] = {
+                        "extraction_method": extra.get("extraction_method"),
+                        "layout": layout,
+                        "schema": decision.get("schema"),
+                        "row_count": decision.get("row_count"),
+                        "line_items": copy.deepcopy(result.get("line_items") or []),
+                    }
+                    selected_extra["final_selected_extraction"] = "gemini"
+                    selected_extra["stock_image_vision_decided"] = True
+                    selected_extra["stock_image_gemini_status"] = (
+                        "stock_sales_detail_after_wrong_schema"
+                    )
+                    logger.info(
+                        "STOCK_IMAGE_GEMINI file=%s "
+                        "status=stock_sales_detail_after_wrong_schema rows=%s "
+                        "from_method=%s",
+                        filename,
+                        len(detail_fix.get("line_items") or []),
+                        method,
+                    )
+                    return detail_fix
+        except Exception as detail_exc:
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s stock_sales_detail after wrong "
+                "schema failed: %s",
+                filename,
+                type(detail_exc).__name__,
+            )
+
         ssa_misfile = (
             method in {"ssa_qty_value_vision", "ssa_qty_value_vision_pdf"}
             or layout == "ssa_opening_receipt_issue_value"

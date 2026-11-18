@@ -5502,6 +5502,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "item_packg_open_stk_value_footer",
         "prompt_datewise_footer",
         "printed_total",
+        # Op.Qty|Pur.Qty|Sale.Qty|Bal manufacturer money band (qty-only grid).
+        "op_qty_pur_sale_bal_manufacturer_band",
     }
     _total_row_trusted = str(totals.get("extra", {}).get("total_row_source") or "") in (
         _trusted_footer_sources
@@ -5596,6 +5598,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "xls_labeled_rs_footer",
             "op_stk_rcpts_footer",
             "printed_total",
+            "op_qty_pur_sale_bal_manufacturer_band",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -22761,6 +22764,17 @@ Return ONLY JSON:
 def _looks_like_pack_op_pur_bal_stock_sale_text(text: str) -> bool:
     """Abbreviated Op/Pur/Pur Val/Sale/Bal Val Stock and Sale Statement."""
     blob = text or ""
+    # Stock and Sales Detail Report (Op.Qty/Op.Val/P.Qty/S.Qty/Cl.Qty) is not
+    # the abbreviated pack/Op/Pur/Bal Val grid — ZEAL banner alone must not steal it.
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(blob):
+            return False
+    except Exception:
+        pass
     if not re.search(r"Stock\s+and\s+Sale\s+Statement", blob, re.I):
         return False
     # Classic ZANDRA uses Op Stk / Cl Stk / Item Cd — leave that path alone.
@@ -23304,11 +23318,22 @@ def _should_try_pack_op_pur_bal_stock_sale(
     sample_text: str = "",
     result: Optional[Dict[str, Any]] = None,
 ) -> bool:
+    blob = sample_text or ""
+    # Detail Report Op.Qty grids must never enter pack/Op/Pur/Bal (invents H-prefix
+    # duplicates and zeros mid-grid sales under the wrong schema).
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(blob):
+            return False
+    except Exception:
+        pass
     if _looks_like_pack_op_pur_bal_stock_sale_text(sample_text):
         return True
     if _pack_op_pur_bal_stock_sale_money_weak(result):
         return True
-    blob = sample_text or ""
     if re.search(r"Stock\s+and\s+Sale\s+Statement", blob, re.I) and re.search(
         r"\bpack\b|\bPur\b|\bBal\b|JR\s*SHAH|SHAH\s+AND\s+COMPANY",
         blob,
@@ -23640,6 +23665,15 @@ def _prefer_pack_op_pur_bal_stock_sale(
     extract but the specialized call failed — caller must not keep the weak
     generic result as final.
     """
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(sample_text or ""):
+            return current
+    except Exception:
+        pass
     use = _looks_like_pack_op_pur_bal_stock_sale_text(sample_text) or (
         _pack_op_pur_bal_stock_sale_money_weak(current)
     )
@@ -37171,15 +37205,19 @@ def _ssa_parse_value_footer_totals(text: str) -> Optional[Dict[str, float]]:
 
 
 def _is_pharmassist_stock_sale_report(text: str) -> bool:
-    """C-Square PharmAssist Stock and Sale Report (Jul/Jun/Op./Pur/Sale/Bal./BVal/SVal)."""
+    """C-Square PharmAssist Stock and Sale Report (prior months/Op./Pur/Sale/Bal./BVal/SVal)."""
     if not text:
         return False
-    return bool(
-        re.search(r"Stock\s+and\s+Sale\s+Report", text, re.I)
-        and re.search(r"PharmAssist", text, re.I)
-        and re.search(r"\bBVal\b", text)
-        and re.search(r"\bSVal\b", text)
-    )
+    try:
+        from services.stock_direct_vision import _has_pharmassist_stock_sale_headers
+
+        return _has_pharmassist_stock_sale_headers(text)
+    except Exception:
+        return bool(
+            re.search(r"(?:S)?tock\s+and\s+Sale\s+Report", text, re.I)
+            and re.search(r"\bbval\b|\bb\s*val\b", text, re.I)
+            and re.search(r"\bsval\b|\bs\s*val\b", text, re.I)
+        )
 
 
 def _pharmassist_header_field(token: str) -> Optional[str]:
@@ -37188,6 +37226,8 @@ def _pharmassist_header_field(token: str) -> Optional[str]:
         "pack": "packing",
         "jul": "jul_qty",
         "jun": "jun_qty",
+        "sep": "sep_qty",
+        "aug": "aug_qty",
         "op": "opening_qty",
         "pur": "receipts_qty",
         "sp": "sp_qty",
@@ -41589,6 +41629,44 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                     exc,
                 )
 
+        # PharmAssist Stock and Sale Report (Op./Pur/Sale/Bal./BVal/SVal +
+        # Sep|Aug or Jul|Jun prior months) must run BEFORE camera_multipage.
+        # Generic multipage maps prior-month qty into opening/receipts and
+        # drops SVal → sales_value=0.
+        try:
+            from services.stock_vision_table import is_scanned_pdf_bytes
+            from services.stock_direct_vision import (
+                extract_pharmassist_scanned_pdf,
+                is_stock_vision_locked,
+            )
+
+            if is_scanned_pdf_bytes(file_bytes, doc):
+                pharmassist_scan = extract_pharmassist_scanned_pdf(
+                    file_bytes, filename
+                )
+                if (
+                    pharmassist_scan
+                    and pharmassist_scan.get("line_items")
+                    and is_stock_vision_locked(pharmassist_scan)
+                ):
+                    pharmassist_scan.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )["statement_count"] = 1
+                    logger.info(
+                        "STOCK_PHARMASSIST_SCANNED_PDF file=%s "
+                        "status=early_hit_before_multipage rows=%s",
+                        filename,
+                        len(pharmassist_scan["line_items"]),
+                    )
+                    return pharmassist_scan
+        except Exception as pharm_exc:
+            logger.info(
+                "STOCK_PHARMASSIST_SCANNED_PDF file=%s "
+                "status=skip_before_multipage error=%s",
+                filename,
+                type(pharm_exc).__name__,
+            )
+
         # Stock and Sales Detail (Op.Qty/Op.Val + P.Sch) image-only PDFs must
         # run BEFORE camera_multipage/vision_table. Those generic paths map
         # scheme/return money into sales_qty and were winning in Postman while
@@ -45252,6 +45330,34 @@ def _lms_multiline_name_after_code_enabled() -> bool:
     }
 
 
+def _lms_bare_numeric_packing_enabled() -> bool:
+    """STOCK_LMS_BARE_NUMERIC_PACKING — Packing may be a bare factor (e.g. 200).
+
+    Default ON. Without this, one-cell-per-line PDF text drops rows whose
+    Packing cell is digits-only (KOFLET LOZENGES 160 +40 / 200).
+    """
+    return os.getenv("STOCK_LMS_BARE_NUMERIC_PACKING", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _lms_name_column_company_enabled() -> bool:
+    """STOCK_LMS_NAME_COLUMN_COMPANY — Name column banners become company_name.
+
+    Default ON. StockStatement grids print company in Name (often split across
+    lines before the first Code), not in the page title.
+    """
+    return os.getenv("STOCK_LMS_NAME_COLUMN_COMPANY", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _parse_text_lms_opstock_rcpts(
     text: str, filename: str, source_format: str
 ) -> Optional[Dict[str, Any]]:
@@ -45386,7 +45492,7 @@ def _parse_text_lms_opstock_rcpts(
         if not result.get("stockist_name") and re.search(
             r"PHARMA|MEDICAL|AGENC|STORES|DISTRIBUT|DRUG", ln, re.I
         ) and not re.search(r"STOCK|SALES|STATEMENT|HIMALAYA\s+DRUG", ln, re.I):
-            result["stockist_name"] = _clean_name(ln)
+            result["stockist_name"] = _clean_name(ln).rstrip(" ,;|")
         if not result.get("company_name") and re.search(
             r"HIMALAYA|ZENITH|AUROBINDO|MANUFACTUR", ln, re.I
         ):
@@ -45421,6 +45527,37 @@ def _parse_text_lms_opstock_rcpts(
     min_needed = sum(
         1 for k in ("lms", "op", "pur", "sale", "bal") if k in numeric_keys
     )
+    need_nums = len(numeric_keys)
+
+    def _is_unit_pack_token(tok: str) -> bool:
+        return bool(pack_token_re.match(tok or ""))
+
+    def _following_numeric_run(following: List[str], need: int) -> int:
+        count = 0
+        for nxt in following:
+            if num_re.fullmatch(nxt or ""):
+                count += 1
+                if count >= need:
+                    return count
+                continue
+            break
+        return count
+
+    def _is_lms_pack_token(tok: str, prev: str, following: List[str]) -> bool:
+        if _is_unit_pack_token(tok):
+            return True
+        if not _lms_bare_numeric_packing_enabled():
+            return False
+        # Bare Packing cell (e.g. "200") — never LMS/OP after a unit pack.
+        if not re.fullmatch(r"\d{1,4}", tok or ""):
+            return False
+        if not re.search(r"[A-Za-z]", prev or ""):
+            return False
+        if _is_unit_pack_token(prev):
+            return False
+        if _following_numeric_run(following, need_nums) < need_nums:
+            return False
+        return True
 
     def _append_lms_item(
         name: str,
@@ -45505,16 +45642,54 @@ def _parse_text_lms_opstock_rcpts(
             for ln in lines[body_start:]
             if ln and not re.search(r"^(total|grand\s+total|page\s+\d)", ln, re.I)
         ]
+        # Name-column company banner sits before the first product Code.
+        if _lms_name_column_company_enabled() and not result.get("company_name"):
+            company_bits: List[str] = []
+            for tok in tokens:
+                if re.fullmatch(r"\d{4,}", tok or ""):
+                    break
+                if re.search(
+                    r"HIMALAYA|ZENITH|ZANDRA|ZEAL|WELLNESS|AUROBINDO|MANUFACTUR",
+                    tok or "",
+                    re.I,
+                ):
+                    company_bits.append(tok)
+                elif company_bits and re.fullmatch(
+                    r"PHARMA|DRUGS?|COMPANY|CO\.?", tok or "", re.I
+                ):
+                    company_bits.append(tok)
+                elif company_bits:
+                    break
+            if company_bits:
+                result["company_name"] = _clean_name(" ".join(company_bits))
+                logger.info(
+                    "LMS_OPSTOCK_NAME_COMPANY file=%s company=%r",
+                    filename,
+                    result["company_name"],
+                )
         i = 0
         while i < len(tokens):
-            if not pack_token_re.match(tokens[i] or ""):
+            prev = tokens[i - 1] if i > 0 else ""
+            following = tokens[i + 1 :]
+            if not _is_lms_pack_token(tokens[i], prev, following):
                 i += 1
                 continue
             packing = tokens[i]
+            if not _is_unit_pack_token(packing):
+                logger.info(
+                    "LMS_OPSTOCK_BARE_PACKING file=%s pack=%r prev=%r",
+                    filename,
+                    packing,
+                    (prev or "")[:48],
+                )
             # Name / code sit immediately before packing.
             pre: List[str] = []
             j = i - 1
-            while j >= 0 and not pack_token_re.match(tokens[j] or ""):
+            while j >= 0 and not _is_lms_pack_token(
+                tokens[j],
+                tokens[j - 1] if j > 0 else "",
+                tokens[j + 1 :],
+            ):
                 # Stop before prior row's trailing numerics.
                 if num_re.fullmatch(tokens[j] or "") and (
                     "." in tokens[j] or len(pre) >= 6
@@ -45557,7 +45732,11 @@ def _parse_text_lms_opstock_rcpts(
             k = i + 1
             while k < len(tokens) and len(nums) < len(numeric_keys):
                 tok = tokens[k]
-                if pack_token_re.match(tok or "") and nums:
+                prev_k = tokens[k - 1] if k > 0 else ""
+                if (
+                    _is_lms_pack_token(tok, prev_k, tokens[k + 1 :])
+                    and nums
+                ):
                     break
                 if re.fullmatch(r"\d{4,}", tok or "") and len(nums) >= min_needed:
                     break
@@ -45585,6 +45764,26 @@ def _parse_text_lms_opstock_rcpts(
             work = ln.strip()
             code = None
             packing = None
+            name = ""
+            nums: List[str] = []
+            # Leading Name-column company banner: "HIMALAYA 211052 ASHVAGANDHA…"
+            m_name_code = re.match(
+                r"^(?P<co>[A-Za-z][A-Za-z .&/-]{1,40})\s+(?P<code>\d{4,})\s+(?P<rest>.+)$",
+                work,
+            )
+            if m_name_code and not re.match(r"^\d{4,}\s+", work):
+                if _lms_name_column_company_enabled() and not result.get(
+                    "company_name"
+                ):
+                    co = _clean_name(m_name_code.group("co"))
+                    if re.search(
+                        r"HIMALAYA|ZENITH|ZANDRA|ZEAL|WELLNESS|AUROBINDO",
+                        co,
+                        re.I,
+                    ):
+                        result["company_name"] = co
+                code = m_name_code.group("code")
+                work = m_name_code.group("rest").strip()
             m_code = re.match(r"^(\d{4,})\s+(.+)$", work)
             if m_code:
                 code = m_code.group(1)
@@ -45597,6 +45796,44 @@ def _parse_text_lms_opstock_rcpts(
                 packing = pack_mid.group("pack").strip()
                 name = _clean_name(pack_mid.group("name"))
                 nums = [m.group(0) for m in num_re.finditer(pack_mid.group("rest"))]
+            elif _lms_bare_numeric_packing_enabled():
+                # Right-align movement nums; peel bare Packing (e.g. 200).
+                parts = work.split()
+                mov: List[str] = []
+                idx = len(parts)
+                while idx > 0 and len(mov) < need_nums:
+                    cand = parts[idx - 1]
+                    if num_re.fullmatch(cand or ""):
+                        mov.insert(0, cand)
+                        idx -= 1
+                        continue
+                    break
+                if (
+                    len(mov) == need_nums
+                    and idx >= 2
+                    and re.fullmatch(r"\d{1,4}", parts[idx - 1] or "")
+                    and any(re.search(r"[A-Za-z]", p or "") for p in parts[: idx - 1])
+                ):
+                    packing = parts[idx - 1]
+                    name = _clean_name(" ".join(parts[: idx - 1]))
+                    nums = mov
+                    logger.info(
+                        "LMS_OPSTOCK_BARE_PACKING file=%s pack=%r name=%r",
+                        filename,
+                        packing,
+                        name[:48],
+                    )
+                else:
+                    pack_m = pack_tail_re.match(work)
+                    if pack_m:
+                        packing = pack_m.group("pack").strip()
+                        work = pack_m.group("name").strip(" -")
+                    nums = [m.group(0) for m in num_re.finditer(work)]
+                    if nums and re.match(r"^\d{4,}$", nums[0] or ""):
+                        if not code:
+                            code = nums[0]
+                        nums = nums[1:]
+                    name = _clean_name(re.sub(num_re, " ", work))
             else:
                 pack_m = pack_tail_re.match(work)
                 if pack_m:
@@ -45622,16 +45859,21 @@ def _parse_text_lms_opstock_rcpts(
         return None
 
     result["line_items"] = items
+    # "As On Oct26" / month-year titles — same helper used by other text paths.
+    result = _coerce_month_year_period_fields(result, content_text=text)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "text_lms_opstock_rcpts"
     extra["layout"] = "text_lms_opstock_rcpts"
     extra["stock_identity_kind"] = "opening_receipts_sales_closing"
     extra["stock_identity_formula"] = "closing=opening+receipts-sales"
     logger.info(
-        "LMS_OPSTOCK_RCPTS file=%s status=ok rows=%s cols=%s",
+        "LMS_OPSTOCK_RCPTS file=%s status=ok rows=%s cols=%s company=%r period=%s..%s",
         filename,
         len(items),
         sorted(colmap.items(), key=lambda kv: kv[1]),
+        result.get("company_name"),
+        result.get("period_from"),
+        result.get("period_to"),
     )
     return result
 
@@ -48805,6 +49047,16 @@ def _peek_suggests_ssa_qty_value(text: str) -> bool:
         re.search(r"\bPURCH\b", text, re.I) or re.search(r"\bSALE\s*VAL\b", text, re.I)
     ):
         return False
+    # Stock and Sales Detail Report is Op.Qty/Op.Val — never SSA ANALYSIS/DUMP.
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(text):
+            return False
+    except Exception:
+        pass
     # Qty-only OPENING|RECEIPT|ISSUE|CLOSING (dashes, no VALUE) is not this reader.
     if _is_ssa_oric_qty_only_text(text):
         return False
@@ -48885,6 +49137,16 @@ def _is_ssa_opening_receipt_issue_dump_text(text: str) -> bool:
     """
     if not text or not re.search(r"STOCK\s*&\s*SALES", text, re.I):
         return False
+    # Detail Report Op.Qty/Op.Val/P.Qty/S.Qty/Cl.Qty is not OPENING/RECEIPT/DUMP.
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(text):
+            return False
+    except Exception:
+        pass
     if re.search(r"\bM\.?\s*EXP\b|\bRATE\b", text, re.I):
         return False
     blob = text.upper()
@@ -48904,6 +49166,16 @@ def _is_ssa_opening_receipt_issue_dump_text_fuzzy(text: str) -> bool:
     """
     if not text:
         return False
+    # "Stock and Sales Detail Report" matches STOCK AND SALES — exclude it.
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(text):
+            return False
+    except Exception:
+        pass
     if not re.search(
         r"STOCK\s*[&§]\s*SALES|STOCK\s+AND\s+SALES|STOCK\s*SALES\s*ANALYSIS",
         text,
@@ -49124,6 +49396,23 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             skip_ocr_gate,
         )
         return None
+    # Soft-reject Stock and Sales Detail Report even when skip_ocr_gate is on.
+    # Phone SSA-dump force otherwise invents OPENING/RECEIPT/DUMP and zeros Op.Qty.
+    try:
+        from services.stock_direct_vision import (
+            _looks_like_stock_sales_detail_report_title,
+        )
+
+        if _looks_like_stock_sales_detail_report_title(soft_preview):
+            logger.info(
+                "SSA_DUMP_SKIP reason=stock_sales_detail_report file=%s "
+                "skip_ocr_gate=%s",
+                filename,
+                skip_ocr_gate,
+            )
+            return None
+    except Exception:
+        pass
 
     if not skip_ocr_gate:
         preview = soft_preview
@@ -63196,14 +63485,53 @@ def _maybe_early_vision_for_image(
     if not quality.get("should_fallback"):
         return None, False
 
-    # Prefer the column-locked pack/Op/Pur/Bal reader BEFORE generic early Vision.
-    # Generic early often zeros Pur / Sale Val / Bal Val and wastes rate limit.
+    # Stock and Sales Detail Op.Qty|Op.Val BEFORE pack/Op/Pur/Bal.
+    # Pack reader invents H-prefix duplicate SKUs and mis-maps P/S/Cl columns.
     header_hint = ""
     try:
         header_hint = _pack_op_pur_bal_header_hint(file_bytes)
     except Exception:
         header_hint = ""
     probe_text = "\n".join(t for t in (sample or "", header_hint) if t)
+    try:
+        from services.stock_direct_vision import (
+            _has_stock_sales_op_qty_val_headers,
+            extract_stock_sales_op_qty_val_direct_vision,
+            is_stock_vision_locked,
+        )
+
+        if _has_stock_sales_op_qty_val_headers(probe_text):
+            detail_pre_pack = extract_stock_sales_op_qty_val_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="stock_sales_detail_before_pack_op_pur_bal",
+            )
+            if (
+                detail_pre_pack
+                and detail_pre_pack.get("line_items")
+                and is_stock_vision_locked(detail_pre_pack)
+            ):
+                extra = detail_pre_pack.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = (
+                    "stock_sales_detail_before_pack_op_pur_bal"
+                )
+                logger.info(
+                    "[SalesStatement] file=%s decision=STOCK_SALES_DETAIL_EARLY "
+                    "rows=%s reason=before_pack_op_pur_bal",
+                    filename,
+                    len(detail_pre_pack.get("line_items") or []),
+                )
+                return detail_pre_pack, True
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s stock_sales_detail before pack failed: %s",
+            filename,
+            type(exc).__name__,
+        )
+
+    # Prefer the column-locked pack/Op/Pur/Bal reader BEFORE generic early Vision.
+    # Generic early often zeros Pur / Sale Val / Bal Val and wastes rate limit.
     if _should_try_pack_op_pur_bal_stock_sale(probe_text):
         specialized = _extract_pack_op_pur_bal_stock_sale_vision(
             file_bytes, filename, ext
@@ -63473,17 +63801,67 @@ def _maybe_early_vision_for_image(
             )
             return oric_early, True
 
+    # Stock and Sales Detail Op.Qty|Op.Val must beat phone SSA force.
+    # SSA invents OPENING/RECEIPT/DUMP and zeros the upper Op.Qty/P.Qty grid.
+    _detail_early_peek = "\n".join(t for t in (sample or "", header_hint or "") if t)
+    try:
+        from services.stock_direct_vision import (
+            _has_stock_sales_op_qty_val_headers,
+            extract_stock_sales_op_qty_val_direct_vision,
+            is_stock_vision_locked,
+        )
+
+        if _has_stock_sales_op_qty_val_headers(_detail_early_peek):
+            detail_early = extract_stock_sales_op_qty_val_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="stock_sales_detail_before_ssa_early",
+            )
+            if (
+                detail_early
+                and detail_early.get("line_items")
+                and is_stock_vision_locked(detail_early)
+            ):
+                extra = detail_early.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = "stock_sales_detail_before_ssa_early"
+                logger.info(
+                    "[SalesStatement] file=%s decision=STOCK_SALES_DETAIL_EARLY "
+                    "rows=%s",
+                    filename,
+                    len(detail_early.get("line_items") or []),
+                )
+                return detail_early, True
+    except Exception as exc:
+        logger.info(
+            "[SalesStatement] file=%s stock_sales_detail early before SSA "
+            "failed: %s",
+            filename,
+            type(exc).__name__,
+        )
+
     # Phone SSA screenshots: generic early Vision shifts columns; use column-locked SSA.
     try_ssa_early = _peek_suggests_ssa_qty_value(sample) or _peek_suggests_ssa_qty_value(
         header_hint
     )
     if not try_ssa_early and _is_phone_tall_document_screenshot(file_bytes):
+        # Detail Report chrome must not fall into SSA via low-OCR phone force.
+        _detail_blocks_ssa = False
         try:
-            from services.extraction_quality import quality_threshold
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers as _detail_hdrs,
+            )
 
-            try_ssa_early = float(quality.get("score") or 0) < quality_threshold()
+            _detail_blocks_ssa = _detail_hdrs(_detail_early_peek)
         except Exception:
-            try_ssa_early = False
+            _detail_blocks_ssa = False
+        if not _detail_blocks_ssa:
+            try:
+                from services.extraction_quality import quality_threshold
+
+                try_ssa_early = float(quality.get("score") or 0) < quality_threshold()
+            except Exception:
+                try_ssa_early = False
     if try_ssa_early:
         try:
             ssa_early = _extract_ssa_qty_value_vision(file_bytes, filename, ext)
@@ -66047,6 +66425,47 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     else None,
                 )
                 return main_oric
+        # Stock and Sales Detail Op.Qty|Op.Val before SSA dump skip_ocr_gate.
+        # Dump force invents OPENING/RECEIPT/DUMP and zeros the printed Op.Qty grid.
+        try:
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers,
+                extract_stock_sales_op_qty_val_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            if _has_stock_sales_op_qty_val_headers(_op_stk_peek or ""):
+                detail_pre_ssa = extract_stock_sales_op_qty_val_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="stock_sales_detail_before_ssa_dump",
+                )
+                if (
+                    detail_pre_ssa
+                    and detail_pre_ssa.get("line_items")
+                    and is_stock_vision_locked(detail_pre_ssa)
+                ):
+                    try:
+                        _enrich_stock_statement_header_from_ocr(
+                            detail_pre_ssa, _op_stk_peek or ""
+                        )
+                    except Exception:
+                        pass
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=stock_sales_op_qty_val "
+                        "file=%s line_items=%s reason=before_ssa_dump",
+                        filename,
+                        len(detail_pre_ssa.get("line_items") or []),
+                    )
+                    return detail_pre_ssa
+        except Exception as _detail_pre_exc:
+            logger.info(
+                "[SalesStatement] file=%s stock_sales_detail before SSA dump "
+                "skipped: %s",
+                filename,
+                type(_detail_pre_exc).__name__,
+            )
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk

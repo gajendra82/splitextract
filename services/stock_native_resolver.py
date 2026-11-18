@@ -2661,7 +2661,8 @@ def _items_from_resolved_word_columns(
             r"^himalaya\b|company\s*total|value\s*->|qnt\s*->|"
             r"prepared\s+by|computer\s+generated|does\s+not\s+require\s+stamp|"
             r"\bDSTK\b|days\s+stock\s+on|\bCIN\s*No\b|\bPAN\s*No\b|\bGSTIN\b|"
-            r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b",
+            r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b|"
+            r"^manufacturer\s*(?:name\s*)?:",
             name,
             re.I,
         ):
@@ -2733,6 +2734,157 @@ def _pdf_words_letterhead_meta_enabled() -> bool:
         "yes",
         "on",
     }
+
+
+def _op_qty_pur_sale_bal_meta_enabled() -> bool:
+    """STOCK_PDF_WORDS_OP_QTY_PUR_SALE_BAL_META — default ON (kill switch).
+
+    Tags Op.Qty|Pur.Qty|Sale.Qty|Bal qty grids and fills Seller/Manufacturer
+    chrome so reconciliation can soft-skip known printed Bal gaps.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_OP_QTY_PUR_SALE_BAL_META", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
+    """Fingerprint Op.Qty|Pur.Qty|Sale.Qty|Bal and fill title/company/stockist."""
+    if not _op_qty_pur_sale_bal_meta_enabled() or not isinstance(result, dict):
+        return False
+    blob = str(peek or "")
+    if not blob.strip():
+        return False
+    try:
+        from services.stock_direct_vision import _has_op_qty_pur_sale_bal_headers
+    except Exception:
+        return False
+    if not _has_op_qty_pur_sale_bal_headers(blob):
+        return False
+
+    changed = False
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        result.setdefault("totals", {})["extra"] = extra
+    if extra.get("layout") != "op_qty_pur_sale_bal":
+        extra["layout"] = "op_qty_pur_sale_bal"
+        changed = True
+    extra["psr_column_layout"] = "op_qty_pur_sale_bal"
+    extra["schema"] = "op_qty_pur_sale_bal"
+    extra["qty_only"] = True
+
+    if re.search(r"Mfac\s+SAS\s+Summary", blob, re.I) or not result.get(
+        "report_title"
+    ):
+        if re.search(r"Mfac\s+SAS\s+Summary", blob, re.I):
+            result["report_title"] = "Mfac SAS Summary Report"
+            changed = True
+
+    seller = re.search(
+        r"Seller\s*:\s*([A-Za-z][A-Za-z0-9 .&'/-]*?)"
+        r"(?=\s+OLD\s+NO|\s+NEW\s+NO|\s+\d{2,}|\s*,|\n|$)",
+        blob,
+        re.I,
+    )
+    if seller and seller.group(1).strip():
+        stockist = re.sub(r"\s+", " ", seller.group(1)).strip(" -")
+        if stockist:
+            result["stockist_name"] = stockist
+            changed = True
+    elif re.search(
+        r"Mfac\s+SAS\s+Summary", str(result.get("stockist_name") or ""), re.I
+    ):
+        result["stockist_name"] = None
+        changed = True
+
+    mfr = re.search(
+        r"Manufacturer\s*(?:Name\s*)?:\s*"
+        r"([A-Za-z][A-Za-z0-9 .&'/-]*?)"
+        r"(?=\s+\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|\s{2,}|\n|$)",
+        blob,
+        re.I,
+    )
+    if mfr and mfr.group(1).strip():
+        company = re.sub(r"\s+", " ", mfr.group(1)).strip(" -")
+        stockist_now = str(result.get("stockist_name") or "").strip()
+        if company and (
+            not stockist_now or company.upper() != stockist_now.upper()
+        ):
+            result["company_name"] = company
+            changed = True
+    elif re.search(
+        r"Mfac\s+SAS\s+Summary", str(result.get("company_name") or ""), re.I
+    ):
+        result["company_name"] = None
+        changed = True
+
+    # Manufacturer totals band under headers: Op / Pur / Sale / Bal money.
+    # e.g. "Manufacturer : HIMALAYA - ZANDRA 3,89,850.04 2,46,223.81 …"
+    band = re.search(
+        r"Manufacturer\s*(?:Name\s*)?:[^\n]*?"
+        r"(\d{1,3}(?:,\d{2,3})+\.\d{2})\s+"
+        r"(\d{1,3}(?:,\d{2,3})+\.\d{2})\s+"
+        r"(\d{1,3}(?:,\d{2,3})+\.\d{2})\s+"
+        r"(\d{1,3}(?:,\d{2,3})+\.\d{2})",
+        blob,
+        re.I,
+    )
+    if band:
+        def _inr(raw: str) -> float:
+            return float(str(raw).replace(",", ""))
+
+        opening_v = _inr(band.group(1))
+        purchase_v = _inr(band.group(2))
+        sales_v = _inr(band.group(3))
+        closing_v = _inr(band.group(4))
+        totals = result.setdefault("totals", {})
+        if not isinstance(totals, dict):
+            totals = {}
+            result["totals"] = totals
+        if totals.get("sales_value") in (None, "", 0, 0.0):
+            totals["sales_value"] = sales_v
+            changed = True
+        if totals.get("closing_value") in (None, "", 0, 0.0):
+            totals["closing_value"] = closing_v
+            changed = True
+        if extra.get("opening_value") in (None, "", 0, 0.0):
+            extra["opening_value"] = opening_v
+            changed = True
+        if extra.get("purchase_value") in (None, "", 0, 0.0):
+            extra["purchase_value"] = purchase_v
+            changed = True
+        extra["manufacturer_band_totals"] = True
+        extra["total_row_source"] = "op_qty_pur_sale_bal_manufacturer_band"
+        logger.info(
+            "STOCK_PDF_WORDS_OP_QTY_PUR_SALE_BAL_BAND_TOTALS "
+            "opening_value=%s purchase_value=%s sales_value=%s closing_value=%s",
+            opening_v,
+            purchase_v,
+            sales_v,
+            closing_v,
+        )
+
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        item_extra = item.setdefault("extra", {})
+        if not isinstance(item_extra, dict):
+            item_extra = {}
+            item["extra"] = item_extra
+        item_extra["layout"] = "op_qty_pur_sale_bal"
+        item_extra["psr_column_layout"] = "op_qty_pur_sale_bal"
+        item_extra["schema"] = "op_qty_pur_sale_bal"
+
+    if changed:
+        logger.info(
+            "STOCK_PDF_WORDS_OP_QTY_PUR_SALE_BAL_META "
+            "title=%r company=%r stockist=%r items=%s",
+            result.get("report_title"),
+            result.get("company_name"),
+            result.get("stockist_name"),
+            len(result.get("line_items") or []),
+        )
+    return changed
 
 
 _LETTERHEAD_TITLE_RE = re.compile(
@@ -3229,6 +3381,7 @@ def parse_pdf_free_column_statement(
             "STOCK_PDF_WORDS_MANUFACTURER_NAME company=%s",
             result["company_name"],
         )
+    _apply_op_qty_pur_sale_bal_meta(result, peek)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     extra["extraction_method"] = "pdf_words_free_columns"
     extra["statement_count"] = 1
@@ -3245,8 +3398,12 @@ def parse_pdf_free_column_statement(
     footer = parsed.get("footer_totals")
     if not footer:
         footer = _footer_totals_from_page_results(page_results)
+    # Manufacturer Op/Pur/Sale/Bal money band already filled totals — do not
+    # let a qty-only footer wipe sales_value / closing_value or the source tag.
+    keep_mfr_band = bool(extra.get("manufacturer_band_totals"))
     if footer:
-        extra["total_row_source"] = "printed_footer"
+        if not keep_mfr_band:
+            extra["total_row_source"] = "printed_footer"
         for key in (
             "opening_qty",
             "receipts_qty",
@@ -3257,6 +3414,8 @@ def parse_pdf_free_column_statement(
             "last_month_sales_value",
         ):
             if footer.get(key) is not None:
+                if keep_mfr_band and key in {"opening_value", "receipts_value"}:
+                    continue
                 if key in {
                     "opening_qty",
                     "receipts_qty",
@@ -3267,9 +3426,9 @@ def parse_pdf_free_column_statement(
                 }:
                     result["totals"][key] = footer[key]
                 extra[key] = footer[key]
-        if footer.get("sales_value") is not None:
+        if footer.get("sales_value") is not None and not keep_mfr_band:
             result["totals"]["sales_value"] = footer["sales_value"]
-        if footer.get("closing_value") is not None:
+        if footer.get("closing_value") is not None and not keep_mfr_band:
             result["totals"]["closing_value"] = footer["closing_value"]
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
