@@ -1,0 +1,740 @@
+[
+  {
+    "name": "anyio",
+    "version": "4.13.0",
+    "count": 2,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-4025",
+        "fix_versions": [
+          "4.14.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-4024",
+        "fix_versions": [
+          "4.14.2"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "certifi",
+    "version": "2026.4.22",
+    "count": 1,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-4320",
+        "fix_versions": [
+          "2026.10.19"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "cryptography",
+    "version": "48.0.0",
+    "count": 7,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-3554",
+        "fix_versions": [
+          "49.0.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3552",
+        "fix_versions": [
+          "50.0.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3553",
+        "fix_versions": [
+          "49.0.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3552",
+        "fix_versions": [
+          "50.0.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3553",
+        "fix_versions": [
+          "49.0.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3554",
+        "fix_versions": [
+          "49.0.0"
+        ]
+      },
+      {
+        "id": "GHSA-537c-gmf6-5ccf",
+        "fix_versions": [
+          "48.0.1"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pdfminer-six",
+    "version": "20231228",
+    "count": 4,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-1762",
+        "fix_versions": [
+          "20251107"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1761",
+        "fix_versions": [
+          "20251230"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1762",
+        "fix_versions": [
+          "20251107"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1761",
+        "fix_versions": [
+          "20251230"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pillow",
+    "version": "11.1.0",
+    "count": 55,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-2249",
+        "fix_versions": [
+          "12.1.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2250",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-165",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2874",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2252",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-165",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2250",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2253",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2255",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2257",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2256",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2254",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2252",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2249",
+        "fix_versions": [
+          "12.1.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2874",
+        "fix_versions": [
+          "12.2.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3453",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3451",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3493",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2254",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2253",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2256",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2255",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3454",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3451",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3494",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3495",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3496",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3453",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3454",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3495",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3496",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3494",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3493",
+        "fix_versions": [
+          "12.3.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112895",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112400",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112397",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112896",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112897",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112395",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112404",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112899",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112402",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112900",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112893",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112392",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112891",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112390",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112401",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112901",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112391",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112894",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112406",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112399",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112892",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      },
+      {
+        "id": "CVE-2026-112393",
+        "fix_versions": [
+          "13.0.0"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pip",
+    "version": "26.1.1",
+    "count": 4,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-196",
+        "fix_versions": [
+          "26.1.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-196",
+        "fix_versions": [
+          "26.1.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3721",
+        "fix_versions": [
+          "26.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3721",
+        "fix_versions": [
+          "26.2.0"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "pypdf2",
+    "version": "3.0.1",
+    "count": 1,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-1835",
+        "fix_versions": [
+          "3.9.0"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "python-dotenv",
+    "version": "1.0.1",
+    "count": 2,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-2270",
+        "fix_versions": [
+          "1.2.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2270",
+        "fix_versions": [
+          "1.2.2"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "python-multipart",
+    "version": "0.0.20",
+    "count": 12,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-1852",
+        "fix_versions": [
+          "0.0.22"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3038",
+        "fix_versions": [
+          "0.0.26"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3039",
+        "fix_versions": [
+          "0.0.27"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3040",
+        "fix_versions": [
+          "0.0.31"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3036",
+        "fix_versions": [
+          "0.0.30"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3037",
+        "fix_versions": [
+          "0.0.30"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1852",
+        "fix_versions": [
+          "0.0.22"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3038",
+        "fix_versions": [
+          "0.0.26"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3037",
+        "fix_versions": [
+          "0.0.30"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3036",
+        "fix_versions": [
+          "0.0.30"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3040",
+        "fix_versions": [
+          "0.0.31"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-3039",
+        "fix_versions": [
+          "0.0.27"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "requests",
+    "version": "2.32.3",
+    "count": 4,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-1872",
+        "fix_versions": [
+          "2.32.4"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2275",
+        "fix_versions": [
+          "2.33.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1872",
+        "fix_versions": [
+          "2.32.4"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2275",
+        "fix_versions": [
+          "2.33.0"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "starlette",
+    "version": "0.45.3",
+    "count": 14,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-1941",
+        "fix_versions": [
+          "0.47.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1942",
+        "fix_versions": [
+          "0.49.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-161",
+        "fix_versions": [
+          "1.0.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-161",
+        "fix_versions": [
+          "1.0.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2281",
+        "fix_versions": [
+          "1.1.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2280",
+        "fix_versions": [
+          "1.1.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-249",
+        "fix_versions": [
+          "1.3.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-248",
+        "fix_versions": [
+          "1.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-249",
+        "fix_versions": [
+          "1.3.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-248",
+        "fix_versions": [
+          "1.3.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1942",
+        "fix_versions": [
+          "0.49.1"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-1941",
+        "fix_versions": [
+          "0.47.2"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2281",
+        "fix_versions": [
+          "1.1.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-2280",
+        "fix_versions": [
+          "1.1.0"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "urllib3",
+    "version": "2.7.0",
+    "count": 3,
+    "vulns": [
+      {
+        "id": "PYSEC-2026-4177",
+        "fix_versions": [
+          "2.8.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-4176",
+        "fix_versions": [
+          "2.8.0"
+        ]
+      },
+      {
+        "id": "PYSEC-2026-4175",
+        "fix_versions": [
+          "2.8.0"
+        ]
+      }
+    ]
+  }
+]

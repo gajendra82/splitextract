@@ -22,7 +22,7 @@ GOOGLE_GENAI_USE_VERTEXAI = os.getenv(
     "GOOGLE_GENAI_USE_VERTEXAI", "true"
 ).strip().lower() in {"1", "true", "yes", "on"}
 GOOGLE_CLOUD_PROJECT = os.getenv(
-    "GOOGLE_CLOUD_PROJECT", "pod-ocr-502015"
+    "GOOGLE_CLOUD_PROJECT", "invoice-ai-production"
 ).strip()
 GOOGLE_CLOUD_LOCATION = os.getenv(
     "GOOGLE_CLOUD_LOCATION", "global"
@@ -83,13 +83,13 @@ def initialize_vertex_gemini_client() -> genai.Client:
 
     _vertex_client = genai.Client(
         vertexai=True,
-        project=GOOGLE_CLOUD_PROJECT or "pod-ocr-502015",
+        project=GOOGLE_CLOUD_PROJECT or "invoice-ai-production",
         location=GOOGLE_CLOUD_LOCATION or "global",
     )
     _vertex_client_initialized = True
 
     logger.info("Using Vertex AI Gemini")
-    logger.info("Project: %s", GOOGLE_CLOUD_PROJECT or "pod-ocr-502015")
+    logger.info("Project: %s", GOOGLE_CLOUD_PROJECT or "invoice-ai-production")
     logger.info("Location: %s", GOOGLE_CLOUD_LOCATION or "global")
 
     return _vertex_client

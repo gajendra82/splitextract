@@ -1,0 +1,6 @@
+exists=yes
+mode=0o600
+uid=0
+gid=0
+size=2362
+name_basename_len=18

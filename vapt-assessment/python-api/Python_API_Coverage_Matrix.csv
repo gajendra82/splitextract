@@ -1,0 +1,16 @@
+area,method,result,finding_ids,notes
+Authentication on extraction routes,Source review and empty unauthenticated POSTs,Gap confirmed,CAN-PY-001,No 401 observed
+Object and tenant authorization,Source review of blob fields,Source gap; runtime not tested,CAN-PY-003,No cross-account storage call
+SQL injection,Search of application Python,No database API found,,No ORM or raw SQL
+Command injection,"Search for os.system, shell=True, eval, exec, pickle",Not found,,Bandit did not report B602 or B301
+SSRF,Source review of requests.get,Source gap; fetch not sent,CAN-PY-002,Metadata not requested
+File upload validation,Source review of extension checks,Extension allow list present; content and size not enforced,CAN-PY-010,No file was uploaded
+Error handling,Source review and empty-POST responses,Exception text path present; not triggered,CAN-PY-006,
+CORS,Source and OPTIONS preflight,Any origin reflected with credentials,CAN-PY-007,
+Security headers and TLS,nginx response and one TLS 1.2 handshake,Headers missing; TLS 1.2 certificate valid,CAN-PY-008,No full cipher sweep
+Rate limiting,Source review,No per-client limiter; impact not tested,CAN-PY-010,Load test not performed
+Secrets at rest,File mode inspection,Environment file is mode 644; HTTP does not serve it,CAN-PY-004,Values not copied
+Process privilege,Unit file and ps,Runs as root,CAN-PY-011,
+Dependencies,pip-audit against site-packages,70 unique identifiers; none exploited,CAN-PY-013,First freeze reinstall attempt failed
+Interactive documentation,"GET /docs, /redoc, /openapi.json",HTTP 200 without credentials,CAN-PY-001,
+Adjacent Python listeners,ss and nginx map,Port 8000 is listening and was not assessed. Ports 8002 and 8003 were not listening.,,Out of scope

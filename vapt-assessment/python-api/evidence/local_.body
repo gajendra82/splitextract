@@ -1,0 +1,1 @@
+{"service":"Invoice Splitter + Extractor API v10.0 (PDFPlumber + Tesseract)","features":["✅ 4-tier OCR: PDFPlumber → PyMuPDF → Tesseract → Gemini","✅ 80-95% cost reduction","✅ Complete GSTIN extraction (handles OCR errors)","✅ Enhanced IRN validation","✅ Vendor/Customer auto-detection","✅ Quantity/Price swap detection","✅ MRP vs RATE validation"]}

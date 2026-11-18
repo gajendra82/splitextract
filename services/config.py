@@ -88,7 +88,7 @@ class ExtractionConfig:
         default_factory=lambda: os.getenv("VISION_PROVIDER", "gemini").strip().lower()
     )
     vision_model: str = field(
-        default_factory=lambda: os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+        default_factory=lambda: os.getenv("VISION_MODEL", "gemini-3.5-flash-lite").strip()
     )
 
     # Vertex AI Gemini
@@ -97,7 +97,7 @@ class ExtractionConfig:
     )
     google_cloud_project: str = field(
         default_factory=lambda: os.getenv(
-            "GOOGLE_CLOUD_PROJECT", "pod-ocr-502015"
+            "GOOGLE_CLOUD_PROJECT", "invoice-ai-production"
         ).strip()
     )
     google_cloud_location: str = field(

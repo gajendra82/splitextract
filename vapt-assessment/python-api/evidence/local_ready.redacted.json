@@ -1,0 +1,19 @@
+{
+  "ready": true,
+  "active_request": true,
+  "request_id": "[REDACTED]",
+  "active_ocr": 0,
+  "active_gpt": 0,
+  "active_gemini": 1,
+  "heartbeat_age": 1.98,
+  "current_stage": "gemini_vision_request",
+  "current_page": 1,
+  "total_pages": 1,
+  "current_invoice": null,
+  "last_completed_step": "gemini_vision_request",
+  "memory_usage_mb": null,
+  "uptime_seconds": 98141.2,
+  "thread_count": 4,
+  "waiting_requests": 0,
+  "processing_status": "processing"
+}

@@ -1,0 +1,14 @@
+canonical_id,sast_id,dast_id,title,severity,cvss,status,sast_status,dast_status
+CAN-PY-001,SAST-PY-001,DAST-PY-001,Extraction API has no authentication,Medium,6.5,Open,Confirmed in source,Confirmed
+CAN-PY-002,SAST-PY-002,DAST-PY-002,split_raw_url is fetched without a destination allow list,Medium,6.5,Open,Confirmed in source,Not performed
+CAN-PY-003,SAST-PY-003,DAST-PY-003,Caller-supplied blob container and path are used with the service credential,Medium,6.5,Open,Confirmed in source,Not performed
+CAN-PY-004,SAST-PY-004,DAST-PY-004,Environment file holding cloud and model credentials is world-readable,Medium,5.5,Open,Confirmed by file mode and configuration review,Confirmed that HTTP does not return the file
+CAN-PY-005,SAST-PY-005,DAST-PY-005,API listens in cleartext on all interfaces,Medium,5.3,Open,Confirmed in runner.py and the live unit,Confirmed from this host
+CAN-PY-009,SAST-PY-009,DAST-PY-009,Unauthenticated health output includes the in-flight document identity,Medium,5.3,Open,Confirmed in source,Confirmed
+CAN-PY-006,SAST-PY-006,DAST-PY-006,Handlers return exception text to the caller,Low,3.7,Open,Confirmed in source,Partially observed
+CAN-PY-007,SAST-PY-007,DAST-PY-007,CORS reflects any origin and allows credentials,Low,3.1,Open,Confirmed in source,Confirmed
+CAN-PY-008,SAST-PY-008,DAST-PY-008,Security headers are absent and server versions are disclosed,Low,3.1,Open,Confirmed in the nginx vhost,Confirmed
+CAN-PY-010,SAST-PY-010,DAST-PY-010,Upload size and concurrency limits do not cover every extraction route,Low,Not scored,Open,Confirmed in source and nginx configuration,Not performed
+CAN-PY-011,SAST-PY-011,DAST-PY-011,The extraction process runs as root,Informational,Not scored,Open,Confirmed in the unit file,Confirmed by process uid
+CAN-PY-012,SAST-PY-012,,Container build file does not match the running service,Informational,Not scored,Open,Confirmed by file review,Not applicable
+CAN-PY-013,SAST-PY-013,,Dependency advisories are present; exploitability was not demonstrated,Informational,Not scored,Open,"Scanner result, not a validated vulnerability",Not applicable

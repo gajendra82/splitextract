@@ -1,0 +1,4372 @@
+{
+  "errors": [],
+  "generated_at": "2026-10-22T10:11:11Z",
+  "metrics": {
+    "/var/www/html/split-extract/app.py": {
+      "CONFIDENCE.HIGH": 168,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 8,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 175,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 40989,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/runner.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 171,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/__init__.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/config.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 119,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/excel_invoice_extract.py": {
+      "CONFIDENCE.HIGH": 7,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 7,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1262,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/extraction_cache.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 84,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/extraction_logger.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 47,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/extraction_metrics.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 60,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/file_type_detector.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 113,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/gemini_vision_extractor.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 99,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/image_preprocessing.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 117,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/internal_invoice_ai.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 352,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/ocr_quality.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 104,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/prompts.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 128,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/reliability.py": {
+      "CONFIDENCE.HIGH": 8,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 8,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 864,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/sales_statement_extractor.py": {
+      "CONFIDENCE.HIGH": 5,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 5,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 2557,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "/var/www/html/split-extract/services/vertex_gemini_client.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 160,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 188,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 9,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 195,
+      "SEVERITY.MEDIUM": 2,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 47227,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "131             logger.info(f\"\ud83e\udde0 [{stage}]{elapsed}\")\n132     except Exception:\n133         pass\n134 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 132,
+      "line_range": [
+        132,
+        133
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "927                 float(GEMINI_PROVIDER_BACKOFF_MAX_SECONDS), float(base))\n928             sleep_time = sleep_time + random.uniform(0.0, sleep_time * 0.25)\n929             remaining = MAX_WAIT_TIME - (time.time() - start_time)\n",
+      "col_offset": 38,
+      "end_col_offset": 76,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 928,
+      "line_range": [
+        928
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "1130                 total_pages, int(getattr(parent, \"page_count\", 0) or 0))\n1131     except Exception:\n1132         pass\n1133     return total_pages\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1131,
+      "line_range": [
+        1131,
+        1132
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1257             return summary_inv\n1258     except Exception:\n1259         pass\n1260     top = str(full_data.get(\"invoice_no\") or \"\").strip()\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1258,
+      "line_range": [
+        1258,
+        1259
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2561 \n2562     except Exception:\n2563         pass\n2564 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2562,
+      "line_range": [
+        2562,
+        2563
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2828                 str(item.get(\"total_amount\", \"\"))) or 0)\n2829         except Exception:\n2830             pass\n2831         _row_coherent = (\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2829,
+      "line_range": [
+        2829,
+        2830
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "2903                     derived_qty - round(derived_qty)) <= 0.05\n2904             except Exception:\n2905                 pass\n2906 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 2904,
+      "line_range": [
+        2904,
+        2905
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "3181             total = float(m.group(10).replace(',', ''))\n3182         except Exception:\n3183             continue\n3184         if rate <= 0 or qty < 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 3182,
+      "line_range": [
+        3182,
+        3183
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "3326             t = float(normalize_numeric_value(str(it.get(\"total_amount\", 0) or 0)) or 0)\n3327         except Exception:\n3328             continue\n3329         usable += 1\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 3327,
+      "line_range": [
+        3327,
+        3328
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "3601             rate = float(m.group(5).replace(',', ''))\n3602         except Exception:\n3603             continue\n3604         if qty <= 0 or rate <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 3602,
+      "line_range": [
+        3602,
+        3603
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "3838                 taxable = float(match.group(5).replace(',', ''))\n3839             except Exception:\n3840                 continue\n3841             if qty <= 0 or rate <= 0 or taxable <= 0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 3839,
+      "line_range": [
+        3839,
+        3840
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "3927                         score += 5\n3928                 except Exception:\n3929                     pass\n3930             if score > best_score:\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 3928,
+      "line_range": [
+        3928,
+        3929
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "4214                 cand = float(rm.group(1))\n4215             except Exception:\n4216                 continue\n4217             if cand < 8:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 4215,
+      "line_range": [
+        4215,
+        4216
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "4419                 str(af.get(\"mrp\", \"\") or \"0\")) or 0)\n4420         except Exception:\n4421             continue\n4422         if fq < 1 or fq > 20 or mrp_val < 8:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 4420,
+      "line_range": [
+        4420,
+        4421
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "4829                     f\"\u26a0\ufe0f Total qty mismatch after correction: items_sum={sum_qty} vs tot_qty={total_qty}\")\n4830         except Exception:\n4831             pass\n4832 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 4830,
+      "line_range": [
+        4830,
+        4831
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "5023             v_f = float(value)\n5024         except Exception:\n5025             continue\n5026         if q_f <= 0 or r_f <= 0 or v_f < 1:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 5024,
+      "line_range": [
+        5024,
+        5025
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "5524                 count = int(match.group(1))\n5525             except Exception:\n5526                 continue\n5527             if 1 <= count <= 5000:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 5525,
+      "line_range": [
+        5525,
+        5526
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "5794                         rate = f\"{value_val / qty_val:.2f}\"\n5795             except Exception:\n5796                 pass\n5797 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 5795,
+      "line_range": [
+        5795,
+        5796
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "6004                     f\"\ud83d\udd04 Recovered (full-text): {product_name} (qty={qty}, rate={rate})\")\n6005             except:\n6006                 continue\n6007 \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 6005,
+      "line_range": [
+        6005,
+        6006
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "6071                                         amount_val / qty_val) if qty_val > 0 else rate\n6072                             except:\n6073                                 pass\n6074                     if not rate:\n",
+      "col_offset": 28,
+      "end_col_offset": 36,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 6072,
+      "line_range": [
+        6072,
+        6073
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "6388                         continue\n6389                 except Exception:\n6390                     pass\n6391 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 6389,
+      "line_range": [
+        6389,
+        6390
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "7163                 tail_qty = int(qty_str[-tail_len:])\n7164             except Exception:\n7165                 continue\n7166             if 1 <= tail_qty <= 500:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 7164,
+      "line_range": [
+        7164,
+        7165
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "7201                 val = int(run)\n7202             except Exception:\n7203                 continue\n7204             if 0 < val <= 999999:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 7202,
+      "line_range": [
+        7202,
+        7203
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "7309                     cand = float(m.group(1))\n7310                 except Exception:\n7311                     continue\n7312                 if cand not in tax_vals:\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 7310,
+      "line_range": [
+        7310,
+        7311
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "7757                     )\n7758         except Exception:\n7759             pass\n7760 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 7758,
+      "line_range": [
+        7758,
+        7759
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "7784                             )\n7785         except Exception:\n7786             pass\n7787 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 7785,
+      "line_range": [
+        7785,
+        7786
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "7809                         break\n7810                     except Exception:\n7811                         continue\n7812                 if qty_before_free <= 0:\n",
+      "col_offset": 20,
+      "end_col_offset": 32,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 7810,
+      "line_range": [
+        7810,
+        7811
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "7843                 )\n7844         except Exception:\n7845             continue\n7846 \n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 7844,
+      "line_range": [
+        7844,
+        7845
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "8040             img.close()\n8041         except Exception:\n8042             pass\n8043 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 8041,
+      "line_range": [
+        8041,
+        8042
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "8687                                 free_qty_str = str(int(rec_val))\n8688                         except Exception:\n8689                             pass\n8690 \n",
+      "col_offset": 24,
+      "end_col_offset": 32,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 8688,
+      "line_range": [
+        8688,
+        8689
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "8780                     str(item.get(\"total_amount\", \"0\") or \"0\")))\n8781             except Exception:\n8782                 continue\n8783 \n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 8781,
+      "line_range": [
+        8781,
+        8782
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "10002                 str(item.get(\"quantity\", \"0\"))))\n10003         except Exception:\n10004             continue\n10005         if cur <= 0 or qty <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 10003,
+      "line_range": [
+        10003,
+        10004
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "10532                 str(item.get(\"total_amount\", \"0\"))))\n10533         except Exception:\n10534             continue\n10535         if cur <= 0 or qty <= 0 or gross <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 10533,
+      "line_range": [
+        10533,
+        10534
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "10617             img.close()\n10618         except Exception:\n10619             pass\n10620         return max(candidates, key=lambda t: len(t.strip()))\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 10618,
+      "line_range": [
+        10618,
+        10619
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "10651                     return taxable\n10652         except Exception:\n10653             pass\n10654     if ocr_text:\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 10652,
+      "line_range": [
+        10652,
+        10653
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "10665                 return float(raw)\n10666             except Exception:\n10667                 pass\n10668     return 0.0\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 10666,
+      "line_range": [
+        10666,
+        10667
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "11069                 return v\n11070         except Exception:\n11071             continue\n11072     return 0.0\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 11070,
+      "line_range": [
+        11070,
+        11071
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "11095             t = float(normalize_numeric_value(str(it.get(\"total_amount\", 0) or 0)) or 0)\n11096         except Exception:\n11097             continue\n11098         if q <= 0 or r <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 11096,
+      "line_range": [
+        11096,
+        11097
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "11251                     str(rit.get(\"total_amount\", 0) or 0)) or 0)\n11252             except Exception:\n11253                 continue\n11254             r_mrp = _yash_item_mrp(rit) or cur_mrp\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 11252,
+      "line_range": [
+        11252,
+        11253
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "11418                 rest_nums.append(float(tok.replace(\",\", \"\")))\n11419             except Exception:\n11420                 continue\n11421         picked = _yash_pick_qty_rate_amount(rest_nums)\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 11419,
+      "line_range": [
+        11419,
+        11420
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "11480                     img.close()\n11481                 except Exception:\n11482                     pass\n11483             n = len(_parse_yash_agencies_rate_rows(text))\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 11481,
+      "line_range": [
+        11481,
+        11482
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "13494                 chunks.append(chunk.strip())\n13495         except Exception:\n13496             continue\n13497 \n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 13495,
+      "line_range": [
+        13495,
+        13496
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "13499         img.close()\n13500     except Exception:\n13501         pass\n13502 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 13500,
+      "line_range": [
+        13500,
+        13501
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "13909                     rr = float(row.get(\"unit_price\") or 0)\n13910                 except Exception:\n13911                     continue\n13912                 if qty > 0 and rate > 0 and abs(qty - rq) < 0.51 and abs(rate - rr) <= 0.02:\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 13910,
+      "line_range": [
+        13910,
+        13911
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "14000             img.close()\n14001         except Exception:\n14002             pass\n14003         return best\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 14001,
+      "line_range": [
+        14001,
+        14002
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "15064             part_x, header_y = t[0], y\n15065         elif token == \"PACK\":\n15066             pack_x = t[0]\n",
+      "col_offset": 22,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'PACK'",
+      "line_number": 15065,
+      "line_range": [
+        15065
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "15066             pack_x = t[0]\n15067         elif token == \"BATCH\":\n15068             batch_x = t[0]\n",
+      "col_offset": 22,
+      "end_col_offset": 29,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'BATCH'",
+      "line_number": 15067,
+      "line_range": [
+        15067
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "15597                 nums.append(float(tok))\n15598             except Exception:\n15599                 continue\n15600         best = None\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 15598,
+      "line_range": [
+        15598,
+        15599
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "15890             img.close()\n15891         except Exception:\n15892             pass\n15893         return text\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 15891,
+      "line_range": [
+        15891,
+        15892
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "15940                     return True\n15941             except Exception:\n15942                 pass\n15943         tot_m = re.search(\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 15941,
+      "line_range": [
+        15941,
+        15942
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "15955                     return True\n15956             except Exception:\n15957                 pass\n15958         # Single highly coherent paid triple with a substantial Amount \u2014 still\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 15956,
+      "line_range": [
+        15956,
+        15957
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "15973             amt = float(r.get(\"total_amount\", 0) or 0)\n15974         except Exception:\n15975             continue\n15976         if q <= 0 or rate <= 0 or amt <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 15974,
+      "line_range": [
+        15974,
+        15975
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "16010                         return False\n16011             except Exception:\n16012                 pass\n16013     return True\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 16011,
+      "line_range": [
+        16011,
+        16012
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "16174                     rg = float(ip[n:] + \".\" + fp)\n16175                 except Exception:\n16176                     continue\n16177                 if not (1 <= qg <= 200 and 3.5 <= rg <= 2000):\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 16175,
+      "line_range": [
+        16175,
+        16176
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "16437                 amount = float(m.group(4).replace(',', '.'))\n16438             except Exception:\n16439                 continue\n16440             _add_row(qty, rate, amount)\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 16438,
+      "line_range": [
+        16438,
+        16439
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "16453                 amount = float(m2.group(3).replace(',', '.'))\n16454             except Exception:\n16455                 continue\n16456             _add_row(qty, rate, amount)\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 16454,
+      "line_range": [
+        16454,
+        16455
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "16464             amount = float(m3.group(2).replace(',', '.'))\n16465         except Exception:\n16466             continue\n16467         if rate < 5:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 16465,
+      "line_range": [
+        16465,
+        16466
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "16544             img.close()\n16545         except Exception:\n16546             pass\n16547         return extract_jackson_medicals_invoice_date(text)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 16545,
+      "line_range": [
+        16545,
+        16546
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "16574             img.close()\n16575         except Exception:\n16576             pass\n16577         inv = extract_jackson_medicals_invoice_no(text)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 16575,
+      "line_range": [
+        16575,
+        16576
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "16700                         matched[\"total_amount\"] = r[\"total_amount\"]\n16701                 except Exception:\n16702                     pass\n16703                 continue\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 16701,
+      "line_range": [
+        16701,
+        16702
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "16932                 str(item.get(\"total_amount\", 0) or 0)))\n16933         except Exception:\n16934             continue\n16935         if cur_total <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 16933,
+      "line_range": [
+        16933,
+        16934
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17122                     str(it.get(\"total_amount\", 0) or 0))), 2)\n17123             except Exception:\n17124                 continue\n17125             if t > 0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17123,
+      "line_range": [
+        17123,
+        17124
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17212                     amount_holders.setdefault(new_t, []).append(item)\n17213                 except Exception:\n17214                     pass\n17215 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17213,
+      "line_range": [
+        17213,
+        17214
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17392                 str(item.get(\"total_amount\", 0) or 0))), 2)\n17393         except Exception:\n17394             continue\n17395         if amt >= 50:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17393,
+      "line_range": [
+        17393,
+        17394
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17444                     str(item.get(\"total_amount\", 0) or 0)))\n17445             except Exception:\n17446                 continue\n17447             if amt < 50:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17445,
+      "line_range": [
+        17445,
+        17446
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17462                     str(item.get(\"total_amount\", 0) or 0)))\n17463             except Exception:\n17464                 continue\n17465             if named_amt > 0 and abs(amt - named_amt) / max(named_amt, 1.0) > 0.02:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17463,
+      "line_range": [
+        17463,
+        17464
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17478                     str(it.get(\"total_amount\", 0) or 0))))\n17479             except Exception:\n17480                 pass\n17481         for idx, row in enumerate(qr_rows):\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17479,
+      "line_range": [
+        17479,
+        17480
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17588                 found.append(float(f\"{m.group(1)}.{m.group(2)}\"))\n17589             except Exception:\n17590                 pass\n17591         # Jackson band/page OCR: \"$876.30\" is often 5876.30 (leading 5 as $)\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17589,
+      "line_range": [
+        17589,
+        17590
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17601                     found.append(float(f\"{lead}{body}\"))\n17602             except Exception:\n17603                 pass\n17604         return found\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17602,
+      "line_range": [
+        17602,
+        17603
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17614                 found.append(float(f\"{raw[:-2]}.{raw[-2:]}\"))\n17615             except Exception:\n17616                 pass\n17617         return found\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17615,
+      "line_range": [
+        17615,
+        17616
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17625                 rates.append(float(f\"{m.group(1)}.{m.group(2)}\"))\n17626             except Exception:\n17627                 pass\n17628         # 8203 \u2192 82.03 (ZINCOVIT rate with dropped decimal)\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17626,
+      "line_range": [
+        17626,
+        17627
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17632                 rates.append(float(f\"{raw[:-2]}.{raw[-2:]}\"))\n17633             except Exception:\n17634                 pass\n17635         return rates\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17633,
+      "line_range": [
+        17633,
+        17634
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17823             fq = int(fm.group(1))\n17824         except Exception:\n17825             continue\n17826         if not (1 <= fq <= 500):\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17824,
+      "line_range": [
+        17824,
+        17825
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "17874                 str(it.get(\"total_amount\", 0) or 0))))\n17875         except Exception:\n17876             pass\n17877 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 17875,
+      "line_range": [
+        17875,
+        17876
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "17952             nums.append({\"v\": float(raw), \"dec\": \".\" in raw})\n17953         except Exception:\n17954             continue\n17955     gst_i = None\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 17953,
+      "line_range": [
+        17953,
+        17954
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "18179             exp = m.group('exp')\n18180         except Exception:\n18181             continue\n18182         is_free = (amt <= 0.009 and rate <= 0.009) or (\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 18180,
+      "line_range": [
+        18180,
+        18181
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "18353             nums.append(float(m.group(0)))\n18354         except Exception:\n18355             continue\n18356     return nums\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 18354,
+      "line_range": [
+        18354,
+        18355
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "18586             img.close()\n18587         except Exception:\n18588             pass\n18589         h, w = arr.shape[:2]\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 18587,
+      "line_range": [
+        18587,
+        18588
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "18621                 parts.append(raw_text)\n18622         except Exception:\n18623             pass\n18624         return \"\\n\".join(parts)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 18622,
+      "line_range": [
+        18622,
+        18623
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "18871             nums.append(float(m.group(0)))\n18872         except Exception:\n18873             continue\n18874     return nums\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 18872,
+      "line_range": [
+        18872,
+        18873
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "19233             details[\"total\"] = f\"{float(tot_m.group(1).replace(',', '')):.2f}\"\n19234         except Exception:\n19235             pass\n19236     for dm in re.finditer(\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 19234,
+      "line_range": [
+        19234,
+        19235
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "19246             break\n19247         except Exception:\n19248             continue\n19249     return details\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 19247,
+      "line_range": [
+        19247,
+        19248
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "19313             img.close()\n19314         except Exception:\n19315             pass\n19316         with tesseract_ocr_slot(\"sr_pharma_psm6\"):\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 19314,
+      "line_range": [
+        19314,
+        19315
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "19409             img.close()\n19410         except Exception:\n19411             pass\n19412         return extract_jackson_medicals_invoice_total(text)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 19410,
+      "line_range": [
+        19410,
+        19411
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "19426             return float(words_total)\n19427     except Exception:\n19428         pass\n19429     m = re.search(\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 19427,
+      "line_range": [
+        19427,
+        19428
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "19752             return items\n19753     except Exception:\n19754         pass\n19755 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 19753,
+      "line_range": [
+        19753,
+        19754
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "20239     normalized = ocr_text.replace('\\n', ' ')\n20240     date_token = r'([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2,4})'\n20241 \n",
+      "col_offset": 17,
+      "end_col_offset": 78,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2,4})'",
+      "line_number": 20240,
+      "line_range": [
+        20240
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "20289     normalized = ocr_text.replace('\\n', ' ')\n20290     date_token = r'([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'\n20291 \n",
+      "col_offset": 17,
+      "end_col_offset": 76,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'",
+      "line_number": 20290,
+      "line_range": [
+        20290
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "20585             money.append(float(tok.replace(\",\", \".\")))\n20586         except Exception:\n20587             continue\n20588     pred = round(qty * rate, 2)\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 20586,
+      "line_range": [
+        20586,
+        20587
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "20784             img.close()\n20785         except Exception:\n20786             pass\n20787         return (text + \"\\n\" + text2).strip()\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 20785,
+      "line_range": [
+        20785,
+        20786
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "20825                 money.append(float(tok))\n20826             except Exception:\n20827                 continue\n20828         end_int = re.search(r'(\\d{4,7})(?:\\.\\d{1,2})?\\s*\\|?\\s*$', line_n)\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 20826,
+      "line_range": [
+        20826,
+        20827
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "20843                 iv = int(tok)\n20844             except Exception:\n20845                 continue\n20846             if iv in (5,) or iv > 2000:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 20844,
+      "line_range": [
+        20844,
+        20845
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "20864                     amount_bases.append(5000.0 + tail)\n20865             except Exception:\n20866                 pass\n20867 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 20865,
+      "line_range": [
+        20865,
+        20866
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "21150             img.close()\n21151         except Exception:\n21152             pass\n21153         arr = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 21151,
+      "line_range": [
+        21151,
+        21152
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "23637             img.close()\n23638         except Exception:\n23639             pass\n23640         return text\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 23638,
+      "line_range": [
+        23638,
+        23639
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "24443             v = float(m.group(1).replace(',', ''))\n24444         except Exception:\n24445             continue\n24446         if 50000 <= v <= 500000:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 24444,
+      "line_range": [
+        24444,
+        24445
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "24886                     img.close()\n24887                 except Exception:\n24888                     pass\n24889             n = len(_parse_medica_torero_qty_rate_rows(text))\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 24887,
+      "line_range": [
+        24887,
+        24888
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "25757             img.close()\n25758         except Exception:\n25759             pass\n25760 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 25758,
+      "line_range": [
+        25758,
+        25759
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "25801             img.close()\n25802         except Exception:\n25803             pass\n25804         gray = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 25802,
+      "line_range": [
+        25802,
+        25803
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "26063             img.close()\n26064         except Exception:\n26065             pass\n26066         return \"\"\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 26064,
+      "line_range": [
+        26064,
+        26065
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "26069         img.close()\n26070     except Exception:\n26071         pass\n26072 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 26070,
+      "line_range": [
+        26070,
+        26071
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "26197                 val = float(f\"{mm.group(1)}.{mm.group(2)}\")\n26198             except Exception:\n26199                 continue\n26200             if val < 30.0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 26198,
+      "line_range": [
+        26198,
+        26199
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "26313                         amount_f = alt\n26314                 except Exception:\n26315                     pass\n26316 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 26314,
+      "line_range": [
+        26314,
+        26315
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "27228     normalized = ocr_text.replace('\\n', ' ')\n27229     date_token = r'([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'\n27230     # OCR may insert pipes/brackets between \"No.\" and \"DEL\" (e.g. \"No. |DEL-26-8655 Date\")\n",
+      "col_offset": 17,
+      "end_col_offset": 76,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'",
+      "line_number": 27229,
+      "line_range": [
+        27229
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "27397     date_token = (\n27398         r'(?:\\d{0,4})?'\n27399         r'([0-9]\\d)[\\-/\\.\\\\ ]([01]\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})\\b'\n27400     )\n27401 \n27402     def _is_dl_print_date(iso: str) -> bool:\n",
+      "col_offset": 8,
+      "end_col_offset": 67,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '(?:\\d{0,4})?([0-9]\\d)[\\-/\\.\\\\ ]([01]\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})\\b'",
+      "line_number": 27398,
+      "line_range": [
+        27397,
+        27398,
+        27399,
+        27400
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "27519 \n27520     date_token = r'([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'\n27521 \n",
+      "col_offset": 17,
+      "end_col_offset": 76,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: '([0-3]?\\d)[\\-/\\.\\\\ ]([01]?\\d)[\\-/\\.\\\\ ]((?:19|20)?\\d{2})'",
+      "line_number": 27520,
+      "line_range": [
+        27520
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "27853             rate = float(m.group(8).replace(',', ''))\n27854         except Exception:\n27855             continue\n27856         if qty <= 0 or rate <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 27854,
+      "line_range": [
+        27854,
+        27855
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28020             rate = float(m.group(8).replace(',', ''))\n28021         except Exception:\n28022             continue\n28023         if qty <= 0 or rate <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28021,
+      "line_range": [
+        28021,
+        28022
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28208             amount = float(m.group(5).replace(',', ''))\n28209         except Exception:\n28210             continue\n28211         if amount <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28209,
+      "line_range": [
+        28209,
+        28210
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28216                 val = float(tok.replace(',', ''))\n28217             except Exception:\n28218                 continue\n28219             if val > 0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28217,
+      "line_range": [
+        28217,
+        28218
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28537                     amount = float(amount_raw)\n28538                 except Exception:\n28539                     continue\n28540                 mrp = None\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28538,
+      "line_range": [
+        28538,
+        28539
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28555                     qty = float(qm.group('qty'))\n28556                 except Exception:\n28557                     continue\n28558                 tail = ln[qm.end():]\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28556,
+      "line_range": [
+        28556,
+        28557
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28572                     mrp = float(m2.group('mrp'))\n28573                 except Exception:\n28574                     continue\n28575                 _consider(qty, rate, amount, amount_raw, mrp)\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28573,
+      "line_range": [
+        28573,
+        28574
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28585                     mrp = float(m.group('mrp'))\n28586                 except Exception:\n28587                     continue\n28588                 # Placeholder rate; _consider recomputes from amount/qty\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28586,
+      "line_range": [
+        28586,
+        28587
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28616                             )\n28617                 except Exception:\n28618                     pass\n28619 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 28617,
+      "line_range": [
+        28617,
+        28618
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "28721                 net = float(m.group('net'))\n28722             except Exception:\n28723                 continue\n28724             if qty < 1 or taxable <= 0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 28722,
+      "line_range": [
+        28722,
+        28723
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "28759                                 mrp = maybe_mrp\n28760                 except Exception:\n28761                     pass\n28762 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 28760,
+      "line_range": [
+        28760,
+        28761
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29091                 _add(float(d + ip[1:]))\n29092     except Exception:\n29093         pass\n29094     return out\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29092,
+      "line_range": [
+        29092,
+        29093
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29131             _add(float(prefix + rs))\n29132         except Exception:\n29133             pass\n29134     return out\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29132,
+      "line_range": [
+        29132,
+        29133
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29146         amount_prefs.append(float(f\"{int(amount)}.00\"))\n29147     except Exception:\n29148         pass\n29149     for a in amount_prefs:\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29147,
+      "line_range": [
+        29147,
+        29148
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29241                 cand_pairs.append((float(m.group('rate')), float(m.group('amount'))))\n29242             except Exception:\n29243                 pass\n29244         toks = re.findall(r'\\d+\\.\\d{2,3}', cleaned)\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29242,
+      "line_range": [
+        29242,
+        29243
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29248                 vals.append(float(t if t.count('.') == 1 else t[:t.find('.') + 3]))\n29249             except Exception:\n29250                 pass\n29251         for i in range(len(vals)):\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29249,
+      "line_range": [
+        29249,
+        29250
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29402                     vals.append(float(t))\n29403                 except Exception:\n29404                     pass\n29405             best = None\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29403,
+      "line_range": [
+        29403,
+        29404
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29549                 v = float(m.group(1))\n29550             except Exception:\n29551                 continue\n29552             if 5 <= v <= 900:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 29550,
+      "line_range": [
+        29550,
+        29551
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "29561                 v = float(m.group(1))\n29562             except Exception:\n29563                 continue\n29564             if 500 <= v <= 250000:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 29562,
+      "line_range": [
+        29562,
+        29563
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "29585             img.close()\n29586         except Exception:\n29587             pass\n29588         return (\"\\n\".join(paired_lines) + \"\\n\" + product_band).strip()\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29586,
+      "line_range": [
+        29586,
+        29587
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29709         models_to_try.append(get_current_model_config()[\"name\"])\n29710     except Exception:\n29711         pass\n29712     for mname in (\"gemini-2.5-flash\", \"gemini-2.5-flash-lite\"):\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 29710,
+      "line_range": [
+        29710,
+        29711
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "29874                 qty = float(it.get(\"quantity\") or 0)\n29875             except Exception:\n29876                 continue\n29877             q2 = _riddhishree_qty_from_rate_amount(rate, amount)\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 29875,
+      "line_range": [
+        29875,
+        29876
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "30311                 return cleaned\n30312     except Exception:\n30313         pass\n30314     if re.fullmatch(r'\\d{2}[A-Z0-9]{13}', g) and g != _ZIL_PHARMA_VENDOR_GSTIN:\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 30312,
+      "line_range": [
+        30312,
+        30313
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "30387                 fa, fb, fc, fd = (float(nums[i + k]) for k in range(4))\n30388             except Exception:\n30389                 continue\n30390             if fb <= 0 or fc <= 0 or abs(fb - fc) > 0.05:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 30388,
+      "line_range": [
+        30388,
+        30389
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "30406                     fb, fc, fd = float(nums[i]), float(nums[i + 1]), float(nums[i + 2])\n30407                 except Exception:\n30408                     continue\n30409                 if fb <= 0 or abs(fb - fc) > 0.05:\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 30407,
+      "line_range": [
+        30407,
+        30408
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "30431                     )\n30432             except Exception:\n30433                 pass\n30434     elif label_total:\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 30432,
+      "line_range": [
+        30432,
+        30433
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "30544                     left = line[: m3.start()].strip()\n30545                 except Exception:\n30546                     continue\n30547         name = _name_from_left(left)\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 30545,
+      "line_range": [
+        30545,
+        30546
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "30841                     a = float(normalize_numeric_value(str(item.get(\"total_amount\") or 0)))\n30842                 except Exception:\n30843                     continue\n30844                 af = item.get(\"additional_fields\") if isinstance(\n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 30842,
+      "line_range": [
+        30842,
+        30843
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "31037             return cleaned\n31038     except Exception:\n31039         pass\n31040     if re.fullmatch(r'\\d{2}[A-Z0-9]{13}', g):\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 31038,
+      "line_range": [
+        31038,
+        31039
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "31072             return iso\n31073     except Exception:\n31074         pass\n31075     return m.group(1)\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 31073,
+      "line_range": [
+        31073,
+        31074
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "31146                 return float(m.group(1))\n31147             except Exception:\n31148                 continue\n31149         return None\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 31147,
+      "line_range": [
+        31147,
+        31148
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "31368             gst = float(tail_m.group(\"gst\"))\n31369         except Exception:\n31370             continue\n31371         if qty <= 0 or amt < 0 or rate < 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 31369,
+      "line_range": [
+        31369,
+        31370
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "31845             rate = float(m.group(7).replace(',', ''))\n31846         except Exception:\n31847             continue\n31848         if qty <= 0 or rate <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 31846,
+      "line_range": [
+        31846,
+        31847
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "31997             rate = float(m.group(5).replace(',', ''))\n31998         except Exception:\n31999             continue\n32000         if qty <= 0 or rate <= 0:\n",
+      "col_offset": 8,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 31998,
+      "line_range": [
+        31998,
+        31999
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "32416                     str(af.get(\"discount_percentage\") or 0)))\n32417             except Exception:\n32418                 continue\n32419             if qty <= 0 or up <= 0 or gross <= 0:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 32417,
+      "line_range": [
+        32417,
+        32418
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "32622                     str(additional_fields[\"gross_amount\"])))\n32623             except:\n32624                 pass\n32625 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 32623,
+      "line_range": [
+        32623,
+        32624
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "32818                             f\"for '{item.get('product_description', 'Unknown')}' (MRP={mrp_val:.2f})\")\n32819                 except:\n32820                     pass\n32821             else:\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 32819,
+      "line_range": [
+        32819,
+        32820
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "33089                     price_by_product[product] = price\n33090             except:\n33091                 pass\n33092 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 33090,
+      "line_range": [
+        33090,
+        33091
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35026                         should_replace_date = True\n35027                 except Exception:\n35028                     pass\n35029 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35027,
+      "line_range": [
+        35027,
+        35028
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35258                     _sum_del[\"invoice_date_raw\"] = f\"{_dd:02d}-{_mm:02d}-{_yy}\"\n35259                 except Exception:\n35260                     pass\n35261     except Exception as _del_date_err:\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35259,
+      "line_range": [
+        35259,
+        35260
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35404                         f\"\u2705 Fixed: qty={item['quantity']}, price={item['unit_price']}\")\n35405             except:\n35406                 pass\n35407 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35405,
+      "line_range": [
+        35405,
+        35406
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35462                     logger.info(f\"   Swapped: qty={up}, unit_price={qty}\")\n35463         except:\n35464             pass\n35465 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35463,
+      "line_range": [
+        35463,
+        35464
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35544                 continue\n35545         except Exception:\n35546             pass\n35547 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35545,
+      "line_range": [
+        35545,
+        35546
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "35726                         _candidate_rates_from_filtered.append(_r4b)\n35727                 except Exception:\n35728                     pass\n35729                 continue\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 35727,
+      "line_range": [
+        35727,
+        35728
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "36218                                     rate_from_ocr = rate_candidate\n36219                             except:\n36220                                 pass\n36221 \n",
+      "col_offset": 28,
+      "end_col_offset": 36,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 36219,
+      "line_range": [
+        36219,
+        36220
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "37287                             )\n37288                 except Exception:\n37289                     pass\n37290 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 37288,
+      "line_range": [
+        37288,
+        37289
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "37562                         str(_it20.get(\"total_amount\", \"0\") or \"0\")) or 0)\n37563                 except Exception:\n37564                     continue\n37565 \n",
+      "col_offset": 16,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 37563,
+      "line_range": [
+        37563,
+        37564
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "37589                         continue\n37590                 except Exception:\n37591                     pass\n37592 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 37590,
+      "line_range": [
+        37590,
+        37591
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "38821                 )\n38822     except Exception:\n38823         pass\n38824 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 38822,
+      "line_range": [
+        38822,
+        38823
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "38869                         )\n38870     except Exception:\n38871         pass\n38872 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 38870,
+      "line_range": [
+        38870,
+        38871
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "38909                     )\n38910     except Exception:\n38911         pass\n38912 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 38910,
+      "line_range": [
+        38910,
+        38911
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "39605                         page, page_num=page_num)\n39606             except Exception:\n39607                 pass\n39608 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 39606,
+      "line_range": [
+        39606,
+        39607
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "40770                                 _sum[\"invoice_date_raw\"] = f\"{_dd:02d}/{_mm:02d}/{_yy}\"\n40771                             except Exception:\n40772                                 pass\n40773         except Exception as _hyd_fix_err:\n",
+      "col_offset": 28,
+      "end_col_offset": 36,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 40771,
+      "line_range": [
+        40771,
+        40772
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "40837                             _sum_del[\"invoice_date_raw\"] = f\"{_dd:02d}-{_mm:02d}-{_yy}\"\n40838                         except Exception:\n40839                             pass\n40840         except Exception as _del_fix_err:\n",
+      "col_offset": 24,
+      "end_col_offset": 32,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 40838,
+      "line_range": [
+        40838,
+        40839
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "40894                                 )\n40895                             except Exception:\n40896                                 pass\n40897         except Exception as _trust_fix_err:\n",
+      "col_offset": 28,
+      "end_col_offset": 36,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 40895,
+      "line_range": [
+        40895,
+        40896
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "42075             img.close()\n42076         except Exception:\n42077             pass\n42078         return []\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 42076,
+      "line_range": [
+        42076,
+        42077
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "42185         img.close()\n42186     except Exception:\n42187         pass\n42188 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 42186,
+      "line_range": [
+        42186,
+        42187
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "42996             _up_page_img.close()\n42997         except Exception:\n42998             pass\n42999 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 42997,
+      "line_range": [
+        42997,
+        42998
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "43721                 summary_obj[\"invoice_no\"] = group_invoice_no\n43722         except Exception:\n43723             pass\n43724 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 43722,
+      "line_range": [
+        43722,
+        43723
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "43966             )\n43967         except Exception:\n43968             pass\n43969         # Prefer first non-empty hospital/vendor\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 43967,
+      "line_range": [
+        43967,
+        43968
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "44142                     summary_obj[\"hospital_code\"] = hospital_code\n44143         except Exception:\n44144             pass\n44145 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 44143,
+      "line_range": [
+        44143,
+        44144
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "44882                         return inv_from_summary\n44883                 except Exception:\n44884                     pass\n44885 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 44883,
+      "line_range": [
+        44883,
+        44884
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "44889                         return inv_top\n44890                 except Exception:\n44891                     pass\n44892 \n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 44890,
+      "line_range": [
+        44890,
+        44891
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "45844                             canonical_invoice_no = summary_invoice_no\n45845                     except Exception:\n45846                         pass\n45847 \n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 45845,
+      "line_range": [
+        45845,
+        45846
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "45869                             canonical_invoice_no = summary_invoice_no\n45870                     except Exception:\n45871                         pass\n45872 \n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 45870,
+      "line_range": [
+        45870,
+        45871
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "45921                                 canonical_invoice_no = \"\"\n45922             except Exception:\n45923                 pass\n45924 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 45922,
+      "line_range": [
+        45922,
+        45923
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "46068                 base[\"size_mb\"] = round(max(base_size, new_size), 2)\n46069             except Exception:\n46070                 pass\n46071 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 46069,
+      "line_range": [
+        46069,
+        46070
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "47226                             group_invoice_no = summary_invoice_no\n47227                     except Exception:\n47228                         pass\n47229 \n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 47227,
+      "line_range": [
+        47227,
+        47228
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "47296                                 \"\" if str(group_invoice_no).startswith(\"UNKNOWN\") else group_invoice_no)\n47297             except Exception:\n47298                 pass\n47299 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 47297,
+      "line_range": [
+        47297,
+        47298
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "47818         description=\"Invoice Splitter + Extractor API\")\n47819     parser.add_argument(\"--host\", default=os.getenv(\"HOST\", \"0.0.0.0\"))\n47820     parser.add_argument(\"--port\", type=int,\n",
+      "col_offset": 60,
+      "end_col_offset": 69,
+      "filename": "/var/www/html/split-extract/app.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 47819,
+      "line_range": [
+        47819
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "22 APP = \"app:app\"\n23 HOST = \"0.0.0.0\"\n24 PORT = 8001\n",
+      "col_offset": 7,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/runner.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 605,
+        "link": "https://cwe.mitre.org/data/definitions/605.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible binding to all interfaces.",
+      "line_number": 23,
+      "line_range": [
+        23
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b104_hardcoded_bind_all_interfaces.html",
+      "test_id": "B104",
+      "test_name": "hardcoded_bind_all_interfaces"
+    },
+    {
+      "code": "456                 return dt.strftime(\"%Y-%m-%d\")\n457         except Exception:\n458             pass\n459         return _normalize_numeric(value)\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 457,
+      "line_range": [
+        457,
+        458
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "694             wb.close()\n695         except Exception:\n696             pass\n697         raise\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 695,
+      "line_range": [
+        695,
+        696
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "725                                 val = dt_time(tup[3], tup[4], tup[5])\n726                         except Exception:\n727                             pass\n728                     values.append(val)\n",
+      "col_offset": 24,
+      "end_col_offset": 32,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 726,
+      "line_range": [
+        726,
+        727
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "732                 wb.release_resources()\n733             except Exception:\n734                 pass\n735 \n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 733,
+      "line_range": [
+        733,
+        734
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "789                         val = dt_time(tup[3], tup[4], tup[5])\n790                 except Exception:\n791                     pass\n792             values.append(val)\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 790,
+      "line_range": [
+        790,
+        791
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "829                 wb.release_resources()\n830             except Exception:\n831                 pass\n832         return sheets\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 830,
+      "line_range": [
+        830,
+        831
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1198                     any_amount = True\n1199             except Exception:\n1200                 continue\n1201         if any_amount:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/services/excel_invoice_extract.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 1199,
+      "line_range": [
+        1199,
+        1200
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "110             record.args = ()\n111         except Exception:\n112             pass\n113         return True\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 111,
+      "line_range": [
+        111,
+        112
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "203             )\n204         except Exception:\n205             pass\n206 \n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 204,
+      "line_range": [
+        204,
+        205
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "530                 handler.flush()\n531             except Exception:\n532                 pass\n533         logging.shutdown()\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 531,
+      "line_range": [
+        531,
+        532
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "533         logging.shutdown()\n534     except Exception:\n535         pass\n536 \n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 534,
+      "line_range": [
+        534,
+        535
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "647                     tess_children.append(child)\n648             except Exception:\n649                 continue\n650         for child in tess_children:\n",
+      "col_offset": 12,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Continue detected.",
+      "line_number": 648,
+      "line_range": [
+        648,
+        649
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b112_try_except_continue.html",
+      "test_id": "B112",
+      "test_name": "try_except_continue"
+    },
+    {
+      "code": "653                 terminated += 1\n654             except Exception:\n655                 pass\n656         if tess_children:\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 654,
+      "line_range": [
+        654,
+        655
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "660                     child.kill()\n661                 except Exception:\n662                     pass\n663     except Exception as exc:\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 661,
+      "line_range": [
+        661,
+        662
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "729         )\n730     except Exception:\n731         pass\n732     _dump_diagnostics(reason)\n",
+      "col_offset": 4,
+      "end_col_offset": 12,
+      "filename": "/var/www/html/split-extract/services/reliability.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 730,
+      "line_range": [
+        730,
+        731
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "948                     return \".xlsx\"\n949         except Exception:\n950             pass\n951     # Legacy OLE: Word .doc vs Excel .xls\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/sales_statement_extractor.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 949,
+      "line_range": [
+        949,
+        950
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "976                     return \".txt\"\n977             except Exception:\n978                 pass\n979     return ext\n",
+      "col_offset": 12,
+      "end_col_offset": 20,
+      "filename": "/var/www/html/split-extract/services/sales_statement_extractor.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 977,
+      "line_range": [
+        977,
+        978
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1398                 word.Quit()\n1399         except Exception:\n1400             pass\n1401         try:\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/sales_statement_extractor.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1399,
+      "line_range": [
+        1399,
+        1400
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1402             pythoncom.CoUninitialize()\n1403         except Exception:\n1404             pass\n1405         for path in (in_path, out_path):\n",
+      "col_offset": 8,
+      "end_col_offset": 16,
+      "filename": "/var/www/html/split-extract/services/sales_statement_extractor.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1403,
+      "line_range": [
+        1403,
+        1404
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "1429                         chunks.append(cleaned)\n1430                 except Exception:\n1431                     pass\n1432                 ascii_parts = re.findall(rb\"[\\x20-\\x7e]{4,}\", raw)\n",
+      "col_offset": 16,
+      "end_col_offset": 24,
+      "filename": "/var/www/html/split-extract/services/sales_statement_extractor.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 1430,
+      "line_range": [
+        1430,
+        1431
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.4/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    }
+  ]
+}

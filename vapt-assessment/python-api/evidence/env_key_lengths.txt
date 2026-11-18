@@ -1,0 +1,52 @@
+=== env file mode and key lengths only ===
+path=/var/www/html/.env
+mode=0o644
+owner_uid=0 gid=0
+size_bytes=3425
+GEMINI_API_KEY	len=53	nonempty=True
+USE_GPT_FOR_GOOD_OCR	len=4	nonempty=True
+OPENAI_API_KEY	len=164	nonempty=True
+GPT_TEXT_MODEL	len=12	nonempty=True
+GPT_TIMEOUT	len=2	nonempty=True
+AZURE_STORAGE_CONNECTION_STRING	len=181	nonempty=True
+AZURE_STORAGE_ACCOUNT_NAME	len=6	nonempty=True
+AZURE_STORAGE_ACCOUNT_KEY	len=88	nonempty=True
+AZURE_CONTAINER_NAME	len=14	nonempty=True
+GOOGLE_GENAI_USE_VERTEXAI	len=4	nonempty=True
+GOOGLE_CLOUD_PROJECT	len=14	nonempty=True
+GOOGLE_CLOUD_LOCATION	len=6	nonempty=True
+GOOGLE_APPLICATION_CREDENTIALS	len=30	nonempty=True
+ENABLE_GPT_CACHE	len=5	nonempty=True
+ENABLE_OCR_NORMALIZATION	len=5	nonempty=True
+ENABLE_GPT_TOKEN_LOGGING	len=5	nonempty=True
+GPT_CACHE_TTL_SECONDS	len=5	nonempty=True
+GPT_CACHE_DIR	len=10	nonempty=True
+GPT_INPUT_COST_PER_1M_USD	len=4	nonempty=True
+GPT_OUTPUT_COST_PER_1M_USD	len=4	nonempty=True
+HOST	len=7	nonempty=True
+PORT	len=4	nonempty=True
+MAX_CONCURRENT_REQUESTS	len=1	nonempty=True
+REQUEST_QUEUE_TIMEOUT	len=4	nonempty=True
+REQUEST_STUCK_THRESHOLD_SECONDS	len=4	nonempty=True
+MAX_PARALLEL_CALLS	len=1	nonempty=True
+MAX_TESSERACT_CONCURRENCY	len=1	nonempty=True
+OCR_TESSERACT_CALL_TIMEOUT_ENABLED	len=4	nonempty=True
+TESSERACT_CALL_TIMEOUT_SECONDS	len=2	nonempty=True
+OCR_PAGE_FUTURE_TIMEOUT_SECONDS	len=3	nonempty=True
+OCR_CPU_STEAL_GUARD_ENABLED	len=4	nonempty=True
+OCR_CPU_STEAL_THRESHOLD_PERCENT	len=2	nonempty=True
+OCR_WATCHDOG_ENABLED	len=5	nonempty=True
+OCR_WATCHDOG_INTERVAL_SECONDS	len=2	nonempty=True
+OCR_WATCHDOG_STUCK_SECONDS	len=3	nonempty=True
+OCR_STRUCTURED_LOGGING_ENABLED	len=5	nonempty=True
+OCR_SEMAPHORE_LOGGING_ENABLED	len=5	nonempty=True
+OCR_THREADPOOL_LOGGING_ENABLED	len=5	nonempty=True
+OCR_TESSERACT_LOGGING_ENABLED	len=5	nonempty=True
+OCR_MID_EXECUTION_HEARTBEAT_ENABLED	len=5	nonempty=True
+OCR_HEARTBEAT_TICK_SECONDS	len=2	nonempty=True
+OUTPUT_FOLDER	len=11	nonempty=True
+ROOT_FOLDER	len=3	nonempty=True
+USE_LOCAL_GEMINI_RATE_LIMITER	len=5	nonempty=True
+GEMINI_MAX_REQUESTS_PER_MINUTE	len=3	nonempty=True
+GEMINI_MAX_REQUESTS_PER_DAY	len=5	nonempty=True
+GEMINI_PROVIDER_BACKOFF_MAX_SECONDS	len=2	nonempty=True

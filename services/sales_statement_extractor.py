@@ -2485,7 +2485,7 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
     try:
         from services.vertex_gemini_client import generate_content_via_vertex
 
-        model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+        model = os.getenv("VISION_MODEL", "gemini-3.5-flash-lite").strip()
         payload = {
             "contents": [
                 {
@@ -2900,7 +2900,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     result = empty_result(filename, ext.lstrip("."))
     mime = _image_mime(ext)
     b64 = base64.b64encode(file_bytes).decode("ascii")
-    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    model = os.getenv("VISION_MODEL", "gemini-3.5-flash-lite").strip()
 
     vision_payload = {
         "contents": [

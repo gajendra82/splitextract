@@ -6,6 +6,12 @@
 credentials/
 *.json.key
 *-a13495addaeb.json
+invoice-ai-production-*.json
+*-b871490c6765.json
+
+# Env backups contain live API keys
+migration-backups/**/env.bak
+env.bak
 
 .venv/
 venv/

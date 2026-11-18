@@ -1,0 +1,12 @@
+openapi 3.1.0
+title Invoice Splitter + Extractor API v10.0 (PDFPlumber + Tesseract)
+securitySchemes None
+root_security None
+GET /
+POST /extract-pod-grn
+POST /extract-sales-statement
+GET /health
+GET /live
+GET /ready
+POST /split-and-extract
+POST /test-extract

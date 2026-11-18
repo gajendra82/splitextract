@@ -1,0 +1,4 @@
+=== listeners 8000-8003 ===
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess                                                                                                                                                                                                                
+tcp   LISTEN 0      2048         0.0.0.0:8000       0.0.0.0:*    users:(("python3",pid=106734,fd=13))                                                                                                                                                                                  
+tcp   LISTEN 0      2048         0.0.0.0:8001       0.0.0.0:*    users:(("python3",pid=106735,fd=3))                                                                                                                                                                                   

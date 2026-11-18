@@ -1,0 +1,29 @@
+evidence_id,artifact,finding_ids,collected_utc,method,sanitization
+E-01,evidence/openapi_routes.txt,"CAN-PY-001, CAN-PY-010",2026-10-22T10:05:58Z,Live OpenAPI parsed locally,Sanitized route list
+E-02,evidence/post_split_empty.headers and .body,"CAN-PY-001, CAN-PY-002, CAN-PY-006",2026-10-22T10:05:58Z,"Empty POST, no file and no URL",Validation body only
+E-03,evidence/post_test_empty.headers and .body,"CAN-PY-001, CAN-PY-006",2026-10-22T10:05:58Z,Empty POST /test-extract,Validation body only
+E-04,evidence/post_sales_empty.headers and .body,"CAN-PY-001, CAN-PY-006",2026-10-22T10:05:58Z,Empty POST /extract-sales-statement,Validation body only
+E-05,evidence/post_grn_empty.headers and .body,"CAN-PY-001, CAN-PY-002, CAN-PY-006",2026-10-22T10:05:58Z,Empty POST /extract-pod-grn,Validation body only
+E-06,evidence/cors_preflight.headers,CAN-PY-007,2026-10-22T10:05:58Z,OPTIONS /health with an untrusted Origin,Headers only
+E-07,evidence/nginx_health_raw.headers,CAN-PY-008,2026-10-22T10:05:59Z,GET via nginx loopback resolve,Headers only; body redacted and removed
+E-08,evidence/nginx_docs.headers and local_docs.headers,CAN-PY-001,2026-10-22T10:05:26Z,GET /docs locally and through nginx,"Swagger HTML, no credentials"
+E-09,evidence/nginx_dotenv.body and .headers,CAN-PY-004,2026-10-22T10:05:58Z,GET /.env through nginx,"35-byte banner, not the secrets file"
+E-10,evidence/cleartext_health_raw.headers,CAN-PY-005,2026-10-22T10:05:59Z,GET /health on the host primary address port 8001,Headers only; body redacted and removed
+E-11,evidence/local_health.redacted.json,CAN-PY-009,2026-10-22T10:05:26Z,GET /health,Document identifiers replaced with [REDACTED]
+E-12,evidence/local_ready.redacted.json,CAN-PY-009,2026-10-22T10:05:26Z,GET /ready,Document identifiers replaced with [REDACTED]
+E-13,evidence/env_key_lengths.txt,"CAN-PY-003, CAN-PY-004",2026-10-22T10:05:26Z,stat and key-length inspection,Names and lengths only; no values
+E-14,evidence/gcp_cred_mode.txt,CAN-PY-004,2026-10-22T10:07:00Z,stat of the credential file,Mode only; path not stored
+E-15,evidence/listeners.txt,CAN-PY-005,2026-10-22T10:05:26Z,ss,Socket table
+E-16,evidence/process.txt,"CAN-PY-005, CAN-PY-010, CAN-PY-011, CAN-PY-012",2026-10-22T10:05:26Z,ps and selected environment names,No secret values
+E-17,evidence/firewall.txt,CAN-PY-005,2026-10-22T10:05:26Z,ufw and iptables INPUT policy,Policy line only
+E-18,evidence/tls_cert.txt,CAN-PY-008,2026-10-22T10:05:59Z,"openssl x509 subject, issuer, dates",No private key
+E-19,evidence/tls_protocol.txt,CAN-PY-008,2026-10-22T10:05:59Z,openssl s_client TLS 1.2,Handshake summary
+E-21,scans/pip_audit.json,CAN-PY-013,2026-10-22T10:17:00Z,pip-audit 2.10.1 --path site-packages,Advisory identifiers and fix versions
+E-22,scans/venv_freeze.txt,CAN-PY-013,2026-10-22T10:11:00Z,pip freeze of the service virtualenv,Package names and versions
+E-24,evidence/openapi_routes.txt,CAN-PY-001,2026-10-22T10:05:58Z,OpenAPI securitySchemes field,Null security schemes
+E-25,evidence/env_key_lengths.txt,CAN-PY-003,2026-10-22T10:05:26Z,Non-empty Azure key length,Length only
+E-26,scans/bandit.json,CAN-PY-005,2026-10-22T10:10:47Z,Bandit 1.9.4 medium and higher,B104 on the bind
+E-27,evidence/nginx_http.headers,CAN-PY-008,2026-10-22T10:05:58Z,HTTP request to port 80,301 to HTTPS
+E-28,nginx_excerpt.txt,"CAN-PY-001, CAN-PY-008, CAN-PY-010",2026-10-22T10:18:00Z,Manual excerpt of the vhost,Private-key path omitted
+E-29,evidence/nginx_health_raw.redacted.json,CAN-PY-009,2026-10-22T10:05:59Z,Health through nginx,Identifiers redacted
+E-30,scans/bandit_all.json,Methodology,2026-10-22T10:11:04Z,Bandit 1.9.4 all severities,197 results triaged; not each a finding

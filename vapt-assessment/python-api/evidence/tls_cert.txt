@@ -1,0 +1,4 @@
+subject=CN = zydus-py.mediola.in
+issuer=C = US, O = Let's Encrypt, CN = YE1
+notBefore=Sep 17 10:44:08 2026 GMT
+notAfter=Dec 16 10:44:07 2026 GMT
