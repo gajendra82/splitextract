@@ -1909,6 +1909,42 @@ def _ps_pharma_orphan_qty_shift_enabled() -> bool:
     }
 
 
+def _ps_pharma_leading_pack_unit_enabled() -> bool:
+    """STOCK_PS_PHARMA_LEADING_PACK_UNIT — peel PCS/NOS before OPENING…CLOSING.
+
+    Default ON. Qty-token empty-frag `[A-Za-z]{1,3}` also matches pack units
+    (PCS), so `… 60'S PCS 20 - 20 -` was read as five qty tokens and identity
+    kept PCS=0 as OPENING (shift). Peel the pack unit; keep printed ORIC.
+    """
+    return os.getenv(
+        "STOCK_PS_PHARMA_LEADING_PACK_UNIT", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _ps_pharma_is_pack_unit_token(tok: str) -> bool:
+    t = str(tok or "").strip().lower().rstrip(".,;:|")
+    return t in {
+        "pcs",
+        "pc",
+        "nos",
+        "no",
+        "noss",
+        "unit",
+        "units",
+        "box",
+        "jar",
+        "btl",
+        "bot",
+        "bottle",
+        "strip",
+    }
+
+
 def _ssa_oric_trailing_qty_column_enabled() -> bool:
     """Qty-only ORIC rows with an unlabeled 5th qty after CLOSING.
 
@@ -2290,6 +2326,32 @@ def _parse_ps_pharma_statement(text: str, filename: str) -> Optional[Dict[str, A
                 m5.group(6),
             ]
             left5 = m5.group(1)
+            # PCS/NOS matched qty empty-frag — peel before ORIC identity pick.
+            if (
+                _ps_pharma_leading_pack_unit_enabled()
+                and _ps_pharma_is_pack_unit_token(five[0])
+            ):
+                pack_u = str(five[0]).strip()
+                o, r, i, c = five[1], five[2], five[3], five[4]
+                row = _ps_item(left5, o, r, i, c)
+                if row:
+                    cur_pack = str(row.get("packing") or "").strip()
+                    row["packing"] = (
+                        f"{cur_pack} {pack_u}".strip() if cur_pack else pack_u
+                    )
+                    logger.info(
+                        "PS_PHARMA_LEADING_PACK_UNIT product=%s pack=%s "
+                        "oric=%s,%s,%s,%s",
+                        str(row.get("product_name") or "")[:48],
+                        pack_u,
+                        o,
+                        r,
+                        i,
+                        c,
+                    )
+                    items.append(row)
+                pending_name = ""
+                continue
             has_pack = bool(_ps_name_pack(left5)[1])
             first4_ok = _ps_pharma_oric_balances(
                 _ps_qty(five[0]),
@@ -28248,6 +28310,193 @@ def _lstsl_open_recd_vision_enabled() -> bool:
     }
 
 
+def _lstsl_cl_qnty_in_sales_repair_enabled() -> bool:
+    """STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR — Cl.Qnty parked in sales_qty.
+
+    Opening Quantity | Cl. Qnty. sheets (no Sales column) can be forced through
+    the locked LstSL Vision schema, which maps Cl.Qnty → sales_qty and derives
+    closing. Default ON. Kill switch: false.
+    """
+    return os.getenv("STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_looks_like_opening_cl_qnty_only(text: str) -> bool:
+    """True when headers look like Opening Quantity | Cl. Qnty. with no Sales."""
+    if not text:
+        return False
+    has_open = bool(re.search(r"Opening\s+Quantit", text, re.I))
+    has_cl = bool(re.search(r"Cl\.?\s*Qnty\.?", text, re.I))
+    if not (has_open and has_cl):
+        return False
+    # Reject when a real Sales qty column header is present.
+    if re.search(r"\bSales?\s*(?:Qty|Quantity|Qnty)\b|\bSale\s+Qty\b", text, re.I):
+        return False
+    return True
+
+
+def _looks_like_cl_qnty_parked_in_sales(result: Dict[str, Any]) -> bool:
+    """Heuristic: Cl.Qnty mapped into sales_qty; closing derived as open-sales."""
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    checked = 0
+    receipts_zero = 0
+    identity_ok = 0
+    sales_exceeds_open = 0
+    for item in items:
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if abs(oq) + abs(rq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        if abs(rq) < 0.05:
+            receipts_zero += 1
+        expected = oq + rq - sq
+        tol = max(1.0, 0.02 * max(abs(expected), abs(cq), 1.0))
+        if abs(expected - cq) <= tol:
+            identity_ok += 1
+        # Printed Cl.Qnty often exceeds Opening when purchases are omitted.
+        if abs(rq) < 0.05 and abs(sq) > abs(oq) + 0.05:
+            sales_exceeds_open += 1
+    if checked < 5:
+        return False
+    if receipts_zero < 0.85 * checked:
+        return False
+    if identity_ok < 0.70 * checked:
+        return False
+    if sales_exceeds_open < max(2, int(0.08 * checked)):
+        return False
+    return True
+
+
+def _lstsl_cl_qnty_repaired(result: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(result, dict):
+        return False
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    return bool(extra.get("cl_qnty_parked_in_sales_repaired"))
+
+
+def _lstsl_reject_qty_value_misread_enabled() -> bool:
+    """STOCK_LSTSL_REJECT_QTY_VALUE_MISREAD — drop LstSL on Op/Pur/Sl/Cl money grids.
+
+    Default ON. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_LSTSL_REJECT_QTY_VALUE_MISREAD", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _lstsl_result_looks_like_qty_value_misread(result: Dict[str, Any]) -> bool:
+    """True when locked LstSL schema was applied to an Op.Qnt/Op.Value sheet.
+
+    Those STOCK REPORT grids have Pur/Sl/Cl qty+value pairs. LstSL leaves
+    line sales_value at 0, parks Sl.Qnt-scale totals into sales_value (*1000),
+    and uses packings like 1 PIC / 1 TUB. Opening|Cl.Qnty repairs are excluded.
+    """
+    if not _lstsl_reject_qty_value_misread_enabled():
+        return False
+    if _lstsl_cl_qnty_repaired(result):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    n = len(items)
+    totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
+    sv = _to_float(totals.get("sales_value"))
+    sq_sum = sum(_to_float(i.get("sales_qty")) for i in items)
+    # Footer "Sales Value" is really COMPANY Sl.Qnt * 1000 (e.g. 3546 → 3546000).
+    if (
+        sv > 1000.0
+        and sq_sum > 50.0
+        and abs(sv - sq_sum * 1000.0) <= max(1.0, 0.01 * sv)
+    ):
+        return True
+    pack_hits = 0
+    money_cv = 0
+    zero_line_sv = 0
+    missing_ov = 0
+    for item in items:
+        pack = str(item.get("packing") or "")
+        if re.search(
+            r"(?i)^\s*1\s*(?:PIC|PCS|PH|TUB|X\d)|^\s*\d+\s*MML",
+            pack,
+        ):
+            pack_hits += 1
+        if _to_float(item.get("closing_value")) > 1.0:
+            money_cv += 1
+        if abs(_to_float(item.get("sales_value"))) < 0.05:
+            zero_line_sv += 1
+        ov = item.get("opening_value")
+        if ov in (None, "", 0, 0.0):
+            missing_ov += 1
+    return (
+        pack_hits >= max(5, int(0.35 * n))
+        and money_cv >= max(5, int(0.45 * n))
+        and zero_line_sv >= int(0.85 * n)
+        and missing_ov >= int(0.70 * n)
+    )
+
+
+def _repair_cl_qnty_parked_in_sales(result: Dict[str, Any]) -> bool:
+    """Move printed Cl.Qnty out of sales_qty into closing_qty (no invented digits).
+
+    Flag: STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR (default ON).
+    """
+    if not _lstsl_cl_qnty_in_sales_repair_enabled():
+        return False
+    if not _looks_like_cl_qnty_parked_in_sales(result):
+        return False
+    moved = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        printed_close = _to_float(item.get("sales_qty"))
+        item["closing_qty"] = printed_close
+        item["sales_qty"] = 0.0
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra = dict(extra)
+        fs = (
+            extra.get("field_source")
+            if isinstance(extra.get("field_source"), dict)
+            else {}
+        )
+        fs = dict(fs)
+        fs["closing_qty"] = "printed"
+        fs["sales_qty"] = "missing"
+        extra["field_source"] = fs
+        flags = list(extra.get("flags") or [])
+        if "CL_QNTY_PARKED_IN_SALES" not in flags:
+            flags.append("CL_QNTY_PARKED_IN_SALES")
+        extra["flags"] = flags
+        extra["layout"] = "opening_cl_qnty_only"
+        item["extra"] = extra
+        moved += 1
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        totals = {}
+        result["totals"] = totals
+    tot_extra = totals.setdefault("extra", {})
+    if not isinstance(tot_extra, dict):
+        tot_extra = {}
+        totals["extra"] = tot_extra
+    tot_extra["cl_qnty_parked_in_sales_repaired"] = True
+    tot_extra["layout"] = "opening_cl_qnty_only"
+    tot_extra["cl_qnty_parked_in_sales_rows"] = moved
+    logger.info(
+        "STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR rows=%s layout=opening_cl_qnty_only",
+        moved,
+    )
+    return moved > 0
+
+
 def _text_looks_like_lstsl_open_recd_chrome(text: str) -> bool:
     """True when printed headers are LstSL|Open|Recd|Sales|Close."""
     if not text:
@@ -28386,15 +28635,26 @@ def _extract_lstsl_open_recd_vision(
     result = empty_result(filename, (ext or "jpg").lstrip(".") or "jpg")
     result = _apply_parsed_sales_json(result, parsed)
     result = _finalize_lstsl_open_recd_vision(result, parsed)
+    repaired = _repair_cl_qnty_parked_in_sales(result)
     items = result.get("line_items") or []
     if len(items) < 5:
+        return None
+    if _lstsl_result_looks_like_qty_value_misread(result):
+        logger.info(
+            "STOCK_LSTSL_REJECT_QTY_VALUE_MISREAD file=%s rows=%s "
+            "sales_value=%s",
+            filename,
+            len(items),
+            (result.get("totals") or {}).get("sales_value"),
+        )
         return None
     fail = _op_stk_lms1_identity_fail_rate(result)
     extra = result.setdefault("totals", {}).setdefault("extra", {})
     if isinstance(extra, dict):
         extra["lstsl_identity_fail_rate"] = round(fail, 3)
     # Reject obvious column-shift reads (Order parked in Close).
-    if fail > 0.50:
+    # Opening|Cl.Qnty repairs leave identity failing by design (no Sales col).
+    if fail > 0.50 and not repaired:
         logger.info(
             "STOCK_LSTSL_OPEN_RECD_VISION rejected file=%s fail_rate=%.2f rows=%s",
             filename,
@@ -46878,22 +47138,23 @@ def _parse_vikash_ocr_text(ocr_text: str, filename: str, ext: str) -> Dict[str, 
 
 
 _SSA_QTY_VALUE_VISION_PROMPT = """
-This image is a "STOCK & SALES ANALYSIS" printout with paired QTY + VALUE columns.
-It is NOT a Product Stock Report, NOT ZANDRA Stock and Sale, and NOT an OpBal sheet.
+This image is a paired QTY + VALUE stock grid (STOCK & SALES ANALYSIS, or a
+STOCK REPORT with Op.Qnt/Op.Value/Pur.Qnt/Pur.Value/Sl.Qnt/Sl.Value/Cl.Qnt/Cl.Value).
+It is NOT a Product Stock Report qty-only sheet, NOT ZANDRA Stock and Sale, and NOT an OpBal sheet.
 
 Columns LEFT TO RIGHT. A dash or blank cell is 0. NEVER shift a later number left.
 
-1 ITEM DESCRIPTION -> product_name
-2 pack / unit (75G, 60, Pcs) -> packing
-3 OPENING QTY -> opening_qty
-4 OPENING VALUE -> opening_value
-5 RECEIPT QTY -> receipts_qty
-6 RECEIPT VALUE -> receipts_value
-7 ISSUE QTY -> sales_qty
-8 ISSUE VALUE -> sales_value
-9 CLOSING QTY -> closing_qty
-10 CLOSING VALUE -> closing_value
-11 DUMP QTY -> extra.dump_qty
+1 ITEM DESCRIPTION / Particular -> product_name
+2 pack / unit (75G, 60, Pcs, 1 PIC, 1 TUB) -> packing
+3 OPENING QTY / Op.Qnt. -> opening_qty
+4 OPENING VALUE / Op.Value -> opening_value
+5 RECEIPT QTY / Pur.Qnt. -> receipts_qty
+6 RECEIPT VALUE / Pur.Value -> receipts_value
+7 ISSUE QTY / Sl.Qnt. -> sales_qty
+8 ISSUE VALUE / Sl.Value -> sales_value
+9 CLOSING QTY / Cl.Qnt. -> closing_qty
+10 CLOSING VALUE / Cl.Value -> closing_value
+11 DUMP QTY -> extra.dump_qty (omit when not printed)
 
 Return ONLY valid JSON:
 {
@@ -46924,16 +47185,21 @@ Return ONLY valid JSON:
 Rules:
 - stockist_name = shop/agency printed above the title (e.g. PRAKASH DRUG AGENCY).
 - company_name = name in parentheses on the STOCK & SALES ANALYSIS line
-  (e.g. HIMALAYA ZANDRA), not the shop header.
-- Include every product row printed before the TOTAL row (including all-zero rows).
+  (e.g. HIMALAYA ZANDRA), or the For HIMALAYA … line on STOCK REPORT, not the shop header.
+- Include every product row printed before the TOTAL / COMPANY Total row (including all-zero rows).
 - M.EXP is expiry text only; never treat it as qty or value.
 - OPENING VALUE is a printed money column. Copy it into opening_value.
   Do not leave opening_value 0 when OPENING VALUE is printed.
-- ISSUE QTY is sales_qty. ISSUE VALUE is sales_value.
-- DUMP QTY is extra.dump_qty, not closing_qty.
-- Skip the HIMALAYA ZEAL banner row and the TOTAL footer row as products.
+- ISSUE QTY / Sl.Qnt. is sales_qty. ISSUE VALUE / Sl.Value is sales_value.
+  A small printed Sl.Qnt like 5.00 must become sales_qty=5 — never leave sales 0
+  when Sl.Qnt is printed, and then Cl.Qnt must be the printed closing (not Op.Qnt).
+- DUMP QTY is extra.dump_qty, not closing_qty. When DUMP is absent, omit it.
+- Skip the HIMALAYA ZEAL banner row and the TOTAL / COMPANY Total footer as products.
+- Keep each product's numbers on that same product row. Do not attach the next
+  row's Op/Pur/Sl/Cl figures to the product above.
 - Example: AACTARIL SOAP 75G opening 37 / 2648.83, receipt 0 / 0, issue 0 / 0, closing 37 / 2648.83.
 - Example: ABANA TABS 60 opening 63 / 9361.80, receipt 200 / value, issue 30 / 4700.06, closing 233 / 34623.80.
+- Example: BLEMINOR … Op.Qnt 90 / Op.Value 13195, Sl.Qnt 5 / Sl.Value 824.50, Cl.Qnt 85 / Cl.Value 12370.50.
 - Preserve explicit printed values. Do not recalculate closing_value from qty * rate.
 """.strip()
 
@@ -58065,9 +58331,10 @@ def _extract_ssa_mexp_photo(
 
 
 def _particular_packing_stock_report_text(text: str) -> bool:
-    """Firm name, STOCK REPORT, a To period, and For HIMALAYA / ZEAL.
+    """Firm name, STOCK REPORT, a To period, and For HIMALAYA ZEAL / DRUG.
 
-    Himalaya Drugs Zeal sheets and order forms are a different layout.
+    Same Particular|Packing|Op.Qnt|Pur|Sl|Cl qty+value grid. Himalaya Drugs
+    (plural) Zeal sheets and order forms are a different layout.
     """
     if not text or not re.search(r"\bSTOCK\s+REPORT\b", text, re.I):
         return False
@@ -58079,7 +58346,11 @@ def _particular_packing_stock_report_text(text: str) -> bool:
         re.I,
     ):
         return False
-    return bool(re.search(r"\bZEAL\b", text, re.I))
+    return bool(
+        re.search(r"\bZEAL\b", text, re.I)
+        or re.search(r"For\s+HIMALAYA\s+DRUG\b", text, re.I)
+        or re.search(r"Op\.?\s*Qnt\.?\s+Op\.?\s*Value", text, re.I)
+    )
 
 
 def _particular_packing_header_fields(text: str) -> Dict[str, Optional[str]]:
@@ -58104,6 +58375,14 @@ def _particular_packing_header_fields(text: str) -> Dict[str, Optional[str]]:
     company = None
     if re.search(r"HIMALAYA", text or "", re.I) and re.search(r"\bZEAL\b", text or "", re.I):
         company = "HIMALAYA (ZEAL)"
+    else:
+        m_for = re.search(
+            r"For\s+(HIMALAYA\s+DRUG(?:\s*[-–]\s*[A-Za-z0-9 /]+)?)",
+            text or "",
+            re.I,
+        )
+        if m_for:
+            company = _clean_name(m_for.group(1))
     period_from = period_to = None
     m = re.search(
         r"(\d{1,2}[./]\d{1,2}[./]\d{2,4})\s*To\s*:?\s*(\d{1,2}[./]\d{1,2}[./]\d{2,4})",
@@ -62764,15 +63043,26 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 # High Op_Stk fail often means LstSL|Open|Recd|Sales|Close with
                 # Order shifted into closing — try locked LstSL vision once.
-                try:
-                    lstsl_pre = _extract_lstsl_open_recd_vision(
-                        file_bytes, filename, ext
+                # Skip when OCR already shows Opening Quantity | Cl. Qnty. only.
+                lstsl_pre = None
+                if _text_looks_like_opening_cl_qnty_only(_op_stk_peek or ""):
+                    logger.info(
+                        "STOCK_LSTSL_SKIP_OPENING_CL_QNTY_ONLY file=%s",
+                        filename,
                     )
-                except Exception:
-                    lstsl_pre = None
+                else:
+                    try:
+                        lstsl_pre = _extract_lstsl_open_recd_vision(
+                            file_bytes, filename, ext
+                        )
+                    except Exception:
+                        lstsl_pre = None
                 if lstsl_pre and lstsl_pre.get("line_items"):
                     fail_lstsl = _op_stk_lms1_identity_fail_rate(lstsl_pre)
-                    if fail_lstsl < fail_pre and fail_lstsl <= 0.50:
+                    repaired_cl = _lstsl_cl_qnty_repaired(lstsl_pre)
+                    if repaired_cl or (
+                        fail_lstsl < fail_pre and fail_lstsl <= 0.50
+                    ):
                         extra_l = lstsl_pre.setdefault("totals", {}).setdefault(
                             "extra", {}
                         )
@@ -62783,10 +63073,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         logger.info(
                             "[STOCK_EXTRACTION_PATH] "
                             "stage=lstsl_after_op_stk_high_fail "
-                            "file=%s line_items=%s fail_rate=%.2f",
+                            "file=%s line_items=%s fail_rate=%.2f repaired_cl=%s",
                             filename,
                             len(lstsl_pre.get("line_items") or []),
                             fail_lstsl,
+                            repaired_cl,
                         )
                         return lstsl_pre
         if (
@@ -62827,7 +63118,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         # Prefer locked LstSL schema before Op_Stk: without OCR,
                         # Op_Stk maps Recd→Open and Order→Close on LstSL sheets.
                         lstsl_rescue = None
-                        if _lstsl_open_recd_vision_enabled():
+                        if _lstsl_open_recd_vision_enabled() and not (
+                            _text_looks_like_opening_cl_qnty_only(_op_stk_peek or "")
+                        ):
                             try:
                                 lstsl_rescue = _extract_lstsl_open_recd_vision(
                                     file_bytes, filename, ext
@@ -62844,7 +63137,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                 fail_l = _op_stk_lms1_identity_fail_rate(
                                     lstsl_rescue
                                 )
-                                if fail_l <= 0.35:
+                                repaired_cl = _lstsl_cl_qnty_repaired(lstsl_rescue)
+                                if repaired_cl or fail_l <= 0.35:
                                     extra_l = lstsl_rescue.setdefault(
                                         "totals", {}
                                     ).setdefault("extra", {})
@@ -62855,10 +63149,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                     logger.info(
                                         "[STOCK_EXTRACTION_PATH] "
                                         "stage=lstsl_after_ssa_misfile "
-                                        "file=%s line_items=%s fail_rate=%.2f",
+                                        "file=%s line_items=%s fail_rate=%.2f "
+                                        "repaired_cl=%s",
                                         filename,
                                         len(lstsl_rescue.get("line_items") or []),
                                         fail_l,
+                                        repaired_cl,
                                     )
                                     return lstsl_rescue
                         if _op_stk_before_ssa_phone_enabled():

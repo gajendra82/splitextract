@@ -10,10 +10,14 @@ from unittest.mock import patch
 from services.sales_statement_extractor import (
     _extract_lstsl_open_recd_vision,
     _finalize_lstsl_open_recd_vision,
+    _looks_like_cl_qnty_parked_in_sales,
     _lstsl_clean_packing,
+    _lstsl_result_looks_like_qty_value_misread,
     _op_stk_lms1_identity_fail_rate,
     _parse_lstsl_open_recd_statement,
+    _repair_cl_qnty_parked_in_sales,
     _sanitize_compute_totals,
+    _text_looks_like_opening_cl_qnty_only,
     _try_lstsl_open_recd_image,
     empty_result,
     extract_sales_statement,
@@ -584,6 +588,139 @@ Closing Value 1.00
         self.assertEqual(
             result["totals"]["extra"]["extraction_method"], "lstsl_open_recd_vision"
         )
+
+    def test_opening_cl_qnty_only_text_detect(self):
+        self.assertTrue(
+            _text_looks_like_opening_cl_qnty_only(
+                "STOCK REPORT (SUMMARY)\nName  Opening Quantity  Cl. Qnty.\n"
+                "AACTARIL SOAP  59  50"
+            )
+        )
+        self.assertFalse(
+            _text_looks_like_opening_cl_qnty_only(
+                "Product Name Pack LstSL Open Recd. Sales Close\nABANA 60'S 28 89 100 22 167"
+            )
+        )
+        self.assertFalse(
+            _text_looks_like_opening_cl_qnty_only(
+                "Name Opening Quantity Sales Qty Cl. Qnty.\nAACTARIL 59 9 50"
+            )
+        )
+
+    def test_cl_qnty_parked_in_sales_repair(self):
+        """LstSL schema mapped Cl.Qnty → sales; restore printed closing."""
+        result = empty_result("stock_report.jpg", "jpg")
+        # Mimic Opening|Cl.Qnty-only misread: sales holds Cl, closing = open-sales.
+        rows = [
+            ("AACTARIL SOAP", 59, 50),
+            ("ABANA TABLETS", 48, 18),
+            ("ALTHEA LOTION", 13, 12),
+            ("CONFIDO TABLETS", 56, 118),
+            ("DIABECON DS", 14, 31),
+            ("PILEX KIT COMBO", 0, 50),
+            ("REOSTO TABLETS", 55, 366),
+            ("VRIKSHAMLA TAB", 12, 60),
+        ]
+        items = []
+        for name, opening, cl_in_sales in rows:
+            items.append(
+                {
+                    "product_name": name,
+                    "opening_qty": float(opening),
+                    "receipts_qty": 0.0,
+                    "sales_qty": float(cl_in_sales),
+                    "sales_value": 0.0,
+                    "closing_qty": float(opening - cl_in_sales),
+                    "closing_value": 0.0,
+                    "extra": {},
+                }
+            )
+        result["line_items"] = items
+        self.assertTrue(_looks_like_cl_qnty_parked_in_sales(result))
+        with patch.dict(os.environ, {"STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR": "true"}):
+            self.assertTrue(_repair_cl_qnty_parked_in_sales(result))
+        aact = next(
+            i for i in result["line_items"] if i["product_name"] == "AACTARIL SOAP"
+        )
+        self.assertEqual(aact["opening_qty"], 59.0)
+        self.assertEqual(aact["sales_qty"], 0.0)
+        self.assertEqual(aact["closing_qty"], 50.0)
+        self.assertEqual(aact["extra"]["field_source"]["closing_qty"], "printed")
+        self.assertEqual(aact["extra"]["field_source"]["sales_qty"], "missing")
+        conf = next(
+            i for i in result["line_items"] if i["product_name"] == "CONFIDO TABLETS"
+        )
+        self.assertEqual(conf["closing_qty"], 118.0)
+        self.assertEqual(conf["sales_qty"], 0.0)
+        self.assertTrue(
+            result["totals"]["extra"]["cl_qnty_parked_in_sales_repaired"]
+        )
+
+    def test_cl_qnty_repair_skips_true_lstsl_rows(self):
+        result = _parse_lstsl_open_recd_statement(SAMPLE, "stmt.pdf", "pdf")
+        self.assertFalse(_looks_like_cl_qnty_parked_in_sales(result))
+        with patch.dict(os.environ, {"STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR": "true"}):
+            self.assertFalse(_repair_cl_qnty_parked_in_sales(result))
+        abana = next(
+            i for i in result["line_items"] if i["product_name"] == "ABANA TAB"
+        )
+        self.assertEqual(abana["sales_qty"], 22.0)
+        self.assertEqual(abana["closing_qty"], 167.0)
+
+    def test_cl_qnty_repair_flag_off(self):
+        result = empty_result("stock_report.jpg", "jpg")
+        result["line_items"] = [
+            {
+                "product_name": f"P{i}",
+                "opening_qty": 10.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 40.0,
+                "closing_qty": -30.0,
+                "extra": {},
+            }
+            for i in range(8)
+        ]
+        with patch.dict(os.environ, {"STOCK_LSTSL_CL_QNTY_IN_SALES_REPAIR": "false"}):
+            self.assertFalse(_repair_cl_qnty_parked_in_sales(result))
+        self.assertEqual(result["line_items"][0]["sales_qty"], 40.0)
+
+    def test_lstsl_rejects_op_qnt_value_stock_report_misread(self):
+        """Op.Qnt/Sl.Qnt qty+value sheet forced through LstSL must not lock."""
+        result = empty_result("1000343838.png", "png")
+        result["totals"] = {
+            "sales_value": 3546000.0,
+            "closing_value": 506410.69,
+            "extra": {"extraction_method": "lstsl_open_recd_vision"},
+        }
+        packs = ["1 PIC", "1 PH", "1 TUB", "1X60TAB", "1X10CAP", "100 MML.", "1 PH", "1X60T"]
+        items = []
+        for i, pack in enumerate(packs):
+            items.append(
+                {
+                    "product_name": f"PROD {i}",
+                    "packing": pack,
+                    "opening_qty": 10.0 + i,
+                    "receipts_qty": 0.0,
+                    "sales_qty": 443.25,  # 8 * 443.25 = 3546
+                    "sales_value": 0.0,
+                    "closing_qty": 5.0,
+                    "closing_value": 1000.0 + i,
+                    "opening_value": None,
+                    "extra": {},
+                }
+            )
+        result["line_items"] = items
+        with patch.dict(
+            os.environ, {"STOCK_LSTSL_REJECT_QTY_VALUE_MISREAD": "true"}
+        ):
+            self.assertTrue(_lstsl_result_looks_like_qty_value_misread(result))
+        true_lstsl = _parse_lstsl_open_recd_statement(SAMPLE, "stmt.pdf", "pdf")
+        with patch.dict(
+            os.environ, {"STOCK_LSTSL_REJECT_QTY_VALUE_MISREAD": "true"}
+        ):
+            self.assertFalse(
+                _lstsl_result_looks_like_qty_value_misread(true_lstsl)
+            )
 
 
 if __name__ == "__main__":

@@ -49,6 +49,21 @@ class TestSsaOricQtyOnlyDetector(unittest.TestCase):
         self.assertTrue(_peek_suggests_ssa_qty_value(QTY_VALUE_ANALYSIS))
 
 
+SARAF_PCS_ORIC = """
+SARAF BROTHERS
+STOCK & SALES ANALYSIS 01-10-2026 - 31-10-2026
+CODE ITEM DESCRIPTION OPENING RECEIPT ISSUE CLOSING
+07000004 ABANA TABS 60'S PCS 20 - 20 -
+BRESL BRESOL SYRUP 200ML PCS -1 - -1 -
+BREST BRESOL TABS 60'S PCS 10 - 3 7
+CYST CYSTONE TABS 60'S PCS 27 - 27 -
+7000349 RUMALAYA LINIME 60ML PCS 40 - 40 -
+7002239 LIV 52 DS SYRUP 200ML PCS 2 - 2 -
+LIVDT LIV 52 DS TABS 60'S PCS 185 100 178 107
+TOTAL 71778 22281 58429 39932
+"""
+
+
 class TestSsaOricQtyOnlyParser(unittest.TestCase):
     def test_opening_not_shifted_into_receipt(self):
         result = _parse_ps_pharma_statement(DATTA_ORIC, "datta.pdf")
@@ -68,6 +83,35 @@ class TestSsaOricQtyOnlyParser(unittest.TestCase):
         self.assertEqual(pilex["opening_qty"], 3.0)
         self.assertEqual(pilex["receipts_qty"], 100.0)
         self.assertEqual(result.get("company_name"), "HIMALAYA WELLNESS CO (ZENITH)")
+
+    def test_pcs_pack_unit_not_stolen_as_opening(self):
+        """PCS matches qty empty-frag; must not shift OPENING into RECEIPT."""
+        with patch.dict(
+            os.environ, {"STOCK_PS_PHARMA_LEADING_PACK_UNIT": "true"}, clear=False
+        ):
+            result = _parse_ps_pharma_statement(SARAF_PCS_ORIC, "saraf.pdf")
+        self.assertIsNotNone(result)
+        by_name = {item["product_name"]: item for item in result["line_items"]}
+        abana = next(i for n, i in by_name.items() if "ABANA" in n)
+        self.assertEqual(abana["opening_qty"], 20.0)
+        self.assertEqual(abana["receipts_qty"], 0.0)
+        self.assertEqual(abana["sales_qty"], 20.0)
+        self.assertEqual(abana["closing_qty"], 0.0)
+        self.assertIn("PCS", str(abana.get("packing") or "").upper())
+        cyst = next(i for n, i in by_name.items() if "CYSTONE" in n)
+        self.assertEqual(cyst["opening_qty"], 27.0)
+        self.assertEqual(cyst["receipts_qty"], 0.0)
+        self.assertEqual(cyst["sales_qty"], 27.0)
+        self.assertEqual(cyst["closing_qty"], 0.0)
+        liv = next(i for n, i in by_name.items() if "LIV 52 DS TABS" in n)
+        self.assertEqual(liv["opening_qty"], 185.0)
+        self.assertEqual(liv["receipts_qty"], 100.0)
+        self.assertEqual(liv["sales_qty"], 178.0)
+        self.assertEqual(liv["closing_qty"], 107.0)
+        bresol = next(i for n, i in by_name.items() if "BRESOL TABS" in n)
+        self.assertEqual(bresol["opening_qty"], 10.0)
+        self.assertEqual(bresol["sales_qty"], 3.0)
+        self.assertEqual(bresol["closing_qty"], 7.0)
 
 
 class TestSsaOricQtyOnlyPhotoExtract(unittest.TestCase):
