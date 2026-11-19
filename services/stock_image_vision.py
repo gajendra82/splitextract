@@ -148,6 +148,8 @@ _TRUSTED_METHODS = frozenset(
         "op_stk_rcpts_stock_sale_vision",
         "zandra_two_column_order_form",
         "sap_order_form_vision",
+        # Qty-only ORIC Vision (not the weak Tesseract OCR sibling).
+        "ssa_oric_qty_only_vision",
     }
 )
 _TRUSTED_LAYOUTS = frozenset(
@@ -467,6 +469,31 @@ def assess_stock_structured_quality(
 
     if signals.get("layout_unsafe") or extra.get("layout_unsafe"):
         reasons.append("layout_not_understood")
+
+    # Qty-only ORIC Tesseract OCR often keeps high numeric coverage while still
+    # dropping/shifting rows (valid_ratio < 0.90). Escalate to ORIC Vision.
+    if method == "ssa_oric_qty_only_ocr" and not vision and items:
+        try:
+            from services.stock_row_classifier import (
+                classify_result_safe,
+                would_fallback,
+            )
+
+            summary = classify_result_safe(result or {})
+            weak, weak_reason = would_fallback(summary or {})
+            if weak:
+                if "oric_ocr_weak" not in reasons:
+                    reasons.append("oric_ocr_weak")
+                if "identity_failure_rate" not in reasons and weak_reason:
+                    reasons.append("identity_failure_rate")
+        except Exception:
+            try:
+                from services.sales_statement_extractor import _ssa_oric_ocr_needs_vision
+
+                if _ssa_oric_ocr_needs_vision(result):
+                    reasons.append("oric_ocr_weak")
+            except Exception:
+                pass
 
     deduped: List[str] = []
     for reason in reasons:
@@ -815,6 +842,7 @@ def _structured_is_untrusted(decision: Dict[str, Any]) -> bool:
         "schema_unknown",
         "required_headers_missing",
         "layout_not_understood",
+        "oric_ocr_weak",
     }:
         return True
     try:
@@ -940,11 +968,20 @@ def apply_direct_stock_image_gemini(
 
         # MediVision Op/Purc/Sale/WSale before Op_Stk — SSA misfile + Cl val
         # peek otherwise steals this chrome into Op_Stk/Rcpts column shift.
+        # Tall stacked Pack|Rate|Sale Value scans must stay on VISION_TABLE.
+        _skip_medivision_stacked = False
+        try:
+            from services.stock_vision_table import _needs_vertical_split
+
+            _skip_medivision_stacked = bool(_needs_vertical_split(file_bytes))
+        except Exception:
+            _skip_medivision_stacked = False
         medivision = None
         if (
             _enabled()
             and _medivision_op_wsale_early_enabled()
             and _is_medivision_op_wsale_header(peek_text)
+            and not _skip_medivision_stacked
         ):
             try:
                 medivision = _extract_medivision_op_wsale_photo(
@@ -958,6 +995,28 @@ def apply_direct_stock_image_gemini(
                     exc,
                 )
                 medivision = None
+        elif _skip_medivision_stacked and _is_medivision_op_wsale_header(peek_text):
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s medivision_op_wsale skipped "
+                "reason=stacked_multi_block_pack_rate",
+                filename,
+            )
+        if medivision and medivision.get("line_items"):
+            try:
+                from services.gemini_extraction_fallback import (
+                    _pack_rate_prev_sale_shift_suspected,
+                )
+
+                if _pack_rate_prev_sale_shift_suspected(medivision):
+                    logger.info(
+                        "STOCK_IMAGE_GEMINI file=%s medivision_op_wsale rejected "
+                        "reason=pack_rate_prev_sale_shift rows=%s",
+                        filename,
+                        len(medivision.get("line_items") or []),
+                    )
+                    medivision = None
+            except Exception:
+                pass
         if medivision and medivision.get("line_items"):
             selected_extra = medivision.setdefault("totals", {}).setdefault("extra", {})
             selected_extra["quality_decision"] = decision
@@ -1173,6 +1232,59 @@ def apply_direct_stock_image_gemini(
             len(op_stk.get("line_items") or []),
         )
         return op_stk
+
+    # Weak qty-only ORIC OCR: prefer dedicated ORIC Vision over generic prompt
+    # (generic often invents VALUE columns / shifts RECEIPT).
+    if (
+        _enabled()
+        and method == "ssa_oric_qty_only_ocr"
+        and (force_gemini or "oric_ocr_weak" in set(decision.get("reasons") or []))
+    ):
+        try:
+            from services.sales_statement_extractor import (
+                _extract_ssa_oric_qty_only_vision,
+                _ssa_oric_vision_result_usable,
+            )
+
+            ocr_rows = [
+                item
+                for item in (result.get("line_items") or [])
+                if isinstance(item, dict)
+            ] or None
+            oric_vision = _extract_ssa_oric_qty_only_vision(
+                file_bytes, filename, ext, ocr_items=ocr_rows
+            )
+        except Exception as exc:
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s ssa_oric_qty_only preferred path "
+                "failed: %s",
+                filename,
+                type(exc).__name__,
+            )
+            oric_vision = None
+        if (
+            oric_vision
+            and oric_vision.get("line_items")
+            and _ssa_oric_vision_result_usable(oric_vision)
+        ):
+            selected_extra = oric_vision.setdefault("totals", {}).setdefault("extra", {})
+            selected_extra["quality_decision"] = decision
+            selected_extra["structured_extraction"] = {
+                "extraction_method": extra.get("extraction_method"),
+                "layout": layout,
+                "schema": decision.get("schema"),
+                "row_count": decision.get("row_count"),
+                "line_items": copy.deepcopy(result.get("line_items") or []),
+            }
+            selected_extra["final_selected_extraction"] = "gemini"
+            selected_extra["stock_image_vision_decided"] = True
+            selected_extra["stock_image_gemini_status"] = "ssa_oric_qty_only_preferred"
+            logger.info(
+                "STOCK_IMAGE_GEMINI file=%s status=ssa_oric_qty_only_preferred rows=%s",
+                filename,
+                len(oric_vision.get("line_items") or []),
+            )
+            return oric_vision
 
     if not force_gemini:
         extra["final_selected_extraction"] = "structured"

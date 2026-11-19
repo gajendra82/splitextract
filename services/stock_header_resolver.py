@@ -156,6 +156,12 @@ ALIASES: Dict[str, List[str]] = {
         "prev. sls",
         "previous sale",
         "previous sales",
+        # Pack|Rate grids: Previous Last Sale | Previous Sale (both history).
+        "previous last sale",
+        "prev last sale",
+        "previous last",
+        "prev last",
+        "prev. last sale",
         # Previous Lz / Previous Sz history qty bands (not period opening).
         "previous lz",
         "previous sz",
@@ -188,6 +194,11 @@ ALIASES: Dict[str, List[str]] = {
         "nonmoving",
         "non moving",
         "non-moving",
+        "nonmove",
+        "nonmove qty",
+        "non move qty",
+        "nonmoveqty",
+        "flag",
         "margin",
         "margin percent",
         "margin %",
@@ -3867,10 +3878,11 @@ def resolve_columns(
     _promote_movement_value_followers(prelim)
 
     # Deduplicate canonical fields: keep higher confidence.
+    # lms may appear twice (Previous Last Sale | Previous Sale) — both history.
     best: Dict[str, int] = {}
     for i, col in enumerate(prelim):
         canon = col["canonical"]
-        if canon in {"ignore", None}:
+        if canon in {"ignore", None, "lms"}:
             continue
         if canon not in best:
             best[canon] = i

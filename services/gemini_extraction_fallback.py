@@ -35,12 +35,30 @@ If closing value is not printed, return null.
 If sales value is not printed, return null.
 Preserve product names, packing, and product codes as printed.
 Do not expand a short printed name into a catalogue name.
+Do not invent product rows that are not visible on the image.
 Do not use the filename as the statement period.
 A date printed beside the stockist name is a run date unless the document
 also prints a From and To period. Use the From and To period when it is printed.
 Read every supplied page. Do not stop after the first page.
 Do not treat a total, subtotal, address, GSTIN, or page footer as a product.
 Do not treat STOCK REPORT / COMPANY NAME banner lines as products.
+
+When headers are Product Name|Pack|Rate|Previous Last Sale|Previous Sale|
+Opening|Receipt|Sales|Free|Sales RTN|Sale Value|Purchase RTN|Others|
+Closing|Cl Value|expQty|nonMove Qty|Flag:
+- Previous Last Sale and Previous Sale are last-month history — never map
+  them to opening_qty, receipts_qty, or sales_qty.
+- opening_qty = Opening, receipts_qty = Receipt, sales_qty = Sales.
+- sales_value = Sale Value (money after Sales RTN), never leave it 0/null
+  when a Sale Value digit is printed.
+- closing_qty = Closing, closing_value = Cl Value.
+- Keep blank Free / Sales RTN / Purchase RTN / Others cells so columns do
+  not shift left.
+- When the same header band repeats in stacked blocks, continue one table
+  top-to-bottom; emit each visible product once; never invent catalog SKUs.
+- Mark ----Total---->> / ---Total--->> as totals (not a product row).
+  Copy its Sale Value into totals.sales_value and Cl Value into
+  totals.closing_value.
 
 Return JSON only:
 {
@@ -558,6 +576,51 @@ def _result_is_weak(result: Dict[str, Any], quality: Dict[str, Any]) -> bool:
     return not items
 
 
+def _pack_rate_prev_sale_shift_suspected(result: Dict[str, Any]) -> bool:
+    """True when Prev Sale/Opening/Sale Value look column-shifted on Pack|Rate grids.
+
+    Typical failure: sales_value mostly null/0 while Cl Value money lands in
+    closing_value, or sales_qty=1 (Previous Last Sale) with large receipts.
+    """
+    items = [
+        i
+        for i in (result.get("line_items") or [])
+        if isinstance(i, dict)
+        and str(i.get("product_name") or "").strip()
+        and not re.search(r"total", str(i.get("product_name") or ""), re.I)
+    ]
+    if len(items) < 8:
+        return False
+
+    def _n(v: Any) -> Optional[float]:
+        if v is None or isinstance(v, bool):
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    sval_missing = 0
+    cval_money = 0
+    tiny_sales = 0
+    for item in items:
+        sv = _n(item.get("sales_value"))
+        if sv is None or abs(sv) < 0.005:
+            sval_missing += 1
+        cv = _n(item.get("closing_value"))
+        if cv is not None and abs(cv) >= 100.0:
+            cval_money += 1
+        sq = _n(item.get("sales_qty"))
+        if sq is not None and abs(sq - 1.0) < 0.001:
+            tiny_sales += 1
+    half = max(5, int(0.45 * len(items)))
+    if sval_missing >= half and cval_money >= 2:
+        return True
+    if tiny_sales >= 2 and sval_missing >= half:
+        return True
+    return False
+
+
 def try_gemini_vision_extract(
     file_bytes: bytes,
     filename: str,
@@ -599,6 +662,15 @@ def try_gemini_vision_extract(
         "header_as_product_rows",
         "missing_product_names",
     }:
+        return None
+    if _pack_rate_prev_sale_shift_suspected(gemini_result):
+        logger.info(
+            "[SalesStatement] file=%s decision=GEMINI_VISION_FALLBACK "
+            "reason=PACK_RATE_PREV_SALE_SHIFT_REJECT rows=%s — defer to "
+            "vision_table vertical split",
+            filename,
+            len(gemini_result.get("line_items") or []),
+        )
         return None
     _stamp(gemini_result, gemini_quality, "early_success")
     logger.info(
@@ -1112,6 +1184,14 @@ def maybe_apply_gemini_fallback(
     )
     if shifted >= max(5, len(gemini_items) // 4):
         gemini_ok = False
+    if gemini_ok and _pack_rate_prev_sale_shift_suspected(gemini_result):
+        gemini_ok = False
+        logger.info(
+            "[SalesStatement] file=%s GEMINI_FALLBACK rejected "
+            "reason=pack_rate_prev_sale_shift rows=%s",
+            filename,
+            len(gemini_items),
+        )
 
     def _nonzero_qty_rows(payload: Dict[str, Any]) -> int:
         count = 0
@@ -1181,7 +1261,11 @@ def maybe_apply_gemini_fallback(
                 gemini_ratio,
             )
             return result
-        if gemini_ratio >= ocr_ratio and gemini_items:
+        if (
+            gemini_ratio >= ocr_ratio
+            and gemini_items
+            and not _pack_rate_prev_sale_shift_suspected(gemini_result)
+        ):
             _stamp(gemini_result, gemini_quality, "success")
             logger.info(
                 "VETO_RESULT_PICK request_id=%s picked=gemini ocr_ratio=%s "
@@ -1207,6 +1291,13 @@ def maybe_apply_gemini_fallback(
                 if isinstance(gextra, dict):
                     gextra["identity_veto_unresolved"] = True
             return gemini_result
+        if gemini_items and _pack_rate_prev_sale_shift_suspected(gemini_result):
+            logger.info(
+                "VETO_RESULT_PICK request_id=%s picked=ocr "
+                "reason=PACK_RATE_PREV_SALE_SHIFT gemini_ratio=%s",
+                rid,
+                gemini_ratio,
+            )
 
         _attach_gemini_as_candidates(result, gemini_result)
         _stamp(result, quality, "kept_ocr_better_ratio")

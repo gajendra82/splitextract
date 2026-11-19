@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -5399,17 +5400,61 @@ def _has_opening_receive_issue_closing_qty_value_headers(text: str) -> bool:
 
     Distinct from Op.Qty/P.Qty/S.Qty/Cls Detail grids. Scanned early Op.Qty
     Vision must not claim this family (sales land as 0, money bleeds into qty).
+
+    Phone/scan OCR often drops STOCK after OPENING, glues RECEIVE bands, and
+    reads CLOSING as COSINE/CLOSI — still reject Op.Qty when the STATEMENT
+    chrome + PRODUCT DESCRIPTION + OPENING/RECEIVE band are present.
     """
     blob = text or ""
     if not blob.strip():
         return False
-    has_open = bool(re.search(r"OPENING\s+STOCK", blob, re.I))
-    has_recv = bool(
-        re.search(r"RECEIVE\s+(QUANTITY|QTY|VALUE)|RECEIVE\s+QUANT", blob, re.I)
+    # Never treat Stock and Sales Detail (Op.Qty/P.Sch) as ORIC qty|value.
+    if _looks_like_stock_sales_detail_report_title(blob):
+        return False
+    if _has_stock_sales_op_qty_val_headers(blob) and not re.search(
+        r"OPENING\s+STOCK|RECEIVE\s+(QUANTITY|QTY)|ISSUE\s+(QUANTITY|QTY)",
+        blob,
+        re.I,
+    ):
+        return False
+    has_open = bool(
+        re.search(
+            r"OPENING\s+STOCK|OPENING\s+VALUE|\bOPENING\b",
+            blob,
+            re.I,
+        )
     )
-    has_issue = bool(re.search(r"ISSUE\s+(QUANTITY|QTY|VALUE)", blob, re.I))
-    has_close = bool(re.search(r"CLOSING\s+STOCK", blob, re.I))
-    return has_open and has_recv and has_issue and has_close
+    has_recv = bool(
+        re.search(
+            r"RECEIVE\s+(QUANTITY|QTY|VALUE)|RECEIVE\s+QUANT|\bRECEIVE\b|\bRECEIPT\b",
+            blob,
+            re.I,
+        )
+    )
+    has_issue = bool(
+        re.search(r"ISSUE\s+(QUANTITY|QTY|VALUE)|\bISSUE\b|\bTSSUE\b", blob, re.I)
+    )
+    has_close = bool(
+        re.search(
+            r"CLOSING\s+STOCK|CLOSING\s+VALUE|\bCLOSING\b|"
+            r"\bCOSINE\b|\bCLOSINE\b|\bCLOSI\b|\bCLOS\b",
+            blob,
+            re.I,
+        )
+    )
+    if has_open and has_recv and has_issue and has_close:
+        return True
+    has_product = bool(re.search(r"PRODUCT\s+DESC", blob, re.I))
+    has_title = bool(
+        re.search(r"STOCK\s*&\s*SALES\s+STATEMENT|STOCK\s+AND\s+SALES\s+STATEMENT", blob, re.I)
+    )
+    # Noisy scan: title + PRODUCT DESCRIPTION + OPENING + RECEIVE is enough to
+    # keep this family off the Op.Qty Detail early path.
+    if has_title and has_product and has_open and has_recv:
+        return True
+    if has_product and has_open and has_recv and (has_issue or has_close):
+        return True
+    return False
 
 
 def _ocr_png_header_probe(png_bytes: bytes) -> str:
@@ -5451,6 +5496,563 @@ def _ocr_png_header_probe(png_bytes: bytes) -> str:
         return "\n".join(chunks)
     except Exception:
         return ""
+
+
+def _oric_scanned_pdf_early_enabled() -> bool:
+    """STOCK_ORIC_SCANNED_PDF_EARLY — claim OPENING|RECEIVE|ISSUE scans before Op.Qty.
+
+    Default ON. Kill-switch only; no new ops env required.
+    """
+    return os.getenv("STOCK_ORIC_SCANNED_PDF_EARLY", "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def _score_oric_header_ocr(text: str) -> int:
+    """Score uprightness of a header OCR band for ORIC qty|value scans."""
+    blob = text or ""
+    if not blob.strip():
+        return 0
+    score = 0
+    if re.search(r"PRODUCT\s+DESC", blob, re.I):
+        score += 4
+    if re.search(r"OPENING", blob, re.I):
+        score += 3
+    if re.search(r"RECEIVE|RECEIPT", blob, re.I):
+        score += 3
+    if re.search(r"ISSUE|TSSUE", blob, re.I):
+        score += 2
+    if re.search(r"CLOSING|COSINE|CLOSINE|CLOSI", blob, re.I):
+        score += 2
+    if re.search(r"STOCK\s*&\s*SALES\s+STATEMENT|HIMALAYA", blob, re.I):
+        score += 2
+    if re.search(r"BONNISAN|BRESOL|CYSTONE|LIV|MENTAT|SEPTILIN", blob, re.I):
+        score += 1
+    return score
+
+
+def _upright_oric_scanned_page_png(png_bytes: bytes) -> bytes:
+    """Rotate a portrait PDF page so ORIC headers read left-to-right.
+
+    Landscape STATEMENT sheets are often stored as portrait buffers. Vision on
+    the sideways page shifts OPENING/RECEIVE/ISSUE/CLOSING across rows.
+    """
+    if not png_bytes:
+        return png_bytes
+    try:
+        from PIL import Image
+        from services.sales_statement_extractor import _a2z_tesseract
+        from services.stock_ocr_policy import stock_ocr_context
+    except Exception:
+        return png_bytes
+    try:
+        with Image.open(io.BytesIO(png_bytes)) as raw:
+            base = raw.convert("RGB")
+    except Exception:
+        return png_bytes
+    width, height = base.size
+    digest = hashlib.sha256(png_bytes).hexdigest()[:10]
+    # Landscape phone photos of Marg STATEMENT pages are often sideways
+    # (text vertical in-frame). Always score rotations — do not early-return
+    # on width>=height or TOTAL/SKU OCR and Vision both slide columns.
+    best_rot = 0
+    best_score = -1
+    best_img = None
+    try:
+        tess = _a2z_tesseract()
+    except Exception:
+        tess = None
+    for rot in (0, 90, 270, 180):
+        img = base.rotate(rot, expand=True) if rot else base
+        score = 0
+        if tess is not None:
+            try:
+                # Header band + a mid/footer band so continuation pages that
+                # only print TOTAL near the top still score the upright rot.
+                bands = [
+                    img.crop(
+                        (0, 0, img.size[0], max(40, int(img.size[1] * 0.35)))
+                    ),
+                    img.crop(
+                        (
+                            0,
+                            max(0, int(img.size[1] * 0.45)),
+                            img.size[0],
+                            img.size[1],
+                        )
+                    ),
+                ]
+                text_parts: List[str] = []
+                for bi, band in enumerate(bands):
+                    probe = band.copy()
+                    probe.thumbnail((1600, 1000))
+                    with stock_ocr_context(
+                        region=f"oric_upright_{digest}_r{rot}_b{bi}", page="1"
+                    ):
+                        text_parts.append(
+                            tess.image_to_string(probe, config="--psm 6") or ""
+                        )
+                text = "\n".join(text_parts)
+                score = _score_oric_header_ocr(text)
+                if re.search(r"\bTOTALS?\b", text or "", re.I):
+                    score += 4
+                # Dense qty|value rows (continuation pages with no header chrome).
+                if len(re.findall(r"\d+\.\d{2}", text or "")) >= 3:
+                    score += 3
+                if re.search(
+                    r"\b(?:OPENING|RECEIVE|ISSUE|CLOSING|PRODUCT\s+DESC)\b",
+                    text or "",
+                    re.I,
+                ):
+                    score += 2
+            except Exception:
+                score = 0
+        # Prefer landscape orientation when OCR is inconclusive.
+        if img.size[0] >= img.size[1]:
+            score += 1
+        if score > best_score:
+            best_score = score
+            best_rot = rot
+            best_img = img
+    if best_img is None:
+        best_img = base
+        best_rot = 0
+    try:
+        buf = io.BytesIO()
+        best_img.save(buf, format="PNG", optimize=True)
+        out = buf.getvalue()
+        logger.info(
+            "STOCK_ORIC_SCANNED_UPRIGHT rot=%s score=%s size=%sx%s -> %sx%s",
+            best_rot,
+            best_score,
+            width,
+            height,
+            best_img.size[0],
+            best_img.size[1],
+        )
+        return out or png_bytes
+    except Exception:
+        return png_bytes
+
+
+def _stitch_oric_header_onto_continuation(
+    header_page_png: bytes, continuation_png: bytes
+) -> bytes:
+    """Paste page-1 column headers above a headerless continuation body.
+
+    Marg STATEMENT page 2 often omits OPENING/RECEIVE/ISSUE/CLOSING chrome;
+    Vision then returns no rows. Reusing the first-page header band keeps the
+    same qty|value schema without inventing numbers.
+    """
+    if not continuation_png:
+        return continuation_png
+    if not header_page_png:
+        return continuation_png
+    try:
+        from PIL import Image, ImageEnhance
+    except Exception:
+        return continuation_png
+    try:
+        with Image.open(io.BytesIO(header_page_png)) as raw_h:
+            header_img = raw_h.convert("RGB")
+        with Image.open(io.BytesIO(continuation_png)) as raw_c:
+            body = raw_c.convert("RGB")
+    except Exception:
+        return continuation_png
+    try:
+        hdr = header_img.crop(
+            (0, 0, header_img.width, max(40, int(header_img.height * 0.16)))
+        )
+        if body.width > 0 and hdr.width > 0:
+            new_h = max(30, int(hdr.height * (body.width / float(hdr.width))))
+            hdr = hdr.resize((body.width, new_h), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGB", (body.width, hdr.height + body.height), (255, 255, 255))
+        canvas.paste(hdr, (0, 0))
+        canvas.paste(body, (0, hdr.height))
+        # Mild upscale helps sparse continuation scans.
+        canvas = canvas.resize(
+            (int(canvas.width * 1.2), int(canvas.height * 1.2)),
+            Image.Resampling.LANCZOS,
+        )
+        canvas = ImageEnhance.Contrast(canvas).enhance(1.35)
+        buf = io.BytesIO()
+        canvas.save(buf, format="JPEG", quality=92)
+        out = buf.getvalue()
+        logger.info(
+            "STOCK_ORIC_CONTINUATION_HEADER_STITCH body=%sx%s out=%sx%s",
+            body.size[0],
+            body.size[1],
+            canvas.size[0],
+            canvas.size[1],
+        )
+        return out or continuation_png
+    except Exception as exc:
+        logger.info(
+            "STOCK_ORIC_CONTINUATION_HEADER_STITCH skipped err=%s",
+            type(exc).__name__,
+        )
+        return continuation_png
+
+
+def _crop_oric_ink_content_png(png_bytes: bytes) -> bytes:
+    """Trim large white margins on upright ORIC continuation pages.
+
+    Page-2 TOTAL / last SKUs often sit in a small ink island; full-page Vision
+    then returns an empty/zero shell and footer OCR sees blank bands.
+    """
+    if not png_bytes:
+        return png_bytes
+    try:
+        from PIL import Image
+        import numpy as np
+    except Exception:
+        return png_bytes
+    try:
+        with Image.open(io.BytesIO(png_bytes)) as raw:
+            img = raw.convert("RGB")
+    except Exception:
+        return png_bytes
+    width, height = img.size
+    if width < 200 or height < 200:
+        return png_bytes
+    try:
+        arr = np.asarray(img)
+        mask = (
+            (arr[:, :, 0] < 245)
+            | (arr[:, :, 1] < 245)
+            | (arr[:, :, 2] < 245)
+        )
+        ys, xs = np.where(mask)
+        if len(xs) < 500:
+            return png_bytes
+        pad = 12
+        left = max(0, int(xs.min()) - pad)
+        top = max(0, int(ys.min()) - pad)
+        right = min(width, int(xs.max()) + pad + 1)
+        bottom = min(height, int(ys.max()) + pad + 1)
+        crop_w = right - left
+        crop_h = bottom - top
+        # Only crop when margins are material (continuation pages).
+        if crop_w >= int(0.92 * width) and crop_h >= int(0.85 * height):
+            return png_bytes
+        if crop_w < 180 or crop_h < 120:
+            return png_bytes
+        cropped = img.crop((left, top, right, bottom))
+        buf = io.BytesIO()
+        cropped.save(buf, format="PNG", optimize=True)
+        out = buf.getvalue()
+        logger.info(
+            "STOCK_ORIC_SCANNED_CONTENT_CROP from=%sx%s to=%sx%s",
+            width,
+            height,
+            cropped.size[0],
+            cropped.size[1],
+        )
+        return out or png_bytes
+    except Exception as exc:
+        logger.info(
+            "STOCK_ORIC_SCANNED_CONTENT_CROP skipped err=%s", type(exc).__name__
+        )
+        return png_bytes
+
+
+def extract_opening_receive_issue_closing_scanned_pdf(
+    file_bytes: bytes,
+    filename: str,
+) -> Optional[Dict[str, Any]]:
+    """Image-only PDF: OPENING|RECEIVE|ISSUE|CLOSING qty|value (main_stock ORIC).
+
+    Runs before Op.Qty Detail early claim so sideways STATEMENT scans are not
+    forced into stock_sales_op_qty_val (row shift + missing page-2 SKUs).
+    Budget stays inside the main_stock photo reader (max 2 Gemini).
+    """
+    if not _oric_scanned_pdf_early_enabled():
+        return None
+    images = _render_pdf_page_pngs(file_bytes, max_pages=2, zoom=2.8)
+    if not images:
+        try:
+            from services.gemini_extraction_fallback import _pdf_images
+
+            images = _pdf_images(file_bytes, max_pages=2) or []
+        except Exception:
+            images = []
+    if not images:
+        return None
+
+    header_peek = _ocr_png_header_probe(images[0])
+    if not _has_opening_receive_issue_closing_qty_value_headers(header_peek):
+        logger.info(
+            "STOCK_ORIC_SCANNED_PDF file=%s status=skip reason=headers",
+            filename,
+        )
+        return None
+    if _has_stock_sales_op_qty_val_headers(header_peek) and not re.search(
+        r"OPENING\s+STOCK|PRODUCT\s+DESC", header_peek or "", re.I
+    ):
+        logger.info(
+            "STOCK_ORIC_SCANNED_PDF file=%s status=skip reason=op_qty_val_headers",
+            filename,
+        )
+        return None
+
+    try:
+        from services.sales_statement_extractor import (
+            empty_result,
+            _extract_main_stock_sales_vision,
+            _extract_opening_receive_issue_closing_photo,
+            _main_stock_enrich_spreadsheet_meta,
+            _main_stock_apply_printed_totals_footer,
+            _main_stock_peel_oric_total_contamination,
+            _main_stock_result_is_all_zero_shell,
+        )
+    except Exception as exc:
+        logger.info(
+            "STOCK_ORIC_SCANNED_PDF file=%s status=skip import=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return None
+
+    seed: Optional[Dict[str, Any]] = None
+    merged_items: List[Dict[str, Any]] = []
+    seen_names: set = set()
+    last_upright_for_footer: Optional[bytes] = None
+    first_page_upright: Optional[bytes] = None
+    for page_index, image in enumerate(images[:2]):
+        upright = _upright_oric_scanned_page_png(image)
+        upright = _crop_oric_ink_content_png(upright)
+        if page_index == 0:
+            first_page_upright = upright
+        last_upright_for_footer = upright
+        vision_bytes = upright
+        min_items = 5
+        if page_index > 0 and first_page_upright:
+            # Headerless continuation: stitch page-1 chrome + allow 1–3 SKUs.
+            vision_bytes = _stitch_oric_header_onto_continuation(
+                first_page_upright, upright
+            )
+            min_items = 1
+        # Prefer Vision on upright pages: band OCR often keeps product names
+        # but blanks OPENING/RECEIVE/ISSUE/CLOSING on dense scans.
+        fallback = empty_result(filename, "png")
+        _main_stock_enrich_spreadsheet_meta(fallback, header_peek or "")
+        page = _extract_main_stock_sales_vision(
+            vision_bytes,
+            filename,
+            ".png",
+            fallback,
+            sheets_screenshot=False,
+            min_items=min_items,
+        )
+        if (
+            not page
+            or not page.get("line_items")
+            or _main_stock_result_is_all_zero_shell(page)
+        ):
+            page = _extract_opening_receive_issue_closing_photo(
+                upright, filename, ".png"
+            )
+        if (
+            not page
+            or not page.get("line_items")
+            or _main_stock_result_is_all_zero_shell(page)
+        ):
+            logger.info(
+                "STOCK_ORIC_SCANNED_PDF file=%s page=%s status=empty_or_zero_shell",
+                filename,
+                page_index + 1,
+            )
+            continue
+        if seed is None:
+            seed = page
+        page_nonzero = 0
+        for item in page.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            for key in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "sales_value",
+                "closing_value",
+            ):
+                try:
+                    if abs(float(item.get(key) or 0.0)) > 0.051:
+                        page_nonzero += 1
+                        break
+                except (TypeError, ValueError):
+                    continue
+        # Continuation pages with only TOTAL / 1–3 SKUs are fine; skip a
+        # page that merely repeats blank name shells from OCR cache.
+        if page_index > 0 and page_nonzero == 0:
+            logger.info(
+                "STOCK_ORIC_SCANNED_PDF file=%s page=%s status=skip_blank_continuation",
+                filename,
+                page_index + 1,
+            )
+            continue
+        for item in page.get("line_items") or []:
+            if not isinstance(item, dict):
+                continue
+            # Pack size must stay in the key (100GM vs 50GM, 100ML vs 200ML).
+            try:
+                from services.sales_statement_extractor import (
+                    _main_stock_item_identity_key,
+                    _main_stock_peel_pack_into_field,
+                )
+
+                _main_stock_peel_pack_into_field(item)
+                name_key = _main_stock_item_identity_key(item)
+            except Exception:
+                pack = str(item.get("packing") or "").strip().lower()
+                name_key = re.sub(
+                    r"[^a-z0-9]",
+                    "",
+                    f"{item.get('product_name') or ''}{pack}".lower(),
+                )
+            if name_key and name_key in seen_names:
+                continue
+            if name_key:
+                seen_names.add(name_key)
+            merged_items.append(item)
+        logger.info(
+            "STOCK_ORIC_SCANNED_PDF file=%s page=%s rows=%s nonzero=%s",
+            filename,
+            page_index + 1,
+            len(page.get("line_items") or []),
+            page_nonzero,
+        )
+
+    if seed is None or len(merged_items) < 5:
+        logger.info(
+            "STOCK_ORIC_SCANNED_PDF file=%s status=skip rows=%s",
+            filename,
+            len(merged_items),
+        )
+        return None
+
+    seed["line_items"] = merged_items
+    # Keep the upload extension (pdf), not the per-page render (.png).
+    seed["source_file"] = filename
+    seed["source_format"] = (
+        Path(filename).suffix.lstrip(".").lower() if filename else "pdf"
+    ) or "pdf"
+    # Vision/OCR sometimes parks chrome junk in stockist_name; re-seed from peek.
+    stockist_now = str(seed.get("stockist_name") or "")
+    if (
+        not re.search(r"[A-Za-z]{4,}", stockist_now)
+        or re.search(r"[|�]|seen\s+i", stockist_now, re.I)
+        or len(stockist_now) < 4
+    ):
+        seed["stockist_name"] = None
+    _main_stock_enrich_spreadsheet_meta(seed, header_peek or "")
+    try:
+        from services.sales_statement_extractor import (
+            _enrich_stock_statement_header_from_ocr,
+            _main_stock_clean_letterhead_address,
+            _main_stock_normalize_product_name,
+            _main_stock_peel_pack_into_field,
+            _main_stock_repair_clipped_himalaya_names,
+            _main_stock_repair_closing_value_hundreds_digit,
+        )
+
+        _enrich_stock_statement_header_from_ocr(seed, header_peek or "")
+        _main_stock_repair_clipped_himalaya_names(seed, header_peek or "")
+        for item in seed.get("line_items") or []:
+            if isinstance(item, dict) and item.get("product_name"):
+                item["product_name"] = _main_stock_normalize_product_name(
+                    str(item.get("product_name") or "")
+                )
+                _main_stock_peel_pack_into_field(item)
+        _main_stock_repair_closing_value_hundreds_digit(seed)
+    except Exception:
+        pass
+    if not seed.get("company_name") and re.search(
+        r"HIMALAYA\s+ZANDRA", header_peek or "", re.I
+    ):
+        seed["company_name"] = "HIMALAYA ZANDRA"
+    if not seed.get("stockist_name"):
+        m_party = re.search(
+            r"M/?S\.?\s*([A-Z][A-Z0-9 .&'/-]{3,80}?DISTRIBUTORS?)",
+            header_peek or "",
+            re.I,
+        )
+        if m_party:
+            seed["stockist_name"] = re.sub(r"\s+", " ", m_party.group(1)).strip(" ,.")
+    if not seed.get("stockist_address"):
+        m_addr = re.search(
+            r"(?im)^(?:M/?S\.?[^\n]*\n)?([^\n]{12,160}?(?:ROAD|STREET|COMPLEX|MARKET|FLOOR|NAGAR|COLONY|PIN|-\d{6})[^\n]*)",
+            header_peek or "",
+        )
+        if m_addr:
+            addr = re.sub(r"\s+", " ", m_addr.group(1)).strip(" ,.")
+            if not re.search(
+                r"HIMALAYA|STOCK\s*&\s*SALES|PRODUCT\s+DESC|Licence|Fax\s*:",
+                addr,
+                re.I,
+            ):
+                seed["stockist_address"] = addr
+    try:
+        from services.sales_statement_extractor import (
+            _main_stock_clean_letterhead_address,
+        )
+
+        if seed.get("stockist_address"):
+            seed["stockist_address"] = _main_stock_clean_letterhead_address(
+                str(seed.get("stockist_address") or "")
+            )
+    except Exception:
+        pass
+    # Peel TOTAL-scale blocks Vision glued onto the last SKU before footer OCR.
+    try:
+        from services.sales_statement_extractor import (
+            _main_stock_peel_oric_total_contamination,
+        )
+
+        peeled = _main_stock_peel_oric_total_contamination(seed)
+        if peeled:
+            logger.info(
+                "STOCK_ORIC_SCANNED_PDF file=%s total_contamination_peeled=%s",
+                filename,
+                peeled,
+            )
+    except Exception:
+        pass
+    # Footer TOTAL lives on the last page — upright + ink-crop for peel.
+    try:
+        footer_img = last_upright_for_footer or _crop_oric_ink_content_png(
+            _upright_oric_scanned_page_png(images[-1])
+        )
+        _main_stock_apply_printed_totals_footer(seed, footer_img)
+    except Exception:
+        pass
+
+    extra = seed.setdefault("totals", {}).setdefault("extra", {})
+    if isinstance(extra, dict):
+        extra["extraction_method"] = "opening_receive_issue_closing_scanned_pdf"
+        extra["layout"] = "opening_receive_issue_closing"
+        extra["early_vision_reason"] = "oric_scanned_pdf_before_op_qty_val"
+        extra["statement_count"] = 1
+    lock_stock_vision_result(
+        seed,
+        early_vision_reason="oric_scanned_pdf_before_op_qty_val",
+        stock_direct_vision_route="opening_receive_issue_closing",
+        extraction_method="opening_receive_issue_closing_scanned_pdf",
+        layout="opening_receive_issue_closing",
+        stock_identity_kind="opening_receipts_sales_closing",
+        numeric_source="gemini_vision",
+    )
+    logger.info(
+        "STOCK_ORIC_SCANNED_PDF file=%s status=hit rows=%s company=%s",
+        filename,
+        len(merged_items),
+        seed.get("company_name"),
+    )
+    return seed
 
 
 def _stock_sales_detail_scan_per_page_enabled() -> bool:
@@ -6359,6 +6961,17 @@ def extract_stock_sales_op_qty_val_scanned_pdf(
             "op_stock_divert_missed continuing_op_qty_val",
             filename,
         )
+
+    # Do not force Op.Qty Detail Vision on unrelated scanned families (ORIC
+    # OPENING|RECEIVE|ISSUE, blank/noisy chrome, etc.). Positive Detail headers
+    # (or Detail title route) are required before claiming the page.
+    if not _has_stock_sales_op_qty_val_headers(header_peek or ""):
+        logger.info(
+            "STOCK_SALES_OP_QTY_VAL_SCANNED_PDF file=%s status=skip "
+            "reason=no_op_qty_val_headers",
+            filename,
+        )
+        return None
 
     seed: Optional[Dict[str, Any]] = None
     calls = 0

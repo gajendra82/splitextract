@@ -84,6 +84,20 @@ _OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS: Tuple[str, ...] = (
     "closing_value",
 )
 
+# Same grid with a Free column between Sales and Sales RTN (printed Free).
+_OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE: Tuple[str, ...] = (
+    "opening_qty",
+    "purchase_qty",
+    "sales_qty",
+    "free_out_qty",
+    "sales_return_qty",
+    "sales_value",
+    "purchase_return_qty",
+    "other_outward_qty",
+    "closing_qty",
+    "closing_value",
+)
+
 _OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN: Tuple[str, ...] = (
     "opening_qty",
     "purchase_qty",
@@ -662,13 +676,15 @@ def _peel_rate_and_prev_num_idxs(
         rate_idxs.append(idxs[0])
         idxs = idxs[1:]
     targets = {
+        len(_OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE),
         len(_OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS),
         len(_OPEN_RCPT_SALE_VALUE_CLOSE_NO_RTN),
         len(_OPEN_RCPT_SALE_SVALUE_TRUNC),
     }
-    # Prev Lz / Prev Sz sit between Rate and Opening (qty-like).
+    # Prev Last Sale / Previous Sale sit between Rate and Opening (qty-like).
+    # Allow up to 4 peels so Rate + 2 prev + Free mid-band can hit len=10.
     peeled = 0
-    while idxs and peeled < 3 and len(idxs) not in targets:
+    while idxs and peeled < 4 and len(idxs) not in targets:
         smaller = [t for t in targets if t < len(idxs)]
         if not smaller:
             break
@@ -684,6 +700,82 @@ def _peel_rate_and_prev_num_idxs(
         idxs = idxs[1:]
         peeled += 1
     return rate_idxs, prev_idxs, idxs
+
+
+def _col_mostly_zero_or_empty(
+    rows: Sequence[Dict[str, Any]],
+    col_idx: int,
+    *,
+    min_frac: float = 0.6,
+) -> bool:
+    """True when most product rows are blank/zero in this column (Free/RTN)."""
+    seen = 0
+    empty = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        if col_idx >= len(cells):
+            continue
+        seen += 1
+        raw = cells[col_idx]
+        if raw is None or str(raw).strip() in {"", "-", "—", "–", "0", "0.0", "0.00"}:
+            empty += 1
+    if seen < 2:
+        return seen > 0 and empty == seen
+    return empty >= max(2, int(min_frac * seen))
+
+
+def _movement_looks_free_aware(
+    rows: Sequence[Dict[str, Any]],
+    move_idxs: Sequence[int],
+) -> bool:
+    """Sales|Free|Sales RTN|Sale Value mid-band (Free mostly empty, Sale Value money)."""
+    if len(move_idxs) != len(_OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE):
+        return False
+    sale_i, free_i, srtn_i, sval_i = (
+        move_idxs[2],
+        move_idxs[3],
+        move_idxs[4],
+        move_idxs[5],
+    )
+    if not _col_has_sale_or_close_money(rows, sval_i):
+        return False
+    # Free / Sales RTN must not be the money column.
+    if _col_has_sale_or_close_money(rows, free_i):
+        return False
+    if _col_has_sale_or_close_money(rows, srtn_i):
+        return False
+    # Free is sparse; require a high empty ratio so a no-Free Sales digit
+    # parked in this slot (e.g. sale=1) does not look like Free.
+    if not _col_mostly_zero_or_empty(rows, free_i, min_frac=0.85):
+        return False
+    # Sales should carry at least as many non-empty cells as Free.
+    sale_fill = 0
+    free_fill = 0
+    for row in rows or []:
+        if not isinstance(row, dict) or row.get("is_total_row"):
+            continue
+        cells = list(row.get("cells") or [])
+        for idx, bucket in ((sale_i, "sale"), (free_i, "free")):
+            if idx >= len(cells):
+                continue
+            raw = cells[idx]
+            if raw is None or str(raw).strip() in {
+                "",
+                "-",
+                "—",
+                "–",
+                "0",
+                "0.0",
+                "0.00",
+            }:
+                continue
+            if bucket == "sale":
+                sale_fill += 1
+            else:
+                free_fill += 1
+    return sale_fill >= free_fill
 
 
 def _try_open_rcpt_sale_value_close_layout(
@@ -703,8 +795,42 @@ def _try_open_rcpt_sale_value_close_layout(
     # Prefer not to steal classic OpQty|OpVal paired grids.
     if _num_idxs_look_qty_value_paired(rows, movement):
         return None
+    n_free = len(_OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE)
     n9 = len(_OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS)
-    if len(movement) >= n9:
+    # Prefer Free-aware exact width first — taking last-9 of a Free grid
+    # parks Opening in lms and Sales under Free (sales_qty→0).
+    if len(movement) == n_free and _col_has_closing_money(rows, movement[-1]):
+        if _movement_looks_free_aware(rows, movement):
+            return (
+                rate_idxs,
+                prev_idxs,
+                list(movement),
+                _OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE,
+            )
+        # Peel stopped early on a no-Free grid — drop one lead into prev.
+        return (
+            rate_idxs,
+            prev_idxs + [movement[0]],
+            list(movement[1:]),
+            _OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS,
+        )
+    if len(movement) > n_free:
+        use = list(movement[-n_free:])
+        lead = list(movement[:-n_free])
+        if _col_has_closing_money(rows, use[-1]) and _movement_looks_free_aware(
+            rows, use
+        ):
+            return (
+                rate_idxs,
+                prev_idxs + lead,
+                use,
+                _OPEN_RCPT_SALE_VALUE_CLOSE_WITH_FREE,
+            )
+    if len(movement) == n9:
+        if not _col_has_closing_money(rows, movement[-1]):
+            return None
+        return rate_idxs, prev_idxs, list(movement), _OPEN_RCPT_SALE_VALUE_CLOSE_FIELDS
+    if len(movement) > n9:
         use = list(movement[-n9:])
         lead = list(movement[:-n9])
         if not _col_has_closing_money(rows, use[-1]):
@@ -1356,6 +1482,16 @@ def _headers_look_like_ssa_ori_amount_grid(columns: Sequence[Dict[str, Any]]) ->
         return False
     if any(t == "box" for t in texts):
         return False
+    # Pack|Rate|Previous Last Sale|Opening|Receipt|Sales|Free|Sale Value|Cl Value
+    # is not a missing-BOX SSA grid — zero rows falsely vote for a one-slot shift.
+    if any(
+        "previous last sale" in t
+        or t in {"previous sale", "prev sale", "prev last sale"}
+        or t in {"sale value", "cl value", "sales rtn", "purchase rtn", "nonmove qty"}
+        or t == "free"
+        for t in texts
+    ):
+        return False
     has_open = any("opening" in t or t in {"op", "opn"} for t in texts)
     has_receipt = any("receipt" in t for t in texts)
     has_issue = any("issue" in t or "sale" in t for t in texts)
@@ -1398,8 +1534,13 @@ def _box_shift_votes_on_ori_amount_grid(
             continue
         box_n, open_n, rec_n, sale_n, close_n = nums  # type: ignore[misc]
         checked += 1
-        box_whole = abs(box_n - int(box_n)) <= 0.001 and 0 <= box_n <= 24
+        # Real case-size BOX is a small positive whole; blank/zero openings on
+        # Pack|Rate grids must not count as a missing BOX vote.
+        box_whole = abs(box_n - int(box_n)) <= 0.001 and 1 <= box_n <= 24
         if not box_whole:
+            continue
+        # All-zero movement rows always "balance" — ignore them.
+        if open_n == 0 and rec_n == 0 and sale_n == 0 and close_n == 0:
             continue
         # Shifted identity: Opening+Receipt−Issues ≈ Closing
         if abs((open_n + rec_n - sale_n) - close_n) <= 0.51:
@@ -2005,6 +2146,25 @@ def build_table_prompt() -> str:
         "map to extra.lms, never this period's sales_qty. Tot Sales is "
         "sales_qty; Tot Closing is closing_qty (quantity); Stock Value is "
         "closing_value (money) — never put Stock Value into Tot Closing. "
+        "Product Name|Pack|Rate|Previous Last Sale|Previous Sale|Opening|"
+        "Receipt|Sales|Free|Sales RTN|Sale Value|Purchase RTN|Others|Closing|"
+        "Cl Value|expQty|nonMove Qty|Flag: emit ONE header cell per printed "
+        "column (keep Previous Last Sale and Previous Sale separate; keep Free "
+        "between Sales and Sales RTN). Previous Last Sale / Previous Sale are "
+        "lms history — never this period's Opening or Sales. Sale Value is "
+        "sales_value money after Sales RTN; Cl Value is closing_value — never "
+        "put Sale Value into Closing or leave Sale Value null/0 when a money "
+        "digit is printed. Closing and Cl Value sit after Others and before "
+        "expQty — never emit 0/null for Closing/Cl Value when digits are "
+        "printed there (e.g. Closing 21 / Cl Value 3263). Previous Sale must "
+        "not slide into Opening/Receipt/Sales; keep blank Free/Sales RTN/"
+        "Purchase RTN/Others/expQty/nonMove/Flag as null so later columns do "
+        "not shift. Emit one cell per header for every product row. "
+        "When the same header band repeats in stacked blocks on one image, "
+        "treat them as one continued table top-to-bottom: emit each visible "
+        "product row once, never invent catalog SKUs that are not printed, and "
+        "never duplicate a product across blocks. Mark ----Total---->> / "
+        "---Total--->> as is_total_row=true. "
         "Stock and Sale grids with Op|Pur|Gd.In|Tot In|Sale|Gd.Out|Closing|"
         "Purchase|Sale|Stock: Closing is closing_qty; trailing Purchase|Sale|"
         "Stock are purchase_value|sales_value|closing_value money — never put "
@@ -2225,15 +2385,82 @@ def _split_min_height() -> int:
 def _vertical_split_eager_enabled() -> bool:
     """STOCK_VISION_VERTICAL_SPLIT_EAGER — tall images: top+bottom halves first.
 
-    Default OFF (recon-priority deferral). ON uses both Gemini slots for halves
-    so dense statements keep opening/receipt cells instead of nulling them.
+    Default ON. Dense Pack|Rate|Prev|Opening|…|Sale Value stacked scans need
+    both Gemini slots on halves or freeform Gemini invents SKUs and shifts
+    Prev Sale into Opening. Kill switch: false.
     """
-    return os.getenv("STOCK_VISION_VERTICAL_SPLIT_EAGER", "false").strip().lower() in {
+    return os.getenv("STOCK_VISION_VERTICAL_SPLIT_EAGER", "true").strip().lower() in {
         "1",
         "true",
         "yes",
         "on",
     }
+
+
+def _narrow_stacked_vision_upscale_enabled() -> bool:
+    """STOCK_VISION_NARROW_STACKED_UPSCALE — 2x+contrast for tall narrow grids.
+
+    Default ON. OKEN-style Pack|Rate|Prev|Opening|…|Cl Value strips are often
+    ~1000px wide with 18 columns; native resolution makes Closing/Cl Value and
+    Opening/Receipt digits unreadable and invents catalog SKUs. Kill switch: false.
+    """
+    return os.getenv("STOCK_VISION_NARROW_STACKED_UPSCALE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _upscale_narrow_stacked_vision_image(img: bytes) -> bytes:
+    """2x LANCZOS + autocontrast + mild sharpen for narrow stacked multi-block.
+
+    No-op when disabled, wide enough already, or not a tall stacked strip.
+    """
+    if not _narrow_stacked_vision_upscale_enabled():
+        return img
+    w, h = _image_dimensions(img)
+    if w <= 0 or h <= 0:
+        return img
+    aspect = h / float(w)
+    # Match stacked_multi_block gate in _needs_vertical_split; skip wide sheets.
+    if aspect < 2.0 or h < 1600 or w >= 1600:
+        return img
+    try:
+        from PIL import Image, ImageEnhance, ImageOps
+        import io
+
+        with Image.open(io.BytesIO(img)) as im:
+            im = im.convert("RGB")
+            big = im.resize(
+                (max(1, im.width * 2), max(1, im.height * 2)),
+                Image.Resampling.LANCZOS,
+            )
+            big = ImageOps.autocontrast(big)
+            big = ImageEnhance.Contrast(big).enhance(1.35)
+            big = ImageEnhance.Sharpness(big).enhance(1.8)
+            buf = io.BytesIO()
+            fmt = "JPEG" if img[:2] == b"\xff\xd8" else "PNG"
+            if fmt == "JPEG":
+                big.save(buf, format="JPEG", quality=95)
+            else:
+                big.save(buf, format="PNG")
+            out = buf.getvalue()
+        logger.info(
+            "VISION_TABLE NARROW_STACKED_UPSCALE from=%sx%s to=%sx%s bytes=%s",
+            w,
+            h,
+            w * 2,
+            h * 2,
+            len(out),
+        )
+        return out
+    except Exception as exc:
+        logger.info(
+            "VISION_TABLE NARROW_STACKED_UPSCALE_SKIP err=%s",
+            type(exc).__name__,
+        )
+        return img
 
 
 def _coerce_y_center_to_fraction(
@@ -2311,7 +2538,19 @@ def _pack_cell_is_company_banner(text: Any) -> bool:
 
 
 def _normalize_product_key(name: Any) -> str:
-    return re.sub(r"[^a-z0-9]", "", str(name or "").lower())
+    """Normalize product names for crop-overlap dedupe.
+
+    Collapses packing OCR noise (20NX8 vs 20X8'S) and common letter
+    swaps (SHILAJEET/SHILAJIT) so stacked-half twins merge instead of
+    both surviving as CROP_OVERLAP_CONFLICT.
+    """
+    text = str(name or "").lower()
+    text = text.replace("jeet", "jit")
+    # Packing OCR: 10NX6 / 20NX8 → 10X6 / 20X8; strip trailing INDIA/IND.
+    text = re.sub(r"(\d+)\s*n\s*x\s*(\d+)", r"\1x\2", text)
+    text = re.sub(r"\bindia\b", " ", text)
+    text = re.sub(r"\bind\b", " ", text)
+    return re.sub(r"[^a-z0-9]", "", text)
 
 
 def _gemini_response_text(response: Any) -> str:
@@ -3273,13 +3512,19 @@ def _needs_vertical_split(img: bytes) -> bool:
     w, h = _image_dimensions(img)
     if h <= 0:
         return False
-    if h >= _split_min_height():
-        # Narrow upright phone frames: prefer one shot unless extremely tall.
+    # Stacked multi-block scans (OKEN etc.): aspect >= 2 even under 2800px.
+    # One full-frame call invents catalog SKUs and shifts Prev Sale → Opening.
+    aspect = (h / float(w)) if w > 0 else 0.0
+    stacked_multi_block = w > 0 and aspect >= 2.0 and h >= 1600
+    if h >= _split_min_height() or stacked_multi_block:
+        # Narrow upright phone frames: prefer one shot unless extremely tall
+        # or clearly a stacked multi-block strip (aspect >= 2).
         if (
             _phone_portrait_skip_split_enabled()
             and w < h
             and w < 2800
             and h < _phone_portrait_split_min_height()
+            and not stacked_multi_block
         ):
             logger.info(
                 "VISION_TABLE skip_vertical_split phone_portrait w=%s h=%s "
@@ -3289,6 +3534,14 @@ def _needs_vertical_split(img: bytes) -> bool:
                 _phone_portrait_split_min_height(),
             )
             return False
+        if stacked_multi_block and h < _split_min_height():
+            logger.info(
+                "VISION_TABLE need_vertical_split stacked_multi_block "
+                "w=%s h=%s aspect=%.2f",
+                w,
+                h,
+                aspect,
+            )
         return True
     # Portrait-leaning wide sheets only — not landscape desk photos.
     if w < h and w >= 3000 and h >= 2200:
@@ -3297,7 +3550,11 @@ def _needs_vertical_split(img: bytes) -> bool:
 
 
 def _vertical_halves(img: bytes) -> List[bytes]:
-    """Split into overlapping top/bottom crops (JPEG/PNG matching input)."""
+    """Split into overlapping top/bottom crops (JPEG/PNG matching input).
+
+    Stacked multi-block strips (aspect >= 2) use a larger overlap so the
+    middle product block and Closing/Cl Value digits are in both halves.
+    """
     try:
         from PIL import Image
         import io
@@ -3306,7 +3563,11 @@ def _vertical_halves(img: bytes) -> List[bytes]:
             w, h = im.size
             if h < 400:
                 return [img]
-            overlap = int(h * 0.10)
+            aspect = (h / float(w)) if w > 0 else 0.0
+            # Tall stacked OKEN strips: slightly larger overlap for middle block
+            # without flooding CROP_OVERLAP_CONFLICT twins (18% was too wide).
+            overlap_frac = 0.12 if aspect >= 2.0 else 0.10
+            overlap = int(h * overlap_frac)
             mid = h // 2
             top_box = (0, 0, w, min(h, mid + overlap))
             bot_box = (0, max(0, mid - overlap), w, h)
@@ -3317,7 +3578,7 @@ def _vertical_halves(img: bytes) -> List[bytes]:
                 buf = io.BytesIO()
                 save_kw: Dict[str, Any] = {}
                 if fmt == "JPEG":
-                    save_kw["quality"] = 92
+                    save_kw["quality"] = 95
                     if crop.mode not in ("RGB", "L"):
                         crop = crop.convert("RGB")
                 crop.save(buf, format=fmt, **save_kw)
@@ -3852,6 +4113,8 @@ def _merge_proposed_mapping(
                 "prev. sale",
                 "previous sale",
                 "previous sales",
+                "previous last sale",
+                "prev last sale",
             } or resolver_canon == "lms":
                 if model_canon in {
                     "opening_qty",
@@ -3863,6 +4126,15 @@ def _merge_proposed_mapping(
                 }:
                     header_ok = False
                     errors.append(f"LMS_MODEL_BLOCK col={idx}")
+            # Printed Free between Sales and Sales RTN must stay free_out —
+            # model often remaps it to sales_qty and shifts Sale Value left.
+            if header_norm == "free" or resolver_canon == "free_out_qty":
+                if (
+                    model_canon in CANONICAL_FIELDS
+                    and model_canon not in {"free_out_qty", "ignore"}
+                ):
+                    header_ok = False
+                    errors.append(f"FREE_MODEL_BLOCK col={idx}")
             # Stk. Value / stock value is closing stock money, never opening_value.
             if header_norm in {
                 "stk value",
@@ -3972,14 +4244,16 @@ def _merge_proposed_mapping(
                 item["source"] = "model"
                 item["reason"] = "proposed_mapping"
             elif (
-                resolver_conf >= 0.8
+                header_ok
+                and resolver_conf >= 0.8
                 and model_canon in CANONICAL_FIELDS
                 and model_canon != "ignore"
                 and model_canon != resolver_canon
             ):
                 errors.append(f"MAPPING_DISAGREE col={idx}")
             elif (
-                resolver_canon != "ignore"
+                header_ok
+                and resolver_canon != "ignore"
                 and resolver_conf >= 0.5
                 and model_canon in CANONICAL_FIELDS
                 and model_canon != "ignore"
@@ -4781,15 +5055,30 @@ def _restore_issue_fields_from_header(
                 and _looks_small_qty(sv_now)
                 and not _looks_money(sv_now, raw_text=str(sv_now))
             ):
-                item["sales_value"] = float(printed_sv)
-                fs["sales_value"] = "printed"
-                changed = True
-                logger.info(
-                    "VISION_TABLE ISSUE_VALUE_FROM_HEADER product=%s "
-                    "sales_value=%s",
-                    str(item.get("product_name") or "")[:60],
-                    float(printed_sv),
-                )
+                flags_now = list(extra.get("flags") or [])
+                # Cl Value was moved out of Sale Value — do not revive the
+                # same printed cell back into sales_value.
+                skip_sv_restore = "CLOSING_VALUE_IN_SALES_VALUE" in flags_now
+                if not skip_sv_restore:
+                    try:
+                        cv_now = item.get("closing_value")
+                        if (
+                            cv_now is not None
+                            and abs(float(cv_now) - float(printed_sv)) <= 0.05
+                        ):
+                            skip_sv_restore = True
+                    except (TypeError, ValueError):
+                        pass
+                if not skip_sv_restore:
+                    item["sales_value"] = float(printed_sv)
+                    fs["sales_value"] = "printed"
+                    changed = True
+                    logger.info(
+                        "VISION_TABLE ISSUE_VALUE_FROM_HEADER product=%s "
+                        "sales_value=%s",
+                        str(item.get("product_name") or "")[:60],
+                        float(printed_sv),
+                    )
         elif (
             printed_sv is not None
             and closing is not None
@@ -5320,7 +5609,15 @@ def _repair_closing_money_parked_in_qty(item: Dict[str, Any]) -> bool:
     raw = _closing_qty_raw_text(item)
     if not _looks_money(cq, raw_text=raw):
         return False
-    if not _closing_value_missing(item):
+    # Cl Value often emits printed 0 while money sits in Closing — treat that
+    # blank zero as missing so the money can move into closing_value.
+    cv_blank_zero = False
+    try:
+        cv0 = item.get("closing_value")
+        cv_blank_zero = cv0 is not None and abs(float(cv0)) < 0.001
+    except (TypeError, ValueError):
+        cv_blank_zero = False
+    if not _closing_value_missing(item) and not cv_blank_zero:
         return False
     # If opening + receipt - sales ≈ closing_qty, the cell is qty — do not park.
     try:
@@ -6621,6 +6918,259 @@ def _repair_clear_money_duplicate_free_out(item: Dict[str, Any]) -> bool:
     return True
 
 
+def _pack_rate_open_sales_in_free_enabled() -> bool:
+    """STOCK_VISION_PACK_RATE_OPEN_SALES_IN_FREE — default ON.
+
+    Pack|Rate|Prev*|Opening|Receipt|Sales|Free grids: Vision parks Opening
+    under Receipt and Sales under Free when Closing/Sale Value are unread.
+    Reassign printed digits only — never invent Closing or Sale Value.
+    """
+    return os.getenv(
+        "STOCK_VISION_PACK_RATE_OPEN_SALES_IN_FREE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _repair_pack_rate_opening_receipt_sales_in_free(item: Dict[str, Any]) -> bool:
+    """Opening→Receipt and Sales→Free left-shift on Pack|Rate|…|Free grids.
+
+    Symptom: opening=0, receipts=N, sales=0, free_out=S (small qtys). Moves
+    N→opening and S→sales. Leaves Closing/Sale Value as Vision emitted them
+    (often missing) — never invents those digits.
+    """
+    if not _pack_rate_open_sales_in_free_enabled():
+        return False
+    if not _pack_rate_sale_value_layout_enabled():
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    if fs.get("free_out_qty") != "printed":
+        return False
+    headers = extra.get("vision_column_headers") or []
+    header_blob = " ".join(str(h or "").lower() for h in headers)
+    if headers and "free" not in header_blob:
+        return False
+    free_out = extra.get("free_out_qty")
+    if _looks_money(free_out) or not _looks_small_qty(free_out):
+        return False
+    try:
+        fo = float(free_out)
+    except (TypeError, ValueError):
+        return False
+    if abs(fo) < 0.001:
+        return False
+    if not (
+        item.get("sales_qty") is None
+        or fs.get("sales_qty") == "missing"
+        or _qty_is_blank_zero(item.get("sales_qty"))
+    ):
+        return False
+    opening_blank = (
+        item.get("opening_qty") is None
+        or fs.get("opening_qty") == "missing"
+        or _qty_is_blank_zero(item.get("opening_qty"))
+    )
+    receipt = item.get("receipts_qty")
+    receipt_ok = (
+        fs.get("purchase_qty") == "printed" or fs.get("receipts_qty") == "printed"
+    ) and _looks_small_qty(receipt) and not _qty_is_blank_zero(receipt)
+    if not (opening_blank and receipt_ok):
+        # Sales-only in Free (Opening already correct) — still move Free→Sales
+        # when Closing/Sale Value unread so Free does not hold period sales.
+        if not opening_blank:
+            item["sales_qty"] = fo
+            extra["free_out_qty"] = None
+            fs["sales_qty"] = "printed"
+            fs["free_out_qty"] = "missing"
+            flags = list(extra.get("flags") or [])
+            if "PACK_RATE_SALES_IN_FREE" not in flags:
+                flags.append("PACK_RATE_SALES_IN_FREE")
+            extra["flags"] = flags
+            logger.info(
+                "VISION_TABLE PACK_RATE_SALES_IN_FREE product=%s sales_qty=%s",
+                str(item.get("product_name") or "")[:60],
+                fo,
+            )
+            return True
+        return False
+    try:
+        rc = float(receipt)
+    except (TypeError, ValueError):
+        return False
+    item["opening_qty"] = rc
+    item["receipts_qty"] = 0.0
+    item["sales_qty"] = fo
+    extra["free_out_qty"] = None
+    fs["opening_qty"] = "printed"
+    fs["purchase_qty"] = "printed"
+    fs["sales_qty"] = "printed"
+    fs["free_out_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "PACK_RATE_OPEN_SALES_IN_FREE" not in flags:
+        flags.append("PACK_RATE_OPEN_SALES_IN_FREE")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PACK_RATE_OPEN_SALES_IN_FREE product=%s "
+        "opening_qty=%s sales_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        rc,
+        fo,
+    )
+    return True
+
+
+def _closing_value_in_sales_value_enabled() -> bool:
+    """STOCK_VISION_CLOSING_VALUE_IN_SALES_VALUE — default ON."""
+    return os.getenv(
+        "STOCK_VISION_CLOSING_VALUE_IN_SALES_VALUE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _repair_closing_value_parked_in_sales_value(
+    item: Dict[str, Any],
+    next_item: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Move Cl Value out of Sale Value when Closing Value was stolen from next.
+
+    Pack|Rate|…|Sale Value|…|Cl Value: Vision puts this row's Cl Value under
+    Sale Value and copies the next row's Cl Value into closing_value. Reassigns
+    the printed Sale Value digit into closing_value; clears sales_value. Never
+    invents Sale Value or Sales qty.
+    """
+    if not _closing_value_in_sales_value_enabled():
+        return False
+    if not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    sv = item.get("sales_value")
+    cv = item.get("closing_value")
+    cq = item.get("closing_qty")
+    if not _looks_money(sv):
+        return False
+    if not _looks_small_qty(cq) or _qty_is_blank_zero(cq):
+        return False
+    if not _looks_money(cv):
+        return False
+    try:
+        sv_f = float(sv)
+        cv_f = float(cv)
+    except (TypeError, ValueError):
+        return False
+    if abs(sv_f - cv_f) <= 0.05:
+        return False
+    # Next row shares this closing_value → contamination signal.
+    stolen = False
+    if isinstance(next_item, dict):
+        ncv = next_item.get("closing_value")
+        try:
+            if ncv is not None and abs(float(ncv) - cv_f) <= 0.05:
+                stolen = True
+        except (TypeError, ValueError):
+            stolen = False
+    if not stolen:
+        return False
+    # Current identity must fail (sales digit/value mix is wrong).
+    err = _ssa_simple_identity_error(item)
+    if err is not None and err <= 0.51:
+        return False
+    item["closing_value"] = sv_f
+    item["sales_value"] = None
+    extra["sales_value"] = None
+    fs["closing_value"] = "printed"
+    fs["sales_value"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "CLOSING_VALUE_IN_SALES_VALUE" not in flags:
+        flags.append("CLOSING_VALUE_IN_SALES_VALUE")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE CLOSING_VALUE_IN_SALES_VALUE product=%s "
+        "closing_value=%s sales_value=missing",
+        str(item.get("product_name") or "")[:60],
+        sv_f,
+    )
+    return True
+
+
+def _neighbor_closing_steal_clear_enabled() -> bool:
+    """STOCK_VISION_CLEAR_NEIGHBOR_CLOSING_STEAL — default ON."""
+    return os.getenv(
+        "STOCK_VISION_CLEAR_NEIGHBOR_CLOSING_STEAL", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _clear_neighbor_stolen_closing_fields(
+    items: Sequence[Dict[str, Any]],
+) -> int:
+    """Clear Closing/Cl Value on row A when they match row B and A fails identity.
+
+    Neighbor contamination on Pack|Rate grids (e.g. RUMALAYA GEL taking
+    LINIMENT's Closing 65). Clears the stolen printed assignment to missing —
+    never invents the correct Closing.
+    """
+    if not _neighbor_closing_steal_clear_enabled():
+        return 0
+    cleared = 0
+    for i in range(len(items) - 1):
+        a = items[i]
+        b = items[i + 1]
+        if not isinstance(a, dict) or not isinstance(b, dict):
+            continue
+        a_err = _ssa_simple_identity_error(a)
+        b_err = _ssa_simple_identity_error(b)
+        if a_err is None or a_err <= 0.51:
+            continue
+        if b_err is None or b_err > 0.51:
+            continue
+        try:
+            ca = a.get("closing_qty")
+            cb = b.get("closing_qty")
+            if ca is None or cb is None:
+                continue
+            ca_f = float(ca)
+            cb_f = float(cb)
+        except (TypeError, ValueError):
+            continue
+        if abs(ca_f) < 0.001 or abs(ca_f - cb_f) > 0.05:
+            continue
+        extra = a.setdefault("extra", {})
+        fs = extra.setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            continue
+        a["closing_qty"] = None
+        fs["closing_qty"] = "missing"
+        # Shared Cl Value with the neighbor is the same steal.
+        try:
+            av = a.get("closing_value")
+            bv = b.get("closing_value")
+            if (
+                av is not None
+                and bv is not None
+                and abs(float(av) - float(bv)) <= 0.05
+            ):
+                a["closing_value"] = None
+                extra["closing_value"] = None
+                fs["closing_value"] = "missing"
+        except (TypeError, ValueError):
+            pass
+        flags = list(extra.get("flags") or [])
+        if "NEIGHBOR_CLOSING_STEAL_CLEARED" not in flags:
+            flags.append("NEIGHBOR_CLOSING_STEAL_CLEARED")
+        extra["flags"] = flags
+        cleared += 1
+        logger.info(
+            "VISION_TABLE NEIGHBOR_CLOSING_STEAL_CLEARED product=%s "
+            "stolen_closing=%s neighbor=%s",
+            str(a.get("product_name") or "")[:60],
+            ca_f,
+            str(b.get("product_name") or "")[:60],
+        )
+    return cleared
+
+
 def _repair_opvalue_opening_mirrored_in_sales(item: Dict[str, Any]) -> bool:
     """Restore opening when Vision left Op blank and mirrored it under Sales/Cl.
 
@@ -6945,6 +7495,9 @@ def _repair_qty_copied_into_value_fields(item: Dict[str, Any]) -> bool:
         if qf is None or vf is None:
             continue
         if abs(qf - vf) > 0.001:
+            continue
+        # Both zero is not a qty-copied-into-value bug — skip (no flag).
+        if abs(qf) < 0.001 and abs(vf) < 0.001:
             continue
         if _looks_money(vf) or not _looks_small_qty(vf):
             continue
@@ -9412,19 +9965,31 @@ def _compare_line_sums_to_printed_total(
     printed_vals = {k: round(_num(printed, k), 2) for k, _ in fields}
     # Footer-only remap: money parked in a TOTAL qty cell (e.g. OP.STK total
     # holding opening stock value) — move into the paired value for compare.
+    # Skip when Cl Value already has paisa money: Pack|Rate|…|Cl Value totals
+    # print large aggregate Opening/Receipt/Sales qtys that must stay qty.
+    closing_val_has_paisa = False
+    try:
+        raw_cv = printed.get("closing_value")
+        if raw_cv is None and isinstance(printed.get("extra"), dict):
+            raw_cv = printed["extra"].get("closing_value")
+        if raw_cv is not None and abs(float(raw_cv) - int(float(raw_cv))) > 0.001:
+            closing_val_has_paisa = abs(float(raw_cv)) >= 1.0
+    except (TypeError, ValueError):
+        closing_val_has_paisa = False
     remapped_value_fields = set()
-    for qty_k, val_k in (
-        ("opening_qty", "opening_value"),
-        ("receipts_qty", "receipts_value"),
-        ("sales_qty", "sales_value"),
-        ("closing_qty", "closing_value"),
-    ):
-        q = printed_vals.get(qty_k, 0.0)
-        v = printed_vals.get(val_k, 0.0)
-        if _looks_money(q) and abs(v) < 0.001:
-            printed_vals[val_k] = q
-            printed_vals[qty_k] = 0.0
-            remapped_value_fields.add(val_k)
+    if not closing_val_has_paisa:
+        for qty_k, val_k in (
+            ("opening_qty", "opening_value"),
+            ("receipts_qty", "receipts_value"),
+            ("sales_qty", "sales_value"),
+            ("closing_qty", "closing_value"),
+        ):
+            q = printed_vals.get(qty_k, 0.0)
+            v = printed_vals.get(val_k, 0.0)
+            if _looks_money(q) and abs(v) < 0.001:
+                printed_vals[val_k] = q
+                printed_vals[qty_k] = 0.0
+                remapped_value_fields.add(val_k)
     diffs: Dict[str, float] = {}
     for k, _ in fields:
         if abs(line_sums[k] - printed_vals[k]) <= 0.51:
@@ -9900,6 +10465,8 @@ _ALWAYS_NON_PRODUCT_NAME = re.compile(
     r"\([^)]*\bdiv(?:i|ision)?\b[^)]*\)|"
     r"\bhimalaya\b\s*\(|"
     r"\bERP\b.{0,80}(?:Rs\.?\s*\d{3,}|\bfor\s+Chemist\b)|"
+    # Header band leaked as a product row on stacked Pack|Rate|… scans.
+    r"^\s*product\s*name\s*$|"
     # Packing / unit fragments mis-read as their own product row.
     r"^\s*(?:GM|GMS|G|ML|MG|WA|TAB|CAP|PCS?|\d+\s*G(?:M)?)\s*$"
 )
@@ -10947,6 +11514,8 @@ def _map_single_table(
             _repair_pur_free_sale_closing_left_shift(item)
             # Sales Qty=0 with the real count under Sales Free (free_out).
             _repair_sales_qty_parked_in_free_out(item)
+            # Pack|Rate|Free: Opening parked in Receipt, Sales parked in Free.
+            _repair_pack_rate_opening_receipt_sales_in_free(item)
             # OpValue no-movement: Op blank, same digits under Sales/Cl.
             _repair_opvalue_opening_mirrored_in_sales(item)
             # Drop free_out when it is a duplicate of sales_value money.
@@ -11048,6 +11617,20 @@ def _map_single_table(
                 _repair_ssa_analysis_item_from_physical_cells(item)
         except Exception:
             logger.exception("STOCK_VISION_PRE_SNAPSHOT_REMAP_FAILED")
+
+    # Pack|Rate neighbor passes need adjacent rows (Cl Value in Sale Value,
+    # Closing stolen from next product). Never invent replacement digits.
+    for i, item in enumerate(line_items):
+        if not isinstance(item, dict):
+            continue
+        nxt = line_items[i + 1] if i + 1 < len(line_items) else None
+        _repair_closing_value_parked_in_sales_value(
+            item, nxt if isinstance(nxt, dict) else None
+        )
+    _clear_neighbor_stolen_closing_fields(line_items)
+    for tot in totals_rows:
+        if isinstance(tot, dict):
+            _repair_clear_money_duplicate_free_out(tot)
 
     for item in line_items:
         _maybe_stamp_vision_first_snapshot(item)
@@ -11267,6 +11850,26 @@ def _item_has_nonzero_qty(item: Dict[str, Any]) -> bool:
     return False
 
 
+def _item_has_printed_closing_pair(item: Dict[str, Any]) -> bool:
+    """True when Closing qty and Cl Value both look printed/non-empty."""
+    if not isinstance(item, dict):
+        return False
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+    try:
+        cq = item.get("closing_qty")
+        cv = item.get("closing_value")
+        if cq is None or cv is None:
+            return False
+        if abs(float(cq)) <= 1e-9 and abs(float(cv)) <= 1e-9:
+            return False
+    except (TypeError, ValueError):
+        return False
+    if fs.get("closing_qty") == "missing" or fs.get("closing_value") == "missing":
+        return False
+    return True
+
+
 def dedupe_crop_overlap_rows(
     items: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -11336,6 +11939,54 @@ def dedupe_crop_overlap_rows(
                         str(item.get("product_name") or "")[:60],
                     )
                     matched_exact = True  # drop new
+                    break
+                # Prefer the twin that kept Closing + Cl Value digits.
+                prev_cl = _item_has_printed_closing_pair(prev)
+                item_cl = _item_has_printed_closing_pair(item)
+                if item_cl and not prev_cl:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_CLOSING "
+                        "keep_new product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    out[idx] = item
+                    replaced = True
+                    break
+                if prev_cl and not item_cl:
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_CLOSING "
+                        "keep_prev product=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    matched_exact = True
+                    break
+                # Both have closing but neither balances — keep closer identity.
+                prev_err = _ssa_simple_identity_error(prev)
+                item_err = _ssa_simple_identity_error(item)
+                if (
+                    prev_err is not None
+                    and item_err is not None
+                    and abs(item_err - prev_err) > 0.51
+                ):
+                    if item_err < prev_err:
+                        logger.info(
+                            "VISION_TABLE CROP_OVERLAP_PREFER_CLOSER_IDENTITY "
+                            "keep_new product=%s err=%.2f<%.2f",
+                            str(item.get("product_name") or "")[:60],
+                            item_err,
+                            prev_err,
+                        )
+                        out[idx] = item
+                        replaced = True
+                        break
+                    logger.info(
+                        "VISION_TABLE CROP_OVERLAP_PREFER_CLOSER_IDENTITY "
+                        "keep_prev product=%s err=%.2f<%.2f",
+                        str(item.get("product_name") or "")[:60],
+                        prev_err,
+                        item_err,
+                    )
+                    matched_exact = True
                     break
         if matched_exact or replaced:
             continue
@@ -13100,9 +13751,17 @@ def run_vision_table_path(
                 cropped = _crop_bright_spreadsheet_region(image_bytes_for_vision)
             except Exception:
                 cropped = None
-            page_images = [cropped or image_bytes_for_vision]
+            base_img = cropped or image_bytes_for_vision
             if cropped:
                 _log("table_crop_applied", bytes=len(cropped))
+            # Narrow tall Pack|Rate|…|Cl Value strips: 2x before split/Gemini.
+            upscaled = _upscale_narrow_stacked_vision_image(base_img)
+            if upscaled is not base_img and len(upscaled) != len(base_img):
+                uw, uh = _image_dimensions(upscaled)
+                _log("narrow_stacked_upscale", to_w=uw, to_h=uh, bytes=len(upscaled))
+                base_img = upscaled
+                image_bytes_for_vision = upscaled
+            page_images = [base_img]
             gemini_budget = 2
         elif kind == "scanned_pdf":
             from services.gemini_extraction_fallback import _pdf_images
@@ -13134,6 +13793,9 @@ def run_vision_table_path(
         # Tall-image vertical split: default defers for recon-recovery priority.
         # STOCK_VISION_VERTICAL_SPLIT_EAGER=true spends both Gemini slots on
         # overlapping top/bottom halves so dense statements keep product qtys.
+        # Narrow-stacked 2x upscale + eager halves is the reliable path for
+        # Pack|Rate|Prev|Opening|…|Cl Value OKEN strips (full-frame shifts
+        # Prev Sale into Opening and parks Sale Value into Cl Value).
         deferred_vertical_split = False
         eager_vertical_split = False
         original_image_for_reread: Optional[bytes] = (
@@ -13301,6 +13963,18 @@ def run_vision_table_path(
         _apply_unread_zero_closing_pass(all_items)
         _apply_closing_qty_from_header_pass(all_items, column_map or [])
         _apply_issue_from_header_pass(all_items, column_map or [])
+        # Re-apply Pack|Rate neighbor fixes after ISSUE_FROM_HEADER so Sale
+        # Value cells are not revived into sales_value after Cl Value move.
+        for i, item in enumerate(all_items):
+            if not isinstance(item, dict):
+                continue
+            nxt = all_items[i + 1] if i + 1 < len(all_items) else None
+            _repair_closing_value_parked_in_sales_value(
+                item, nxt if isinstance(nxt, dict) else None
+            )
+            _repair_pack_rate_opening_receipt_sales_in_free(item)
+            _repair_clear_money_duplicate_free_out(item)
+        _clear_neighbor_stolen_closing_fields(all_items)
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
         all_totals.extend(peeled_totals)
