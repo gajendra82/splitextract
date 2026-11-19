@@ -5498,6 +5498,12 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     has_footer_qty = _total_row_src == "footer_total"
     # prompt_datewise_footer already stored printed Total qty in extra — keep it.
     preserve_prompt_datewise_footer_qty = _total_row_src == "prompt_datewise_footer"
+    # Pack|Rate|…|Sales|Free footers: keep printed Sales (2nd-last before Free).
+    preserve_pack_rate_printed_qty = (
+        _total_row_src == "pack_rate_sale_value_footer"
+        or str(totals.get("extra", {}).get("sales_qty_source") or "")
+        == "printed_total"
+    )
     if has_footer_qty:
         if totals.get("sales_qty") is not None:
             totals["extra"]["sales_qty"] = totals.get("sales_qty")
@@ -5507,7 +5513,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             totals["extra"]["closing_qty"] = totals.get("closing_qty")
         else:
             totals["extra"]["closing_qty"] = sum_closing_qty
-    elif preserve_prompt_datewise_footer_qty:
+    elif preserve_prompt_datewise_footer_qty or preserve_pack_rate_printed_qty:
         if totals["extra"].get("sales_qty") is None:
             totals["extra"]["sales_qty"] = sum_sales_qty
         if totals["extra"].get("closing_qty") is None:
@@ -5545,6 +5551,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "item_packg_open_stk_value_footer",
         "prompt_datewise_footer",
         "printed_total",
+        "pack_rate_sale_value_footer",
         # Op.Qty|Pur.Qty|Sale.Qty|Bal manufacturer money band (qty-only grid).
         "op_qty_pur_sale_bal_manufacturer_band",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
@@ -45601,32 +45608,28 @@ def _lstsl_take_qty_tail(
 
 
 def _pdf_pack_rate_sale_value_enabled() -> bool:
-    """STOCK_PDF_PACK_RATE_SALE_VALUE — Pack|Rate|Opening|Sale Value|Cl Value PDF.
+    """Pack|Rate|Opening|Sale Value|Cl Value PDF peel — always ON in code.
 
-    Default ON. Dense Stock-And-Sales grids mash header glyphs; vision then
-    shifts Sale Value into sales_qty. Kill switch: false.
+    Dense Stock-And-Sales grids mash header glyphs; vision then shifts Sale
+    Value into sales_qty. No .env key — enable/disable only by changing this
+    return (do not ask ops to set STOCK_PDF_PACK_RATE_SALE_VALUE).
     """
-    return os.getenv("STOCK_PDF_PACK_RATE_SALE_VALUE", "true").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    return True
 
 
 def _text_has_pack_rate_sale_value_chrome(text: str) -> bool:
     """Fingerprint Pack|Rate|Opening|Receipt|Sales|Sale Value|Closing|Cl Value."""
     if not text:
         return False
-    blob = text[:8000]
+    blob = text[:12000]
     has_title = bool(
         re.search(r"Stock\s+And\s+Sales\s+for\s+the\s+period", blob, re.I)
         or re.search(r"Sale\s*Value", blob, re.I)
     )
-    # Headers often glue (SaOpening / SaOlepening) — match Opening OR Open stem.
+    # Headers often glue (SaOpening / SalOepening) — Opening OR Oepening stem.
     return bool(
         has_title
-        and re.search(r"Open(?:ing|e?ning)?", blob, re.I)
+        and re.search(r"Open(?:ing)?|Oepening", blob, re.I)
         and re.search(r"Receipt", blob, re.I)
         and re.search(r"Sales", blob, re.I)
         and re.search(r"Cl\s*Value|Closing", blob, re.I)
@@ -45638,6 +45641,7 @@ def _text_has_pack_rate_sale_value_chrome(text: str) -> bool:
     )
 
 
+# Without Free (common wide single page). With Free when that column is printed.
 _PACK_RATE_SALE_VALUE_KEYS: Tuple[str, ...] = (
     "rate",
     "prev_la",
@@ -45654,12 +45658,226 @@ _PACK_RATE_SALE_VALUE_KEYS: Tuple[str, ...] = (
     "exp",
     "nonmove",
 )
+_PACK_RATE_SALE_VALUE_KEYS_WITH_FREE: Tuple[str, ...] = (
+    "rate",
+    "prev_la",
+    "prev_sa",
+    "op",
+    "pur",
+    "sale",
+    "free",
+    "srtn",
+    "sval",
+    "prtn",
+    "others",
+    "bal",
+    "bval",
+    "exp",
+    "nonmove",
+)
+
+
+def _pack_rate_keys_for_num_count(n: int) -> Tuple[str, ...]:
+    """Pick Free-aware key tuple from how many numeric slots were printed."""
+    if n >= len(_PACK_RATE_SALE_VALUE_KEYS_WITH_FREE):
+        return _PACK_RATE_SALE_VALUE_KEYS_WITH_FREE
+    return _PACK_RATE_SALE_VALUE_KEYS
+
+
+def _pack_rate_row_from_band_texts(
+    texts: List[str],
+    *,
+    num_re: re.Pattern,
+    pack_re: re.Pattern,
+    keys: Tuple[str, ...],
+    min_nums: int = 12,
+) -> Optional[List[str]]:
+    """Turn one row's tokens into [name, pack, ...nums] or None."""
+    texts = [t for t in texts if t]
+    if not texts:
+        return None
+    joined = " ".join(texts)
+    if re.search(
+        r"product\s*nam|sale\s*value|----total|\btotal\b|stock\s+and\s+sales",
+        joined,
+        re.I,
+    ):
+        if re.search(r"total", joined, re.I):
+            return ["__TOTAL__"] + texts
+        return None
+    while texts and re.fullmatch(r"[*\sD]+", texts[-1] or "", re.I):
+        texts.pop()
+    texts = [re.sub(r"[*\s]+$", "", t) if t else t for t in texts]
+    texts = [t for t in texts if t]
+    nums: List[str] = []
+    cut = len(texts)
+    while cut > 0 and len(nums) < len(keys):
+        tok = texts[cut - 1].replace(",", "")
+        tok = re.sub(r"[*D]+$", "", tok, flags=re.I)
+        if num_re.match(tok):
+            nums.insert(0, tok)
+            cut -= 1
+            continue
+        break
+    if len(nums) < min_nums:
+        return None
+    while len(nums) < len(keys):
+        nums.append("")
+    left = texts[:cut]
+    packing = None
+    ordered_name_parts: List[str] = []
+    _pack_unit_only = re.compile(
+        r"^(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S|''S)$", re.I
+    )
+    for p in left:
+        if packing is None and pack_re.match(p or ""):
+            packing = p
+            continue
+        if _pack_unit_only.match(p or ""):
+            # Lone unit tokens (ML/TAB) are packing crumbs, not the SKU name.
+            if packing is None:
+                packing = p
+            continue
+        if num_re.match((p or "").replace(",", "")):
+            continue
+        if (
+            re.search(r"\d", p or "")
+            and re.search(r"[A-Za-z]", p or "")
+            and len(p) >= 3
+            and not pack_re.match(p or "")
+        ):
+            m_pack = re.search(
+                r"(\d+\s*(?:ML|GMS?|GM|TAB|TABS|'S|S|''S))$",
+                p,
+                re.I,
+            )
+            if m_pack and packing is None:
+                packing = m_pack.group(1)
+            # Keep product codes with digits (LIV-52, CYSTONE-SF2, BONNISPAZ1).
+            stem = re.match(r"^([A-Za-z][A-Za-z0-9./-]{1,})", p or "")
+            if stem and len(stem.group(1).strip()) >= 3:
+                ordered_name_parts.append(stem.group(1).strip())
+            continue
+        if re.search(r"[A-Za-z]", p or ""):
+            # Skip short OCR crumbs like "5D" / "G0" that are pack mash leftovers.
+            if len(p) <= 2 and re.search(r"\d", p or ""):
+                continue
+            ordered_name_parts.append(p)
+    name = _clean_name(
+        " ".join(ordered_name_parts)
+        or " ".join(p for p in left if re.search(r"[A-Za-z]{3,}", p or ""))
+    )
+    if not name or len(name) < 2:
+        return None
+    if re.fullmatch(
+        r"(?:ML|GMS?|GM|TAB|TABS|CAP|CAPS|'S|S|\d+)", name, re.I
+    ):
+        return None
+    return [name, packing or ""] + nums[: len(keys)]
+
+
+def _pack_rate_cluster_page_bands(
+    words: List[Dict[str, Any]],
+) -> List[List[str]]:
+    bands: List[List[Dict[str, Any]]] = []
+    for w in sorted(
+        words, key=lambda x: (float(x.get("top") or 0), float(x.get("x0") or 0))
+    ):
+        top = float(w.get("top") or 0)
+        if not bands:
+            bands.append([w])
+            continue
+        prev_top = float(bands[-1][0].get("top") or 0)
+        if abs(top - prev_top) <= 3.5:
+            bands[-1].append(w)
+        else:
+            bands.append([w])
+    out: List[List[str]] = []
+    for band in bands:
+        band = sorted(band, key=lambda x: float(x.get("x0") or 0))
+        texts = [str(w.get("text") or "").strip() for w in band]
+        texts = [t for t in texts if t]
+        if texts:
+            out.append(texts)
+    return out
+
+
+def _pack_rate_page_role(bands: List[List[str]]) -> str:
+    """Classify a page half: left (names+Opening), right (Sale Value/Closing), other."""
+    header_blob = " ".join(" ".join(b) for b in bands[:8])
+    has_product = bool(re.search(r"Product\s*Nam", header_blob, re.I))
+    has_opening = bool(re.search(r"Open(?:ing)?|Oepening", header_blob, re.I))
+    has_sale_value = bool(re.search(r"Sale\s*Value", header_blob, re.I))
+    has_closing = bool(re.search(r"\bClosing\b|Cl\s*Value", header_blob, re.I))
+    if has_product and has_opening and not has_closing:
+        return "left"
+    if has_sale_value and has_closing and not has_product:
+        return "right"
+    # Continuation pages: named product rows vs numeric-only rows.
+    named = 0
+    numeric = 0
+    for texts in bands:
+        joined = " ".join(texts)
+        if re.search(r"----total|\btotal\b|stock\s+and\s+sales|product\s*nam", joined, re.I):
+            continue
+        nums = sum(
+            1
+            for t in texts
+            if re.match(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$", t.replace(",", ""))
+        )
+        has_alpha = bool(re.search(r"[A-Za-z]{3,}", joined))
+        if has_alpha and nums >= 3:
+            named += 1
+        elif nums >= 4 and not has_alpha:
+            numeric += 1
+        elif nums >= 4 and has_alpha and re.match(
+            r"^-?\d", texts[0] if texts else ""
+        ):
+            numeric += 1
+    if named >= 3 and named > numeric:
+        return "left"
+    if numeric >= 3 and numeric > named:
+        return "right"
+    return "other"
+
+
+def _pack_rate_side_rows(
+    bands: List[List[str]], *, named: bool
+) -> Tuple[List[List[str]], Optional[List[str]]]:
+    """Product bands for one half-page; stop at Total (no rows after)."""
+    rows: List[List[str]] = []
+    total_band: Optional[List[str]] = None
+    for texts in bands:
+        joined = " ".join(texts)
+        if re.search(r"product\s*nam|sale\s*value|stock\s+and\s+sales", joined, re.I):
+            continue
+        if re.search(r"----total|\btotal\b", joined, re.I):
+            total_band = texts
+            break
+        nums = sum(
+            1
+            for t in texts
+            if re.match(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$", (t or "").replace(",", ""))
+        )
+        has_alpha = bool(re.search(r"[A-Za-z]{3,}", joined))
+        if named:
+            if has_alpha and nums >= 3:
+                rows.append(texts)
+        else:
+            if nums >= 4 and (not has_alpha or re.match(r"^-?\d", texts[0])):
+                rows.append(texts)
+    return rows, total_band
 
 
 def _pack_rate_sale_value_rows_from_words(
     file_bytes: bytes,
 ) -> Tuple[List[List[str]], Optional[str]]:
-    """Build [name, pack, ...14 nums] rows from pdfplumber word x-order."""
+    """Build [name, pack, ...nums] rows from pdfplumber word x-order.
+
+    Wide Stock-And-Sales PDFs often print Product|…|Sales|Free on the first
+    half of pages and Sales RTN|Sale Value|…|Closing on the second half.
+    Stitch those halves by row order and stop at the printed Total row.
+    """
     import io
 
     try:
@@ -45676,109 +45894,201 @@ def _pack_rate_sale_value_rows_from_words(
     )
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            page_bands: List[List[List[str]]] = []
+            roles: List[str] = []
             for page in pdf.pages:
                 peek_parts.append(page.extract_text() or "")
                 words = page.extract_words() or []
-                if not words:
-                    continue
-                # Cluster by top into row bands.
-                bands: List[List[Dict[str, Any]]] = []
-                for w in sorted(words, key=lambda x: (float(x.get("top") or 0), float(x.get("x0") or 0))):
-                    top = float(w.get("top") or 0)
-                    if not bands:
-                        bands.append([w])
+                bands = _pack_rate_cluster_page_bands(words) if words else []
+                page_bands.append(bands)
+                roles.append(_pack_rate_page_role(bands) if bands else "other")
+
+            peek = "\n".join(peek_parts)
+            has_free_header = bool(re.search(r"\bFree\b", peek, re.I))
+
+            def _emit_from_texts(texts: List[str], *, min_nums: int = 12) -> None:
+                # Peel Rate glued into pack/country OCR crumbs before counting
+                # slots: "(INDIA16)0.72"→160.72, "IND267.42", "0INDIA",
+                # "INDIA146.66", "S95.76".
+                peeled: List[str] = []
+                for tok in texts:
+                    t = str(tok or "")
+                    if num_re.match(t.replace(",", "")):
+                        peeled.append(t)
                         continue
-                    prev_top = float(bands[-1][0].get("top") or 0)
-                    if abs(top - prev_top) <= 3.5:
-                        bands[-1].append(w)
-                    else:
-                        bands.append([w])
-                for band in bands:
-                    band = sorted(band, key=lambda x: float(x.get("x0") or 0))
-                    texts = [str(w.get("text") or "").strip() for w in band]
-                    texts = [t for t in texts if t]
-                    if not texts:
-                        continue
-                    joined = " ".join(texts)
-                    if re.search(
-                        r"product\s*nam|sale\s*value|----total|\btotal\b|stock\s+and\s+sales",
-                        joined,
+                    m_india_split = re.search(
+                        r"\(INDIA(?P<head>\d+)\)(?P<tail>\d*\.\d{2})$",
+                        t,
                         re.I,
-                    ):
-                        # Keep TOTAL for footer peel later via joined peek.
-                        if re.search(r"total", joined, re.I):
-                            rows_out.append(["__TOTAL__"] + texts)
-                        continue
-                    # Drop trailing Flag markers (*, **, D) so right-align works.
-                    while texts and re.fullmatch(r"[*\sD]+", texts[-1] or "", re.I):
-                        texts.pop()
-                    texts = [
-                        re.sub(r"[*\s]+$", "", t) if t else t for t in texts
-                    ]
-                    texts = [t for t in texts if t]
-                    # Right-align the 14 movement slots (Rate…nonMove).
-                    nums: List[str] = []
-                    cut = len(texts)
-                    while cut > 0 and len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
-                        tok = texts[cut - 1].replace(",", "")
-                        # Flag residue glued to qty: "0**" / "0D".
-                        tok = re.sub(r"[*D]+$", "", tok, flags=re.I)
-                        if num_re.match(tok):
-                            nums.insert(0, tok)
-                            cut -= 1
-                            continue
-                        break
-                    if len(nums) < 12:
-                        continue
-                    # Pad missing trailing exp/nonmove with empty (missing).
-                    while len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
-                        nums.append("")
-                    left = texts[:cut]
-                    packing = None
-                    clean_name_parts: List[str] = []
-                    fallback_name_parts: List[str] = []
-                    for p in left:
-                        if packing is None and pack_re.match(p or ""):
-                            packing = p
-                            continue
-                        if num_re.match((p or "").replace(",", "")):
-                            continue
-                        # Skip dense OCR mash like 3D0RMOLPS / 2S0Y0PM.
-                        if (
-                            re.search(r"\d", p or "")
-                            and re.search(r"[A-Za-z]", p or "")
-                            and len(p) >= 5
-                            and not pack_re.match(p or "")
-                        ):
-                            m_pack = re.search(
-                                r"(\d+\s*(?:ML|GMS?|GM|TAB|TABS|'S|S|''S))$",
-                                p,
-                                re.I,
-                            )
-                            if m_pack and packing is None:
-                                packing = m_pack.group(1)
-                            # Keep a leading alpha stem (BONNISPAZ1 → BONNISPAZ).
-                            stem = re.match(r"^([A-Za-z][A-Za-z ./-]{1,})", p or "")
-                            if stem and len(stem.group(1).strip()) >= 3:
-                                fallback_name_parts.append(stem.group(1).strip())
-                            continue
-                        if re.search(r"[A-Za-z]", p or ""):
-                            clean_name_parts.append(p)
-                    name = _clean_name(
-                        " ".join(clean_name_parts)
-                        or " ".join(fallback_name_parts)
-                        or " ".join(
-                            p
-                            for p in left
-                            if re.search(r"[A-Za-z]{3,}", p or "")
+                    )
+                    if m_india_split:
+                        rate = (
+                            m_india_split.group("head")
+                            + m_india_split.group("tail")
                         )
-                    )
-                    if not name or len(name) < 2:
+                        stem = t[: m_india_split.start()].rstrip()
+                        if stem:
+                            peeled.append(stem)
+                        peeled.append(rate)
                         continue
-                    rows_out.append(
-                        [name, packing or ""]
-                        + nums[: len(_PACK_RATE_SALE_VALUE_KEYS)]
+                    m_ind = re.search(
+                        r"(?P<head>IND|INDIA)(?P<rate>\d+\.\d{2})$",
+                        t,
+                        re.I,
                     )
+                    if m_ind and re.search(r"[A-Za-z]", t[: m_ind.start()] or "x"):
+                        stem = t[: m_ind.start()].rstrip()
+                        if stem:
+                            peeled.append(stem)
+                        peeled.append(m_ind.group("rate"))
+                        continue
+                    if m_ind and m_ind.start() == 0:
+                        peeled.append(m_ind.group("rate"))
+                        continue
+                    m_india = re.match(
+                        r"^(?P<rate>\d+(?:\.\d+)?)(?P<rest>INDIA.*)$",
+                        t,
+                        re.I,
+                    )
+                    if m_india:
+                        peeled.append(m_india.group("rate"))
+                        peeled.append(m_india.group("rest"))
+                        continue
+                    m_srate = re.search(
+                        r"^(?P<head>.*?)(?P<rate>\d+\.\d{2})$", t
+                    )
+                    if (
+                        m_srate
+                        and re.search(r"[A-Za-z]", t)
+                        and len(m_srate.group("rate")) >= 4
+                    ):
+                        head = (m_srate.group("head") or "").rstrip("`'")
+                        if head:
+                            peeled.append(head)
+                        peeled.append(m_srate.group("rate"))
+                        continue
+                    peeled.append(t)
+                texts = peeled
+
+                probe = [
+                    t
+                    for t in texts
+                    if num_re.match((t or "").replace(",", ""))
+                ]
+                keys = (
+                    _PACK_RATE_SALE_VALUE_KEYS_WITH_FREE
+                    if has_free_header
+                    or len(probe) >= len(_PACK_RATE_SALE_VALUE_KEYS_WITH_FREE)
+                    else _PACK_RATE_SALE_VALUE_KEYS
+                )
+                row = _pack_rate_row_from_band_texts(
+                    texts,
+                    num_re=num_re,
+                    pack_re=pack_re,
+                    keys=keys,
+                    min_nums=min_nums,
+                )
+                if not row or row[0] == "__TOTAL__":
+                    if row and row[0] == "__TOTAL__":
+                        rows_out.append(row)
+                    return
+                # Free-aware grids print 15 numeric slots. When Rate is still
+                # mashed into the product glyph, right-collect yields 14 — use
+                # the collected nonempty count (not probe: mashed mid-name
+                # digits like "3102" inflate probe and used to skip this pad,
+                # shifting Sale Value into sales_return / Cl Value into
+                # closing_qty).
+                if has_free_header and len(row) >= 3:
+                    nums = list(row[2:])
+                    nonempty = [n for n in nums if str(n).strip() != ""]
+                    if len(nonempty) == len(_PACK_RATE_SALE_VALUE_KEYS):
+                        row = [row[0], row[1], ""] + nonempty
+                        while len(row) < 2 + len(
+                            _PACK_RATE_SALE_VALUE_KEYS_WITH_FREE
+                        ):
+                            row.append("")
+                        logger.info(
+                            "PACK_RATE_SALE_VALUE status=left_pad_missing_rate "
+                            "product=%s",
+                            str(row[0])[:40],
+                        )
+                name = str(row[0] or "").strip()
+                # Drop pack-only / glyph crumbs mistaken for a product.
+                if re.fullmatch(
+                    r"(?:ML|GMS?|GM|TAB|TABS|CAP|CAPS|'S|S|\d+)", name, re.I
+                ):
+                    return
+                rows_out.append(row)
+
+            # Block layout: all left halves then all right halves (N+N pages).
+            first_right = next(
+                (i for i, r in enumerate(roles) if r == "right"), -1
+            )
+            block_ok = (
+                first_right >= 1
+                and all(r == "left" for r in roles[:first_right])
+                and all(r == "right" for r in roles[first_right:])
+                and len(roles[:first_right]) == len(roles[first_right:])
+                and len(roles[:first_right]) >= 1
+            )
+            if block_ok:
+                lefts = page_bands[:first_right]
+                rights = page_bands[first_right:]
+                for left_bands, right_bands in zip(lefts, rights):
+                    left_rows, left_total = _pack_rate_side_rows(
+                        left_bands, named=True
+                    )
+                    right_rows, right_total = _pack_rate_side_rows(
+                        right_bands, named=False
+                    )
+                    # Right Total is often numeric-only (no "Total" label).
+                    if (
+                        left_total is not None
+                        and right_total is None
+                        and len(right_rows) == len(left_rows) + 1
+                    ):
+                        right_total = right_rows.pop()
+                    n = min(len(left_rows), len(right_rows))
+                    slack = max(
+                        2, int(0.15 * max(len(left_rows), len(right_rows), 1))
+                    )
+                    if n < 3 or abs(len(left_rows) - len(right_rows)) > slack:
+                        logger.info(
+                            "PACK_RATE_SALE_VALUE status=split_pair_skip "
+                            "left_rows=%s right_rows=%s",
+                            len(left_rows),
+                            len(right_rows),
+                        )
+                        continue
+                    for i in range(n):
+                        _emit_from_texts(
+                            list(left_rows[i]) + list(right_rows[i]),
+                            min_nums=12,
+                        )
+                    # Stop at Total: merge printed footer halves only.
+                    if left_total is not None or right_total is not None:
+                        tot = list(left_total or []) + list(right_total or [])
+                        rows_out.append(["__TOTAL__"] + tot)
+                        logger.info(
+                            "PACK_RATE_SALE_VALUE status=split_stop_at_total "
+                            "rows=%s sales_total=%s",
+                            n,
+                            (right_total or left_total),
+                        )
+                if rows_out:
+                    return rows_out, peek
+
+            # Single-stream / interleaved pages (legacy wide one-page tables).
+            for bands in page_bands:
+                for texts in bands:
+                    joined = " ".join(texts)
+                    if re.search(r"----total|\btotal\b", joined, re.I) and not re.search(
+                        r"product\s*nam|sale\s*value", joined, re.I
+                    ):
+                        rows_out.append(["__TOTAL__"] + texts)
+                        # No product rows after the printed Total on this page.
+                        break
+                    _emit_from_texts(texts, min_nums=12)
     except Exception:
         return [], None
     return rows_out, "\n".join(peek_parts)
@@ -46001,11 +46311,10 @@ def _parse_pdf_pack_rate_sale_value(
     if not _pdf_pack_rate_sale_value_enabled():
         return None
     peek = ""
+    # Sale Value / Closing often sit on later split-column pages — peek all.
     if doc is not None:
         try:
-            peek = "\n".join(
-                (page.get_text("text") or "") for page in doc[: min(2, len(doc))]
-            )
+            peek = "\n".join((page.get_text("text") or "") for page in doc)
         except Exception:
             peek = ""
     if not peek:
@@ -46014,8 +46323,7 @@ def _parse_pdf_pack_rate_sale_value(
 
             _doc = fitz.open(stream=file_bytes, filetype="pdf")
             peek = "\n".join(
-                (_doc[i].get_text("text") or "")
-                for i in range(min(2, len(_doc)))
+                (_doc[i].get_text("text") or "") for i in range(len(_doc))
             )
             _doc.close()
         except Exception:
@@ -46028,6 +46336,7 @@ def _parse_pdf_pack_rate_sale_value(
     items: List[Dict[str, Any]] = []
     printed_sval = None
     printed_cval = None
+    printed_sale_qty = None
     result = empty_result(filename, "pdf")
     result["report_title"] = "Stock And Sales"
     for ln in (peek or "").splitlines()[:30]:
@@ -46056,11 +46365,15 @@ def _parse_pdf_pack_rate_sale_value(
             for tok in row[1:]:
                 for m in re.finditer(r"-?\d+(?:,\d{3})*(?:\.\d+)?", tok):
                     nums.append(m.group(0).replace(",", ""))
-            # Same 14 slots as body: Rate…Sale…Sale Value…Closing…Cl Value…
             vals = [_to_float(v) or 0.0 for v in nums]
-            if len(vals) >= len(_PACK_RATE_SALE_VALUE_KEYS):
-                printed_sval = vals[7]  # Sale Value
-                printed_cval = vals[11]  # Cl Value
+            keys = _pack_rate_keys_for_num_count(len(vals))
+            if len(vals) >= len(keys):
+                idx = {k: i for i, k in enumerate(keys)}
+                # Sales is the printed column immediately before Free (2nd-last
+                # on the left half). Sale Value / Cl Value from right half.
+                printed_sale_qty = vals[idx["sale"]]
+                printed_sval = vals[idx["sval"]]
+                printed_cval = vals[idx["bval"]]
             elif len(vals) >= 8:
                 # Truncated footer: pick Sales RTN < Sale Value pattern.
                 printed_cval = max(vals[-3:]) if vals else None
@@ -46078,11 +46391,12 @@ def _parse_pdf_pack_rate_sale_value(
         nums = row[2:]
         if len(nums) < 12:
             continue
-        while len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
+        keys = _pack_rate_keys_for_num_count(len(nums))
+        while len(nums) < len(keys):
             nums.append("")
         values = {
             k: _to_float(v) if str(v).strip() != "" else None
-            for k, v in zip(_PACK_RATE_SALE_VALUE_KEYS, nums)
+            for k, v in zip(keys, nums)
         }
         item = empty_line_item()
         item["product_name"] = name
@@ -46109,6 +46423,8 @@ def _parse_pdf_pack_rate_sale_value(
                 "closing_value": "printed",
             },
         }
+        if values.get("free") is not None:
+            item["extra"]["free_qty"] = values.get("free")
         if values.get("prev_la") is not None:
             item["extra"]["lms"] = values.get("prev_la")
         items.append(item)
@@ -46134,6 +46450,11 @@ def _parse_pdf_pack_rate_sale_value(
     extra["stock_identity_formula"] = (
         "closing=opening+receipts-sales+sales_return-purchase_return-others"
     )
+    if printed_sale_qty not in (None,):
+        # Printed Sales column on ----Total----->> (2nd-last before Free).
+        result["totals"]["sales_qty"] = printed_sale_qty
+        extra["sales_qty"] = printed_sale_qty
+        extra["sales_qty_source"] = "printed_total"
     if printed_sval not in (None, 0.0):
         result["totals"]["sales_value"] = printed_sval
         extra["total_row_source"] = "pack_rate_sale_value_footer"
@@ -46143,9 +46464,10 @@ def _parse_pdf_pack_rate_sale_value(
         extra["closing_value_source"] = "printed_total"
     logger.info(
         "PACK_RATE_SALE_VALUE file=%s status=ok source=words rows=%s "
-        "sales_value=%s closing_value=%s",
+        "sales_qty=%s sales_value=%s closing_value=%s",
         filename,
         len(items),
+        printed_sale_qty,
         result["totals"].get("sales_value"),
         result["totals"].get("closing_value"),
     )
