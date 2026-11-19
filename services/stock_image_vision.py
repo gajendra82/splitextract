@@ -981,10 +981,14 @@ def apply_direct_stock_image_gemini(
             return medivision
 
         # SSA dump / pack-Op-Pur-Bal misfile of Stock and Sales Detail → Op.Qty Vision.
+        # Pack-Op-Pur-Bal of PharmAssist Report → locked PharmAssist Vision
+        # (prompt example Pur Val=125277 must not stick as purchase_value).
         try:
             from services.stock_direct_vision import (
                 _has_stock_sales_op_qty_val_headers,
+                _has_pharmassist_stock_sale_headers,
                 extract_stock_sales_op_qty_val_direct_vision,
+                extract_pharmassist_direct_vision,
                 is_stock_vision_locked,
             )
 
@@ -998,6 +1002,83 @@ def apply_direct_stock_image_gemini(
                 "pack_op_pur_bal_stock_sale",
                 "op_pur_sp_sale_bal_val",
             }
+            pack_misfile = method in {
+                "pack_op_pur_bal_stock_sale_vision",
+                "op_pur_sp_sale_bal_val_photo",
+            } or layout in {
+                "pack_op_pur_bal_stock_sale",
+                "op_pur_sp_sale_bal_val",
+            }
+            # Prompt-example bleed / Sep|Aug→Op/Pur shift / stockist-in-company.
+            result_misfile = False
+            try:
+                from services.sales_statement_extractor import (
+                    _pack_op_pur_bal_looks_like_pharmassist_misfile,
+                )
+
+                result_misfile = _pack_op_pur_bal_looks_like_pharmassist_misfile(
+                    result, peek_text
+                )
+            except Exception:
+                result_misfile = False
+            try:
+                pack_example_pv = abs(
+                    float(
+                        ((result.get("totals") or {}).get("extra") or {}).get(
+                            "purchase_value"
+                        )
+                        or 0
+                    )
+                    - 125277.0
+                ) < 0.51
+            except (TypeError, ValueError):
+                pack_example_pv = False
+            if (
+                _enabled()
+                and pack_misfile
+                and (
+                    _has_pharmassist_stock_sale_headers(peek_text)
+                    or pack_example_pv
+                    or result_misfile
+                )
+            ):
+                pharm_fix = extract_pharmassist_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="pharmassist_after_pack_op_pur_misfile",
+                )
+                if (
+                    pharm_fix
+                    and pharm_fix.get("line_items")
+                    and is_stock_vision_locked(pharm_fix)
+                ):
+                    selected_extra = pharm_fix.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )
+                    selected_extra["quality_decision"] = decision
+                    selected_extra["structured_extraction"] = {
+                        "extraction_method": extra.get("extraction_method"),
+                        "layout": layout,
+                        "schema": decision.get("schema"),
+                        "row_count": decision.get("row_count"),
+                        "line_items": copy.deepcopy(result.get("line_items") or []),
+                    }
+                    selected_extra["final_selected_extraction"] = "gemini"
+                    selected_extra["stock_image_vision_decided"] = True
+                    selected_extra["stock_image_gemini_status"] = (
+                        "pharmassist_after_pack_op_pur_misfile"
+                    )
+                    logger.info(
+                        "STOCK_IMAGE_GEMINI file=%s "
+                        "status=pharmassist_after_pack_op_pur_misfile rows=%s "
+                        "from_method=%s example_pv=%s",
+                        filename,
+                        len(pharm_fix.get("line_items") or []),
+                        method,
+                        pack_example_pv,
+                    )
+                    return pharm_fix
             if (
                 _enabled()
                 and wrong_schema
@@ -1041,8 +1122,8 @@ def apply_direct_stock_image_gemini(
                     return detail_fix
         except Exception as detail_exc:
             logger.info(
-                "STOCK_IMAGE_GEMINI file=%s stock_sales_detail after wrong "
-                "schema failed: %s",
+                "STOCK_IMAGE_GEMINI file=%s stock_sales_detail/pharmassist after "
+                "wrong schema failed: %s",
                 filename,
                 type(detail_exc).__name__,
             )

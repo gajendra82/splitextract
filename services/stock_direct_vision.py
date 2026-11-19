@@ -130,6 +130,9 @@ Map ONLY these fields into the JSON:
   BVal  -> closing_value
   SVal  -> sales_value
 
+There is NO per-row Opening Value / Purchase Value column.
+Never invent opening_value or purchase_value / receipts_value on line_items.
+
 Put prior-month columns into extra only:
   left prior month  -> extra.prior_month_a_qty  (also jul_qty / sep_qty when labeled)
   right prior month -> extra.prior_month_b_qty  (also jun_qty / aug_qty when labeled)
@@ -147,20 +150,38 @@ Examples (copy when visible):
   then opening_qty=90 receipts_qty=0 sales_qty=4 closing_qty=86
   sales_value=628 closing_value=13499 (Sep/Aug stay in extra)
 
-Stockist is the company header (e.g. AJ PHARMA AND SURGICAL / FOUR FENCE…).
+Stockist = bold letterhead above the address (e.g. D K PHARMA / AJ PHARMA…).
+stockist_address = the city/PIN/street/phone line under the stockist name.
+company_name = manufacturer band (e.g. 281 THE HIMALAYA ZEAL).
 Period from "From date DD-Mon-YY to DD-Mon-YY".
 
-Footer money labels (copy when printed on this image):
-  Opening Val. -> totals.extra.opening_value
+Each product appears ONCE. If the printed name ends with "*", keep that
+single row (do not also emit an unstarred duplicate of the same pack).
+
+Footer money labels (manufacturer band / page foot — ALWAYS copy when visible).
+Indian-lakh commas stay as numbers (1,05,054.58 -> 105054.58):
+  Opening Val. / Opening Val -> totals.extra.opening_value
   Closing Val. / Closina Val. -> totals.closing_value
-  Sales (period, not Sales(Sep)/Sales(Aug)) -> totals.sales_value
   Purchase -> totals.extra.purchase_value
+  Plain "Sales :" / "Sales" amount -> totals.sales_value
+    NEVER "Sales (Sep)" / "Sales (Aug)" / other month history.
+When a second zoom image of the footer is attached, read money from that
+zoom first, then fill any gaps from the full page.
+Never leave totals.sales_value or totals.closing_value null when those
+labels are printed. Do NOT invent them from row BVal/SVal sums.
+Example mapping only (use the printed digits on THIS image, not these):
+  Opening Val.: 12,345.67 -> 12345.67
+  Purchase: 2,222.22 -> 2222.22
+  Closing Val.: 1,05,054.58 -> 105054.58
+  Sales : 11,020.28 -> 11020.28
+  Sales (Sep): 12,135.04 -> ignore
 
 Return ONLY valid JSON:
 {
   "document_type": "stock_statement",
   "schema": "pharmassist_op_pur_sale_bal",
   "stockist_name": string|null,
+  "stockist_address": string|null,
   "company_name": string|null,
   "period_from": "YYYY-MM-DD"|null,
   "period_to": "YYYY-MM-DD"|null,
@@ -211,9 +232,10 @@ Core movement (ALWAYS map these):
   Op.Qty / Op Qty / OPSTK / Op.Stock / Op Stock  -> opening_qty
     ← FIRST stock qty after Pack/BOX (Pack digit is NEVER opening_qty)
   Op.Val / Op Val / OPV    -> opening_value
-  P.Qty  / P Qty / PURC / Pur.Qty -> receipts_qty  ← purchase only; 0 when the cell is 0
+  P.Qty  / P Qty / PURC / Pur.Qty -> receipts_qty  ← purchase QTY only; 0 when the cell is 0
   P.Val  / P Val / PURCV   -> receipts_value
-  Pur.Free / Pur Free      -> purchase_scheme_qty (extra; never receipts_qty)
+  Pur.Free / Pur Free / P.Sch / P Sch -> purchase_scheme_qty
+    (extra ONLY — NEVER receipts_qty, NEVER sales_qty)
   S.Qty  / S Qty / SALE / Sales Qty -> sales_qty
   S.Val  / S Val / SALEV   -> sales_value
   Cls.Qty / Cl.Qty / Cls Qty / STOCK / Cl.Stock / Cl Stock -> closing_qty
@@ -223,9 +245,9 @@ BOX (between Pack and OPSTK) is NOT opening_qty and NOT opening_value — ignore
 Pack (100 / 28 / 50 / 10) is NEVER opening_qty — copy Pack into packing only.
 PCode / Manufacturer / Division are ignore columns.
 
-Stock and Sales Detail often inserts scheme / return columns BETWEEN S and Cl.
-Map returns AND scheme qty (scheme is NOT sales_qty / receipts_qty):
-  P.Sch / P Sch -> ignore as purchase scheme (do not add into receipts_qty)
+Stock and Sales Detail inserts P.Sch / S.Sch / Br / Cr / Db BETWEEN P/S and Cl.
+Map scheme + returns (scheme is NOT sales_qty / receipts_qty):
+  P.Sch / P Sch -> purchase_scheme_qty (NEVER receipts_qty; usually a small free qty)
   S.Sch / S Sch / Free -> sales_scheme_qty (extra only; NEVER fold into sales_qty)
   Cr.Qty / Cr.S.Qty / Re.S.Qty / Rt.S.Qty -> sales_return_qty
   Cr.Val / matching return Val -> sales_return_value (money; NOT closing_value)
@@ -234,14 +256,21 @@ Map returns AND scheme qty (scheme is NOT sales_qty / receipts_qty):
   Db.Qty (+ Db.Sch.Qty) -> purchase_return_qty
   Db.Val -> ignore as money extra (not closing_value)
 Keep reading rightward until Cl.Qty / Cl.Val (RIGHTMOST stock pair).
+Do NOT copy the next product row's Cl.Qty/Cl.Val into this row.
 
-Column-shift traps (dense phone scans):
+Column-shift traps (dense phone scans / continuation pages without header):
   Sl.No is NEVER opening_qty (row 3 → opening_qty is not 3).
   Never put Op.Qty into receipts_qty. If P.Qty cell is 0/blank, receipts_qty=0
   even when Op.Qty is large.
+  P.Sch is NEVER receipts_qty (e.g. P.Qty=297 P.Sch=3 → receipts_qty=297,
+  purchase_scheme_qty=3 — NOT receipts_qty=3).
+  When P.Val is non-zero, receipts_qty must not be 0/null — re-read P.Qty.
+  When S.Val is non-zero, sales_qty must not be 0/null — re-read S.Qty.
+  When Cl.Val is non-zero, closing_qty must not be 0/null — re-read Cl.Qty.
   When P.Qty=0, S.Qty=0 and Op.Val equals Cl.Val, opening_qty MUST equal
   closing_qty (same stock sitting idle) — copy both printed qty cells.
   Never drop a printed non-zero S.Val to 0.
+  Never put P.Val / S.Val / Cl.Val into sales_qty or closing_qty (money ≠ qty).
   Always copy non-zero Cr.Qty into sales_return_qty (returns ADD to stock).
   If Cr.Val is non-zero, Cr.Qty must also be copied (never leave sales_return_qty
   null/0 while sales_return_value is printed).
@@ -255,6 +284,9 @@ Never copy Op.Val, P.Val, Db.Val, Cr.Val, Rt.S.Val, or S.Val into closing_value.
 Never copy Op.Qty into closing_qty.
 Cl.Qty/Cl.Val are ONLY the rightmost pair (after Db.*). If a red ZOOM panel
 shows Cl.Qty|Cl.Val, copy closing fields from that panel per product row.
+If a blue ZOOM panel shows Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|S.Val,
+copy those movement fields from that panel per product row (still take
+Cl.Qty|Cl.Val from the main grid rightmost pair).
 Never leave closing_value null/0 when Cl.Val is printed for that row.
 NEVER invent closing_qty/closing_value from Op+P-S arithmetic — copy the
 printed Cl.Qty/Cl.Val cells even when they disagree with Op+P-S (Db/Cr/Br).
@@ -264,8 +296,33 @@ product_name MUST be the FULL printed item text including pack
 Examples when visible:
 - #KOFLET LOZENGES JAR: Op.Qty 1, Op.Val 253.29, P blank, S.Qty 1,
   S.Val 253.29, Cls blank → closing_qty 0, closing_value 0
-- BONNISAN DROPS (30ML): Op.Qty 0, P.Qty 300, P.Val 18864.0, S.Qty 167,
-  S.Val 12468.22, Cr.Qty 5, Cl.Qty 138, Cl.Val 10303.08
+- BONNISAN DROPS: Op.Qty 119, Op.Val 8884.54, P.Qty 95, P.Sch 5,
+  P.val 6288.05, S.Qty 121, S.Val 9033.86, Cl.Qty 78, Cl.Val 5823.48
+  → receipts_qty=95 (NOT 5), purchase_scheme_qty=5, sales_qty=121,
+    closing_qty=78, closing_value=5823.48 (do NOT drop P.Qty/P.val to 0)
+- BONNISAN LIQUID 200ML: Op.Qty 35, P.Qty 84, S.Qty 52, Cl.Qty 68
+  → receipts_qty=84 (Op-S≠Cl so P is NOT blank)
+- EVECARE CAPS 30S: Op.Qty 96, P 0, S.Qty 36, S.Val 6665.04, Cl.Qty 62
+  → sales_qty=36 / sales_value=6665.04 (do NOT leave both S cells 0 when
+    Op≠Cl)
+- CYSTONE TABS: Op.Qty 210, P.Qty 297, P.Sch 3, P.val 48746.61,
+  S.Qty 268, S.Val 49582.72, Cr.Qty 4, Cl.Qty 206, Cl.Val 38138.84
+  → receipts_qty=297 (NOT 3), purchase_scheme_qty=3, sales_return_qty=4,
+    closing_qty=206 (NOT the next row's 62)
+- SEPTILIN SYRUP: Op.Qty 79, Op.Val 13542.18, P.Qty 56, P.val 8297.02,
+  S.Qty 63, S.Val 10799.46, Cl.Qty 32, Cl.Val 5485.44
+  → receipts_qty=56, sales_qty=63, closing_qty=32 (do not park P.val in
+    S.Val / closing_value; Cl.Val is 5485.44 not 10799.46)
+- SEPTILIN TABS: Op.Qty 104, P 0, S.Qty 86, S.Val 16838.8, Cl.Qty 18,
+  Cl.Val 3524.4 → never leave Cl blank when Cl.Val is printed
+- V-GEL 30GM: Op.Qty 12, P.Qty 25, S.Qty 11, Cl.Qty 27 — do NOT copy the
+  next row's Cl.Qty/Cl.Val into this product
+- SHATAVARI TAB 60S: Op.Qty 22, P.Qty 60, P.val 12219.6, S.Qty 25,
+  S.Val 5714.5, Cl.Qty 57, Cl.Val 13029.06 — NEVER idle-fill Cl=Op=22
+- STYPLON TABS: Op.Qty 29, P.Qty 50, S.Qty 25, Cl.Qty 54, Cl.Val 6912.0
+  — closing_qty is 54 NOT 25 (never copy S.Qty into Cl.Qty)
+- SHUDDHA GUGGULU: Op.Qty 55, P 0, S.Qty 2, S.Val 571.44, Cl.Qty 53,
+  Cl.Val 15143.16 — do not force Cl=Op when S.Qty is printed
 - ASHWAGANDHA GUMMIES 60S: Op.Qty 316, Op.Val 189600.0, P 0, S.Qty 7,
   S.Val 4200.0, Cr.Qty 2, Cl.Qty 311, Cl.Val 186600.0
   (Op.Qty→opening_qty NOT receipts_qty; Cl.Val≠S.Val; Sl.No is not Op.Qty)
@@ -304,6 +361,7 @@ Return ONLY valid JSON:
       "opening_value": number|null,
       "receipts_qty": number|null,
       "receipts_value": number|null,
+      "purchase_scheme_qty": number|null,
       "sales_qty": number|null,
       "sales_value": number|null,
       "sales_scheme_qty": number|null,
@@ -319,9 +377,14 @@ Return ONLY valid JSON:
 }
 
 Include every visible product row top to bottom across both page panels.
+Continuation pages may omit the header — keep the SAME column order as
+Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|S.Sch|S.Val|…|Cl.Qty|Cl.Val.
 Do NOT emit the Total / header Total row as a line_item.
 Copy the printed Total-row S.Val into totals.sales_value and Total-row
-Cl.Val into totals.closing_value when those cells are visible.
+Cl.Val into totals.closing_value when those cells are visible
+(often a top "Total" row on page 1: e.g. S.Val 321247.52, Cl.Val 313133.42).
+Also copy Total-row Op.Val into totals.extra.opening_value and Total-row
+P.val into totals.extra.receipts_value when printed.
 Do NOT sum line sales_value yourself when the Total-row S.Val is printed.
 """.strip()
 
@@ -961,36 +1024,101 @@ def _blue_ink_fraction(file_bytes: bytes) -> float:
         return 0.0
 
 
+def _header_route_ocr_hits(text: str) -> bool:
+    """True when header OCR is usable for stock-layout routing."""
+    blob = text or ""
+    if not blob.strip():
+        return False
+    return bool(
+        _has_order_form_headers(blob)
+        or _has_saleret_headers(blob)
+        or _looks_like_stock_sales_detail_report_title(blob)
+        or _has_stock_sales_op_qty_val_headers(blob)
+        or _has_pharmassist_stock_sale_headers(blob)
+        or _has_op_qty_pur_sale_bal_headers(blob)
+        or _has_opqty_qoh_headers(blob)
+    )
+
+
+def _layout_header_orientation_images(file_bytes: bytes) -> List[Any]:
+    """EXIF + optional landscape rotations for desk-photo header OCR.
+
+    Some phone JPEGs store landscape pixels with a wrong Orientation=6 tag.
+    Blind exif_transpose then yields a sideways portrait and Detail / Op.Qty
+    chrome never matches — try upright landscape variants too.
+    """
+    try:
+        from PIL import Image, ImageOps
+    except Exception:
+        return []
+    images: List[Any] = []
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as raw:
+            base = ImageOps.exif_transpose(raw).convert("RGB")
+            images.append(base)
+            # Wrong EXIF often leaves a tall buffer for landscape Detail grids.
+            if base.width < base.height:
+                images.append(base.rotate(90, expand=True))
+                images.append(base.rotate(-90, expand=True))
+            # Raw pixels without transpose (when tag disagrees with content).
+            try:
+                raw_rgb = raw.convert("RGB")
+                if raw_rgb.size != base.size:
+                    images.append(raw_rgb)
+            except Exception:
+                pass
+    except Exception:
+        return []
+    return images
+
+
 def _layout_header_text(file_bytes: bytes) -> str:
     """OCR top band for layout routing only — not numeric cell recovery."""
     try:
-        from PIL import Image, ImageOps
         from services.sales_statement_extractor import _a2z_tesseract
         from services.stock_ocr_policy import stock_ocr_context
 
-        with Image.open(io.BytesIO(file_bytes)) as raw:
-            img = ImageOps.exif_transpose(raw).convert("RGB")
+        orientations = _layout_header_orientation_images(file_bytes)
+        if not orientations:
+            return ""
+        tess = _a2z_tesseract()
+        fracs = (0.22, 0.30, 0.38)
+        best = ""
+        for orient_idx, img in enumerate(orientations):
             width, height = img.size
             if width < 80 or height < 80:
-                return ""
-            # One named region for all header depths (initial + optional recovery).
+                continue
             chunks: List[str] = []
-            fracs = (0.22, 0.30, 0.38)
-            tess = _a2z_tesseract()
             for idx, frac in enumerate(fracs):
                 header = img.crop((0, 0, width, max(40, int(height * frac))))
                 probe = header.copy()
                 probe.thumbnail((1200, 1200))
-                ctx_kwargs = {"region": "layout_header", "page": "1"}
+                ctx_kwargs = {
+                    "region": (
+                        "layout_header"
+                        if orient_idx == 0
+                        else f"layout_header_orient{orient_idx}"
+                    ),
+                    "page": "1",
+                }
                 if idx > 0:
                     ctx_kwargs["reason"] = "header_detection_failed"
                 with stock_ocr_context(**ctx_kwargs):
                     text = tess.image_to_string(probe, config="--psm 6") or ""
                 if text.strip():
                     chunks.append(text)
-                    if _has_order_form_headers(text) or _has_saleret_headers(text):
-                        return "\n".join(chunks)
-            return "\n".join(chunks)
+                    joined = "\n".join(chunks)
+                    if _header_route_ocr_hits(joined):
+                        logger.info(
+                            "STOCK_LAYOUT_HEADER_ORIENT_HIT orient=%s chars=%s",
+                            orient_idx,
+                            len(joined),
+                        )
+                        return joined
+            joined = "\n".join(chunks)
+            if len(joined) > len(best):
+                best = joined
+        return best
     except Exception:
         return ""
 
@@ -1807,8 +1935,9 @@ def _has_pharmassist_stock_sale_headers(text: str) -> bool:
         re.search(r"(?:S)?tock\s+and\s+Sale\s+Report", blob, re.I)
         or re.search(r"Printed\s+Using\s+PharmAssist|\bPharmAssist\b", blob, re.I)
     )
-    has_bval = bool(re.search(r"\bb\s*val\b|\bbval\b", blob, re.I))
-    has_sval = bool(re.search(r"\bs\s*val\b|\bsval\b", blob, re.I))
+    has_bval = bool(re.search(r"\bb\s*val\b|\bbval\b|\b8val\b", blob, re.I))
+    has_sval = bool(re.search(r"\bs\s*val\b|\bsval\b|\b8val\b", blob, re.I))
+    has_order = bool(re.search(r"\bOrder\b", blob, re.I))
     has_grid = bool(
         re.search(r"\bOp\.?\b", blob, re.I)
         and re.search(r"\bPur\b", blob, re.I)
@@ -1825,6 +1954,11 @@ def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     if title and has_bval and has_sval:
         return True
     if title and has_grid and (has_bval or has_sval):
+        return True
+    # Title + Sep|Aug (or Jul|Jun) grid: BVal OCR often drops on phone peeks.
+    if title and has_grid and has_prior_pair:
+        return True
+    if title and has_grid and has_order:
         return True
     if has_grid and has_bval and has_sval and has_prior_pair:
         return True
@@ -1847,6 +1981,114 @@ def _pharmassist_scanned_early_enabled() -> bool:
     """STOCK_PHARMASSIST_SCANNED_EARLY — default ON (BVal/SVal chrome unique)."""
     raw = os.getenv("STOCK_PHARMASSIST_SCANNED_EARLY", "1").strip().lower()
     return raw not in {"0", "false", "no", "off"}
+
+
+def result_looks_like_pharmassist_bval_spill(result: Optional[Dict[str, Any]]) -> bool:
+    """True when BVal/SVal money was parked in closing_qty / sales_qty.
+
+    Generic vision_table SaleRet paths do this on PharmAssist grids: e.g.
+    closing_qty=1173/16259 (BVal) while true Bal is tens of units. Inflates
+    totals.closing_qty into the tens of thousands.
+    """
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "")
+    if re.search(r"Stock\s+and\s+Sale\s+Report|\bPharmAssist\b", title, re.I):
+        # Title alone is enough when rows also show money-as-qty.
+        pass
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    money_as_closing = 0
+    money_as_sales_qty = 0
+    active = 0
+    for item in items:
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+            closing_value = float(item.get("closing_value") or 0)
+            sales_value = float(item.get("sales_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not (opening or sales or closing or closing_value or sales_value):
+            continue
+        active += 1
+        # BVal-scale numbers in qty slots (hundreds–tens of thousands).
+        if closing >= 400 and (
+            closing_value <= 0.01 or abs(closing - closing_value) < 0.51
+        ):
+            money_as_closing += 1
+        elif closing >= 400 and opening <= 200 and closing > opening * 5:
+            money_as_closing += 1
+        if sales >= 400 and sales_value <= 0.01 and opening <= 200:
+            money_as_sales_qty += 1
+    if active < 5:
+        return False
+    if money_as_closing >= max(3, active // 6):
+        return True
+    if money_as_closing + money_as_sales_qty >= max(4, active // 5):
+        return True
+    # Totals already exploded vs a normal stockist month.
+    try:
+        tot_cq = float(
+            ((result.get("totals") or {}).get("extra") or {}).get("closing_qty")
+            or (result.get("totals") or {}).get("closing_qty")
+            or 0
+        )
+    except (TypeError, ValueError):
+        tot_cq = 0.0
+    try:
+        tot_cv = float((result.get("totals") or {}).get("closing_value") or 0)
+    except (TypeError, ValueError):
+        tot_cv = 0.0
+    if tot_cq >= 5000 and (tot_cv < 50000 or tot_cq > tot_cv):
+        return True
+    return False
+
+
+def try_divert_to_pharmassist_vision(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    *,
+    reason: str,
+    peek_text: str = "",
+    current: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Run locked PharmAssist Vision when chrome or BVal-spill says so."""
+    if not _pharmassist_scanned_early_enabled():
+        return None
+    chrome = _has_pharmassist_stock_sale_headers(peek_text or "")
+    spill = result_looks_like_pharmassist_bval_spill(current) if current else False
+    if not chrome and not spill:
+        title = str((current or {}).get("report_title") or "")
+        if not re.search(r"Stock\s+and\s+Sale\s+Report|\bPharmAssist\b", title, re.I):
+            return None
+    result = extract_pharmassist_direct_vision(
+        file_bytes, filename, ext, reason=reason
+    )
+    if not result or not result.get("line_items"):
+        return None
+    if not is_stock_vision_locked(result):
+        lock_stock_vision_result(
+            result,
+            extraction_method="pharmassist_stock_sale_vision",
+            layout="pharmassist_stock_sale",
+            psr_column_layout="pharmassist_op_pur_sale_bal",
+            stock_identity_kind="opening_receipts_sales_closing",
+            numeric_source="gemini_vision",
+            early_vision_reason=reason,
+        )
+    logger.info(
+        "STOCK_PHARMASSIST_DIVERT file=%s rows=%s reason=%s chrome=%s spill=%s",
+        filename,
+        len(result.get("line_items") or []),
+        reason,
+        chrome,
+        spill,
+    )
+    return result
 
 
 def classify_stock_direct_vision(
@@ -2120,6 +2362,17 @@ def _coerce_vision_payload(parsed: Dict[str, Any]) -> Dict[str, Any]:
             and extra.get("sales_scheme_qty") is None
         ):
             extra["sales_scheme_qty"] = raw["extra"].get("sales_scheme_qty")
+        # P.Sch / Pur.Free — never leave this parked only in receipts_qty.
+        if raw.get("purchase_scheme_qty") is not None and extra.get(
+            "purchase_scheme_qty"
+        ) is None:
+            extra["purchase_scheme_qty"] = raw.get("purchase_scheme_qty")
+        if (
+            isinstance(raw.get("extra"), dict)
+            and raw["extra"].get("purchase_scheme_qty") is not None
+            and extra.get("purchase_scheme_qty") is None
+        ):
+            extra["purchase_scheme_qty"] = raw["extra"].get("purchase_scheme_qty")
         # Op.Qty/Op.Val layouts: keep money fields in extra for finalize promote.
         for money_key in ("opening_value", "receipts_value", "purchase_value"):
             if raw.get(money_key) is not None and extra.get(money_key) is None:
@@ -2160,6 +2413,9 @@ def validate_stock_direct_vision(
 
     packing_leak = 0
     identity_fail = 0
+    money_without_qty = 0
+    receipts_qty_drop = 0
+    sales_qty_drop = 0
     low_confidence_cells = 0
     named = 0
     order_form = layout.startswith("handwritten_order_form")
@@ -2208,6 +2464,50 @@ def validate_stock_direct_vision(
             receipts = float(item.get("receipts_qty") or 0)
             sales = float(item.get("sales_qty") or 0)
             closing = float(item.get("closing_qty") or 0)
+            try:
+                receipts_value = float(item.get("receipts_value") or 0)
+            except (TypeError, ValueError):
+                receipts_value = 0.0
+            try:
+                sales_value = float(item.get("sales_value") or 0)
+            except (TypeError, ValueError):
+                sales_value = 0.0
+            try:
+                closing_value = float(item.get("closing_value") or 0)
+            except (TypeError, ValueError):
+                closing_value = 0.0
+            # Money printed but matching qty zeroed/shifted — trigger repair.
+            if op_qty_val and (
+                (receipts_value > 1 and receipts <= 0)
+                or (sales_value > 1 and sales <= 0)
+                or (closing_value > 1 and closing <= 0)
+            ):
+                money_without_qty += 1
+                extra["money_without_qty"] = True
+            # P.Qty+P.Val both dropped: Op-S alone cannot explain Cl (true P=0
+            # rows satisfy Op-S≈Cl). Flag for Detail repair only — never invent.
+            if (
+                op_qty_val
+                and receipts <= 0
+                and receipts_value <= 1
+                and opening
+                and sales
+                and closing
+                and abs(opening - sales - closing) > 1.01
+            ):
+                receipts_qty_drop += 1
+                extra["receipts_qty_drop_suspect"] = True
+            # S.Qty+S.Val both dropped while Op(+P)-Cl implies movement.
+            if (
+                op_qty_val
+                and sales <= 0
+                and sales_value <= 1
+                and opening
+                and closing
+                and abs(opening + receipts - closing) > 1.01
+            ):
+                sales_qty_drop += 1
+                extra["sales_qty_drop_suspect"] = True
             br = float(extra.get("br_qty") or 0)
             if not br:
                 br = float(
@@ -2235,10 +2535,19 @@ def validate_stock_direct_vision(
             if abs(expected - closing) > 1.01 and (
                 opening or receipts or sales or closing or sale_ret or pur_ret
             ):
-                identity_fail += 1
-                extra["stock_identity_ok"] = False
-                extra["validation_failed"] = True
-                extra["identity_valid"] = False
+                if op_qty_val:
+                    # Detail grids print Cr/Db/Br/Sch that Vision often misses;
+                    # printed Cl.Qty still wins — do not hard-penalize soft_ok.
+                    identity_fail += 1
+                    extra["stock_identity_ok"] = True
+                    extra["identity_valid"] = False
+                    extra["identity_gap_document"] = True
+                    extra["identity_expected_closing"] = expected
+                else:
+                    identity_fail += 1
+                    extra["stock_identity_ok"] = False
+                    extra["validation_failed"] = True
+                    extra["identity_valid"] = False
             else:
                 extra["stock_identity_ok"] = True
                 extra["identity_valid"] = True
@@ -2322,19 +2631,46 @@ def validate_stock_direct_vision(
     # Identity is soft: flag for retry/selection, but do not hard-fail a
     # structurally complete Vision table into the OCR cascade.
     soft_reasons: List[str] = []
-    # Op.Qty|Pur.Qty|Sale.Qty|Bal ledgers often print Bal ≠ Op+Pur-Sale
-    # (document gap). Penalizing identity here rewards Gemini for inventing
-    # Sale/Bal so the math works — keep score structural only for this family.
+    # Op.Qty|Pur.Qty|Sale.Qty|Bal ledgers often print Bal ≠ Op+Pur-Sale.
     if (
         not op_qty_pur_sale_bal
+        and not op_qty_val
         and row_count >= min_rows
         and identity_fail > max(2, row_count // 4)
     ):
         soft_reasons.append("identity_failure_majority")
+    # Detail continuation pages: dense column cascade leaves >half of rows
+    # with Op+P-S≠Cl even when money/qty cells are all filled (just shifted).
+    if (
+        op_qty_val
+        and row_count >= min_rows
+        and identity_fail > max(3, row_count // 2)
+    ):
+        soft_reasons.append("identity_failure_majority")
+    # Detail: S.Val/P.Val/Cl.Val present with qty=0 means column shift — repair.
+    if op_qty_val and money_without_qty >= max(2, row_count // 5):
+        soft_reasons.append("money_without_qty_majority")
+    # Detail: P.Qty vanished (and P.Val too) while Op-S≠Cl — repair.
+    if op_qty_val and receipts_qty_drop >= max(1, row_count // 6):
+        soft_reasons.append("receipts_qty_drop_majority")
+    # Detail: S.Qty+S.Val vanished while Op(+P)≠Cl — repair.
+    if op_qty_val and sales_qty_drop >= max(1, row_count // 6):
+        soft_reasons.append("sales_qty_drop_majority")
 
     hard_ok = not reasons
     if op_qty_pur_sale_bal:
         identity_score = max(0, row_count * 3)
+    elif op_qty_val:
+        # Soft-ok Detail still ranks by column-shift signals + identity gaps so
+        # a no-widen / mid-band retry can beat a shifted first pass.
+        identity_score = max(
+            0,
+            row_count * 3
+            - money_without_qty * 2
+            - receipts_qty_drop * 2
+            - sales_qty_drop * 2
+            - max(0, identity_fail - row_count // 4),
+        )
     else:
         identity_score = max(0, row_count * 3 - identity_fail * 2)
     return {
@@ -2380,6 +2716,7 @@ def _call_psr_vision(
     prompt: Optional[str] = None,
     layout_label: str = "product_stock_report",
     default_title: str = "Product Stock Report",
+    extra_images: Optional[List[Tuple[bytes, str]]] = None,
 ) -> Optional[Dict[str, Any]]:
     from services.sales_extraction_runtime import (
         sales_generate_content_via_vertex as generate_content_via_vertex,
@@ -2415,19 +2752,39 @@ def _call_psr_vision(
         gemini_input=gemini_input_kind,
         numeric_source="gemini_vision",
     )
+    parts: List[Dict[str, Any]] = [
+        {"text": prompt or STOCK_DIRECT_VISION_PROMPT},
+        {
+            "inline_data": {
+                "mime_type": mime,
+                "data": base64.b64encode(vision_bytes).decode("ascii"),
+            }
+        },
+    ]
+    for img_bytes, label in extra_images or []:
+        if not img_bytes:
+            continue
+        parts.append(
+            {
+                "text": (
+                    f"Additional crop ({label}): read Opening Val / Purchase / "
+                    "Closing Val / period Sales from this band when present."
+                )
+            }
+        )
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": base64.b64encode(img_bytes).decode("ascii"),
+                }
+            }
+        )
     payload = {
         "contents": [
             {
                 "role": "user",
-                "parts": [
-                    {"text": prompt or STOCK_DIRECT_VISION_PROMPT},
-                    {
-                        "inline_data": {
-                            "mime_type": mime,
-                            "data": base64.b64encode(vision_bytes).decode("ascii"),
-                        }
-                    },
-                ],
+                "parts": parts,
             }
         ],
         "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
@@ -3275,6 +3632,292 @@ def extract_handwritten_stock_direct_vision(
     return best
 
 
+def _pharmassist_row_score(item: Dict[str, Any]) -> Tuple[int, int, int]:
+    """Prefer starred rows, then rows with SVal/BVal, then denser qty fills."""
+    name = str(item.get("product_name") or "")
+    starred = 1 if "*" in name else 0
+    try:
+        sval = float(item.get("sales_value") or 0)
+    except (TypeError, ValueError):
+        sval = 0.0
+    try:
+        cval = float(item.get("closing_value") or 0)
+    except (TypeError, ValueError):
+        cval = 0.0
+    money = 1 if (sval > 0.01 or cval > 0.01) else 0
+    filled = 0
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        try:
+            if abs(float(item.get(key) or 0)) > 0.01:
+                filled += 1
+        except (TypeError, ValueError):
+            pass
+    return (starred, money, filled)
+
+
+def _pharmassist_dedupe_star_rows(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Collapse NAME vs NAME* duplicates for the same packing (keep best)."""
+    if len(items) < 2:
+        return items
+    best: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    order: List[Tuple[str, str]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        raw_name = str(item.get("product_name") or "").strip()
+        if not raw_name:
+            continue
+        base = re.sub(r"\s*\*\s*", " ", raw_name)
+        base = re.sub(r"\s+", " ", base).strip().upper()
+        pack = re.sub(r"\s+", "", str(item.get("packing") or "").upper())
+        key = (base, pack)
+        prev = best.get(key)
+        if prev is None:
+            best[key] = item
+            order.append(key)
+            continue
+        if _pharmassist_row_score(item) > _pharmassist_row_score(prev):
+            best[key] = item
+            logger.info(
+                "STOCK_PHARMASSIST_STAR_DEDUP keep=%r drop=%r",
+                str(item.get("product_name") or "")[:60],
+                str(prev.get("product_name") or "")[:60],
+            )
+        else:
+            logger.info(
+                "STOCK_PHARMASSIST_STAR_DEDUP keep=%r drop=%r",
+                str(prev.get("product_name") or "")[:60],
+                str(item.get("product_name") or "")[:60],
+            )
+    return [best[k] for k in order if k in best]
+
+
+def _pharmassist_clear_invented_row_money(item: Dict[str, Any]) -> None:
+    """Rows print BVal/SVal only — drop invented opening/purchase money."""
+    for key in ("opening_value", "receipts_value"):
+        if item.get(key) not in (None, "", 0, 0.0):
+            item[key] = None
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    changed = False
+    for key in ("opening_value", "receipts_value", "purchase_value"):
+        if extra.get(key) not in (None, "", 0, 0.0):
+            extra.pop(key, None)
+            changed = True
+    if changed:
+        item["extra"] = extra
+
+
+def _pharmassist_peel_address(peek: str) -> Optional[str]:
+    """City/PIN/street/phone line under PharmAssist letterhead."""
+    if not (peek or "").strip():
+        return None
+    m = re.search(
+        r"(?im)^[A-Z0-9][A-Z0-9 .,&'\-/]{2,60}\s*\n\s*"
+        r"([A-Z0-9][A-Z0-9 .,\-/]{8,160}?(?:Phone|Ph\.?|Mob\.?)[^\n]{0,60})",
+        peek,
+    )
+    if not m:
+        m = re.search(
+            r"(?im)^((?:[A-Z][A-Z .,-]{3,40}-\d{6}|DAVANGERE|BANGALORE|MUMBAI|"
+            r"CHENNAI|HYDERABAD|PUNE|KOLKATA)[^\n]{0,140})",
+            peek,
+        )
+    if not m:
+        return None
+    addr = re.sub(r"\s+", " ", m.group(1)).strip(" ,")
+    if len(addr) < 8:
+        return None
+    if re.search(r"Stock\s+and\s+Sale|Opening\s+Val|Item\s+Pack|HIMALAYA", addr, re.I):
+        return None
+    return addr
+
+
+def _finalize_pharmassist_result(
+    result: Optional[Dict[str, Any]],
+    file_bytes: bytes = b"",
+    peek_text: str = "",
+    filename: str = "",
+) -> Optional[Dict[str, Any]]:
+    """Header/footer peel + star dedupe for PharmAssist Stock and Sale Report."""
+    if not isinstance(result, dict) or not result.get("line_items"):
+        return result
+    if not filename:
+        filename = str(result.get("source_file") or result.get("filename") or "")
+
+    peek = peek_text or ""
+    if not peek and file_bytes:
+        try:
+            peek = _layout_header_text(file_bytes) or ""
+        except Exception:
+            peek = ""
+        try:
+            footer_bit = _ocr_png_footer_probe(file_bytes) or ""
+        except Exception:
+            footer_bit = ""
+        if footer_bit:
+            peek = f"{peek}\n{footer_bit}".strip()
+
+    try:
+        from services.sales_statement_extractor import (
+            _enrich_stock_statement_header_from_ocr,
+            _clear_company_confused_stockist,
+        )
+
+        if peek:
+            _enrich_stock_statement_header_from_ocr(result, peek)
+        _clear_company_confused_stockist(result)
+    except Exception:
+        pass
+
+    # Vision often parks "D K PHARMA (THE HIMALAYA ZEAL)" in company_name.
+    company = str(result.get("company_name") or "").strip()
+    stockist = str(result.get("stockist_name") or "").strip()
+    if not stockist and company:
+        m_co = re.match(
+            r"^(.+?\bPHARMA(?:CEUTICALS?)?)\s*[\(\-–—]\s*(.+)$",
+            company,
+            re.I,
+        )
+        if m_co and re.search(r"HIMALAYA|ZEAL|ZANDRA|WELLNESS", m_co.group(2), re.I):
+            result["stockist_name"] = m_co.group(1).strip(" -–—(")
+            result["company_name"] = re.sub(
+                r"^[\(\-–—\s]+|[\)\s]+$", "", m_co.group(2)
+            ).strip()
+            logger.info(
+                "STOCK_PHARMASSIST_SPLIT_COMPANY stockist=%r company=%r",
+                result["stockist_name"],
+                result["company_name"],
+            )
+
+    if not str(result.get("stockist_address") or "").strip():
+        addr = _pharmassist_peel_address(peek)
+        if addr:
+            result["stockist_address"] = addr
+            logger.info(
+                "STOCK_PHARMASSIST_ADDRESS_PEEL address=%r",
+                addr[:80],
+            )
+
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    for item in items:
+        _pharmassist_clear_invented_row_money(item)
+    before = len(items)
+    items = _pharmassist_dedupe_star_rows(items)
+    if len(items) != before:
+        logger.info(
+            "STOCK_PHARMASSIST_STAR_DEDUP rows_before=%s rows_after=%s",
+            before,
+            len(items),
+        )
+    result["line_items"] = items
+
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    footer_money = _peel_pharmassist_footer_money(peek) if peek else {}
+    if footer_money:
+        if "sales_value" in footer_money:
+            totals["sales_value"] = footer_money["sales_value"]
+            extra["sales_value_source"] = "pharmassist_footer_ocr"
+        if "closing_value" in footer_money:
+            totals["closing_value"] = footer_money["closing_value"]
+            extra["closing_value_source"] = "pharmassist_footer_ocr"
+        for key in ("opening_value", "purchase_value"):
+            if key in footer_money:
+                extra[key] = footer_money[key]
+                extra[f"{key}_source"] = "pharmassist_footer_ocr"
+        extra["total_row_source"] = "pharmassist_footer_ocr"
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_OCR keys=%s values=%s",
+            ",".join(sorted(footer_money.keys())),
+            footer_money,
+        )
+
+    try:
+        open_v = float(extra.get("opening_value")) if extra.get("opening_value") is not None else None
+    except (TypeError, ValueError):
+        open_v = None
+    try:
+        sv = float(totals["sales_value"]) if totals.get("sales_value") is not None else None
+    except (TypeError, ValueError):
+        sv = None
+    try:
+        cv = (
+            float(totals["closing_value"])
+            if totals.get("closing_value") is not None
+            else None
+        )
+    except (TypeError, ValueError):
+        cv = None
+
+    # Drop Vision totals that look like incomplete BVal/SVal line sums
+    # (integer, far below Opening Val) — never trust those as footer.
+    if cv is not None and not _pharmassist_money_looks_like_footer(cv, open_v):
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_REJECT field=closing_value value=%s opening=%s",
+            cv,
+            open_v,
+        )
+        totals["closing_value"] = None
+        extra.pop("closing_value_source", None)
+        cv = None
+    if sv is not None and not _pharmassist_money_looks_like_footer(
+        sv, open_v, loose_sales=True
+    ):
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_REJECT field=sales_value value=%s opening=%s",
+            sv,
+            open_v,
+        )
+        totals["sales_value"] = None
+        extra.pop("sales_value_source", None)
+        sv = None
+
+    need_footer_vision = bool(
+        file_bytes
+        and open_v is not None
+        and open_v >= 1000
+        and (cv is None or sv is None)
+    )
+    if need_footer_vision:
+        vision_footer = _pharmassist_footer_money_vision(file_bytes, filename)
+        if vision_footer:
+            if "sales_value" in vision_footer and sv is None:
+                totals["sales_value"] = vision_footer["sales_value"]
+                extra["sales_value_source"] = "pharmassist_footer_ocr"
+                sv = vision_footer["sales_value"]
+            if "closing_value" in vision_footer and cv is None:
+                totals["closing_value"] = vision_footer["closing_value"]
+                extra["closing_value_source"] = "pharmassist_footer_ocr"
+                cv = vision_footer["closing_value"]
+            for key in ("opening_value", "purchase_value"):
+                if key in vision_footer and extra.get(key) in (None, "", 0, 0.0):
+                    extra[key] = vision_footer[key]
+                    extra[f"{key}_source"] = "pharmassist_footer_ocr"
+            logger.info(
+                "STOCK_PHARMASSIST_FOOTER_VISION keys=%s values=%s",
+                ",".join(sorted(vision_footer.keys())),
+                vision_footer,
+            )
+
+    if sv is not None and _pharmassist_money_looks_like_footer(
+        sv, open_v, loose_sales=True
+    ):
+        extra.setdefault("sales_value_source", "pharmassist_footer_ocr")
+    if cv is not None and _pharmassist_money_looks_like_footer(cv, open_v):
+        extra.setdefault("closing_value_source", "pharmassist_footer_ocr")
+    if (
+        extra.get("opening_value") not in (None, "", 0, 0.0)
+        or extra.get("purchase_value") not in (None, "", 0, 0.0)
+        or extra.get("sales_value_source") == "pharmassist_footer_ocr"
+        or extra.get("closing_value_source") == "pharmassist_footer_ocr"
+    ):
+        extra["total_row_source"] = "pharmassist_footer_ocr"
+
+    extra["extraction_method"] = "pharmassist_stock_sale_vision"
+    extra["layout"] = "pharmassist_stock_sale"
+    return result
+
+
 def extract_pharmassist_direct_vision(
     file_bytes: bytes,
     filename: str,
@@ -3304,6 +3947,9 @@ def extract_pharmassist_direct_vision(
     original_meta = {"normalized": False, "normalization_reason": None}
     candidates: List[Tuple[int, Dict[str, Any], Dict[str, Any]]] = []
 
+    # Rows from the original page. Footer Opening/Closing/Sales are repaired
+    # in _finalize_pharmassist_result via a dedicated footer-band call when
+    # needed (blank-OCR path skips pack, so budget remains for that pass).
     result = _call_psr_vision(
         file_bytes,
         filename,
@@ -3356,7 +4002,9 @@ def extract_pharmassist_direct_vision(
             (int(validation.get("identity_score") or 0), result, validation)
         )
         if validation.get("soft_ok"):
-            return result
+            return _finalize_pharmassist_result(
+                result, file_bytes=file_bytes, filename=filename
+            )
         _log(
             "STOCK_DIRECT_VISION_VALIDATION_FAILED",
             filename=filename,
@@ -3444,7 +4092,9 @@ def extract_pharmassist_direct_vision(
                     )
                 )
                 if validation2.get("soft_ok"):
-                    return result2
+                    return _finalize_pharmassist_result(
+                        result2, file_bytes=file_bytes, filename=filename
+                    )
 
     if not candidates:
         return None
@@ -3467,7 +4117,9 @@ def extract_pharmassist_direct_vision(
             or 1
         ),
     )
-    return best
+    return _finalize_pharmassist_result(
+        best, file_bytes=file_bytes, filename=filename
+    )
 
 
 def _parse_pharmassist_money_token(raw: str) -> Optional[float]:
@@ -3523,6 +4175,224 @@ def _ocr_png_footer_probe(png_bytes: bytes) -> str:
             return tess.image_to_string(band, config="--psm 6") or ""
     except Exception:
         return ""
+
+
+def _pharmassist_money_looks_like_footer(
+    value: Optional[float],
+    opening_value: Optional[float] = None,
+    *,
+    loose_sales: bool = False,
+) -> bool:
+    """True when a Vision total looks like printed footer money, not a line sum."""
+    if value is None:
+        return False
+    try:
+        val = float(value)
+    except (TypeError, ValueError):
+        return False
+    if val < 1000:
+        return False
+    has_paise = abs(val - round(val)) >= 0.005
+    try:
+        open_v = float(opening_value) if opening_value is not None else None
+    except (TypeError, ValueError):
+        open_v = None
+    # Printed PharmAssist footer amounts almost always include paise (.xx).
+    # Integer totals are usually incomplete BVal/SVal line sums.
+    if not has_paise:
+        return False
+    if open_v is not None and open_v >= 1000:
+        # Closing should sit near Opening Val scale; line BVal sums undershoot.
+        if not loose_sales and val + 0.51 < open_v * 0.55:
+            return False
+        # Period Sales is usually well below Opening Val.
+        if loose_sales and val + 0.51 > open_v * 0.85:
+            return False
+    return True
+
+
+_PHARMASSIST_FOOTER_ONLY_PROMPT = """
+Read ONLY the manufacturer footer money band on this crop
+(Opening Val / Purchase / Closing Val / Sales).
+
+Return ONLY JSON:
+{
+  "opening_value": number|null,
+  "purchase_value": number|null,
+  "closing_value": number|null,
+  "sales_value": number|null
+}
+
+Rules:
+- Copy printed digits. Indian commas: 1,05,054.58 -> 105054.58.
+- sales_value = plain "Sales :" / "Sales" amount for the period.
+- NEVER use Sales (Sep) / Sales (Aug) / other month history.
+- Do not invent. Null when a label is not visible.
+""".strip()
+
+
+def _pharmassist_footer_money_vision(
+    file_bytes: bytes,
+    filename: str = "",
+) -> Dict[str, float]:
+    """One Gemini call on the footer band for Opening/Purchase/Closing/Sales."""
+    band = _pharmassist_footer_band_png(file_bytes)
+    if not band:
+        return {}
+    try:
+        from services.sales_extraction_runtime import (
+            sales_generate_content_via_vertex as generate_content_via_vertex,
+        )
+        from services.sales_statement_extractor import (
+            _extract_json_object,
+            _gemini_response_text,
+        )
+    except Exception:
+        return {}
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {"text": _PHARMASSIST_FOOTER_ONLY_PROMPT},
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": base64.b64encode(band).decode("ascii"),
+                        }
+                    },
+                ],
+            }
+        ],
+        "generationConfig": {"temperature": 0.0, "maxOutputTokens": 512},
+    }
+    try:
+        response = generate_content_via_vertex(
+            model=model,
+            payload=payload,
+            timeout=60,
+            label="stock_pharmassist_footer",
+        )
+        parsed = _extract_json_object(_gemini_response_text(response)) or {}
+    except Exception as exc:
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_VISION error file=%s err=%s",
+            filename,
+            type(exc).__name__,
+        )
+        return {}
+    out: Dict[str, float] = {}
+    try:
+        open_v = (
+            float(parsed["opening_value"])
+            if parsed.get("opening_value") is not None
+            else None
+        )
+    except (TypeError, ValueError):
+        open_v = None
+    for key in ("opening_value", "purchase_value", "closing_value", "sales_value"):
+        raw = parsed.get(key)
+        if raw is None:
+            continue
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            continue
+        loose = key == "sales_value"
+        if key in {"opening_value", "purchase_value"}:
+            if val >= 1000:
+                out[key] = val
+            continue
+        if _pharmassist_money_looks_like_footer(val, open_v or out.get("opening_value"), loose_sales=loose):
+            out[key] = val
+    return out
+
+
+def _pharmassist_footer_band_png(png_bytes: bytes) -> bytes:
+    """Crop+enlarge the Opening/Closing/Sales/Purchase manufacturer footer."""
+    if not png_bytes:
+        return b""
+    try:
+        from PIL import Image
+    except Exception:
+        return b""
+    try:
+        with Image.open(io.BytesIO(png_bytes)) as raw:
+            img = raw.convert("RGB")
+        width, height = img.size
+        if width < 120 or height < 200:
+            return b""
+        top = int(height * 0.68)
+        footer = img.crop((0, top, width, height))
+        zoom_w = max(900, int(width * 1.6))
+        zoom_h = max(280, int(footer.height * 2.2))
+        _lanczos = getattr(getattr(Image, "Resampling", Image), "LANCZOS", Image.LANCZOS)
+        footer_zoom = footer.resize((zoom_w, zoom_h), _lanczos)
+        buf = io.BytesIO()
+        footer_zoom.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return b""
+
+
+def _pharmassist_compose_footer_zoom(png_bytes: bytes) -> bytes:
+    """Full page + enlarged footer band so Opening/Closing/Sales stay readable.
+
+    Phone composites often bury the manufacturer footer under dense rows;
+    one Gemini call with a side zoom avoids a second budget burn.
+    """
+    if not png_bytes:
+        return png_bytes
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return png_bytes
+    try:
+        with Image.open(io.BytesIO(png_bytes)) as raw:
+            img = raw.convert("RGB")
+        width, height = img.size
+        if width < 120 or height < 200:
+            return png_bytes
+        footer_bytes = _pharmassist_footer_band_png(png_bytes)
+        if not footer_bytes:
+            return png_bytes
+        with Image.open(io.BytesIO(footer_bytes)) as fz:
+            footer_zoom = fz.convert("RGB")
+        gap = 8
+        canvas = Image.new(
+            "RGB",
+            (width + gap + footer_zoom.width, max(height, footer_zoom.height)),
+            (255, 255, 255),
+        )
+        canvas.paste(img, (0, 0))
+        canvas.paste(footer_zoom, (width + gap, 0))
+        draw = ImageDraw.Draw(canvas)
+        draw.rectangle(
+            [width + gap, 0, canvas.width - 1, footer_zoom.height - 1],
+            outline=(0, 90, 180),
+            width=3,
+        )
+        draw.text(
+            (width + gap + 6, 6),
+            "ZOOM Opening Val|Purchase|Closing Val|Sales (period)",
+            fill=(0, 90, 180),
+        )
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        out = buf.getvalue()
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_ZOOM bytes_in=%s bytes_out=%s",
+            len(png_bytes),
+            len(out),
+        )
+        return out or png_bytes
+    except Exception as exc:
+        logger.info(
+            "STOCK_PHARMASSIST_FOOTER_ZOOM skip reason=%s",
+            type(exc).__name__,
+        )
+        return png_bytes
 
 
 def _peel_pharmassist_footer_money(text: str) -> Dict[str, float]:
@@ -3697,27 +4567,13 @@ def extract_pharmassist_scanned_pdf(
         return None
 
     seed["line_items"] = merged_items
-    # Prefer printed footer money over Vision line-item sums.
-    footer_money = _peel_pharmassist_footer_money(peek_blob)
-    if footer_money:
-        totals = seed.setdefault("totals", {})
-        extra = totals.setdefault("extra", {})
-        if "sales_value" in footer_money:
-            totals["sales_value"] = footer_money["sales_value"]
-            extra["sales_value_source"] = "pharmassist_footer_ocr"
-        if "closing_value" in footer_money:
-            totals["closing_value"] = footer_money["closing_value"]
-            extra["closing_value_source"] = "pharmassist_footer_ocr"
-        for key in ("opening_value", "purchase_value"):
-            if key in footer_money:
-                extra[key] = footer_money[key]
-                extra[f"{key}_source"] = "pharmassist_footer_ocr"
+    seed = _finalize_pharmassist_result(seed, peek_text=peek_blob)
+    if not seed or not seed.get("line_items"):
         logger.info(
-            "STOCK_PHARMASSIST_FOOTER_OCR file=%s keys=%s values=%s",
+            "STOCK_PHARMASSIST_SCANNED_PDF file=%s status=skip reason=finalize_empty",
             filename,
-            ",".join(sorted(footer_money.keys())),
-            footer_money,
         )
+        return None
 
     validation = validate_stock_direct_vision(seed, layout="pharmassist_stock_sale")
     if not validation.get("ok"):
@@ -3734,6 +4590,8 @@ def extract_pharmassist_scanned_pdf(
     extra["gemini_calls"] = calls
     extra["pharmassist_scanned_pdf"] = True
     extra["skip_post_pipeline_gemini"] = True
+    if str(extra.get("sales_value_source") or "") == "pharmassist_footer_ocr":
+        extra["total_row_source"] = "pharmassist_footer_ocr"
     lock_stock_vision_result(
         seed,
         extraction_method="pharmassist_stock_sale_vision",
@@ -3746,14 +4604,111 @@ def extract_pharmassist_scanned_pdf(
     )
     logger.info(
         "STOCK_PHARMASSIST_SCANNED_PDF file=%s status=ok rows=%s "
-        "sales_value=%s closing_value=%s calls=%s",
+        "sales_value=%s closing_value=%s opening_value=%s purchase_value=%s "
+        "calls=%s",
         filename,
-        len(merged_items),
+        len(seed.get("line_items") or []),
         (seed.get("totals") or {}).get("sales_value"),
         (seed.get("totals") or {}).get("closing_value"),
+        ((seed.get("totals") or {}).get("extra") or {}).get("opening_value"),
+        ((seed.get("totals") or {}).get("extra") or {}).get("purchase_value"),
         calls,
     )
     return seed
+
+
+def _clear_detail_closing_qty_copied_from_sales(result: Dict[str, Any]) -> int:
+    """Drop Cl.Qty when it is clearly a copy of S.Qty (keep Cl.Val).
+
+    Never invents a replacement from Op+P-S — marks the qty missing only.
+    """
+    cleared = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+            closing_value = float(item.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not (
+            closing > 0
+            and sales > 0
+            and abs(closing - sales) < 0.01
+            and closing_value > 1
+            and opening
+            and abs(opening - closing) > 1.01
+        ):
+            continue
+        # Identity already disagrees with this Cl.Qty — S.Qty bleed.
+        expected = opening + receipts - sales
+        if abs(expected - closing) <= 1.01:
+            continue
+        item["closing_qty"] = None
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        fs = extra.setdefault("field_source", {})
+        if isinstance(fs, dict):
+            fs["closing_qty"] = "missing"
+        extra["closing_qty_cleared_sales_copy"] = True
+        cleared += 1
+        _log(
+            "STOCK_SALES_DETAIL_CL_SALES_COPY_CLEARED",
+            product=str(item.get("product_name") or "")[:60],
+            sales_qty=sales,
+            closing_value=closing_value,
+        )
+    return cleared
+
+
+def _finalize_detail_op_qty_val_result(
+    result: Optional[Dict[str, Any]], file_bytes: bytes = b""
+) -> Optional[Dict[str, Any]]:
+    """Enrich Seller:/Himalaya headers and swap confused company/stockist."""
+    if not isinstance(result, dict):
+        return result
+    try:
+        from services.sales_statement_extractor import (
+            _enrich_stock_statement_header_from_ocr,
+            _clear_company_confused_stockist,
+        )
+
+        peek = ""
+        try:
+            peek = _layout_header_text(file_bytes) if file_bytes else ""
+        except Exception:
+            peek = ""
+        if peek:
+            _enrich_stock_statement_header_from_ocr(result, peek)
+        _clear_company_confused_stockist(result)
+    except Exception:
+        pass
+    try:
+        _clear_detail_closing_qty_copied_from_sales(result)
+    except Exception:
+        pass
+    # Prefer printed Total-row money; else line sums so multipage totals are not null.
+    try:
+        from services.sales_statement_extractor import _sanitize_compute_totals
+
+        _sanitize_compute_totals(result)
+    except Exception:
+        totals = result.setdefault("totals", {})
+        items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+        if totals.get("sales_value") is None:
+            sv = sum(float(i.get("sales_value") or 0) for i in items)
+            if sv > 0:
+                totals["sales_value"] = round(sv, 2)
+        if totals.get("closing_value") is None:
+            cv = sum(float(i.get("closing_value") or 0) for i in items)
+            if cv > 0:
+                totals["closing_value"] = round(cv, 2)
+    return result
 
 
 def extract_stock_sales_op_qty_val_direct_vision(
@@ -3765,7 +4720,9 @@ def extract_stock_sales_op_qty_val_direct_vision(
     max_attempts: Optional[int] = None,
 ) -> Optional[Dict[str, Any]]:
     """Original-image Vision for STOCK AND SALES Op.Qty/Op.Val paired columns."""
-    model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
+    # Dense Detail phone scans (P.Sch/Cr/Db + continuation pages) need more
+    # than flash-lite; keep override via VISION_MODEL when ops set one.
+    model = os.getenv("VISION_MODEL", "gemini-2.5-flash").strip()
     if max_attempts is None:
         max_attempts = _max_attempts()
     else:
@@ -3794,19 +4751,31 @@ def extract_stock_sales_op_qty_val_direct_vision(
             "normalization_reason": None,
             "exif_oriented": True,
         }
-    widen_cl = _stock_sales_detail_widen_cl_enabled()
-    vision_bytes = (
-        _widen_detail_closing_columns(vision_primary)
-        if widen_cl
-        else vision_primary
-    )
-    if widen_cl:
+    # Continuation pages have no header row; Cl-only zoom biases Op→P→S
+    # left-shifts. Prefer mid-band Op→S zoom on those pages (best SEPTILIN /
+    # V-GEL recovery in audits).
+    continuation = "continuation" in str(reason or "").lower()
+    widen_cl = _stock_sales_detail_widen_cl_enabled() and not continuation
+    widen_movement = continuation
+    if widen_movement:
+        vision_bytes = _widen_detail_movement_columns(vision_primary)
+        original_meta = {
+            **original_meta,
+            "stock_sales_detail_widen_cl": False,
+            "stock_sales_detail_widen_movement": True,
+        }
+    elif widen_cl:
+        vision_bytes = _widen_detail_closing_columns(vision_primary)
         original_meta = {
             **original_meta,
             "stock_sales_detail_widen_cl": True,
         }
+    else:
+        vision_bytes = vision_primary
+    vision_bytes = _limit_detail_vision_image(vision_bytes)
     call_reason = reason + (
         ("+exif_orient" if exif_oriented else "")
+        + ("+widen_movement" if widen_movement else "")
         + ("+widen_cl" if widen_cl else "")
     )
 
@@ -3862,6 +4831,7 @@ def extract_stock_sales_op_qty_val_direct_vision(
             (int(validation.get("identity_score") or 0), result, validation)
         )
         if validation.get("soft_ok"):
+            result = _finalize_detail_op_qty_val_result(result, file_bytes)
             lock_stock_vision_result(
                 result,
                 early_vision_reason="stock_sales_op_qty_val_vision",
@@ -3872,11 +4842,34 @@ def extract_stock_sales_op_qty_val_direct_vision(
             return result
 
     if max_attempts >= 2 and (not candidates or not validation.get("soft_ok")):
+        soft_rs = {
+            str(x)
+            for x in (
+                (validation.get("soft_reasons") or [])
+                if isinstance(validation, dict)
+                else []
+            )
+        }
+        # Dropped/shifted P/S/Cl mid-columns: Cl-zoom merge rarely recovers
+        # P.Qty. Prefer a full main-prompt re-read without the Cl strip.
+        column_shift_soft = bool(
+            soft_rs
+            & {
+                "money_without_qty_majority",
+                "receipts_qty_drop_majority",
+                "sales_qty_drop_majority",
+                "identity_failure_majority",
+            }
+        )
+        # Column-shift soft fails use a full re-read (below). Identity-repair
+        # merge is only for residual soft gaps that are not mid-column drops —
+        # merge has been observed inventing Cl=Op+P-S on Detail scans.
         use_identity_repair = (
             _stock_sales_detail_identity_repair_enabled()
             and bool(result)
             and bool(validation.get("ok"))
             and not validation.get("soft_ok")
+            and not column_shift_soft
         )
         if use_identity_repair:
             _log(
@@ -3944,6 +4937,7 @@ def extract_stock_sales_op_qty_val_direct_vision(
                     )
                 ]
                 if validation_r.get("soft_ok"):
+                    result = _finalize_detail_op_qty_val_result(result, file_bytes)
                     lock_stock_vision_result(
                         result,
                         early_vision_reason="stock_sales_op_qty_val_vision",
@@ -3953,16 +4947,39 @@ def extract_stock_sales_op_qty_val_direct_vision(
                     )
                     return result
         else:
+            # Header pages: plain re-read. Continuation: mid-band Op→S zoom.
+            use_movement_retry = bool(continuation and column_shift_soft)
+            retry_bytes = _limit_detail_vision_image(
+                _widen_detail_movement_columns(vision_primary)
+                if use_movement_retry
+                else vision_primary
+            )
+            retry_meta = {
+                **original_meta,
+                "stock_sales_detail_widen_cl": False,
+                "stock_sales_detail_widen_movement": use_movement_retry,
+                "stock_sales_detail_column_shift_retry": bool(column_shift_soft),
+            }
+            _log(
+                "STOCK_SALES_DETAIL_COLUMN_SHIFT_RETRY",
+                filename=filename,
+                detected_layout=layout,
+                schema=schema,
+                reason=",".join(sorted(soft_rs)) or "retry",
+                gemini_called="pending",
+                widen_cl=False,
+                widen_movement=use_movement_retry,
+            )
             result2 = _call_psr_vision(
                 file_bytes,
                 filename,
                 ext,
-                vision_bytes=vision_bytes,
-                image_meta=original_meta,
+                vision_bytes=retry_bytes,
+                image_meta=retry_meta,
                 candidate=2,
                 model=model,
                 route=layout,
-                reason=call_reason + "+retry",
+                reason=call_reason + "+column_shift_retry",
                 prompt=STOCK_SALES_OP_QTY_VAL_VISION_PROMPT,
                 layout_label="stock_sales_op_qty_val",
                 default_title="STOCK AND SALES",
@@ -3982,10 +4999,12 @@ def extract_stock_sales_op_qty_val_direct_vision(
                 extra2 = result2.setdefault("totals", {}).setdefault("extra", {})
                 extra2["extraction_method"] = "stock_sales_op_qty_val_vision"
                 extra2["layout"] = "stock_sales_op_qty_val"
+                extra2["stock_sales_detail_column_shift_retry"] = True
                 candidates.append(
                     (int(validation2.get("identity_score") or 0), result2, validation2)
                 )
                 if validation2.get("soft_ok"):
+                    result2 = _finalize_detail_op_qty_val_result(result2, file_bytes)
                     lock_stock_vision_result(
                         result2,
                         early_vision_reason="stock_sales_op_qty_val_vision",
@@ -4007,8 +5026,42 @@ def extract_stock_sales_op_qty_val_direct_vision(
         )
         return None
 
-    candidates.sort(key=lambda row: row[0], reverse=True)
+    def _detail_candidate_rank(
+        row: Tuple[int, Dict[str, Any], Dict[str, Any]]
+    ) -> Tuple[int, int, int, int, int]:
+        score, cand, val = row
+        items = [i for i in (cand.get("line_items") or []) if isinstance(i, dict)]
+        filled_sales = 0
+        filled_closing = 0
+        for item in items:
+            try:
+                if float(item.get("sales_qty") or 0) > 0:
+                    filled_sales += 1
+                elif float(item.get("sales_value") or 0) > 1:
+                    filled_sales += 1
+            except (TypeError, ValueError):
+                pass
+            try:
+                if float(item.get("closing_value") or 0) > 1:
+                    filled_closing += 1
+                if float(item.get("closing_qty") or 0) > 0:
+                    filled_closing += 1
+            except (TypeError, ValueError):
+                pass
+        soft = 1 if val.get("soft_ok") else 0
+        # Prefer soft_ok, then identity score, then closing/sales fill (blanked
+        # retries lose), then denser tables.
+        return (
+            soft,
+            int(score or 0),
+            filled_closing,
+            filled_sales,
+            len(items),
+        )
+
+    candidates.sort(key=_detail_candidate_rank, reverse=True)
     best_score, best, best_val = candidates[0]
+    best = _finalize_detail_op_qty_val_result(best, file_bytes)
     lock_stock_vision_result(
         best,
         early_vision_reason="stock_sales_op_qty_val_vision",
@@ -4043,17 +5096,24 @@ For every product row (skip Total), return the printed:
   product_name — FULL item text including pack
   opening_qty (Op.Qty) — first qty after Item; never Sl.No
   opening_value (Op.Val) — money
-  receipts_qty (P.Qty) — 0 when printed 0; never copy Op.Qty here
-  sales_qty (S.Qty)
+  receipts_qty (P.Qty) — purchase QTY; 0 when printed 0; never copy Op.Qty here
+  receipts_value (P.Val) — money
+  purchase_scheme_qty (P.Sch) — free/scheme only; NEVER put this in receipts_qty
+  sales_qty (S.Qty) — never 0 when S.Val is non-zero
   sales_value (S.Val) — money; never drop a printed non-zero to 0
   sales_scheme_qty (S.Sch) — 0 when blank; never fold into sales_qty
   sales_return_qty (Cr.Qty / Rt.S.Qty) — 0 when blank
-  closing_qty (Cl.Qty) — second-to-last stock column
+  closing_qty (Cl.Qty) — second-to-last stock column; never 0 when Cl.Val non-zero
   closing_value (Cl.Val) — RIGHTMOST money column after all Rt/Cr/Db cols
 
 Do NOT invent numbers. Do NOT balance equations.
-Do NOT copy S.Val / Db.Val / Cr.Val into closing_value.
+Do NOT copy S.Val / Db.Val / Cr.Val / P.Val into closing_value or closing_qty.
 Do NOT treat Sl.No as opening_qty.
+Do NOT put P.Sch into receipts_qty (e.g. P.Qty=95 P.Sch=5 → receipts_qty=95).
+Do NOT copy the next row's Cl.Qty/Cl.Val into this row.
+Do NOT copy S.Qty into closing_qty (e.g. S.Qty=25 Cl.Qty=54 → closing_qty=54).
+Do NOT mark a row idle (P=0,S=0,Cl=Op) when P.Qty or S.Qty is printed non-zero
+(e.g. SHATAVARI Op=22 P=60 S=25 Cl=57 — not Op=Cl=22).
 When P=0, S=0 and Op.Val==Cl.Val, opening_qty must equal closing_qty.
 If Cl.Val is printed, closing_value must not be null or 0 unless the cell is 0.
 Also copy Total-row S.Val → totals.sales_value and Total-row Cl.Val →
@@ -4067,6 +5127,8 @@ Return ONLY JSON:
       "opening_qty": number|null,
       "opening_value": number|null,
       "receipts_qty": number|null,
+      "receipts_value": number|null,
+      "purchase_scheme_qty": number|null,
       "sales_qty": number|null,
       "sales_value": number|null,
       "sales_scheme_qty": number|null,
@@ -4174,6 +5236,7 @@ def _merge_detail_closing_repair(
         "opening_qty",
         "opening_value",
         "receipts_qty",
+        "receipts_value",
         "sales_qty",
         "sales_value",
         "sales_return_qty",
@@ -4220,6 +5283,10 @@ def _merge_detail_closing_repair(
             if trial_extra.get("sales_scheme_qty") != src.get("sales_scheme_qty"):
                 trial_extra["sales_scheme_qty"] = src.get("sales_scheme_qty")
                 changed = True
+        if src.get("purchase_scheme_qty") is not None:
+            if trial_extra.get("purchase_scheme_qty") != src.get("purchase_scheme_qty"):
+                trial_extra["purchase_scheme_qty"] = src.get("purchase_scheme_qty")
+                changed = True
         if not changed:
             continue
         base_gap = _detail_row_identity_gap(item)
@@ -4231,7 +5298,7 @@ def _merge_detail_closing_repair(
             src.get("closing_qty") is not None or src.get("closing_value") is not None
         )
         # Keep repair only when identity improves or stays within 0.51.
-        # Also allow equal-ish gap when filling missing Cr / S.Sch / S.Val.
+        # Also allow equal-ish gap when filling missing Cr / S.Sch / S.Val / P.Qty.
         fills_missing = bool(
             (item.get("sales_return_qty") in (None, 0) and src.get("sales_return_qty"))
             or (
@@ -4239,6 +5306,46 @@ def _merge_detail_closing_repair(
                 and src.get("sales_scheme_qty")
             )
             or (not item.get("sales_value") and src.get("sales_value"))
+            or (
+                float(item.get("receipts_qty") or 0) == 0
+                and src.get("receipts_qty") not in (None, 0)
+                and (
+                    float(item.get("receipts_value") or 0) > 1
+                    or float(src.get("receipts_value") or 0) > 1
+                    or base_gap > 1.01
+                )
+            )
+            or (
+                float(item.get("sales_qty") or 0) == 0
+                and (
+                    float(item.get("sales_value") or 0) > 1
+                    or float(src.get("sales_value") or 0) > 1
+                    or base_gap > 1.01
+                )
+                and src.get("sales_qty") not in (None, 0)
+            )
+            or (
+                float(item.get("closing_qty") or 0) == 0
+                and float(item.get("closing_value") or 0) > 1
+                and src.get("closing_qty") not in (None, 0)
+            )
+            or (
+                # Cl.Qty duplicated from S.Qty while Cl.Val looks real.
+                float(item.get("closing_qty") or 0) > 0
+                and float(item.get("sales_qty") or 0) > 0
+                and abs(
+                    float(item.get("closing_qty") or 0)
+                    - float(item.get("sales_qty") or 0)
+                )
+                < 0.01
+                and float(item.get("closing_value") or 0) > 1
+                and src.get("closing_qty") not in (None, 0)
+                and abs(
+                    float(src.get("closing_qty") or 0)
+                    - float(item.get("sales_qty") or 0)
+                )
+                > 0.51
+            )
             or (
                 float(item.get("opening_qty") or 0) == 0
                 and float(
@@ -4359,9 +5466,9 @@ def _stock_sales_detail_widen_cl_enabled() -> bool:
 
 
 def _stock_sales_detail_identity_repair_enabled() -> bool:
-    """Second-call Op/P/S/Cr/Cl repair+merge on soft identity fail (default OFF)."""
-    raw = os.getenv("STOCK_SALES_DETAIL_IDENTITY_REPAIR", "0").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    """Second-call Op/P/S/Cr/Cl repair+merge on soft identity fail (default ON)."""
+    raw = os.getenv("STOCK_SALES_DETAIL_IDENTITY_REPAIR", "true").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
 
 
 def _widen_detail_closing_columns(page_png: bytes) -> bytes:
@@ -4411,6 +5518,116 @@ def _widen_detail_closing_columns(page_png: bytes) -> bytes:
             (width + gap + 4, 6),
             "ZOOM Cl.Qty | Cl.Val (rightmost pair ONLY)",
             fill=(200, 0, 0),
+        )
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return page_png
+    finally:
+        try:
+            img.close()
+        except Exception:
+            pass
+
+
+def _limit_detail_vision_image(
+    page_png: bytes, *, max_side: int = 2200, max_bytes: int = 3_500_000
+) -> bytes:
+    """Downscale/recompress Detail Vision inputs so flash does not empty-out.
+
+    Phone JPEGs + movement/Cl zoom panels often exceed ~6–9MB; Vertex then
+    returns empty JSON. Keep upright content — only size, never crop digits.
+    """
+    if not page_png:
+        return page_png
+    try:
+        from PIL import Image
+    except Exception:
+        return page_png
+    try:
+        img = Image.open(io.BytesIO(page_png)).convert("RGB")
+    except Exception:
+        return page_png
+    try:
+        w, h = img.size
+        longest = max(w, h)
+        if longest > max_side:
+            scale = float(max_side) / float(longest)
+            img = img.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                Image.Resampling.LANCZOS,
+            )
+        quality = 90
+        out = page_png
+        for _ in range(4):
+            buf = io.BytesIO()
+            img.save(buf, format="JPEG", quality=quality, optimize=True)
+            out = buf.getvalue()
+            if len(out) <= max_bytes:
+                return out
+            quality = max(60, quality - 10)
+        return out
+    except Exception:
+        return page_png
+    finally:
+        try:
+            img.close()
+        except Exception:
+            pass
+
+
+def _widen_detail_movement_columns(page_png: bytes) -> bytes:
+    """Paste an enlarged Op.Qty→S.Val mid-band for column-shift retries.
+
+    Continuation Detail pages without headers often drop P.Qty or shift Op→P→S
+    left by one. A labeled zoom of the movement pair (not Cl alone) keeps
+    receipts_qty/sales_qty aligned to printed cells. Never invents digits.
+    """
+    if not page_png:
+        return page_png
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return page_png
+    try:
+        img = Image.open(io.BytesIO(page_png)).convert("RGB")
+    except Exception:
+        return page_png
+    try:
+        width, height = img.size
+        if width < 200 or height < 200:
+            return page_png
+        # Include Item text so zoom rows stay aligned; through S.Val before Cl.
+        # Do NOT also paste a Cl strip here — dual panels cascade the last rows.
+        left = int(width * 0.08)
+        right = int(width * 0.74)
+        if right - left < 80:
+            return page_png
+        mid = img.crop((left, 0, right, height))
+        zoom_w = max(mid.width + 1, int(mid.width * 1.35))
+        mid_zoom = mid.resize((zoom_w, height), Image.Resampling.LANCZOS)
+        gap = 8
+        canvas = Image.new(
+            "RGB", (width + gap + mid_zoom.width, height), (255, 255, 255)
+        )
+        canvas.paste(img, (0, 0))
+        canvas.paste(mid_zoom, (width + gap, 0))
+        draw = ImageDraw.Draw(canvas)
+        draw.rectangle(
+            [width + gap, 0, canvas.width - 1, height - 1],
+            outline=(0, 90, 180),
+            width=3,
+        )
+        draw.rectangle(
+            [left, int(height * 0.08), right - 2, height - 2],
+            outline=(0, 90, 180),
+            width=3,
+        )
+        draw.text(
+            (width + gap + 4, 6),
+            "ZOOM Item|Op.Qty|Op.Val|P.Qty|P.Sch|P.Val|S.Qty|S.Val",
+            fill=(0, 90, 180),
         )
         buf = io.BytesIO()
         canvas.save(buf, format="PNG", optimize=True)

@@ -5349,14 +5349,14 @@ def _op_qty_val_prefer_line_totals_enabled() -> bool:
     """STOCK_OP_QTY_VAL_PREFER_LINE_TOTALS — replace divergent Vision Total-row money.
 
     When Op.Qty|Op.Val Detail Vision misreads the printed Total row, prefer the
-    sum of already-extracted line sales_value / closing_value (same printed cells).
-    Default OFF.
+    higher of Vision Total-row vs sum of line sales_value / closing_value.
+    Default ON.
     """
-    return os.getenv("STOCK_OP_QTY_VAL_PREFER_LINE_TOTALS", "0").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
+    return os.getenv("STOCK_OP_QTY_VAL_PREFER_LINE_TOTALS", "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
     }
 
 
@@ -5381,9 +5381,31 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     totals["extra"]["line_sales_value_sum"] = sum_sales_value
     totals["extra"]["line_closing_value_sum"] = sum_closing_value
 
+    # PharmAssist composites often miss page-1 rows: BVal/SVal line sums then
+    # under-shoot Opening Val. Never invent footer money from those incomplete
+    # lines when the layout already tagged printed footer / Vision footer.
+    _method = str(totals["extra"].get("extraction_method") or "")
+    _layout = str(totals["extra"].get("layout") or "")
+    _pharmassist_layout = (
+        "pharmassist" in _method.lower() or "pharmassist" in _layout.lower()
+    )
+    try:
+        _open_val = float(totals["extra"].get("opening_value") or 0)
+    except (TypeError, ValueError):
+        _open_val = 0.0
+    _pharmassist_incomplete_lines = bool(
+        _pharmassist_layout
+        and _open_val >= 1000
+        and (
+            sum_closing_value + 0.51 < _open_val * 0.85
+            or str(totals["extra"].get("total_row_source") or "")
+            == "pharmassist_footer_ocr"
+        )
+    )
+
     # When a printed Stock Value column exists on rows but no footer money total was
     # captured, surface the line sum at top-level so totals.closing_value is not null.
-    if _fill_null_value_totals_from_lines_enabled():
+    if _fill_null_value_totals_from_lines_enabled() and not _pharmassist_incomplete_lines:
         if totals.get("closing_value") is None and sum_closing_value > 0:
             totals["closing_value"] = round(sum_closing_value, 2)
             totals["extra"]["closing_value_source"] = "line_item_sum"
@@ -5398,6 +5420,16 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
                 "STOCK_FILL_NULL_VALUE_TOTALS field=sales_value value=%s source=line_item_sum",
                 totals["sales_value"],
             )
+    elif _pharmassist_incomplete_lines and (
+        totals.get("closing_value") is None or totals.get("sales_value") is None
+    ):
+        logger.info(
+            "STOCK_FILL_NULL_VALUE_TOTALS skip=pharmassist_incomplete_lines "
+            "opening_value=%s line_closing_sum=%s line_sales_sum=%s",
+            _open_val,
+            sum_closing_value,
+            sum_sales_value,
+        )
 
     # Op.Qty|Op.Val Detail: keep money/qty totals consistent with extracted rows.
     # Closing: always mirror line Cl.Val sum (printed cell per row).
@@ -5412,15 +5444,26 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     if _op_qty_val_prefer_line_totals_enabled() and op_qty_val_layout:
         if sum_closing_value > 0:
             prev_cv = totals.get("closing_value")
-            new_cv = round(sum_closing_value, 2)
-            if prev_cv != new_cv:
-                logger.info(
-                    "STOCK_OP_QTY_VAL_PREFER_LINE_TOTALS field=closing_value was=%s now=%s",
-                    prev_cv,
-                    new_cv,
+            try:
+                prev_cv_f = float(prev_cv) if prev_cv is not None else None
+            except (TypeError, ValueError):
+                prev_cv_f = None
+            line_cv = round(sum_closing_value, 2)
+            # Prefer higher of Vision Total-row Cl.Val vs line sum (incomplete
+            # pages must not overwrite a printed Total-row closing).
+            if prev_cv_f is not None and prev_cv_f + 0.51 >= line_cv:
+                totals["extra"]["closing_value_source"] = (
+                    totals["extra"].get("closing_value_source") or "vision_total_row"
                 )
-            totals["closing_value"] = new_cv
-            totals["extra"]["closing_value_source"] = "line_item_sum"
+            else:
+                if prev_cv_f != line_cv:
+                    logger.info(
+                        "STOCK_OP_QTY_VAL_PREFER_LINE_TOTALS field=closing_value was=%s now=%s",
+                        prev_cv,
+                        line_cv,
+                    )
+                totals["closing_value"] = line_cv
+                totals["extra"]["closing_value_source"] = "line_item_sum"
         if sum_sales_value > 0:
             prev_sv = totals.get("sales_value")
             try:
@@ -5504,6 +5547,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "printed_total",
         # Op.Qty|Pur.Qty|Sale.Qty|Bal manufacturer money band (qty-only grid).
         "op_qty_pur_sale_bal_manufacturer_band",
+        # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
+        "pharmassist_footer_ocr",
     }
     _total_row_trusted = str(totals.get("extra", {}).get("total_row_source") or "") in (
         _trusted_footer_sources
@@ -5599,6 +5644,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "op_stk_rcpts_footer",
             "printed_total",
             "op_qty_pur_sale_bal_manufacturer_band",
+            "pharmassist_footer_ocr",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -18357,8 +18403,9 @@ def _clear_company_confused_stockist(result: Dict[str, Any]) -> bool:
         company
         and not _stockist_name_is_manufacturer_or_title(company)
         and re.search(
-            r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|associates|"
-            r"enterprises|traders|private\s+limited|pvt\.?\s*ltd)\b",
+            r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|pharma|stores|associates|"
+            r"enterprises|traders|healthcare|private\s+limited|pvt\.?\s*ltd|"
+            r"unit\s+of)\b",
             company,
         )
         and os.getenv(
@@ -22769,9 +22816,14 @@ def _looks_like_pack_op_pur_bal_stock_sale_text(text: str) -> bool:
     try:
         from services.stock_direct_vision import (
             _looks_like_stock_sales_detail_report_title,
+            _has_pharmassist_stock_sale_headers,
         )
 
         if _looks_like_stock_sales_detail_report_title(blob):
+            return False
+        # PharmAssist Sep|Aug|Op|Pur|Sale|Bal|BVal|SVal|Order — never this prompt
+        # (example Pur Val=125277 bleeds into purchase_value).
+        if _has_pharmassist_stock_sale_headers(blob):
             return False
     except Exception:
         pass
@@ -23265,7 +23317,23 @@ def _reconcile_pack_op_pur_bal_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     if footer_pv not in (None, "", 0, 0.0) and float(footer_pv) >= max(
         1000.0, line_purchase
     ):
-        extra["purchase_value"] = float(footer_pv)
+        # Prompt-example Pur Val=125277 from _PACK_OP_PUR_BAL prompt must not
+        # stick when Vision copied the few-shot total instead of the printed footer.
+        if abs(float(footer_pv) - 125277.0) < 0.51 and (
+            totals.get("sales_value") in (None, "", 0, 0.0)
+            or abs(float(totals.get("sales_value") or 0) - 209502.0) < 0.51
+        ):
+            logger.info(
+                "STOCK_PACK_OP_PUR_BAL_REJECT_PROMPT_EXAMPLE_PURCHASE was=%s",
+                footer_pv,
+            )
+            if line_purchase > 0 and abs(line_purchase - 125277.0) > 0.51:
+                extra["purchase_value"] = line_purchase
+            else:
+                extra.pop("purchase_value", None)
+                extra["purchase_value_rejected_prompt_example"] = float(footer_pv)
+        else:
+            extra["purchase_value"] = float(footer_pv)
     elif line_purchase > 0:
         extra["purchase_value"] = line_purchase
     return result
@@ -23324,9 +23392,18 @@ def _should_try_pack_op_pur_bal_stock_sale(
     try:
         from services.stock_direct_vision import (
             _looks_like_stock_sales_detail_report_title,
+            _has_stock_sales_op_qty_val_headers,
+            _has_pharmassist_stock_sale_headers,
         )
 
-        if _looks_like_stock_sales_detail_report_title(blob):
+        if _looks_like_stock_sales_detail_report_title(blob) or (
+            _has_stock_sales_op_qty_val_headers(blob)
+            and re.search(r"Stock\s+and\s+S\s*ales?\s+Detail|P\.?\s*Sch|Cl\.?\s*Qty", blob, re.I)
+        ):
+            return False
+        # PharmAssist Report (BVal/SVal + prior months) must not use Pur Val=125277
+        # pack prompt — that freezes purchase_value and shifts Sep|Aug into Op/Pur.
+        if _has_pharmassist_stock_sale_headers(blob):
             return False
     except Exception:
         pass
@@ -23347,7 +23424,33 @@ def _should_try_pack_op_pur_bal_stock_sale(
         re.I,
     ) and re.search(r"\bpack\b|\bOp\b|\bPur\b|\bBal\b", blob, re.I):
         return True
+    # Do not steal Detail Op.Qty/Op.Val grids via generic Zandra+packing heuristic
+    # when sample OCR was sideways / blank (wrong EXIF Orientation).
     if result and _looks_like_zandra_stock_sale_result(result):
+        try:
+            from services.stock_direct_vision import (
+                _looks_like_stock_sales_detail_report_title as _detail_title,
+                _has_stock_sales_op_qty_val_headers as _detail_hdrs,
+            )
+
+            title = str(result.get("report_title") or "")
+            if _detail_title(title) or _detail_title(blob) or _detail_hdrs(blob):
+                return False
+            # Generic early Vision often invents packing on Detail photos.
+            method = str(
+                ((result.get("totals") or {}).get("extra") or {}).get(
+                    "extraction_method"
+                )
+                or ""
+            )
+            if "pack_op_pur_bal" not in method and re.search(
+                r"Stock\s+and\s+Sales?\s+Detail|Op\.?\s*Qty|Cl\.?\s*Qty",
+                title,
+                re.I,
+            ):
+                return False
+        except Exception:
+            pass
         items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
         with_pack = sum(1 for i in items if str(i.get("packing") or "").strip())
         if items and with_pack >= max(3, len(items) // 4):
@@ -23585,6 +23688,109 @@ def _vision_call_pack_op_pur_bal(
     return result
 
 
+def _pack_op_pur_bal_looks_like_pharmassist_misfile(
+    result: Optional[Dict[str, Any]],
+    peek_text: str = "",
+) -> bool:
+    """True when pack/Op/Pur/Bal Vision ate a PharmAssist Sep|Aug|BVal|SVal sheet.
+
+    Works without OCR: title, prompt-example Pur Val=125277, Sep→Op shift
+    identity gaps, BVal-as-closing_qty spill, or stockist parked in company_name.
+    """
+    if not isinstance(result, dict):
+        return False
+    try:
+        from services.stock_direct_vision import (
+            _has_pharmassist_stock_sale_headers,
+            result_looks_like_pharmassist_bval_spill,
+        )
+
+        if _has_pharmassist_stock_sale_headers(peek_text or ""):
+            return True
+        if result_looks_like_pharmassist_bval_spill(result):
+            return True
+    except Exception:
+        pass
+    title = str(result.get("report_title") or "")
+    if re.search(r"Stock\s+and\s+Sale\s+Report|\bPharmAssist\b", title, re.I):
+        return True
+    extra = (result.get("totals") or {}).get("extra") or {}
+    if not isinstance(extra, dict):
+        extra = {}
+    try:
+        pv = float(extra.get("purchase_value") or 0)
+    except (TypeError, ValueError):
+        pv = 0.0
+    if abs(pv - 125277.0) < 0.51:
+        return True
+    company = str(result.get("company_name") or "")
+    stockist = str(result.get("stockist_name") or "").strip()
+    if (
+        not stockist
+        and re.search(r"\bPHARMA\b", company, re.I)
+        and re.search(r"HIMALAYA|ZEAL", company, re.I)
+    ):
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 8:
+        return False
+    # Sep|Aug parked as Op/Pur: sale≈0, closing≫opening, identity gap large.
+    sep_shift = 0
+    for item in items:
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not (opening or receipts or sales or closing):
+            continue
+        gap = abs((opening + receipts - sales) - closing)
+        if gap <= 1.01:
+            continue
+        if sales <= 0.01 and closing >= 20 and opening <= 25 and gap >= 10:
+            sep_shift += 1
+        elif gap >= 20:
+            sep_shift += 1
+    return sep_shift >= max(3, len(items) // 10)
+
+
+def _divert_pack_op_pur_bal_to_pharmassist(
+    file_bytes: bytes,
+    filename: str,
+    ext: str,
+    *,
+    reason: str,
+) -> Optional[Dict[str, Any]]:
+    """Replace pack/Op/Pur/Bal with locked PharmAssist Vision when misfiled."""
+    try:
+        from services.stock_direct_vision import (
+            extract_pharmassist_direct_vision,
+            is_stock_vision_locked,
+        )
+
+        pharm = extract_pharmassist_direct_vision(
+            file_bytes, filename, ext, reason=reason
+        )
+        if pharm and pharm.get("line_items") and is_stock_vision_locked(pharm):
+            logger.info(
+                "STOCK_PHARMASSIST_DIVERT_FROM_PACK file=%s rows=%s reason=%s",
+                filename,
+                len(pharm.get("line_items") or []),
+                reason,
+            )
+            return pharm
+    except Exception as exc:
+        logger.info(
+            "STOCK_PHARMASSIST_DIVERT_FROM_PACK file=%s failed error=%s reason=%s",
+            filename,
+            type(exc).__name__,
+            reason,
+        )
+    return None
+
+
 def _extract_pack_op_pur_bal_stock_sale_vision(
     file_bytes: bytes,
     filename: str,
@@ -23603,11 +23809,76 @@ def _extract_pack_op_pur_bal_stock_sale_vision(
         out = _repair_pack_op_pur_bal_footer_leaked_into_rows(out)
         return _reconcile_pack_op_pur_bal_totals(out)
 
+    # Zero-OCR runs never see Sep|Aug/BVal chrome in header peeks — check first.
+    peek = ""
+    try:
+        peek = _pack_op_pur_bal_header_hint(file_bytes) or ""
+    except Exception:
+        peek = ""
+    try:
+        from services.stock_direct_vision import (
+            _has_pharmassist_stock_sale_headers,
+            _layout_header_text,
+        )
+
+        if not peek:
+            peek = _layout_header_text(file_bytes) or ""
+        if _has_pharmassist_stock_sale_headers(peek):
+            diverted = _divert_pack_op_pur_bal_to_pharmassist(
+                file_bytes,
+                filename,
+                ext,
+                reason="pharmassist_chrome_before_pack_extract",
+            )
+            if diverted:
+                return diverted
+    except Exception:
+        pass
+
+    # Prefer PharmAssist before pack when OCR is blank: pack's few-shot
+    # Pur Val=125277 burns the Gemini budget, then divert needs a 2nd call.
+    # Keep only when Vision itself names the PharmAssist report title.
+    if not (peek or "").strip() or len(re.findall(r"[A-Za-z]{3,}", peek or "")) < 8:
+        diverted = _divert_pack_op_pur_bal_to_pharmassist(
+            file_bytes,
+            filename,
+            ext,
+            reason="pharmassist_before_pack_blank_ocr",
+        )
+        if diverted and diverted.get("line_items"):
+            title = str(diverted.get("report_title") or "")
+            extra_d = (diverted.get("totals") or {}).get("extra") or {}
+            has_footer_money = (
+                extra_d.get("opening_value") not in (None, "", 0, 0.0)
+                or extra_d.get("purchase_value") not in (None, "", 0, 0.0)
+                or (diverted.get("totals") or {}).get("closing_value")
+                not in (None, "", 0, 0.0)
+            )
+            if (
+                re.search(r"Stock\s+and\s+Sale\s+Report|\bPharmAssist\b", title, re.I)
+                and has_footer_money
+            ):
+                logger.info(
+                    "STOCK_PHARMASSIST_BEFORE_PACK_BLANK_OCR file=%s rows=%s",
+                    filename,
+                    len(diverted.get("line_items") or []),
+                )
+                return diverted
+
     # One full-page read first (avoids rate-limit storms from multi-crop).
     full_raw = _vision_call_pack_op_pur_bal(
         file_bytes, filename, ext, _PACK_OP_PUR_BAL_STOCK_SALE_VISION_PROMPT
     )
     full = _finish(full_raw)
+    if full and _pack_op_pur_bal_looks_like_pharmassist_misfile(full, peek):
+        diverted = _divert_pack_op_pur_bal_to_pharmassist(
+            file_bytes,
+            filename,
+            ext,
+            reason="pharmassist_misfile_after_pack_full",
+        )
+        if diverted:
+            return diverted
     if full:
         logger.info(
             "pack/Op/Pur/Bal full-page rows=%s money_weak=%s incomplete=%s score=%.1f file=%s",
@@ -23644,12 +23915,33 @@ def _extract_pack_op_pur_bal_stock_sale_vision(
             )
             parts.append(part)
     if not parts:
+        if full and _pack_op_pur_bal_looks_like_pharmassist_misfile(full, peek):
+            diverted = _divert_pack_op_pur_bal_to_pharmassist(
+                file_bytes,
+                filename,
+                ext,
+                reason="pharmassist_misfile_pack_no_crops",
+            )
+            if diverted:
+                return diverted
         return full
     merged = _merge_pack_op_pur_bal_results(parts, filename, ext)
     finished = _finish(merged)
+    best = finished
     if finished and _pack_op_pur_bal_score(finished) >= _pack_op_pur_bal_score(full):
-        return finished
-    return finished or full
+        best = finished
+    else:
+        best = finished or full
+    if best and _pack_op_pur_bal_looks_like_pharmassist_misfile(best, peek):
+        diverted = _divert_pack_op_pur_bal_to_pharmassist(
+            file_bytes,
+            filename,
+            ext,
+            reason="pharmassist_misfile_after_pack_merge",
+        )
+        if diverted:
+            return diverted
+    return best
 
 
 def _prefer_pack_op_pur_bal_stock_sale(
@@ -23665,12 +23957,65 @@ def _prefer_pack_op_pur_bal_stock_sale(
     extract but the specialized call failed — caller must not keep the weak
     generic result as final.
     """
+    detail_chrome = sample_text or ""
     try:
         from services.stock_direct_vision import (
             _looks_like_stock_sales_detail_report_title,
+            _has_stock_sales_op_qty_val_headers,
+            _has_pharmassist_stock_sale_headers,
+            _layout_header_text,
+            extract_stock_sales_op_qty_val_direct_vision,
+            extract_pharmassist_direct_vision,
+            is_stock_vision_locked,
         )
 
-        if _looks_like_stock_sales_detail_report_title(sample_text or ""):
+        if _looks_like_stock_sales_detail_report_title(detail_chrome):
+            return current
+        # Sideways EXIF often blanks sample; re-peek upright header before pack.
+        if not _looks_like_stock_sales_detail_report_title(detail_chrome):
+            try:
+                detail_chrome = "\n".join(
+                    t
+                    for t in (detail_chrome, _layout_header_text(file_bytes) or "")
+                    if t
+                )
+            except Exception:
+                pass
+        if _has_pharmassist_stock_sale_headers(detail_chrome):
+            pharm = extract_pharmassist_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="pharmassist_before_pack_prefer",
+            )
+            if pharm and pharm.get("line_items") and is_stock_vision_locked(pharm):
+                logger.info(
+                    "STOCK_PHARMASSIST_BEFORE_PACK_PREFER file=%s rows=%s",
+                    filename,
+                    len(pharm.get("line_items") or []),
+                )
+                return pharm
+            return current
+        if _looks_like_stock_sales_detail_report_title(
+            detail_chrome
+        ) or _has_stock_sales_op_qty_val_headers(detail_chrome):
+            detail = extract_stock_sales_op_qty_val_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="detail_before_pack_prefer",
+            )
+            if (
+                detail
+                and detail.get("line_items")
+                and is_stock_vision_locked(detail)
+            ):
+                logger.info(
+                    "STOCK_SALES_DETAIL_BEFORE_PACK_PREFER file=%s rows=%s",
+                    filename,
+                    len(detail.get("line_items") or []),
+                )
+                return detail
             return current
     except Exception:
         pass
@@ -23678,6 +24023,10 @@ def _prefer_pack_op_pur_bal_stock_sale(
         _pack_op_pur_bal_stock_sale_money_weak(current)
     )
     if not use and current and _looks_like_zandra_stock_sale_result(current):
+        # Never steal Stock and Sales Detail via invented packing on generic early.
+        title = str((current or {}).get("report_title") or "")
+        if re.search(r"Stock\s+and\s+Sales?\s+Detail|Op\.?\s*Qty", title, re.I):
+            return current
         items = [i for i in (current.get("line_items") or []) if isinstance(i, dict)]
         with_pack = sum(1 for i in items if str(i.get("packing") or "").strip())
         if items and with_pack >= max(3, len(items) // 4):
@@ -41667,6 +42016,28 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
                 type(pharm_exc).__name__,
             )
 
+        # Pack|Rate|Prev*|Opening|Receipt|Sales|Sale Value|Closing|Cl Value.
+        # Dense grids mash header glyphs; vision then parks Sale Value in
+        # sales_qty / Cl Value in closing_qty. Native word-x peel first.
+        try:
+            pack_rate = _parse_pdf_pack_rate_sale_value(
+                file_bytes, filename, doc=doc
+            )
+            if pack_rate and pack_rate.get("line_items"):
+                pack_rate["totals"]["extra"]["statement_count"] = 1
+                logger.info(
+                    "PACK_RATE_SALE_VALUE file=%s status=early_pdf_hit rows=%s",
+                    filename,
+                    len(pack_rate["line_items"]),
+                )
+                return pack_rate
+        except Exception as pack_rate_exc:
+            logger.info(
+                "PACK_RATE_SALE_VALUE file=%s status=early_pdf_skip error=%s",
+                filename,
+                type(pack_rate_exc).__name__,
+            )
+
         # Stock and Sales Detail (Op.Qty/Op.Val + P.Sch) image-only PDFs must
         # run BEFORE camera_multipage/vision_table. Those generic paths map
         # scheme/return money into sales_qty and were winning in Postman while
@@ -45227,6 +45598,558 @@ def _lstsl_take_qty_tail(
             )
         return left, repaired
     return None
+
+
+def _pdf_pack_rate_sale_value_enabled() -> bool:
+    """STOCK_PDF_PACK_RATE_SALE_VALUE — Pack|Rate|Opening|Sale Value|Cl Value PDF.
+
+    Default ON. Dense Stock-And-Sales grids mash header glyphs; vision then
+    shifts Sale Value into sales_qty. Kill switch: false.
+    """
+    return os.getenv("STOCK_PDF_PACK_RATE_SALE_VALUE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_has_pack_rate_sale_value_chrome(text: str) -> bool:
+    """Fingerprint Pack|Rate|Opening|Receipt|Sales|Sale Value|Closing|Cl Value."""
+    if not text:
+        return False
+    blob = text[:8000]
+    has_title = bool(
+        re.search(r"Stock\s+And\s+Sales\s+for\s+the\s+period", blob, re.I)
+        or re.search(r"Sale\s*Value", blob, re.I)
+    )
+    # Headers often glue (SaOpening / SaOlepening) — match Opening OR Open stem.
+    return bool(
+        has_title
+        and re.search(r"Open(?:ing|e?ning)?", blob, re.I)
+        and re.search(r"Receipt", blob, re.I)
+        and re.search(r"Sales", blob, re.I)
+        and re.search(r"Cl\s*Value|Closing", blob, re.I)
+        and re.search(r"Rate", blob, re.I)
+        # Not the LMS|OP.Stock StockStatement family.
+        and not re.search(
+            r"\bLMS\b.*\bOP\.?\s*Stock\b|\bOP\.?\s*Stock\b.*\bLMS\b", blob, re.I
+        )
+    )
+
+
+_PACK_RATE_SALE_VALUE_KEYS: Tuple[str, ...] = (
+    "rate",
+    "prev_la",
+    "prev_sa",
+    "op",
+    "pur",
+    "sale",
+    "srtn",
+    "sval",
+    "prtn",
+    "others",
+    "bal",
+    "bval",
+    "exp",
+    "nonmove",
+)
+
+
+def _pack_rate_sale_value_rows_from_words(
+    file_bytes: bytes,
+) -> Tuple[List[List[str]], Optional[str]]:
+    """Build [name, pack, ...14 nums] rows from pdfplumber word x-order."""
+    import io
+
+    try:
+        import pdfplumber
+    except ImportError:
+        return [], None
+    rows_out: List[List[str]] = []
+    peek_parts: List[str] = []
+    num_re = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$")
+    pack_re = re.compile(
+        r"^(?:\d+\s*(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S|''S)|"
+        r"\d+ML|\d+GMS?|\d+GR|\d+'S|\d+''S|\d+\"S)$",
+        re.I,
+    )
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            for page in pdf.pages:
+                peek_parts.append(page.extract_text() or "")
+                words = page.extract_words() or []
+                if not words:
+                    continue
+                # Cluster by top into row bands.
+                bands: List[List[Dict[str, Any]]] = []
+                for w in sorted(words, key=lambda x: (float(x.get("top") or 0), float(x.get("x0") or 0))):
+                    top = float(w.get("top") or 0)
+                    if not bands:
+                        bands.append([w])
+                        continue
+                    prev_top = float(bands[-1][0].get("top") or 0)
+                    if abs(top - prev_top) <= 3.5:
+                        bands[-1].append(w)
+                    else:
+                        bands.append([w])
+                for band in bands:
+                    band = sorted(band, key=lambda x: float(x.get("x0") or 0))
+                    texts = [str(w.get("text") or "").strip() for w in band]
+                    texts = [t for t in texts if t]
+                    if not texts:
+                        continue
+                    joined = " ".join(texts)
+                    if re.search(
+                        r"product\s*nam|sale\s*value|----total|\btotal\b|stock\s+and\s+sales",
+                        joined,
+                        re.I,
+                    ):
+                        # Keep TOTAL for footer peel later via joined peek.
+                        if re.search(r"total", joined, re.I):
+                            rows_out.append(["__TOTAL__"] + texts)
+                        continue
+                    # Drop trailing Flag markers (*, **, D) so right-align works.
+                    while texts and re.fullmatch(r"[*\sD]+", texts[-1] or "", re.I):
+                        texts.pop()
+                    texts = [
+                        re.sub(r"[*\s]+$", "", t) if t else t for t in texts
+                    ]
+                    texts = [t for t in texts if t]
+                    # Right-align the 14 movement slots (Rate…nonMove).
+                    nums: List[str] = []
+                    cut = len(texts)
+                    while cut > 0 and len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
+                        tok = texts[cut - 1].replace(",", "")
+                        # Flag residue glued to qty: "0**" / "0D".
+                        tok = re.sub(r"[*D]+$", "", tok, flags=re.I)
+                        if num_re.match(tok):
+                            nums.insert(0, tok)
+                            cut -= 1
+                            continue
+                        break
+                    if len(nums) < 12:
+                        continue
+                    # Pad missing trailing exp/nonmove with empty (missing).
+                    while len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
+                        nums.append("")
+                    left = texts[:cut]
+                    packing = None
+                    clean_name_parts: List[str] = []
+                    fallback_name_parts: List[str] = []
+                    for p in left:
+                        if packing is None and pack_re.match(p or ""):
+                            packing = p
+                            continue
+                        if num_re.match((p or "").replace(",", "")):
+                            continue
+                        # Skip dense OCR mash like 3D0RMOLPS / 2S0Y0PM.
+                        if (
+                            re.search(r"\d", p or "")
+                            and re.search(r"[A-Za-z]", p or "")
+                            and len(p) >= 5
+                            and not pack_re.match(p or "")
+                        ):
+                            m_pack = re.search(
+                                r"(\d+\s*(?:ML|GMS?|GM|TAB|TABS|'S|S|''S))$",
+                                p,
+                                re.I,
+                            )
+                            if m_pack and packing is None:
+                                packing = m_pack.group(1)
+                            # Keep a leading alpha stem (BONNISPAZ1 → BONNISPAZ).
+                            stem = re.match(r"^([A-Za-z][A-Za-z ./-]{1,})", p or "")
+                            if stem and len(stem.group(1).strip()) >= 3:
+                                fallback_name_parts.append(stem.group(1).strip())
+                            continue
+                        if re.search(r"[A-Za-z]", p or ""):
+                            clean_name_parts.append(p)
+                    name = _clean_name(
+                        " ".join(clean_name_parts)
+                        or " ".join(fallback_name_parts)
+                        or " ".join(
+                            p
+                            for p in left
+                            if re.search(r"[A-Za-z]{3,}", p or "")
+                        )
+                    )
+                    if not name or len(name) < 2:
+                        continue
+                    rows_out.append(
+                        [name, packing or ""]
+                        + nums[: len(_PACK_RATE_SALE_VALUE_KEYS)]
+                    )
+    except Exception:
+        return [], None
+    return rows_out, "\n".join(peek_parts)
+
+
+def _parse_text_pack_rate_sale_value(
+    text: str, filename: str, source_format: str
+) -> Optional[Dict[str, Any]]:
+    """One-token-per-line / spaced text for Pack|Rate|Sale Value grids."""
+    if not _pdf_pack_rate_sale_value_enabled():
+        return None
+    if not _text_has_pack_rate_sale_value_chrome(text or ""):
+        return None
+    lines = [
+        re.sub(r"[ \t]+", " ", ln.replace("\u00a0", " ")).strip()
+        for ln in (text or "").splitlines()
+    ]
+    lines = [ln for ln in lines if ln]
+    header_idx = None
+    for i, ln in enumerate(lines[:60]):
+        if (
+            re.search(r"\bOpening\b", ln, re.I)
+            and re.search(r"\bReceipt\b", ln, re.I)
+            and re.search(r"\bSales\b", ln, re.I)
+            and re.search(r"Value|Closing", ln, re.I)
+        ):
+            header_idx = i
+            break
+        # One label per line header run.
+        if re.fullmatch(r"Opening", ln, re.I):
+            window = " ".join(lines[max(0, i - 6) : i + 10])
+            if _text_has_pack_rate_sale_value_chrome(window):
+                header_idx = max(0, i - 6)
+                break
+    if header_idx is None:
+        return None
+
+    num_re = re.compile(r"^-?\d+(?:,\d{3})*(?:\.\d+)?$")
+    pack_re = re.compile(
+        r"^(?:\d+\s*(?:ML|GMS?|GM|GR|G|TAB|TABS|CAP|CAPS|'S|S|''S)|"
+        r"\d+ML|\d+GMS?|\d+GR|\d+'S|\d+''S|\d+\"S)$",
+        re.I,
+    )
+    need = len(_PACK_RATE_SALE_VALUE_KEYS)
+    items: List[Dict[str, Any]] = []
+    result = empty_result(filename, source_format)
+    result["report_title"] = result.get("report_title") or "Stock And Sales"
+    for ln in lines[: header_idx + 1]:
+        if not result.get("stockist_name") and re.search(
+            r"PHARMA|MEDICAL|AGENC|STORES|DISTRIBUT|MEDICO", ln, re.I
+        ) and not re.search(r"STOCK|SALES|STATEMENT|HIMALAYA", ln, re.I):
+            result["stockist_name"] = _clean_name(ln).rstrip(" ,;|")
+        if not result.get("company_name") and re.search(
+            r"HIMALAYA|ZANDRA|ZADRA|ZENITH|ZEAL", ln, re.I
+        ):
+            result["company_name"] = _clean_name(ln)
+        period = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-)\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            ln,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    # Multiline: name then rate…nums one per line.
+    body = lines[header_idx + 1 :]
+    # Flatten continued one-label headers (Rate / Previous / …).
+    while body and re.fullmatch(
+        r"Pack|Rate|Previous|Opening|Receipt|Sales|Sale\s*Value|Closing|"
+        r"Cl\s*Value|expQty|nonMoveQty|Flag|Purchase\s*R|Others|Sales\s*RTN|"
+        r"Last\s*Sale|Previous\s*Sale|Product\s*Na.*",
+        body[0],
+        re.I,
+    ):
+        body = body[1:]
+
+    i = 0
+    printed_sval = None
+    printed_cval = None
+    while i < len(body):
+        ln = body[i]
+        if re.search(r"^(----+)?total|grand\s+total|page\s+\d", ln, re.I):
+            # Footer nums follow on subsequent lines or same line.
+            footer_nums: List[str] = []
+            j = i
+            while j < len(body) and len(footer_nums) < 16:
+                for m in re.finditer(r"-?\d+(?:,\d{3})*(?:\.\d+)?", body[j]):
+                    footer_nums.append(m.group(0).replace(",", ""))
+                j += 1
+                if footer_nums and j < len(body) and re.search(
+                    r"[A-Za-z]{3,}", body[j] or ""
+                ) and not re.search(r"total", body[j], re.I):
+                    break
+            # Sale Value sits after Sales|Sales RTN; prefer mid-large money.
+            if len(footer_nums) >= 8:
+                # Heuristic matching printed x-order: … sales, srtn, sval, …
+                printed_sval = _to_float(footer_nums[6]) if len(footer_nums) > 6 else None
+                printed_cval = _to_float(footer_nums[-2]) if len(footer_nums) >= 2 else None
+                # Prefer largest late money as Cl Value when present.
+                money = [(_to_float(v) or 0.0, v) for v in footer_nums if "." in v or (_to_float(v) or 0) >= 1000]
+                if money:
+                    money_sorted = sorted(money, key=lambda kv: kv[0])
+                    if printed_cval is None or printed_cval < money_sorted[-1][0]:
+                        printed_cval = money_sorted[-1][0]
+            i = j
+            continue
+        # Collect name tokens until numeric run of `need`.
+        name_parts: List[str] = []
+        packing = None
+        nums: List[str] = []
+        j = i
+        while j < len(body):
+            tok = body[j]
+            if re.search(r"^(----+)?total|grand\s+total|page\s+\d", tok, re.I):
+                break
+            if num_re.match(tok.replace(",", "")) and (
+                nums or not name_parts or "." in tok or len(name_parts) >= 1
+            ):
+                # Start or continue numeric run.
+                if not nums and name_parts and not (
+                    "." in tok or re.fullmatch(r"\d{1,4}", tok.replace(",", ""))
+                ):
+                    name_parts.append(tok)
+                    j += 1
+                    continue
+                nums.append(tok.replace(",", ""))
+                j += 1
+                if len(nums) >= need:
+                    break
+                continue
+            if nums:
+                break
+            if pack_re.match(tok):
+                packing = tok
+            else:
+                name_parts.append(tok)
+            j += 1
+        name = _clean_name(" ".join(name_parts))
+        # Peel trailing pack from name when not separate.
+        if packing is None and name:
+            m_pack = re.search(
+                r"^(?P<n>.+?)\s+(?P<p>\d+\s*(?:ML|GMS?|GM|TAB|TABS|'S|S|''S))$",
+                name,
+                re.I,
+            )
+            if m_pack:
+                name = _clean_name(m_pack.group("n"))
+                packing = m_pack.group("p")
+        if name and len(nums) >= 12:
+            while len(nums) < need:
+                nums.append("")
+            values = {
+                k: _to_float(v) if str(v).strip() != "" else None
+                for k, v in zip(_PACK_RATE_SALE_VALUE_KEYS, nums)
+            }
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = values.get("op")
+            item["receipts_qty"] = values.get("pur")
+            item["sales_qty"] = values.get("sale")
+            item["sales_return_qty"] = values.get("srtn")
+            item["sales_value"] = values.get("sval")
+            item["closing_qty"] = values.get("bal")
+            item["closing_value"] = values.get("bval")
+            item["extra"] = {
+                "layout": "text_pack_rate_sale_value",
+                "rate": values.get("rate"),
+                "purchase_return_qty": values.get("prtn"),
+                "other_outward_qty": values.get("others"),
+                "expiry_damage_qty": values.get("exp"),
+                "field_source": {
+                    "opening_qty": "printed",
+                    "receipts_qty": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "printed",
+                },
+            }
+            if values.get("prev_la") is not None:
+                item["extra"]["lms"] = values.get("prev_la")
+            items.append(item)
+        i = max(j, i + 1)
+
+    if len(items) < 5:
+        return None
+    result["line_items"] = items
+    result = _coerce_month_year_period_fields(result, content_text=text)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "text_pack_rate_sale_value"
+    extra["layout"] = "text_pack_rate_sale_value"
+    extra["stock_identity_kind"] = "opening_purchase_sale_saleret_expdmg"
+    extra["stock_identity_formula"] = (
+        "closing=opening+receipts-sales+sales_return-purchase_return-others"
+    )
+    if printed_sval not in (None, 0.0):
+        result["totals"]["sales_value"] = printed_sval
+        extra["total_row_source"] = "pack_rate_sale_value_footer"
+        extra["sales_value_source"] = "printed_total"
+    if printed_cval not in (None, 0.0):
+        result["totals"]["closing_value"] = printed_cval
+        extra["closing_value_source"] = "printed_total"
+    logger.info(
+        "PACK_RATE_SALE_VALUE file=%s status=ok source=text rows=%s",
+        filename,
+        len(items),
+    )
+    return result
+
+
+def _parse_pdf_pack_rate_sale_value(
+    file_bytes: bytes,
+    filename: str,
+    *,
+    doc=None,
+) -> Optional[Dict[str, Any]]:
+    """PDF Pack|Rate|Opening|Receipt|Sales|Sale Value|Closing|Cl Value via words."""
+    if not _pdf_pack_rate_sale_value_enabled():
+        return None
+    peek = ""
+    if doc is not None:
+        try:
+            peek = "\n".join(
+                (page.get_text("text") or "") for page in doc[: min(2, len(doc))]
+            )
+        except Exception:
+            peek = ""
+    if not peek:
+        try:
+            import fitz
+
+            _doc = fitz.open(stream=file_bytes, filetype="pdf")
+            peek = "\n".join(
+                (_doc[i].get_text("text") or "")
+                for i in range(min(2, len(_doc)))
+            )
+            _doc.close()
+        except Exception:
+            peek = ""
+    if not _text_has_pack_rate_sale_value_chrome(peek):
+        return None
+
+    word_rows, word_peek = _pack_rate_sale_value_rows_from_words(file_bytes)
+    peek = word_peek or peek
+    items: List[Dict[str, Any]] = []
+    printed_sval = None
+    printed_cval = None
+    result = empty_result(filename, "pdf")
+    result["report_title"] = "Stock And Sales"
+    for ln in (peek or "").splitlines()[:30]:
+        if not result.get("stockist_name") and re.search(
+            r"PHARMA|MEDICAL|AGENC|STORES|DISTRIBUT|MEDICO", ln, re.I
+        ) and not re.search(r"STOCK|SALES|STATEMENT|HIMALAYA", ln, re.I):
+            result["stockist_name"] = _clean_name(ln).rstrip(" ,;|")
+        if not result.get("company_name") and re.search(
+            r"HIMALAYA|ZANDRA|ZADRA|ZENITH|ZEAL", ln, re.I
+        ):
+            result["company_name"] = _clean_name(ln)
+        period = re.search(
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*(?:to|-)\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            ln,
+            re.I,
+        )
+        if period:
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    for row in word_rows:
+        if not row:
+            continue
+        if row[0] == "__TOTAL__":
+            nums = []
+            for tok in row[1:]:
+                for m in re.finditer(r"-?\d+(?:,\d{3})*(?:\.\d+)?", tok):
+                    nums.append(m.group(0).replace(",", ""))
+            # Same 14 slots as body: Rate…Sale…Sale Value…Closing…Cl Value…
+            vals = [_to_float(v) or 0.0 for v in nums]
+            if len(vals) >= len(_PACK_RATE_SALE_VALUE_KEYS):
+                printed_sval = vals[7]  # Sale Value
+                printed_cval = vals[11]  # Cl Value
+            elif len(vals) >= 8:
+                # Truncated footer: pick Sales RTN < Sale Value pattern.
+                printed_cval = max(vals[-3:]) if vals else None
+                for i in range(len(vals) - 2):
+                    if (
+                        vals[i] >= 1000
+                        and 0 <= vals[i + 1] < vals[i]
+                        and vals[i + 2] >= 1000
+                    ):
+                        printed_sval = vals[i + 2]
+                        break
+            continue
+        name = row[0]
+        packing = row[1] or None
+        nums = row[2:]
+        if len(nums) < 12:
+            continue
+        while len(nums) < len(_PACK_RATE_SALE_VALUE_KEYS):
+            nums.append("")
+        values = {
+            k: _to_float(v) if str(v).strip() != "" else None
+            for k, v in zip(_PACK_RATE_SALE_VALUE_KEYS, nums)
+        }
+        item = empty_line_item()
+        item["product_name"] = name
+        item["packing"] = packing
+        item["opening_qty"] = values.get("op")
+        item["receipts_qty"] = values.get("pur")
+        item["sales_qty"] = values.get("sale")
+        item["sales_return_qty"] = values.get("srtn")
+        item["sales_value"] = values.get("sval")
+        item["closing_qty"] = values.get("bal")
+        item["closing_value"] = values.get("bval")
+        item["extra"] = {
+            "layout": "pdf_pack_rate_sale_value",
+            "rate": values.get("rate"),
+            "purchase_return_qty": values.get("prtn"),
+            "other_outward_qty": values.get("others"),
+            "expiry_damage_qty": values.get("exp"),
+            "field_source": {
+                "opening_qty": "printed",
+                "receipts_qty": "printed",
+                "sales_qty": "printed",
+                "sales_value": "printed",
+                "closing_qty": "printed",
+                "closing_value": "printed",
+            },
+        }
+        if values.get("prev_la") is not None:
+            item["extra"]["lms"] = values.get("prev_la")
+        items.append(item)
+
+    if len(items) < 5:
+        # Fall back to one-token-per-line text peel.
+        text_parsed = _parse_text_pack_rate_sale_value(peek, filename, "pdf")
+        if text_parsed and text_parsed.get("line_items"):
+            return text_parsed
+        logger.info(
+            "PACK_RATE_SALE_VALUE file=%s status=skip reason=too_few_rows n=%s",
+            filename,
+            len(items),
+        )
+        return None
+
+    result["line_items"] = items
+    result = _coerce_month_year_period_fields(result, content_text=peek)
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["extraction_method"] = "pdf_pack_rate_sale_value"
+    extra["layout"] = "pdf_pack_rate_sale_value"
+    extra["stock_identity_kind"] = "opening_purchase_sale_saleret_expdmg"
+    extra["stock_identity_formula"] = (
+        "closing=opening+receipts-sales+sales_return-purchase_return-others"
+    )
+    if printed_sval not in (None, 0.0):
+        result["totals"]["sales_value"] = printed_sval
+        extra["total_row_source"] = "pack_rate_sale_value_footer"
+        extra["sales_value_source"] = "printed_total"
+    if printed_cval not in (None, 0.0):
+        result["totals"]["closing_value"] = printed_cval
+        extra["closing_value_source"] = "printed_total"
+    logger.info(
+        "PACK_RATE_SALE_VALUE file=%s status=ok source=words rows=%s "
+        "sales_value=%s closing_value=%s",
+        filename,
+        len(items),
+        result["totals"].get("sales_value"),
+        result["totals"].get("closing_value"),
+    )
+    return result
 
 
 def _text_has_lms_opstock_rcpts_headers(text: str) -> bool:
@@ -63496,7 +64419,9 @@ def _maybe_early_vision_for_image(
     try:
         from services.stock_direct_vision import (
             _has_stock_sales_op_qty_val_headers,
+            _has_pharmassist_stock_sale_headers,
             extract_stock_sales_op_qty_val_direct_vision,
+            extract_pharmassist_direct_vision,
             is_stock_vision_locked,
         )
 
@@ -63523,9 +64448,34 @@ def _maybe_early_vision_for_image(
                     len(detail_pre_pack.get("line_items") or []),
                 )
                 return detail_pre_pack, True
+
+        # PharmAssist Stock and Sale Report BEFORE pack/Op/Pur/Bal.
+        # Pack prompt hardcodes Pur Val=125277 and maps Sep|Aug into Op/Pur.
+        if _has_pharmassist_stock_sale_headers(probe_text):
+            pharm_pre_pack = extract_pharmassist_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="pharmassist_before_pack_op_pur_bal",
+            )
+            if (
+                pharm_pre_pack
+                and pharm_pre_pack.get("line_items")
+                and is_stock_vision_locked(pharm_pre_pack)
+            ):
+                extra = pharm_pre_pack.setdefault("totals", {}).setdefault("extra", {})
+                extra["early_vision_reason"] = "pharmassist_before_pack_op_pur_bal"
+                logger.info(
+                    "[SalesStatement] file=%s decision=PHARMASSIST_STOCK_SALE_EARLY "
+                    "rows=%s reason=before_pack_op_pur_bal",
+                    filename,
+                    len(pharm_pre_pack.get("line_items") or []),
+                )
+                return pharm_pre_pack, True
     except Exception as exc:
         logger.info(
-            "[SalesStatement] file=%s stock_sales_detail before pack failed: %s",
+            "[SalesStatement] file=%s stock_sales_detail/pharmassist before pack "
+            "failed: %s",
             filename,
             type(exc).__name__,
         )
@@ -66045,6 +66995,45 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
             )
         )
+        # PharmAssist Sep|Aug|BVal|SVal before VT — VT SaleRet parks BVal in closing_qty.
+        _skip_vt_for_pharmassist = False
+        try:
+            from services.stock_direct_vision import (
+                _has_pharmassist_stock_sale_headers,
+                try_divert_to_pharmassist_vision,
+            )
+
+            _skip_vt_for_pharmassist = _has_pharmassist_stock_sale_headers(
+                _op_stk_peek or ""
+            )
+            if _skip_vt_for_pharmassist:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE skipped "
+                    "reason=pharmassist_stock_sale",
+                    filename,
+                )
+                pharm_before_vt = try_divert_to_pharmassist_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="pharmassist_before_vision_table",
+                    peek_text=_op_stk_peek or "",
+                )
+                if pharm_before_vt and pharm_before_vt.get("line_items"):
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=pharmassist_before_vt "
+                        "file=%s line_items=%s",
+                        filename,
+                        len(pharm_before_vt.get("line_items") or []),
+                    )
+                    return pharm_before_vt
+        except Exception as _pharm_vt_exc:
+            logger.info(
+                "[SalesStatement] file=%s pharmassist-before-VT failed: %s",
+                filename,
+                type(_pharm_vt_exc).__name__,
+            )
+            _skip_vt_for_pharmassist = False
         if _skip_vt_for_op_stk:
             logger.info(
                 "[SalesStatement] file=%s VISION_TABLE skipped reason=op_stk_rcpts_grid",
@@ -66797,6 +67786,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             vision_table_active_for("image")
             and not _skip_vt_for_op_stk
             and not _skip_vt_for_medica
+            and not _skip_vt_for_pharmassist
             and not _ssa_sheets_qty_value
             and not _ssa_portrait_noise_early
         ):
@@ -66815,6 +67805,37 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
             if outcome.get("status") == "ok" and isinstance(outcome.get("result"), dict):
                 result = outcome["result"]
+                # VT SaleRet on PharmAssist: BVal spills into closing_qty (52329 etc.).
+                try:
+                    from services.stock_direct_vision import (
+                        result_looks_like_pharmassist_bval_spill,
+                        try_divert_to_pharmassist_vision,
+                    )
+
+                    if result_looks_like_pharmassist_bval_spill(result):
+                        pharm_after_vt = try_divert_to_pharmassist_vision(
+                            file_bytes,
+                            filename,
+                            ext,
+                            reason="pharmassist_after_vt_bval_spill",
+                            peek_text=_op_stk_peek or "",
+                            current=result,
+                        )
+                        if pharm_after_vt and pharm_after_vt.get("line_items"):
+                            logger.info(
+                                "[STOCK_EXTRACTION_PATH] stage=pharmassist_after_vt "
+                                "file=%s line_items=%s",
+                                filename,
+                                len(pharm_after_vt.get("line_items") or []),
+                            )
+                            return pharm_after_vt
+                except Exception as _pharm_spill_exc:
+                    logger.info(
+                        "[SalesStatement] file=%s pharmassist after VT spill "
+                        "failed: %s",
+                        filename,
+                        type(_pharm_spill_exc).__name__,
+                    )
                 # VT often collapses Medica SALE/STOCK on dark phone shots even
                 # when OCR peek failed — rescue with the dedicated strip reader.
                 try:
@@ -67377,6 +68398,37 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         header_hint = _pack_op_pur_bal_header_hint(file_bytes)
     except Exception:
         header_hint = ""
+    try:
+        from services.stock_direct_vision import (
+            _has_pharmassist_stock_sale_headers,
+            extract_pharmassist_direct_vision,
+            is_stock_vision_locked,
+        )
+
+        if _has_pharmassist_stock_sale_headers(header_hint):
+            pharm_img = extract_pharmassist_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="pharmassist_before_pack_image",
+            )
+            if (
+                pharm_img
+                and pharm_img.get("line_items")
+                and is_stock_vision_locked(pharm_img)
+            ):
+                logger.info(
+                    "STOCK_PHARMASSIST_IMAGE file=%s rows=%s reason=before_pack",
+                    filename,
+                    len(pharm_img.get("line_items") or []),
+                )
+                return pharm_img
+    except Exception as pharm_img_exc:
+        logger.info(
+            "STOCK_PHARMASSIST_IMAGE file=%s skipped error=%s",
+            filename,
+            type(pharm_img_exc).__name__,
+        )
     if _should_try_pack_op_pur_bal_stock_sale(header_hint):
         try:
             pack_bal = _extract_pack_op_pur_bal_stock_sale_vision(
