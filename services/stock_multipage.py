@@ -1480,10 +1480,17 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
             prev = list(extra_bits.get("printed_section_amount_totals") or [])
             prev.extend(sec for sec in sections if isinstance(sec, dict))
             extra_bits["printed_section_amount_totals"] = prev
-        if extra.get("extraction_method"):
-            method = extra.get("extraction_method")
-        elif page.get("extraction_method"):
-            method = page.get("extraction_method")
+        page_method = extra.get("extraction_method") or page.get("extraction_method")
+        if page_method:
+            # Prefer Detail Op.Qty method over later SSA misroutes on
+            # headerless continuation pages.
+            if method is None or (
+                "stock_sales_op_qty_val" in str(page_method)
+                and "stock_sales_op_qty_val" not in str(method or "")
+            ):
+                method = page_method
+            elif "stock_sales_op_qty_val" not in str(method or ""):
+                method = page_method
 
     def _combine(vals: List[float]) -> Optional[float]:
         if not vals:
@@ -1559,6 +1566,8 @@ def build_statement_from_page_group(
         elif printed_totals.get("extra", {}).get("layout"):
             extra["layout"] = printed_totals["extra"]["layout"]
 
+    if "stock_sales_op_qty_val" in str(extra.get("extraction_method") or ""):
+        extra["layout"] = extra.get("layout") or "stock_sales_op_qty_val"
     statement: Dict[str, Any] = {
         "source_file": source_file,
         "source_format": source_format,
@@ -1575,6 +1584,15 @@ def build_statement_from_page_group(
             "extra": extra,
         },
     }
+    # Detail: page Vision Total-rows are often incomplete; prefer higher of
+    # combined page totals vs full multipage line sum (never invent).
+    try:
+        from services.sales_statement_extractor import _sanitize_compute_totals
+
+        if "stock_sales_op_qty_val" in str(extra.get("extraction_method") or ""):
+            _sanitize_compute_totals(statement)
+    except Exception:
+        pass
     logger.info(
         "MULTI_PAGE_GROUP_BUILT request_id=%s period=%s pages=%s "
         "line_items=%s sales_value=%s closing_value=%s",
@@ -1582,8 +1600,8 @@ def build_statement_from_page_group(
         group.get("period") or "none",
         page_numbers,
         len(resolved),
-        printed_totals.get("sales_value"),
-        printed_totals.get("closing_value"),
+        (statement.get("totals") or {}).get("sales_value"),
+        (statement.get("totals") or {}).get("closing_value"),
     )
     return statement
 
@@ -1638,6 +1656,84 @@ def extract_multipage_image_stock_statement(
     geometry_pages = 0
     vision_pages = 0
     gemini_calls = 0
+    # Stock and Sales Detail Op.Qty/Op.Val: continuation pages often reprint
+    # only data rows (no title). Inherit Detail Vision from the prior page
+    # unless a different letterhead / PharmAssist chrome is present.
+    prior_detail_op_qty_val = False
+
+    def _multipage_detail_continuation_enabled() -> bool:
+        raw = os.getenv("STOCK_MULTIPAGE_DETAIL_CONTINUATION", "1").strip().lower()
+        return raw not in {"0", "false", "no", "off"}
+
+    def _page_is_detail_op_qty_val(result: Optional[Dict[str, Any]]) -> bool:
+        if not isinstance(result, dict):
+            return False
+        extra = (result.get("totals") or {}).get("extra") or {}
+        method = str(extra.get("extraction_method") or "")
+        layout = str(extra.get("layout") or "")
+        return "stock_sales_op_qty_val" in method or layout.startswith(
+            "stock_sales_op_qty_val"
+        )
+
+    def _peek_blocks_detail_continuation(file_bytes: bytes) -> bool:
+        """True when this page is a new PharmAssist / other letterhead statement."""
+        try:
+            from services.stock_direct_vision import (
+                _layout_header_text,
+                _has_pharmassist_stock_sale_headers,
+                _looks_like_stock_sales_detail_report_title,
+            )
+
+            peek = _layout_header_text(file_bytes) or ""
+            if _has_pharmassist_stock_sale_headers(peek):
+                return True
+            # Fresh Detail title is fine (still Detail) — do not block.
+            if _looks_like_stock_sales_detail_report_title(peek):
+                return False
+            if re.search(
+                r"Stock\s+and\s+Sale\s+Report|For\s+Manufacturer\s*:|"
+                r"\bSep\b.*\bAug\b|\bJul\b.*\bJun\b",
+                peek,
+                re.I | re.S,
+            ):
+                return True
+        except Exception:
+            return False
+        return False
+
+    def _try_detail_continuation(
+        file_bytes: bytes, filename: str, ext: str
+    ) -> Optional[Dict[str, Any]]:
+        try:
+            from services.stock_direct_vision import (
+                extract_stock_sales_op_qty_val_direct_vision,
+                is_stock_vision_locked,
+            )
+
+            detail = extract_stock_sales_op_qty_val_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="multipage_detail_continuation",
+                # Allow repair when money_without_qty soft-fails (P/S/Cl shifts).
+                max_attempts=2,
+            )
+            if (
+                detail
+                and detail.get("line_items")
+                and is_stock_vision_locked(detail)
+                and len(detail.get("line_items") or []) >= 3
+            ):
+                extra = detail.setdefault("totals", {}).setdefault("extra", {})
+                extra["multipage_detail_continuation"] = True
+                return detail
+        except Exception as exc:
+            logger.info(
+                "MULTI_PAGE_DETAIL_CONTINUATION skipped file=%s err=%s",
+                filename,
+                type(exc).__name__,
+            )
+        return None
 
     for idx, (filename, file_bytes) in enumerate(pages):
         page_no = idx + 1
@@ -1701,7 +1797,23 @@ def extract_multipage_image_stock_statement(
             safe_name,
         )
         try:
-            page_result = parse_image_fn(file_bytes, safe_name, ext)
+            page_result = None
+            if (
+                _multipage_detail_continuation_enabled()
+                and prior_detail_op_qty_val
+                and not _peek_blocks_detail_continuation(file_bytes)
+            ):
+                page_result = _try_detail_continuation(file_bytes, safe_name, ext)
+                if page_result is not None:
+                    logger.info(
+                        "MULTI_PAGE_DETAIL_CONTINUATION request_id=%s "
+                        "page_number=%s rows=%s",
+                        request_id or "-",
+                        page_no,
+                        len(page_result.get("line_items") or []),
+                    )
+            if page_result is None:
+                page_result = parse_image_fn(file_bytes, safe_name, ext)
             try:
                 from services.sales_statement_extractor import (
                     _fill_printed_report_period_from_ocr,
@@ -1751,6 +1863,10 @@ def extract_multipage_image_stock_statement(
         elif "vision" in method or extra.get("vision_called"):
             vision_pages += 1
         gemini_calls += int(extra.get("gemini_calls") or 0)
+        if _page_is_detail_op_qty_val(page_result):
+            # Keep inheriting for later headerless Detail pages even if an
+            # intervening PharmAssist sheet was mixed into the upload.
+            prior_detail_op_qty_val = True
 
         page_rows: List[Dict[str, Any]] = []
         for it in page_result.get("line_items") or []:
@@ -1768,6 +1884,29 @@ def extract_multipage_image_stock_statement(
             if isinstance(page_result.get("totals"), dict)
             else {}
         )
+        # Detail pages: when Vision Total-row money is missing, surface line sums
+        # so multipage merge still carries sales/closing totals.
+        if _page_is_detail_op_qty_val(page_result):
+            if page_totals.get("sales_value") is None:
+                line_sv = sum(
+                    float(r.get("sales_value") or 0)
+                    for r in page_rows
+                    if isinstance(r, dict)
+                )
+                if line_sv > 0:
+                    page_totals["sales_value"] = round(line_sv, 2)
+                    extra = dict(extra) if isinstance(extra, dict) else {}
+                    extra["sales_value_source"] = "line_item_sum"
+            if page_totals.get("closing_value") is None:
+                line_cv = sum(
+                    float(r.get("closing_value") or 0)
+                    for r in page_rows
+                    if isinstance(r, dict)
+                )
+                if line_cv > 0:
+                    page_totals["closing_value"] = round(line_cv, 2)
+                    extra = dict(extra) if isinstance(extra, dict) else {}
+                    extra["closing_value_source"] = "line_item_sum"
         page_entry = {
             "page_number": page_no,
             "filename": safe_name,
@@ -1944,7 +2083,15 @@ def extract_multipage_image_stock_statement(
     method = primary_extra.get("extraction_method") or shared_extra.get(
         "extraction_method"
     )
-    if method and str(method).startswith("ssa_"):
+    # Prefer Detail Op.Qty method stamped on the group over a later SSA page
+    # that only won because continuation chrome was blank.
+    if "stock_sales_op_qty_val" in str(method or ""):
+        engine = "stock_sales_op_qty_val_vision"
+        shared_extra["extraction_method"] = method
+        shared_extra["extraction_engine"] = engine
+        shared_extra["layout"] = primary_extra.get("layout") or "stock_sales_op_qty_val"
+        shared_extra["vision_table_final"] = False
+    elif method and str(method).startswith("ssa_"):
         engine = "ssa_qty_value_vision"
         shared_extra["extraction_method"] = method
         shared_extra["extraction_engine"] = engine

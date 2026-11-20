@@ -36,6 +36,15 @@ class StockSalesDetailOpQtyValHeaderTests(unittest.TestCase):
         )
         self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
 
+    def test_detail_report_title_ocr_split_sales_token(self):
+        """Phone OCR often splits Sales as 'S\\nales' in the title band."""
+        text = (
+            "Stock and S\n\nales Detail Report\n"
+            "HIMALAYA DRUG CO (ZEAL)\n"
+            "Seller: IRKAL DRUG HOUSE (RANEBENNUR)\n"
+        )
+        self.assertTrue(_has_stock_sales_op_qty_val_headers(text))
+
     def test_opstk_opv_stock_and_sales_statement(self):
         text = (
             "ARKAY MEDICOS PVT. LTD.\n"

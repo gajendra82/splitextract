@@ -522,6 +522,30 @@ def _order_form_qty_only_row(item: Dict[str, Any]) -> bool:
     return False
 
 
+def _op_qty_pur_sale_bal_doc_gap_recon_enabled() -> bool:
+    """STOCK_OP_QTY_PUR_SALE_BAL_DOC_GAP_RECON — default ON (kill switch).
+
+    Op.Qty|Pur.Qty|Sale.Qty|Bal qty grids often print Bal ≠ Op+Pur-Sale with no
+    return/free column. Soft-skip recon so we keep printed digits and do not
+    rewrite qty to force identity.
+    """
+    raw = os.getenv("STOCK_OP_QTY_PUR_SALE_BAL_DOC_GAP_RECON", "1").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def _op_qty_pur_sale_bal_row(item: Dict[str, Any]) -> bool:
+    """True for Op.Qty|Pur.Qty|Sale.Qty|Bal / Mfac SAS Summary qty-grid rows."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    if layout.startswith("op_qty_pur_sale_bal"):
+        return True
+    if str(extra.get("psr_column_layout") or "") == "op_qty_pur_sale_bal":
+        return True
+    if str(extra.get("schema") or "") == "op_qty_pur_sale_bal":
+        return True
+    return False
+
+
 def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     """Return reconciliation dict; does not mutate quantities."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -556,6 +580,44 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
             "sales_return_in_total": False,
             "base_qty": None,
             "adjustments": {},
+        }
+
+    # Op.Qty|Pur.Qty|Sale.Qty|Bal: keep printed Bal; document often unbalanced.
+    if _op_qty_pur_sale_bal_doc_gap_recon_enabled() and _op_qty_pur_sale_bal_row(item):
+        closing_f = None if closing in (None, "") else _f(closing)
+        exp_closing, formula = compute_closing_formula(item)
+        qty_diff = None
+        if closing_f is not None:
+            qty_diff = round(float(closing_f) - exp_closing, 4)
+        logger.info(
+            "STOCK_RECONCILIATION_SKIP reason=op_qty_pur_sale_bal_doc_gap "
+            "product=%s opening_qty=%s purchase_qty=%s sales_qty=%s "
+            "extracted_closing_qty=%s expected_closing_qty=%s difference=%s",
+            str(item.get("product_name") or "")[:80],
+            opening,
+            purchase,
+            sales,
+            closing_f,
+            exp_closing,
+            qty_diff,
+        )
+        return {
+            "expected_total_qty": expected_total_qty(item),
+            "expected_closing_qty": exp_closing,
+            "actual_closing_qty": closing_f,
+            "quantity_difference": qty_diff,
+            "total_ok": True,
+            "closing_ok": True,
+            "valid": True,
+            "skipped": "op_qty_pur_sale_bal_doc_gap",
+            "opening_qty": opening,
+            "purchase_qty": purchase,
+            "sales_qty": sales,
+            "extracted_closing_qty": closing_f,
+            "base_source": "op_qty_pur_sale_bal_doc_gap",
+            "sales_return_in_total": formula.get("sales_return_in_total"),
+            "base_qty": formula.get("base_qty"),
+            "adjustments": formula.get("adjustments"),
         }
 
     # SALE+CLOSING-only sheets: identity formula is not applicable.
