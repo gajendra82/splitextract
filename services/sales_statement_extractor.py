@@ -28449,6 +28449,19 @@ def _saleable_combo_pack_peel_enabled() -> bool:
     }
 
 
+def _saleable_pack_unit_codes_enabled() -> bool:
+    """Recognize compact Packing codes (60T / 30C / JAR) before Opn qty.
+
+    Default ON. Kill with STOCK_SALEABLE_PACK_UNIT_CODES=false.
+    """
+    return os.getenv("STOCK_SALEABLE_PACK_UNIT_CODES", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _saleable_leading_pack_cell(cell: str) -> bool:
     """True when the first metric cell is Packing, not Opn qty."""
     tok = (cell or "").strip()
@@ -28467,12 +28480,26 @@ def _saleable_leading_pack_cell(cell: str) -> bool:
         logger.info("SALEABLE_COMBO_PACK_PEEL cell=%r", tok[:40])
         return True
     if re.fullmatch(
-        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|TAB|TABS|CAPS?|SYP|SYR|INJ|S)\b.*",
+        r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GR|G|TAB|TABS|CAPS?|SYP|SYR|INJ|S)\b.*",
         tok,
         re.I,
     ):
         return True
     if re.fullmatch(r"\d+\s*[xX*]\s*\d+.*", tok):
+        return True
+    # Compact pack codes on Saleable Stock Report Packing column:
+    # 60T / 10T / 30C / 60CAP already covered above / T / JAR / PH 60'S.
+    if _saleable_pack_unit_codes_enabled() and re.fullmatch(
+        r"(?:"
+        r"\d{1,4}\s*(?:T|C)\b.*"
+        r"|T\b"
+        r"|JAR\b.*"
+        r"|(?:PH\s*)?\d{1,4}\s*['\"]?\s*S\b.*"
+        r")",
+        tok,
+        re.I,
+    ):
+        logger.info("SALEABLE_PACK_UNIT_PEEL cell=%r", tok[:40])
         return True
     return False
 
@@ -28488,7 +28515,10 @@ def _saleable_pair_cells(raw: str, fields: Sequence[str]) -> Optional[List[str]]
     while cells and not cells[-1]:
         cells.pop()
     # Particular|Packing|Opn|… → drop Packing so qty/value pairs stay aligned.
-    if len(cells) == len(fields) + 1 and _saleable_leading_pack_cell(cells[0]):
+    # Firm/Grand Total print an empty Packing cell before the eight pair values.
+    if len(cells) == len(fields) + 1 and (
+        not cells[0].strip() or _saleable_leading_pack_cell(cells[0])
+    ):
         cells = cells[1:]
     if len(cells) < len(fields):
         return None
@@ -28588,18 +28618,21 @@ def _saleable_pair_item(raw: str, fields: Sequence[str]) -> Optional[Dict[str, A
     if not name or _SALEABLE_SKIP_NAME_RE.search(name):
         return None
     values, sources = _saleable_pair_assignment(cells, fields)
-    pack = None
-    name, pack = _saleable_split_packing(name)
     parts = [part.strip() for part in raw.split("|")]
     metric = parts[1:]
     while metric and not metric[-1]:
         metric.pop()
-    if (
-        not pack
-        and len(metric) == len(fields) + 1
-        and _saleable_leading_pack_cell(metric[0])
+    pack_col = None
+    if len(metric) == len(fields) + 1 and (
+        not metric[0].strip() or _saleable_leading_pack_cell(metric[0])
     ):
-        pack = _clean_name(metric[0]) or None
+        pack_col = _clean_name(metric[0]) or None
+    # Prefer the Packing column when present; only peel size from the name
+    # when that column is absent.
+    if pack_col:
+        pack = pack_col
+    else:
+        name, pack = _saleable_split_packing(name)
     item = empty_line_item()
     item["product_name"] = name
     item["packing"] = pack

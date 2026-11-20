@@ -240,6 +240,9 @@ ALIASES: Dict[str, List[str]] = {
         "opening quantity",
         "op qty",
         "op.qty",
+        # COMPANY STOCK STATEMENT (SR): OP_QNTY / OP-QNT.
+        "op qnty",
+        "op qnt",
         "op stock",
         "op.",
         "op.bal",
@@ -287,6 +290,11 @@ ALIASES: Dict[str, List[str]] = {
         "purchased qty",
         "rcvd",
         "rcvd qty",
+        # COMPANY STOCK STATEMENT (SR): RCV-QNT / RCV-AMT pair.
+        "rcv",
+        "rcv qnt",
+        "rcv qnty",
+        "rcv qty",
         "purchbillqty",
         "purch bill qty",
         "purchase bill qty",
@@ -317,6 +325,12 @@ ALIASES: Dict[str, List[str]] = {
         "issue quantity",
         "issue quant",  # wrapped ISSUE QUANT(ITY)
         "issue/sales",
+        "issue q",
+        "issue qty",
+        # Printed typo ISUUE-Q on COMPANY STOCK STATEMENT (SR).
+        "isuue",
+        "isuue q",
+        "isuue qty",
         "sales qty",
         "sale qty",
         # Stock and Sales Detail Report: S.Qty.
@@ -363,6 +377,12 @@ ALIASES: Dict[str, List[str]] = {
         "sale rtn",
         "sales rtn",
         "sales rtn qty",
+        # COMPANY STOCK STATEMENT (SR): RQNTY / RTN-AMT return pair.
+        "rqnty",
+        "r qnty",
+        "rtn qty",
+        "rtn qnt",
+        "rtn qnty",
         # Stock Report: Sls.Rtn beside Cur.Sls / Pur.Rtn.
         "sls rtn",
         "sls.rtn",
@@ -472,6 +492,9 @@ ALIASES: Dict[str, List[str]] = {
         "balance",
         "balance qty",
         "bal qty",
+        # COMPANY STOCK STATEMENT (SR): BAL-QNT.
+        "bal qnt",
+        "bal qnty",
         "clstk",
         "cl stk",
         "cl st",  # Cl.St abbreviated closing stock
@@ -828,6 +851,8 @@ _DIRECT_VALUE_FIELDS = {
     "op val": "opening_value",
     "opval": "opening_value",
     "opv": "opening_value",
+    "op amt": "opening_value",
+    "opamt": "opening_value",
     "open value": "opening_value",
     "open. value": "opening_value",
     "opening value": "opening_value",
@@ -842,12 +867,21 @@ _DIRECT_VALUE_FIELDS = {
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
+    # COMPANY STOCK STATEMENT (SR): RCV-AMT / ISSUE-AMT / BAL-AMT / RTN-AMT.
+    "rcv amt": "purchase_value",
+    "rcvamt": "purchase_value",
+    "rcv value": "purchase_value",
     "salev": "sales_value",
     "sale v": "sales_value",
     "issue value": "sales_value",
+    "issue amt": "sales_value",
+    "issueamt": "sales_value",
     "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
+    "bal amt": "closing_value",
+    "balamt": "closing_value",
+    "bal value": "closing_value",
 }
 
 
@@ -1615,6 +1649,20 @@ def _prefer_non_ignore_dead_zone_enabled() -> bool:
     """
     return os.getenv(
         "STOCK_HEADER_PREFER_NON_IGNORE_DEAD_ZONE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pack_in_product_dead_zone_enabled() -> bool:
+    """STOCK_HEADER_PACK_IN_PRODUCT_DEAD_ZONE — 400GM between Particular|Op.Qnt.
+
+    Op.Qnt/Pur.Qnt/Sl.Qnt/Cl.Qnt sheets have no Pack column. A size token
+    (400GM / 200ML) that lands in the product_name|opening_qty dead zone used
+    to AMBIGUOUS_CELL both columns and drop the row. Prefer pack when that
+    column exists, otherwise keep the size on product_name.
+    Default ON. Kill switch STOCK_HEADER_PACK_IN_PRODUCT_DEAD_ZONE=false.
+    """
+    return os.getenv(
+        "STOCK_HEADER_PACK_IN_PRODUCT_DEAD_ZONE", "true"
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -3028,6 +3076,40 @@ def _assign_cells_by_column_bands(
                     )
                     continue
 
+            # Particular | Op.Qnt with no Pack header: keep 400GM on the name.
+            if _pack_in_product_dead_zone_enabled() and _unit_pack_token(raw):
+                left_c = str(left_b.get("canonical") or "")
+                right_c = str(right_b.get("canonical") or "")
+                pair = {left_c, right_c}
+                if pair == {"product_name", "opening_qty"} or pair == {
+                    "product_name",
+                    "pack",
+                }:
+                    pack_band = next(
+                        (
+                            b
+                            for b in bands
+                            if str(b.get("canonical") or "") == "pack"
+                        ),
+                        None,
+                    )
+                    if pack_band is not None:
+                        target = pack_band
+                    elif left_c == "product_name":
+                        target = left_b
+                    else:
+                        target = right_b
+                    bucket[int(target["col_index"])].append(raw)
+                    assigned += 1
+                    logger.info(
+                        "STOCK_HEADER_PACK_IN_PRODUCT_DEAD_ZONE token=%r "
+                        "col_index=%s canonical=%s",
+                        raw,
+                        target.get("col_index"),
+                        target.get("canonical"),
+                    )
+                    continue
+
             errors.append(
                 {
                     "code": "AMBIGUOUS_CELL",
@@ -4201,13 +4283,21 @@ _PSEUDO_DIGIT_START = 0x03C4
 _PSEUDO_DIGIT_END = 0x03CD
 
 
+_CID_GLYPH_RE = re.compile(r"\(cid:\d+\)", re.I)
+
+
 def decode_pdf_pseudo_digits(text: Any) -> str:
-    """Map PDF pseudo-digit Greek letters τ..ύ onto ASCII 0-9."""
+    """Map PDF pseudo-digit Greek letters τ..ύ onto ASCII 0-9.
+
+    Also strips pdfplumber ``(cid:N)`` glyph placeholders (often a newline).
+    """
     raw = "" if text is None else str(text)
     if not raw:
         return raw
+    original = raw
+    raw = _CID_GLYPH_RE.sub("", raw)
     out: List[str] = []
-    changed = False
+    changed = raw != original
     for ch in raw:
         cp = ord(ch)
         if _PSEUDO_DIGIT_START <= cp <= _PSEUDO_DIGIT_END:
@@ -4215,7 +4305,7 @@ def decode_pdf_pseudo_digits(text: Any) -> str:
             changed = True
         else:
             out.append(ch)
-    return "".join(out) if changed else raw
+    return "".join(out) if changed else original
 
 
 def decode_pdf_word_tokens(words: Any) -> Any:

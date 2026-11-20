@@ -782,6 +782,24 @@ def _exact_header_alias(text: str) -> bool:
     return False
 
 
+def _keep_delimited_movement_headers_enabled() -> bool:
+    """STOCK_PDF_KEEP_DELIMITED_MOVEMENT_HEADERS — keep OP_QNTY / OP-AMT whole.
+
+    Default ON. Kill switch STOCK_PDF_KEEP_DELIMITED_MOVEMENT_HEADERS=false.
+    COMPANY STOCK STATEMENT (SR) prints OP_QNTY / OP-AMT / ISSUE-AMT / BAL-AMT
+    as single headers. Unglue was splitting them into OP|_QNTY and ISS|UE-AMT,
+    which dropped RCV/ISUUE bands and forced the OCR fallback.
+    """
+    return os.getenv(
+        "STOCK_PDF_KEEP_DELIMITED_MOVEMENT_HEADERS", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_DELIMITED_MOVEMENT_HEADER_RE = re.compile(
+    r"(?i)^[A-Za-z]{2,10}[-_](?:QNTY|QNT|QTY|AMT|VAL|VALUE|Q)$"
+)
+
+
 def _split_glued_header_text(text: str) -> Optional[Tuple[str, str]]:
     """Split QtyLM / FreeSales / QtyCl.Stock into two header fragments."""
     if not text or " " in text or "|" in text:
@@ -789,6 +807,14 @@ def _split_glued_header_text(text: str) -> Optional[Tuple[str, str]]:
     if parse_number(text) is not None:
         return None
     if _exact_header_alias(text):
+        return None
+    # OP_QNTY / RCV-QNT / ISSUE-AMT / BAL-AMT — already one printed header.
+    if _keep_delimited_movement_headers_enabled() and _DELIMITED_MOVEMENT_HEADER_RE.fullmatch(
+        text.strip()
+    ):
+        logger.info(
+            "STOCK_PDF_KEEP_DELIMITED_MOVEMENT_HEADERS token=%r", text.strip()
+        )
         return None
     best: Optional[Tuple[int, str, str]] = None
     for i in range(1, len(text)):
