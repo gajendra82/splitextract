@@ -385,5 +385,131 @@ class TestSaleableQtyValuePairs(unittest.TestCase):
         )
 
 
+PACKING_PAIR_HEADER = (
+    "M/S RENUKA ENTERPRISE\n"
+    "(From 01/10/2026 To 31/10/2026)\n"
+    "Saleable Stock Report\n"
+    "Particular                       |Packing|        Opn|        Opn|        Rec|        Rec|      Issue|      Issue|        Bal|        Bal\n"
+    "                                 |       |      (Q+F)|   Amt(Q+F)|      (Q+F)|        Amt|      (Q+F)|        Amt|      (Q+F)|   Amt(Q+F)\n"
+)
+
+
+class TestSaleablePackingColumnUnitCodes(unittest.TestCase):
+    """Packing codes like 60T/10T must not shift into opening_qty."""
+
+    def test_compact_pack_codes_do_not_shift_qty_value_pairs(self):
+        text = (
+            PACKING_PAIR_HEADER
+            + "AACTARIL SOAP                    |75GM   |         ——|         ——|      72.00|    6308.64|       5.00|     438.10|      67.00|    5870.54\n"
+            + "CONFIDO TAB                      |60T    |         ——|         ——|     100.00|   19428.00|      11.00|    2137.08|      89.00|   17290.92\n"
+            + "NEEM TAB                         |PH 60'S|         ——|         ——|      60.00|   11886.00|         ——|         ——|      60.00|   11886.00\n"
+            + "SPEMAN TAB 60 TAB                |60T    |       5.00|     823.45|      50.00|    9448.00|         ——|         ——|      55.00|   10305.10\n"
+            + "TENTEX FORTE TABS                |10T    |         ——|         ——|     300.00|   31998.00|       5.00|     533.30|     295.00|   31464.70\n"
+            + "Firm Total                       |       |      17.00|    1909.65|    5175.00|  766553.10|     298.00|   48109.54|    4894.00|  720325.70\n"
+        )
+        result = _parse_saleable_stock_report(text, "rad7B368.pdf", "pdf")
+        self.assertIsNotNone(result)
+        by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in result["line_items"]
+        }
+        soap = by_name["AACTARIL SOAP"]
+        self.assertEqual(soap["packing"], "75GM")
+        self.assertEqual(soap["opening_qty"], 0.0)
+        self.assertEqual(soap["receipts_qty"], 72.0)
+        self.assertEqual(soap["sales_qty"], 5.0)
+        self.assertEqual(soap["closing_qty"], 67.0)
+        self.assertEqual(soap["sales_value"], 438.10)
+        self.assertEqual(soap["closing_value"], 5870.54)
+
+        confido = by_name["CONFIDO TAB"]
+        self.assertEqual(confido["packing"], "60T")
+        self.assertEqual(confido["opening_qty"], 0.0)
+        self.assertEqual(confido["receipts_qty"], 100.0)
+        self.assertEqual(confido["sales_qty"], 11.0)
+        self.assertEqual(confido["closing_qty"], 89.0)
+        self.assertNotEqual(confido["opening_qty"], None)
+        self.assertNotEqual(confido["receipts_qty"], 19428.0)
+        self.assertNotEqual(confido["sales_qty"], 2137.08)
+
+        neem = by_name["NEEM TAB"]
+        self.assertEqual(neem["packing"], "PH 60'S")
+        self.assertEqual(neem["receipts_qty"], 60.0)
+        self.assertEqual(neem["closing_qty"], 60.0)
+
+        speman = by_name["SPEMAN TAB 60 TAB"]
+        self.assertEqual(speman["packing"], "60T")
+        self.assertEqual(speman["opening_qty"], 5.0)
+        self.assertEqual(speman["receipts_qty"], 50.0)
+        self.assertEqual(speman["sales_qty"], 0.0)
+        self.assertEqual(speman["closing_qty"], 55.0)
+        self.assertNotEqual(speman["receipts_qty"], 823.45)
+
+        tentex = by_name["TENTEX FORTE TABS"]
+        self.assertEqual(tentex["packing"], "10T")
+        self.assertEqual(tentex["receipts_qty"], 300.0)
+        self.assertEqual(tentex["sales_qty"], 5.0)
+        self.assertEqual(tentex["closing_qty"], 295.0)
+        self.assertNotEqual(tentex["receipts_qty"], 31998.0)
+
+        names = [str(i.get("product_name") or "").upper() for i in result["line_items"]]
+        self.assertNotIn("FIRM TOTAL", names)
+        extra = (result.get("totals") or {}).get("extra") or {}
+        self.assertEqual(extra.get("opening_qty"), 17.0)
+        self.assertEqual(extra.get("receipts_qty"), 5175.0)
+        self.assertEqual(extra.get("sales_qty"), 298.0)
+        self.assertEqual(extra.get("closing_qty"), 4894.0)
+        self.assertEqual(extra.get("opening_value"), 1909.65)
+        self.assertEqual(extra.get("receipts_value"), 766553.10)
+        self.assertEqual(extra.get("printed_sales_value"), 48109.54)
+        self.assertEqual(extra.get("printed_closing_value"), 720325.70)
+        self.assertNotEqual(extra.get("receipts_qty"), 1909.65)
+
+
+RAD7B368 = Path("/var/www/html/splitextract/rad7B368.pdf")
+
+
+@unittest.skipUnless(RAD7B368.is_file(), "missing rad7B368.pdf fixture")
+class TestSaleableRad7B368Fixture(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.result = extract_sales_statement(
+            RAD7B368.read_bytes(), RAD7B368.name
+        )
+        cls.extra = (cls.result.get("totals") or {}).get("extra") or {}
+        cls.items = cls.result.get("line_items") or []
+
+    def test_saleable_pair_layout_and_row_count(self):
+        self.assertEqual(self.extra.get("extraction_method"), "saleable_stock_report")
+        self.assertEqual(
+            self.extra.get("layout"), "saleable_opn_rec_issue_bal_qty_value"
+        )
+        self.assertEqual(len(self.items), 74)
+
+    def test_sample_rows_and_firm_totals(self):
+        by_name = {
+            str(item.get("product_name") or "").upper(): item for item in self.items
+        }
+        soap = by_name["AACTARIL SOAP"]
+        self.assertEqual(soap["packing"], "75GM")
+        self.assertEqual(soap["receipts_qty"], 72.0)
+        self.assertEqual(soap["sales_qty"], 5.0)
+        self.assertEqual(soap["closing_qty"], 67.0)
+        confido = by_name["CONFIDO TAB"]
+        self.assertEqual(confido["packing"], "60T")
+        self.assertEqual(confido["receipts_qty"], 100.0)
+        self.assertEqual(confido["sales_qty"], 11.0)
+        self.assertEqual(confido["closing_qty"], 89.0)
+        tentex = by_name["TENTEX FORTE TABS"]
+        self.assertEqual(tentex["packing"], "10T")
+        self.assertEqual(tentex["receipts_qty"], 300.0)
+        self.assertEqual(tentex["sales_qty"], 5.0)
+        self.assertEqual(tentex["closing_qty"], 295.0)
+        self.assertEqual(self.extra.get("opening_qty"), 17.0)
+        self.assertEqual(self.extra.get("receipts_qty"), 5175.0)
+        self.assertEqual(self.extra.get("sales_qty"), 298.0)
+        self.assertEqual(self.extra.get("closing_qty"), 4894.0)
+
+
 if __name__ == "__main__":
     unittest.main()

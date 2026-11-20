@@ -117,6 +117,34 @@ def _is_section_banner_item(item: Dict[str, Any]) -> bool:
     return bool(re.search(r"[A-Za-z]", name))
 
 
+def _brand_section_pending_skip_enabled() -> bool:
+    """STOCK_PDF_WORDS_SKIP_BRAND_SECTION_PENDING — HIMALAYA ZENITH above SKUs.
+
+    Op.Qnt/Pur/Sl/Cl STOCK REPORT prints a brand/division line with no numbers
+    above the first product. Treating that line as a wrapped product title
+    prepended it to the next SKU, then ``^himalaya`` dropped the whole row.
+    Default ON. Kill switch STOCK_PDF_WORDS_SKIP_BRAND_SECTION_PENDING=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_SKIP_BRAND_SECTION_PENDING", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_BRAND_SECTION_PREFIX_RE = re.compile(r"(?i)^hima(?:laya|lya)\b")
+
+
+def _is_brand_section_pending_name(frag: Any) -> bool:
+    """Manufacturer / division banner — not a wrapped SKU title fragment."""
+    s = re.sub(r"\s+", " ", str(frag or "")).strip()
+    if not s or re.search(r"\d", s) or _SECTION_PACK_WORD.search(s):
+        return False
+    words = s.split()
+    if not (2 <= len(words) <= 4):
+        return False
+    # HIMALAYA ZENITH / printed misspelling HIMALYA ZANDRA|DRUG|ZINDEL.
+    return bool(_BRAND_SECTION_PREFIX_RE.match(s))
+
+
 def _is_sheet_total_name(name: Any) -> bool:
     """Division / company / value totals — not a product 'Total :' lot row."""
     text = str(name or "").strip()
@@ -378,6 +406,9 @@ def fields_to_line_item(
             continue
         if into_extra:
             extra[dest] = number
+            # Keep sale_return on the line_item contract as well as extra.
+            if dest == "sale_return" and number is not None:
+                item["sale_return"] = number
         else:
             item[dest] = number
 
@@ -649,6 +680,18 @@ def build_line_items_from_tokens(
         # Wrapped product-name fragment with no movement numbers → append.
         # Only short letter-only wraps (CREAM / GEL ANTI ACNE), never codes or
         # footer chrome ("2 COMPANY 99 Prod.").
+        # Printed 0 / 0.00 is a real STOCK STATEMENT row — not a wrap fragment.
+        qty_missing = all(
+            item.get(k) in (None, "")
+            for k in (
+                "opening_qty",
+                "receipts_qty",
+                "sales_qty",
+                "closing_qty",
+                "sales_value",
+                "closing_value",
+            )
+        )
         qty_empty = all(
             item.get(k) in (None, "", 0, 0.0)
             for k in (
@@ -665,25 +708,36 @@ def build_line_items_from_tokens(
         # Code+qty row with name on the line above: apply pending before the
         # empty-name skip (Item|Item Name layouts park the SKU in product_code).
         if pending_name and (has_code or not qty_empty):
-            cur = frag
-            if not cur or cur.upper() in pending_name.upper():
-                item["product_name"] = pending_name
-            elif pending_name.lower() not in cur.lower():
-                item["product_name"] = f"{pending_name} {cur}".strip()
+            if _brand_section_pending_skip_enabled() and _is_brand_section_pending_name(
+                pending_name
+            ):
+                logger.info(
+                    "STOCK_PDF_WORDS_BRAND_SECTION_PENDING_DROP pending=%s",
+                    pending_name[:60],
+                )
+                pending_name = None
             else:
-                item["product_name"] = cur
-            logger.info(
-                "STOCK_PDF_WORDS_NAME_PENDING_APPLY name=%s",
-                str(item.get("product_name") or "")[:60],
-            )
-            pending_name = None
-            name = item.get("product_name")
-            frag = str(name or "").strip()
+                cur = frag
+                if not cur or cur.upper() in pending_name.upper():
+                    item["product_name"] = pending_name
+                elif pending_name.lower() not in cur.lower():
+                    item["product_name"] = f"{pending_name} {cur}".strip()
+                else:
+                    item["product_name"] = cur
+                logger.info(
+                    "STOCK_PDF_WORDS_NAME_PENDING_APPLY name=%s",
+                    str(item.get("product_name") or "")[:60],
+                )
+                pending_name = None
+                name = item.get("product_name")
+                frag = str(name or "").strip()
         # Name printed above the code/qty row (Months SS Report wraps).
+        # Require truly missing movement cells — not printed zeros.
         if (
-            qty_empty
+            qty_missing
             and frag
             and not has_code
+            and not item.get("packing")
             and not _SKIP_CONTINUATION.search(frag)
             and re.search(r"[A-Za-z]{2,}", frag)
             and len(frag.split()) <= 6
@@ -694,13 +748,11 @@ def build_line_items_from_tokens(
             )
         ):
             letter_only = not re.search(r"\d", frag)
-            if letter_only or item.get("packing"):
+            if letter_only:
                 # Single-token wraps (CREAM / INDIA) may glue to the previous
                 # SKU; multi-word lines are the next product's title banner.
                 if (
                     items
-                    and letter_only
-                    and not item.get("packing")
                     and not pending_name
                     and len(frag.split()) == 1
                 ):
@@ -720,6 +772,14 @@ def build_line_items_from_tokens(
                 ):
                     pending_name = None
                     continue
+                if _brand_section_pending_skip_enabled() and _is_brand_section_pending_name(
+                    frag
+                ):
+                    logger.info(
+                        "STOCK_PDF_WORDS_BRAND_SECTION_SKIP name=%s", frag[:60]
+                    )
+                    pending_name = None
+                    continue
                 pending_name = (
                     f"{pending_name} {frag}".strip() if pending_name else frag
                 )
@@ -727,6 +787,12 @@ def build_line_items_from_tokens(
                     "STOCK_PDF_WORDS_NAME_PENDING name=%s", pending_name[:60]
                 )
                 continue
+        elif qty_empty and not qty_missing and frag:
+            logger.info(
+                "STOCK_PDF_WORDS_ZERO_MOVEMENT_KEEP name=%s pack=%s",
+                frag[:60],
+                str(item.get("packing") or "")[:20],
+            )
         if not frag and not has_code:
             continue
         if frag and not re.search(r"[A-Za-z]", frag) and not has_code:
@@ -2658,7 +2724,7 @@ def _items_from_resolved_word_columns(
 
         if name.startswith("[") or is_software_price_ad_name(name) or re.search(
             r"software by|end of report|stock qt|total amount|total quantity|"
-            r"^himalaya\b|company\s*total|value\s*->|qnt\s*->|"
+            r"company\s*total|value\s*->|qnt\s*->|"
             r"prepared\s+by|computer\s+generated|does\s+not\s+require\s+stamp|"
             r"\bDSTK\b|days\s+stock\s+on|\bCIN\s*No\b|\bPAN\s*No\b|\bGSTIN\b|"
             r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b|"
@@ -2685,7 +2751,38 @@ def _items_from_resolved_word_columns(
             item.get("sales_qty"),
             item.get("closing_qty"),
         ]
-        if all(v in (None, "") for v in qty_vals):
+        qty_blank = all(v in (None, "") for v in qty_vals)
+        # Brand/division line alone (no qtys). Do not drop a real SKU that still
+        # starts with HIMALAYA after a bad pending merge — strip the banner.
+        if _BRAND_SECTION_PREFIX_RE.match(name):
+            if qty_blank:
+                logger.info("STOCK_PDF_WORDS_BRAND_BANNER_SKIP name=%s", name[:60])
+                continue
+            if _brand_section_pending_skip_enabled():
+                # Only peel "HIMALAYA ZENITH " / "HIMALYA DRUG " (brand + line).
+                stripped = re.sub(
+                    r"(?i)^hima(?:laya|lya)\s+\S+\s+",
+                    "",
+                    name,
+                    count=1,
+                ).strip()
+                if (
+                    stripped
+                    and stripped.lower() != name.lower()
+                    and re.search(r"[A-Za-z]", stripped)
+                    and (
+                        _SECTION_PACK_WORD.search(stripped)
+                        or len(stripped.split()) >= 2
+                    )
+                ):
+                    logger.info(
+                        "STOCK_PDF_WORDS_BRAND_PREFIX_STRIP from=%s to=%s",
+                        name[:60],
+                        stripped[:60],
+                    )
+                    item["product_name"] = stripped
+                    name = stripped
+        if qty_blank:
             extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
             has_pack = bool(str(item.get("packing") or "").strip())
             if (
