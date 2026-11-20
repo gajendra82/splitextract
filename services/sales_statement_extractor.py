@@ -66283,14 +66283,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 # Skip when peek is OPENING|RECEIPT|ISSUE|CLOSING|M.EXP (pack).
                 if not _text_looks_like_pack_mexp_oric_chrome(_op_stk_peek or ""):
                     # Skip when OCR already shows Opening Quantity | Cl. Qnty. only.
-                lstsl_pre = None
-                if _text_looks_like_opening_cl_qnty_only(_op_stk_peek or ""):
-                    logger.info(
-                        "STOCK_LSTSL_SKIP_OPENING_CL_QNTY_ONLY file=%s",
-                        filename,
-                    )
-                else:
-                    try:
+                    lstsl_pre = None
+                    if _text_looks_like_opening_cl_qnty_only(_op_stk_peek or ""):
+                        logger.info(
+                            "STOCK_LSTSL_SKIP_OPENING_CL_QNTY_ONLY file=%s",
+                            filename,
+                        )
+                    else:
+                        try:
                             lstsl_pre = _extract_lstsl_open_recd_vision(
                                 file_bytes, filename, ext
                             )
@@ -66299,9 +66299,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     if lstsl_pre and lstsl_pre.get("line_items"):
                         fail_lstsl = _op_stk_lms1_identity_fail_rate(lstsl_pre)
                         repaired_cl = _lstsl_cl_qnty_repaired(lstsl_pre)
-                    if repaired_cl or (
-                        fail_lstsl < fail_pre and fail_lstsl <= 0.50
-                    ):
+                        if repaired_cl or (
+                            fail_lstsl < fail_pre and fail_lstsl <= 0.50
+                        ):
                             extra_l = lstsl_pre.setdefault("totals", {}).setdefault(
                                 "extra", {}
                             )
@@ -66317,7 +66317,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                 len(lstsl_pre.get("line_items") or []),
                                 fail_lstsl,
                                 repaired_cl,
-                        )
+                            )
                             return lstsl_pre
                 else:
                     pack_rescue = _try_pack_mexp_photo_before_lstsl(
