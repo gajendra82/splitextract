@@ -679,16 +679,28 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
         qty_diff = round(closing_f - exp_closing, 4)
         closing_ok = abs(closing_f - exp_closing) <= _closing_tol(closing_f)
     elif fs.get("closing_qty") == "missing" or closing is None:
-        closing_f = None
-        closing_ok = False
-        qty_diff = None
+        # Blank / unread closing is fine when identity expects ~0 (zero-activity
+        # rows, or opening+receipts-sales already balanced with nothing printed).
+        if abs(exp_closing) <= _TOL:
+            closing_f = 0.0
+            qty_diff = 0.0
+            closing_ok = True
+        else:
+            closing_f = None
+            closing_ok = False
+            qty_diff = None
     else:
         closing_f = _f(closing)
         qty_diff = round(float(closing_f) - exp_closing, 4)
         closing_ok = abs(float(closing_f) - exp_closing) <= _closing_tol(closing_f)
 
-    # Never accept a negative stock closing as reconciled.
-    if closing_f is not None and float(closing_f) < -_TOL:
+    # Derived negative closing is not accepted (forces recovery). Printed
+    # negative closing (Tally oversold) is valid when it matches identity.
+    if (
+        closing_f is not None
+        and float(closing_f) < -_TOL
+        and fs.get("closing_qty") == "derived"
+    ):
         closing_ok = False
 
     valid = bool(total_ok and closing_ok)
