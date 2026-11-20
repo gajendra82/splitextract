@@ -1,0 +1,114 @@
+{
+  "source": "probe_rollout/scanned_stock_3.pdf",
+  "hand_checked": true,
+  "checked_by": "cursor-agent",
+  "checked_date": "2026-10-02",
+  "incomplete": true,
+  "notes": "Image-only PDF of the same Pharma Hub statement as rollout_7. Partial hand-read of first product rows from rendered page.",
+  "line_items": [
+    {
+      "product_name": "HIMCOCID SNOUFSYP",
+      "packing": "200ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1848"
+    },
+    {
+      "product_name": "AACTARIL SOAP",
+      "packing": "75GM",
+      "opening_qty": 2.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 2.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "17720"
+    },
+    {
+      "product_name": "ABANA TAB",
+      "packing": "60's",
+      "opening_qty": 55.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 12.0,
+      "closing_qty": 43.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1397"
+    },
+    {
+      "product_name": "AMALAKI CAP",
+      "packing": "60",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1424"
+    },
+    {
+      "product_name": "CLARINA CREAM",
+      "packing": "30GM",
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 31.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1836"
+    },
+    {
+      "product_name": "CLARINA FACE MASK",
+      "packing": "75ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1837"
+    },
+    {
+      "product_name": "CLARINA FACE WASH GEL",
+      "packing": "60ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1838"
+    },
+    {
+      "product_name": "CONFIDO TAB",
+      "packing": "60",
+      "opening_qty": 53.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 12.0,
+      "closing_qty": 41.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      },
+      "product_code": "1919"
+    }
+  ]
+}

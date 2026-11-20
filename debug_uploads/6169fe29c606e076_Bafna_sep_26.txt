@@ -1,0 +1,47 @@
+BAFNA MEDICO, SANGAMNER
+EStock Report from 01/09/26 to 30/09/26(HIMALAYA(ZANDRA))F
+Date : 01/10/26                                                       Page: 1
+M-----------------------------------------------------------------------------------------------------------
+Item Name                Packg Open.Stk. Receipt L.Sales Cur.SlsPur.RtnSls.RtnClos.Stk.Above 60 Above 90   
+-----------------------------------------------------------------------------------------------------------
+BONNISAN                 200ML.       39       0       1       0      0      0      39        0       39   
+BONNISAN DROPS           30ML.        81       0       5       4      0      0      77       27        0   
+BONNISAN LIQ 100ML       100ML        45       0       4      14      0      0      31       31        0   
+BONNISPAZ DROPS          15ML         24       0      18       4      0      0      20        0       20   
+BRESOL NS SALINE         10ML        107       0       6       1      0      0     106        0        6   
+BRESOL SYRUP             200ML       101       0       6       9      0      0      92        8        0   
+BRESOL TAB.              30TAB.       18       0       5       8      0      0      10        0       10   
+CYSTONE SYP.200ML        200ML.       36      56      11      12      0      0      80        0       24   
+CYSTONE TAB              60TAB.      220       0      33      33      0      0     187        0      187   
+EVECARE 200ML.           200ML.       79       0      22      24      0      0      55        0       55   
+EVECARE CAPS. 30CAPS.    30caps       64       0       3       3      0      0      61        0       61   
+EVECARE FORTE 200ML      200ML       118       0      33      16      0      0     102        0      102   
+EVECARE FORTE TAB        10TAB         0     168     112      87      0      0      81        0        0   
+GERIFORTE SYRUP          200ML.       12      28       3       8      0      0      32        0        4   
+GERIFORTE TAB            60TAB.       24       0       2       5      0      0      19        0       19   
+HIMPLASIA TAB            30TAB.       93       0       4       2      0      0      91       91        0   
+LIV.52 60ML.DROP         60ML.       148       0      40      20      0      2     130        0      130   
+LIV.52 DS SY 100 ML      100ML       156      70      46      53      0      0     173        0        1   
+LIV.52 DS TAB.           60TAB.      100     100      28      47      0      0     153        0        2   
+LUKOL SY                 200ML        25       0       2       0      0      0      25        0       25   
+LUKOL TAB                60TAB        57       0       9      13      0      0      44        0       44   
+MENOSAN TAB.             30TAB.       56       0       0       3      0      0      53        0        0   
+MENTAT SYRUP             200ML.       22      28      11      15      0      0      35        0        0   
+MENTAT TAB               60TAB.       16       0       1      10      0      0       6        0        6   
+PLATENZA SYRUP           100ML       102      56      29      28      0      0     130        0        0   
+PLATENZA TAB             20CAP       283       0      12      52      0      0     231       63        0   
+QUISTA KIDZ CHOC 200GM   200GM        55       0       4       7      0      0      48        0        0   
+QUISTA KIDZ VANILA 200GM 200GM         0       0       0       0      0      0       0        0        0   
+REOSTO TAB.              30TAB.        0       0       0       0      0      0       0        0        0   
+RUMALAYA LINI ROLL ON 60M60ML          5       0       2       0      0      0       5        0        5   
+SEPTILIN                 60TAB.       86       0      23      22      0      0      64        0       64   
+SEPTILIN 200ML.          200ml.       45      84      39      42      0      0      87        0        3   
+SPEMAN                   60TAB.       39       0       1      10      0      0      29        0       29   
+STYPLON                  30TAB.        3      50       5       0      0      0      53        2        1   
+V-GEL OINT.30GMS         30GM         33       0       6      10      0      0      23        0       23   
+===========================================================================================================
+Grand Total                       317589   85865   65705   75429      0    190   328215    27783   118410  
+
+
+
+

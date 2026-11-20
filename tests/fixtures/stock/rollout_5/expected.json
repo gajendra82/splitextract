@@ -1,0 +1,348 @@
+{
+  "source": "rollout_5 vision JSON (mapped cells \u2014 mapper regression; hand-check lives in rollout_5_za_psr)",
+  "hand_checked": false,
+  "notes": "Exact match for map_vision_table(replay of saved Gemini JSON). Digit OCR may differ from image hand-check.",
+  "line_items": [
+    {
+      "product_name": "HIORA K TOOTHPASTE 100 GM",
+      "opening_qty": 9.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 21.0,
+      "closing_qty": 38.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "HIORA K TOOTHPASTE 50 GM",
+      "opening_qty": 20.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 5.0,
+      "closing_qty": 75.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "HIORA SG GEL 10GM",
+      "opening_qty": 5.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 4.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "KARELA TAB",
+      "opening_qty": 57.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 56.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LASUNA TAB",
+      "opening_qty": 38.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 37.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP 100ML",
+      "opening_qty": 212.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 212.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DROP 60ML",
+      "opening_qty": 106.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 12.0,
+      "closing_qty": 94.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP 100ML",
+      "opening_qty": 184.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 8.0,
+      "closing_qty": 176.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP 200ML",
+      "opening_qty": 34.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 19.0,
+      "closing_qty": 25.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 SYP 100 ML",
+      "opening_qty": 0.0,
+      "receipts_qty": 70.0,
+      "sales_qty": 0.0,
+      "closing_qty": 44.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS SYP 200 ML",
+      "opening_qty": 66.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 36.0,
+      "closing_qty": 30.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LIV 52 DS TAB",
+      "opening_qty": 13.0,
+      "receipts_qty": 100.0,
+      "sales_qty": 49.0,
+      "closing_qty": 64.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LUKOL SYP 200ML",
+      "opening_qty": 68.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 69.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "LUKOL TAB",
+      "opening_qty": 61.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 10.0,
+      "closing_qty": 51.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "MENOSAN TAB",
+      "opening_qty": 50.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 5.0,
+      "closing_qty": 45.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "MENTAT DS SYP 100MU",
+      "opening_qty": 52.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 52.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "MENTAT SYP 200ML",
+      "opening_qty": 22.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 6.0,
+      "closing_qty": 16.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "MENTAT TAB",
+      "opening_qty": 4.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 13.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "MESHASHIRINGI TAB",
+      "opening_qty": 40.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 40.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "PROT ORAL RINSE 100ML",
+      "opening_qty": 50.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 41.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "PLATENZA SYP 100ML",
+      "opening_qty": 51.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 49.0,
+      "closing_qty": 0.0,
+      "extra": {
+        "sale_return": 2.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "PLATENZA TAB",
+      "opening_qty": 139.0,
+      "receipts_qty": 1.0,
+      "sales_qty": 90.0,
+      "closing_qty": 49.0,
+      "extra": {
+        "sale_return": 1.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "PUNARNAVA TAB",
+      "opening_qty": 7.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 4.0,
+      "closing_qty": 3.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "REOSTO TAB",
+      "opening_qty": 28.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 1.0,
+      "closing_qty": 27.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN SYP 200ML",
+      "opening_qty": 22.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 19.0,
+      "closing_qty": 3.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SEPTILIN TAB",
+      "opening_qty": 75.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 9.0,
+      "closing_qty": 66.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SERPINA TAB",
+      "opening_qty": 11.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 3.0,
+      "closing_qty": 8.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SHATAVARI TAB",
+      "opening_qty": 9.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 3.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SHUDDHA GUGULU TAB",
+      "opening_qty": 49.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 49.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "SPEMAN TAB",
+      "opening_qty": 0.0,
+      "receipts_qty": 50.0,
+      "sales_qty": 9.0,
+      "closing_qty": 41.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    },
+    {
+      "product_name": "STYPLON TAB",
+      "opening_qty": 25.0,
+      "receipts_qty": 0.0,
+      "sales_qty": 0.0,
+      "closing_qty": 25.0,
+      "extra": {
+        "sale_return": 0.0,
+        "exp_damage": 0.0
+      }
+    }
+  ]
+}

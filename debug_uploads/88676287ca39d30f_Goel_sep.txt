@@ -1,0 +1,83 @@
+M
+ 
+ 
+ 
+ 
+                                                
+between 9/1/2026 and 9/30/2026                                                   Page - 1
+------------------------------------------------------------------------------------------------
+Product Name               Packing       OP <---Receipts--->  <----Sales---->  <---Closing---->
+                                        Qty    Qty     Value    Qty     Value    Qty      Value
+------------------------------------------------------------------------------------------------
+EVECARE FORTE 3X10-TANLET  3X10           0     84   5446.56     84   5446.56      0       0.00
+QUISTA KIDZ CF POWDER 200  200GM          0     12   3567.84     12   3567.84      0       0.00
+RENOSANTE 60-CAPSULES      60            25      0      0.00      1    324.21     24    7781.04
+ASHWAGANDHA HIMALAYA 60-T  60 S          47      0      0.00     47   8295.97      0       0.00
+GASEX 100-TABLETS          100 S         35      0      0.00     15   2087.10     20    2782.80
+GASEX SYRUP 200ML          200ML         21      0      0.00     13   1317.03      8     810.48
+GOKSHURA 60-TABLETS        60`S          30      0      0.00      6   1131.42     24    4525.68
+HERBOLAX 100-TABLETS       100           26      0      0.00      2    301.72     24    3620.64
+KOFLET COUGH SYRUP 100ML   100ML         20      0      0.00     20   1580.40      0       0.00
+KOFLET H LOZENGES 6-TABLE  6             34      0      0.00     34    652.80      0       0.00
+KOFLET LOZENGES            10S          165      0      0.00     14    217.42    151    2345.03
+RUMALAYA 60-TABLETS        60            40      0      0.00      5    661.95     35    4633.65
+RUMALAYA FORTE 30-TABLETS  30            44      0      0.00     10   1546.80     34    5259.12
+RUMALAYA LINIMENT 60ML     60ML          51      0      0.00     15   1702.05     36    4084.92
+TENTEX ROYAL 10-CAPSULES   10            26      0      0.00     20   3796.00      6    1138.80
+BONNISAN DROPS 30ML        30ML          31      0      0.00     31   2051.89      0       0.00
+BONNISAN LIQUID 100ML      100ML        127     56   3365.60     93   5603.10     90    5409.00
+BONNISAN LIQUID 200ML      200ML         39      0      0.00     20   2026.20     19    1924.89
+BRESOL 60-TABLETS          60            24      0      0.00     24   4020.24      0       0.00
+BRESOL SYRUP 200ML         200ML         46      0      0.00     10   1452.10     36    5227.56
+CYSTONE FORTE 30-TABLETS   30            54      0      0.00     19   2040.41     35    3758.65
+CYSTONE SYRUP 200ML        200ML         47     28   5125.12     49   8968.96     26    4759.04
+EVECARE 30-CAPSULES        30           104      0      0.00      1    143.23    103   16675.49
+EVECARE FORTE LIQUID 200M  200ML         29      0      0.00      1    158.05     28    4860.24
+EVECARE SYRUP 200ML        200ML          3     28   4065.88     30   4356.30      1     145.21
+EVECARE SYRUP 400ML        400ML         12      0      0.00      1    221.54     11    2436.94
+GALACTOSURE GRANULES       200GM         15      0      0.00      2    532.26     13    3459.69
+GERIFORTE 100-TABLETS      100           39      0      0.00      3    332.34     36    3988.08
+GERIFOTE SYRUP 200ML       200ML         18      0      0.00      0      0.00     18    2613.78
+HIMPLASIA TABLETS 2X30     2X30          32     50  16548.50     75  24822.75      7    2316.79
+HIORA K TOOTH PAST 100G    100GM         82     50   5403.00     90   9725.40     42    4538.52
+INTIMA HYGIENE WASH 100ML  100ML         24      0      0.00      0      0.00     24    2464.80
+LIV 52 DROPS 60ML          60ML          80      0      0.00     12   1175.28     68    6659.92
+LIV 52 DS 60-TABLETS       60           185      0      0.00     74  14045.20    111   21067.80
+LIV 52 DS SYRUP 100ML      100ML         43      0      0.00     18   2777.04     25    3857.00
+LIV 52 DS SYRUP 200ML      200ML         38     35   8297.45     65  15409.55      8    1896.56
+LUKOL 60-TABLETS           60            32     50   8544.00     73  12474.24      9    1537.92
+LUKOL SYP 200ML            200ML         28      0      0.00      1    158.05     27    4267.35
+MENTAT 60-TABLETS          50            38      0      0.00     33   4591.62      5     695.70
+MENTAT SYRUP 200ML         200ML         62      0      0.00     17   2950.86     45    7811.10
+PUNARNAVA 60-CAPSULES      60            60      0      0.00     60  13237.80      0       0.00
+SEPTILIN 60-TABLETS        60           102    100  17358.00    111  19267.38     91   15795.78
+SEPTILIN SYRUP 200ML       200ML          8     28   4254.88     36   5470.56      0       0.00
+SPEMAN 60-TABLETS          60            15      0      0.00     11   1842.61      4     670.04
+ABANA 60-TABLETS           60           119      0      0.00     11   1634.60    108   16048.80
+CONFIDO 60-TABLETS         60`S*         19      0      0.00      3    492.39     16    2626.08
+DIABECON 60-TABLETS        60            99      0      0.00      9   1191.51     90   11915.10
+DIABECON DS 60-TABLETS     60S*           3      0      0.00      3    577.47      0       0.00
+HIMCOLIN GEL 30GM          30GM          61      0      0.00      3    625.38     58   12090.68
+LIV 52 100-TABLETS         100          116      0      0.00     64   9510.40     52    7727.20
+LIV 52 SYRUP 100ML         100ML         52      0      0.00     52   4916.60      0       0.00
+LIV 52 SYRUP 200ML         200ML         54      0      0.00     54   8534.70      0       0.00
+OPHTHACARE EYE DROPS 10ML  10ML          38      0      0.00      5    347.85     33    2295.81
+PILEX 60-TABLETS           60            70      0      0.00     68  11251.96      2     330.94
+-------------------------------------------------------------------------- Follow page ... 2
+                                                
+between 9/1/2026 and 9/30/2026                                                   Page - 2
+------------------------------------------------------------------------------------------------
+Product Name               Packing       OP <---Receipts--->  <----Sales---->  <---Closing---->
+                                        Qty    Qty     Value    Qty     Value    Qty      Value
+------------------------------------------------------------------------------------------------
+PILEX FORTE 30-TABLETS     30            15      0      0.00     15   1584.15      0       0.00
+PILEX FORTE OINTMENT 30GM  30GM          55      0      0.00     55   5572.05      0       0.00
+RENALKA SYRUP 100ML        100ML         51      0      0.00      3    226.95     48    3631.20
+TENTEX FORTE 10-TABLETS    10           185      0      0.00     69   6523.95    116   10967.80
+------------------------------------------------------------------------------------------------
+                                  396950.98         81976.83        245474.19         233453.62
+------------------------------------------------------------------------------------------------
+Powered by MetaLinks                                                                                     End.
+P
+
+

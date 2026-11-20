@@ -1,0 +1,44 @@
+30/09/26 18:23:50          PAGE: 1
+                    CHANDIWAL DISTRIBUTORS,JALGAON
+                    THE HIMALAYA DRUG Co.(ZANDRA) 
+STOCK & SALE REPORT FROM 01/09/26 TO 30/09/26 (Based on delivery dates)
+--------------------------------------------------------------------------
+ITEM NAME               BOX    PACK    OPQTY  P_QTY  REPL   S_QTY  B_QTY
+==========================================================================
+DIVISION NAME : THE HIMALAYA DRUG Co.(ZANDRA) 
+
+BONNISAN DROPS          50 BOT 30 ML      33      0      0      5     28
+BONNISAN LIQ                   200 ML     25      0      0      2     23
+BONNISAN LIQUID         100ML  100ML      13     56      0     32     37
+BONNISPAZ DROPS         72 BOT 15 ML       0     72      0     14     58
+BRESOL NASAL SOLUTION   50*10M 10ML       36      0      0      2     34
+BRESOL SYRUP            28*200 200ML      28      0      0      4     24
+BRESOL TABLET           50X60' 60'S        2      0      0      2      0
+CYSTONE FORTE TAB       2*30TA 30'S        0     56      0     15     41
+CYSTONE SYRUP           28X200 200 ML      9      0      0      3      6
+CYSTONE TAB             100X60 60'S       66      0      0     13     53
+EVECARE CAPSULES        100 BO 30'S        2      0      0      0      2
+EVECARE FORTE SYRUP     28*200 200ML      10      0      0      1      9
+EVECARE SYRUP           28 BOT 200 ML     26      0      0     12     14
+GERIFORTE LIQUID        28 BOT 200 ML      3      0      0      1      2
+GERIFORTE TABS          100 BO 60'S       17      0      0      3     14
+HIORA GA GEL            50X15M 15 ML      21      0      0      0     21
+HIORA K MOUTHWASH       25*150 150 ML      1      0      0      1      0
+HIORA K TOOTH PASTE     50X50G 50 GM       8      0      0      8      0
+HIORA SG                50X10G 10 GM      41      0      0     15     26
+LIV.52 DROPS            100 BO  60 ML     29    100      0     89     40
+LIV.52 DS SYP           70     100 ML     12     70      0     28     54
+LIV.52 DS SYP           35     200ML      28      0      0     14     14
+LIV.52 DS TAB           100X60  60'S      30      0      0     21      9
+LUKOL TAB               50 BOT 60'S       33      0      0     13     20
+MENTAT  TABS.           100 BO  60'S       7      0      0      5      2
+MENTAT SYRUP            28 BOT 200 ML     19      0      0     11      8
+RENALKA SYRUP           56BOT  100 ML     40      0      0      3     37
+SEPTILIN  SYRUP         28 BOT 200 ML     27     28      0     35     20
+SEPTILIN  TABS          100X60 60'S       80      0      0     19     61
+SHATAVARI TAB           50 BOT 60TAB      53      0      0      2     51
+SPEMAN TABS             50 BOT 60'S       46      0      0      3     43
+==========================================================================
+                                      OP_VAL     P_VAL         S_VAL    B_VAL
+TOTAL AMOUNT                          117087     37469         53278   106469
+==========================================================================

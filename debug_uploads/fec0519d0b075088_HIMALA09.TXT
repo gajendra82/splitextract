@@ -1,0 +1,231 @@
+ÿ
+NARAYAN MEDICAL (NEW)                                                01/10/2026
+BHANDERHATI, HOOGHLY                                                 17:43:04
+                              
+** Daily Stock Summary (Company-wise) **          From 01/09/2026 to 30/09/2026
+Company:HIMALAYA ZEUS [M177]                              Ordering Factor: 0.00
+-------------------------------------------------------------------------------
+        Product & Pack        |  Op. | Pur. |Sales|Sales| Adj./| Cl.  | Order |
+                              | Stock| Qty. |Retu.| Qty.| Dmg. |Stock | Qty.  |
+------------------------------|------|------|-----|-----|------|------|-------|
+AACTARIL SOAP,75GM                 52      0     0     0      0     52     -52
+ALTHEA CREAM,60GM                   0      0     0     0      0      0       0
+ALTHEA LOTION,100ML                 0      0     0     0      0      0       0
+BLEMINOR ANTIBLEMISH CREA,30ML      0      0     0     0      0      0       0
+CHIROPEX CREAM,30GM                 0      0     0     0      0      0       0
+CLARINA ANTI ACNE CREAM,30GM        0      0     0     0      0      0       0
+CLARINA ANTI ACNE FACEWAS,60ML     41      0     0     5      0     36     -36
+GASEX SYRUP,200ML                   9      0     0     7     -1      1      -1
+GASEX TABS,100'S                   20      0     0     6      0     14     -14
+HAIR ZONE SOLUTION,60ML            10      0     0     0    -10      0       0
+HIORA D TOOTH PASTE,100GM          35      0     0     1      0     34     -34
+HIORA GA GEL,15ML                  47      0     0     0      0     47     -47
+HIORA K MOUTH WASH,150ML            0      0     0     0      0      0       0
+HIORA K TOOTH PASTE,100GM          40      0     0     5      0     35     -35
+HIORA K TOOTH PASTE,50GM            0      0     0     0      0      0       0
+HIORA SG GEL,10GM                  51      0     0    13      0     38     -38
+HIORA TOOTHPASTE,100G               0      0     0     0      0      0       0
+QUISTA ACTIVE 200G,200GM            0      0     0     0      0      0       0
+TRIKATU SYRUP,200ML                 0      0     0     0      0      0       0
+---------------------Purchase----Sl.Retu---- Sales -------Stock----Ordering----
+Valuation (Rs.) =>  0.00        0.00       4001.92     24311.23      -24311.23
+-------------------------------------------------------------------------------
+REMARKS: KOKAN GHOSH 8158830122                                  
+N.B: Pur. Qty includes Pur. Repl., Sales Qty. includes Challan Qty.,
+     Cl. Stock qty includes Bonus Qty., Adj./Dmg. Qty includes Stock 
+     Adjustment and Goods Replacement Qty.
+Sales Valuation (as per PTS): Rs.3715.57    
+ÿ
+NARAYAN MEDICAL (NEW)                                                01/10/2026
+BHANDERHATI, HOOGHLY                                                 17:43:04
+                              
+** Daily Stock Summary (Company-wise) **          From 01/09/2026 to 30/09/2026
+Company:HIMALAYA ZANDRA [M178]                            Ordering Factor: 0.00
+-------------------------------------------------------------------------------
+        Product & Pack        |  Op. | Pur. |Sales|Sales| Adj./| Cl.  | Order |
+                              | Stock| Qty. |Retu.| Qty.| Dmg. |Stock | Qty.  |
+------------------------------|------|------|-----|-----|------|------|-------|
+ABANA TAB,60'S                      0      0     0     0      0      0       0
+DIABECON DS TAB,60S                42      0     0     1      0     41     -41
+EVECARE CAP,30CAP                  90      0     0     1      0     89     -89
+EVECARE FORTE SYP,200ML            11     28     0     0      0     39     -39
+EVECARE FORTE TAB,10               72      0     0     3      0     69     -69
+EVECARE SYP,200ML                  25      0     0    10      0     15     -15
+EVECARE SYP,400ML                   2      0     0     0     -2      0       0
+FLORASANTE CAPSUL,20CAP             0      0     0     0      0      0       0
+FLORASENT CAPSULES,10S              1     28     0     0      0     29     -29
+GERIFORTE SYRUP,200ML              35      0     0     3     -6     26     -26
+GERIFORTE TAB,100'STAB              0      0     0     0      0      0       0
+GERIFORTE TAB,60TAB                37      0     0     0      0     37     -37
+HIOWNA VANILLA FLAVOUR,200GM        0      0     0     0      0      0       0
+MO                            
+IMMUSANTE TAB,20S                 147      0     0     0      0    147    -147
+LASUNA TAB,60S                     40      0     0     0      0     40     -40
+LIV 52 DS SUGAR FREE SYP,200ML      0     35     0     0      0     35     -35
+LIV 52 DS SYP,100ML                69      0     0     8      0     61     -61
+LIV 52 DS SYP,200ML                25     70     0    53      0     42     -42
+LIV 52 DS SYP SUGAR FREE,100ML     59      0     0     0      0     59     -59
+LIV.52 DS TABS,60                  61    200     0    94      0    167    -167
+LUKOL SYP,200ML                    20      0     0     5     -3     12     -12
+LUKOL TAB,60TAB                    25      0     0    13      0     12     -12
+MENOSAN TAB,30S                    37      0     0     0      0     37     -37
+MESHASHRINGI TAB,60TAB              0      0     0     0      0      0       0
+PLATENZA TAB,20S                  118      0     0     3      0    115    -115
+PUNARNAVA TAB,60TAB                17      0     0     0      0     17     -17
+QUISTA DN 400G(MILK),400GM          0      0     0     0      0      0       0
+QUISTA DN 400GM VANILA,400GM        0      0     0     0      0      0       0
+RENALKA SYP,100ML                   0     56     0    24      0     32     -32
+RENALKA SYP,200ML                  14      0     0     8      0      6      -6
+RENOSANTE CAP,60S                   0     25     0    10      0     15     -15
+REOSTO TAB,30S                      5      0     0     3      0      2      -2
+RUMALAYA  GEL JAR,10GM              0      0     0     0      0      0       0
+SHATAVARI SYP,200ML                 0      0     0     0      0      0       0
+SHATAVARI TAB,60S                  40      0     0     0      0     40     -40
+SPEMAN TAB,60S                     47      0     0    25      0     22     -22
+---------------------Purchase----Sl.Retu---- Sales -------Stock----Ordering----
+Valuation (Rs.) =>  87569.85    0.00       52460.89    188459.27    -188459.27
+-------------------------------------------------------------------------------
+REMARKS: 9163214174/9836044851                                   
+N.B: Pur. Qty includes Pur. Repl., Sales Qty. includes Challan Qty.,
+     Cl. Stock qty includes Bonus Qty., Adj./Dmg. Qty includes Stock 
+     Adjustment and Goods Replacement Qty.
+Sales Valuation (as per PTS): Rs.49687.59   
+ÿ
+NARAYAN MEDICAL (NEW)                                                01/10/2026
+BHANDERHATI, HOOGHLY                                                 17:43:04
+                              
+** Daily Stock Summary (Company-wise) **          From 01/09/2026 to 30/09/2026
+Company:HIMALAYA OTX [M179]                               Ordering Factor: 0.00
+-------------------------------------------------------------------------------
+        Product & Pack        |  Op. | Pur. |Sales|Sales| Adj./| Cl.  | Order |
+                              | Stock| Qty. |Retu.| Qty.| Dmg. |Stock | Qty.  |
+------------------------------|------|------|-----|-----|------|------|-------|
+ASHVAGANDHA TAB,60S                 0      0     0     0      0      0       0
+KOFLET EX LINCTUS SYP,100ML         0      0     0     0      0      0       0
+KOFLET SF LINCTUS SYP,100ML         0      0     0     0      0      0       0
+KOFLET SF LOZEN LEMON,10NX6S        0      0     0     0      0      0       0
+KOFLET SF LOZEN ORANG,10NX6S        0      0     0     0      0      0       0
+KOFLET SF LOZENGES GIN,6S           0      0     0     0      0      0       0
+KOFLET SF LOZENGES ORG,10NX6        0      0     0     0      0      0       0
+NEEM TAB,60S                        0      0     0     0      0      0       0
+Q DEE(CRAMPS) TAB,8S                0      0     0     0      0      0       0
+Q-DEE NAUSEA TAB,8TAB               0      0     0     0      0      0       0
+RUMALAYA  GEL,30GM                  0      0     0     0      0      0       0
+RUMALAYA FORTE TAB,30S              1    100     0    12      0     89     -89
+RUMALAYA TAB,60S                    0      0     0     0      0      0       0
+SHALLAKI TAB,60S                    0      0     0     0      0      0       0
+TENTEX ROYAL CAP,10'S              23      0     0    16      0      7      -7
+---------------------Purchase----Sl.Retu---- Sales -------Stock----Ordering----
+Valuation (Rs.) =>  15429.00    0.00       4937.54     15265.22      -15265.22
+-------------------------------------------------------------------------------
+REMARKS: SUMAN MUKHERJEE-9830815503                              
+N.B: Pur. Qty includes Pur. Repl., Sales Qty. includes Challan Qty.,
+     Cl. Stock qty includes Bonus Qty., Adj./Dmg. Qty includes Stock 
+     Adjustment and Goods Replacement Qty.
+Sales Valuation (as per PTS): Rs.4670.58    
+ÿ
+NARAYAN MEDICAL (NEW)                                                01/10/2026
+BHANDERHATI, HOOGHLY                                                 17:43:04
+                              
+** Daily Stock Summary (Company-wise) **          From 01/09/2026 to 30/09/2026
+Company:HIMALAYA ZENITH [M181]                            Ordering Factor: 0.00
+-------------------------------------------------------------------------------
+        Product & Pack        |  Op. | Pur. |Sales|Sales| Adj./| Cl.  | Order |
+                              | Stock| Qty. |Retu.| Qty.| Dmg. |Stock | Qty.  |
+------------------------------|------|------|-----|-----|------|------|-------|
+BONNISAN DROPS,30ML                50      0     0    20      0     30     -30
+BONNISAN LIQ,100ML                 55      0     0     0      0     55     -55
+BONNISAN LIQ,200 ML                 8      0     0     2      0      6      -6
+BRESOL  SYP,100ML                   0      0     0     0      0      0       0
+BRESOL  TAB,60T                    26      0     0     0      0     26     -26
+BRESOL NS SALINE NASAL,10ML         3     50     0    16      0     37     -37
+BRESOL SYP,200ML                   63      0     0    36      0     27     -27
+CONFIDO TAB,60'S                  100      0     0    13      0     87     -87
+CYSTONE FORTE TABS,30S             52    112     0    36      0    128    -128
+CYSTONE SF SYP,200ML                0     28     0     0      0     28     -28
+CYSTONE SYP,100ML                   0      0     0     0      0      0       0
+CYSTONE SYP,200ML                   9     28     0     8      0     29     -29
+CYSTONE TABS,60'S                  58    200     0    54      0    204    -204
+DIAREX SYP,100ML                    0      0     0     0      0      0       0
+HIOWNA CHOCOLATE                    0      0     0     0      0      0       0
+FLAVOUR,200GM(AD              
+HIOWNA VANILLA FLAVOUR,200GM        0      0     0     0      0      0       0
+AD                            
+KOFLET H LOZENGES,6S                0      0     0     0      0      0       0
+KOFLET LOZENGES 160+40 FR,1'S       0      0     0     0      0      0       0
+KOFLET LOZENGES 200+25FR,1'S        0     12     0     1      0     11     -11
+KOFLET LOZENGES(60+15FRE),1PIS      0     12     0     7      0      5      -5
+KOFLET SYP,100ML                    0     56     0    27      0     29     -29
+LIV 52 DROP,60 ML                  85      0     0    13      0     72     -72
+LIV 52 DROPS,100ML                 34      0     0     7      0     27     -27
+MENTAT DS SYRUP,100ML               0      0     0     0      0      0       0
+MENTAT SYRUP,200ML                 21      0     0     3      0     18     -18
+MENTAT TABS,60'S                   39      0     0     5      0     34     -34
+MINTAT SYRUP,200ML                  0      0     0     0      0      0       0
+OPHTHACARE EYE DROPS,10ML           0      0     0     0      0      0       0
+OXITARD CAP,10S                     0      0     0     0      0      0       0
+PILEX FORTE OINT,30GM              19      0     0    11      0      8      -8
+PILEX FORTE TAB,30S                32      0     0     1     -4     27     -27
+PILEX OINT,30 GM                    0      0     0     0      0      0       0
+PILEX TAB,60'S                     84      0     0    39      0     45     -45
+PLATENZA SYP 100ML,100ML            0      0     0     0      0      0       0
+RUMALAYA LINIMENT,60ML              0      0     0     0      0      0       0
+SEPTILIN GUMMIES TAB,30S            8      0     0     0     -8      0       0
+SEPTILIN SYRUP,200 ML              28      0     0     4      0     24     -24
+SEPTILIN TAB,60'S                  32    100     0    27      0    105    -105
+TENTEX FORTE TABS,10'S             46      0     0    14      0     32     -32
+---------------------Purchase----Sl.Retu---- Sales -------Stock----Ordering----
+Valuation (Rs.) =>  84319.36    0.00       48082.28    148453.49    -148453.49
+-------------------------------------------------------------------------------
+REMARKS: MANAS ADHYA 9830035758                                  
+N.B: Pur. Qty includes Pur. Repl., Sales Qty. includes Challan Qty.,
+     Cl. Stock qty includes Bonus Qty., Adj./Dmg. Qty includes Stock 
+     Adjustment and Goods Replacement Qty.
+Sales Valuation (as per PTS): Rs.45502.60   
+ÿ
+NARAYAN MEDICAL (NEW)                                                01/10/2026
+BHANDERHATI, HOOGHLY                                                 17:43:04
+                              
+** Daily Stock Summary (Company-wise) **          From 01/09/2026 to 30/09/2026
+Company:HIMALAYA -ZEAL [M7]                               Ordering Factor: 0.00
+-------------------------------------------------------------------------------
+        Product & Pack        |  Op. | Pur. |Sales|Sales| Adj./| Cl.  | Order |
+                              | Stock| Qty. |Retu.| Qty.| Dmg. |Stock | Qty.  |
+------------------------------|------|------|-----|-----|------|------|-------|
+BONISPAZ DROP,15ML                 14      0     0     1      0     13     -13
+DIAREX TAB,30S                      0      0     0     0      0      0       0
+GALACTOSURE GRANULES,200GM          8     12     0     5      0     15     -15
+HERBOLAX CAP,10S                    0      0     0     0      0      0       0
+HIMCOCID SYP SUGER FREE,200ML       0      0     0     0      0      0       0
+HIMCOLIN GEL,30GM                  35      0     0     5      0     30     -30
+HIMCOSPAZ CAP,10S                   0      0     0     0      0      0       0
+HIMPLASIA TAB,30S                   3    100     0     0      0    103    -103
+LIV 52 HB CAP,10S                   0      0     0     0      0      0       0
+LIV.52 SYRUP,100ML                 39      0     0    36      0      3      -3
+LIV.52 SYRUP,200ML                 75      0     0    52      0     23     -23
+LIV.52 TABS,100'S                  90      0     0    56      0     34     -34
+ORO T ORAL RINSE SYP,100ML         49      0     0     0      0     49     -49
+ORO T ORAL RINSE SYP,200ML          0      0     0     0      0      0       0
+PURE HANDS ADVANCED,500ML           0      0     0     0      0      0       0
+PURE HANDS ADVANCED,750ML           0      0     0     0      0      0       0
+PURE HANDS ADVANCED BLUE,750ML      0      0     0     0      0      0       0
+PUREHANDS TUBE,100ML                0      0     0     0      0      0       0
+PUREHANDS(LEMON),100ML              0      0     0     0      0      0       0
+PUREHANDS(LITCHI),100ML             0      0     0     0      0      0       0
+PUREHANDS(LITCHI),200ML             0      0     0     0      0      0       0
+PUREHANDS(LITCHI),500ML             0      0     0     0      0      0       0
+PUREHANDS(ORANGE),100ML             0      0     0     0      0      0       0
+PUREHANDS(ORANGE),500ML             0      0     0     0      0      0       0
+QUISTA KIDZ CHOCO,200G              0      0     0     0      0      0       0
+QUISTA KIDZ VANILLA,200G            0      0     0     0      0      0       0
+TALEKT SYP,120ML                    0      0     0     0      0      0       0
+TULASI SYP,200ML                    0      0     0     0      0      0       0
+---------------------Purchase----Sl.Retu---- Sales -------Stock----Ordering----
+Valuation (Rs.) =>  20729.28    0.00       24486.51    44140.14      -44140.14
+-------------------------------------------------------------------------------
+REMARKS: PRALAY KR.MUKHERJEE-8017353632                          
+N.B: Pur. Qty includes Pur. Repl., Sales Qty. includes Challan Qty.,
+     Cl. Stock qty includes Bonus Qty., Adj./Dmg. Qty includes Stock 
+     Adjustment and Goods Replacement Qty.
+Sales Valuation (as per PTS): Rs.23109.45   
+ÿ

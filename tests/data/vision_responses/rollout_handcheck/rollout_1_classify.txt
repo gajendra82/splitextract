@@ -1,0 +1,3 @@
+=== classify_result ===
+counts: {"VALID": 39, "MINOR_DISCREPANCY": 0, "COLUMN_ASSIGNMENT_SUSPECTED": 0, "OCR_VALUE_SUSPECTED": 0, "MISSING_VALUE": 0, "STRUCTURAL_ERROR": 0}
+valid_ratio: 1.0

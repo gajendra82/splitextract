@@ -1,0 +1,51 @@
+W1G          PHARMA DISTRIBUTORSW0H
+                  HALL NO.4 Ist Fl.NR. BOI DATTA CHOWK,YAVATMAL
+HIMALAYA
+S.S.Report From 01/09/26 To 30/09/26
+---------------------------------------------------------------------------
+PRODUCT                    PACKING OPN.  RECD. RET  TOT   SALE  CLOS.  
+                                   STK   STK  GOODS STK          STK   ZEAL (PENSIONWAR)
+---------------------------------------------------------------------------
+AACTARIL SOAP             |75gm  |   31|    0|    0|   31|   19|   12|    0
+ABANA TAB                 |60's  |   51|    0|    0|   51|    9|   42|    0
+ALTHEA LOTION             |100ml |   39|    0|    0|   39|    0|   39|    0
+AMALAKI CAP               |60's  |    0|    0|    0|    0|    0|    0|    0
+BLEMINOR ANTI BLEMISH CRE |30ml  |   67|    0|    0|   67|   27|   40|    0
+CLARINA-ANTI ACNE CREAM   |30gm  |   71|    0|    0|   71|   15|   56|    0
+CLARINA-ANTI ACNE FACEWAS |50ml  |   23|    0|    0|   23|    4|   19|    0
+CONFIDO TAB               |60's  |  135|    0|    0|  135|   37|   98|    0
+DIABECON TAB              |60's  |   38|    0|    0|   38|    0|   38|    0
+DIABECON-DS TAB           |60's  |   21|    0|    0|   21|   11|   10|    0
+DIAREX SYP                |100ml |   17|    0|    0|   17|    3|   14|    0
+DIAREX TAB                |30's  |    0|    0|    0|    0|    0|    0|    0
+HADJOD TAB                |60's  |   43|    0|    0|   43|   19|   24|    0
+HAIR ZONE SOLUTION        |60ml  |    4|   28|    0|   32|    4|   28|    0
+HEAL LIP                  |10gm  |    0|    0|    0|    0|    0|    0|    0
+HERBOLAX CAP              |10's  |  103|    0|    0|  103|   58|   45|    0
+HERBOLAX TAB              |100's |   40|    0|    0|   40|    0|   40|    0
+HIMCOLIN GEL              |30gm  |   39|    0|    0|   39|   10|   29|    0
+LIV-52 HB CAP             |10's  |   63|    0|    0|   63|   50|   13|    0
+LIV-52 SYP                |100ml |  322|   70|    0|  392|  321|   71|    0
+LIV-52 SYP                |200ml |  469|    0|    0|  469|  210|  259|    0
+LIV-52 SYP (SF)           |100ml |    8|    0|    0|    8|    2|    6|    0
+LIV-52 SYP (SF)           |200ml |   17|    0|    0|   17|    0|   17|    0
+LIV-52 TAB                |100's |  171|    0|    0|  171|  108|   63|    0
+OPTHACARE EYE DROPS       |10ml  |   31|   72|    0|  103|   31|   72|    0
+ORO-T ORAL RINSE          |100ml |   78|    0|    0|   78|   12|   66|    0
+PILEX TAB                 |60's  |  247|  103|    0|  350|  181|  169|    0
+PILEX-FORTE OINT          |30gm  |  101|  200|    0|  301|  144|  157|    0
+PILEX-FORTE TAB           |30's  |   10|   50|    0|   60|   28|   32|    0
+PURIM TAB                 |60's  |   12|    1|    0|   13|    3|   10|    0
+QUISTA-ACTIVE POWDER      |200gm |    0|    0|    0|    0|    0|    0|    0
+RENALKA SYP               |100ml |   18|   56|    0|   74|   37|   37|    0
+RENALKA SYP               |200ml |   32|    0|    0|   32|    0|   32|    0
+SHALLAKI TAB              |60's  |   27|    0|    0|   27|   13|   14|    0
+SHIGRU TAB                |60's  |   22|    0|    0|   22|    0|   22|    0
+TENTAX-FORTE TAB          |10's  |  197|    0|    0|  197|   73|  124|    0
+TRIPHALA SYP              |200ml |    0|    0|    0|    0|    0|    0|    0
+VEGECORT CREAM            |30gm  |    0|    0|    0|    0|    0|    0|    0
+VRIKSHAMLA CAP            |60's  |   23|    0|    0|   23|    0|   23|    0
+---------------------------------------------------------------------------
+OP.STK  385106    PR.STK   74310    RT.COM       0    CL.STK  260397
+SL.AMT  199020
+---------------------------------------------------------------------------

@@ -1,0 +1,16 @@
+=== compare (current vs vision) ===
+product                                   cur_op  vis_op cur_pur vis_pur  cur_sl  vis_sl  cur_cl  vis_cl
+Arjuna tablets                               0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bonnisan drops                               0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bonnisan liquid                              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bonnisan liquid                              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bonnispaz drops                              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bresol syrup                                 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bresol tablets                               0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Bresol-NS saline nasal solution              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Cystone forte tablets                        0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Cystone syrup                                0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Cystone tablets                              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Cystone-SF liquid                            0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Evecare capsules                             0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+Evecare syrup                                0.0     0.0     0.0     0.0    15.0     0.0     0.0     0.0

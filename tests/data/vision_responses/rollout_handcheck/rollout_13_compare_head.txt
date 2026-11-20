@@ -1,0 +1,16 @@
+=== compare (current vs vision) ===
+product                                   cur_op  vis_op cur_pur vis_pur  cur_sl  vis_sl  cur_cl  vis_cl
+HIMCOCID SNOUFSYP                            0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+AACTARIL SOAP                                0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+ABANA TAB                                   55.0     0.0     0.0     0.0    12.0     0.0    43.0     0.0
+AMALAKI CAP                                  0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+CLARINA CREAM                               40.0     0.0     0.0     0.0     9.0     0.0    31.0     0.0
+CLARINA FACE MASK                            0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+CLARINA FACE WASH GEL                        0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+CONFIDO TAB                                 53.0     0.0     0.0     0.0    12.0     0.0    41.0     0.0
+DIABECON DS TAB                              0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+DIABECON TAB                                 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+DIAREX SYRUP                                 0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+DIAREX TAB                                   0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+HADJOD CAP                                   0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+HAIR ZONE SOLUTION                           0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0

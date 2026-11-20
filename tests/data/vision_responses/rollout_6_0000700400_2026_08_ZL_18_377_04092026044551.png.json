@@ -1,0 +1,1140 @@
+{
+  "header_rows": [
+    {
+      "cells": [
+        {
+          "text": "Product Name",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "Packing",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        {
+          "text": "Opening",
+          "col_index": 2,
+          "x_center": 0.334
+        },
+        {
+          "text": "Receipt",
+          "col_index": 3,
+          "x_center": 0.392
+        },
+        {
+          "text": "Issues",
+          "col_index": 4,
+          "x_center": 0.449
+        },
+        {
+          "text": "Closing",
+          "col_index": 5,
+          "x_center": 0.507
+        },
+        {
+          "text": "Sh.Exp",
+          "col_index": 6,
+          "x_center": 0.565
+        },
+        {
+          "text": "Liquidation",
+          "col_index": 7,
+          "x_center": 0.64
+        },
+        {
+          "text": "Sales Amount",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        {
+          "text": "Closing Amount",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ]
+    }
+  ],
+  "column_count": 10,
+  "rows": [
+    {
+      "row_index": 0,
+      "cells": [
+        {
+          "text": "THE HIMALAYA DRUG(ZIL)",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 1,
+      "cells": [
+        {
+          "text": "CLARINA ANTI ACNE FACE WA",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        {
+          "text": "25",
+          "col_index": 2,
+          "x_center": 0.334
+        },
+        null,
+        null,
+        {
+          "text": "25",
+          "col_index": 5,
+          "x_center": 0.507
+        },
+        null,
+        {
+          "text": "440 Days",
+          "col_index": 7,
+          "x_center": 0.64
+        },
+        null,
+        {
+          "text": "2,828.00",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 2,
+      "cells": [
+        {
+          "text": "CLARINA ANTI ACNE KIT [CM",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "1KIT",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 3,
+      "cells": [
+        {
+          "text": "CLARINA ANTI-ACNE CREAM",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "30GM",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 4,
+      "cells": [
+        {
+          "text": "FLORASANTE CAP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "20'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 5,
+      "cells": [
+        {
+          "text": "GASEX SYP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 6,
+      "cells": [
+        {
+          "text": "GASEX SYP[GINGER-LEMON]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 7,
+      "cells": [
+        {
+          "text": "GASEX SYRUP (ELAICHI FLA)",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 8,
+      "cells": [
+        {
+          "text": "GASEX TAB",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        {
+          "text": "35",
+          "col_index": 2,
+          "x_center": 0.334
+        },
+        null,
+        {
+          "text": "5",
+          "col_index": 4,
+          "x_center": 0.449
+        },
+        {
+          "text": "30",
+          "col_index": 5,
+          "x_center": 0.507
+        },
+        null,
+        {
+          "text": "236 Days",
+          "col_index": 7,
+          "x_center": 0.64
+        },
+        {
+          "text": "667.75",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        {
+          "text": "4,008.90",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 9,
+      "cells": [
+        {
+          "text": "GUDUCHI CAP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 10,
+      "cells": [
+        {
+          "text": "HAIR ZONE LOTION",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 11,
+      "cells": [
+        {
+          "text": "HERBOLAX CAPS",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "10'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 12,
+      "cells": [
+        {
+          "text": "HIMCOCID SUSP [BANANA FL]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 13,
+      "cells": [
+        {
+          "text": "HIMCOCID SUSP [MINT FLAV]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 14,
+      "cells": [
+        {
+          "text": "HIMCOCID SUSP [SNF FLAV]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 15,
+      "cells": [
+        {
+          "text": "HIMCOCID-SF SYP (MINT)",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 16,
+      "cells": [
+        {
+          "text": "HIMCOCID-SF SYP [BANANA]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 17,
+      "cells": [
+        {
+          "text": "HIMCOCID-SF SYP [SAUNF]",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 18,
+      "cells": [
+        {
+          "text": "HIOWNA CHOCOLATE FLAVOUR 200GM",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 19,
+      "cells": [
+        {
+          "text": "HIOWNA CHOCOLATE FLAVOUR 400GM",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 20,
+      "cells": [
+        {
+          "text": "HIOWNA JR CHOCOLATE FLAV",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200GM",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 21,
+      "cells": [
+        {
+          "text": "HIOWNA JR STRABERRY FLAV",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200GM",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 22,
+      "cells": [
+        {
+          "text": "KOFLET LOZENGES 175+25",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "JAR",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 23,
+      "cells": [
+        {
+          "text": "KOFLET SF LINCTUS",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 24,
+      "cells": [
+        {
+          "text": "KOFLET SYP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 25,
+      "cells": [
+        {
+          "text": "KOFLET-EX LINCTUS",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 26,
+      "cells": [
+        {
+          "text": "LIV 52 SYP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        {
+          "text": "64",
+          "col_index": 3,
+          "x_center": 0.392
+        },
+        {
+          "text": "27",
+          "col_index": 4,
+          "x_center": 0.449
+        },
+        {
+          "text": "37",
+          "col_index": 5,
+          "x_center": 0.507
+        },
+        null,
+        {
+          "text": "70 Days",
+          "col_index": 7,
+          "x_center": 0.64
+        },
+        {
+          "text": "2,983.50",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        {
+          "text": "4,146.22",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 27,
+      "cells": [
+        {
+          "text": "LIV 52 SYP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "200ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        {
+          "text": "33",
+          "col_index": 3,
+          "x_center": 0.392
+        },
+        {
+          "text": "33",
+          "col_index": 4,
+          "x_center": 0.449
+        },
+        null,
+        null,
+        null,
+        {
+          "text": "6,040.75",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 28,
+      "cells": [
+        {
+          "text": "LIV 52 TAB",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "100'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        {
+          "text": "100",
+          "col_index": 2,
+          "x_center": 0.334
+        },
+        null,
+        {
+          "text": "2",
+          "col_index": 4,
+          "x_center": 0.449
+        },
+        {
+          "text": "98",
+          "col_index": 5,
+          "x_center": 0.507
+        },
+        null,
+        {
+          "text": "1372 Days",
+          "col_index": 7,
+          "x_center": 0.64
+        },
+        {
+          "text": "352.00",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        {
+          "text": "17,258.78",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 29,
+      "cells": [
+        {
+          "text": "RUMALAYA FORTE TAB",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "30'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 30,
+      "cells": [
+        {
+          "text": "RUMALAYA GEL",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "30GM",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 31,
+      "cells": [
+        {
+          "text": "RUMALAYA LINIMENT",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 32,
+      "cells": [
+        {
+          "text": "RUMALAYA TAB",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 33,
+      "cells": [
+        {
+          "text": "TALEKT CAP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "60'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 34,
+      "cells": [
+        {
+          "text": "TALEKT SYP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "120ML",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 35,
+      "cells": [
+        {
+          "text": "TENTEX FORTE TAB",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "10'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 36,
+      "cells": [
+        {
+          "text": "TENTEX ROYAL CAP",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        {
+          "text": "10'S",
+          "col_index": 1,
+          "x_center": 0.276
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 37,
+      "cells": [
+        {
+          "text": "**Liqudation is based on last three months sales",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "text": "10,044.00",
+          "col_index": 8,
+          "x_center": 0.75
+        },
+        {
+          "text": "28,241.90",
+          "col_index": 9,
+          "x_center": 0.883
+        }
+      ],
+      "is_total_row": true
+    },
+    {
+      "row_index": 38,
+      "cells": [
+        {
+          "text": ".F.",
+          "col_index": 0,
+          "x_center": 0.176
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    }
+  ],
+  "proposed_mapping": [
+    {
+      "col_index": 0,
+      "mapping": "product_name",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 1,
+      "mapping": "pack",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 2,
+      "mapping": "opening_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 3,
+      "mapping": "receipt_qty",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 4,
+      "mapping": "issues_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 5,
+      "mapping": "closing_qty",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 6,
+      "mapping": "sh_exp",
+      "confidence": 0.8
+    },
+    {
+      "col_index": 7,
+      "mapping": "liquidation",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 8,
+      "mapping": "sales_amount",
+      "confidence": 1.0
+    },
+    {
+      "col_index": 9,
+      "mapping": "closing_amount",
+      "confidence": 1.0
+    }
+  ],
+  "unreadable_cells": [],
+  "stockist_name": "THE HIMALAYA DRUG(ZIL)",
+  "statement_period": "01/07/2026 to 29/07/2026"
+}

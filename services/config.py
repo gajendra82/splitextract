@@ -4,9 +4,14 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
+_tests_env = Path(__file__).resolve().parents[1] / "tests" / ".env"
+if _tests_env.is_file():
+    load_dotenv(_tests_env, override=False)
 
 
 def _env_bool(name: str, default: bool) -> bool:

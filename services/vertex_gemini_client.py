@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 
+# Root .env first; tests/.env fills local gaps (STOCK_VISION_TABLE, Vertex creds)
+# without overriding an already-exported production environment.
 load_dotenv()
+_tests_env = Path(__file__).resolve().parents[1] / "tests" / ".env"
+if _tests_env.is_file():
+    load_dotenv(_tests_env, override=False)
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +37,109 @@ GOOGLE_CLOUD_LOCATION = os.getenv(
 ).strip()
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv(
     "GOOGLE_APPLICATION_CREDENTIALS", ""
-).strip()
+).strip().strip('"').strip("'")
+if GOOGLE_APPLICATION_CREDENTIALS:
+    # Keep ADC path quote-clean for google-auth.
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
+
+# Hard cap on a single Vertex HTTP round-trip (seconds). future.result uses the
+# caller timeout; HttpOptions enforces the same bound inside httpx.
+_VERTEX_HTTP_TIMEOUT_CAP = int(
+    os.getenv("VERTEX_GEMINI_HTTP_TIMEOUT_SECONDS", "180") or "180"
+)
 
 _vertex_client: Optional[genai.Client] = None
 _vertex_client_initialized = False
+_api_key_client: Optional[genai.Client] = None
+
+
+def _env_flag(name: str, default: bool = True) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _bounded_timeout_seconds(timeout: int) -> int:
+    try:
+        base = int(timeout or 1)
+    except (TypeError, ValueError):
+        base = 1
+    cap = max(1, int(_VERTEX_HTTP_TIMEOUT_CAP or 180))
+    return max(1, min(base, cap))
+
+
+def _api_key_fallback_enabled() -> bool:
+    """Flagged local recovery when Vertex credentials are misconfigured."""
+    return _env_flag("GEMINI_API_KEY_FALLBACK_ON_VERTEX_CREDENTIAL_ERROR", False)
+
+
+def _vertex_credentials_missing() -> bool:
+    if not GOOGLE_APPLICATION_CREDENTIALS:
+        return False
+    return not os.path.exists(GOOGLE_APPLICATION_CREDENTIALS)
+
+
+def _get_api_key_gemini_client() -> genai.Client:
+    global _api_key_client
+    if _api_key_client is not None:
+        return _api_key_client
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise FileNotFoundError(
+            "Vertex credentials are missing and GEMINI_API_KEY is not set"
+        )
+    _api_key_client = genai.Client(api_key=api_key, vertexai=False)
+    logger.warning(
+        "GEMINI_API_KEY_FALLBACK provider=ai_studio reason=missing_vertex_credentials"
+    )
+    return _api_key_client
+
+
+def _attach_http_timeout(
+    config: Optional[types.GenerateContentConfig],
+    timeout_seconds: int,
+) -> types.GenerateContentConfig:
+    """Ensure GenerateContentConfig carries an httpx timeout (milliseconds)."""
+    timeout_ms = max(1, int(timeout_seconds)) * 1000
+    http_opts = types.HttpOptions(timeout=timeout_ms)
+    if config is None:
+        return types.GenerateContentConfig(http_options=http_opts)
+    try:
+        return config.model_copy(update={"http_options": http_opts})
+    except Exception:
+        # Older/newer SDK shapes — best-effort mutate.
+        try:
+            config.http_options = http_opts  # type: ignore[attr-defined]
+            return config
+        except Exception:
+            return types.GenerateContentConfig(http_options=http_opts)
+
+
+def run_callable_with_timeout(fn, timeout: int, *, label: str = "vertex_gemini"):
+    """Run ``fn`` with a wall-clock timeout that does not block on shutdown.
+
+    ``ThreadPoolExecutor.__exit__`` defaults to ``shutdown(wait=True)``, which
+    re-blocks after ``future.result(timeout=…)`` fires whenever the worker is
+    still stuck on a hung HTTP/socket read. That made Gemini "timeouts"
+    ineffective in production (observed ~60s timeout + ~70s shutdown wait).
+    """
+    timeout = _bounded_timeout_seconds(timeout)
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix=label[:12] or "vtx")
+    future = executor.submit(fn)
+    try:
+        return future.result(timeout=timeout)
+    except FuturesTimeoutError as exc:
+        logger.error(
+            "vertex_gemini_call_timeout label=%s timeout=%ss "
+            "(abandoning worker thread; shutdown wait=False)",
+            label,
+            timeout,
+        )
+        raise TimeoutError(f"Gemini request timed out after {timeout}s") from exc
+    finally:
+        # Never wait for a hung httpx/socket read — release the caller immediately.
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 class GeminiProviderError(Exception):
@@ -52,13 +159,6 @@ class GeminiRestResponse:
 
     def json(self) -> Dict[str, Any]:
         return self._data
-
-
-def _env_flag(name: str, default: bool = True) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def initialize_vertex_gemini_client() -> genai.Client:
@@ -117,7 +217,15 @@ def _payload_part_to_sdk(part: Dict[str, Any]) -> types.Part:
             decoded = base64.b64decode(raw_data)
         else:
             decoded = raw_data
-        return types.Part.from_bytes(data=decoded, mime_type=mime_type)
+        media_resolution = (
+            inline.get("media_resolution")
+            or inline.get("mediaResolution")
+        )
+        return types.Part.from_bytes(
+            data=decoded,
+            mime_type=mime_type,
+            media_resolution=media_resolution,
+        )
 
     raise ValueError(f"Unsupported Gemini payload part: {part!r}")
 
@@ -134,7 +242,185 @@ def payload_to_generate_config(payload: Dict[str, Any]) -> Optional[types.Genera
     if max_tokens is not None:
         kwargs["max_output_tokens"] = max_tokens
 
+    mime = gen_cfg.get("responseMimeType") or gen_cfg.get("response_mime_type")
+    if mime:
+        kwargs["response_mime_type"] = mime
+    schema = gen_cfg.get("responseSchema") or gen_cfg.get("response_schema")
+    if schema is not None:
+        kwargs["response_schema"] = schema
+
+    thinking = gen_cfg.get("thinkingConfig") or gen_cfg.get("thinking_config")
+    if thinking is not None:
+        if isinstance(thinking, dict):
+            budget = thinking.get("thinkingBudget", thinking.get("thinking_budget", 0))
+            include = thinking.get("includeThoughts", thinking.get("include_thoughts"))
+            kwargs["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=budget,
+                include_thoughts=include,
+            )
+        else:
+            kwargs["thinking_config"] = thinking
+
+    media = gen_cfg.get("mediaResolution") or gen_cfg.get("media_resolution")
+    if media is not None:
+        kwargs["media_resolution"] = media
+
     return types.GenerateContentConfig(**kwargs) if kwargs else None
+
+
+_VERTEX_ERROR_APPROVED_KEYS = {
+    "code",
+    "status",
+    "message",
+    "quotametric",
+    "quota_metric",
+    "quotaid",
+    "quota_id",
+    "quotalimit",
+    "quota_limit",
+    "quotalimitvalue",
+    "quota_limit_value",
+    "retrydelay",
+    "retry_delay",
+    "retryinfo",
+    "retry_info",
+    "reason",
+    "@type",
+}
+_VERTEX_ERROR_CONTAINER_KEYS = {
+    "error",
+    "details",
+    "metadata",
+    "violations",
+}
+_VERTEX_ERROR_DENIED_KEYS = {
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "set_cookie",
+    "private_key",
+    "privatekey",
+    "private_key_id",
+    "api_key",
+    "apikey",
+    "access_token",
+    "id_token",
+    "refresh_token",
+    "client_secret",
+    "password",
+    "secret",
+    "credential",
+    "credentials",
+    "bearer",
+    "token",
+}
+_VERTEX_SAFE_HEADER_EXACT = {"retry-after", "x-goog-retry-info"}
+_VERTEX_ERROR_VALUE_MAX_LEN = 400
+
+
+def _vertex_error_key_norm(key: Any) -> str:
+    return str(key or "").strip().lower().replace("-", "_")
+
+
+def _vertex_error_value_is_sensitive(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if not text:
+        return False
+    if text.startswith("-----BEGIN"):
+        return True
+    if text.lower().startswith("bearer "):
+        return True
+    if text.startswith("AIza"):
+        return True
+    return False
+
+
+def _vertex_error_clip(value: Any) -> Any:
+    if isinstance(value, str) and len(value) > _VERTEX_ERROR_VALUE_MAX_LEN:
+        return value[:_VERTEX_ERROR_VALUE_MAX_LEN] + "…"
+    return value
+
+
+def _sanitize_vertex_error_details(value: Any) -> Any:
+    """Keep only quota/capacity diagnostic fields from a Google APIError body."""
+    if isinstance(value, dict):
+        cleaned: Dict[str, Any] = {}
+        for raw_key, raw_val in value.items():
+            key = str(raw_key)
+            norm = _vertex_error_key_norm(key)
+            if norm in _VERTEX_ERROR_DENIED_KEYS or "authorization" in norm:
+                continue
+            if _vertex_error_value_is_sensitive(raw_val):
+                continue
+            if norm in _VERTEX_ERROR_APPROVED_KEYS or key == "@type":
+                cleaned[key] = _sanitize_vertex_error_details(raw_val)
+            elif norm in _VERTEX_ERROR_CONTAINER_KEYS:
+                nested = _sanitize_vertex_error_details(raw_val)
+                if nested not in (None, {}, []):
+                    cleaned[key] = nested
+        return cleaned
+    if isinstance(value, list):
+        items = [
+            _sanitize_vertex_error_details(item)
+            for item in value
+        ]
+        return [item for item in items if item not in (None, {}, [])]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return _vertex_error_clip(value)
+    return None
+
+
+def _safe_vertex_error_headers(response: Any) -> Dict[str, str]:
+    headers = getattr(response, "headers", None) if response is not None else None
+    if headers is None:
+        return {}
+    try:
+        items = headers.items()
+    except Exception:
+        return {}
+    safe: Dict[str, str] = {}
+    for raw_key, raw_val in items:
+        key = str(raw_key)
+        low = key.lower()
+        norm = _vertex_error_key_norm(key)
+        if norm in _VERTEX_ERROR_DENIED_KEYS or "authorization" in low:
+            continue
+        if low not in _VERTEX_SAFE_HEADER_EXACT and "quota" not in low:
+            continue
+        if _vertex_error_value_is_sensitive(raw_val):
+            continue
+        safe[key] = str(_vertex_error_clip(raw_val))
+    return safe
+
+
+def _vertex_provider_error_diag(exc: Any, model: str) -> Dict[str, Any]:
+    """Build a journal-safe diagnostic payload from google-genai APIError."""
+    details = _sanitize_vertex_error_details(getattr(exc, "details", None))
+    headers = _safe_vertex_error_headers(getattr(exc, "response", None))
+    payload: Dict[str, Any] = {
+        "event": "VERTEX_GEMINI_PROVIDER_ERROR",
+        "http_code": getattr(exc, "code", None),
+        "status": getattr(exc, "status", None),
+        "message": _vertex_error_clip(getattr(exc, "message", None)),
+        "model": model,
+        "project": GOOGLE_CLOUD_PROJECT or None,
+        "location": GOOGLE_CLOUD_LOCATION or None,
+    }
+    if details not in (None, {}, []):
+        payload["details"] = details
+    if headers:
+        payload["headers"] = headers
+    return payload
+
+
+def _log_vertex_provider_error(exc: Any, model: str) -> None:
+    diag = _vertex_provider_error_diag(exc, model)
+    logger.warning(
+        "VERTEX_GEMINI_PROVIDER_ERROR %s",
+        json.dumps(diag, default=str, sort_keys=True),
+    )
 
 
 def payload_to_contents(payload: Dict[str, Any]):
@@ -150,8 +436,13 @@ def payload_to_contents(payload: Dict[str, Any]):
 
 def sdk_response_to_rest_dict(response) -> Dict[str, Any]:
     text = (getattr(response, "text", None) or "").strip()
+    finish_reason = None
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        finish_reason = getattr(candidates[0], "finish_reason", None)
+        if finish_reason is not None:
+            finish_reason = str(finish_reason)
     if not text:
-        candidates = getattr(response, "candidates", None) or []
         if candidates:
             content = getattr(candidates[0], "content", None)
             parts = getattr(content, "parts", None) or []
@@ -166,7 +457,12 @@ def sdk_response_to_rest_dict(response) -> Dict[str, Any]:
         }
 
     return {
-        "candidates": [{"content": {"parts": [{"text": text}]}}],
+        "candidates": [
+            {
+                "content": {"parts": [{"text": text}]},
+                "finishReason": finish_reason,
+            }
+        ],
         "usageMetadata": usage_metadata,
     }
 
@@ -177,9 +473,23 @@ def generate_content_via_vertex(
     timeout: int,
 ) -> GeminiRestResponse:
     """Invoke Vertex AI generate_content and return REST-shaped response."""
-    client = get_vertex_gemini_client()
+    use_api_key_fallback = (
+        bool(os.getenv("GEMINI_API_KEY", "").strip())
+        and (
+            not GOOGLE_GENAI_USE_VERTEXAI
+            or (_api_key_fallback_enabled() and _vertex_credentials_missing())
+        )
+    )
+    if use_api_key_fallback:
+        client = _get_api_key_gemini_client()
+    else:
+        client = get_vertex_gemini_client()
     contents = payload_to_contents(payload)
-    config = payload_to_generate_config(payload)
+    eff_timeout = _bounded_timeout_seconds(timeout)
+    config = _attach_http_timeout(
+        payload_to_generate_config(payload),
+        eff_timeout,
+    )
 
     def _invoke():
         try:
@@ -190,15 +500,15 @@ def generate_content_via_vertex(
             )
         except genai_errors.APIError as exc:
             if exc.code in (429, 503):
+                _log_vertex_provider_error(exc, model)
                 raise GeminiProviderError(exc.code, str(exc)) from exc
             raise
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_invoke)
-        try:
-            response = future.result(timeout=timeout)
-        except FuturesTimeoutError as exc:
-            raise TimeoutError(f"Gemini request timed out after {timeout}s") from exc
+    response = run_callable_with_timeout(
+        _invoke,
+        eff_timeout,
+        label="gemini_api_key" if use_api_key_fallback else "vertex_gemini",
+    )
 
     return GeminiRestResponse(
         status_code=200,

@@ -1,0 +1,39 @@
+{
+  "stockist_name": "VARDHMAN MEDISALES PRIVATE LIMITED",
+  "report_title": "STOCK AND SALES",
+  "layout": "stock_sales_op_qty_val",
+  "note": "Qty was already correct under SaleRet misroute; values were shifted. Hand-checked from source.jpg.",
+  "products": {
+    "#KOFLET LOZENGES JAR": {
+      "packing": "200'S",
+      "opening_qty": 1,
+      "opening_value": 253.29,
+      "receipts_qty": 0,
+      "receipts_value": 0,
+      "sales_qty": 1,
+      "sales_value": 253.29,
+      "closing_qty": 0,
+      "closing_value": 0
+    },
+    "ASHWAGANDHA TAB": {
+      "packing": "60'S",
+      "opening_qty": 9,
+      "opening_value": 1782.9,
+      "receipts_qty": 0,
+      "receipts_value": 0,
+      "sales_qty": 6,
+      "sales_value": 1188.6,
+      "closing_qty": 13,
+      "closing_value": 2575.3
+    },
+    "BONNISAN DROPS": {
+      "packing": "30ML",
+      "opening_qty": 43,
+      "receipts_qty": 100,
+      "receipts_value": 7466.0,
+      "sales_qty": 66,
+      "closing_qty": 77,
+      "closing_value": 5748.82
+    }
+  }
+}

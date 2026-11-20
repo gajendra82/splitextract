@@ -1,0 +1,44 @@
+CH
+             SIRISHA MEDICAL AGENCIES
+E                                      Stock & Sales StatementF
+From 01/09/2026 To 26/09/2026                                                            Page : 1
+----------------------------------------------------------------------------------------------------
+Product Name                 Pack     O.Stk    Purc      Tot    Sale     Qoh        Value  Age
+----------------------------------------------------------------------------------------------------
+Company :HIMALAYA ZANDRA                     
+------------------------
+BONNISAN DROPS 30ML          30 ML        0     200      200     150      50      3309.50    8 
+EVECARE CAPSU                30S          0       0        0       0       0         0.00   99 
+EVECARE FORTE LIQUID         200ml       13       0       13       0      13      2256.54   60 
+EVECARE FORTE TAB            10s          0       0        0       0       0         0.00  902 
+EVECARE SYRUP                400ML       47       0       47       0      47     10412.38   60 
+EVECARE SYRUP 200 ML         200 ML       0       0        0       0       0         0.00   99 
+EVEGEL  30G                  30G          0       0        0       0       0         0.00 2860 
+HIOWINA CHOCOLATE FLAVOUR (M 200 GM       0       0        0       0       0         0.00 2836 
+KOFLET SF LINCTUS 100ML      100ml        0       0        0       0       0         0.00 2836 
+KOFLET-SF LOZENGES(GINGER MI 10*6         0       0        0       0       0         0.00 2134 
+KOFLET-SFLOZ LMN LIME FLOUR  10*6         0       0        0       0       0         0.00 2681 
+LASUNA  TABLETS              60S          0       0        0       0       0         0.00   68 
+LIV 52 DS                    60s        121       0      121     104      17      3226.60   38 
+LIV -52 DS SYP               200ml       12       0       12       0      12      2844.84   48 
+LIV 52 DS SYRUP 100 ML       100 ML       1       0        1       0       1       151.96  320 
+LUKOL SYP                    200ml        0       0        0       0       0         0.00 2985 
+LUKOL TAB 60S                60s          0      50       50      50       0         0.00    8 
+MENTAT DS SUGAR FREE SYP     100ML        0       0        0       0       0         0.00 1259 
+PLATENZA                     3*20s        0       0        0       0       0         0.00 1259 
+RENALKA SYRUP                100ml        0       0        0       0       0         0.00  637 
+RENALKA SYRUP 200 ML         200 ML       0       0        0       0       0         0.00  668 
+RENOSANTE CAP                60S         20       0       20       0      20      6484.20   78 
+RUMALAYA 10G JAR PACK        10g          0       0        0       0       0         0.00 2860 
+RUMALAYA FORTE  TAB          30S          0       0        0       0       0         0.00 2527 
+RUMALAYA GEL                 30GM         0       0        0       0       0         0.00 1998 
+RUMALAYA GEL                 30gm         0       0        0       0       0         0.00 2619 
+RUMALAYA GEL 10 GM BLISTER P 10 GM        0       0        0       0       0         0.00 3804 
+SPEMAN TABLETS 60            60         100       0      100      50      50      8375.50   38 
+TENTEX ROYAL CAPSULES 10     10 S         0       0        0       0       0         0.00 2705 
+V-GEL 30GM                   30g          0       0        0       0       0         0.00 1309 
+----------------------------------------------------------------------------------------------------
+Opening Value  :    61866.72 Sale Value    :    55179.24 
+Purchase Value :    21782.00 Closing Value :    37061.52 
+----------------------------------------------------------------------------------------------------
+

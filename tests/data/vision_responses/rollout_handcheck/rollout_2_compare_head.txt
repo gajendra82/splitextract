@@ -1,0 +1,16 @@
+=== compare (current vs vision) ===
+product                                   cur_op  vis_op cur_pur vis_pur  cur_sl  vis_sl  cur_cl  vis_cl
+AACTARIL SOAP                                2.0     0.0     0.0     0.0     2.0     0.0     0.0     0.0
+ABANA TAB                                    0.0     0.0     3.0     0.0     0.0     0.0     3.0     0.0
+ACTARIL SOAP                                64.0     0.0     0.0     0.0     3.0     0.0    61.0     0.0
+BLEMINOR ANTI BLE CRE.30M                    2.0     0.0     3.0     0.0     2.0     0.0     4.0     0.0
+CLARINA ANTI ACNE FACE                       0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0
+CLARINA ANTI ACNE CREAM                     50.0     0.0     0.0     0.0     4.0     0.0    46.0     0.0
+CONFIDO TAB                                 37.0     0.0     0.0     0.0    28.0     0.0    11.0     0.0
+DIABECON DS TAB                             25.0     0.0     0.0     0.0     8.0     0.0    17.0     0.0
+DIABECONE TAB                               52.0     0.0     0.0     0.0     4.0     0.0    48.0     0.0
+DIAREX                                       0.0     0.0     0.0     0.0     1.0     0.0     0.0     0.0
+HADJOD TAB                                  34.0     0.0     0.0     0.0    13.0     0.0    21.0     0.0
+HAIRZONE SOLUTION                           27.0     0.0     0.0     0.0     1.0     0.0    26.0     0.0
+HERBOLAX CAP                               100.0     0.0     0.0     0.0    38.0     0.0    62.0     0.0
+HERBOLAX TAB                                 1.0     0.0     0.0     0.0     0.0     0.0     1.0     0.0

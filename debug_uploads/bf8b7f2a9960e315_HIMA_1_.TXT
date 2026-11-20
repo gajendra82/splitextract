@@ -1,0 +1,195 @@
+t1MDATE : 02-10-2026t1E                   SENDIL PHARMA                    F
+t1ME                 STOCK STATEMENT REPORT FROM 01-09-2026 TO 30-09-2026F                                                                            Page : 1
+t1MECOMPANY:HIMALAYA DRUG CO.,                                    F
+t1M======================================================================================
+MMEDICINE NAME      PACK    O.B  PURC TOTAL L_SLE ADJ SALES    SAL.VAL CL.ST   CLST.VAL
+M======================================================================================
+MCYSTONE TABS       60'S     62   ---    62   314   -    62   11461.40   ---        ---
+MBONNISAN LIQ       200ML   137   ---   137   259   -    45    4914.04    92   10513.76
+MBONNISAN 120ML     120ml   582   ---   582   544   -    45    2985.84   537   36440.82
+MPILEX TABS         60'S     85   ---    85    17   -    33    6159.78    52    9706.32
+MKOFLET SYRUP       100ML    53   ---    53    21   -    33    2946.24    20    1785.60
+MPILEX FORTE OIN    30g     151   ---   151    13   -    31    3542.68   120   13699.01
+MTENTEX FORTE       10'S    223   ---   223     2   -    15    1340.70   208   21701.44
+MCYSTONE FOR        30'S     12   ---    12    20   -     9    1090.26     3     363.42
+MPILEX FORTE TAB    30'S     42   ---    42   ---   -     6     707.16    36    4225.81
+MBRESOL SYRUP       200 M    23   ---    23     6   4     5     618.70    22    3603.60
+MHIMCOLIN GEL       30G      27   ---    27   ---   -     2     421.44    25    5438.16
+MSEPTILIN SYRUP     200ml    47   ---    47   ---   -     1     171.42    46    7885.32
+MTELEKT SYR         120 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MTELEKT CAP         60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MSEPTILIN TABS      60'S     87   ---    87     2   -   ---        ---    87   17036.50
+MSEPTILIN GUMMIES   30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MSEPTILIN DROPS     60 ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MRUMALAYA TAB       60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MRUMALAYA LINIMENT  60 ML    33   ---    33    13   -   ---        ---    33    4191.10
+MQUISTA KIDZ VF     200GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MQUISTA KIDZ C/F    200GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MPURIM TAB          60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MPURE HAND SANITAIS 100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MPLATENZA SYR       100ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MOXITARD CAP        10'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MOPHTHACARE EYE DRO 10ML     35   ---    35   ---   -   ---        ---    35    2045.05
+MMENTAT TAB         60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MMENTAT SYR         200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MMENTAT GUMMIES     30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV-52 DROPS       60ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV-52 DROP*       120 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET-H ORA       6'S     ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET-H LEMON     6'S     ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET-H GINGER    6'S     ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET ZAR         175'S   ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET LOZENGERS.  10'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET LOZENGERS   200S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MKOFLET EX SYR      100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIOWNA KIDS-400 GM 400 G   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIOWNA KIDS        200 G   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA-SHINE PASTE  50 GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA-K-M/W        150 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA SHINE PHASTE 50 GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA PAIN GEL     10GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA M/W          215ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIMPLASIA TAB.     30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MGERIFORTE TAB      100'S    50   ---    50   ---   -   ---        ---    50    6248.00
+MGERIFORTE SYP      200ml   ---   ---   ---   ---   -   ---        ---   ---        ---
+MDIAREX SYR         100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MCYSTONE SYRUP      100ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MCYSTONE SYR        200 M    30   ---    30   ---   -   ---        ---    30    6083.61
+MCONFIDO TAB        60'S     59   ---    59     4   -   ---        ---    59   10879.05
+MBRESOL SYRU        100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MBRESOL NS DRO      10ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+MBONNISPAZ DROPS    15ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+M                           ---------   ---------            ---------        ---------
+M                                0.00   137547.66             36359.66        161846.57
+M                           ---------   ---------            ---------        ---------
+M======================================================================================
+ReplaceMent Value :    296.42
+Free Product Vlaue:      0.00
+                                        EFor SENDIL PHARMA                                FP
+
+t1MDATE : 02-10-2026t1E                   SENDIL PHARMA                    F
+t1ME                 STOCK STATEMENT REPORT FROM 01-09-2026 TO 30-09-2026F                                                                            Page : 1
+t1MECOMPANY:HIMALAYA AYUR CONCEPTS                                F
+t1M======================================================================================
+MMEDICINE NAME      PACK    O.B  PURC TOTAL L_SLE ADJ SALES    SAL.VAL CL.ST   CLST.VAL
+M======================================================================================
+MRENALKA SYR        100ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MPROTEIN SHAMPOO    6ML     ---   ---   ---   ---   -   ---        ---   ---        ---
+MGENTLE FACE WASH G 50GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MGENTLE FACE WASH C 50GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MFOOT CARE CREAM    30GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MDANDRUFF SHAMPOO   120ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MARJUNA CAPSULES    60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MANTI DANDRUFF SHAM 40ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+MANTI DANDRUFF SHAM 100ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+M                           ---------   ---------            ---------        ---------
+M                                0.00        0.00                 0.00             0.00
+M                           ---------   ---------            ---------        ---------
+M======================================================================================
+ReplaceMent Value :      0.00
+Free Product Vlaue:      0.00
+                                        EFor SENDIL PHARMA                                FP
+
+t1MDATE : 02-10-2026t1E                   SENDIL PHARMA                    F
+t1ME                 STOCK STATEMENT REPORT FROM 01-09-2026 TO 30-09-2026F                                                                            Page : 1
+t1MECOMPANY:ZEAL                                                  F
+t1M======================================================================================
+MMEDICINE NAME      PACK    O.B  PURC TOTAL L_SLE ADJ SALES    SAL.VAL CL.ST   CLST.VAL
+M======================================================================================
+MGASEX TABS         100'S    48   ---    48    20   -    22    3453.12    26    4034.00
+MLIV 52 TABS        100'S    90   ---    90   577   -    15    2514.30    75   12571.50
+MHIMCOCID MINT SUS  200 M    38   ---    38     2   -     5     552.40    33    3645.84
+MLIV 52 100ML       100ml     2   ---     2   100   -     2     168.43   ---        ---
+MTRIPHALA TAB       50'S     53   ---    53   ---   -   ---        ---    53   12114.74
+MTALEKT TAB         60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV-52 SYP SUGARFR 100ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV-52 SUGER FREE  200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV-52 HB CAP      10*3    ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV 52 200ML       200ml   144   ---   144     5   -   ---        ---   144   25656.71
+MHIOWNA VANILA      200GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIOWNA CHO FLO-A   400GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIMCOCID BANA SUS  200ML     2   ---     2   ---   -   ---        ---     2     203.27
+MHERBOLEX TABLETS   100'S   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHERBOLAX CAPSULES  10      ---   ---   ---   ---   -   ---        ---   ---        ---
+MHADJOD TAB         60'S     41   ---    41   ---   -   ---        ---    41    9808.23
+MGASEX 200ML SYP    200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MDIAREX TABS        30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MCLARINA ANTI ACNEF 60ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+MCHIROPEX CRE       30GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+M                           ---------   ---------            ---------        ---------
+M                                0.00   111615.32              6688.25         68034.29
+M                           ---------   ---------            ---------        ---------
+M======================================================================================
+ReplaceMent Value :      0.00
+Free Product Vlaue:      0.00
+                                        EFor SENDIL PHARMA                                FP
+
+t1MDATE : 02-10-2026t1E                   SENDIL PHARMA                    F
+t1ME                 STOCK STATEMENT REPORT FROM 01-09-2026 TO 30-09-2026F                                                                            Page : 1
+t1MECOMPANY:HIMALAYA ZANDRA                                       F
+t1M======================================================================================
+MMEDICINE NAME      PACK    O.B  PURC TOTAL L_SLE ADJ SALES    SAL.VAL CL.ST   CLST.VAL
+M======================================================================================
+MDIABECON DS        60'S     52   ---    52     2   -    14    3039.96    38    8059.97
+MBRESOL TAB         60'S     56   ---    56     4   -     5     756.20    51    9599.24
+MABANA TAB .        60'S     82   ---    82     4   -     3     502.86    79   13241.98
+MV-GEL.             30GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MTENTEX ROYAL*              ---   ---   ---   ---   -   ---        ---   ---        ---
+MSTYPLON            30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MSPEMAN TAB         60'S    ---   ---   ---     2   -   ---        ---   ---        ---
+MSHATAVARI TAB      60'S     60   ---    60   ---   -   ---        ---    60   11000.40
+MSERPINA TAB        100'S   ---   ---   ---   ---   -   ---        ---   ---        ---
+MRUMALYA GEL        10 GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MRUMALYA FORT       30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MRUMALAYA GEL       1 JAR   ---   ---   ---   ---   -   ---        ---   ---        ---
+MREOSTO TAB*        30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MRENALKA SY         200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MPUNARNAVA TAB      50'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MMENOSAN TAB        30'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MLUKOL TAB*         60'S     15   ---    15   ---   -   ---        ---    15    2165.70
+MLIV DS SUGER FREE  100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MLIV 52 DS TABS     60'S     85   ---    85   ---   -   ---        ---    85   18198.50
+MKOFLET SF SYR      100 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA PASTE        100GM   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIMCOSPAZ          10'     ---   ---   ---   ---   -   ---        ---   ---        ---
+MEVECARE SY         200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MEVECARE FORT SY    200ML   ---   ---   ---   ---   -   ---        ---   ---        ---
+MEVECARE CAP        30'S     12   ---    12   ---   -   ---        ---    12    1691.88
+MDIABECON TABS      60'S     92   ---    92   ---   -   ---        ---    92   10435.56
+MBRAHMI CAPSULES    60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+MBONNISAN DROPS*    30ML    ---   ---   ---   ---   -   ---        ---   ---        ---
+MARJUNA TAB         60'S    ---   ---   ---   ---   -   ---        ---   ---        ---
+M                           ---------   ---------            ---------        ---------
+M                                0.00     2012.12              4299.02         74393.23
+M                           ---------   ---------            ---------        ---------
+M======================================================================================
+ReplaceMent Value :      0.00
+Free Product Vlaue:      0.00
+                                        EFor SENDIL PHARMA                                FP
+
+t1MDATE : 02-10-2026t1E                   SENDIL PHARMA                    F
+t1ME                 STOCK STATEMENT REPORT FROM 01-09-2026 TO 30-09-2026F                                                                            Page : 1
+t1MECOMPANY:HIMALYA HOS                                           F
+t1M======================================================================================
+MMEDICINE NAME      PACK    O.B  PURC TOTAL L_SLE ADJ SALES    SAL.VAL CL.ST   CLST.VAL
+M======================================================================================
+MHIORA-K TOOTHPAST  100GM    39   ---    39    21   -    39    4759.56   ---        ---
+MHIORA-K TOOTHPASTE 50 GM    23   ---    23     2   -    22    1776.72     1      80.76
+MHIORA-GA           15ML     37   ---    37   ---   -     2     123.76    35    2152.04
+MHIORA-SG           10GM    ---   ---   ---    36   -   ---        ---   ---        ---
+MHIORA TOOTHPASTE   50 GM    49   ---    49   ---   -   ---        ---    49    3957.24
+MHIORA M/W.         150 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHIORA K MOUTH WASH 150 M   ---   ---   ---   ---   -   ---        ---   ---        ---
+MHAIR ZONE SOL      60ML     19   ---    19   ---   -   ---        ---    19    5152.42
+MCLARINA ANTI ACNE  30GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+MBLEMINOR CRE       30ML     35   ---    35   ---   -   ---        ---    35    6853.00
+MAACTARIL SOAP      75GM    ---   ---   ---   ---   -   ---        ---   ---        ---
+M                           ---------   ---------            ---------        ---------
+M                                0.00     5796.60              6660.04         18195.46
+M                           ---------   ---------            ---------        ---------
+M======================================================================================
+ReplaceMent Value :      0.00
+Free Product Vlaue:      0.00
+
+                                        EFor SENDIL PHARMA                                FP
+

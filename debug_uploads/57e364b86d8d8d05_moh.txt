@@ -1,0 +1,28 @@
+30/09/26 18:24:00          PAGE: 1
+                    CHANDIWAL DISTRIBUTORS,JALGAON
+                    THE HIMALAYA DRUG Co.(ZEAL)   
+STOCK & SALE REPORT FROM 01/09/26 TO 30/09/26 (Based on delivery dates)
+--------------------------------------------------------------------------
+ITEM NAME               BOX    PACK    OPQTY  P_QTY  REPL   S_QTY  B_QTY
+==========================================================================
+DIVISION NAME : THE HIMALAYA DRUG Co.(ZEAL)   
+
+ABANA TABS              100X60 60'S       25      0      0     10     15
+CLARINA ANTI ACNE FACE         60ML       50      0      0      1     49
+CLARINA CREAM           50X30  30 GM      50      0      0      2     48
+CONFIDO TAB             100 BO 60'S       37      0      0     11     26
+HADJOD TAB              50BOT  60TAB       5      0      0      5      0
+HERBOLAX TABS           100BOT 100'S      39      0      0      3     36
+LIV.52 SYRUP            70     100ML      40    140      0    120     60
+LIV.52 SYRUP            35 BOT 200 ML     28     35      0     31     32
+LIV.52 TABS             100 BO 100'S      59      0      0     41     18
+ORO-T  ORAL             50*100 100ML      26     50      0     26     50
+PILEX FORTE OINTMENT    30*100 30GM       16    100      0     30     86
+PILEX FORTE TAB         2*30*  30TAB       1     56      0      8     49
+PILEX TAB               100 BO 60'S       82      0      0     55     27
+TALEKT TAB              50*60T 60TAB      50      0      0      0     50
+TENTEX FORTE TABS       10X10' 10'S      221      0      0     40    181
+==========================================================================
+                                      OP_VAL     P_VAL         S_VAL    B_VAL
+TOTAL AMOUNT                          102493     39600         52526    95372
+==========================================================================

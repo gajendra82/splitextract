@@ -959,9 +959,17 @@ def run_tesseract_call(
 
     try:
         if OCR_TESSERACT_CALL_TIMEOUT_ENABLED:
-            with ThreadPoolExecutor(max_workers=1, thread_name_prefix="tess-timeout") as pool:
-                fut = pool.submit(fn)
+            # Avoid ThreadPoolExecutor context-manager shutdown(wait=True), which
+            # re-blocks after future.result times out on a wedged Tesseract.
+            pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="tess-timeout")
+            fut = pool.submit(fn)
+            try:
                 result = fut.result(timeout=timeout)
+            except FuturesTimeoutError:
+                pool.shutdown(wait=False, cancel_futures=True)
+                raise
+            else:
+                pool.shutdown(wait=False, cancel_futures=True)
         else:
             result = fn()
 

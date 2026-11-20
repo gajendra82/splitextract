@@ -1,0 +1,10 @@
+{
+  "source": "0000734827_2026_08_ZA_24_259_03092026065501.jpg",
+  "hand_checked": true,
+  "checked_by": "cursor-agent",
+  "checked_date": "2026-10-02",
+  "incomplete": true,
+  "notes": "Handwritten Zandra dual-column order form. Full row-by-row hand-read deferred: phone chrome crops obscured product cells; dual-column layout needs left/right table expected entries. Spot-check identity on known printed products when re-cropped. Do not treat pipeline outputs as ground truth.",
+  "line_items": [],
+  "layout": "dual_column_handwritten"
+}

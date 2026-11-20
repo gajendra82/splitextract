@@ -68,7 +68,23 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTa
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+except Exception as _fitz_exc:
+    logging.getLogger(__name__).warning(
+        "FITZ_COMPAT native_pymupdf_blocked err=%s",
+        _fitz_exc,
+    )
+    from services.fitz_compat import install as _install_fitz_compat
+
+    fitz = _install_fitz_compat()
+    # #region agent log
+    try:
+        import json as _dbg_json, time as _dbg_time
+        open(r"c:\Users\Prerana Bhalerao\OneDrive\Desktop\splitextract\debug-4e9f84.log","a",encoding="utf-8").write(_dbg_json.dumps({"sessionId":"4e9f84","hypothesisId":"A","location":"app.py:fitz_install","message":"fitz backend after native import fail","data":{"fitz_compat":bool(getattr(fitz,"FITZ_COMPAT",False)),"fitz_mod":getattr(fitz,"__name__",None),"exc":type(_fitz_exc).__name__,"exc_msg":str(_fitz_exc)[:200]},"timestamp":int(_dbg_time.time()*1000),"runId":"pre-fix"})+"\n")
+    except Exception:
+        pass
+    # #endregion
 import requests
 import asyncio
 
@@ -78,7 +94,7 @@ try:
     PDFPLUMBER_AVAILABLE = True
 except ImportError:
     PDFPLUMBER_AVAILABLE = False
-    print("⚠️ pdfplumber not installed. Run: pip install pdfplumber")
+    print("WARNING: pdfplumber not installed. Run: pip install pdfplumber")
 
 # ✅ Tesseract OCR
 try:
@@ -89,7 +105,12 @@ try:
     TESSERACT_AVAILABLE = True
 except ImportError:
     TESSERACT_AVAILABLE = False
-    print("⚠️ Tesseract/OpenCV not installed. Run: pip install pytesseract opencv-python pillow")
+    # ASCII-only: Windows cp1252 consoles raise UnicodeEncodeError on emoji and
+    # that abort can break cold imports of call_gemini_with_quota (Vision table).
+    print(
+        "WARNING: Tesseract/OpenCV not installed. "
+        "Run: pip install pytesseract opencv-python pillow"
+    )
 
 # Azure Blob Storage
 try:
@@ -150,8 +171,11 @@ app.add_middleware(
 @app.middleware("http")
 async def _track_extract_inflight(request: Request, call_next):
     """Count open extract calls + log connection lifecycle (no OCR logic)."""
-    tracked = request.url.path.rstrip(
-        "/") in ("/split-and-extract", "/test-extract")
+    path = request.url.path.rstrip("/")
+    tracked = path in ("/split-and-extract", "/test-extract")
+    # Close after sales extract responses so wedged keep-alives cannot pin
+    # Laravel queue workers after the JSON body has already been written.
+    sales_extract = path == "/extract-sales-statement"
     peer = (
         f"{request.client.host}:{request.client.port}"
         if request.client
@@ -179,6 +203,8 @@ async def _track_extract_inflight(request: Request, call_next):
                 getattr(response, "status_code", "?"),
                 time.monotonic() - t0,
             )
+        if sales_extract:
+            response.headers["Connection"] = "close"
         return response
     except Exception:
         if tracked:
@@ -209,8 +235,18 @@ async def _track_extract_inflight(request: Request, call_next):
 # ============================================================================
 
 
-# Load .env file (only works locally, ignored on Hugging Face)
+# Load .env file (only works locally, ignored on Hugging Face).
+# tests/.env is a local fallback when the repo root has no .env — fills
+# STOCK_VISION_TABLE / Vertex credentials without overriding real env/.env.
 load_dotenv()
+try:
+    from pathlib import Path as _EnvPath
+
+    _tests_env = _EnvPath(__file__).resolve().parent / "tests" / ".env"
+    if _tests_env.is_file():
+        load_dotenv(_tests_env, override=False)
+except Exception:
+    pass
 
 
 AZURE_STORAGE_CONNECTION_STRING = os.getenv(
@@ -638,6 +674,20 @@ async def _reliability_startup():
     register_tesseract_slot_probe(_tesseract_slot_probe)
     register_request_progress_sync(_sync_request_progress_from_reliability)
     start_watchdog()
+    try:
+        from services.stuck_tcp_reaper import start_stuck_tcp_reaper
+
+        start_stuck_tcp_reaper()
+    except Exception as exc:
+        logger.warning(
+            "stuck_tcp_reaper_start_failed error=%s", type(exc).__name__
+        )
+    try:
+        from services.stock_row_classifier import log_soffice_availability_once
+
+        log_soffice_availability_once()
+    except Exception as exc:
+        logger.info("SOFFICE_AVAILABLE=false reason=startup_check_failed error=%s", type(exc).__name__)
 
 
 def create_ocr_stats() -> Dict[str, float]:
@@ -891,13 +941,48 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
     """Call Vertex AI Gemini with optional local quota + wait/retry on provider 429/503."""
     start_time = time.time()
     provider_attempt = 0
+    provider_429_count = 0
 
     while True:
+        from services.sales_extraction_runtime import (
+            GEMINI_PROVIDER_429_MAX_RETRIES,
+            SalesExtractionDeadlineExceeded,
+            check_sales_deadline,
+            get_gemini_provider_cooldown_remaining,
+            note_gemini_provider_429,
+            note_gemini_provider_success,
+            sales_deadline_active,
+            sales_deadline_remaining_seconds,
+            sales_gemini_timeout_seconds,
+            mark_sales_stage,
+            wait_gemini_provider_cooldown,
+        )
+
+        if sales_deadline_active():
+            check_sales_deadline(f"gemini_{request_type}")
+            sales_rem = sales_deadline_remaining_seconds() or 0.0
+            if sales_rem <= 0:
+                raise SalesExtractionDeadlineExceeded(
+                    "unknown", f"gemini_{request_type}", 0
+                )
+
         elapsed = time.time() - start_time
         remaining_wait = int(max(1, MAX_WAIT_TIME - elapsed))
+        if sales_deadline_active():
+            sales_rem = sales_deadline_remaining_seconds() or 0.0
+            remaining_wait = int(max(0, min(remaining_wait, sales_rem)))
+            if remaining_wait <= 0:
+                raise SalesExtractionDeadlineExceeded(
+                    "unknown", f"gemini_{request_type}", 0
+                )
         if remaining_wait <= 0:
             logger.error("⏱️ Max wait reached for Gemini request")
             return None
+
+        # Shared Vertex 429 cooldown — wait outside the Gemini semaphore.
+        wait_gemini_provider_cooldown(
+            label=f"gemini_{request_type}", model=model
+        )
 
         model_config = acquire_model_slot_with_wait(remaining_wait)
         if not model_config:
@@ -905,13 +990,23 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
 
         update_request_progress(f"gemini_{request_type}_request")
         try:
-            response = generate_content_via_vertex(
-                model=model,
-                payload=payload,
-                timeout=timeout,
-            )
+            # Cap simultaneous provider HTTP calls; RPM/RPD still owned here.
+            from services.sales_extraction_runtime import gemini_call_slot
+
+            eff_timeout = sales_gemini_timeout_seconds(timeout)
+            with gemini_call_slot(f"gemini_{request_type}"):
+                response = generate_content_via_vertex(
+                    model=model,
+                    payload=payload,
+                    timeout=eff_timeout,
+                )
             update_request_progress(f"gemini_{request_type}_response_received")
+            note_gemini_provider_success()
             return response
+
+        except SalesExtractionDeadlineExceeded:
+            release_gemini_inflight_counter()
+            raise
 
         except GeminiProviderError as e:
             provider_attempt += 1
@@ -921,13 +1016,43 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                 logger.error("⏱️ Gemini provider throttling wait timeout")
                 return None
 
-            # Exponential backoff with jitter for real provider 429/503 only.
+            if int(getattr(e, "code", 0) or 0) == 429:
+                provider_429_count += 1
+                note_gemini_provider_429(
+                    model=model,
+                    label=f"gemini_{request_type}",
+                    attempt=provider_429_count,
+                )
+                if provider_429_count >= int(GEMINI_PROVIDER_429_MAX_RETRIES):
+                    logger.error(
+                        "gemini_provider_retry_exhausted request_type=%s "
+                        "model=%s attempt=%s max_retries=%s",
+                        request_type,
+                        model,
+                        provider_429_count,
+                        GEMINI_PROVIDER_429_MAX_RETRIES,
+                    )
+                    return None
+                # Next loop iteration waits on shared cooldown (no semaphore held).
+                mark_sales_stage("gemini_retry")
+                continue
+
+            # Exponential backoff with jitter for real provider 503 (and other codes).
             base = 2 ** min(provider_attempt, 6)  # 2,4,8,...,64
             sleep_time = min(
                 float(GEMINI_PROVIDER_BACKOFF_MAX_SECONDS), float(base))
             sleep_time = sleep_time + random.uniform(0.0, sleep_time * 0.25)
             remaining = MAX_WAIT_TIME - (time.time() - start_time)
-            sleep_time = max(0.5, min(sleep_time, remaining))
+            if sales_deadline_active():
+                sales_rem = sales_deadline_remaining_seconds() or 0.0
+                remaining = min(remaining, sales_rem)
+                if remaining <= 0:
+                    mark_sales_stage("gemini_retry")
+                    raise SalesExtractionDeadlineExceeded(
+                        "unknown", "gemini_retry", 0
+                    )
+            cooldown_rem = get_gemini_provider_cooldown_remaining()
+            sleep_time = max(0.5, min(max(sleep_time, cooldown_rem), remaining))
 
             logger.warning(
                 f"⚠️ Gemini {request_type} hit provider limit ({e.code}). "
@@ -935,6 +1060,7 @@ def call_gemini_with_quota(model: str, payload: dict, timeout: int, request_type
                 f"(attempt={provider_attempt}, sleep={sleep_time:.1f}s, "
                 f"provider={GEMINI_PROVIDER_NAME}, model={model})"
             )
+            mark_sales_stage("gemini_retry")
             _log_quota_wait(
                 model_config, "provider", sleep_time, time.time() - start_time)
             time.sleep(sleep_time)
@@ -4740,6 +4866,24 @@ def remove_weak_zero_amount_items(items: List[Dict]) -> List[Dict]:
         # Remove items that have no product description, no quantity, and no unit_price.
         # These are phantom rows generated by Gemini from ledger/reference number columns
         # (e.g., running-balance lines like "*DV0003280 18-08-20 62384.001959").
+        additional = item.get("additional_fields")
+        if isinstance(additional, dict) and additional.get("layout") in (
+            "prompt_datewise",
+            "zl_opening_primary_closing",
+            "order_form",
+            "rate_qty_value",
+            "qty_value_dump",
+            "item_pack_sreturn_others",
+            "zenith_opstk_totalstock",
+            "sunderlal_openstk_sale",
+            "pack_opening_receipt_issue_mexp",
+            "opening_receipt_issue_closing",
+            "opening_receive_issue_closing",
+            "group_wise_received_issue_value",
+        ):
+            kept_items.append(item)
+            continue
+
         has_description = bool(
             description and description not in ("NONE", "NULL", "N/A", ""))
         has_qty = qty_val > 0
@@ -5331,6 +5475,22 @@ def recover_missing_items_from_ocr(existing_items: List[Dict], ocr_text: str) ->
     Returns: Updated list with any recovered missing items appended.
     """
     if not ocr_text:
+        return existing_items
+
+    # Sales-statement wrap: product rows are already authoritative. Generic
+    # invoice OCR recovery invents merged/garbage names from statement dumps.
+    if re.search(
+        r"(?i)^\s*SOURCE:\s*(?:SALES_STATEMENT|EXCEL)\b",
+        ocr_text,
+    ) or (
+        existing_items
+        and isinstance(existing_items[0].get("additional_fields"), dict)
+        and existing_items[0]["additional_fields"].get("layout")
+        == "group_wise_received_issue_value"
+    ):
+        logger.info(
+            "⏭️ Skipping OCR missing-item recovery for sales-statement layout"
+        )
         return existing_items
 
     # PRAKASH MEDICAL STORES: BM-PHARMA recovery treats the glued packing-slip
@@ -7845,6 +8005,118 @@ def fix_partap_pdfplumber_rows_from_ocr(items, ocr_text: str):
             continue
 
     return items
+
+
+def _ocr_suggests_alaric_enterprises_smartpharma360(
+    ocr_text: str = "", vendor: str = ""
+) -> bool:
+    """ALARIC ENTERPRISES / SmartPharma360: Qty | Free | Rate | MRP | Amount.
+
+    Rate is the selling price; MRP is higher. Vision often maps MRP → unit_price
+    while Qty is already correct (INDEL2627008380 ZODOX 20 × 110, MRP 169.58).
+    """
+    blob = f"{vendor or ''}\n{ocr_text or ''}".upper()
+    if not blob.strip():
+        return False
+    if re.search(r'ALARIC\s+ENTERPRISES', blob):
+        return True
+    compact = blob.replace(' ', '')
+    if 'SMARTPHARMA360' not in compact:
+        return False
+    if not (re.search(r'\bQTY\b', blob) and re.search(r'\bRATE\b', blob)
+            and re.search(r'\bMRP\b', blob)):
+        return False
+    return bool(re.search(r'OLD\s*MRP', blob) or re.search(r'\bFREE\b', blob))
+
+
+def _alaric_group_vendor_ocr(group: dict, page_results: list) -> Tuple[str, str]:
+    """Vendor + OCR from the group and per-page Vision payloads (OCR may be empty)."""
+    ocr_parts = [str((group or {}).get("ocr_text") or "")]
+    vendors: List[str] = []
+
+    def _vendor_from_full_data(ed) -> str:
+        if not isinstance(ed, dict):
+            return ""
+        data = ed.get("data") if isinstance(ed.get("data"), dict) else ed
+        if not isinstance(data, dict):
+            return str(ed.get("vendor") or "")
+        summary = data.get("invoice_summary")
+        if isinstance(summary, dict) and summary.get("vendor"):
+            return str(summary.get("vendor") or "")
+        return str(data.get("vendor") or ed.get("vendor") or "")
+
+    vendors.append(_vendor_from_full_data((group or {}).get("extracted_data")))
+    for pidx in (group or {}).get("pages") or []:
+        if not page_results or pidx >= len(page_results):
+            continue
+        pr = page_results[pidx]
+        if not isinstance(pr, dict):
+            continue
+        ocr_parts.append(str(pr.get("ocr_text") or ""))
+        vendors.append(_vendor_from_full_data(pr.get("full_data")))
+    return "\n".join(ocr_parts), " ".join(v for v in vendors if v)
+
+
+def _apply_alaric_enterprises_multipage_vision_line_items(
+    group: dict, page_results: list
+) -> bool:
+    """Keep page-2+ Vision rows for ALARIC / SmartPharma360 (INDEL2627008376).
+
+    Scanned copies have empty Tesseract OCR, so combined-OCR re-extract never
+    runs and grouping keeps only page-1 line items (SN 17–23 dropped).
+    """
+    if not isinstance(group, dict):
+        return False
+    pages = group.get("pages") or []
+    if len(pages) < 2:
+        return False
+    ocr_blob, vendor_blob = _alaric_group_vendor_ocr(group, page_results)
+    if not _ocr_suggests_alaric_enterprises_smartpharma360(ocr_blob, vendor_blob):
+        return False
+
+    items = []
+    seen = set()
+    pages_with_items = 0
+    for pidx in pages:
+        if not page_results or pidx >= len(page_results):
+            continue
+        pr = page_results[pidx]
+        if not isinstance(pr, dict):
+            continue
+        page_added = 0
+        for it in _extract_line_items_for_validation(pr.get("full_data") or {}):
+            if not isinstance(it, dict):
+                continue
+            name = str(it.get("product_description", "") or "").strip()
+            if not name:
+                continue
+            key = (
+                name.upper(),
+                str(it.get("lot_batch_number", "") or "").strip().upper(),
+                str(it.get("quantity", "") or ""),
+                str(it.get("total_amount", "") or ""),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(it)
+            page_added += 1
+        if page_added:
+            pages_with_items += 1
+
+    if pages_with_items < 2 or len(items) < 2:
+        return False
+
+    if not group.get("extracted_data") and pages:
+        group["extracted_data"] = (page_results[pages[0]] or {}).get("full_data")
+    if isinstance(group.get("extracted_data"), dict):
+        _merge_line_items_into_full_data(group["extracted_data"], items)
+        logger.info(
+            f"   ✅ ALARIC ENTERPRISES: kept {len(items)} Vision line item(s) across "
+            f"{len(pages)} page(s) (skipped combined-OCR re-extract)"
+        )
+        return True
+    return False
 
 
 def _is_smartpharma360_table_layout(header_line: str, ocr_text: str) -> bool:
@@ -32717,6 +32989,8 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
 
             # ✅ Prefer correcting quantity first when unit_price appears plausible and
             # total/unit_price gives a clean integer qty (common OCR misread for single-item invoices).
+            # ALARIC/SmartPharma360: unit_price is often MRP; Amount/MRP can be near-integer
+            # (ZODOX 2200/169.58≈13) while printed Qty is already correct — keep Qty.
             if unit_price > 0 and validation_total > 0:
                 inferred_qty_from_rate = validation_total / unit_price
                 nearest_qty = round(inferred_qty_from_rate)
@@ -32727,12 +33001,21 @@ def fix_mrp_as_unit_price(item, vendor: str = "", ocr_text: str = ""):
                     and abs(qty - nearest_qty) >= 1
                     and relative_qty_gap >= 0.20
                 ):
-                    logger.warning(
-                        f"⚠️ QTY misread detected: qty={qty}, unit_price={unit_price}, total={validation_total}")
-                    item["quantity"] = str(int(nearest_qty))
-                    logger.info(
-                        f"   ✅ Fixed quantity from total/rate: {qty} -> {item['quantity']}")
-                    return item
+                    if _ocr_suggests_alaric_enterprises_smartpharma360(
+                        ocr_text, vendor
+                    ):
+                        logger.info(
+                            f"⏭️ Skipping QTY-misread for ALARIC/SmartPharma360 "
+                            f"'{product}': keeping qty={qty} "
+                            f"(Amount/MRP≈{nearest_qty}); Rate from amount/qty"
+                        )
+                    else:
+                        logger.warning(
+                            f"⚠️ QTY misread detected: qty={qty}, unit_price={unit_price}, total={validation_total}")
+                        item["quantity"] = str(int(nearest_qty))
+                        logger.info(
+                            f"   ✅ Fixed quantity from total/rate: {qty} -> {item['quantity']}")
+                        return item
 
             # ⚠️ CORRUPTION CHECK: If qty is suspiciously round and mismatch is HUGE,
             # this likely means Gemini read from wrong columns entirely (e.g., GSTAMT vs Amount)
@@ -43874,10 +44157,45 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         or ""
     ).strip()
     qty = line.get("sales_qty")
-    if qty in (None, "", 0, 0.0) and line.get("closing_qty") not in (None, ""):
-        # Stock-only rows still expose a quantity for UI tables
+    # Sales Qty is the printed Sale column. Closing Stock stays in closing_qty.
+    # Copying Cl Stock into quantity made Secondary Sales show Sale = Closing
+    # (for example Sale 0 and Cl Stock 4 both displayed as 4).
+    prompt_datewise = extra.get("layout") == "prompt_datewise"
+    detail_opval = extra.get("layout") == "stock_sales_detail_opval"
+    zl_bal = extra.get("layout") == "zl_opening_primary_closing"
+    paired_value = extra.get("layout") == "paired_stock_value"
+    # Qty-only Sales & Stock rows: Issue is the quantity, including a real zero.
+    issue_qty = extra.get("layout") == "sales_stock_issue_qty"
+    sunderlal_openstk = extra.get("layout") == "sunderlal_openstk_sale"
+    if (
+        not prompt_datewise
+        and not issue_qty
+        and (zl_bal or paired_value)
+        and qty in (None, "", 0, 0.0)
+        and line.get("closing_qty") not in (None, "")
+    ):
+        # These two layouts have no sales column. Their displayed quantity is closing.
         qty = line.get("closing_qty")
     amount = line.get("sales_value")
+    unit_price = ""
+    if issue_qty:
+        rate = extra.get("unit_rate")
+        if rate not in (None, "", 0, 0.0):
+            unit_price = f"{float(rate):.2f}"
+    if zl_bal:
+        rate = extra.get("unit_rate")
+        if rate not in (None, "", 0, 0.0):
+            unit_price = f"{float(rate):.2f}"
+        # No sales or amount column on this layout. Total follows the closing
+        # qty already chosen above, using the row's own secondary rate.
+        if amount in (None, "", 0, 0.0) and line.get("closing_value") not in (
+            None, "", 0, 0.0,
+        ):
+            amount = line.get("closing_value")
+    if paired_value and line.get("closing_value") not in (None, ""):
+        # Displayed quantity is closing stock. Use the printed closing value
+        # from that same row, including a real zero.
+        amount = line.get("closing_value")
     additional = {}
     for key in (
         "mrp",
@@ -43889,23 +44207,134 @@ def _sales_line_to_invoice_item(line: Dict[str, Any]) -> Dict[str, Any]:
         "invoice_date",
         "opening_value",
         "purchase_value",
+        "issue_value",
         "purchase_scheme",
         "sales_scheme",
         "opening_qty",
         "receipts_qty",
+        "receipts_value",
+        "sales_qty",
         "closing_qty",
         "closing_value",
+        "reorder_qty",
+        "others_qty",
+        "purchase_qty",
+        "sales_return_qty",
+        "others_in_qty",
+        "subtotal_qty",
+        "purchase_return_qty",
+        "others_out_qty",
+        "free_qty",
+        "purchase_free_qty",
+        "purchase_return_free_qty",
+        "sale_free_qty",
+        "sales_return_free_qty",
+        "replacement_qty",
+        "source_product_name",
+        "source_packing",
+        "dump_qty",
+        "dump_stock",
+        "near_expiry_qty",
+        "near_expiry",
+        "shortage_qty",
+        "total_stock_qty",
+        "total_qty",
+        "msr_price",
+        "expected_total",
+        "expected_closing",
+        "stock_identity_ok",
     ):
+        # A printed 0 is the source value. Dropping it made the page show 0 for
+        # a missing field and then reuse Sales as Closing.
+        keep_zero = key in {
+            "opening_qty",
+            "opening_value",
+            "receipts_qty",
+            "receipts_value",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+            "others_qty",
+            "purchase_qty",
+            "sales_return_qty",
+            "others_in_qty",
+            "subtotal_qty",
+            "purchase_return_qty",
+            "others_out_qty",
+            "free_qty",
+            "purchase_free_qty",
+            "purchase_return_free_qty",
+            "sale_free_qty",
+            "sales_return_free_qty",
+            "replacement_qty",
+            "dump_qty",
+            "dump_stock",
+            "near_expiry_qty",
+            "near_expiry",
+            "shortage_qty",
+            "total_stock_qty",
+            "total_qty",
+            "msr_price",
+            "expected_total",
+            "expected_closing",
+            "stock_identity_ok",
+        } or (detail_opval and key == "opening_value") or (
+            sunderlal_openstk and key == "purchase_value"
+        )
+        if detail_opval and key == "opening_value":
+            continue
         if key in extra and extra.get(key) not in (None, ""):
             additional[key] = extra[key]
-        elif key in line and line.get(key) not in (None, "", 0, 0.0):
+        elif prompt_datewise and key in line and line.get(key) not in (None, ""):
             additional[key] = line.get(key)
+        elif key in line and (
+            line.get(key) not in (None, "", 0, 0.0)
+            or (keep_zero and line.get(key) not in (None, ""))
+        ):
+            additional[key] = line.get(key)
+        if detail_opval and key == "opening_qty":
+            additional["opening_value"] = line.get("opening_value")
+    if extra.get("others_qty") not in (None, "") and "others_qty" not in additional:
+        additional["others_qty"] = extra.get("others_qty")
     if line.get("packing"):
         additional["packing"] = line.get("packing")
+    if prompt_datewise:
+        additional["layout"] = "prompt_datewise"
+    if extra.get("layout") == "himalaya_dump_statement":
+        additional["layout"] = "himalaya_dump_statement"
+    if extra.get("layout") == "order_form":
+        additional["layout"] = "order_form"
+    if extra.get("layout") == "rate_qty_value":
+        additional["layout"] = "rate_qty_value"
+    if extra.get("layout") == "qty_value_dump":
+        additional["layout"] = "qty_value_dump"
+    if extra.get("layout") == "item_pack_sreturn_others":
+        additional["layout"] = "item_pack_sreturn_others"
+    if extra.get("layout") == "item_pack_free_return":
+        additional["layout"] = "item_pack_free_return"
+    if extra.get("layout") == "zenith_opstk_totalstock":
+        additional["layout"] = "zenith_opstk_totalstock"
+    if extra.get("layout") == "sunderlal_openstk_sale":
+        additional["layout"] = "sunderlal_openstk_sale"
+    if extra.get("layout") == "pack_opening_receipt_issue_mexp":
+        additional["layout"] = "pack_opening_receipt_issue_mexp"
+    if extra.get("layout") == "opening_receipt_issue_closing":
+        additional["layout"] = "opening_receipt_issue_closing"
+    if extra.get("layout") == "opening_receive_issue_closing":
+        additional["layout"] = "opening_receive_issue_closing"
+    if extra.get("layout") == "group_wise_received_issue_value":
+        additional["layout"] = "group_wise_received_issue_value"
+    if extra.get("layout") == "product_wise_stock_statement":
+        additional["layout"] = "product_wise_stock_statement"
+    if zl_bal:
+        additional["layout"] = "zl_opening_primary_closing"
+    if paired_value:
+        additional["layout"] = "paired_stock_value"
     return {
         "product_description": product,
         "quantity": "" if qty in (None, "") else str(qty),
-        "unit_price": "",
+        "unit_price": unit_price,
         "total_amount": "" if amount in (None, "") else str(amount),
         "hsn_code": str(extra.get("hsn") or ""),
         "lot_batch_number": str(extra.get("batch") or ""),
@@ -44008,12 +44437,18 @@ def _sales_statement_to_flat_invoices(
     total = (sales_result.get("totals") or {}).get("sales_value")
     if total is None:
         total = (sales_result.get("totals") or {}).get("closing_value")
+    stockist = str(sales_result.get("stockist_name") or "").strip()
+    period = str(
+        sales_result.get("period_from") or sales_result.get("period_to") or ""
+    ).strip()
+    # Filename prefixes like 0000700037_... are batch ids, not invoice numbers.
+    statement_no = str(sales_result.get("report_title") or "").strip()
+    if not statement_no:
+        statement_no = " ".join(part for part in (stockist, period) if part).strip()
+    if not statement_no:
+        statement_no = str(sales_result.get("source_file") or "STATEMENT_1")
     return [{
-        "invoice_no": str(
-            sales_result.get("report_title")
-            or sales_result.get("source_file")
-            or "STATEMENT_1"
-        )[:80],
+        "invoice_no": statement_no[:80],
         "invoice_date": str(sales_result.get("period_to") or sales_result.get("period_from") or ""),
         "invoice_date_raw": str(sales_result.get("period_to") or ""),
         "vendor": str(sales_result.get("company_name") or ""),
@@ -44181,7 +44616,19 @@ def build_split_extract_response_from_sales_statement(
         del pdf_bytes
 
     total_time = (datetime.now() - started).total_seconds()
-    totals_extra = ((sales_result.get("totals") or {}).get("extra") or {})
+    totals = sales_result.get("totals") or {}
+    totals_extra = totals.get("extra") or {}
+    # Statement-level qty totals (OPENING/RECEIPT/ISSUE/CLOSING). Prefer
+    # explicit stock_* keys when present; else fall back to totals.* so the
+    # footer ISSUE stays available without overwriting per-product sales_qty.
+    def _meta_stock_qty(*keys: str):
+        for key in keys:
+            if key in totals_extra and totals_extra.get(key) is not None:
+                return totals_extra.get(key)
+        for key in keys:
+            if key in totals and totals.get(key) is not None:
+                return totals.get(key)
+        return None
 
     invoices_filled = []
     for inv in all_invoices:
@@ -44221,18 +44668,26 @@ def build_split_extract_response_from_sales_statement(
                 "company_name": sales_result.get("company_name"),
                 "period_from": sales_result.get("period_from"),
                 "period_to": sales_result.get("period_to"),
-                "sales_value": (sales_result.get("totals") or {}).get("sales_value"),
-                "closing_value": (sales_result.get("totals") or {}).get("closing_value"),
+                "sales_value": totals.get("sales_value"),
+                "closing_value": totals.get("closing_value"),
                 "extraction_method": totals_extra.get("extraction_method"),
                 "hospital_count": totals_extra.get("hospital_count"),
                 "invoice_count": totals_extra.get("invoice_count"),
                 "hospital_sales_summary": totals_extra.get("hospital_sales_summary"),
                 "stock_statement": totals_extra.get("stock_statement"),
                 "stock_statement_line_count": totals_extra.get("stock_statement_line_count"),
-                "stock_opening_qty": totals_extra.get("stock_opening_qty"),
-                "stock_purchases_qty": totals_extra.get("stock_purchases_qty"),
-                "stock_sales_qty": totals_extra.get("stock_sales_qty"),
-                "stock_closing_qty": totals_extra.get("stock_closing_qty"),
+                "stock_opening_qty": _meta_stock_qty(
+                    "stock_opening_qty", "opening_qty"
+                ),
+                "stock_purchases_qty": _meta_stock_qty(
+                    "stock_purchases_qty", "receipts_qty"
+                ),
+                "stock_sales_qty": _meta_stock_qty(
+                    "stock_sales_qty", "sales_qty"
+                ),
+                "stock_closing_qty": _meta_stock_qty(
+                    "stock_closing_qty", "closing_qty"
+                ),
             },
         },
         "cost_optimization": {
@@ -44969,6 +45424,12 @@ def split_and_extract_invoices(
         # ✅ RE-EXTRACT DATA FOR MULTI-PAGE INVOICES using combined OCR from all pages
         for g_idx, g in enumerate(groups):
             if len(g["pages"]) > 1:
+                # ALARIC/SmartPharma360 scans: OCR is often empty (Tesseract missing),
+                # so combined re-extract never runs and page-2 products are dropped.
+                if _apply_alaric_enterprises_multipage_vision_line_items(
+                    g, page_results
+                ):
+                    continue
                 # Multi-page invoice - re-extract data using combined OCR text
                 combined_ocr = g.get("ocr_text", "")
                 if combined_ocr and len(combined_ocr.strip()) > 100:
@@ -46470,6 +46931,10 @@ def test_extract(
         # Re-extract multi-page invoices using combined OCR from all pages
         for g in groups:
             if len(g.get("pages") or []) > 1:
+                if _apply_alaric_enterprises_multipage_vision_line_items(
+                    g, page_results
+                ):
+                    continue
                 combined_ocr = g.get("ocr_text", "")
                 if combined_ocr and len(combined_ocr.strip()) > 100:
                     if _bharath_pages_are_duplicate_copies(combined_ocr):
@@ -47517,7 +47982,36 @@ async def extract_sales_statement_endpoint(file: UploadFile = File(...)):
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
-        result = extract_sales_statement(file_bytes, filename)
+        # This earlier duplicate route still matches first in FastAPI. Bind the
+        # sales deadline/request_id so stock OCR policy cannot region_shared_reuse
+        # another upload's page text (request_id=unknown thread-local leak).
+        from services.sales_extraction_runtime import (
+            SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+            resolve_request_id,
+            run_sales_extract_with_deadline,
+        )
+
+        result = await asyncio.to_thread(
+            run_sales_extract_with_deadline,
+            extract_sales_statement,
+            file_bytes,
+            filename,
+            resolve_request_id(),
+            float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS),
+        )
+        extra = ((result.get("totals") or {}).get("extra") or {})
+        if extra.get("extraction_failed") and extra.get("photo_quality_rejected"):
+            from services.stock_photo_quality import photo_quality_client_detail
+
+            detail = photo_quality_client_detail(extra, filename) or {
+                "error": "extraction_failed",
+                "message": extra.get("extraction_failed_message")
+                or "Photo is not clear. Please retry.",
+                "reasons": extra.get("extraction_failed_reasons")
+                or ["poor_photo_quality"],
+                "source_file": filename,
+            }
+            raise HTTPException(status_code=422, detail=detail)
         return JSONResponse(content=result)
     except HTTPException:
         raise
@@ -47705,8 +48199,82 @@ async def ready():
     return get_ready_snapshot(runtime)
 
 
-@app.post("/extract-sales-statement")
-async def extract_sales_statement_endpoint(
+@app.get("/extract-sales-statement/health")
+async def extract_sales_statement_health():
+    """Extraction readiness vs process liveness.
+
+    ``/`` and ``/live`` only prove the ASGI process is up. This probe reports
+    Tesseract availability, extraction/Gemini slot pressure, and Vertex cooldown
+    without running OCR or model calls.
+    """
+    from services.sales_extraction_runtime import get_sales_extraction_health_snapshot
+
+    snap = get_sales_extraction_health_snapshot()
+    status = "ready" if snap.get("extraction_ready") else "degraded"
+    return {
+        "status": status,
+        "alive": True,
+        "request_id_header": "X-Request-ID",
+        **snap,
+    }
+
+
+@app.get("/extract-sales-statement/status/{request_id}")
+async def extract_sales_statement_status(request_id: str):
+    """Observability progress lookup for sync and async (/submit) extractions."""
+    from services.sales_extraction_runtime import get_sales_progress
+
+    progress = get_sales_progress(request_id)
+    if not progress:
+        raise HTTPException(status_code=404, detail="Unknown request_id")
+    payload = {
+        "status": progress.get("status") or "processing",
+        "stage": progress.get("stage"),
+        "label": progress.get("label"),
+        "request_id": progress.get("request_id"),
+        "filename": progress.get("filename"),
+        "file_type": progress.get("file_type"),
+        "stage_duration_seconds": progress.get("stage_duration_seconds"),
+        "final_status": progress.get("final_status"),
+        "queue_wait_seconds": progress.get("queue_wait_seconds"),
+        "extraction_duration_seconds": progress.get(
+            "extraction_duration_seconds"
+        ),
+    }
+    if progress.get("error") is not None:
+        payload["error"] = progress.get("error")
+    if progress.get("result") is not None:
+        payload["result"] = progress.get("result")
+    return payload
+
+
+@app.post("/extract-sales-statement/cancel/{request_id}")
+async def extract_sales_statement_cancel(request_id: str):
+    """Cooperatively cancel an in-flight sales extraction (stops new OCR/Gemini)."""
+    from services.sales_extraction_runtime import (
+        finish_sales_progress,
+        get_sales_progress,
+        request_cancel_sales_extraction,
+        terminate_sales_tesseract_children,
+    )
+
+    progress = get_sales_progress(request_id)
+    if not progress:
+        raise HTTPException(status_code=404, detail="Unknown request_id")
+    request_cancel_sales_extraction(request_id)
+    terminate_sales_tesseract_children()
+    if not progress.get("final_status"):
+        finish_sales_progress(request_id, "cancelled")
+    return {
+        "status": "cancelled",
+        "request_id": request_id,
+        "message": "Cancellation requested; in-flight OCR/Gemini will stop cooperatively.",
+    }
+
+
+@app.post("/extract-sales-statement/submit", status_code=202)
+async def extract_sales_statement_submit(
+    request: Request,
     file: UploadFile = File(...),
     batch_id: Optional[str] = Form(None),
     use_blob_storage: bool = Form(False),
@@ -47715,12 +48283,148 @@ async def extract_sales_statement_endpoint(
     split_id: Optional[str] = Form(None),
     file_name: Optional[str] = Form(None),
 ):
-    """Extract stock/sales/POD GRN statement data.
+    """Accept a sales-statement extraction and process it in the background.
 
-    Returns the SAME top-level JSON contract as /split-and-extract
-    (success, Invoices, invoices, summary, queue, ocr_statistics, ...)
-    so Laravel POD screens can treat GRN Excel like other POD uploads.
+    Returns HTTP 202 immediately after validating the upload and buffering
+    file bytes. Poll GET /extract-sales-statement/status/{request_id}.
+
+    Process-local queue only (no Redis/Celery). In-flight jobs are lost if
+    the Python process restarts.
     """
+    from services.sales_extraction_runtime import (
+        resolve_request_id,
+        submit_sales_extraction_background,
+    )
+
+    filename = file.filename or "upload"
+    content_type = (file.content_type or "").lower()
+    if "." not in filename:
+        if content_type.startswith("text/"):
+            filename = f"{filename}.txt"
+        elif content_type == "application/pdf":
+            filename = f"{filename}.pdf"
+        elif content_type in {"image/jpeg", "image/jpg"}:
+            filename = f"{filename}.jpg"
+        elif content_type == "image/png":
+            filename = f"{filename}.png"
+        elif content_type == "image/bmp":
+            filename = f"{filename}.bmp"
+        elif content_type in {"image/tiff", "image/tif"}:
+            filename = f"{filename}.tiff"
+        elif content_type == "image/webp":
+            filename = f"{filename}.webp"
+        elif content_type in {
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }:
+            filename = (
+                f"{filename}.docx"
+                if "openxmlformats" in content_type
+                else f"{filename}.doc"
+            )
+
+    ext = ("." + filename.rsplit(".", 1)
+           [-1].lower()) if "." in filename else ""
+    word_mime = content_type in {
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/octet-stream",
+    }
+    if ext and ext not in SALES_STATEMENT_EXTENSIONS:
+        if not (
+            content_type.startswith("text/")
+            or content_type.startswith("image/")
+            or content_type == "application/pdf"
+            or word_mimegg
+            or content_type in {
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }
+        ):
+            raise HTTPException(
+                status_code=400,    
+                detail=(
+                    f"Unsupported format '{ext}'. "
+                    f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
+                ),
+            )
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    file_type = ext.lstrip(".") if ext else (content_type or None)
+    if not batch_id:
+        batch_id = str(uuid.uuid4())
+
+    file_bytes = await file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    accept = await submit_sales_extraction_background(
+        request_id=request_id,
+        filename=filename,
+        file_bytes=file_bytes,
+        file_type=file_type,
+        batch_id=batch_id,
+        split_id=split_id,
+        file_name=file_name or filename,
+        use_blob_storage=use_blob_storage,
+        blob_container=blob_container,
+        target_invoices_blob_folder=target_invoices_blob_folder,
+    )
+    status_url = f"/extract-sales-statement/status/{request_id}"
+    return JSONResponse(
+        status_code=202,
+        content={
+            "accepted": True,
+            "request_id": request_id,
+            "status": accept.get("status") or "queued",
+            "stage": accept.get("stage") or "queued",
+            "status_url": status_url,
+            "already_queued": bool(accept.get("already_queued")),
+            "message": (
+                "Extraction already in progress for this request_id."
+                if accept.get("already_queued")
+                else "Extraction accepted and processing in background."
+            ),
+        },
+    )
+
+
+@app.post("/extract-sales-statement")
+async def extract_sales_statement_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    batch_id: Optional[str] = Form(None),
+    use_blob_storage: bool = Form(False),
+    blob_container: Optional[str] = Form(None),
+    target_invoices_blob_folder: Optional[str] = Form(None),
+    split_id: Optional[str] = Form(None),
+    file_name: Optional[str] = Form(None),
+):
+    """Extract stock/sales statement data.
+
+    Default JSON is the original sales-statement contract used by Laravel
+    secondary-sales reprocess: stockist_name, line_items, period_from,
+    period_to, totals, optional statements[].
+
+    POD hospital-sales workbooks still return the /split-and-extract wrapper.
+    """
+    from services.sales_extraction_runtime import (
+        SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+        SalesExtractionBusy,
+        SalesExtractionDeadlineExceeded,
+        acquire_sales_extraction_slot,
+        begin_sales_progress,
+        finish_sales_progress,
+        log_extraction_deadline_exceeded,
+        log_sales_extraction_event,
+        release_sales_extraction_slot,
+        request_cancel_sales_extraction,
+        resolve_request_id,
+        run_sales_extract_with_deadline,
+        terminate_sales_tesseract_children,
+        update_sales_progress,
+    )
+
     filename = file.filename or "upload"
     # Preserve original name; extractor also sniffs magic bytes for txt/images/Word/PDF
     # when extension is missing or mismatched (e.g. .TXT, octet-stream upload).
@@ -47777,34 +48481,539 @@ async def extract_sales_statement_endpoint(
                     f"Supported: {sorted(SALES_STATEMENT_EXTENSIONS)}"
                 ),
             )
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    file_type = ext.lstrip(".") if ext else (content_type or None)
+    total_started = time.time()
+    queue_wait_seconds = 0.0
+    extraction_duration_seconds = None
+    slot_acquired = False
+    final_status = "failed"
+    deadline_seconds = float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS)
+
+    if not batch_id:
+        batch_id = str(uuid.uuid4())
+    begin_sales_progress(
+        request_id, filename, stage="queued", batch_id=batch_id
+    )
+
+    def _extraction_failed_detail(message: str, reasons: Optional[list] = None, **extra):
+        detail = {
+            "error": "extraction_failed",
+            "message": message,
+            "reasons": reasons or [],
+            "source_file": filename,
+            "request_id": request_id,
+        }
+        detail.update(extra)
+        return detail
+
+    def _maybe_save_sales_upload(payload: bytes) -> None:
+        """Optional debug copy so failed reprocess can be replayed without Laravel."""
+        if not _env_bool_flag("STOCK_SAVE_UPLOADS", False):
+            return
+        try:
+            import hashlib
+            from pathlib import Path
+
+            dest_dir = Path(
+                os.getenv(
+                    "STOCK_SAVE_UPLOADS_DIR",
+                    "/var/www/html/splitextract/debug_uploads",
+                )
+            )
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            safe = re.sub(r"[^\w.\-]+", "_", filename)[:180] or "upload.bin"
+            digest = hashlib.sha256(payload).hexdigest()[:16]
+            path = dest_dir / f"{digest}_{safe}"
+            path.write_bytes(payload)
+            logger.info(
+                "STOCK_UPLOAD_SAVED request_id=%s path=%s bytes=%s",
+                request_id,
+                str(path),
+                len(payload),
+            )
+        except Exception as exc:
+            logger.warning(
+                "STOCK_UPLOAD_SAVE_FAILED request_id=%s error=%s",
+                request_id,
+                type(exc).__name__,
+            )
+
     try:
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Empty file")
-        start_time = datetime.now()
-        if not batch_id:
-            batch_id = str(uuid.uuid4())
-        sales_result = extract_sales_statement(file_bytes, filename)
-        # Same response schema as /split-and-extract for Laravel POD compatibility
-        response = build_split_extract_response_from_sales_statement(
-            sales_result=sales_result,
-            source_filename=filename,
-            batch_id=batch_id,
-            split_id=split_id,
-            file_name=file_name or filename,
-            use_blob_storage=use_blob_storage,
-            container_name=blob_container,
-            target_invoices_blob_folder=target_invoices_blob_folder,
-            start_time=start_time,
+        _maybe_save_sales_upload(file_bytes)
+
+        try:
+            queue_wait_seconds = await acquire_sales_extraction_slot()
+            slot_acquired = True
+        except SalesExtractionBusy as busy:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"Server busy. Queue wait exceeded {busy.timeout}s. "
+                    "Please retry."
+                ),
+            ) from busy
+
+        update_sales_progress(
+            request_id,
+            "preparing",
+            queue_wait_seconds=queue_wait_seconds,
+            file_type=file_type,
         )
-        return JSONResponse(content=response)
-    except HTTPException:
+        start_time = datetime.now()
+        extraction_started = time.time()
+        update_sales_progress(request_id, "parsing")
+        # Keep sync extract_sales_statement; offload so the event loop stays free.
+        # wait_for is a backstop: cooperative deadline inside the worker stops
+        # OCR/Gemini sooner. Cancelling the await does NOT kill the thread, so
+        # we set a cancel flag and terminate tesseract children on expiry.
+        # If Laravel/HTTP client disconnects (timeout), stop work and mark failed
+        # so progress polling does not spin forever.
+        client_disconnected = False
+
+        async def _cancel_on_disconnect() -> None:
+            nonlocal client_disconnected
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        client_disconnected = True
+                        logger.warning(
+                            "sales_client_disconnected request_id=%s filename=%s",
+                            request_id,
+                            filename,
+                        )
+                        request_cancel_sales_extraction(request_id)
+                        terminate_sales_tesseract_children()
+                        finish_sales_progress(request_id, "client_disconnected")
+                        return
+                    await asyncio.sleep(0.5)
+            except asyncio.CancelledError:
+                return
+
+        disconnect_watch = asyncio.create_task(_cancel_on_disconnect())
+        try:
+            sales_result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    run_sales_extract_with_deadline,
+                    extract_sales_statement,
+                    file_bytes,
+                    filename,
+                    request_id,
+                    deadline_seconds,
+                ),
+                timeout=deadline_seconds + 15.0,
+            )
+        except asyncio.TimeoutError as exc:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage="asyncio_timeout",
+                limit_seconds=deadline_seconds,
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=_extraction_failed_detail(
+                    (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(deadline_seconds)}s."
+                    ),
+                    reasons=["extraction_deadline_exceeded"],
+                    stage="failed",
+                ),
+            ) from exc
+        except SalesExtractionDeadlineExceeded as exc:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            if client_disconnected:
+                final_status = "client_disconnected"
+                raise HTTPException(
+                    status_code=499,
+                    detail=_extraction_failed_detail(
+                        "Client disconnected during extraction.",
+                        reasons=["client_disconnected"],
+                        stage=exc.stage,
+                    ),
+                ) from exc
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage=exc.stage,
+                limit_seconds=float(exc.limit_seconds or deadline_seconds),
+            )
+            raise HTTPException(
+                status_code=422,
+                detail=_extraction_failed_detail(
+                    (
+                        "Stock statement extraction exceeded the maximum "
+                        f"execution time of {int(exc.limit_seconds or deadline_seconds)}s."
+                    ),
+                    reasons=["extraction_deadline_exceeded"],
+                    stage=exc.stage,
+                ),
+            ) from exc
+        except asyncio.CancelledError:
+            request_cancel_sales_extraction(request_id)
+            terminate_sales_tesseract_children()
+            final_status = "cancelled"
+            raise
+        finally:
+            disconnect_watch.cancel()
+            try:
+                await asyncio.wait_for(disconnect_watch, timeout=1.0)
+            except Exception:
+                pass
+        extraction_duration_seconds = time.time() - extraction_started
+
+        extra = ((sales_result.get("totals") or {}).get("extra") or {})
+        quality = extra.get("extraction_quality") or {}
+        update_sales_progress(
+            request_id,
+            "validating",
+            file_type=file_type,
+            page_count=extra.get("page_count"),
+            extraction_method=extra.get("extraction_method"),
+            ocr_quality=(
+                quality.get("score") if isinstance(quality, dict) else None
+            ),
+            vision_fallback=bool(extra.get("gemini_fallback")),
+            extraction_duration_seconds=extraction_duration_seconds,
+        )
+        # Never return a false-success zero statement when the quality gate
+        # and Gemini Vision both failed to produce trustworthy products.
+        if extra.get("extraction_failed"):
+            from services.stock_photo_quality import photo_quality_client_detail
+
+            photo_detail = photo_quality_client_detail(extra, filename)
+            if photo_detail:
+                raise HTTPException(status_code=422, detail=photo_detail)
+            reasons = []
+            if isinstance(quality, dict):
+                reasons = list(quality.get("reasons") or [])
+            detail = {
+                "error": "extraction_failed",
+                "message": (
+                    extra.get("extraction_failed_message")
+                    or (
+                        "Could not reliably extract stock statement products. "
+                        "OCR/parser and Gemini Vision fallback both failed validation."
+                    )
+                ),
+                "reasons": reasons,
+                "gemini_fallback": extra.get("gemini_fallback"),
+                "source_file": filename,
+            }
+            raise HTTPException(status_code=422, detail=detail)
+        # POD hospital GRN workbooks keep the invoice wrapper. Secondary-sales
+        # reprocess requires the original statement contract (line_items,
+        # stockist_name, period_from, statements).
+        if extra.get("extraction_method") == "pod_hospital_wise_sales_xlsx":
+            response = build_split_extract_response_from_sales_statement(
+                sales_result=sales_result,
+                source_filename=filename,
+                batch_id=batch_id,
+                split_id=split_id,
+                file_name=file_name or filename,
+                use_blob_storage=use_blob_storage,
+                container_name=blob_container,
+                target_invoices_blob_folder=target_invoices_blob_folder,
+                start_time=start_time,
+            )
+            final_status = "completed"
+            return JSONResponse(content=response)
+        final_status = "completed"
+        return JSONResponse(content=sales_result)
+    except HTTPException as http_exc:
+        if http_exc.status_code == 422:
+            final_status = "extraction_failed"
+        elif http_exc.status_code == 429:
+            final_status = "queue_timeout"
+        else:
+            final_status = "failed"
         raise
     except ValueError as e:
+        final_status = "failed"
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        final_status = "failed"
         logger.exception("Sales statement extraction failed for %s", filename)
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if slot_acquired:
+            release_sales_extraction_slot()
+        total_duration_seconds = time.time() - total_started
+        finish_sales_progress(
+            request_id,
+            final_status,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            file_type=file_type,
+        )
+        log_sales_extraction_event(
+            request_id,
+            filename=filename,
+            file_type=file_type,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            total_duration_seconds=total_duration_seconds,
+            final_status=final_status,
+        )
+
+
+@app.post("/extract-sales-statement-multi")
+async def extract_sales_statement_multi_endpoint(
+    request: Request,
+    stockist_id: Optional[str] = Form(None),
+    month: Optional[str] = Form(None),
+    is_multi_page: Optional[str] = Form("true"),
+):
+    """Extract ONE stock statement from multiple ordered page images.
+
+    Flutter sends all pages in a single multipart request (files[]=...).
+    Does not change POST /extract-sales-statement.
+    """
+    from services.sales_extraction_runtime import (
+        SALES_EXTRACTION_MAX_EXECUTION_SECONDS,
+        SalesExtractionBusy,
+        SalesExtractionDeadlineExceeded,
+        acquire_sales_extraction_slot,
+        begin_sales_progress,
+        clear_sales_deadline,
+        finish_sales_progress,
+        log_extraction_deadline_exceeded,
+        log_sales_extraction_event,
+        release_sales_extraction_slot,
+        resolve_request_id,
+        start_sales_deadline,
+        update_sales_progress,
+    )
+    from services.stock_multipage import (
+        MultiPageImageExtractionError,
+        extract_multipage_image_stock_statement,
+    )
+
+    _ = is_multi_page  # accepted for Flutter contract; always multi-page here
+
+    request_id = resolve_request_id(request.headers.get("X-Request-ID"))
+    total_started = time.time()
+    queue_wait_seconds = 0.0
+    extraction_duration_seconds = None
+    slot_acquired = False
+    final_status = "failed"
+    filename = "multipage_stock_statement"
+    file_type = "image_multipage"
+    deadline_seconds = float(SALES_EXTRACTION_MAX_EXECUTION_SECONDS)
+
+    form = await request.form()
+    uploads: List[UploadFile] = []
+    for key in ("files[]", "files"):
+        for item in form.getlist(key):
+            if hasattr(item, "read") and hasattr(item, "filename"):
+                uploads.append(item)  # type: ignore[arg-type]
+        if uploads:
+            break
+
+    begin_sales_progress(
+        request_id, filename, stage="queued", batch_id=stockist_id or request_id
+    )
+
+    def _fail_body(
+        *,
+        error: str,
+        message: str,
+        page_number: Optional[int] = None,
+        status_code: int = 422,
+    ) -> JSONResponse:
+        body: Dict[str, Any] = {
+            "success": False,
+            "error": error,
+            "message": message,
+            "is_multi_page": True,
+            "request_id": request_id,
+            "stockist_id": stockist_id,
+            "month": month,
+        }
+        if page_number is not None:
+            body["page_number"] = page_number
+        return JSONResponse(status_code=status_code, content=body)
+
+    if not uploads:
+        finish_sales_progress(request_id, "failed")
+        return _fail_body(
+            error="validation_failed",
+            message="No page images provided (expected files[])",
+            status_code=400,
+        )
+
+    tmp_dir = None
+    try:
+        tmp_dir = tempfile.mkdtemp(prefix="stock_multipage_")
+        pages: List[Tuple[str, bytes]] = []
+        for idx, upload in enumerate(uploads):
+            page_no = idx + 1
+            raw = await upload.read()
+            page_name = upload.filename or f"page_{page_no}.jpg"
+            # Preserve multipart order; store temp copy for debugging/replay.
+            safe = re.sub(r"[^\w.\-]+", "_", page_name)[:180] or f"page_{page_no}.jpg"
+            dest = os.path.join(tmp_dir, f"{page_no:02d}_{safe}")
+            with open(dest, "wb") as fh:
+                fh.write(raw or b"")
+            pages.append((page_name, raw or b""))
+
+        filename = pages[0][0] if pages else filename
+
+        try:
+            queue_wait_seconds = await acquire_sales_extraction_slot()
+            slot_acquired = True
+        except SalesExtractionBusy as busy:
+            return _fail_body(
+                error="queue_timeout",
+                message=(
+                    f"Server busy. Queue wait exceeded {busy.timeout}s. "
+                    "Please retry."
+                ),
+                status_code=429,
+            )
+
+        update_sales_progress(
+            request_id,
+            "preparing",
+            queue_wait_seconds=queue_wait_seconds,
+            file_type=file_type,
+            page_count=len(pages),
+        )
+        extraction_started = time.time()
+        update_sales_progress(request_id, "parsing", page_count=len(pages))
+
+        def _run_multi():
+            # Bind request-local Gemini/OCR instrumentation + wall-clock deadline.
+            # Without this, multi-page Gemini logs show request_id=unknown and
+            # sales_extraction_event reports gemini_calls=None.
+            total_bytes = sum(len(b or b"") for _, b in pages)
+            start_sales_deadline(
+                request_id,
+                deadline_seconds,
+                file_size=total_bytes,
+            )
+            try:
+                return extract_multipage_image_stock_statement(
+                    pages,
+                    request_id=request_id,
+                    stockist_id=stockist_id,
+                    month=month,
+                )
+            finally:
+                clear_sales_deadline()
+
+        try:
+            sales_result = await asyncio.wait_for(
+                asyncio.to_thread(_run_multi),
+                timeout=deadline_seconds + 15.0,
+            )
+        except asyncio.TimeoutError:
+            final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage="asyncio_timeout",
+                limit_seconds=deadline_seconds,
+                page_count=len(pages),
+            )
+            return _fail_body(
+                error="extraction_failed",
+                message=(
+                    "Stock statement extraction exceeded the maximum "
+                    f"execution time of {int(deadline_seconds)}s."
+                ),
+                status_code=422,
+            )
+        except SalesExtractionDeadlineExceeded as exc:
+            final_status = "extraction_failed"
+            log_extraction_deadline_exceeded(
+                request_id,
+                stage=exc.stage,
+                limit_seconds=float(exc.limit_seconds or deadline_seconds),
+                page_count=len(pages),
+            )
+            return _fail_body(
+                error="extraction_failed",
+                message=(
+                    "Stock statement extraction exceeded the maximum "
+                    f"execution time of {int(exc.limit_seconds or deadline_seconds)}s."
+                ),
+                status_code=422,
+            )
+        except MultiPageImageExtractionError as exc:
+            final_status = "extraction_failed"
+            return _fail_body(
+                error=exc.error,
+                message=exc.message,
+                page_number=exc.page_number or None,
+                status_code=422 if exc.error == "page_processing_failed" else 400,
+            )
+
+        extraction_duration_seconds = time.time() - extraction_started
+        final_status = "completed"
+        update_sales_progress(
+            request_id,
+            "validating",
+            file_type=file_type,
+            page_count=sales_result.get("page_count"),
+            extraction_method=(
+                (sales_result.get("totals") or {}).get("extra") or {}
+            ).get("extraction_method"),
+            extraction_duration_seconds=extraction_duration_seconds,
+        )
+        return JSONResponse(content=sales_result)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        final_status = "failed"
+        logger.exception(
+            "MULTI_PAGE_EXTRACTION_FAILED request_id=%s error=%s",
+            request_id,
+            type(exc).__name__,
+        )
+        return _fail_body(
+            error="extraction_failed",
+            message=str(exc) or "Multi-page extraction failed",
+            status_code=500,
+        )
+    finally:
+        if slot_acquired:
+            release_sales_extraction_slot()
+        total_duration_seconds = time.time() - total_started
+        finish_sales_progress(
+            request_id,
+            final_status,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            file_type=file_type,
+        )
+        multi_page_count = None
+        try:
+            multi_page_count = len(pages)  # type: ignore[name-defined]
+        except Exception:
+            multi_page_count = len(uploads) if uploads else None
+        log_sales_extraction_event(
+            request_id,
+            filename=filename,
+            file_type=file_type,
+            page_count=multi_page_count,
+            queue_wait_seconds=queue_wait_seconds,
+            extraction_duration_seconds=extraction_duration_seconds,
+            total_duration_seconds=total_duration_seconds,
+            final_status=final_status,
+        )
+        if tmp_dir:
+            try:
+                import shutil
+
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":

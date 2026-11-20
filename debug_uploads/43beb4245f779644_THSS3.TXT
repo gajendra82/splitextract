@@ -1,0 +1,43 @@
+
+           SHIRI SREEHARI ENTERPRISES          
+From : 01/09/2026                  STOCK AND  SALES STATEMENT       
+To   : 30/09/2026
+Company Name : THE HIMALAYA DRUG COMPANY (ZENITH)                             Page :   1
+------------------------------------------------------------------------------------------------
+Code   Product Name             Packing  Opening  Receipts    Total    Sales  Closing    Closing
+                                          Stock                                Stock      Value
+------------------------------------------------------------------------------------------------
+HZE026 BONNISAN LIQUID          200ML         0          0        0        0        0       0.00
+HZE002 BONNISPAZ DROPS          15ML          0          0        0        0        0       0.00
+HZE003 BRESOL SYP               100ML         0          0        0        0        0       0.00
+HZE004 CONFIDO TABS             60'S         47          0       47        2       45    6296.40
+HZE006 CYSTONE SYP              100ML         0          0        0        0        0       0.00
+HZE007 CYSTONE TABS             60'S         99        100      199       75      124   20853.16
+HZA020 DIAKOF LINCTUS           100'ML        0          0        0        0        0       0.00
+HZE008 GERIFORTE TABS           100'S         0          0        0        0        0       0.00
+HZE010 HIMCOLIN GEL             30GM          0          0        0        0        0       0.00
+HZE030 HIOWNA JR CHOCLATE FLAVO 200GRMS       0          0        0        0        0       0.00
+HZE031 HIOWNA JR STRBERRY FLAVO 200GRM        0          0        0        0        0       0.00
+HZE011 KOFLET JAR               250'S         0          0        0        0        0       0.00
+HZE012 KOFLET SYP               100ML        56         56      112       66       46    3625.72
+HZE043 KOFLET SYP (COLDBALM)    100ML         0          0        0        0        0       0.00
+HZE029 KOFLET- H LOZENGES       6'S           0          0        0        0        0       0.00
+HZE014 LIV 52 DROPS             120ML         0          0        0        0        0       0.00
+HZE013 LIV 52 DROPS             60ML         67          0       67       31       36    3702.24
+HZE015 MENTAT SYP               200ML         0          0        0        0        0       0.00
+HZE016 MENTAT TABS              60'S          0          0        0        0        0       0.00
+HZE017 OPHTHACARE EYE DROPS     10ML          0          0        0        0        0       0.00
+HZE044 PILEX FORTE OINT 30GM    1'S          71          0       71       14       57    5639.01
+HZE018 PILEX OIN                30GM          0          0        0        0        0       0.00
+HZE019 PILEX TABS               60'S         10        100      110        5      105   17657.95
+HZE025 PURIM TABS               60'S          0          0        0        0        0       0.00
+HZE021 RUMALAYA LINAMENT        60ML         62          0       62       16       46    4932.58
+HZE020 RUMALAYA TABS            60'S          0          0        0        0        0       0.00
+HZE028 SEPTILIN DROPS           60ML          0          0        0        0        0       0.00
+HZE022 SEPTILIN SYP             200ML         0         28       28        0       28    4244.24
+HZE023 SEPTILIN TABS            60'S          0          0        0        0        0       0.00
+HZE024 TENTEX FORTE TABS        10'S          0          0        0        0        0       0.00
+------------------------------------------------------------------------------------------------
+ Opening Value Rs.       50,224.29   Sales Value   Rs.       25,501.15
+ Receipt Value Rs.       42,228.16   Closing Value Rs.       66,951.30
+------------------------------------------------------------------------------------------------

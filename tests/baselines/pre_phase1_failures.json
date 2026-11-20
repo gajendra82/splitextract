@@ -1,0 +1,65 @@
+{
+  "description": "Pre-Phase-1 offline suite baseline. Recorded before Prompt 1b; re-verified after 1b. Phase 1 must not add failures beyond the remaining baseline_known / deferred_phase_3 set.",
+  "recorded_at": "2026-10-01",
+  "suite_pre_1b": {
+    "tests_run": 198,
+    "failures": 6,
+    "errors": 1,
+    "skipped": 21
+  },
+  "suite_post_1b": {
+    "tests_run": 218,
+    "failures": 6,
+    "errors": 0,
+    "skipped": 22,
+    "notes": "format_pipeline FileDataError fixed; Prompt 1b tests added; no live Vertex 429."
+  },
+  "errors": [
+    {
+      "id": "tests.test_format_pipeline_regression.TestFormatDispatchStaysSeparate.test_pdf_xls_xlsx_txt_html_do_not_enter_word",
+      "symptom": "pymupdf.FileDataError: Failed to open stream on fake %PDF-1.4 bytes inside gemini_extraction_fallback._pdf_images",
+      "disposition": "fixed_in_prompt_1b",
+      "notes": "Corrupt PDF must be flagged, not crash."
+    }
+  ],
+  "failures": [
+    {
+      "id": "tests.test_excel_statement_dates.TestMatNameExcelHeaders.test_sample_xlsx_mat_name_and_code",
+      "symptom": "missing fixture 0000737608_2026_08_ZL_04_742_03092026190352.xlsx",
+      "disposition": "baseline_known",
+      "notes": "Fixture absent on this host."
+    },
+    {
+      "id": "tests.test_excel_statement_dates.TestSindAgenciesXlsxRegression.test_sample_xlsx_period_from_content_not_filename",
+      "symptom": "missing fixture 0000737569_2026_08_ZL_13_285_01092026073322.xlsx",
+      "disposition": "baseline_known",
+      "notes": "Fixture absent on this host."
+    },
+    {
+      "id": "tests.test_item_description_stock_sales_docx.TestItemDescriptionStockSalesDocx.test_uploaded_omnis_file_matches_printed_grand_total",
+      "symptom": "fixture docx is missing",
+      "disposition": "baseline_known"
+    },
+    {
+      "id": "tests.test_sale_closing_analysis_docx.TestSaleClosingAnalysisDocx.test_lachmi_drug_sale_and_closing",
+      "symptom": "fixture docx is missing",
+      "disposition": "baseline_known"
+    },
+    {
+      "id": "tests.test_product_stock_report.TestFixedSalesStockTxt.test_value_columns_are_read_when_printed",
+      "symptom": "AssertionError: 0.0 is not None (closing_value)",
+      "disposition": "deferred_phase_3",
+      "notes": "Missing values become None under STOCK_NULLABLE_QTY in Phase 3."
+    },
+    {
+      "id": "tests.test_product_stock_report.TestProductStockReport.test_stacked_opbal_pdf_text_collapses_to_rows",
+      "symptom": "AssertionError: '500 ML' != '500ML'",
+      "disposition": "baseline_known",
+      "notes": "Packing whitespace normalisation; not part of Prompt 1b."
+    }
+  ],
+  "notes": [
+    "After Prompt 1b expect failures=6 errors=0 on the recorded module set (+ 1b tests).",
+    "Do not treat baseline_known / deferred_phase_3 as regressions introduced by Phase 1."
+  ]
+}

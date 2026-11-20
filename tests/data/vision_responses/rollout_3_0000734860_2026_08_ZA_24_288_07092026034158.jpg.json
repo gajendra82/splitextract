@@ -1,0 +1,950 @@
+{
+  "header_rows": [
+    {
+      "cells": [
+        {
+          "text": "ORDER FORM",
+          "col_index": 0,
+          "x_center": 0.115
+        },
+        {
+          "text": "From:",
+          "col_index": 0,
+          "x_center": 0.145
+        },
+        {
+          "text": "Vedansh Pharma",
+          "col_index": 0,
+          "x_center": 0.245
+        },
+        {
+          "text": "Goraklypus.",
+          "col_index": 0,
+          "x_center": 0.325
+        },
+        {
+          "text": "Stock Statement",
+          "col_index": 1,
+          "x_center": 0.275
+        },
+        {
+          "text": "Order No.:",
+          "col_index": 2,
+          "x_center": 0.355
+        },
+        {
+          "text": "To:",
+          "col_index": 3,
+          "x_center": 0.375
+        },
+        {
+          "text": "SINCE 1930",
+          "col_index": 4,
+          "x_center": 0.555
+        },
+        {
+          "text": "Date:",
+          "col_index": 5,
+          "x_center": 0.625
+        },
+        {
+          "text": "31/08/2026",
+          "col_index": 6,
+          "x_center": 0.715
+        },
+        {
+          "text": "Value",
+          "col_index": 7,
+          "x_center": 0.775
+        },
+        {
+          "text": "Rs.",
+          "col_index": 8,
+          "x_center": 0.815
+        },
+        {
+          "text": "P.",
+          "col_index": 9,
+          "x_center": 0.835
+        },
+        {
+          "text": "Total:",
+          "col_index": 10,
+          "x_center": 0.725
+        }
+      ]
+    },
+    {
+      "cells": [
+        {
+          "text": "ST/CST/TIN:",
+          "col_index": 0,
+          "x_center": 0.115
+        },
+        {
+          "text": "SAP",
+          "col_index": 1,
+          "x_center": 0.145
+        },
+        {
+          "text": "Code",
+          "col_index": 2,
+          "x_center": 0.165
+        },
+        {
+          "text": "Product",
+          "col_index": 3,
+          "x_center": 0.255
+        },
+        {
+          "text": "Pack",
+          "col_index": 4,
+          "x_center": 0.315
+        },
+        {
+          "text": "Qty.",
+          "col_index": 5,
+          "x_center": 0.355
+        },
+        {
+          "text": "SAP",
+          "col_index": 6,
+          "x_center": 0.415
+        },
+        {
+          "text": "Code",
+          "col_index": 7,
+          "x_center": 0.435
+        },
+        {
+          "text": "Product",
+          "col_index": 8,
+          "x_center": 0.525
+        },
+        {
+          "text": "Pack",
+          "col_index": 9,
+          "x_center": 0.575
+        },
+        {
+          "text": "Qty.",
+          "col_index": 10,
+          "x_center": 0.615
+        },
+        {
+          "text": "Value",
+          "col_index": 11,
+          "x_center": 0.675
+        },
+        {
+          "text": "Rs.",
+          "col_index": 12,
+          "x_center": 0.715
+        },
+        {
+          "text": "P.",
+          "col_index": 13,
+          "x_center": 0.735
+        }
+      ]
+    }
+  ],
+  "column_count": 14,
+  "rows": [
+    {
+      "row_index": 0,
+      "cells": [
+        null,
+        "7002259",
+        null,
+        "Arjuna tablets",
+        "60s",
+        null,
+        "7000256",
+        null,
+        "Liv.52 DS tablets",
+        "60s",
+        "300",
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 1,
+      "cells": [
+        null,
+        "7000080",
+        null,
+        "Bonnisan drops",
+        "30 ml",
+        null,
+        "7005682",
+        null,
+        "Liv.52 DS syrup (Sugar-free)",
+        "100 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 2,
+      "cells": [
+        null,
+        "7001338",
+        null,
+        "Bonnisan liquid",
+        "100 ml",
+        null,
+        "7006065",
+        null,
+        "Liv.52 DS syrup (Sugar-free)",
+        "200 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 3,
+      "cells": [
+        null,
+        "7000084",
+        null,
+        "Bonnisan liquid",
+        "200 ml",
+        null,
+        "7001730",
+        null,
+        "Lukol syrup",
+        "200 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 4,
+      "cells": [
+        null,
+        "7000087",
+        null,
+        "Bonnispaz drops",
+        "15 ml",
+        "72",
+        "7000269",
+        null,
+        "Lukol tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 5,
+      "cells": [
+        null,
+        "7002534",
+        null,
+        "Bresol syrup",
+        "200 ml",
+        null,
+        "7000276",
+        null,
+        "Menosan tablets",
+        "30s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 6,
+      "cells": [
+        null,
+        "7000094",
+        null,
+        "Bresol tablets",
+        "60s",
+        null,
+        "7000283",
+        null,
+        "Mentat syrup",
+        "200 ml",
+        "56",
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 7,
+      "cells": [
+        null,
+        "7003189",
+        null,
+        "Bresol-NS saline nasal solution",
+        "10 ml",
+        null,
+        "7000288",
+        null,
+        "Mentat tablets",
+        "60s",
+        "300",
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 8,
+      "cells": [
+        null,
+        "7003058",
+        null,
+        "Cystone forte tablets",
+        "2x30s",
+        null,
+        "7005605",
+        null,
+        "Mentat gummies",
+        "30s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 9,
+      "cells": [
+        null,
+        "7000111",
+        null,
+        "Cystone syrup",
+        "200 ml",
+        null,
+        "7000279",
+        null,
+        "Mentat DS syrup (Sugar-free)",
+        "100 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 10,
+      "cells": [
+        null,
+        "7000114",
+        null,
+        "Cystone tablets",
+        "60s",
+        null,
+        "7002271",
+        null,
+        "Meshashringi tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 11,
+      "cells": [
+        null,
+        "7004178",
+        null,
+        "Cystone-SF liquid",
+        "200 ml",
+        null,
+        "7004702",
+        null,
+        "Platenza syrup",
+        "100 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 12,
+      "cells": [
+        null,
+        "7000132",
+        null,
+        "Evecare capsules",
+        "30s",
+        null,
+        "7003449",
+        null,
+        "Platenza tablets",
+        "3x20s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 13,
+      "cells": [
+        null,
+        "7000136",
+        null,
+        "Evecare syrup",
+        "200 ml",
+        "28",
+        "7002674",
+        null,
+        "Punarnava tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 14,
+      "cells": [
+        null,
+        "7000137",
+        null,
+        "Evecare syrup",
+        "400 ml",
+        "1",
+        "7003738",
+        null,
+        "PureHands Advanced (Blue)",
+        "500 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 15,
+      "cells": [
+        null,
+        "7003318",
+        null,
+        "Evecare forte liquid",
+        "200 ml",
+        "28",
+        "7004026",
+        null,
+        "Quista kidz (Chocolate)",
+        "200 g",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 16,
+      "cells": [
+        null,
+        "7003490",
+        null,
+        "Evecare forte tablets",
+        "3x10s",
+        null,
+        "7004025",
+        null,
+        "Quista kidz (Vanilla)",
+        "200 g",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 17,
+      "cells": [
+        null,
+        "7005232",
+        null,
+        "Florasante capsules",
+        "10s",
+        null,
+        "7000338",
+        null,
+        "Reosto tablets",
+        "30s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 18,
+      "cells": [
+        null,
+        "7000166",
+        null,
+        "Geriforte syrup",
+        "200 ml",
+        null,
+        "7000358",
+        null,
+        "Septilin syrup",
+        "200 ml",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 19,
+      "cells": [
+        null,
+        "7005621",
+        null,
+        "Geriforte tablets",
+        "60s",
+        null,
+        "7000363",
+        null,
+        "Septilin tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 20,
+      "cells": [
+        null,
+        "7003668",
+        null,
+        "Haridra tablets",
+        "60s",
+        null,
+        "7005601",
+        null,
+        "Septilin gummies",
+        "30s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 21,
+      "cells": [
+        null,
+        "7005591",
+        null,
+        "Himplasia tablets",
+        "2x30s",
+        null,
+        "7000365",
+        null,
+        "Serpina tablets",
+        "100s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 22,
+      "cells": [
+        null,
+        "7005811",
+        null,
+        "HiOra-D toothpaste",
+        "100 g",
+        null,
+        "7002264",
+        null,
+        "Shatavari tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 23,
+      "cells": [
+        null,
+        "7000210",
+        null,
+        "HiOra-GA gel",
+        "15 ml",
+        null,
+        "7002265",
+        null,
+        "Shuddha Guggulu tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 24,
+      "cells": [
+        null,
+        "7001520",
+        null,
+        "HiOra-K mouthwash",
+        "150 ml",
+        null,
+        "7000379",
+        null,
+        "Speman tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 25,
+      "cells": [
+        null,
+        "7000212",
+        null,
+        "HiOra-K toothpaste",
+        "100 g",
+        "50",
+        "7000380",
+        null,
+        "Styplon tablets",
+        "30s",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 26,
+      "cells": [
+        null,
+        "7000214",
+        null,
+        "HiOra-K toothpaste",
+        "50 g",
+        "50",
+        "7000404",
+        null,
+        "V-Gel",
+        "30 g",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 27,
+      "cells": [
+        null,
+        "7000219",
+        null,
+        "HiOra-SG qel",
+        "10 g",
+        null,
+        "7006190",
+        null,
+        "Galactosure granules (Elaichi)",
+        "200 g",
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 28,
+      "cells": [
+        null,
+        "7002488",
+        null,
+        "Immusante tablets",
+        "3x20s",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 29,
+      "cells": [
+        null,
+        "7002270",
+        null,
+        "Karela tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 30,
+      "cells": [
+        null,
+        "7002262",
+        null,
+        "Lasuna tablets",
+        "60s",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 31,
+      "cells": [
+        null,
+        "7000251",
+        null,
+        "Liv.52 drops",
+        "60 ml",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 32,
+      "cells": [
+        null,
+        "7001340",
+        null,
+        "Liv.52 drops",
+        "100 ml",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 33,
+      "cells": [
+        null,
+        "7000253",
+        null,
+        "Liv.52 DS syrup",
+        "100 ml",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 34,
+      "cells": [
+        null,
+        "7002239",
+        null,
+        "Liv.52 DS syrup",
+        "200 ml",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": false
+    },
+    {
+      "row_index": 35,
+      "cells": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "is_total_row": true
+    }
+  ],
+  "proposed_mapping": [
+    {
+      "col_index": 0,
+      "mapping": "ignore",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 1,
+      "mapping": "product_name",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 2,
+      "mapping": "ignore",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 3,
+      "mapping": "product_name",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 4,
+      "mapping": "pack",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 5,
+      "mapping": "opening_qty",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 6,
+      "mapping": "product_name",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 7,
+      "mapping": "ignore",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 8,
+      "mapping": "product_name",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 9,
+      "mapping": "pack",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 10,
+      "mapping": "opening_qty",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 11,
+      "mapping": "opening_value",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 12,
+      "mapping": "rate",
+      "confidence": 0.9
+    },
+    {
+      "col_index": 13,
+      "mapping": "ignore",
+      "confidence": 0.9
+    }
+  ],
+  "unreadable_cells": [],
+  "stockist_name": "Vedansh Pharma",
+  "statement_period": "31/08/2026"
+}

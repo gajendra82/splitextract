@@ -1,0 +1,127 @@
+
+N.N.DRUG AGENCIES
+GST:09ABHPA6490L1ZB
+ SALES & STOCK REPORT   FROM 01/09/2026  TO 30/09/2026            Page: 1
+================================================================================
+DESCRIPTION/PACKING     Pro.  OPENING    PUR.   SALE   CR.NO.  DR.NO.  CLOSING   
+                        Age     QTY.     QTY.    QTY.  ST.[+]  ST.[-]    QTY.    
+================================================================================
+HYHYA                     
+BONNISAN DROPS                   8     100       0       0       0     108
+BONNISAN LIQUID                  1       0       1       0       0       0
+BONNISPAZ DROPS                 20       0      20       0       0       0
+BRESOL SYRUP                    15       0       6       0       0       9
+BRESOL TAB                       0       0       0       0       0       0
+CYSTONE FORTE TAB                0       0       0       0       0       0
+CYSTONE SYRUP                   25       0       0       0       0      25
+CYSTONE TAB                     99       0       2       0       0      97
+EVECARE CAP                      0       0       0       0       0       0
+EVECARE FORTE LQD                0       0       0       0       0       0
+EVECARE SYRUP                   20      28      30       0       0      18
+EVECARE SYRUP                    0       0       0       0       0       0
+GERIFORTE SYRUP                  0       0       0       0       0       0
+GERIFORTE TAB                    0       0       0       0       0       0
+HIMPLASIA TAB                    0       0       0       0       0       0
+HIORA K 50 T/PASTE              14       0       3       0       0      11
+HIORA K M/W                     22       0       0       0       0      22
+HIORA K T/PASTE                  1       0       0       0       0       1
+HIORA REGULAR M/W                0       0       0       0       0       0
+HIORA TOOTHPASTE                 0       0       0       0       0       0
+HIORA TOOTHPASTE 50              0       0       0       0       0       0
+LIV 52 100 DROP                  0       0       0       0       0       0
+LIV 52 DROP                    133       0      68       0       0      65
+LIV 52 DS 2 SYRUP               34       0       3       0       3      28
+LIV 52 DS SYRUP                 45       0      11       0       1      33
+LIV 52 DS TAB                  184       0      27       0       2     155
+LUKOL SYRUP                      3       0       0       0       0       3
+LUKOL TAB                       25     100     103       1       0      23
+MENTAT SYRUP                    14       0       2       0       1      11
+MENTAT TAB                       0       0       0       0       0       0
+PLATENZA SYRUP                   0     112      56       0       0      56
+PLATENZA TAB                     0       0       0       0       0       0
+QUISTA CHOC KIDZ                 0       0       0       0       0       0
+QUISTA KIDZ VANILLA              0       0       0       0       0       0
+RENALKA SYRUP                    2       0       0       0       0       2
+SEPTILIN SYRUP                   6      28       2       0       0      32
+SEPTILIN TAB                     5     100       4       0       0     101
+SPEMAN TAB                      42       0       0       0       0      42
+STYPLON TAB                      0       0       0       0       0       0
+TENTEX ROYAL CAPS               29       0       0       0       0      29
+TRIKATU SYRUP                    0       0       0       0       0       0
+TRIKATU TAB                      0       0       0       0       0       0
+VASAKA SYRUP                     0       0       0       0       0       0
+VASAKA SYRUP                     0       0       0       0       0       0
+================================================================================
+TOTAL QTY. IN UNIT/PCS.      747      468      338      1      7      871
+TOTAL AMOUNT >>>          115727    71274    49858    161   1520   134186
+================================================================================
+
+HYHYB  THE HIMALAYA DRUG COMPANY B             
+AACTARIL SOAP                    0       0       0       0       0       0
+ABANA TAB                       75       0       0       0       0      75
+BLEMINOR ANTIBLEMISH CR          0       0       0       0       0       0
+CLARINA ANTI ACNE CREAM          0       0       0       0       0       0
+CLARINA ANTI ACNE GEL            0       0       0       0       0       0
+CONFIDO TAB                     64       0       4       0       0      60
+DIABECON DS TAB                 48       0       1       0       0      47
+HADJOD TAB                      60       0       2       0       0      58
+HAIR ZONE SOLN                   0       0       0       0       0       0
+HEAL LIP                         0       0       0       0       0       0
+HERBOLAX CAP                     0       0       0       0       0       0
+HERBOLAX TAB                     8       0       0       1       0       9
+HIMCOLIN GEL                    36       0       1       0       0      35
+LIV 52 2 SFREE                   0     350       0       0       0     350
+LIV 52 2 SYRUP                  82       0      25       0       0      57
+LIV 52 DS SFREE 1                0     350     350       0       0       0
+LIV 52 DS SFREE 2                0       0       0       0       0       0
+LIV 52 HB CAP                    0       0       0       0       0       0
+LIV 52 SFREE                     0       0       0       0       0       0
+LIV 52 SYRUP                    23       0       0       0      23       0
+LIV 52 TAB                     269       0       8       0       0     261
+OPTHACARE EEYE DROP              0       0       0       0       0       0
+ORO-T ORAL RINSE LIQUID          0       0       0       0       0       0
+OXITARD CAP                      0       0       0       0       0       0
+PILEX FORTE OINT                63       0      39       0       0      24
+PILEX TAB                      101     500     256       0       2     343
+QUISTA DN 2 MILK MASALA          0       0       0       0       0       0
+QUISTA DN 2 VANILLA              0       0       0       0       0       0
+QUISTA DN VANILLA                0       0       0       0       0       0
+RUMALAYA LINIMENT                0       0       0       0       0       0
+RUMALAYA LINIMENT ROLLO          0       0       0       0       0       0
+TENTEX FORTE TAB               145       0     120       0       0      25
+VASAKA TAB                       0       0       0       0       0       0
+VEGECORT CREAM                   0       0       0       0       0       0
+YASHTIMADHU TAB                  0       0       0       0       0       0
+================================================================================
+TOTAL QTY. IN UNIT/PCS.      974     1200      806      1     25     1344
+TOTAL AMOUNT >>>          144341   204361   124283    156   2424   219010
+================================================================================
+
+HYHYC  HIMALAYA OTC                            
+KARELA TAB                      28       0       0       0       0      28
+KOFLET LOZENGES 200              0       0       0       0       0       0
+KOFLET LOZENGES 60+15           10       0       4       0       0       6
+KOFLET SF LINCTUS               36       0       1       0       0      35
+KOFLET SYRUP                    47       0      21       0       0      26
+================================================================================
+TOTAL QTY. IN UNIT/PCS.      121        0       26      0      0       95
+TOTAL AMOUNT >>>           11538        0     2377      0      0     9490
+================================================================================
+
+HYHYG  HIMALAYA GASTRO                         
+ASHVAGANDHA TAB                  1       0       0       0       0       1
+GASEX ELAICHI SYRUP             28       0       0       0       0      28
+GASEX GINGER/LEMON               0       0       0       0       0       0
+GASEX TAB                       33       0       6       0       0      27
+HIMCOCID BANANA SUSP             0       0       0       0       0       0
+HIMCOCID SAUNF SUSP              0       0       0       0       0       0
+HIMCOCID SUSP                   32       0       7       0       0      25
+KOFLET EX LINCTUS               45       0       3       0       0      42
+KOFLET H GINGER LOZNGES          0       0       0       0       0       0
+KOFLET H ORANGE LOZNGES          6       0       0       0       0       6
+KOFLET SF LOZENGES               0       0       0       0       0       0
+================================================================================
+TOTAL QTY. IN UNIT/PCS.      145        0       16      0      0      129
+TOTAL AMOUNT >>>           13821        0     1726      0      0    12269
+================================================================================
+

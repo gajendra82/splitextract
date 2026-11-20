@@ -1,0 +1,52 @@
+
+           SHIRI SREEHARI ENTERPRISES          
+From : 01/09/2026                  STOCK AND  SALES STATEMENT       
+To   : 30/09/2026
+Company Name : THA HIMALYA DRUG COMPANY(ZANDRA)                               Page :   1
+------------------------------------------------------------------------------------------------
+Code   Product Name             Packing  Opening  Receipts    Total    Sales  Closing    Closing
+                                          Stock                                Stock      Value
+------------------------------------------------------------------------------------------------
+HZA001 ABANA TABS               60'S          0          0        0        0        0       0.00
+HZE040 ARJUNA TAB               60'S          0          0        0        0        0       0.00
+HZA002 BONNISAN DROPS           30ML          0          0        0        0        0       0.00
+THE001 BONNISAN LIQUID          100ML        15          0       15        7        8     504.88
+HZA003 BRESOL TABS              60'S          0          0        0        0        0       0.00
+HZA004 EVECARE CAPS             30'S          0          0        0        0        0       0.00
+HZA023 EVECARE FORTE SYP        200ML         0          0        0        0        0       0.00
+HZA025 EVECARE FORTE TAB        10'S          0          0        0        0        0       0.00
+HZA005 EVECARE SYR              200ML         0          0        0        0        0       0.00
+HZA026 EVEGEL GEL               30G           0          0        0        0        0       0.00
+HZE009 GERIFORTE SYP            200ML         0          0        0        0        0       0.00
+HZE036 HIOWNA CHOCOLATE (MOMZ)  200GM         0          0        0        0        0       0.00
+HZE037 HIOWNA VANILLA (MOMZ)    200G          0          0        0        0        0       0.00
+HZE035 KOFLET SF LINCTUS        100ML         9          1       10       10        0       0.00
+HZE038 KOFLET-SF LOZGIN(GINGER) 10'S          0          0        0        0        0       0.00
+HZE039 KOFLET-SF LOZGIN(ORANGE) 6'S           0          0        0        0        0       0.00
+HZA017 LIV 52 DS TAB            60'S         17          0       17        4       13    2513.03
+HZA028 LIV-52 DS SYP            200ML         0          0        0        0        0       0.00
+HZA006 LIV.52 DS SYR            100ML        55          0       55        2       53    8456.68
+HZA008 LUKOL TABS               60'S         15          0       15        5       10    1794.20
+HZA021 MENOSAN TAB              30'S          0          0        0        0        0       0.00
+HZA009 MENTAT DS SYR            100ML         0          0        0        0        0       0.00
+HZA024 PLATENZA TAB             20'S          0          0        0        0        0       0.00
+HZA020 PURE HANDS               500ML         0          0        0        0        0       0.00
+HZA030 PUREHANDS ADVANCED       2*500ML       0          0        0        0        0       0.00
+HZA029 PUREHANDS(ORANGE)TUBE    100ML         0          0        0        0        0       0.00
+HZA032 Q-DEE(CRAMPS)TAB         8'S           0          0        0        0        0       0.00
+HZA027 QUISTA DN 400G (VANILA)  400G          0          0        0        0        0       0.00
+HZA031 RENALKA SYP              200ML         0          0        0        0        0       0.00
+HZA010 RENALKA SYR              100ML         0          0        0        0        0       0.00
+HZA018 REOSTO TAB               30'S          0          0        0        0        0       0.00
+HZA011 RUMALAYA FORTE TABS      30'S          0          0        0        0        0       0.00
+HZA012 RUMALAYA GEL             10GM          0          0        0        0        0       0.00
+HZE041 SHATAVARI SYR            200ML         0          0        0        0        0       0.00
+HZA013 SPEMAN TABS              60'S          0          0        0        0        0       0.00
+HZE042 STYPLON TAB              30'S          0          0        0        0        0       0.00
+HZA014 STYPLON TABS             30'S          0          0        0        0        0       0.00
+HZA015 TENTEX ROYAL CAP         10'S          0          0        0        0        0       0.00
+HZA016 V-GEL GEL                30GM          0          0        0        0        0       0.00
+------------------------------------------------------------------------------------------------
+ Opening Value Rs.       16,504.17   Sales Value   Rs.        3,324.73
+ Receipt Value Rs.           89.35   Closing Value Rs.       13,268.79
+------------------------------------------------------------------------------------------------

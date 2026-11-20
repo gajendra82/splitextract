@@ -1,0 +1,16 @@
+=== compare (current vs vision) ===
+product                                   cur_op  vis_op cur_pur vis_pur  cur_sl  vis_sl  cur_cl  vis_cl
+HIORA K TOOTHPASTE 100 GM                    9.0     0.0    50.0     0.0    21.0     0.0    38.0     0.0
+HIORA K TOOTHPASTE 50 GM                    80.0     0.0     0.0     0.0     5.0     0.0    75.0     0.0
+HIORA SG GEL 10GM                            5.0     0.0     0.0     0.0     0.0     0.0     5.0     0.0
+KARELA TAB                                  57.0     0.0     0.0     0.0     0.0     0.0    57.0     0.0
+LASUNA TAB                                  38.0     0.0     0.0     0.0     0.0     0.0    38.0     0.0
+LIV.52 DROP 100ML                           12.0     0.0     0.0     0.0     0.0     0.0    12.0     0.0
+LIV.52 DROP 60ML                             6.0     0.0     0.0     0.0     0.0     0.0     6.0     0.0
+LIV.52 DS SYP 100ML                         18.0     0.0     0.0     0.0     0.0     0.0    18.0     0.0
+LIV.52 DS SYP 200ML                         34.0     0.0     0.0     0.0    10.0     0.0    24.0     0.0
+LIV.52 SYP 100 ML                           70.0     0.0     0.0     0.0     0.0     0.0    70.0     0.0
+LIV.52 SYP 200 ML                           66.0     0.0     0.0     0.0    26.0     0.0    40.0     0.0
+LIV.52 DS TAB                               13.0     0.0   100.0     0.0    49.0     0.0    64.0     0.0
+LUKOL SYP 200ML                             68.0     0.0     0.0     0.0     0.0     0.0    68.0     0.0
+LUKOL TAB                                   61.0     0.0     0.0     0.0    10.0     0.0    51.0     0.0
