@@ -1155,17 +1155,33 @@ def _soften_document_qty_gap(
         RowStatus.OCR_VALUE_SUSPECTED,
     }:
         return status
+    fields = read_row_fields(line_item)
+    sq = fields.get("sales")
+    cq = fields.get("closing")
+    # sales_qty == closing_qty with a real identity gap is almost always an
+    # ISSUE←CLOSING copy — keep COLUMN_ASSIGNMENT so recovery can re-read.
+    if (
+        sq is not None
+        and cq is not None
+        and abs(float(sq) - float(cq)) <= 0.51
+        and abs(float(sq)) > 0.001
+    ):
+        expected = expected_closing(fields)
+        if expected is not None:
+            oq = fields.get("opening")
+            open_f = float(oq) if oq is not None else float(cq)
+            if abs(float(expected) - float(cq)) > _minor_tolerance(open_f, float(cq)):
+                if isinstance(info, dict):
+                    info["reason"] = "sales_equals_closing_keep_suspect"
+                return status
     if _line_item_unit_rates_consistent(line_item):
         if isinstance(info, dict):
             info["reason"] = "rate_consistent_qty_gap"
             info["document_qty_gap"] = True
         return RowStatus.MINOR_DISCREPANCY
     # Zero movement but positive closing — printed stock appeared / carried.
-    fields = read_row_fields(line_item)
     oq = fields.get("opening")
     pq = fields.get("purchase")
-    sq = fields.get("sales")
-    cq = fields.get("closing")
     if (
         oq is not None
         and abs(float(oq)) <= 0.001

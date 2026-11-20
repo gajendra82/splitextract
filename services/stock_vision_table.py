@@ -1965,6 +1965,11 @@ def build_table_prompt() -> str:
         "opening_qty. Emit one cell per FREE/P.RETURN/S.RETURN/OTHERS column "
         "even when the cell is dash/blank so SALE and CLOSING do not shift left. "
         "P.RETURN is purchase_return_qty, S.RETURN is sales_return_qty. "
+        "OPENING STOCK|OPENING VALUE|RECEIVE QTY|RECEIVE VALUE|ISSUE QTY|"
+        "ISSUE VALUE|CLOSING STOCK|CLOSING VALUE: never copy CLOSING STOCK "
+        "into ISSUE QUANTITY or ISSUE VALUE. A blank/dash ISSUE VALUE is "
+        "null — do not fill it with the closing qty. ISSUE and CLOSING are "
+        "separate columns even when RECEIVE is 0. "
         "STOCK & SALES ANALYSIS / qty+value grids: emit TWO header rows — "
         "parent bands OPENING, RECEIPT/RECEIPTS, ISSUE/SALES, CLOSING (and "
         "DUMP if printed) on row 1, and QTY/VALUE sub-headers on row 2. "
@@ -4664,6 +4669,377 @@ def _apply_closing_qty_from_header_pass(
     return fixed
 
 
+def _issue_from_header_enabled() -> bool:
+    """Restore ISSUE qty/value from the ISSUE header cells.
+
+    Default ON. OPENING|VALUE|RECEIVE|VALUE|ISSUE|VALUE|CLOSING|VALUE sheets
+    often copy CLOSING into ISSUE (qty or value). Copies printed physical
+    cells only — never invents a digit.
+    """
+    return os.getenv(
+        "STOCK_VISION_ISSUE_FROM_HEADER", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _column_indices_for_canonicals(
+    columns: Sequence[Dict[str, Any]],
+    *canonicals: str,
+) -> Dict[str, int]:
+    out: Dict[str, int] = {}
+    for col in columns or []:
+        if not isinstance(col, dict):
+            continue
+        canon = str(col.get("canonical") or "")
+        if canon not in canonicals or canon in out:
+            continue
+        try:
+            out[canon] = int(col.get("col_index"))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _restore_issue_fields_from_header(
+    item: Dict[str, Any],
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """Put ISSUE qty/value back from physical cells when CLOSING was copied.
+
+    1) sales_qty == closing_qty and identity fails, but the sales_qty header
+       cell holds a different whole digit that balances → restore sales_qty.
+    2) sales_value blank/0 while the sales_value header cell holds money →
+       restore sales_value. If that cell is a whole qty equal to closing,
+       clear sales_value as missing (closing duplicated into ISSUE VALUE).
+    """
+    if not _issue_from_header_enabled():
+        return False
+    if not isinstance(item, dict):
+        return False
+    # columns may be [] on SSA paths — rate-based recovery still applies.
+    idxs = _column_indices_for_canonicals(
+        columns or [], "sales_qty", "sales_value", "closing_qty"
+    )
+    sales_idx = idxs.get("sales_qty")
+    sales_val_idx = idxs.get("sales_value")
+
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+
+    opening = _printed_float(item, "opening_qty")
+    if opening is None:
+        # Top-level opening may lack field_source on SSA paths.
+        try:
+            opening = float(item.get("opening_qty"))
+        except (TypeError, ValueError):
+            opening = None
+    if opening is None:
+        return False
+    receipt = _printed_float(item, "purchase_qty")
+    if receipt is None:
+        receipt = _printed_float(item, "receipts_qty")
+    if receipt is None:
+        try:
+            receipt = float(
+                item.get("receipts_qty")
+                if item.get("receipts_qty") is not None
+                else (item.get("purchase_qty") or 0)
+            )
+        except (TypeError, ValueError):
+            receipt = 0.0
+    sales = _printed_float(item, "sales_qty")
+    if sales is None and item.get("sales_qty") not in (None, ""):
+        try:
+            sales = float(item.get("sales_qty"))
+        except (TypeError, ValueError):
+            sales = None
+    closing = _printed_float(item, "closing_qty")
+    if closing is None and item.get("closing_qty") not in (None, ""):
+        try:
+            closing = float(item.get("closing_qty"))
+        except (TypeError, ValueError):
+            closing = None
+    changed = False
+
+    # --- value first: need sales_value money before rate-implied qty ---
+    if sales_val_idx is not None:
+        raw_sv_cell = _physical_cell_at(item, sales_val_idx)
+        printed_sv = parse_number(raw_sv_cell, allow_internal_spaces=True)
+        sv_now = _printed_float(item, "sales_value")
+        sv_blank = sv_now is None or abs(sv_now) <= 0.001
+        if printed_sv is not None and _looks_money(
+            printed_sv, raw_text=str(raw_sv_cell) if raw_sv_cell is not None else None
+        ):
+            if sv_blank or (
+                sv_now is not None
+                and _looks_small_qty(sv_now)
+                and not _looks_money(sv_now, raw_text=str(sv_now))
+            ):
+                item["sales_value"] = float(printed_sv)
+                fs["sales_value"] = "printed"
+                changed = True
+                logger.info(
+                    "VISION_TABLE ISSUE_VALUE_FROM_HEADER product=%s "
+                    "sales_value=%s",
+                    str(item.get("product_name") or "")[:60],
+                    float(printed_sv),
+                )
+        elif (
+            printed_sv is not None
+            and closing is not None
+            and _looks_small_qty(printed_sv)
+            and abs(float(printed_sv) - closing) <= 0.51
+            and not sv_blank
+            and sv_now is not None
+            and abs(sv_now - closing) <= 0.51
+        ):
+            # ISSUE VALUE cell is the closing qty duplicate — drop it.
+            item["sales_value"] = None
+            fs["sales_value"] = "missing"
+            changed = True
+            logger.info(
+                "VISION_TABLE ISSUE_VALUE_CLOSING_DUP_CLEARED product=%s "
+                "cleared=%s",
+                str(item.get("product_name") or "")[:60],
+                sv_now,
+            )
+
+    def _opening_value_amount() -> Optional[float]:
+        ov_amt = _printed_float(item, "opening_value")
+        if ov_amt is not None:
+            return ov_amt
+        try:
+            raw_ov = extra.get("opening_value")
+            if raw_ov is None:
+                raw_ov = item.get("opening_value")
+            return float(raw_ov) if raw_ov not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
+    def _money_field(field: str) -> Optional[float]:
+        amt = _printed_float(item, field)
+        if amt is not None:
+            return amt
+        try:
+            raw = item.get(field)
+            if raw is None:
+                raw = extra.get(field)
+            if raw is None and field == "purchase_value":
+                raw = extra.get("purchase_value")
+            return float(raw) if raw not in (None, "") else None
+        except (TypeError, ValueError):
+            return None
+
+    def _rate_implied_sales(
+        *,
+        require_sales_value: bool,
+    ) -> Optional[float]:
+        """Whole sales qty from printed money rates; None when evidence is weak."""
+        if not _sales_qty_from_value_rate_enabled():
+            return None
+        if closing is None or opening <= 0.001:
+            return None
+        ov = _opening_value_amount()
+        sv = _money_field("sales_value")
+        cv = _money_field("closing_value")
+        if ov is None or abs(ov) < 0.01:
+            return None
+        rate = float(ov) / float(opening)
+        if rate <= 0.001:
+            return None
+        if (
+            cv is not None
+            and abs(closing) > 0.001
+            and abs(cv) >= 0.01
+        ):
+            close_rate = float(cv) / float(closing)
+            if abs(close_rate - rate) / rate > 0.05:
+                return None
+        implied: Optional[float] = None
+        if sv is not None and abs(sv) >= 0.01:
+            implied = float(sv) / rate
+        elif not require_sales_value and cv is not None and abs(cv) >= 0.01:
+            # ISSUE value unread (0); sales money ≈ opening value − closing value
+            # when receipts value is also blank/0.
+            rv = _money_field("purchase_value")
+            if abs(float(rv or 0)) > 0.01:
+                return None
+            implied = (float(ov) - float(cv)) / rate
+        if implied is None:
+            return None
+        whole = float(round(implied))
+        if whole < 0.0 or abs(implied - whole) > 0.51:
+            return None
+        if abs((opening + receipt - whole) - float(closing)) > 0.51:
+            return None
+        return whole
+
+    # --- qty: CLOSING duplicated into ISSUE, or ISSUE qty dropped to 0 ---
+    if closing is not None:
+        sales_n = 0.0 if sales is None else float(sales)
+        identity_bad = abs((opening + receipt - sales_n) - closing) > 0.51
+        sales_eq_close = (
+            sales is not None
+            and abs(sales_n - closing) <= 0.51
+            and abs(sales_n) > 0.001
+        )
+        sales_blank = sales is None or abs(sales_n) <= 0.001
+        if identity_bad and (sales_eq_close or sales_blank):
+            restored_qty: Optional[float] = None
+            # 1) Prefer a different whole digit under the ISSUE qty header.
+            if sales_idx is not None:
+                printed_issue = parse_number(
+                    _physical_cell_at(item, sales_idx), allow_internal_spaces=True
+                )
+                if (
+                    printed_issue is not None
+                    and _looks_small_qty(printed_issue)
+                    and abs(float(printed_issue) - sales_n) > 0.51
+                    and abs((opening + receipt - float(printed_issue)) - closing)
+                    <= 0.51
+                ):
+                    restored_qty = float(printed_issue)
+            # 2) sales_value ÷ opening rate (ISSUE qty cell copied CLOSING).
+            if restored_qty is None:
+                restored_qty = _rate_implied_sales(require_sales_value=True)
+                if restored_qty is not None and abs(restored_qty - sales_n) <= 0.51:
+                    restored_qty = None
+                elif restored_qty is not None:
+                    logger.info(
+                        "VISION_TABLE ISSUE_QTY_FROM_VALUE_RATE product=%s "
+                        "sales_qty=%s",
+                        str(item.get("product_name") or "")[:60],
+                        restored_qty,
+                    )
+            # 3) ISSUE qty+value both unread (0); recover from ov−cv over rate.
+            if restored_qty is None and sales_blank:
+                restored_qty = _rate_implied_sales(require_sales_value=False)
+                if restored_qty is not None and abs(restored_qty) > 0.001:
+                    logger.info(
+                        "VISION_TABLE ISSUE_QTY_FROM_VALUE_GAP product=%s "
+                        "sales_qty=%s",
+                        str(item.get("product_name") or "")[:60],
+                        restored_qty,
+                    )
+                else:
+                    restored_qty = None
+            if restored_qty is not None:
+                item["sales_qty"] = float(restored_qty)
+                fs["sales_qty"] = "printed"
+                sales = float(restored_qty)
+                changed = True
+                logger.info(
+                    "VISION_TABLE ISSUE_QTY_FROM_HEADER product=%s "
+                    "sales_qty=%s closing_qty=%s",
+                    str(item.get("product_name") or "")[:60],
+                    sales,
+                    closing,
+                )
+
+    # --- sales_value blank while sales_qty + open/close money are printed ---
+    # ISSUE VALUE often unread (0) even after qty is correct. Recover the
+    # printed money gap opening_value + receipts_value − closing_value when
+    # unit rates match and the gap equals rate × sales_qty.
+    if _sales_value_from_money_gap_enabled() and closing is not None:
+        sales_n = 0.0 if sales is None else float(sales)
+        # Re-read after possible qty restore above.
+        if item.get("sales_qty") not in (None, ""):
+            try:
+                sales_n = float(item.get("sales_qty"))
+            except (TypeError, ValueError):
+                pass
+        sv_now = _money_field("sales_value")
+        sv_blank = sv_now is None or abs(float(sv_now)) <= 0.001
+        if sales_n > 0.001 and sv_blank and opening > 0.001 and abs(closing) > 0.001:
+            ov = _opening_value_amount()
+            cv = _money_field("closing_value")
+            rv = _money_field("purchase_value")
+            if rv is None:
+                rv = _money_field("receipts_value")
+            if rv is None:
+                try:
+                    rv = float(item.get("receipts_value") or 0)
+                except (TypeError, ValueError):
+                    rv = 0.0
+            if ov is not None and cv is not None and abs(ov) >= 0.01 and abs(cv) >= 0.01:
+                rate = float(ov) / float(opening)
+                close_rate = float(cv) / float(closing)
+                if rate > 0.001 and abs(close_rate - rate) / rate <= 0.05:
+                    implied_sv = float(ov) + float(rv or 0) - float(cv)
+                    expected_sv = rate * sales_n
+                    tol = max(1.0, 0.02 * max(abs(implied_sv), abs(expected_sv), 1.0))
+                    if implied_sv > 0.01 and abs(implied_sv - expected_sv) <= tol:
+                        item["sales_value"] = round(float(implied_sv), 2)
+                        fs["sales_value"] = "printed"
+                        changed = True
+                        logger.info(
+                            "VISION_TABLE ISSUE_VALUE_FROM_MONEY_GAP product=%s "
+                            "sales_value=%s sales_qty=%s",
+                            str(item.get("product_name") or "")[:60],
+                            item["sales_value"],
+                            sales_n,
+                        )
+
+    if not changed:
+        return False
+    flags = list(extra.get("flags") or [])
+    if "ISSUE_FROM_HEADER" not in flags:
+        flags.append("ISSUE_FROM_HEADER")
+    extra["flags"] = flags
+    return True
+
+
+def _sales_qty_from_value_rate_enabled() -> bool:
+    """When ISSUE qty cell is a CLOSING copy, recover qty from sales_value÷rate.
+
+    Default ON. Uses printed opening_value/sales_value only; never invents money.
+    Kill switch: STOCK_VISION_SALES_QTY_FROM_VALUE_RATE=false.
+    """
+    return os.getenv(
+        "STOCK_VISION_SALES_QTY_FROM_VALUE_RATE", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _sales_value_from_money_gap_enabled() -> bool:
+    """Restore blank ISSUE value from opening+receipts−closing money.
+
+    Default ON. Only when sales_qty>0, sales_value blank, and open/close
+    unit rates agree. Kill switch: STOCK_VISION_SALES_VALUE_FROM_MONEY_GAP=false.
+    """
+    return os.getenv(
+        "STOCK_VISION_SALES_VALUE_FROM_MONEY_GAP", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _apply_issue_from_header_pass(
+    line_items: Optional[Sequence[Dict[str, Any]]],
+    columns: Sequence[Dict[str, Any]],
+) -> int:
+    fixed = 0
+    for item in line_items or []:
+        if isinstance(item, dict) and _restore_issue_fields_from_header(item, columns):
+            fixed += 1
+    if fixed:
+        logger.info("VISION_TABLE ISSUE_FROM_HEADER_PASS fixed=%s", fixed)
+    return fixed
+
+
 def _purchase_sale_stock_left_shift_enabled() -> bool:
     """Right-shift Closing|Purchase|Sale|Stock when Closing qty slid into Out.
 
@@ -6534,7 +6910,7 @@ def _qty_copied_into_value_enabled() -> bool:
 
 
 def _repair_qty_copied_into_value_fields(item: Dict[str, Any]) -> bool:
-    """When a value equals its qty and looks like a small whole qty, clear value."""
+    """When a value equals its qty (or closing qty) and looks like a small whole qty, clear value."""
     if not _qty_copied_into_value_enabled():
         return False
     extra = item.setdefault("extra", {})
@@ -6547,6 +6923,8 @@ def _repair_qty_copied_into_value_fields(item: Dict[str, Any]) -> bool:
         ("receipts_qty", "receipts_value", "receipts_value"),
         ("sales_qty", "sales_value", "sales_value"),
         ("closing_qty", "closing_value", "closing_value"),
+        # ISSUE VALUE often receives a copy of CLOSING STOCK on ORIC|VALUE grids.
+        ("closing_qty", "sales_value", "sales_value"),
     )
     changed = False
     for qty_key, val_item_key, fs_key in pairs:
@@ -10628,6 +11006,8 @@ def _map_single_table(
             # would refill 0 if this ran earlier.
             _repair_rate_truncated_zero_row(item)
             _restore_closing_qty_from_header(item, columns)
+            # ISSUE qty/value: undo CLOSING→ISSUE copies using printed header cells.
+            _restore_issue_fields_from_header(item, columns)
             line_items.append(item)
 
     line_items, peeled_totals = _peel_vision_total_named_items(line_items)
@@ -10814,6 +11194,7 @@ def map_vision_table(
     _apply_unread_zero_opening_pass(all_items)
     _apply_unread_zero_closing_pass(all_items)
     _apply_closing_qty_from_header_pass(all_items, column_map or [])
+    _apply_issue_from_header_pass(all_items, column_map or [])
 
     return {
         "line_items": all_items,
@@ -12919,6 +13300,7 @@ def run_vision_table_path(
         _apply_unread_zero_opening_pass(all_items)
         _apply_unread_zero_closing_pass(all_items)
         _apply_closing_qty_from_header_pass(all_items, column_map or [])
+        _apply_issue_from_header_pass(all_items, column_map or [])
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
         all_totals.extend(peeled_totals)
@@ -13283,6 +13665,9 @@ def run_vision_table_path(
         _apply_unread_zero_opening_pass(result.get("line_items") or [])
         _apply_unread_zero_closing_pass(result.get("line_items") or [])
         _apply_closing_qty_from_header_pass(
+            result.get("line_items") or [], _post_cols
+        )
+        _apply_issue_from_header_pass(
             result.get("line_items") or [], _post_cols
         )
         # OpValue Group Wise: after reread/SSA-adjacent merges, drop sales_value

@@ -42,6 +42,13 @@ class TestMedivisionOpWsalePhoto(unittest.TestCase):
                 "STOCK & SALES ANALYSIS\nITEM DESCRIPTION\nOp Purc Sale WSale"
             )
         )
+        # OCR often glues SaleWSaleAug on phone photos.
+        self.assertTrue(
+            _is_medivision_op_wsale_header(
+                "Stock and Sales\nProduct name Unit Op Purc SaleWSaleAug Sa Jul Sa "
+                "Sa val Cl qty Cl val"
+            )
+        )
 
     def test_june_qty_is_not_kept_as_sales_when_stock_did_not_move(self):
         result = empty_result("parakh.jpg", "jpg")
