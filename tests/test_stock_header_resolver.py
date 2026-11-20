@@ -395,8 +395,13 @@ class ResolveColumnsUnitTests(unittest.TestCase):
             )
             self.assertEqual(parse_number("1,904.62 01-Dec-28"), 1904.62)
             self.assertEqual(parse_number("2805.13 01-Aug-27"), 2805.13)
+            # STOCK REPORT Cl.Value glued to MM/YYYY expiry.
+            self.assertEqual(parse_number("1957.54 11/2028"), 1957.54)
+            self.assertEqual(parse_number("297.62 01/2028"), 297.62)
+            self.assertEqual(parse_number("28215.43 05/2029"), 28215.43)
             # Bare date still unreadable as money.
             self.assertIsNone(parse_number("01-Nov-28"))
+            self.assertIsNone(parse_number("11/2028"))
             # Digit-group spaces still require the allow flag.
             self.assertIsNone(parse_number("1 234"))
             self.assertEqual(

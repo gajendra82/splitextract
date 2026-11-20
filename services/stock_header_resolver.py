@@ -2703,7 +2703,36 @@ def _assign_cells_by_column_bands(
         raw = str(token.get("text") or "")
         hits = [b for b in bands if b["x0"] <= tx <= b["x1"]]
         if len(hits) == 1:
-            bucket[int(hits[0]["col_index"])].append(raw)
+            hit = hits[0]
+            # Expiry absorber often owns the midpoint between Cl.Value and
+            # Expiry; glued "1957.54 11/2028" must stay closing_value money.
+            if (
+                str(hit.get("canonical") or "") == "ignore"
+                and _peel_trailing_expiry_enabled()
+                and _TRAILING_EXPIRY_AFTER_AMOUNT.match(str(raw or "").strip())
+            ):
+                left_val = None
+                for b in sorted(bands, key=lambda bb: float(bb["x_center"])):
+                    if float(b["x_center"]) <= tx and str(
+                        b.get("canonical") or ""
+                    ) in {
+                        "closing_value",
+                        "sales_value",
+                        "opening_value",
+                        "purchase_value",
+                        "receipts_value",
+                    }:
+                        left_val = b
+                if left_val is not None:
+                    bucket[int(left_val["col_index"])].append(raw)
+                    assigned += 1
+                    logger.info(
+                        "STOCK_HEADER_DATE_IGNORE_REHOME_VALUE token=%r -> %s",
+                        str(raw)[:40],
+                        left_val.get("canonical"),
+                    )
+                    continue
+            bucket[int(hit["col_index"])].append(raw)
             assigned += 1
             continue
         if len(hits) > 1:
@@ -3920,7 +3949,11 @@ def _eu_decimal_comma_enabled() -> bool:
 
 _TRAILING_EXPIRY_AFTER_AMOUNT = re.compile(
     r"^(?P<num>-?\d{1,3}(?:,\d{2,3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s+"
-    r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?\s*$"
+    r"(?:"
+    r"\d{1,2}[-/](?:[A-Za-z]{3}|\d{1,2})(?:[-/]\d{2,4})?"  # 01-Nov-28 / 01/12/28
+    r"|"
+    r"\d{1,2}/\d{4}"  # MM/YYYY e.g. 11/2028 on STOCK REPORT Cl.Value
+    r")\s*$"
 )
 
 # Single comma + 1–2 fraction digits, no other separators → decimal comma.

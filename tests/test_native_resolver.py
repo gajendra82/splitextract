@@ -575,6 +575,81 @@ class NativeResolverOnModeTests(unittest.TestCase):
             RowStatus.MISSING_VALUE.value,
         )
 
+    def test_pdf_words_split_particular_and_lot_continuation(self):
+        """Split Particular words + nameless lot lines merge into prior SKU."""
+        import os
+        from unittest.mock import patch
+
+        from services.stock_native_resolver import build_line_items_from_tokens
+
+        columns = [
+            {"canonical": "product_name", "x_center": 10.0, "col_index": 0},
+            {"canonical": "opening_qty", "x_center": 40.0, "col_index": 1},
+            {"canonical": "purchase_qty", "x_center": 55.0, "col_index": 2},
+            {"canonical": "sales_qty", "x_center": 70.0, "col_index": 3},
+            {"canonical": "sales_value", "x_center": 85.0, "col_index": 4},
+            {"canonical": "closing_qty", "x_center": 100.0, "col_index": 5},
+            {"canonical": "closing_value", "x_center": 115.0, "col_index": 6},
+        ]
+
+        def _tok(text, x):
+            return {"text": text, "x": float(x), "x_center": float(x)}
+
+        rows = [
+            # Split particular name before first number (collapsed col_index).
+            [
+                _tok("OPHTHACARE", 8),
+                _tok("EYE", 12),
+                _tok("DROP", 16),
+                _tok("37.00", 40),
+                _tok("37.00", 100),
+                _tok("2362.64", 115),
+            ],
+            # Named product then nameless lot continuation (blank Pur/Sl).
+            [
+                _tok("CONFIDO TAB", 10),
+                _tok("2.00", 40),
+                _tok("2.00", 100),
+                _tok("297.62", 115),
+            ],
+            [
+                _tok("100.00", 40),
+                _tok("100.00", 100),
+                _tok("16361.85", 115),
+            ],
+            [
+                _tok("79.00", 40),
+                _tok("21.00", 70),
+                _tok("3102.06", 85),
+                _tok("58.00", 100),
+                _tok("8567.59", 115),
+            ],
+        ]
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_PDF_WORDS_SPLIT_PARTICULAR": "true",
+                "STOCK_PDF_WORDS_LOT_CONTINUATION": "true",
+            },
+            clear=False,
+        ):
+            items = build_line_items_from_tokens(columns, rows)
+        names = [i.get("product_name") for i in items]
+        self.assertIn("OPHTHACARE EYE DROP", names)
+        ophth = next(i for i in items if i.get("product_name") == "OPHTHACARE EYE DROP")
+        self.assertEqual(ophth.get("opening_qty"), 37.0)
+        self.assertEqual(ophth.get("closing_qty"), 37.0)
+        self.assertEqual(ophth.get("closing_value"), 2362.64)
+        conf = next(i for i in items if i.get("product_name") == "CONFIDO TAB")
+        self.assertEqual(conf.get("opening_qty"), 181.0)
+        self.assertEqual(conf.get("sales_qty"), 21.0)
+        self.assertEqual(conf.get("closing_qty"), 160.0)
+        self.assertEqual(conf.get("closing_value"), 25227.06)
+        self.assertIn(
+            "LOT_CONTINUATION_MERGED",
+            (conf.get("extra") or {}).get("flags") or [],
+        )
+
     def test_docx_gridspan_no_column_shift(self):
         class _GridSpan:
             def __init__(self, val):

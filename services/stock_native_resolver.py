@@ -471,6 +471,7 @@ def build_line_items_from_tokens(
                 if isinstance(t, dict)
                 and not re.search(r"\btotal\b", str(t.get("text") or ""), re.I)
             ]
+        assign_tokens = _join_leading_particular_tokens(assign_tokens)
         assigned = assign_cells(assign_tokens, columns)
         fields = assigned.get("fields") or {}
         formula_toks = [t for t in tokens if isinstance(t, dict) and t.get("formula")]
@@ -531,6 +532,20 @@ def build_line_items_from_tokens(
                 (total_label or token_blob)[:40],
             )
             continue
+        # Particular words sometimes arrive as separate tokens with collapsed
+        # x_centers (OPHTHACARE|EYE|DROP) so product_name stays empty — rebuild.
+        if (
+            (not name or not re.search(r"[A-Za-z]", str(name)))
+            and _recover_split_particular_name(tokens, item)
+        ):
+            name = item.get("product_name")
+        # Nameless lot / batch lines under a product: sum into the previous SKU.
+        if (
+            (not name or not re.search(r"[A-Za-z]", str(name)))
+            and items
+            and _merge_nameless_lot_into_prev(items[-1], item, tokens)
+        ):
+            continue
         if not name or not re.search(r"[A-Za-z]", str(name)):
             continue
         if re.match(r"^(TOTAL|GRAND|SUB\s*TOTAL)\b", str(name), re.I):
@@ -578,6 +593,243 @@ def build_line_items_from_tokens(
         _peel_trailing_pack_into_packing(item, columns)
         items.append(item)
     return items
+
+
+def _pdf_words_lot_continuation_enabled() -> bool:
+    """STOCK_PDF_WORDS_LOT_CONTINUATION — sum nameless batch lines into prior SKU.
+
+    STOCK REPORT sheets print one Particular then several Op/Sl/Cl lot lines
+    with no product name. Default ON. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_LOT_CONTINUATION", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pdf_words_split_particular_enabled() -> bool:
+    """STOCK_PDF_WORDS_SPLIT_PARTICULAR — rebuild Particular from split tokens.
+
+    Default ON. Kill switch: false.
+    """
+    return os.getenv(
+        "STOCK_PDF_WORDS_SPLIT_PARTICULAR", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_LOT_SKIP_ALPHA = re.compile(
+    r"(?i)^(?:total|company|grand|sub|page|value|qnt|ob|pur|sale|closing|"
+    r"prod\.?|i|gm|ml|mg|tab|cap|syp)$"
+)
+
+
+def _join_leading_particular_tokens(
+    tokens: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Merge leading Particular word fragments and reindex so qty bands align.
+
+    Plumber often emits OPHTHACARE|EYE|DROP as three tokens with col_index 0..2,
+    which shifts Op.Qnt into sales_qty. Join them before assign_cells.
+    """
+    if not _pdf_words_split_particular_enabled() or not tokens:
+        return tokens
+    leading_idx: List[int] = []
+    for i, tok in enumerate(tokens):
+        if not isinstance(tok, dict):
+            continue
+        text = str(tok.get("text") or "").strip()
+        if not text:
+            continue
+        if re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(",", "")):
+            break
+        if re.fullmatch(r"\d{1,2}/\d{2,4}", text):
+            break
+        if re.fullmatch(r"-+", text):
+            break
+        if re.search(r"[A-Za-z]", text):
+            leading_idx.append(i)
+            continue
+        break
+    if len(leading_idx) < 2:
+        return tokens
+    parts = [str(tokens[i].get("text") or "").strip() for i in leading_idx]
+    if not any(len(p) >= 3 and not _LOT_SKIP_ALPHA.fullmatch(p) for p in parts):
+        return tokens
+    name = re.sub(r"\s+", " ", " ".join(parts)).strip()
+    if not name or _is_total_row_name(name) or _is_sheet_total_name(name):
+        return tokens
+    first = leading_idx[0]
+    skip = set(leading_idx[1:])
+    joined = dict(tokens[first])
+    joined["text"] = name
+    out: List[Dict[str, Any]] = []
+    for i, tok in enumerate(tokens):
+        if i == first:
+            out.append(joined)
+        elif i in skip:
+            continue
+        elif isinstance(tok, dict):
+            out.append(dict(tok))
+    for i, tok in enumerate(out):
+        tok["col_index"] = i
+    logger.info("STOCK_PDF_WORDS_SPLIT_PARTICULAR joined=%s", name[:48])
+    return out
+
+
+def _recover_split_particular_name(
+    tokens: List[Dict[str, Any]], item: Dict[str, Any]
+) -> bool:
+    """Fallback: set product_name from leading alpha tokens after assign."""
+    if not _pdf_words_split_particular_enabled():
+        return False
+    existing = str(item.get("product_name") or "").strip()
+    if existing and re.search(r"[A-Za-z]", existing):
+        return False
+    leading: List[str] = []
+    for tok in tokens or []:
+        if not isinstance(tok, dict):
+            continue
+        text = str(tok.get("text") or "").strip()
+        if not text:
+            continue
+        if re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(",", "")):
+            break
+        if re.fullmatch(r"\d{1,2}/\d{2,4}", text):
+            break
+        if re.fullmatch(r"-+", text):
+            break
+        if re.search(r"[A-Za-z]", text):
+            leading.append(text)
+            continue
+        break
+    if not leading:
+        return False
+    if not any(len(w) >= 3 and not _LOT_SKIP_ALPHA.fullmatch(w) for w in leading):
+        return False
+    name = re.sub(r"\s+", " ", " ".join(leading)).strip()
+    if not name or _is_total_row_name(name) or _is_sheet_total_name(name):
+        return False
+    item["product_name"] = name
+    logger.info("STOCK_PDF_WORDS_SPLIT_PARTICULAR name=%s", name[:48])
+    return True
+
+
+def _item_has_stock_figures(item: Dict[str, Any]) -> bool:
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+        "opening_value",
+    ):
+        if item.get(key) not in (None, ""):
+            return True
+        if extra.get(key) not in (None, ""):
+            return True
+    return False
+
+
+def _sum_stock_fields(prev: Dict[str, Any], lot: Dict[str, Any], key: str) -> None:
+    """Add lot[key] into prev[key] when either side has a printed number."""
+    extra_prev = prev.setdefault("extra", {})
+    if not isinstance(extra_prev, dict):
+        extra_prev = {}
+        prev["extra"] = extra_prev
+    extra_lot = lot.get("extra") if isinstance(lot.get("extra"), dict) else {}
+
+    def _read(src: Dict[str, Any], ex: Dict[str, Any]) -> Optional[float]:
+        val = src.get(key)
+        if val in (None, ""):
+            val = ex.get(key)
+        if val in (None, ""):
+            return None
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
+    a = _read(prev, extra_prev)
+    b = _read(lot, extra_lot)
+    if a is None and b is None:
+        return
+    total = float(a or 0.0) + float(b or 0.0)
+    if key in prev or key in {
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+    }:
+        prev[key] = total
+    if key in extra_prev or key in {
+        "opening_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+    }:
+        extra_prev[key] = total
+    fs = extra_prev.get("field_source")
+    if isinstance(fs, dict):
+        fs.pop(key, None)
+
+
+def _merge_nameless_lot_into_prev(
+    prev: Dict[str, Any],
+    lot: Dict[str, Any],
+    tokens: List[Dict[str, Any]],
+) -> bool:
+    """Sum a nameless Op/Sl/Cl lot line into the previous product row."""
+    if not _pdf_words_lot_continuation_enabled():
+        return False
+    if not _item_has_stock_figures(lot):
+        return False
+    prev_name = str(prev.get("product_name") or "").strip()
+    if not prev_name or not re.search(r"[A-Za-z]", prev_name):
+        return False
+    if _is_total_row_name(prev_name) or _is_sheet_total_name(prev_name):
+        return False
+    # Reject rows that still carry alphabetic product fragments.
+    for tok in tokens or []:
+        if not isinstance(tok, dict):
+            continue
+        text = str(tok.get("text") or "").strip()
+        if not text or _LOT_SKIP_ALPHA.fullmatch(text):
+            continue
+        if re.search(r"[A-Za-z]{3,}", text) and not re.fullmatch(
+            r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(",", "")
+        ):
+            # Looks like a product / banner fragment, not a pure lot line.
+            if not re.fullmatch(r"\d{6,}", text):  # batch codes ok
+                if not re.fullmatch(r"[A-Za-z]?\d{5,}", text):
+                    return False
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "sales_value",
+        "closing_value",
+        "opening_value",
+        "receipts_value",
+    ):
+        _sum_stock_fields(prev, lot, key)
+    # Keep first packing/batch; do not overwrite with lot "I".
+    flags = list((prev.get("extra") or {}).get("flags") or [])
+    if "LOT_CONTINUATION_MERGED" not in flags:
+        flags.append("LOT_CONTINUATION_MERGED")
+    prev.setdefault("extra", {})["flags"] = flags
+    logger.info(
+        "STOCK_PDF_WORDS_LOT_CONTINUATION prev=%s op=%s is=%s cq=%s cv=%s",
+        prev_name[:40],
+        prev.get("opening_qty"),
+        prev.get("sales_qty"),
+        prev.get("closing_qty"),
+        prev.get("closing_value"),
+    )
+    return True
 
 
 def build_items_from_pdf_page_results(
