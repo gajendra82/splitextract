@@ -2525,7 +2525,34 @@ def _structure_sales_text(text: str, filename: str, source_format: str) -> Dict[
 # Image (Gemini Vision)
 # ---------------------------------------------------------------------------
 
-_SALES_STATEMENT_VISION_PROMPT = """
+# Item Movement (StkValue + SaleAmt) column rules — Intimate Pharmaceuticals etc.
+# Keep additive: only applies when those headers exist; other formats unchanged.
+_ITEM_MOVEMENT_SALEAMT_RULES = """
+CRITICAL — Item Movement / INTIMATE PHARMACEUTICALS (code 721917) and similar:
+Column order left→right after Item Name:
+  Opening | PQty | PFree | PReturn | SQty | SFree | SReturn | Closing | StkValue | SaleAmt | Sales1 | Sales2 | Sales3 | Avg | Rol
+
+Money:
+- SaleAmt -> sales_value ONLY. NEVER use StkValue/Sales1/Sales2/Sales3 as sales_value.
+- StkValue -> closing_value AND extra.stock_value (closing stock valuation).
+- SaleAmt is immediately AFTER StkValue and BEFORE Sales 1.
+
+Qty (read by header position, not number order):
+- Opening -> opening_qty; PQty -> receipts_qty; PFree -> extra.purchase_free_qty;
+  PReturn -> extra.purchase_return_qty; SQty -> sales_qty;
+  SFree -> extra.sales_free_qty; SReturn -> extra.sales_return_qty; Closing -> closing_qty.
+- SQty is NOT Closing. SReturn is NOT SQty and NOT PQty.
+- Blank cells are 0. Do not shift left-hand qty into neighboring columns.
+- Identity check: Opening + PQty + PFree - PReturn - SQty - SFree + SReturn = Closing.
+
+Totals:
+- totals.sales_value = SaleAmt footer total.
+- totals.closing_value = StkValue footer total.
+- totals.extra.stock_value = StkValue footer total.
+""".strip()
+
+_SALES_STATEMENT_VISION_PROMPT = (
+    """
 You extract pharmaceutical STOCK AND SALES / STOCK REPORT statements (NOT tax invoices).
 
 Return ONLY valid JSON (no markdown) with this exact shape:
@@ -2547,13 +2574,13 @@ Return ONLY valid JSON (no markdown) with this exact shape:
       "sales_value": number,
       "closing_qty": number,
       "closing_value": number,
-      "extra": {}
+      "extra": {"stock_value": number}
     }
   ],
   "totals": {
     "sales_value": number|null,
     "closing_value": number|null,
-    "extra": {}
+    "extra": {"stock_value": number}
   }
 }
 
@@ -2562,17 +2589,26 @@ Rules:
 - stockist_name = the agency/seller header (e.g. NEW VIKASH MEDICAL AGENCY), NOT the manufacturer.
 - company_name = manufacturer/division line (e.g. VERITAZ HEALTHCARE LTD).
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026). Never invent years like 2001 or 2030.
-- Map Pur.Qnt / Purchase / Receipts -> receipts_qty
-- Map Sl.Qnt / Sales qty / Issue -> sales_qty; Sl.Value -> sales_value
-- Map Cl.Qnt / Closing -> closing_qty; Cl.Value -> closing_value
-- Map Op.Qnt / Opening / OpBal -> opening_qty
+- Map Pur.Qnt / Purchase / Receipts / PQty / Purc -> receipts_qty
+- Map Sl.Qnt / Sales qty / Issue / SQty / Sale -> sales_qty (use printed Sale; do not output 0 when Sale is non-zero)
+- Map Sl.Value / SaleAmt / Sales Amount / Sa val / Sa.Val -> sales_value (NOT StkValue / Op val)
+- Map Cl.Qnt / Closing / Cl qty -> closing_qty; Cl.Value / Cl val -> closing_value
+- Map Op.Qnt / Opening / OpBal / Op -> opening_qty; Op val -> extra.opening_value
+- For Op | Op val | Purc | Purc val | Sale | Sa val | Cl qty | Cl val:
+  Sale->sales_qty, Sa val->sales_value, Cl qty->closing_qty, Cl val->closing_value.
 - For OpBal|Receipt|Total|Issue|Closing: sales_qty=Issue (NOT Total); Dump is not closing_value.
+"""
+    + "\n"
+    + _ITEM_MOVEMENT_SALEAMT_RULES
+    + """
 - Use 0 for missing numeric fields.
 - Include every printed product row.
-""".strip()
+"""
+).strip()
 
 
-_SALES_STATEMENT_TEXT_PROMPT = """
+_SALES_STATEMENT_TEXT_PROMPT = (
+    """
 You extract pharmaceutical STOCK AND SALES / STOCK REPORT statements from OCR text (NOT tax invoices).
 
 Return ONLY valid JSON (no markdown) with this exact shape:
@@ -2594,13 +2630,13 @@ Return ONLY valid JSON (no markdown) with this exact shape:
       "sales_value": number,
       "closing_qty": number,
       "closing_value": number,
-      "extra": {}
+      "extra": {"stock_value": number}
     }
   ],
   "totals": {
     "sales_value": number|null,
     "closing_value": number|null,
-    "extra": {}
+    "extra": {"stock_value": number}
   }
 }
 
@@ -2608,9 +2644,12 @@ Rules:
 - Ignore handwritten notes.
 - stockist_name = agency/seller header; company_name = manufacturer/division.
 - Dates like 01/06/26 mean DD/MM/YY (year 26 -> 2026).
-- Map Op.Qnt/Opening/OpBal -> opening_qty; Pur.Qnt/Purchase/Receipt -> receipts_qty;
-  Sl.Qnt/Sales/Issue -> sales_qty; Sl.Value/Amount -> sales_value;
-  Cl.Qnt/Closing Balance -> closing_qty; Cl.Value -> closing_value.
+- Map Op.Qnt/Opening/OpBal/Op -> opening_qty; Pur.Qnt/Purchase/Receipt/PQty/Purc -> receipts_qty;
+  Sl.Qnt/Sales/Issue/SQty/Sale -> sales_qty; Sl.Value/SaleAmt/Sales Amount/Sa val -> sales_value;
+  Cl.Qnt/Closing/Cl qty -> closing_qty; Cl.Value/Cl val -> closing_value;
+  Op val -> extra.opening_value.
+- For Op|Op val|Purc|Purc val|Sale|Sa val|Cl qty|Cl val: Sale is sales_qty (not 0 when printed).
+- NEVER map StkValue / Stock Value / Op val to sales_value.
 - For OpBal | Receipt | Total | Issue | Closing columns:
   opening_qty=OpBal, receipts_qty=Receipt, sales_qty=Issue (NOT Total),
   closing_qty=Closing. Total/Dump/NearExpiry go in extra only; never map Total to sales_qty
@@ -2625,7 +2664,24 @@ Rules:
   totals.opening_qty=290022, totals.receipts_qty=230450,
   totals.sales_qty=292807 (ISSUE), totals.closing_qty=262432.
 - Reject OCR-merged numbers (e.g. 75374123024). Prefer null over garbage money.
+"""
+    + "\n"
+    + _ITEM_MOVEMENT_SALEAMT_RULES
+    + """
 - Use 0 for missing numeric fields. Include every product row with numbers.
+"""
+).strip()
+
+_ITEM_MOVEMENT_SALEAMT_RETRY_PROMPT = """
+CORRECTIVE PASS — previous extraction likely put StkValue into sales_value.
+
+Re-read the Item Movement table carefully by COLUMN HEADER position:
+- sales_value MUST come from the SaleAmt column only
+- extra.stock_value MUST come from the StkValue column
+- Do NOT copy StkValue, Sales 1, Sales 2, or Sales 3 into sales_value
+- totals.sales_value = SaleAmt footer total; totals.extra.stock_value = StkValue footer total
+
+Return the full JSON again with corrected sales_value / stock_value mapping.
 """.strip()
 
 
@@ -2678,6 +2734,528 @@ def _gemini_response_text(response) -> str:
         )
     except Exception:
         return ""
+
+
+def _pick_raw_money_field(raw: Dict[str, Any], *keys: str) -> Any:
+    """Read a money field from item root or nested extra under alternate names."""
+    extra = raw.get("extra") if isinstance(raw.get("extra"), dict) else {}
+    for key in keys:
+        if key in raw and raw[key] is not None and str(raw[key]).strip() != "":
+            return raw[key]
+        if key in extra and extra[key] is not None and str(extra[key]).strip() != "":
+            return extra[key]
+    return None
+
+
+def _normalize_item_movement_saleamt_fields(
+    raw: Dict[str, Any], item: Dict[str, Any]
+) -> None:
+    """Map SaleAmt -> sales_value and StkValue -> extra.stock_value when both exist.
+
+    Only remaps when alternate SaleAmt/StkValue keys are present so other
+    statement formats (Sl.Value-only) are unchanged.
+    """
+    extra = item.get("extra")
+    if not isinstance(extra, dict):
+        extra = {}
+        item["extra"] = extra
+
+    sale_amt = _pick_raw_money_field(
+        raw,
+        "sale_amt",
+        "saleamt",
+        "SaleAmt",
+        "sales_amount",
+        "sale_amount",
+    )
+    stk_value = _pick_raw_money_field(
+        raw,
+        "stock_value",
+        "stk_value",
+        "stkvalue",
+        "StkValue",
+        "stock_val",
+    )
+
+    # Preserve other Item Movement qty/history columns when model returns them.
+    for src, dest in (
+        ("purchase_free_qty", "purchase_free_qty"),
+        ("pfree", "purchase_free_qty"),
+        ("purchase_return_qty", "purchase_return_qty"),
+        ("preturn", "purchase_return_qty"),
+        ("sales_free_qty", "sales_free_qty"),
+        ("sfree", "sales_free_qty"),
+        ("sales_return_qty", "sales_return_qty"),
+        ("sreturn", "sales_return_qty"),
+        ("sales_1", "sales_1"),
+        ("sales_2", "sales_2"),
+        ("sales_3", "sales_3"),
+        ("avg", "avg"),
+        ("rol", "rol"),
+    ):
+        val = _pick_raw_money_field(raw, src)
+        if val is not None and dest not in extra:
+            extra[dest] = _to_float(val)
+
+    if sale_amt is None and stk_value is None:
+        return
+
+    sale_f = _to_float(sale_amt) if sale_amt is not None else None
+    stk_f = _to_float(stk_value) if stk_value is not None else None
+    cur = _to_float(item.get("sales_value"))
+
+    if stk_f is not None and stk_f > 0:
+        extra["stock_value"] = stk_f
+
+    if sale_f is not None:
+        # If sales_value currently equals StkValue, replace with SaleAmt.
+        if stk_f is not None and abs(cur - stk_f) < 0.051 and abs(cur - sale_f) > 0.051:
+            item["sales_value"] = sale_f
+        else:
+            item["sales_value"] = sale_f
+    elif (
+        stk_f is not None
+        and stk_f > 0
+        and abs(cur - stk_f) < 0.051
+        and _to_float(item.get("sales_qty")) <= 0
+    ):
+        # Zero-sales row still holding StkValue in sales_value — clear it.
+        item["sales_value"] = 0.0
+        extra["rejected_stkvalue_as_sales_value"] = cur
+
+
+def _looks_like_item_movement_report(result: Dict[str, Any]) -> bool:
+    """Detect Intimate / Item Movement (StkValue+SaleAmt) statements only.
+
+    Do NOT key off extra.stock_value alone — other formats (Op/Sale/Sa val) may
+    carry that key and must not run Intimate qty rewrites (which can zero sales_qty).
+    """
+    blob = " ".join(
+        str(result.get(k) or "")
+        for k in ("stockist_name", "stockist_address", "company_name", "report_title")
+    ).upper()
+    if re.search(r"ITEM\s*MOVEMENT", blob):
+        return True
+    if re.search(r"INTIMATE\s+PHARMACEUTICAL", blob):
+        return True
+    if "721917" in blob.replace(" ", ""):
+        return True
+    # Explicit StkValue/SaleAmt/Sales1 markers only (not generic stock_value)
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        keys = {str(k) for k in (set(extra) | set(item))}
+        if keys & {"sale_amt", "SaleAmt", "StkValue", "stkvalue", "sales_1", "sales_2", "sales_3"}:
+            return True
+    return False
+
+
+def _sales_value_looks_like_stkvalue(result: Dict[str, Any]) -> bool:
+    """Heuristic: StkValue copied into sales_value (zero SQty rows still have money)."""
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    suspects = 0
+    for item in items:
+        if _to_float(item.get("sales_qty")) > 0:
+            continue
+        if _to_float(item.get("sales_value")) <= 1:
+            continue
+        if _to_float(item.get("closing_qty")) > 0 or _to_float(item.get("opening_qty")) > 0:
+            suspects += 1
+    if suspects >= 2:
+        return True
+    # Also: many lines have stock_value == sales_value while SaleAmt should differ
+    same_as_stock = 0
+    compared = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if "stock_value" not in extra:
+            continue
+        compared += 1
+        if abs(_to_float(item.get("sales_value")) - _to_float(extra.get("stock_value"))) < 0.051:
+            if _to_float(item.get("sales_value")) > 0:
+                same_as_stock += 1
+    return compared >= 3 and same_as_stock >= max(2, compared // 2)
+
+
+def _needs_item_movement_saleamt_retry(result: Dict[str, Any]) -> bool:
+    """Retry only when SaleAmt was clearly replaced by StkValue."""
+    return _looks_like_item_movement_report(result) and _sales_value_looks_like_stkvalue(
+        result
+    )
+
+
+def _item_movement_retry_is_better(
+    original: Dict[str, Any], corrected: Dict[str, Any]
+) -> bool:
+    """Accept corrective pass only if SaleAmt mapping improved without collapsing qty."""
+    if _sales_value_looks_like_stkvalue(corrected):
+        return False
+    orig_items = [i for i in (original.get("line_items") or []) if isinstance(i, dict)]
+    new_items = [i for i in (corrected.get("line_items") or []) if isinstance(i, dict)]
+    if len(new_items) < max(1, int(len(orig_items) * 0.8)):
+        return False
+    orig_qty = sum(_to_float(i.get("sales_qty")) for i in orig_items)
+    new_qty = sum(_to_float(i.get("sales_qty")) for i in new_items)
+    # Don't accept a pass that wipes SQty while the first pass had movement.
+    if orig_qty >= 10 and new_qty < max(1.0, orig_qty * 0.25):
+        return False
+    return True
+
+
+def _item_movement_qty_balance(
+    opening: float,
+    receipts: float,
+    sales: float,
+    closing: float,
+    *,
+    purchase_free: float = 0.0,
+    purchase_return: float = 0.0,
+    sales_free: float = 0.0,
+    sales_return: float = 0.0,
+    tol: float = 0.51,
+) -> bool:
+    """Opening + PQty + PFree - PReturn - SQty - SFree + SReturn == Closing."""
+    left = (
+        opening
+        + receipts
+        + purchase_free
+        - purchase_return
+        - sales
+        - sales_free
+        + sales_return
+    )
+    return abs(left - closing) <= tol
+
+
+def _fix_item_movement_stkvalue_in_closing_value(result: Dict[str, Any]) -> None:
+    """Item Movement: StkValue is closing stock valuation.
+
+    Keep StkValue in closing_value (and mirror to extra.stock_value).
+    Only relocate money when SaleAmt was wrongly parked in closing_value.
+    Never null totals.closing_value — it should remain the StkValue total.
+    """
+    if not _looks_like_item_movement_report(result):
+        return
+
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    mirrored = 0
+    moved_sale = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        cv = _to_float(item.get("closing_value"))
+        sv = _to_float(item.get("sales_value"))
+        stk = _to_float(extra.get("stock_value"))
+
+        # Drop noise zero stock_value placeholders from the model
+        if "stock_value" in extra and stk <= 0:
+            extra.pop("stock_value", None)
+            stk = 0.0
+
+        # Undo StkValue wrongly parked in sales_value (PLATENZA): closing stock remains,
+        # identity fits Opening + SReturn = Closing with sales_qty holding SReturn.
+        if (
+            sv > 0
+            and cv <= 0
+            and stk <= 0
+            and _to_float(item.get("closing_qty")) > 0
+            and _to_float(item.get("sales_qty")) > 0
+            and _item_movement_qty_balance(
+                _to_float(item.get("opening_qty")),
+                _to_float(item.get("receipts_qty")),
+                0.0,
+                _to_float(item.get("closing_qty")),
+                sales_return=_to_float(item.get("sales_qty")),
+            )
+        ):
+            item["closing_value"] = sv
+            extra["stock_value"] = sv
+            item["sales_value"] = 0.0
+            mirrored += 1
+            continue
+
+        # SaleAmt-only mis-map (e.g. ARJUNA): SQty present, sales_value empty, and no
+        # closing stock qty — so the money cannot be StkValue. Do NOT apply when
+        # closing_qty > 0 (e.g. PLATENZA: SReturn misread as SQty but StkValue remains).
+        if (
+            cv > 0
+            and sv <= 0
+            and _to_float(item.get("sales_qty")) > 0
+            and _to_float(item.get("closing_qty")) <= 0
+        ):
+            item["sales_value"] = cv
+            item["closing_value"] = 0.0
+            extra.pop("stock_value", None)
+            moved_sale += 1
+            continue
+
+        # StkValue already in closing_value — keep it, mirror to extra.stock_value
+        if cv > 0 and stk <= 0:
+            extra["stock_value"] = cv
+            mirrored += 1
+            continue
+
+        # StkValue only in extra.stock_value — promote to closing_value
+        if cv <= 0 and stk > 0:
+            item["closing_value"] = stk
+            mirrored += 1
+            continue
+
+        # Both set and equal — already correct
+        if cv > 0 and stk > 0 and abs(cv - stk) < 0.051:
+            continue
+
+        # Both set but disagree: prefer closing_value as StkValue when sales_value is set
+        if cv > 0 and stk > 0 and sv > 0 and abs(cv - stk) >= 0.051:
+            extra["stock_value"] = cv
+            mirrored += 1
+
+    extras = result.setdefault("totals", {}).setdefault("extra", {})
+    if mirrored or moved_sale:
+        extras["corrected_item_movement_stkvalue_closing"] = True
+        if moved_sale:
+            extras["corrected_saleamt_from_closing_value"] = moved_sale
+
+    closing_sum = round(sum(_to_float(i.get("closing_value")) for i in items), 2)
+    stock_sum = round(
+        sum(
+            _to_float((i.get("extra") or {}).get("stock_value"))
+            for i in items
+            if isinstance(i.get("extra"), dict)
+        ),
+        2,
+    )
+    closing_total = result.get("totals", {}).get("closing_value")
+    existing_stk_total = _to_float(extras.get("stock_value"))
+
+    # Prefer printed StkValue total in totals.closing_value; never leave it null
+    # when we have line closing/stock values.
+    if closing_total is None or _to_float(closing_total) <= 0:
+        if closing_sum > 0:
+            result["totals"]["closing_value"] = closing_sum
+            closing_total = closing_sum
+        elif stock_sum > 0:
+            result["totals"]["closing_value"] = stock_sum
+            closing_total = stock_sum
+
+    if closing_total is not None and _to_float(closing_total) > 0:
+        if existing_stk_total <= 0:
+            extras["stock_value"] = round(float(closing_total), 2)
+    elif stock_sum > 0 and existing_stk_total <= 0:
+        extras["stock_value"] = stock_sum
+
+
+def _item_movement_extra_qty(extra: Dict[str, Any], key: str) -> float:
+    return _to_float(extra.get(key)) if isinstance(extra, dict) else 0.0
+
+
+def _fix_item_movement_qty_columns(result: Dict[str, Any]) -> None:
+    """Repair Intimate Item Movement qty shifts/swaps using stock identity + money polarity.
+
+    Scoped to Item Movement / Intimate only. Does not change other statement formats.
+    """
+    if not _looks_like_item_movement_report(result):
+        return
+
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    fixes = 0
+    for item in items:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        item["extra"] = extra
+        op = _to_float(item.get("opening_qty"))
+        rec = _to_float(item.get("receipts_qty"))
+        sales = _to_float(item.get("sales_qty"))
+        close = _to_float(item.get("closing_qty"))
+        sv = _to_float(item.get("sales_value"))
+        cv = _to_float(item.get("closing_value")) or _to_float(extra.get("stock_value"))
+        pfree = _item_movement_extra_qty(extra, "purchase_free_qty")
+        preturn = _item_movement_extra_qty(extra, "purchase_return_qty")
+        sfree = _item_movement_extra_qty(extra, "sales_free_qty")
+        sreturn = _item_movement_extra_qty(extra, "sales_return_qty")
+
+        def bal(
+            opening: float,
+            receipts: float,
+            sold: float,
+            closing: float,
+            sret: float = sreturn,
+            tol: float = 0.51,
+        ) -> bool:
+            return _item_movement_qty_balance(
+                opening,
+                receipts,
+                sold,
+                closing,
+                purchase_free=pfree,
+                purchase_return=preturn,
+                sales_free=sfree,
+                sales_return=sret,
+                tol=tol,
+            )
+
+        changed = False
+        exact_ok = bal(op, rec, sales, close)
+        nearly_ok = bal(op, rec, sales, close, tol=2.0)
+
+        # 1) Opening shifted into PQty (e.g. ARJUNA: Opening=2,PQty=1 read as 0/2)
+        if op <= 0 and rec > 0 and not exact_ok:
+            new_op = rec
+            new_rec = close - new_op + sales + sfree - pfree + preturn - sreturn
+            if new_rec >= 0 and bal(new_op, new_rec, sales, close):
+                item["opening_qty"] = new_op
+                item["receipts_qty"] = new_rec
+                op, rec = new_op, new_rec
+                exact_ok = True
+                nearly_ok = True
+                changed = True
+
+        # 2) SReturn misread as SQty when there was no sale amount
+        #    (e.g. PLATENZA: SReturn=2, SaleAmt blank, Closing=5)
+        if (
+            not exact_ok
+            and sales > 0
+            and sv <= 0
+            and bal(op, rec, 0.0, close, sret=sales + sreturn)
+        ):
+            extra["sales_return_qty"] = sales + sreturn
+            item["sales_qty"] = 0.0
+            sales, sreturn = 0.0, sales + sreturn
+            exact_ok = True
+            nearly_ok = True
+            changed = True
+
+        # 3) SQty shifted into PQty and Closing copied into SQty
+        #    (e.g. LUKOL: PQty blank/SQty=11/Closing=35 read as receipts=11,sales=35,close=35)
+        if (
+            not nearly_ok
+            and rec > 0
+            and abs(sales - close) < 0.51
+            and bal(op, 0.0, rec, close)
+        ):
+            item["receipts_qty"] = 0.0
+            item["sales_qty"] = rec
+            rec, sales = 0.0, rec
+            exact_ok = True
+            nearly_ok = True
+            changed = True
+
+        # 4) SReturn parked in SQty while real SQty is missing
+        #    (e.g. REOSTO: SQty=25, SReturn=2 read as sales_qty=2)
+        #    Only when current sales_qty looks like a small return digit — never rewrite
+        #    already-nearly-balanced rows (CYSTONE off-by-1, SEPTILLIN, etc.).
+        if (
+            not nearly_ok
+            and sales > 0
+            and sv > 0
+            and sreturn <= 0
+            and sales <= max(5.0, close * 0.2)
+        ):
+            inferred_sales = op + rec + pfree - preturn - sfree + sales - close
+            if (
+                inferred_sales >= sales * 3
+                and bal(op, rec, inferred_sales, close, sret=sales)
+            ):
+                extra["sales_return_qty"] = sales
+                item["sales_qty"] = inferred_sales
+                sreturn, sales = sales, inferred_sales
+                exact_ok = True
+                nearly_ok = True
+                changed = True
+
+        # 5) SQty ↔ Closing swap when identity holds either way but money polarity disagrees
+        #    (e.g. LIV 52 DS TABS / MENOSAN)
+        if (
+            bal(op, rec, sales, close)
+            and bal(op, rec, close, sales)
+            and sales != close
+            and sv > 0
+            and cv > 0
+        ):
+            if sv > cv * 1.05 and sales < close:
+                item["sales_qty"], item["closing_qty"] = close, sales
+                sales, close = close, sales
+                changed = True
+            elif cv > sv * 1.05 and close < sales:
+                item["sales_qty"], item["closing_qty"] = close, sales
+                sales, close = close, sales
+                changed = True
+
+        if changed:
+            fixes += 1
+            extra["qty_columns_corrected"] = True
+
+    if fixes:
+        extras = result.setdefault("totals", {}).setdefault("extra", {})
+        extras["corrected_item_movement_qty_rows"] = fixes
+
+
+def _apply_item_movement_totals_stock_value(
+    result: Dict[str, Any], parsed: Dict[str, Any]
+) -> None:
+    """Ensure StkValue total lands in totals.extra.stock_value, not sales_value."""
+    totals_in = parsed.get("totals") if isinstance(parsed.get("totals"), dict) else {}
+    extra_in = (
+        totals_in.get("extra") if isinstance(totals_in.get("extra"), dict) else {}
+    )
+    stk_total = _pick_raw_money_field(
+        {"extra": extra_in, **{k: totals_in.get(k) for k in ("stock_value", "stk_value", "StkValue")}},
+        "stock_value",
+        "stk_value",
+        "StkValue",
+    )
+    sale_total = _pick_raw_money_field(
+        {
+            "extra": extra_in,
+            **{
+                k: totals_in.get(k)
+                for k in ("sale_amt", "saleamt", "SaleAmt", "sales_amount", "sales_value")
+            },
+        },
+        "sale_amt",
+        "saleamt",
+        "SaleAmt",
+        "sales_amount",
+    )
+    extra = result["totals"].setdefault("extra", {})
+    if stk_total is not None and _to_float(stk_total) > 0:
+        extra["stock_value"] = _to_float(stk_total)
+    if sale_total is not None and (
+        "sale_amt" in totals_in
+        or "SaleAmt" in totals_in
+        or "saleamt" in totals_in
+        or "sales_amount" in totals_in
+        or "sale_amt" in extra_in
+        or "SaleAmt" in extra_in
+    ):
+        # Explicit SaleAmt total wins over a mis-mapped sales_value.
+        result["totals"]["sales_value"] = _to_float(sale_total)
+
+    # Remap StkValue that Gemini parked in closing_value / totals.closing_value
+    _fix_item_movement_stkvalue_in_closing_value(result)
+    # Repair Opening/PQty/SQty/SReturn/Closing shifts for this format only
+    _fix_item_movement_qty_columns(result)
+
+    # If line stock_value sum matches totals.sales_value, sales_value is StkValue.
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    stock_sum = sum(
+        _to_float((i.get("extra") or {}).get("stock_value"))
+        for i in items
+        if isinstance(i.get("extra"), dict)
+    )
+    sales_sum = sum(_to_float(i.get("sales_value")) for i in items)
+    printed = result["totals"].get("sales_value")
+    if (
+        stock_sum > 0
+        and printed is not None
+        and abs(float(printed) - stock_sum) < 1.0
+        and abs(sales_sum - stock_sum) > 1.0
+    ):
+        result["totals"]["sales_value"] = round(sales_sum, 2)
+        extra["stock_value"] = round(stock_sum, 2)
+        extra["corrected_sales_value_from_line_saleamt"] = True
 
 
 def _apply_parsed_sales_json(
@@ -2766,7 +3344,8 @@ def _apply_parsed_sales_json(
         item["closing_qty"] = _to_float(raw.get("closing_qty"))
         item["closing_value"] = _to_float(raw.get("closing_value"))
         if isinstance(raw.get("extra"), dict):
-            item["extra"] = raw["extra"]
+            item["extra"] = dict(raw["extra"])
+        _normalize_item_movement_saleamt_fields(raw, item)
         if item["product_name"]:
             items.append(item)
     result["line_items"] = items
@@ -2777,6 +3356,10 @@ def _apply_parsed_sales_json(
         result["totals"]["closing_value"] = _to_nullable_float(totals.get("closing_value"))
         if isinstance(totals.get("extra"), dict):
             result["totals"]["extra"].update(totals["extra"])
+    if _looks_like_item_movement_report(result) or _looks_like_item_movement_report(
+        parsed if isinstance(parsed, dict) else {}
+    ):
+        _apply_item_movement_totals_stock_value(result, parsed)
     return result
 
 
@@ -2917,6 +3500,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
     # Retry Gemini Vision briefly on 429/503, then fall back to OCR.
     last_err: Optional[Exception] = None
+    vision_result: Optional[Dict[str, Any]] = None
     for attempt in range(3):
         try:
             response = generate_content_via_vertex(
@@ -2925,9 +3509,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             text = _gemini_response_text(response)
             parsed = _extract_json_object(text)
             if parsed and (parsed.get("line_items") or parsed.get("stockist_name")):
-                result = _apply_parsed_sales_json(result, parsed)
-                result["totals"]["extra"]["extraction_method"] = "gemini_vision"
-                return result
+                vision_result = _apply_parsed_sales_json(
+                    empty_result(filename, ext.lstrip(".")), parsed
+                )
+                vision_result["totals"]["extra"]["extraction_method"] = "gemini_vision"
+                break
             last_err = ValueError(f"non-JSON vision response: {(text or '')[:200]}")
         except GeminiProviderError as exc:
             last_err = exc
@@ -2936,6 +3522,51 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             last_err = exc
             logger.warning("Gemini vision failed for %s: %s", filename, exc)
             break
+
+    # Item Movement (StkValue/SaleAmt): one corrective pass if sales_value == StkValue
+    if vision_result is not None and _needs_item_movement_saleamt_retry(vision_result):
+        retry_payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "text": (
+                                _SALES_STATEMENT_VISION_PROMPT
+                                + "\n\n"
+                                + _ITEM_MOVEMENT_SALEAMT_RETRY_PROMPT
+                            )
+                        },
+                        {"inline_data": {"mime_type": mime, "data": b64}},
+                    ],
+                }
+            ],
+            "generationConfig": {"temperature": 0.0, "maxOutputTokens": 8192},
+        }
+        try:
+            response = generate_content_via_vertex(
+                model=model, payload=retry_payload, timeout=120
+            )
+            parsed = _extract_json_object(_gemini_response_text(response))
+            if parsed and parsed.get("line_items"):
+                corrected = _apply_parsed_sales_json(
+                    empty_result(filename, ext.lstrip(".")), parsed
+                )
+                if _item_movement_retry_is_better(vision_result, corrected):
+                    corrected["totals"]["extra"]["extraction_method"] = (
+                        "gemini_vision_saleamt_retry"
+                    )
+                    return corrected
+                vision_result["totals"]["extra"]["saleamt_retry_rejected"] = True
+        except Exception as exc:
+            logger.warning(
+                "Item Movement SaleAmt corrective vision pass failed for %s: %s",
+                filename,
+                exc,
+            )
+
+    if vision_result is not None:
+        return vision_result
 
     logger.warning(
         "Falling back to Tesseract OCR for sales image %s (%s)",
