@@ -1,0 +1,49 @@
+---
+description: Playbook for stockist extraction fixes — layout family, never stockist-named routes
+globs: services/**/*.py, tests/**/*.py
+alwaysApply: true
+---
+
+# Stockist extraction playbook (layout-family, not stockist-wise)
+
+When the user says **extraction**, brings a stockist PDF/JSON audit, or asks for a "stockist fallback", follow this playbook. Do **not** add a parser, OCR route, regex, prompt, or branch named after a stockist, distributor, software, or filename code.
+
+## Workflow (every extraction task)
+
+1. **Fingerprint the layout family from headers / printed chrome**, not from the stockist name.
+   Examples of families already in-tree:
+   - `LstSL Open Recd Sales Close` (+ optional `LstMove` / `Stk.Value`)
+   - `Op Stk / Rcpts / Sales / Closing` (vision `op_stk_rcpts_sales_closing`)
+   - Pack|Rate|LMS|Open|Recd|Sale|Sale Value grids
+   - Native pdfplumber word columns with Sale/Closing/Open stock value footers
+
+2. **Classify the failure** (pick one primary):
+   - Footer / summary money ingested as `line_items` (e.g. `Last Month Sales`, `Open. Value`, `Receipt Value`, `Sales Value`, `Closing Value`)
+   - Header bleed (first data row used as column headers)
+   - Column shift / sales↔closing / LMS parked in opening
+   - Split product/pack lines or OCR glyph artifacts
+   - Missing column → field must stay `None` + `field_source=missing` (never invent)
+
+3. **Fix in exactly one allowed lever** (see `stock-extraction.mdc` rule 11):
+   - (a) `stock_header_resolver` ALIASES / rules
+   - (b) generic Vision table prompt or schema
+   - (c) `stock_row_classifier` identity rules (candidates only; no arithmetic rewrite of printed qty/value)
+   - (d) generic native table builders / labeled-footer peelers
+
+4. **Enable in code (no new `.env` entries).** Turn the fix on via an in-module constant/helper defaulted ON in the extractor (not a new env var for managers to add). Prefer kill-switch style only when the matched strings can never be SKUs (e.g. LstSL footer labels). Log with a stable greppable prefix.
+
+5. **Tests**: synthetic fixture from the audit numbers is enough when the PDF is absent; if the PDF is present, add an optional `@unittest.skipUnless` live check. Run the new tests and the full suite.
+
+6. **End-of-task summary**: files changed, in-code toggles enabled, layout family name, and anything blocked (missing PDF, Gemini budget, etc.).
+
+## LstSL / Open / Recd family (reference)
+
+- Text path: `_parse_lstsl_open_recd_statement` — skips footer label product names; puts money on `totals` / `totals.extra` with `total_row_source=lstsl_open_recd_footer`.
+- Vision path: `_LSTSL_FOOTER_LABEL_NAME`, `_filter_lstsl_footer_total_rows`, `_extract_lstsl_footer_money`.
+- Native words path: `_split_labeled_value_footers` + `STOCK_PDF_WORDS_LSTSL_VALUE_FOOTERS` (peels the same labels into `footer_totals`).
+
+When a new stockist shows this header/footer pattern, extend those shared label lists or header aliases — never `if stockist == "…"`.
+
+## Cross-chat continuity
+
+Reuse this playbook whenever the user says "extraction" in a new chat. Re-identify the layout family from the current artifact; do not assume the previous stockist's name selects a route.
