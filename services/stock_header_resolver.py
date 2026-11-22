@@ -289,6 +289,7 @@ ALIASES: Dict[str, List[str]] = {
         "received",
         "in",
         "inward",
+        "inwards",  # Tally Stock Category Summary
         "pi",
         "primary",
         "primary purchase",
@@ -332,6 +333,7 @@ ALIASES: Dict[str, List[str]] = {
         "issues",
         "out",
         "outward",
+        "outwards",  # Tally Stock Category Summary
         "sold",
         "issue quantity",
         "issue quant",  # wrapped ISSUE QUANT(ITY)
@@ -2241,10 +2243,40 @@ def _apply_group_wise_sales_sequence(
     return True
 
 
+def _already_has_purchase_sales_qty_value_pairs(
+    prelim: Sequence[Dict[str, Any]],
+) -> bool:
+    """True when Purchase/Sales already resolved as qty+value (not Free mid).
+
+    Opening|Purchase|Sales|Free/Retn|Closing with Qty|value children already
+    yield purchase_qty/purchase_value/sales_qty/sales_value. Group Wise
+    OpValue remaps that mid span to Purchase|Free|Value|Sales|Free|Value and
+    parks purchase money under free_in_qty / sales money under sales_qty.
+    """
+    canons = {
+        str(c.get("canonical") or "")
+        for c in prelim
+        if isinstance(c, dict)
+    }
+    return {
+        "purchase_qty",
+        "purchase_value",
+        "sales_qty",
+        "sales_value",
+    }.issubset(canons)
+
+
 def _looks_like_group_wise_opvalue_headers(prelim: Sequence[Dict[str, Any]]) -> bool:
     """True for Op.Stock|OpValue|…|Cl.Stock|ClValue Group Wise money grids."""
     canons = [str(c.get("canonical") or "") for c in prelim if isinstance(c, dict)]
     norms = [_header_norm_tokens(c.get("header_text")) for c in prelim]
+    # Already-paired Qty|value movement columns must not be rewritten as
+    # Purchase|Free|Value (Stock Statement Opening/Purchase/Sales grids).
+    if _already_has_purchase_sales_qty_value_pairs(prelim):
+        logger.info(
+            "STOCK_HEADER_GROUP_WISE_OPVALUE_SKIP already_paired_qty_value"
+        )
+        return False
     has_opvalue_text = any(
         n in {"opvalue", "op value"} or "opvalue" in n.replace(" ", "")
         for n in norms
@@ -2695,9 +2727,25 @@ def _unit_pack_token(text: Any) -> bool:
     )
 
 
-def _is_batch_type_marker_token(text: Any) -> bool:
-    """Single-letter batch class (I/T/B) next to MRP — never a pack size."""
-    return bool(re.fullmatch(r"[A-Za-z]", str(text or "").strip()))
+_QTY_UNIT_LABELS = frozenset(
+    {
+        "nos",
+        "no",
+        "pcs",
+        "pc",
+        "qty",
+        "qnty",
+        "unit",
+        "units",
+        "each",
+        "ea",
+    }
+)
+
+
+def _is_qty_unit_label(text: Any) -> bool:
+    t = str(text or "").strip().rstrip(".,")
+    return bool(t) and t.lower() in _QTY_UNIT_LABELS
 
 
 def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str]]:
@@ -2705,8 +2753,8 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
     packs: List[str] = []
     rest: List[str] = []
     for t in texts:
-        if _is_batch_type_marker_token(t):
-            # Drop MRP/Batch class letter (I/T) — never packing, never rate text.
+        # Repeated unit labels (NOs / PCS) are not pack sizes.
+        if _is_qty_unit_label(t):
             continue
         if _unit_pack_token(t):
             packs.append(t)
@@ -2717,21 +2765,24 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
             t
             for t in texts
             if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())
-            and not _is_batch_type_marker_token(t)
+            and not _is_qty_unit_label(t)
         ]
         numeric = [
             t
             for t in texts
             if re.fullmatch(r"-?\d+(?:[.,]\d+)?", str(t or "").strip().replace(",", ""))
         ]
-        if letter and numeric and len(letter) + len(numeric) == len(texts):
+        unit_only = [t for t in texts if _is_qty_unit_label(t)]
+        if letter and numeric and len(letter) + len(numeric) + len(unit_only) == len(
+            texts
+        ):
             return letter, numeric
         # Truncated pack fragments (10M from 10ML, 100M from 100ML) are not
         # unit tokens and not letter-only. Keep printed numbers; peel the rest.
         numbers: List[str] = []
         others: List[str] = []
         for t in texts:
-            if _is_batch_type_marker_token(t):
+            if _is_qty_unit_label(t):
                 continue
             if parse_number(t) is not None:
                 numbers.append(t)
@@ -2739,6 +2790,8 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
                 others.append(t)
         if numbers and others:
             return others, numbers
+        if numbers and not others:
+            return [], numbers
     return packs, rest
 
 
@@ -2843,6 +2896,9 @@ def _disambiguate_gap_token(
     if left_c == "product_name" and right_c in {"pack", "opening_qty"}:
         if re.fullmatch(r"(?i)pcs|nos|no", raw or ""):
             return right_b if right_c == "pack" else left_b
+        # Tally glues qty+unit ("1,344 NOs" / "(-)232 NOs") past the name band.
+        if right_c == "opening_qty" and parse_number(raw) is not None:
+            return right_b
         return left_b
     qty_canons = {
         "opening_qty",
@@ -4478,12 +4534,26 @@ def parse_number(raw: Any, *, allow_internal_spaces: bool = False) -> Optional[f
         return None
 
     negative = False
-    if text.startswith("(") and text.endswith(")"):
+    # Tally Stock Category Summary: (-)232 / (-)2,232.83 (minus before digits).
+    tally_neg = re.match(r"^\(-\)\s*(.+)$", text)
+    if tally_neg:
+        negative = True
+        text = tally_neg.group(1).strip()
+    elif text.startswith("(") and text.endswith(")"):
         negative = True
         text = text[1:-1].strip()
     elif text.endswith("-") and not text.startswith("-"):
         negative = True
         text = text[:-1].strip()
+
+    # Qty cells often glue the unit: "1,344 NOs" / "559 Nos" / "14 PCS".
+    unit_glued = re.match(
+        r"^(.+?)\s+(?:NOs?|NOS|Nos|pcs|PCS|Pcs|pc|units?|qty|qnty)\.?$",
+        text,
+        re.I,
+    )
+    if unit_glued:
+        text = unit_glued.group(1).strip()
 
     # Peel BEFORE digit-space collapse — otherwise "81.56 01-Nov-28" becomes
     # "81.5601-Nov-28" and fails. Pipe gutter peel handles "|" forms below.

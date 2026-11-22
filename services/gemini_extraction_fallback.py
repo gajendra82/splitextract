@@ -894,6 +894,21 @@ def maybe_apply_gemini_fallback(
         _stamp(result, quality, "not_called")
         return True
 
+    # Tally Stock Category Summary / Opening|Inwards|Outwards|Closing Qty+Value.
+    # Native pdf_group_qty_value already read the chrome — do not replace.
+    if _allowlist_skip(
+        "pdf_group_qty_value_layout",
+        (
+            str(extra.get("extraction_method") or "") == "pdf_group_qty_value"
+            or str(extra.get("layout_family") or "")
+            == "opening_inwards_outwards_closing"
+            or str(extra.get("layout") or "")
+            == "opening_inwards_outwards_closing"
+        )
+        and len(result.get("line_items") or []) >= 3,
+    ):
+        return result
+
     # Marg PRODUCT DESCRIPTION / OPENING / RECEIVE / ISSUE photos.
     if _allowlist_skip(
         "main_stock_column_reader",

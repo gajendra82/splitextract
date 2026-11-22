@@ -1426,7 +1426,76 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
     Identical values repeated on every page stay one grand total. Distinct
     page/section subtotals are summed. Prefer explicit printed section amount
     lists when present. Never invent — only use non-null printed totals.
+
+    Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING statements print one statement-level
+    TOTAL on the last page — never sum page-1 line fills with that footer.
+
+    STOCK AND SALES (CONSOLIDATED) Op.Qty/Op.Val also prints one statement Total
+    on the last page — prefer that peel over summing incomplete page line fills.
     """
+    # Prefer last page with a trusted ORIC / main_stock TOTAL peel.
+    oric_pick: Optional[Dict[str, Any]] = None
+    consolidated_pick: Optional[Dict[str, Any]] = None
+    _consolidated_sources = {
+        "consolidated_op_qty_val_total_ocr",
+        "op_stk_rcpts_footer",
+        "stock_sales_detail_total",
+        "printed_footer",
+        "labeled_stock_value_footer",
+    }
+    for page in pages:
+        if not isinstance(page, dict):
+            continue
+        totals = page.get("totals") if isinstance(page.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        src = str(extra.get("total_row_source") or "")
+        if src.startswith("main_stock"):
+            if totals.get("closing_value") in (None, "") and totals.get(
+                "sales_value"
+            ) in (
+                None,
+                "",
+            ):
+                continue
+            oric_pick = {
+                "sales_value": totals.get("sales_value"),
+                "closing_value": totals.get("closing_value"),
+                "extra": dict(extra),
+                "extraction_method": extra.get("extraction_method")
+                or page.get("extraction_method"),
+            }
+            continue
+        if src not in _consolidated_sources:
+            continue
+        if totals.get("closing_value") in (None, "") and totals.get("sales_value") in (
+            None,
+            "",
+        ):
+            continue
+        consolidated_pick = {
+            "sales_value": totals.get("sales_value"),
+            "closing_value": totals.get("closing_value"),
+            "extra": dict(extra),
+            "extraction_method": extra.get("extraction_method")
+            or page.get("extraction_method"),
+        }
+    if oric_pick is not None:
+        logger.info(
+            "MULTIPAGE EXTRACTION printed_totals source=main_stock_oric "
+            "sales=%s closing=%s",
+            oric_pick.get("sales_value"),
+            oric_pick.get("closing_value"),
+        )
+        return oric_pick
+    if consolidated_pick is not None:
+        logger.info(
+            "MULTIPAGE EXTRACTION printed_totals source=consolidated_op_qty_val "
+            "sales=%s closing=%s",
+            consolidated_pick.get("sales_value"),
+            consolidated_pick.get("closing_value"),
+        )
+        return consolidated_pick
+
     sales_vals: List[float] = []
     closing_vals: List[float] = []
     section_sales: List[float] = []
@@ -1824,6 +1893,19 @@ def extract_multipage_image_stock_statement(
                 )
             except Exception:
                 pass
+            # Last-page CONSOLIDATED Total bar (Op.Val/P.Val/S.Val/Cls.Val).
+            # _parse_image may keep only closing; peel sales/opening here so
+            # multipage merge surfaces the printed statement Total.
+            try:
+                from services.sales_statement_extractor import (
+                    _apply_consolidated_op_qty_val_printed_total,
+                )
+
+                page_result = _apply_consolidated_op_qty_val_printed_total(
+                    page_result, file_bytes=file_bytes, ocr_hint=""
+                )
+            except Exception:
+                pass
         except Exception as exc:
             logger.info(
                 "MULTI_PAGE_EXTRACTION_FAILED request_id=%s page_number=%s "
@@ -2108,9 +2190,13 @@ def extract_multipage_image_stock_statement(
         "opening_value",
         "receipts_qty",
         "receipts_value",
+        "purchase_value",
         "sales_qty",
         "closing_qty",
         "layout",
+        "total_row_source",
+        "sales_value_source",
+        "closing_value_source",
     ):
         if primary_extra.get(key) is not None:
             merged_extra[key] = primary_extra.get(key)
