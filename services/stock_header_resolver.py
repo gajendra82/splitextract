@@ -562,6 +562,12 @@ ALIASES: Dict[str, List[str]] = {
         "free replace",
         "free repl",
         "free receipt",
+        # Stock and Sale: Gd.In sits between Pur and Tot In (free inward).
+        "gd in",
+        "gd.in",
+        "gdin",
+        "goods in",
+        "goods inward",
         # MR Report / Stock and Sales: PUR FREE QTY | SALE FREE QTY.
         "pur free",
         "pur free qty",
@@ -2689,17 +2695,30 @@ def _unit_pack_token(text: Any) -> bool:
     )
 
 
+def _is_batch_type_marker_token(text: Any) -> bool:
+    """Single-letter batch class (I/T/B) next to MRP — never a pack size."""
+    return bool(re.fullmatch(r"[A-Za-z]", str(text or "").strip()))
+
+
 def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str]]:
     """Split pack-like tokens out of a qty/value bucket."""
     packs: List[str] = []
     rest: List[str] = []
     for t in texts:
+        if _is_batch_type_marker_token(t):
+            # Drop MRP/Batch class letter (I/T) — never packing, never rate text.
+            continue
         if _unit_pack_token(t):
             packs.append(t)
         else:
             rest.append(t)
     if not packs and len(texts) >= 2:
-        letter = [t for t in texts if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())]
+        letter = [
+            t
+            for t in texts
+            if re.fullmatch(r"[A-Za-z]{2,6}", str(t or "").strip())
+            and not _is_batch_type_marker_token(t)
+        ]
         numeric = [
             t
             for t in texts
@@ -2712,6 +2731,8 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
         numbers: List[str] = []
         others: List[str] = []
         for t in texts:
+            if _is_batch_type_marker_token(t):
+                continue
             if parse_number(t) is not None:
                 numbers.append(t)
             else:
@@ -2722,7 +2743,12 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
 
 
 def _stash_peeled_pack(fields: Dict[str, Optional[str]], packs: Sequence[str]) -> None:
-    token = " ".join(p for p in packs if p).strip()
+    cleaned = [
+        p
+        for p in packs
+        if p and not _is_batch_type_marker_token(p)
+    ]
+    token = " ".join(cleaned).strip()
     if not token:
         return
     existing = str(fields.get("pack") or "").strip()

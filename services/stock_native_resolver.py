@@ -3238,18 +3238,20 @@ def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
 
 _LETTERHEAD_TITLE_RE = re.compile(
     r"(?i)stock\s+and\s+sales|stock\s*&\s*sales|sale\s+and\s+stock|"
-    r"stock\s+statement|page\s*no\b|for\s+the\s+period"
+    r"stock\s+statement|stock\s+report|page\s*no\b|for\s+the\s+period"
 )
 _LETTERHEAD_TABLE_RE = re.compile(
     r"(?i)^(?:sl\.?\s*no|sno|product(?:\s+name)?|item(?:\s+name)?|"
-    r"particulars|opening|op\.?\s*stock|pack(?:ing)?)\b"
+    r"particulars?|opening|op\.?\s*stock|pack(?:ing)?)\b"
 )
 _LETTERHEAD_ADDRESS_RE = re.compile(
     r"(?i)\bgstin\b|\bgst\s*:|\bpin(?:code)?\b|\bdist(?:rict)?\b|"
     r"\broad\b|\boad\b|\bstreet\b|\bnagar\b|\bplot\b|\bat/?po\b|"
+    r"\bshop(?:p)?ing\b|\bcomplex\b|\bmarket\b|\bbaza?a?r\b|"
     r"\b\d{6}\b|\bphone\b|\bmobile\b|\be-?mail\b|\bstate\b|"
     r"\bkarnataka\b|\barnataka\b|\bmaharashtra\b|\btamil\s*nadu\b|"
-    r"\bandhra\b|\btelangana\b|\bgujarat\b|\bdelhi\b|\bfssai\b"
+    r"\bandhra\b|\btelangana\b|\bgujarat\b|\bdelhi\b|\bfssai\b|"
+    r"\bbihar\b|\bbhagalpur\b"
 )
 _LETTERHEAD_DISTRIBUTOR_RE = re.compile(
     r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|stores|"
@@ -3605,6 +3607,29 @@ def parse_pdf_free_column_statement(
 
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
+    if not result.get("period_from") and re.search(r"(?i)\bSTOCK\s+REPORT\b", peek):
+        # "01/09/26 To :30/09/26" under STOCK REPORT (no From cue).
+        bare_to = re.search(
+            r"(?m)^\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+            r"(?:To|to)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s*$",
+            peek,
+        )
+        if bare_to:
+            def _iso_bare(day: str, month: str, year: str) -> str:
+                yr = year if len(year) == 4 else ("20" + year)
+                return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+            result["period_from"] = _iso_bare(
+                bare_to.group(1), bare_to.group(2), bare_to.group(3)
+            )
+            result["period_to"] = _iso_bare(
+                bare_to.group(4), bare_to.group(5), bare_to.group(6)
+            )
+            logger.info(
+                "STOCK_PDF_WORDS_STOCK_REPORT_PERIOD period_from=%s period_to=%s",
+                result["period_from"],
+                result["period_to"],
+            )
     if not result.get("period_from"):
         month_period = re.search(
             r"From\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s+"

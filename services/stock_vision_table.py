@@ -6178,6 +6178,293 @@ def _oric_qv_blank_receipt_qty_align_enabled() -> bool:
     }
 
 
+def _oric_qv_blank_opening_qty_align_enabled() -> bool:
+    """Insert null OPENING QTY when Vision dropped it after RATE (default ON).
+
+    RATE|OPENING QTY|VALUE sheets often omit OPENING QTY; Vision then parks
+    OPENING VALUE in the qty slot and left-shifts RECEIPT/ISSUE/CLOSING.
+    """
+    return True
+
+
+def _align_oric_qv_blank_opening_qty(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], int]:
+    """Insert null OPENING QTY when the qty slot already holds OPENING VALUE.
+
+    Requires a RATE column immediately before OPENING QTY. Patterns after RATE:
+      A) ov, rq, rv, iq, iv, cq, cv [, dump]
+         → None, ov, rq, rv, iq, iv, cq, cv  (rest was left-shifted)
+      B) ov_in_oq, 0.00, rq, rv, iq, iv, cq, cv
+         → None, ov, rq, rv, iq, iv, cq, cv  (VALUE slot zeroed; no shift)
+    Never invents digits — only inserts a blank qty slot / moves the printed
+    VALUE token into the VALUE column.
+    """
+    if not _oric_qv_blank_opening_qty_align_enabled():
+        return cells, column_count
+    if not _columns_are_oric_qty_value_grid(columns):
+        return cells, column_count
+    rate_i = _canon_col_index(columns, "rate")
+    oq_i = _canon_col_index(columns, "opening_qty")
+    ov_i = _canon_col_index(columns, "opening_value")
+    if rate_i is None or oq_i is None or ov_i is None:
+        return cells, column_count
+    if rate_i + 1 != oq_i or oq_i + 1 != ov_i:
+        return cells, column_count
+    width = max(int(column_count or 0), ov_i + 7)
+    out = list(cells)
+    if len(out) < width:
+        out = out + [None] * (width - len(out))
+    rate_n = _cell_numeric_or_zero(out[rate_i] if rate_i < len(out) else None)
+    oq_raw = out[oq_i] if oq_i < len(out) else None
+    oq_n = _cell_numeric_or_zero(oq_raw)
+    if rate_n is None or oq_n is None:
+        return cells, column_count
+    # Rate is unit money; opening slot already holds VALUE money (paisa).
+    if not _has_paisa(rate_n) or not _cell_text_looks_value_token(oq_raw):
+        return cells, column_count
+    if _is_oric_whole_qty_token(oq_n) and not _has_paisa(oq_n):
+        return cells, column_count
+
+    ov_raw = out[ov_i] if ov_i < len(out) else None
+    ov_n = _cell_numeric_or_zero(ov_raw)
+    # Pattern B: VALUE parked in QTY; VALUE slot is blank/0.
+    if ov_n is None or abs(ov_n) < 0.001:
+        tail = out[ov_i + 1 : ov_i + 8]
+        rq_i = _canon_col_index(columns, "purchase_qty")
+        rv_i = _canon_col_index(columns, "purchase_value")
+        iq_i = _canon_col_index(columns, "sales_qty")
+        iv_i = _canon_col_index(columns, "sales_value")
+        cq_i = _canon_col_index(columns, "closing_qty")
+        cv_i = _canon_col_index(columns, "closing_value")
+        # B2: blank RECEIPT omitted; body is ISSUE|CLOSING then a duplicated
+        # closing qty (Vision echo). Require cv ≈ cq × rate and trail ≈ cq so
+        # a real RECEIPT|ISSUE|CLOSING row is not misread as blank-receipt.
+        if (
+            len(tail) >= 5
+            and rq_i is not None
+            and rv_i is not None
+            and iq_i is not None
+            and iv_i is not None
+            and cq_i is not None
+            and cv_i is not None
+        ):
+            iq_b2 = _cell_numeric_or_zero(tail[0])
+            iv_b2 = _cell_numeric_or_zero(tail[1])
+            cq_b2 = _cell_numeric_or_zero(tail[2])
+            cv_b2 = _cell_numeric_or_zero(tail[3])
+            trail_b2 = _cell_numeric_or_zero(tail[4])
+            if (
+                iq_b2 is not None
+                and cq_b2 is not None
+                and trail_b2 is not None
+                and _is_oric_whole_qty_token(iq_b2)
+                and _is_oric_whole_qty_token(cq_b2)
+                and abs(trail_b2 - cq_b2) <= 0.51
+                and iv_b2 is not None
+                and cv_b2 is not None
+                and (_has_paisa(iv_b2) or abs(iv_b2) >= 1.0)
+                and (_has_paisa(cv_b2) or abs(cv_b2) >= 1.0)
+                and abs(cq_b2 * rate_n - cv_b2) <= max(0.51, 0.02 * abs(cv_b2))
+            ):
+                out[oq_i] = None
+                out[ov_i] = oq_raw
+                # RECEIPT omitted on the sheet — leave slots blank (do not invent).
+                out[rq_i] = None
+                out[rv_i] = None
+                out[iq_i] = tail[0]
+                out[iv_i] = tail[1]
+                out[cq_i] = tail[2]
+                out[cv_i] = tail[3]
+                logger.info(
+                    "VISION_TABLE ORIC_QV_OPENING_VALUE_IN_QTY_BLANK_RECEIPT "
+                    "product=%r rate=%s opening_value=%s issue=%s closing=%s",
+                    str(out[0] or "")[:40],
+                    rate_n,
+                    oq_n,
+                    [str(tail[0]), str(tail[1])],
+                    [str(tail[2]), str(tail[3])],
+                )
+                return out, max(width, cv_i + 1)
+        # B1: RECEIPT|ISSUE|CLOSING pairs intact after the zeroed VALUE slot.
+        if len(tail) >= 6:
+            rq_b = _cell_numeric_or_zero(tail[0])
+            rv_b = _cell_numeric_or_zero(tail[1])
+            iq_b = _cell_numeric_or_zero(tail[2])
+            iv_b = _cell_numeric_or_zero(tail[3])
+            cq_b = _cell_numeric_or_zero(tail[4])
+            cv_b = _cell_numeric_or_zero(tail[5])
+            if (
+                rq_b is not None
+                and iq_b is not None
+                and cq_b is not None
+                and (_is_oric_whole_qty_token(rq_b) or abs(rq_b) < 0.001)
+                and _is_oric_whole_qty_token(iq_b)
+                and _is_oric_whole_qty_token(cq_b)
+                and rv_b is not None
+                and (_has_paisa(rv_b) or abs(rv_b) < 0.001)
+                and iv_b is not None
+                and (_has_paisa(iv_b) or abs(iv_b) < 0.001)
+                and cv_b is not None
+                and (_has_paisa(cv_b) or abs(cv_b) < 0.001 or abs(cv_b) >= 1.0)
+            ):
+                out[oq_i] = None
+                out[ov_i] = oq_raw
+                logger.info(
+                    "VISION_TABLE ORIC_QV_OPENING_VALUE_IN_QTY product=%r "
+                    "rate=%s opening_value=%s body=%s",
+                    str(out[0] or "")[:40],
+                    rate_n,
+                    oq_n,
+                    [str(v) if v is not None else None for v in tail[:6]],
+                )
+                return out, width
+
+    # Pattern A: body after the mis-parked opening value: rq,rv,iq,iv,cq,cv [,dump]
+    body = out[oq_i + 1 : oq_i + 8]
+    filled = [v for v in body if _cell_numeric_or_zero(v) is not None]
+    if len(filled) < 6:
+        return cells, column_count
+    rq = _cell_numeric_or_zero(filled[0])
+    rv = _cell_numeric_or_zero(filled[1])
+    iq = _cell_numeric_or_zero(filled[2])
+    iv = _cell_numeric_or_zero(filled[3])
+    cq = _cell_numeric_or_zero(filled[4])
+    cv = _cell_numeric_or_zero(filled[5])
+    if (
+        rq is None
+        or iq is None
+        or cq is None
+        or not (_is_oric_whole_qty_token(rq) or abs(rq) < 0.001)
+        or not _is_oric_whole_qty_token(iq)
+        or not _is_oric_whole_qty_token(cq)
+        or rv is None
+        or cv is None
+        or not (_has_paisa(rv) or abs(rv) < 0.001)
+        or not (_has_paisa(iv) or (iv is not None and abs(iv) < 0.001))
+        or not (_has_paisa(cv) or abs(cv) >= 1.0)
+    ):
+        return cells, column_count
+    # Insert blank OPENING QTY; shift VALUE…CLOSING one right.
+    shifted = out[:oq_i] + [None] + out[oq_i:]
+    if len(shifted) > width:
+        shifted = shifted[:width]
+    elif len(shifted) < width:
+        shifted = shifted + [None] * (width - len(shifted))
+    # Preserve trailing dump when it was the last filled token.
+    if len(filled) >= 7:
+        dump_i = _canon_col_index(columns, "total_qty")
+        if dump_i is None:
+            dump_i = oq_i + 8
+        if dump_i is not None and dump_i < len(shifted) and shifted[dump_i] is None:
+            shifted[dump_i] = filled[6]
+            width = max(width, dump_i + 1)
+    logger.info(
+        "VISION_TABLE ORIC_QV_BLANK_OPENING_QTY product=%r rate=%s "
+        "opening_value=%s body=%s",
+        str(out[0] or "")[:40],
+        rate_n,
+        oq_n,
+        [str(v) if v is not None else None for v in filled[:6]],
+    )
+    return shifted, width
+
+
+def _align_oric_qv_total_dup_opening_value(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], int]:
+    """Drop a duplicated OPENING VALUE ahead of OPENING QTY on TOTAL rows.
+
+    RATE-less TOTAL footers often emit:
+      [blank_oq, ov, oq, ov, rq, rv, iq, iv, cq, cv]
+    where the first ov is a duplicate of the real opening value. Drop the
+    leading blank+duplicate so qty/value pairs land under the right headers.
+    Never invents digits — only drops the duplicated printed VALUE token.
+    """
+    if not _oric_qv_blank_opening_qty_align_enabled():
+        return cells, column_count
+    if not _columns_are_oric_qty_value_grid(columns):
+        return cells, column_count
+    oq_i = _canon_col_index(columns, "opening_qty")
+    ov_i = _canon_col_index(columns, "opening_value")
+    if oq_i is None or ov_i is None or oq_i + 1 != ov_i:
+        return cells, column_count
+    width = max(int(column_count or 0), ov_i + 8)
+    out = list(cells)
+    if len(out) < width:
+        out = out + [None] * (width - len(out))
+    oq_n = _cell_numeric_or_zero(out[oq_i] if oq_i < len(out) else None)
+    ov_n = _cell_numeric_or_zero(out[ov_i] if ov_i < len(out) else None)
+    # Leading OPENING QTY must be blank/zero; VALUE holds aggregate money.
+    if oq_n is not None and abs(oq_n) >= 0.001:
+        return cells, column_count
+    if ov_n is None or not (_has_paisa(ov_n) or abs(ov_n) >= 100.0):
+        return cells, column_count
+    # Next two after OV: real oq (whole), duplicate ov.
+    if ov_i + 2 >= len(out):
+        return cells, column_count
+    real_oq_raw = out[ov_i + 1]
+    dup_ov_raw = out[ov_i + 2]
+    real_oq = _cell_numeric_or_zero(real_oq_raw)
+    dup_ov = _cell_numeric_or_zero(dup_ov_raw)
+    if (
+        real_oq is None
+        or dup_ov is None
+        or not _is_oric_whole_qty_token(real_oq)
+        or abs(real_oq) < 1.0
+        or abs(dup_ov - ov_n) > 0.02
+    ):
+        return cells, column_count
+    # Remainder should look like rq,rv,iq,iv,cq,cv (qty/value alternating).
+    rest = out[ov_i + 3 : ov_i + 9]
+    if len(rest) < 6:
+        return cells, column_count
+    rq = _cell_numeric_or_zero(rest[0])
+    rv = _cell_numeric_or_zero(rest[1])
+    iq = _cell_numeric_or_zero(rest[2])
+    iv = _cell_numeric_or_zero(rest[3])
+    cq = _cell_numeric_or_zero(rest[4])
+    cv = _cell_numeric_or_zero(rest[5])
+    if (
+        rq is None
+        or iq is None
+        or cq is None
+        or not _is_oric_whole_qty_token(rq)
+        or not _is_oric_whole_qty_token(iq)
+        or not _is_oric_whole_qty_token(cq)
+        or rv is None
+        or iv is None
+        or cv is None
+        or not (_has_paisa(rv) or abs(rv) >= 1.0)
+        or not (_has_paisa(iv) or abs(iv) >= 1.0)
+        or not (_has_paisa(cv) or abs(cv) >= 1.0)
+    ):
+        return cells, column_count
+    new_body = [real_oq_raw, dup_ov_raw] + list(rest[:6])
+    # Keep any trailing dump cells beyond cq/cv.
+    trailing = out[ov_i + 9 :]
+    rebuilt = out[:oq_i] + new_body + trailing
+    if len(rebuilt) < width:
+        rebuilt = rebuilt + [None] * (width - len(rebuilt))
+    elif len(rebuilt) > width:
+        rebuilt = rebuilt[:width]
+    logger.info(
+        "VISION_TABLE ORIC_QV_TOTAL_DUP_OPENING_VALUE oq=%s ov=%s "
+        "sales_qty=%s sales_value=%s closing_qty=%s closing_value=%s",
+        real_oq,
+        dup_ov,
+        iq,
+        iv,
+        cq,
+        cv,
+    )
+    return rebuilt, width
+
+
 def _cell_text_looks_value_token(text: Any) -> bool:
     """True when the printed token looks like VALUE (decimal / 0.00), not QTY."""
     if text is None:
@@ -9872,14 +10159,14 @@ def _promote_printed_total_row_money(
         if isinstance(t, dict)
         and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
     ]
-    printed = next(
-        (
-            t
-            for t in usable
-            if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
-        ),
-        usable[0] if usable else None,
-    )
+    # Prefer the last TOTAL when multipage sheets print a running footer
+    # (page-1 subtotal then page-2 cumulative).
+    named = [
+        t
+        for t in usable
+        if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
+    ]
+    printed = named[-1] if named else (usable[-1] if usable else None)
     if not isinstance(printed, dict):
         return []
     candidates: Dict[str, float] = {}
@@ -9947,14 +10234,14 @@ def _compare_line_sums_to_printed_total(
         if isinstance(t, dict)
         and not _is_lstsl_footer_label_name(str(t.get("product_name") or ""))
     ]
-    printed = next(
-        (
-            t
-            for t in usable
-            if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
-        ),
-        usable[0] if usable else None,
-    )
+    # Prefer the last TOTAL when multipage sheets print a running footer
+    # (page-1 subtotal then page-2 cumulative).
+    named = [
+        t
+        for t in usable
+        if re.search(r"TOTAL", str(t.get("product_name") or ""), re.I)
+    ]
+    printed = named[-1] if named else (usable[-1] if usable else None)
     if not isinstance(printed, dict):
         return {"compared": False, "reason": "no_printed_total"}
 
@@ -10219,11 +10506,24 @@ def _extract_unlabeled_pack_token(
         if (
             rate_col is not None
             and pack_idx == rate_col
-            and kind not in {"number", "serial_or_small_int", "empty", "total"}
             and nxt_kind in {"number", "serial_or_small_int"}
             and (
                 _looks_money(nxt, raw_text=str(nxt))
                 or ("." in str(nxt) and nxt_kind == "number")
+            )
+            and (
+                # Free-text / labeled pack in RATE, or bare tablet/cap count
+                # (60 / 30) with the real unit rate in the next cell.
+                kind not in {"number", "serial_or_small_int", "empty", "total"}
+                or (
+                    kind == "serial_or_small_int"
+                    and _looks_money(nxt, raw_text=str(nxt))
+                    and bool(_SOLID_FORM_NAME.search(product_name))
+                    # Next must be unit PTR (not opening/closing money).
+                    and 1.0
+                    <= abs(float(str(nxt).replace(",", "")))
+                    < 1000.0
+                )
             )
         ):
             pack_token = raw_pack
@@ -10485,16 +10785,19 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
 )
 
 # Printed TOTAL / GRAND TOTAL footer, including "TOTAL (Value IN Rs.)",
-# "Total:", and category "Total Value (GEL)" rows.
+# "Total:", dashed OCR wrappers ("----Total---->>"), and category
+# "Total Value (GEL)" rows.
 # Does not match product names that merely start with Total (e.g. TOTAL CARE).
 _VISION_TOTAL_ROW_NAME = re.compile(
-    r"(?ix)^\s*(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
-    r"(?:[:.\-–—]*)\s*"
+    r"(?ix)^\s*(?:[-–—_=.*]{2,}\s*)?"
+    r"(?:grand\s+|page\s+|sub\s+|net\s+)?"
+    r"totals?\s*"
+    r"(?:[:.\-–—_=>*]*)\s*"
     r"(?:"
     r"\(.*\)"
     r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
     r")?"
-    r"\s*$"
+    r"\s*(?:[-–—_=.*]{2,})?\s*$"
 )
 
 # Datewise / PROMPT footer labels printed as their own row: "Amount:" / "Bills:".
@@ -11365,6 +11668,9 @@ def _map_single_table(
         cells, column_count = _repair_cells_rate_opening_glue(
             cells, columns, column_count
         )
+        cells, column_count = _align_oric_qv_blank_opening_qty(
+            cells, columns, column_count
+        )
         cells, column_count = _align_oric_qv_blank_receipt_qty(
             cells, columns, column_count
         )
@@ -11397,6 +11703,9 @@ def _map_single_table(
             and re.match(r"^\s*TOTAL\b", product_hint, re.I)
         ):
             cells = _realign_cells_skipping_absent_pack(cells, columns)
+            cells, column_count = _align_oric_qv_total_dup_opening_value(
+                cells, columns, column_count
+            )
 
         physical_pairs = {
             str(i): cells[i] for i in range(column_count) if i < len(cells)
@@ -12771,6 +13080,35 @@ def _fill_zero_fields_from_reread(
         # promote that digit into sales_qty (inflates Sales Qty vs footer).
         if opvalue_grid and key == "sales_qty":
             continue
+        # ORIC qty|value: when first pass already printed OPENING VALUE and left
+        # OPENING QTY blank (VALUE-in-QTY / blank-oq realign), do not import an
+        # opening qty from a degraded reread that lost opening_value (crops often
+        # park the receipt digit in OPENING).
+        if (
+            key == "opening_qty"
+            and isinstance(fs, dict)
+            and fs.get("opening_qty") == "missing"
+            and fs.get("opening_value") == "printed"
+            and _vision_headers_look_like_oric_qty_value(item)
+        ):
+            cand_ov = candidate.get("opening_value")
+            if cand_ov is None:
+                cand_ov = cand_extra.get("opening_value")
+            try:
+                cand_ov_f = float(cand_ov) if cand_ov not in (None, "") else None
+            except (TypeError, ValueError):
+                cand_ov_f = None
+            cand_fs = (
+                cand_extra.get("field_source")
+                if isinstance(cand_extra.get("field_source"), dict)
+                else {}
+            )
+            if (
+                cand_ov_f is None
+                or abs(cand_ov_f) < 0.001
+                or cand_fs.get("opening_value") != "printed"
+            ):
+                continue
         dst = item.get(key)
         if key == "opening_value":
             dst = extra.get("opening_value", dst)
@@ -13004,6 +13342,21 @@ def merge_reread(
             logger.info(
                 "SALE_CLOSING_ONLY reread_rejected invented_opening_or_purchase "
                 "product=%s",
+                str(item.get("product_name") or "")[:80],
+            )
+            accept = False
+        # ORIC qty|value: first pass blanked OPENING QTY but kept OPENING VALUE —
+        # reject a reread that invents opening_qty while dropping opening_value.
+        if (
+            accept
+            and fs.get("opening_qty") == "missing"
+            and fs.get("opening_value") == "printed"
+            and cfs.get("opening_qty") == "printed"
+            and cfs.get("opening_value") != "printed"
+            and _vision_headers_look_like_oric_qty_value(item)
+        ):
+            logger.info(
+                "VISION_REREAD_ORIC_QV_KEEP_BLANK_OPENING product=%s",
                 str(item.get("product_name") or "")[:80],
             )
             accept = False
