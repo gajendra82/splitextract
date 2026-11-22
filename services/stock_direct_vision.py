@@ -1934,6 +1934,7 @@ def _has_pharmassist_stock_sale_headers(text: str) -> bool:
     blob = text or ""
     title = bool(
         re.search(r"(?:S)?tock\s+and\s+Sale\s+Report", blob, re.I)
+        or re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS", blob, re.I)
         or re.search(r"Printed\s+Using\s+PharmAssist|\bPharmAssist\b", blob, re.I)
     )
     has_bval = bool(re.search(r"\bb\s*val\b|\bbval\b|\b8val\b", blob, re.I))
@@ -3712,6 +3713,15 @@ def _pharmassist_peel_address(peek: str) -> Optional[str]:
     """City/PIN/street/phone line under PharmAssist letterhead."""
     if not (peek or "").strip():
         return None
+    m = re.search(r"(?im)^(RS\s*NO\s*:?[^\n]{8,200})", peek)
+    if m:
+        addr = re.sub(r"\s+", " ", m.group(1)).strip(" ,")
+        if len(addr) >= 8 and not re.search(
+            r"Stock\s+and\s+Sale|Opening\s+Val|Item\s+Pack|COMPANY\s+GROUP",
+            addr,
+            re.I,
+        ):
+            return addr
     m = re.search(
         r"(?im)^[A-Z0-9][A-Z0-9 .,&'\-/]{2,60}\s*\n\s*"
         r"([A-Z0-9][A-Z0-9 .,\-/]{8,160}?(?:Phone|Ph\.?|Mob\.?)[^\n]{0,60})",
@@ -4397,9 +4407,17 @@ def _pharmassist_compose_footer_zoom(png_bytes: bytes) -> bytes:
 
 
 def _peel_pharmassist_footer_money(text: str) -> Dict[str, float]:
-    """Peel Opening/Closing/Sales/Purchase footer labels from OCR peek text."""
+    """Peel Opening/Closing/Sales/Purchase footer labels from OCR peek text.
+
+    When ``Grand Total`` is printed, prefer the last Grand Total band over
+    earlier section ``Total :`` money.
+    """
     blob = text or ""
     out: Dict[str, float] = {}
+    grand_matches = list(re.finditer(r"Grand\s*Total\s*:?", blob, re.I))
+    if grand_matches:
+        start = grand_matches[-1].start()
+        blob = blob[start : start + 600]
 
     specs = (
         (
@@ -4418,10 +4436,10 @@ def _peel_pharmassist_footer_money(text: str) -> Dict[str, float]:
         ),
     )
     for key, pat in specs:
-        m = re.search(pat, blob, re.I)
-        if not m:
+        matches = list(re.finditer(pat, blob, re.I))
+        if not matches:
             continue
-        val = _parse_pharmassist_money_token(m.group(1))
+        val = _parse_pharmassist_money_token(matches[-1].group(1))
         if val is not None:
             out[key] = val
     return out

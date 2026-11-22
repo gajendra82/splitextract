@@ -88,6 +88,9 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "free",
         "sample_qty",
         "free_qty",
+        # PharmAssist ADJ. column (printed outward adjustment).
+        "adj_qty",
+        "stock_adj_qty",
     ),
     "sales_return": (
         "sales_return_qty",
@@ -96,6 +99,9 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "saleret",
         "sret",
         "sales_return",
+        # PharmAssist / Stock-and-Sales Detail credit columns.
+        "credit_qty",
+        "cr_qty",
     ),
     "purchase_return": (
         "purchase_return_qty",

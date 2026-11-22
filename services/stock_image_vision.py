@@ -46,8 +46,8 @@ Do not force every statement into opening / receipts / sales / closing.
 Read the headers that are actually printed.
 
 Example mapping when those headers are visible:
-- OPSTK / Opening -> opening_qty
-- PURCH / Purchase -> purchase_qty
+- OPSTK / Opening / Op. -> opening_qty
+- PURCH / Purchase / Pur -> purchase_qty / receipts_qty
 - SALE / Sale -> sales_qty
 - SALE VAL -> sales_value
 - Total -> extra.total_stock (NOT closing_qty)
@@ -56,23 +56,44 @@ Example mapping when those headers are visible:
 - SaleRet / Sale Ret / S.RETURN -> extra.sale_return (NOT sales_qty)
 - P.RETURN -> purchase_return_qty (NOT sales_qty)
 - Exp/Dmg / Expired Stock -> expiry_damage_qty / extra.exp_damage
-- ClosStock / Closing Stock / Closing / Cl Stk -> closing_qty
+- ClosStock / Closing Stock / Closing / Cl Stk / bare Stk (after Sale) -> closing_qty
 - Clos.Amt / Cls Amt / Closing Amount / Value beside Cl Stk -> closing_value
 - IN/OTSTOCK or N/O/STOCK or bare STOCK (stock-on-hand after SALE VAL) -> closing_qty
 - STK VAL -> closing_value
-- EXP3M -> expiry_damage_qty
+- Rate / PTR / MRP -> extra.rate (NEVER closing_value, NEVER sales_value)
+- EXP3M / Sh.E / Shelf Exp -> ignore / extra.shelf_expiry (NEVER closing)
 - Footer labels "Opening stock value" / "Sales value" / "Closing stock value"
+  / Opg.Stk Val / Cl.Stk Val / Pur Val / Sales Val
   -> totals.extra.opening_value / totals.sales_value / totals.closing_value
+    / totals.extra.purchase_value
   (not line-item fields; do not invent per-row sales_value when no SL.VALUE column)
 - PRODUCT|PACK|OPENING|PURCHASE|FREE|P.RETURN|FREE|SALE|FREE|S.RETURN|FREE|OTHERS|CLOSING:
   PACK (60, 30ML, 60 TAB) is packing, never opening_qty. Keep one cell per FREE
   even when it is a dash so SALE/CLOSING do not shift. Period "01-Apr-26 To
   30-Apr-26" is period_from/period_to (DD-Mon-YY).
 
-These are not quantity columns unless the printed header clearly says so:
-PACK, PACKING, SALE VAL, STK VAL, JUL, JUN, STK120, Total, Clos.Amt.
+Item Name | Op. | Pur | SP | Aug | Sep | Sale | SFree | Ins Sale | Ins Free | Stk | Rate | Sh.E:
+- Op. -> opening_qty, Pur -> receipts_qty, Sale -> sales_qty, Stk -> closing_qty
+- Rate -> extra.rate ONLY (never closing_value; rows often have Rate with blank Stk)
+- Aug / Sep (or any month pair) -> extra.prior_month_a_qty / prior_month_b_qty
+  (also aug_qty / sep_qty). NEVER opening_qty / receipts_qty / sales_qty
+- SP / SFree / Ins Free -> extra.sp_qty / free_out_qty / ins_free_qty (not sales)
+- Ins Sale -> extra.institution_sale_qty (NOT sales_qty)
+- Sh.E -> ignore. closing_value stays null when no per-row Cl Value column.
+- stockist_name = letterhead agency at top; stockist_address = street/city/PIN
+  under it; company_name = division band (e.g. 068 HIMALAYA ZEAL DIV), never
+  the letterhead. Skip "068 HIMALAYA ZEAL DIV" / HIMALAYA-ZEAL as products.
+- Footer Opg.Stk Val / Cl.Stk Val / Pur Val / Sales Val / SalRet Val /
+  NetSal (GVal) / Instution Sale / Tran.Stk.Out go to totals only.
+- When several TOTAL / GRAND TOTAL bands print, use ONLY the last GRAND TOTAL
+  (else the last TOTAL).
 
-Skip division banners such as HIMALAYA-ZEAL and Division Total rows.
+These are not quantity columns unless the printed header clearly says so:
+PACK, PACKING, SALE VAL, STK VAL, JUL, JUN, AUG, SEP, Rate, Sh.E, STK120,
+Total, Clos.Amt.
+
+Skip division banners such as HIMALAYA-ZEAL, "068 HIMALAYA ZEAL DIV", and
+Division Total rows.
 Do not invent products from phone UI chrome ("Done", free-trial banners).
 Ignore overline bars drawn above digits; read the digit values underneath.
 
@@ -114,11 +135,24 @@ Return JSON only:
       "extra": {
         "total_stock": null,
         "sale_return": null,
-        "exp_damage": null
+        "exp_damage": null,
+        "rate": null,
+        "prior_month_a_qty": null,
+        "prior_month_b_qty": null,
+        "institution_sale_qty": null,
+        "free_out_qty": null
       },
       "cells": {}
     }
-  ]
+  ],
+  "totals": {
+    "sales_value": null,
+    "closing_value": null,
+    "extra": {
+      "opening_value": null,
+      "purchase_value": null
+    }
+  }
 }
 """.strip()
 
@@ -197,8 +231,28 @@ _NON_QTY_SEMANTICS = frozenset(
         "stk_val",
         "stock_value",
         "closing_value",
+        "rate",
         "jul",
         "jun",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "prior_month",
+        "prior_month_a_qty",
+        "prior_month_b_qty",
+        "lms",
+        "ins_sale",
+        "institution_sale",
+        "institution_sale_qty",
+        "sh_e",
+        "shelf_expiry",
         "stk120",
         "unknown",
         "ignore",
@@ -213,7 +267,28 @@ _CLOSING_QTY_SEMANTICS = frozenset(
         "n_o_stock",
         "stock_qty",
         "stock",
+        "stk",
         "curstk",
+    }
+)
+_MONTH_SEMANTICS = frozenset(
+    {
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+        "prior_month",
+        "prior_month_a_qty",
+        "prior_month_b_qty",
+        "lms",
     }
 )
 
@@ -620,6 +695,7 @@ def _apply_detected_cells(item: Dict[str, Any], columns: List[Dict[str, Any]]) -
     if not isinstance(extra, dict):
         extra = {}
         item["extra"] = extra
+    month_slot = 0
     for column in columns:
         if not isinstance(column, dict):
             continue
@@ -634,6 +710,28 @@ def _apply_detected_cells(item: Dict[str, Any], columns: List[Dict[str, Any]]) -
                 item["sales_value"] = _number(cells[header])
             elif semantic in {"closing_value", "stk_val", "stock_value"}:
                 item["closing_value"] = _number(cells[header])
+            elif semantic == "rate":
+                extra["rate"] = _number(cells[header])
+            elif semantic in _MONTH_SEMANTICS:
+                number = _number(cells[header])
+                mon = semantic if semantic in {
+                    "jan", "feb", "mar", "apr", "may", "jun",
+                    "jul", "aug", "sep", "oct", "nov", "dec",
+                } else None
+                if mon:
+                    extra[f"{mon}_qty"] = number
+                if month_slot == 0:
+                    extra["prior_month_a_qty"] = number
+                    month_slot = 1
+                elif month_slot == 1:
+                    extra["prior_month_b_qty"] = number
+                    month_slot = 2
+            elif semantic in {
+                "ins_sale",
+                "institution_sale",
+                "institution_sale_qty",
+            }:
+                extra["institution_sale_qty"] = _number(cells[header])
             else:
                 extra.setdefault("unmapped_columns", {})[header] = cells[header]
             continue
@@ -648,8 +746,226 @@ def _apply_detected_cells(item: Dict[str, Any], columns: List[Dict[str, Any]]) -
             item["closing_qty"] = number
         elif semantic == "expiry_damage_qty":
             extra["expiry_damage_qty"] = number
+        elif semantic in {"free", "free_out", "free_out_qty", "sfree"}:
+            extra["free_out_qty"] = number
         else:
             extra.setdefault("unmapped_columns", {})[header] = cells[header]
+
+
+def _header_key(text: Any) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(text or "").lower())
+
+
+def _looks_like_op_pur_sale_stk_rate_columns(
+    columns: Optional[List[Dict[str, Any]]] = None,
+    cells: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Fingerprint Op|Pur|Sale|Stk|Rate(+ optional Aug/Sep/SFree/Ins) grids."""
+    headers: List[str] = []
+    for col in columns or []:
+        if isinstance(col, dict):
+            headers.append(str(col.get("header") or ""))
+    if isinstance(cells, dict):
+        headers.extend(str(k) for k in cells.keys())
+    keys = {_header_key(h) for h in headers if h}
+    has_stk = bool(keys & {"stk", "clstk", "closingstk"})
+    has_rate = "rate" in keys
+    has_sale = bool(keys & {"sale", "sales"})
+    has_op = bool(keys & {"op", "opening", "opstk"})
+    # Stk+Rate with Sale/Op — not Bal/BVal money grids.
+    if has_stk and has_rate and (has_sale or has_op):
+        if keys & {"bval", "balval", "sval", "saleval", "clvalue", "clval"}:
+            return False
+        return True
+    return False
+
+
+def _cell_number_by_keys(cells: Dict[str, Any], *want: str) -> Any:
+    want_set = {w.lower() for w in want}
+    for header, value in cells.items():
+        if _header_key(header) in want_set:
+            return _number(value)
+    return None
+
+
+def repair_op_pur_sale_stk_rate_misfile(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Move Rate digits out of closing_value; restore Stk into closing_qty.
+
+    Layout family: Item Name|Op.|Pur|SP|Aug|Sep|Sale|SFree|Ins Sale|Ins Free|
+    Stk|Rate|Sh.E. Kill switch: STOCK_OP_PUR_STK_RATE_REPAIR=false.
+    """
+    if not isinstance(result, dict):
+        return result
+    raw = os.getenv("STOCK_OP_PUR_STK_RATE_REPAIR", "true").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return result
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    columns = extra_t.get("detected_columns") if isinstance(extra_t, dict) else None
+    if not isinstance(columns, list):
+        columns = []
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return result
+    sample_cells = None
+    for item in items:
+        ex = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        cells = ex.get("cells") if isinstance(ex, dict) else None
+        if isinstance(cells, dict) and cells:
+            sample_cells = cells
+            break
+    layout_hit = _looks_like_op_pur_sale_stk_rate_columns(columns, sample_cells)
+    # Heuristic when Vision omitted detected_columns but parked Rate in closing_value.
+    if not layout_hit:
+        rate_like = 0
+        active = 0
+        for item in items:
+            try:
+                cv = item.get("closing_value")
+                cq = item.get("closing_qty")
+                if cv in (None, ""):
+                    continue
+                cv_f = float(cv)
+                cq_f = float(cq) if cq not in (None, "") else 0.0
+            except (TypeError, ValueError):
+                continue
+            # Unit rates on these sheets are typically 10..500 with paise.
+            if 1.0 <= abs(cv_f) <= 500.0 and abs(cv_f - round(cv_f, 2)) < 1e-9:
+                if cq_f == 0.0:
+                    rate_like += 1
+            op = item.get("opening_qty")
+            try:
+                if op not in (None, "") and float(op) > 0:
+                    active += 1
+            except (TypeError, ValueError):
+                pass
+        title = str(result.get("report_title") or "")
+        title_ok = bool(
+            re.search(r"Stock\s+and\s+Sales\s+Report", title, re.I)
+            or re.search(r"Stock\s+and\s+Sale\s+Report", title, re.I)
+        )
+        if rate_like >= max(3, len(items) // 2) and (title_ok or rate_like == len(items)):
+            layout_hit = True
+    if not layout_hit:
+        return result
+
+    # Division chrome (068 HIMALAYA ZEAL DIV) is never a SKU on this family.
+    kept_items: List[Dict[str, Any]] = []
+    dropped_div = 0
+    for item in items:
+        name = str(item.get("product_name") or "").strip()
+        if re.search(
+            r"^\d{2,4}\s+HIMALAYA|\bHIMALAYA\s*-?\s*ZEAL\s*DIV\b",
+            name,
+            re.I,
+        ):
+            dropped_div += 1
+            logger.info(
+                "STOCK_OP_PUR_STK_RATE_REPAIR drop_division_banner product=%r",
+                name[:80],
+            )
+            continue
+        kept_items.append(item)
+    if dropped_div:
+        result["line_items"] = kept_items
+        items = kept_items
+        extra_t["op_pur_stk_rate_division_dropped"] = dropped_div
+
+    repaired = 0
+    for item in items:
+        extra = item.setdefault("extra", {})
+        if not isinstance(extra, dict):
+            extra = {}
+            item["extra"] = extra
+        cells = extra.get("cells") if isinstance(extra.get("cells"), dict) else {}
+        fs = extra.setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            fs = {}
+            extra["field_source"] = fs
+
+        rate_from_cell = _cell_number_by_keys(cells, "rate") if cells else None
+        stk_from_cell = _cell_number_by_keys(cells, "stk", "clstk", "closingstk") if cells else None
+        sale_from_cell = _cell_number_by_keys(cells, "sale", "sales") if cells else None
+        aug_from_cell = _cell_number_by_keys(cells, "aug") if cells else None
+        sep_from_cell = _cell_number_by_keys(cells, "sep") if cells else None
+        sfree_from_cell = _cell_number_by_keys(cells, "sfree", "sfreeqty", "salesfree") if cells else None
+        ins_sale_from_cell = (
+            _cell_number_by_keys(cells, "inssale", "institutionsale", "instsale")
+            if cells
+            else None
+        )
+
+        if rate_from_cell not in (None, ""):
+            extra["rate"] = rate_from_cell
+        if stk_from_cell not in (None, ""):
+            item["closing_qty"] = stk_from_cell
+            fs["closing_qty"] = "printed"
+        if sale_from_cell not in (None, ""):
+            item["sales_qty"] = sale_from_cell
+            fs["sales_qty"] = "printed"
+        if aug_from_cell not in (None, ""):
+            extra["aug_qty"] = aug_from_cell
+            extra.setdefault("prior_month_a_qty", aug_from_cell)
+        if sep_from_cell not in (None, ""):
+            extra["sep_qty"] = sep_from_cell
+            extra.setdefault("prior_month_b_qty", sep_from_cell)
+        if sfree_from_cell not in (None, ""):
+            extra["free_out_qty"] = sfree_from_cell
+        if ins_sale_from_cell not in (None, ""):
+            extra["institution_sale_qty"] = ins_sale_from_cell
+
+        # Rate misfiled as closing_value (no per-row Cl Value on this family).
+        try:
+            cv = item.get("closing_value")
+            cv_f = float(cv) if cv not in (None, "") else None
+        except (TypeError, ValueError):
+            cv_f = None
+        rate_now = extra.get("rate")
+        try:
+            rate_f = float(rate_now) if rate_now not in (None, "") else None
+        except (TypeError, ValueError):
+            rate_f = None
+        if cv_f is not None and 1.0 <= abs(cv_f) <= 500.0:
+            if rate_f is None or abs(rate_f - cv_f) < 0.011:
+                extra["rate"] = cv_f
+                item["closing_value"] = None
+                fs["closing_value"] = "missing"
+                repaired += 1
+                logger.info(
+                    "STOCK_OP_PUR_STK_RATE_REPAIR product=%s rate=%s "
+                    "cleared_closing_value=1",
+                    str(item.get("product_name") or "")[:60],
+                    cv_f,
+                )
+
+        # Clear Aug/Sep parked in receipts/sales when Sale cell restored Stk identity.
+        if sale_from_cell not in (None, "") and (
+            aug_from_cell not in (None, "") or sep_from_cell not in (None, "")
+        ):
+            try:
+                receipts = item.get("receipts_qty")
+                if (
+                    receipts not in (None, "")
+                    and aug_from_cell not in (None, "")
+                    and abs(float(receipts) - float(aug_from_cell)) < 0.011
+                ):
+                    # Pur cell may still be present under another header; only
+                    # clear when Pur cell is blank/absent.
+                    pur_cell = _cell_number_by_keys(cells, "pur", "purchase", "purch")
+                    if pur_cell in (None, "", 0, 0.0):
+                        item["receipts_qty"] = pur_cell if pur_cell not in (None, "") else 0.0
+                        fs["receipts_qty"] = "printed"
+            except (TypeError, ValueError):
+                pass
+
+    if repaired:
+        extra_t["op_pur_stk_rate_repair"] = True
+        extra_t["op_pur_stk_rate_repair_count"] = repaired
+        logger.info(
+            "STOCK_OP_PUR_STK_RATE_REPAIR applied count=%s items=%s",
+            repaired,
+            len(items),
+        )
+    return result
 
 
 def normalize_stock_gemini_extraction(
@@ -679,7 +995,8 @@ def normalize_stock_gemini_extraction(
         if not name:
             continue
         if re.search(
-            r"HIMALAYA\s*-?\s*ZEAL|Division\s*Total|^Total\b|^Done$|free\s*trial",
+            r"^\d{2,4}\s+HIMALAYA|HIMALAYA\s*-?\s*ZEAL|Division\s*Total|"
+            r"^Total\b|^Done$|free\s*trial",
             name,
             re.I,
         ):
@@ -709,6 +1026,11 @@ def normalize_stock_gemini_extraction(
             ("exp_damage", "exp_damage"),
             ("total_stock", "total_stock"),
             ("total", "total_stock"),
+            ("rate", "rate"),
+            ("prior_month_a_qty", "prior_month_a_qty"),
+            ("prior_month_b_qty", "prior_month_b_qty"),
+            ("institution_sale_qty", "institution_sale_qty"),
+            ("free_out_qty", "free_out_qty"),
         ):
             if source.get(alias) not in (None, "") and extra.get(dest) in (None, ""):
                 extra[dest] = _number(source.get(alias))
@@ -735,15 +1057,17 @@ def normalize_stock_gemini_extraction(
                     extra["expiry_damage_qty"] = number
                 elif key in {"total"} and extra.get("total_stock") in (None, ""):
                     extra["total_stock"] = number
-                elif key in {"closstock", "closingstock", "closing"} and item.get(
+                elif key in {"closstock", "closingstock", "closing", "stk"} and item.get(
                     "closing_qty"
                 ) in (None, ""):
                     item["closing_qty"] = number
+                elif key == "rate" and extra.get("rate") in (None, ""):
+                    extra["rate"] = number
                 elif key in {"closamt", "clsamt", "closingamount", "closingamt"} and item.get(
                     "closing_value"
                 ) in (None, ""):
                     item["closing_value"] = number
-        item.pop("cells", None)
+        # Keep cells for Stk|Rate repair; strip after repair below.
         items.append(item)
     result["line_items"] = items
     image_quality = raw.get("image_quality") if isinstance(raw.get("image_quality"), dict) else {}
@@ -751,6 +1075,13 @@ def normalize_stock_gemini_extraction(
     result["totals"]["extra"]["detected_columns"] = columns
     result["totals"]["extra"]["extraction_method"] = "stock_image_gemini"
     result["totals"]["extra"]["layout"] = "stock_image_gemini"
+    result = repair_op_pur_sale_stk_rate_misfile(result)
+    for item in result.get("line_items") or []:
+        if isinstance(item, dict):
+            item.pop("cells", None)
+            ex = item.get("extra") if isinstance(item.get("extra"), dict) else None
+            if isinstance(ex, dict):
+                ex.pop("cells", None)
     # Drop transit mis-filed as total_stock when Op/Sales/Cl already balance.
     for item in result["line_items"]:
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else None

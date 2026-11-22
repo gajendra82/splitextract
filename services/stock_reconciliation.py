@@ -73,6 +73,9 @@ def _sales_return_qty(item: Dict[str, Any]) -> float:
         extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None
     ):
         sales_return = _f(extra.get("credit_qty")) + _f(extra.get("credit_scheme_qty"))
+    # PharmAssist CR column (extra.cr_qty) is the same printed credit/return.
+    if sales_return == 0.0 and extra.get("cr_qty") is not None:
+        sales_return = _f(extra.get("cr_qty"))
     return sales_return
 
 
@@ -211,6 +214,19 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
     for key in ("stock_tf_qty", "pr_qty", "repl_other_out"):
         if extra.get(key) is not None:
             other += _f(extra.get(key))
+    # PharmAssist ADJ. / stock_adj is a printed outward adjustment (not rewrite).
+    adj = None
+    if extra.get("adj_qty") is not None:
+        adj = _f(extra.get("adj_qty"))
+    elif extra.get("stock_adj_qty") is not None:
+        adj = _f(extra.get("stock_adj_qty"))
+    if adj is not None:
+        mirrored = (
+            extra.get("other_outward_qty") is not None
+            and abs(_f(extra.get("other_outward_qty")) - adj) <= 1e-9
+        )
+        if not mirrored:
+            other += adj
     return other
 
 
@@ -231,6 +247,8 @@ def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     if extra.get("sale_return") is not None or extra.get("sales_return") is not None:
         return True
     if extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None:
+        return True
+    if extra.get("cr_qty") is not None:
         return True
     if item.get("sales_return_qty") is not None:
         return True
@@ -476,14 +494,36 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
 
     expected = round(opening_v + purchase_v - sales_v, 4)
     diff = round(closing_v - expected, 4)
-    return {
-        "basis": "opening_value+purchase_value-sales_value",
+    valid = abs(diff) <= max(_TOL, 1.0)
+    basis = "opening_value+purchase_value-sales_value"
+    # Many Product|Rate grids print Closing Value = Closing Qty × Rate even
+    # when open+purchase−sales money differs. Accept that as diagnostic-valid
+    # without rewriting any printed number.
+    rate = extra.get("unit_rate")
+    closing_qty = item.get("closing_qty")
+    rate_valued = None
+    try:
+        if rate not in (None, "") and closing_qty not in (None, ""):
+            rate_valued = round(float(rate) * float(closing_qty), 4)
+            if abs(closing_v - rate_valued) <= max(_TOL, 1.0):
+                if not valid:
+                    basis = "closing_qty*unit_rate"
+                    expected = rate_valued
+                    diff = round(closing_v - expected, 4)
+                valid = True
+    except (TypeError, ValueError):
+        rate_valued = None
+    out = {
+        "basis": basis,
         "enforced": False,
         "expected_closing_value": expected,
         "actual_closing_value": closing_v,
         "value_difference": diff,
-        "valid": abs(diff) <= max(_TOL, 1.0),
+        "valid": valid,
     }
+    if rate_valued is not None:
+        out["rate_valued_closing"] = rate_valued
+    return out
 
 
 def _sale_closing_only_row(item: Dict[str, Any], fs: Dict[str, Any]) -> bool:

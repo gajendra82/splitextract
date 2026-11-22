@@ -60,6 +60,22 @@ Closing|Cl Value|expQty|nonMove Qty|Flag:
   Copy its Sale Value into totals.sales_value and Cl Value into
   totals.closing_value.
 
+When headers are Item Name|Op.|Pur|SP|Aug|Sep|Sale|SFree|Ins Sale|Ins Free|
+Stk|Rate|Sh.E (Stock and Sales Report):
+- Op. -> opening_qty, Pur -> receipts_qty, Sale -> sales_qty, Stk -> closing_qty.
+- Rate -> extra.rate ONLY. NEVER put Rate into closing_value or sales_value.
+  Many rows print only Rate with blank Op/Pur/Sale/Stk — closing_value stays null.
+- Aug/Sep (any month pair) -> extra.prior_month_a_qty / prior_month_b_qty
+  (also aug_qty/sep_qty). NEVER receipts_qty / sales_qty / opening_qty.
+- SP / SFree / Ins Free -> extra (not sales_qty). Ins Sale -> extra.institution_sale_qty.
+- Sh.E -> ignore. No per-row closing_value column on this layout.
+- stockist_name = letterhead agency; stockist_address = street/city/PIN under it;
+  company_name = division band (e.g. 068 HIMALAYA ZEAL DIV), not the letterhead.
+- Skip division banners like "068 HIMALAYA ZEAL DIV" as products.
+- Footer Opg.Stk Val / Cl.Stk Val / Pur Val / Sales Val / SalRet Val /
+  NetSal (GVal) are totals only. When multiple TOTAL / GRAND TOTAL bands
+  print, use ONLY the last GRAND TOTAL (else the last TOTAL).
+
 Return JSON only:
 {
   "stockist_name": string|null,
@@ -79,12 +95,22 @@ Return JSON only:
       "sales_value": number|null,
       "closing_qty": number|null,
       "closing_value": number|null,
-      "extra": {}
+      "extra": {
+        "rate": number|null,
+        "prior_month_a_qty": number|null,
+        "prior_month_b_qty": number|null,
+        "institution_sale_qty": number|null,
+        "free_out_qty": number|null
+      }
     }
   ],
   "totals": {
     "sales_value": number|null,
-    "closing_value": number|null
+    "closing_value": number|null,
+    "extra": {
+      "opening_value": number|null,
+      "purchase_value": number|null
+    }
   }
 }
 """
@@ -514,11 +540,49 @@ def _finish_gemini_result(
         _sanitize_statement_financials,
         empty_result,
     )
+    from services.stock_image_vision import repair_op_pur_sale_stk_rate_misfile
 
     result = empty_result(filename, (ext or "").lstrip("."))
     result = _apply_parsed_sales_json(result, parsed)
     result.setdefault("totals", {}).setdefault("extra", {})
     result["totals"]["extra"]["extraction_method"] = "gemini_extraction_fallback"
+    # Preserve cells/detected_columns briefly for Stk|Rate layout repair.
+    if isinstance(parsed.get("detected_columns"), list):
+        result["totals"]["extra"]["detected_columns"] = [
+            c for c in parsed["detected_columns"] if isinstance(c, dict)
+        ]
+    for src, dst in zip(parsed.get("line_items") or [], result.get("line_items") or []):
+        if not isinstance(src, dict) or not isinstance(dst, dict):
+            continue
+        cells = src.get("cells")
+        if isinstance(cells, dict) and cells:
+            extra = dst.setdefault("extra", {})
+            if isinstance(extra, dict):
+                extra["cells"] = dict(cells)
+        src_extra = src.get("extra") if isinstance(src.get("extra"), dict) else {}
+        if src_extra:
+            dst_extra = dst.setdefault("extra", {})
+            if isinstance(dst_extra, dict):
+                for key in (
+                    "rate",
+                    "prior_month_a_qty",
+                    "prior_month_b_qty",
+                    "aug_qty",
+                    "sep_qty",
+                    "institution_sale_qty",
+                    "free_out_qty",
+                ):
+                    if src_extra.get(key) not in (None, "") and dst_extra.get(key) in (
+                        None,
+                        "",
+                    ):
+                        dst_extra[key] = src_extra.get(key)
+    result = repair_op_pur_sale_stk_rate_misfile(result)
+    for item in result.get("line_items") or []:
+        if isinstance(item, dict):
+            ex = item.get("extra") if isinstance(item.get("extra"), dict) else None
+            if isinstance(ex, dict):
+                ex.pop("cells", None)
     result = _sanitize_statement_financials(result)
     result = _apply_stock_identity_validation(result)
     result = _ensure_stock_qty_value_fields(result)
@@ -980,6 +1044,15 @@ def maybe_apply_gemini_fallback(
             "ssa_qty_value_opening_repair",
         }
         or str(extra.get("layout") or "") == "ssa_opening_receipt_issue_value",
+    ):
+        return result
+
+    # PRODUCT|PACKG|SALES|CLOSING|ORD QTY DAY — locked sale_closing_only Vision.
+    if _allowlist_skip(
+        "product_packg_sales_closing_ord",
+        str(extra.get("extraction_method") or "")
+        == "product_packg_sales_closing_ord_vision"
+        or str(extra.get("layout") or "") == "product_packg_sales_closing_ord",
     ):
         return result
 

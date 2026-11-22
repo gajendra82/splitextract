@@ -4115,7 +4115,22 @@ def _merge_proposed_mapping(
                 "previous sales",
                 "previous last sale",
                 "prev last sale",
-            } or resolver_canon == "lms":
+                # Truncated OCR: Previous La / Si / Sa.
+                "previous la",
+                "previous si",
+                "previous sa",
+                "prev la",
+                "prev si",
+                "prev sa",
+            } or resolver_canon == "lms" or (
+                header_norm.startswith("previous ")
+                and header_norm
+                not in {
+                    "previous",
+                    "previous opening",
+                    "previous balance",
+                }
+            ):
                 if model_canon in {
                     "opening_qty",
                     "opening_value",
@@ -4175,6 +4190,11 @@ def _merge_proposed_mapping(
                 "closing_value",
                 "receipts_qty",
                 "receipts_value",
+                # nonMoveQty is stagnant stock — never outward movement.
+                "other_outward_qty",
+                "expiry_damage_qty",
+                "free_in_qty",
+                "free_out_qty",
             }:
                 header_ok = False
                 errors.append(f"RATE_NON_QTY_MODEL_BLOCK col={idx}")
@@ -7171,6 +7191,544 @@ def _clear_neighbor_stolen_closing_fields(
     return cleared
 
 
+def _pack_rate_sales_in_receipt_enabled() -> bool:
+    """STOCK_VISION_PACK_RATE_SALES_IN_RECEIPT — default ON.
+
+    Blank Receipt + Sales digits parked under Receipt while Sale Value is set.
+    """
+    return os.getenv(
+        "STOCK_VISION_PACK_RATE_SALES_IN_RECEIPT", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pack_rate_row_sale_return(item: Dict[str, Any]) -> float:
+    """Printed sale-return qty from top-level or extra (0 when absent)."""
+    if not isinstance(item, dict):
+        return 0.0
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    raw = item.get("sales_return_qty")
+    if raw is None:
+        raw = extra.get("sale_return") if isinstance(extra, dict) else None
+    try:
+        return float(raw or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _pack_rate_expected_closing_variants(item: Dict[str, Any]) -> List[float]:
+    """Candidate Op(+Rc)(±SR)−Sales closings, including Sales-parked-in-Receipt."""
+    if not isinstance(item, dict):
+        return []
+    try:
+        op = float(item.get("opening_qty") or 0.0)
+        rc = float(item.get("receipts_qty") or 0.0)
+        sl = float(item.get("sales_qty") or 0.0)
+    except (TypeError, ValueError):
+        return []
+    sret = _pack_rate_row_sale_return(item)
+    variants = [op + rc - sl + sret, op + rc - sl]
+    # Sales digits under blank Receipt while Sale Value is printed.
+    sales_blank = item.get("sales_qty") is None or _qty_is_blank_zero(
+        item.get("sales_qty")
+    )
+    sv = item.get("sales_value")
+    try:
+        sv_ok = sv is not None and abs(float(sv)) >= 0.005
+    except (TypeError, ValueError):
+        sv_ok = False
+    if (
+        sales_blank
+        and sv_ok
+        and _looks_small_qty(item.get("receipts_qty"))
+        and not _qty_is_blank_zero(item.get("receipts_qty"))
+    ):
+        variants.extend([op - rc + sret, op - rc])
+    # Deduplicate while preserving order.
+    out: List[float] = []
+    for v in variants:
+        if not any(abs(v - x) <= 0.001 for x in out):
+            out.append(v)
+    return out
+
+
+def _repair_pack_rate_sales_parked_in_receipt(item: Dict[str, Any]) -> bool:
+    """Move Receipt→Sales when that assignment is the only identity-consistent read.
+
+    Pack|Rate grids: Vision parks period Sales under Receipt while Sale Value is
+    set. Only reassigns when sales_qty is blank/0, receipts looks like a small
+    qty, sales_value is printed money, and Op−Receipt≈Closing while
+    Op+Receipt≠Closing. Never invents.
+    """
+    if not _pack_rate_sales_in_receipt_enabled():
+        return False
+    if not _pack_rate_sale_value_layout_enabled():
+        return False
+    if not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    headers = extra.get("vision_column_headers") or []
+    header_blob = " ".join(str(h or "").lower() for h in headers)
+    if headers and "receipt" not in header_blob:
+        return False
+    if not (
+        item.get("sales_qty") is None
+        or fs.get("sales_qty") == "missing"
+        or _qty_is_blank_zero(item.get("sales_qty"))
+    ):
+        return False
+    receipt = item.get("receipts_qty")
+    if not (
+        (fs.get("purchase_qty") == "printed" or fs.get("receipts_qty") == "printed")
+        and _looks_small_qty(receipt)
+        and not _qty_is_blank_zero(receipt)
+    ):
+        return False
+    sv = item.get("sales_value")
+    if sv is None or fs.get("sales_value") == "missing":
+        return False
+    try:
+        if abs(float(sv)) < 0.005:
+            return False
+        rc = float(receipt)
+        op = float(item.get("opening_qty") or 0.0)
+        cl_raw = item.get("closing_qty")
+        if cl_raw is None or _qty_is_blank_zero(cl_raw):
+            return False
+        cl = float(cl_raw)
+    except (TypeError, ValueError):
+        return False
+    sret = _pack_rate_row_sale_return(item)
+    # Require identity to improve when Receipt is read as Sales.
+    as_sales_err = abs(op - rc + sret - cl)
+    as_receipt_err = abs(op + rc + sret - cl)
+    if as_sales_err > 0.51 or as_receipt_err <= 0.51:
+        return False
+    item["sales_qty"] = rc
+    item["receipts_qty"] = 0.0
+    fs["sales_qty"] = "printed"
+    fs["purchase_qty"] = "printed"
+    fs["receipts_qty"] = "printed"
+    flags = list(extra.get("flags") or [])
+    if "PACK_RATE_SALES_IN_RECEIPT" not in flags:
+        flags.append("PACK_RATE_SALES_IN_RECEIPT")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PACK_RATE_SALES_IN_RECEIPT product=%s sales_qty=%s",
+        str(item.get("product_name") or "")[:60],
+        rc,
+    )
+    return True
+
+
+def _pack_rate_closing_up_shift_enabled() -> bool:
+    """STOCK_VISION_PACK_RATE_CLOSING_UP_SHIFT — default ON."""
+    return os.getenv(
+        "STOCK_VISION_PACK_RATE_CLOSING_UP_SHIFT", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _pack_rate_closing_already_correct(
+    item: Dict[str, Any], closing: Optional[float] = None
+) -> bool:
+    """True when printed closing matches any Op/Rc/Sales identity variant."""
+    variants = _pack_rate_expected_closing_variants(item)
+    if not variants:
+        return False
+    try:
+        cl = float(item.get("closing_qty") if closing is None else closing)
+    except (TypeError, ValueError):
+        return False
+    return any(abs(cl - v) <= 0.51 for v in variants)
+
+
+def _repair_pack_rate_closing_shifted_to_prev(
+    items: Sequence[Dict[str, Any]],
+) -> int:
+    """Move Closing/Cl Value down when it identity-matches the next row.
+
+    Pack|Rate symptom: Closing sits one row above its SKU (blank prev row, or
+    prev row whose own identity fails). Cascades displaced wrong closings.
+    Never invents digits.
+    """
+    if not _pack_rate_closing_up_shift_enabled():
+        return 0
+    if not _pack_rate_sale_value_layout_enabled():
+        return 0
+    moved = 0
+    n = len(items)
+    max_passes = max(2, n + 2)
+
+    def _is_blank_movement(row: Dict[str, Any]) -> bool:
+        return all(
+            row.get(k) is None or _qty_is_blank_zero(row.get(k))
+            for k in ("opening_qty", "receipts_qty", "sales_qty")
+        )
+
+    for _pass in range(max_passes):
+        progress = 0
+        for i in range(n - 1):
+            a = items[i]
+            if not isinstance(a, dict):
+                continue
+            try:
+                ca = a.get("closing_qty")
+                if ca is None or abs(float(ca)) < 0.001:
+                    continue
+                ca_f = float(ca)
+            except (TypeError, ValueError):
+                continue
+            # Donor: movement-blank OR its closing does not match its own identity.
+            a_blank = _is_blank_movement(a)
+            a_correct = _pack_rate_closing_already_correct(a, ca_f)
+            if not a_blank and a_correct:
+                continue
+            # Scan a short window so displaced closings can hop past rows that
+            # were just corrected in this cascade (Pack|Rate up-shift chains).
+            target_j = None
+            for j in range(i + 1, min(i + 6, n)):
+                b = items[j]
+                if not isinstance(b, dict):
+                    continue
+                if _is_blank_movement(b):
+                    continue
+                if not any(
+                    abs(ca_f - v) <= 0.51
+                    for v in _pack_rate_expected_closing_variants(b)
+                ):
+                    continue
+                if _pack_rate_closing_already_correct(b):
+                    continue
+                intermediates_ok = True
+                for k in range(i + 1, j):
+                    mid = items[k]
+                    if not isinstance(mid, dict):
+                        intermediates_ok = False
+                        break
+                    if _is_blank_movement(mid):
+                        continue
+                    if not _pack_rate_closing_already_correct(mid):
+                        intermediates_ok = False
+                        break
+                if not intermediates_ok:
+                    continue
+                target_j = j
+                break
+            if target_j is None:
+                continue
+            b = items[target_j]
+            a_extra = a.setdefault("extra", {})
+            a_fs = a_extra.setdefault("field_source", {})
+            b_extra = b.setdefault("extra", {})
+            b_fs = b_extra.setdefault("field_source", {})
+            if not isinstance(a_fs, dict) or not isinstance(b_fs, dict):
+                continue
+            try:
+                old_bc = b.get("closing_qty")
+                old_bc_f = (
+                    float(old_bc)
+                    if old_bc is not None and not _qty_is_blank_zero(old_bc)
+                    else None
+                )
+            except (TypeError, ValueError):
+                old_bc_f = None
+            try:
+                old_bv = b.get("closing_value")
+                old_bv_f = (
+                    float(old_bv)
+                    if old_bv is not None and abs(float(old_bv)) >= 0.005
+                    else None
+                )
+            except (TypeError, ValueError):
+                old_bv_f = None
+            try:
+                av = a.get("closing_value")
+                av_f = (
+                    float(av)
+                    if av is not None and abs(float(av)) >= 0.005
+                    else None
+                )
+            except (TypeError, ValueError):
+                av_f = None
+            # Closing qty + Cl Value travel as a pair.
+            b["closing_qty"] = ca_f
+            b_fs["closing_qty"] = "printed"
+            if av_f is not None:
+                b["closing_value"] = av_f
+                b_fs["closing_value"] = "printed"
+                a["closing_value"] = None
+                a_fs["closing_value"] = "missing"
+                a_extra["closing_value"] = None
+            elif old_bc_f is not None:
+                # Qty replaced; old Cl Value belongs with the displaced qty.
+                b["closing_value"] = None
+                b_fs["closing_value"] = "missing"
+                b_extra["closing_value"] = None
+            # Keep displaced closing on the donor only when no later row already
+            # holds that same correct closing (avoids duplicating a neighbor).
+            keep_displaced = False
+            if old_bc_f is not None and abs(old_bc_f) >= 0.001:
+                already_held = False
+                for j in range(i + 1, n):
+                    other = items[j]
+                    if not isinstance(other, dict):
+                        continue
+                    if not _pack_rate_closing_already_correct(other):
+                        continue
+                    try:
+                        oc = other.get("closing_qty")
+                        if oc is not None and abs(float(oc) - old_bc_f) <= 0.51:
+                            already_held = True
+                            break
+                    except (TypeError, ValueError):
+                        continue
+                if not already_held:
+                    keep_displaced = True
+            if keep_displaced:
+                a["closing_qty"] = old_bc_f
+                a_fs["closing_qty"] = "printed"
+                if old_bv_f is not None:
+                    a["closing_value"] = old_bv_f
+                    a_fs["closing_value"] = "printed"
+            else:
+                a["closing_qty"] = None
+                a_fs["closing_qty"] = "missing"
+            for it, flag in (
+                (a, "PACK_RATE_CLOSING_UP_SHIFT_SRC"),
+                (b, "PACK_RATE_CLOSING_UP_SHIFT_DST"),
+            ):
+                ex = it.setdefault("extra", {})
+                flags = list(ex.get("flags") or [])
+                if flag not in flags:
+                    flags.append(flag)
+                ex["flags"] = flags
+            progress += 1
+            moved += 1
+            logger.info(
+                "VISION_TABLE PACK_RATE_CLOSING_UP_SHIFT from=%s to=%s closing=%s",
+                str(a.get("product_name") or "")[:40],
+                str(b.get("product_name") or "")[:40],
+                ca_f,
+            )
+        # Inverse: blank next row holds this row's Closing (down-shift).
+        for i in range(n - 1):
+            a = items[i]
+            b = items[i + 1]
+            if not isinstance(a, dict) or not isinstance(b, dict):
+                continue
+            if not _is_blank_movement(b):
+                continue
+            try:
+                cb = b.get("closing_qty")
+                if cb is None or abs(float(cb)) < 0.001:
+                    continue
+                cb_f = float(cb)
+            except (TypeError, ValueError):
+                continue
+            if _is_blank_movement(a):
+                continue
+            if not any(
+                abs(cb_f - v) <= 0.51
+                for v in _pack_rate_expected_closing_variants(a)
+            ):
+                continue
+            if _pack_rate_closing_already_correct(a):
+                continue
+            a_extra = a.setdefault("extra", {})
+            a_fs = a_extra.setdefault("field_source", {})
+            b_extra = b.setdefault("extra", {})
+            b_fs = b_extra.setdefault("field_source", {})
+            if not isinstance(a_fs, dict) or not isinstance(b_fs, dict):
+                continue
+            try:
+                old_ac = a.get("closing_qty")
+                old_ac_f = (
+                    float(old_ac)
+                    if old_ac is not None and not _qty_is_blank_zero(old_ac)
+                    else None
+                )
+            except (TypeError, ValueError):
+                old_ac_f = None
+            try:
+                old_av = a.get("closing_value")
+                old_av_f = (
+                    float(old_av)
+                    if old_av is not None and abs(float(old_av)) >= 0.005
+                    else None
+                )
+            except (TypeError, ValueError):
+                old_av_f = None
+            a["closing_qty"] = cb_f
+            a_fs["closing_qty"] = "printed"
+            try:
+                bv = b.get("closing_value")
+                if bv is not None and abs(float(bv)) >= 0.005:
+                    a["closing_value"] = float(bv)
+                    a_fs["closing_value"] = "printed"
+                    b["closing_value"] = None
+                    b_fs["closing_value"] = "missing"
+                    b_extra["closing_value"] = None
+                elif old_ac_f is not None:
+                    a["closing_value"] = None
+                    a_fs["closing_value"] = "missing"
+                    a_extra["closing_value"] = None
+            except (TypeError, ValueError):
+                pass
+            # Drop displaced qty when a later correct row already holds it.
+            keep = False
+            if old_ac_f is not None and abs(old_ac_f) >= 0.001:
+                already_held = False
+                for j in range(i + 1, n):
+                    other = items[j]
+                    if not isinstance(other, dict):
+                        continue
+                    if other is b:
+                        continue
+                    if not _pack_rate_closing_already_correct(other):
+                        continue
+                    try:
+                        oc = other.get("closing_qty")
+                        if oc is not None and abs(float(oc) - old_ac_f) <= 0.51:
+                            already_held = True
+                            break
+                    except (TypeError, ValueError):
+                        continue
+                keep = not already_held
+            if keep:
+                b["closing_qty"] = old_ac_f
+                b_fs["closing_qty"] = "printed"
+                if old_av_f is not None:
+                    b["closing_value"] = old_av_f
+                    b_fs["closing_value"] = "printed"
+            else:
+                b["closing_qty"] = None
+                b_fs["closing_qty"] = "missing"
+            for it, flag in (
+                (b, "PACK_RATE_CLOSING_UP_SHIFT_SRC"),
+                (a, "PACK_RATE_CLOSING_UP_SHIFT_DST"),
+            ):
+                ex = it.setdefault("extra", {})
+                flags = list(ex.get("flags") or [])
+                if flag not in flags:
+                    flags.append(flag)
+                ex["flags"] = flags
+            progress += 1
+            moved += 1
+            logger.info(
+                "VISION_TABLE PACK_RATE_CLOSING_DOWN_SHIFT from=%s to=%s closing=%s",
+                str(b.get("product_name") or "")[:40],
+                str(a.get("product_name") or "")[:40],
+                cb_f,
+            )
+        if progress == 0:
+            break
+    # Orphan Closing on blank-movement rows that match no nearby identity —
+    # clear to missing (never invent the true Closing).
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        if not _is_blank_movement(item):
+            continue
+        try:
+            cl = item.get("closing_qty")
+            if cl is None or abs(float(cl)) < 0.001:
+                continue
+            cl_f = float(cl)
+        except (TypeError, ValueError):
+            continue
+        matched = False
+        for j in range(max(0, i - 3), min(n, i + 4)):
+            if j == i:
+                continue
+            other = items[j]
+            if not isinstance(other, dict) or _is_blank_movement(other):
+                continue
+            if any(
+                abs(cl_f - v) <= 0.51
+                for v in _pack_rate_expected_closing_variants(other)
+            ):
+                matched = True
+                break
+        if matched:
+            continue
+        extra = item.setdefault("extra", {})
+        fs = extra.setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            continue
+        item["closing_qty"] = None
+        fs["closing_qty"] = "missing"
+        try:
+            if item.get("closing_value") is not None:
+                item["closing_value"] = None
+                extra["closing_value"] = None
+                fs["closing_value"] = "missing"
+        except (TypeError, ValueError):
+            pass
+        flags = list(extra.get("flags") or [])
+        if "PACK_RATE_ORPHAN_CLOSING_CLEARED" not in flags:
+            flags.append("PACK_RATE_ORPHAN_CLOSING_CLEARED")
+        extra["flags"] = flags
+        moved += 1
+        logger.info(
+            "VISION_TABLE PACK_RATE_ORPHAN_CLOSING_CLEARED product=%s closing=%s",
+            str(item.get("product_name") or "")[:40],
+            cl_f,
+        )
+    return moved
+
+
+def _repair_pack_rate_spurious_sale_return(item: Dict[str, Any]) -> bool:
+    """Clear sale_return when Closing already balances without it.
+
+    Pack|Rate Free/Sales-RTN OCR often parks a small Free digit under
+    sale_return. When Op+Rc−Sales≈Closing but Op+Rc+SR−Sales does not,
+    drop the SR slot to missing — never invents Closing.
+    """
+    if not _pack_rate_sale_value_layout_enabled():
+        return False
+    if not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    sret = _pack_rate_row_sale_return(item)
+    if abs(sret) < 0.001:
+        return False
+    try:
+        op = float(item.get("opening_qty") or 0.0)
+        rc = float(item.get("receipts_qty") or 0.0)
+        sl = float(item.get("sales_qty") or 0.0)
+        cl = item.get("closing_qty")
+        if cl is None:
+            return False
+        cl_f = float(cl)
+    except (TypeError, ValueError):
+        return False
+    without = abs(op + rc - sl - cl_f)
+    with_sr = abs(op + rc + sret - sl - cl_f)
+    if without > 0.51 or with_sr <= 0.51:
+        return False
+    item["sales_return_qty"] = None
+    if "sale_return" in extra:
+        extra["sale_return"] = None
+    fs["sales_return_qty"] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "PACK_RATE_SPURIOUS_SALE_RETURN_CLEARED" not in flags:
+        flags.append("PACK_RATE_SPURIOUS_SALE_RETURN_CLEARED")
+    extra["flags"] = flags
+    logger.info(
+        "VISION_TABLE PACK_RATE_SPURIOUS_SALE_RETURN_CLEARED product=%s "
+        "cleared_sr=%s closing=%s",
+        str(item.get("product_name") or "")[:60],
+        sret,
+        cl_f,
+    )
+    return True
+
+
 def _repair_opvalue_opening_mirrored_in_sales(item: Dict[str, Any]) -> bool:
     """Restore opening when Vision left Op blank and mirrored it under Sales/Cl.
 
@@ -9893,13 +10451,63 @@ def _promote_printed_total_row_money(
             val = None
         if val is not None:
             candidates[key] = val
-    # Prefer raw-cell Sale Value / Cl Value when present (handles Rate-less TOTAL).
+    # Prefer raw-cell Sale Value / Cl Value when present (handles Rate-less TOTAL),
+    # but never let a Sale-Value-mirrored raw closing overwrite an absorbed Cl Value.
     raw_money = _money_from_total_raw_cells(printed)
+    try:
+        sales_cand = (
+            float(candidates["sales_value"])
+            if candidates.get("sales_value") is not None
+            else (
+                float(printed["sales_value"])
+                if printed.get("sales_value") is not None
+                else None
+            )
+        )
+    except (TypeError, ValueError):
+        sales_cand = None
     for key, val in raw_money.items():
+        if key == "closing_value" and key in candidates:
+            try:
+                mapped = float(candidates[key])
+                raw_f = float(val)
+            except (TypeError, ValueError):
+                candidates[key] = val
+                continue
+            if (
+                sales_cand is not None
+                and abs(mapped - sales_cand) > 0.01
+                and abs(raw_f - sales_cand) <= 0.01
+            ):
+                continue
+            if abs(mapped) >= 0.005 and abs(mapped - raw_f) > 0.01 and abs(mapped) > abs(raw_f):
+                continue
         candidates[key] = val
     promoted: List[str] = []
     for key, val in candidates.items():
-        if totals.get(key) is not None:
+        cur = totals.get(key)
+        if cur is not None:
+            # Pack|Rate: Closing sometimes mirrored from Sale Value; replace
+            # when TOTAL raw/absorbed cells offer a distinct printed closing.
+            try:
+                cur_f = float(cur)
+                val_f = float(val)
+                sales_f = (
+                    float(totals["sales_value"])
+                    if totals.get("sales_value") is not None
+                    else sales_cand
+                )
+            except (TypeError, ValueError):
+                continue
+            if not (
+                key == "closing_value"
+                and sales_f is not None
+                and abs(cur_f - sales_f) <= 0.01
+                and abs(val_f - cur_f) > 0.01
+            ):
+                continue
+            totals[key] = val_f
+            promoted.append(key)
             continue
         totals[key] = val
         promoted.append(key)
@@ -10002,13 +10610,46 @@ def _compare_line_sums_to_printed_total(
         if k in remapped_value_fields:
             continue
         diffs[k] = round(line_sums[k] - printed_vals[k], 2)
-    return {
+
+    # Sale|Closing|Cl Value sheets sometimes print the Cl Value aggregate under
+    # Closing (and an unrelated Sales footer). Annotate — never rewrite digits.
+    source_footer_notes: List[str] = []
+    try:
+        printed_cq = float(printed_vals.get("closing_qty") or 0.0)
+        line_cq = float(line_sums.get("closing_qty") or 0.0)
+        line_cv = float(line_sums.get("closing_value") or 0.0)
+        printed_sq = float(printed_vals.get("sales_qty") or 0.0)
+        line_sq = float(line_sums.get("sales_qty") or 0.0)
+    except (TypeError, ValueError):
+        printed_cq = line_cq = line_cv = printed_sq = line_sq = 0.0
+    if (
+        "closing_qty" in diffs
+        and abs(printed_cq - line_cv) <= 1.0
+        and abs(printed_cq - line_cq) > 0.51
+        and abs(line_cv) >= 1.0
+    ):
+        source_footer_notes.append(
+            "printed_closing_qty_matches_line_closing_value"
+        )
+    if (
+        "sales_qty" in diffs
+        and abs(printed_sq) >= 1.0
+        and abs(line_sq) >= 1.0
+        and abs(printed_sq) > max(abs(line_sq) * 5.0, abs(line_sq) + 50.0)
+    ):
+        source_footer_notes.append("printed_sales_qty_total_inconsistent_with_rows")
+
+    out: Dict[str, Any] = {
         "compared": True,
         "line_sums": line_sums,
         "printed_total": printed_vals,
         "discrepancies": diffs,
         "ok": not diffs,
     }
+    if source_footer_notes:
+        out["source_footer_notes"] = source_footer_notes
+        out["source_footer_inconsistent"] = True
+    return out
 
 
 def _maybe_repair_shifted_qty_row(
@@ -10488,8 +11129,8 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
 # "Total:", and category "Total Value (GEL)" rows.
 # Does not match product names that merely start with Total (e.g. TOTAL CARE).
 _VISION_TOTAL_ROW_NAME = re.compile(
-    r"(?ix)^\s*(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
-    r"(?:[:.\-–—]*)\s*"
+    r"(?ix)^\s*(?:[-–—=~>*\s]*)?(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
+    r"(?:[:.\-–—=>*]*)\s*"
     r"(?:"
     r"\(.*\)"
     r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
@@ -10604,7 +11245,269 @@ def _peel_vision_total_named_items(
             totals.append(item)
         else:
             products.append(item)
+    products, absorbed = _peel_pack_rate_total_absorbed_into_last_sku(products)
+    if absorbed:
+        if totals:
+            _merge_pack_rate_absorbed_total_into(totals[0], absorbed)
+        else:
+            totals.append(absorbed)
     return products, totals
+
+
+def _extend_or_merge_vision_totals(
+    totals: List[Dict[str, Any]],
+    peeled: Sequence[Dict[str, Any]],
+) -> None:
+    """Append peeled TOTAL rows, merging Pack|Rate absorbed bleed into the first."""
+    for row in peeled or []:
+        if not isinstance(row, dict):
+            continue
+        extra = row.get("extra") if isinstance(row.get("extra"), dict) else {}
+        flags = list(extra.get("flags") or []) if isinstance(extra, dict) else []
+        absorbed = "PACK_RATE_TOTAL_ABSORBED_PEEL" in flags
+        has_named_total = any(
+            isinstance(t, dict) and _is_vision_total_row_name(t.get("product_name"))
+            for t in totals
+        )
+        if totals and (absorbed or (has_named_total and _is_vision_total_row_name(row.get("product_name")))):
+            _merge_pack_rate_absorbed_total_into(totals[0], row)
+            continue
+        totals.append(row)
+
+
+def _merge_pack_rate_absorbed_total_into(
+    existing: Dict[str, Any], absorbed: Dict[str, Any]
+) -> None:
+    """Merge absorbed footer money into an already-peeled --Total-->> row.
+
+    When the named TOTAL already carries Sale Value, only fill blank money
+    (sales_value / closing_value) from the absorbed SKU bleed — do not copy
+    footer-scale Opening/Receipt/Sales qty onto TOTAL (those inflate
+    printed_total_validation). Never invents digits.
+    """
+    if not isinstance(existing, dict) or not isinstance(absorbed, dict):
+        return
+    try:
+        existing_sv = (
+            float(existing["sales_value"])
+            if existing.get("sales_value") is not None
+            else None
+        )
+    except (TypeError, ValueError):
+        existing_sv = None
+    # Named TOTAL with Sale Value already mapped: money-only merge.
+    money_only = existing_sv is not None and abs(existing_sv) >= 0.005
+    keys = (
+        ("sales_value", "closing_value")
+        if money_only
+        else (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+            "opening_value",
+            "receipts_value",
+        )
+    )
+    for key in keys:
+        try:
+            cur = existing.get(key)
+            cur_f = float(cur) if cur is not None and cur != "" else None
+        except (TypeError, ValueError):
+            cur_f = None
+        try:
+            new = absorbed.get(key)
+            new_f = float(new) if new is not None and new != "" else None
+        except (TypeError, ValueError):
+            new_f = None
+        if new_f is None:
+            continue
+        if cur_f is None or abs(cur_f) < 0.005:
+            existing[key] = new_f
+    ex_extra = existing.setdefault("extra", {})
+    ab_extra = absorbed.get("extra") if isinstance(absorbed.get("extra"), dict) else {}
+    if isinstance(ex_extra, dict) and isinstance(ab_extra, dict):
+        raw = ab_extra.get("vision_raw_cells")
+        if raw and not ex_extra.get("vision_raw_cells"):
+            ex_extra["vision_raw_cells"] = list(raw)
+        flags = list(ex_extra.get("flags") or [])
+        if "PACK_RATE_TOTAL_ABSORBED_MERGE" not in flags:
+            flags.append("PACK_RATE_TOTAL_ABSORBED_MERGE")
+        ex_extra["flags"] = flags
+    existing["is_total_row"] = True
+    logger.info(
+        "VISION_TABLE PACK_RATE_TOTAL_ABSORBED_MERGE into=%s "
+        "from_name=%s money_only=%s",
+        str(existing.get("product_name") or "")[:40],
+        str(absorbed.get("product_name") or "")[:40],
+        money_only,
+    )
+
+
+def _peel_pack_rate_total_absorbed_into_last_sku(
+    items: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    """When ----Total---->> digits land on the last zero-SKU (Pack|Rate grids).
+
+    Symptom: last product keeps its name but carries footer-scale Opening /
+    Receipt / Sales (e.g. 59400 / 59351 / 111866) while earlier rows are small.
+    Move those printed numbers onto a synthetic TOTAL row and clear the SKU
+    back to blank movement (the printed product line was zeros).
+    """
+    if len(items) < 8:
+        return items, None
+
+    def _f(item: Dict[str, Any], key: str) -> Optional[float]:
+        try:
+            v = item.get(key)
+            if v is None or v == "":
+                return None
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    def _raw_scale(item: Dict[str, Any]) -> float:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        cells = extra.get("vision_raw_cells") if isinstance(extra, dict) else None
+        best = 0.0
+        for cell in cells or []:
+            try:
+                # Skip obvious money-with-paisa for qty-scale gate; still count.
+                best = max(best, abs(float(str(cell).replace(",", ""))))
+            except (TypeError, ValueError):
+                continue
+        return best
+
+    last = items[-1]
+    last_op = _f(last, "opening_qty")
+    last_rc = _f(last, "receipts_qty")
+    last_sl = _f(last, "sales_qty")
+    last_cl = _f(last, "closing_qty")
+    scale = max(
+        abs(last_op or 0.0),
+        abs(last_rc or 0.0),
+        abs(last_sl or 0.0),
+        abs(last_cl or 0.0),
+        _raw_scale(last),
+    )
+    if scale < 5000.0:
+        return items, None
+    prior = items[:-1]
+    prior_scales: List[float] = []
+    for it in prior:
+        prior_scales.append(
+            max(
+                abs(_f(it, "opening_qty") or 0.0),
+                abs(_f(it, "receipts_qty") or 0.0),
+                abs(_f(it, "sales_qty") or 0.0),
+                abs(_f(it, "closing_qty") or 0.0),
+            )
+        )
+    if not prior_scales:
+        return items, None
+    small = sum(1 for s in prior_scales if s < 1000.0)
+    if small < max(5, int(0.7 * len(prior_scales))):
+        return items, None
+    # Emit one synthetic TOTAL from the absorbed digits (caller merges when a
+    # --Total-->> was already peeled from the same page).
+    total_item = dict(last)
+    total_item["product_name"] = "--Total-->>"
+    total_item["is_total_row"] = True
+    tot_extra = (
+        dict(total_item["extra"])
+        if isinstance(total_item.get("extra"), dict)
+        else {}
+    )
+    tot_flags = list(tot_extra.get("flags") or [])
+    if "PACK_RATE_TOTAL_ABSORBED_PEEL" not in tot_flags:
+        tot_flags.append("PACK_RATE_TOTAL_ABSORBED_PEEL")
+    tot_extra["flags"] = tot_flags
+    total_item["extra"] = tot_extra
+    cleared = dict(last)
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+        "sales_return_qty",
+        "opening_value",
+        "receipts_value",
+    ):
+        cleared[key] = None
+    extra = cleared.get("extra") if isinstance(cleared.get("extra"), dict) else {}
+    if not isinstance(extra, dict):
+        extra = {}
+    for key in (
+        "free_out_qty",
+        "purchase_return_qty",
+        "other_outward_qty",
+        "expiry_damage_qty",
+        "unit_rate",
+        "lms",
+    ):
+        if key in extra:
+            extra[key] = None
+    def _is_footer_scale_cell(cell: Any) -> bool:
+        if isinstance(cell, (int, float)):
+            return abs(float(cell)) >= 1000.0
+        if not isinstance(cell, str):
+            return False
+        tok = cell.replace(",", "").strip()
+        if not re.fullmatch(r"\d{4,}(?:\.\d+)?", tok):
+            return False
+        try:
+            return abs(float(tok)) >= 1000.0
+        except (TypeError, ValueError):
+            return False
+
+    # Drop absorbed footer-scale raw/physical cells from the SKU so validation
+    # sums do not re-ingest them via line_items.
+    if "vision_raw_cells" in extra:
+        extra["vision_raw_cells"] = [
+            c
+            for c in (extra.get("vision_raw_cells") or [])
+            if not _is_footer_scale_cell(c)
+        ]
+    physical = extra.get("physical_cells")
+    if isinstance(physical, dict) and physical:
+        scrubbed = {}
+        for k, v in physical.items():
+            if _is_footer_scale_cell(v):
+                scrubbed[k] = None
+            else:
+                scrubbed[k] = v
+        extra["physical_cells"] = scrubbed
+    fs = extra.setdefault("field_source", {})
+    if isinstance(fs, dict):
+        for key in (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "sales_value",
+            "closing_qty",
+            "closing_value",
+        ):
+            fs[key] = "missing"
+    flags = list(extra.get("flags") or [])
+    if "PACK_RATE_TOTAL_ABSORBED_PEEL" not in flags:
+        flags.append("PACK_RATE_TOTAL_ABSORBED_PEEL")
+    extra["flags"] = flags
+    cleared["extra"] = extra
+    out = list(prior) + [cleared]
+    logger.info(
+        "VISION_TABLE PACK_RATE_TOTAL_ABSORBED_PEEL name=%s "
+        "opening=%s receipts=%s sales=%s closing=%s",
+        str(last.get("product_name") or "")[:40],
+        last_op,
+        last_rc,
+        last_sl,
+        last_cl,
+    )
+    return out, total_item
 
 
 def _is_non_product_vision_row(item: Dict[str, Any]) -> bool:
@@ -10708,11 +11611,21 @@ def _normalize_garbled_pack_token(token: str, product_name: str = "") -> str:
     """Repair common OCR pack slips (60S→608) when the product form is solid.
 
     Only rewrites known pack-size prefixes so real qty cells like 88/118 are
-    not turned into 8S/11S.
+    not turned into 8S/11S. Also normalizes degree/quote glyphs in 60°S / 60""S.
     """
     t = str(token or "").strip()
     if not t:
         return t
+    # Printed / OCR apostrophe variants on tablet packs (60°S / 60""S / 60`S).
+    t = (
+        t.replace("°", "'")
+        .replace("º", "'")
+        .replace("\"\"", "'")
+        .replace("''", "'")
+        .replace("`", "'")
+        .replace("´", "'")
+    )
+    t = re.sub(r"(\d+)\s*'+S\b", r"\1'S", t, flags=re.I)
     if _classify_layout_cell(t) == "pack":
         return t
     m = re.fullmatch(r"(\d{2,3})8", t)
@@ -11581,7 +12494,7 @@ def _map_single_table(
 
     line_items, peeled_totals = _peel_vision_total_named_items(line_items)
     if peeled_totals:
-        totals_rows.extend(peeled_totals)
+        _extend_or_merge_vision_totals(totals_rows, peeled_totals)
         logger.info(
             "VISION_TABLE TOTAL_ROW_NAME peeled=%s names=%s",
             len(peeled_totals),
@@ -11627,6 +12540,11 @@ def _map_single_table(
         _repair_closing_value_parked_in_sales_value(
             item, nxt if isinstance(nxt, dict) else None
         )
+    _repair_pack_rate_closing_shifted_to_prev(line_items)
+    for item in line_items:
+        if isinstance(item, dict):
+            _repair_pack_rate_sales_parked_in_receipt(item)
+            _repair_pack_rate_spurious_sale_return(item)
     _clear_neighbor_stolen_closing_fields(line_items)
     for tot in totals_rows:
         if isinstance(tot, dict):
@@ -13227,8 +14145,21 @@ def _stamp_vision_result(
 ) -> Dict[str, Any]:
     result = _empty_result(filename, ext)
     products, peeled_totals = _peel_vision_total_named_items(line_items)
+    # Pack|Sales|Closing|Cl Value screenshots often glue Pack into Product Name
+    # (…OR6S / …CHO(10S / …SPRAY100 ML). Peel into packing — never invent.
+    try:
+        from services.sales_statement_extractor import _main_stock_peel_pack_into_field
+
+        for _prod in products:
+            if isinstance(_prod, dict):
+                _main_stock_peel_pack_into_field(_prod)
+    except Exception as exc:
+        logger.info(
+            "VISION_TABLE PACK_PEEL_FROM_NAME skipped err=%s",
+            type(exc).__name__,
+        )
     extra_totals: List[Dict[str, Any]] = list(totals_rows or [])
-    extra_totals.extend(peeled_totals)
+    _extend_or_merge_vision_totals(extra_totals, peeled_totals)
     result["line_items"] = products
     totals_rows = extra_totals
     if stockist_name:
@@ -13974,10 +14905,16 @@ def run_vision_table_path(
             )
             _repair_pack_rate_opening_receipt_sales_in_free(item)
             _repair_clear_money_duplicate_free_out(item)
+        # Closing-up-shift before Sales-in-Receipt (latter needs correct Closing).
+        _repair_pack_rate_closing_shifted_to_prev(all_items)
+        for item in all_items:
+            if isinstance(item, dict):
+                _repair_pack_rate_sales_parked_in_receipt(item)
+                _repair_pack_rate_spurious_sale_return(item)
         _clear_neighbor_stolen_closing_fields(all_items)
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
-        all_totals.extend(peeled_totals)
+        _extend_or_merge_vision_totals(all_totals, peeled_totals)
 
         result = _stamp_vision_result(
             filename=filename,

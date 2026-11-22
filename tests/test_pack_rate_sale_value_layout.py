@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import unittest
 from unittest.mock import patch
 
@@ -11,9 +12,13 @@ from services.stock_vision_table import (
     _compare_line_sums_to_printed_total,
     _infer_qty_value_canons_from_rows,
     _money_from_total_raw_cells,
+    _peel_vision_total_named_items,
     _promote_printed_total_row_money,
     _repair_closing_value_parked_in_sales_value,
+    _repair_pack_rate_closing_shifted_to_prev,
     _repair_pack_rate_opening_receipt_sales_in_free,
+    _repair_pack_rate_sales_parked_in_receipt,
+    _repair_pack_rate_spurious_sale_return,
     _repair_qty_copied_into_value_fields,
 )
 
@@ -299,6 +304,36 @@ class PackRateSaleValueLayoutTest(unittest.TestCase):
         self.assertEqual(totals["sales_value"], 1416.0)
         self.assertEqual(totals["closing_value"], 32242.74)
 
+    def test_promote_replaces_sales_mirrored_closing_with_absorbed(self):
+        """Top-level Closing=Sale Value must yield to absorbed TOTAL Cl Value."""
+        totals = {"sales_value": 39973.0, "closing_value": 39973.0, "extra": {}}
+        rows = [
+            {
+                "product_name": "--Total-->>",
+                "sales_value": 39973.0,
+                "closing_value": 135894.4,
+                "extra": {
+                    "flags": ["PACK_RATE_TOTAL_ABSORBED_MERGE"],
+                    "vision_raw_cells": [
+                        "--Total-->>",
+                        "0",
+                        "39973",
+                        "0",
+                        "39973",
+                        "0",
+                        "0",
+                    ],
+                },
+            }
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT": "true"}
+        ):
+            promoted = _promote_printed_total_row_money(totals, rows)
+        self.assertIn("closing_value", promoted)
+        self.assertEqual(totals["sales_value"], 39973.0)
+        self.assertEqual(totals["closing_value"], 135894.4)
+
     def test_pack_rate_opening_receipt_sales_in_free_shift(self):
         """KOFLET-style: Opening under Receipt, Sales under Free — reassign only."""
         item = {
@@ -462,6 +497,286 @@ class PackRateSaleValueLayoutTest(unittest.TestCase):
         self.assertEqual(out["printed_total"]["opening_value"], 0.0)
         self.assertEqual(out["printed_total"]["sales_value"], 231332.0)
         self.assertEqual(out["printed_total"]["closing_value"], 76713.21)
+
+    def _hdr(self):
+        return [
+            "Product Name",
+            "Pack",
+            "Rate",
+            "Previous Last Sale",
+            "Previous Sale",
+            "Opening",
+            "Receipt",
+            "Sales",
+            "Free",
+            "Sales RTN",
+            "Sale Value",
+            "Closing",
+            "Cl Value",
+        ]
+
+    def test_closing_up_shift_and_sales_in_receipt_cascade(self):
+        """AACTARIL holds ABANA's Closing; ABANA Sales parked under Receipt."""
+        aact = {
+            "product_name": "AACTARIL",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "sales_value": 0.0,
+            "closing_qty": 33.0,
+            "closing_value": 4904.0,
+            "extra": {"field_source": {}, "vision_column_headers": self._hdr()},
+        }
+        abana = {
+            "product_name": "ABANA TAB",
+            "opening_qty": 43.0,
+            "receipts_qty": 10.0,
+            "sales_qty": 0.0,
+            "sales_value": 1676.0,
+            "closing_qty": 0.0,
+            "closing_value": 0.0,
+            "extra": {
+                "field_source": {
+                    "opening_qty": "printed",
+                    "purchase_qty": "printed",
+                    "receipts_qty": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "printed",
+                    "closing_qty": "printed",
+                },
+                "vision_column_headers": self._hdr(),
+            },
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT": "true",
+                "STOCK_VISION_PACK_RATE_CLOSING_UP_SHIFT": "true",
+                "STOCK_VISION_PACK_RATE_SALES_IN_RECEIPT": "true",
+            },
+        ):
+            n = _repair_pack_rate_closing_shifted_to_prev([aact, abana])
+            self.assertGreaterEqual(n, 1)
+            self.assertTrue(_repair_pack_rate_sales_parked_in_receipt(abana))
+        self.assertIsNone(aact["closing_qty"])
+        self.assertEqual(abana["closing_qty"], 33.0)
+        self.assertEqual(abana["sales_qty"], 10.0)
+        self.assertEqual(abana["receipts_qty"], 0.0)
+
+    def test_closing_up_shift_cascades_liv52_chain(self):
+        """Closing sits one row above across LIV 52 HB → SYP → TAB → OPTHACAR."""
+        rows = [
+            {
+                "product_name": "LIV 52 HB",
+                "opening_qty": 0.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 72.0,
+                "closing_value": 6808.0,
+                "extra": {"field_source": {}},
+            },
+            {
+                "product_name": "LIV 52 SYP 100ML",
+                "opening_qty": 68.0,
+                "receipts_qty": 70.0,
+                "sales_qty": 66.0,
+                "closing_qty": 34.0,
+                "extra": {"sale_return": 3.0, "field_source": {}},
+            },
+            {
+                "product_name": "LIV 52 SYP 200ML",
+                "opening_qty": 13.0,
+                "receipts_qty": 35.0,
+                "sales_qty": 14.0,
+                "closing_qty": 134.0,
+                "extra": {"field_source": {}},
+            },
+            {
+                "product_name": "LIV 52 TAB",
+                "opening_qty": 86.0,
+                "receipts_qty": 100.0,
+                "sales_qty": 52.0,
+                "closing_qty": 69.0,
+                "extra": {"field_source": {}},
+            },
+            {
+                "product_name": "OPTHACAR",
+                "opening_qty": 69.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "closing_qty": 20.0,
+                "extra": {"field_source": {}},
+            },
+            {
+                "product_name": "ORO-T-ORJ",
+                "opening_qty": 22.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 2.0,
+                "closing_qty": 0.0,
+                "extra": {"field_source": {}},
+            },
+        ]
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT": "true",
+                "STOCK_VISION_PACK_RATE_CLOSING_UP_SHIFT": "true",
+            },
+        ):
+            n = _repair_pack_rate_closing_shifted_to_prev(rows)
+        self.assertGreaterEqual(n, 4)
+        self.assertEqual(rows[1]["closing_qty"], 72.0)
+        self.assertEqual(rows[2]["closing_qty"], 34.0)
+        self.assertEqual(rows[3]["closing_qty"], 134.0)
+        self.assertEqual(rows[4]["closing_qty"], 69.0)
+        self.assertEqual(rows[5]["closing_qty"], 20.0)
+
+    def test_spurious_sale_return_cleared_when_closing_balances_without(self):
+        """LIV 52 SYP 100ML: Free digit in sale_return while Closing is 72."""
+        item = {
+            "product_name": "LIV 52 SYP 100ML",
+            "opening_qty": 68.0,
+            "receipts_qty": 70.0,
+            "sales_qty": 66.0,
+            "closing_qty": 72.0,
+            "extra": {
+                "sale_return": 3.0,
+                "field_source": {"sales_return_qty": "printed"},
+            },
+        }
+        with patch.dict(
+            os.environ, {"STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT": "true"}
+        ):
+            self.assertTrue(_repair_pack_rate_spurious_sale_return(item))
+        self.assertIsNone(item["extra"].get("sale_return"))
+        self.assertIn(
+            "PACK_RATE_SPURIOUS_SALE_RETURN_CLEARED",
+            item["extra"].get("flags") or [],
+        )
+
+    def test_closing_down_shift_from_blank_next_row(self):
+        """Blank next SKU holds previous row's Closing (PILEX FORT / FOR1)."""
+        fort = {
+            "product_name": "PILEX FORT",
+            "opening_qty": 0.0,
+            "receipts_qty": 56.0,
+            "sales_qty": 0.0,
+            "sales_value": 1600.0,
+            "closing_qty": 100.0,
+            "closing_value": 10806.0,
+            "extra": {"field_source": {}},
+        }
+        for1 = {
+            "product_name": "PILEX FOR1",
+            "opening_qty": 0.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 0.0,
+            "closing_qty": 56.0,
+            "closing_value": 5929.0,
+            "extra": {"field_source": {}},
+        }
+        tab = {
+            "product_name": "PILEX TAB",
+            "opening_qty": 51.0,
+            "receipts_qty": 100.0,
+            "sales_qty": 51.0,
+            "closing_qty": 100.0,
+            "extra": {"field_source": {}},
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_PACK_RATE_SALE_VALUE_LAYOUT": "true",
+                "STOCK_VISION_PACK_RATE_CLOSING_UP_SHIFT": "true",
+            },
+        ):
+            n = _repair_pack_rate_closing_shifted_to_prev([fort, for1, tab])
+        self.assertGreaterEqual(n, 1)
+        self.assertEqual(fort["closing_qty"], 56.0)
+        self.assertIsNone(for1["closing_qty"])
+        self.assertEqual(tab["closing_qty"], 100.0)
+
+    def test_total_absorb_merges_into_existing_total_row(self):
+        """YASHTIMA footer bleed merges into --Total-->>, not a second TOTAL."""
+        items = []
+        for i in range(10):
+            items.append(
+                {
+                    "product_name": f"SKU{i}",
+                    "opening_qty": float(i + 1),
+                    "receipts_qty": 0.0,
+                    "sales_qty": 0.0,
+                    "closing_qty": float(i + 1),
+                    "extra": {},
+                }
+            )
+        items.append(
+            {
+                "product_name": "--Total-->>",
+                "is_total_row": True,
+                "opening_qty": 0.0,
+                "receipts_qty": 0.0,
+                "sales_qty": 0.0,
+                "sales_value": 39973.0,
+                "closing_qty": 0.0,
+                "closing_value": 0.0,
+                "extra": {},
+            }
+        )
+        items.append(
+            {
+                "product_name": "YASHTIMA",
+                "opening_qty": 59400.0,
+                "receipts_qty": 59351.0,
+                "sales_qty": 111866.0,
+                "sales_value": 743.0,
+                "closing_qty": 135894.0,
+                "closing_value": 135894.4,
+                "extra": {
+                    "vision_raw_cells": [
+                        "YASHTIMA",
+                        "59400",
+                        "59351",
+                        "111866",
+                        "743",
+                        "135894",
+                        "135894.4",
+                    ],
+                    "physical_cells": {
+                        "0": "YASHTIMA",
+                        "3": "63241",
+                        "4": "59400",
+                        "12": "135894",
+                        "13": "135894.4",
+                    },
+                },
+            }
+        )
+        products, totals = _peel_vision_total_named_items(items)
+        self.assertEqual(len(totals), 1)
+        self.assertTrue(
+            re.search(r"TOTAL", str(totals[0].get("product_name") or ""), re.I)
+        )
+        self.assertEqual(totals[0].get("sales_value"), 39973.0)
+        self.assertEqual(totals[0].get("closing_value"), 135894.4)
+        # Money-only merge: do not copy footer-scale Opening/Receipt/Sales qty.
+        self.assertEqual(totals[0].get("opening_qty"), 0.0)
+        self.assertEqual(totals[0].get("receipts_qty"), 0.0)
+        last = products[-1]
+        self.assertEqual(last.get("product_name"), "YASHTIMA")
+        self.assertIsNone(last.get("opening_qty"))
+        self.assertIn(
+            "PACK_RATE_TOTAL_ABSORBED_PEEL",
+            (last.get("extra") or {}).get("flags") or [],
+        )
+        physical = (last.get("extra") or {}).get("physical_cells") or {}
+        for v in physical.values():
+            if v is None:
+                continue
+            try:
+                self.assertLess(abs(float(str(v).replace(",", ""))), 1000.0)
+            except (TypeError, ValueError):
+                pass
 
 
 if __name__ == "__main__":
