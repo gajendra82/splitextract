@@ -586,6 +586,19 @@ def _op_qty_pur_sale_bal_row(item: Dict[str, Any]) -> bool:
     return False
 
 
+def _op_stock_pur_sales_cl_row(item: Dict[str, Any]) -> bool:
+    """True for Pack|Op.Stock|Pur.Qty|Sales Qty|Cl.Stock Statement rows."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    if layout.startswith("op_stock_pur_sales_cl"):
+        return True
+    if str(extra.get("psr_column_layout") or "") == "op_stock_pur_sales_cl":
+        return True
+    if str(extra.get("schema") or "") == "op_stock_pur_sales_cl":
+        return True
+    return False
+
+
 def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     """Return reconciliation dict; does not mutate quantities."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -707,7 +720,11 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     # printed ledger noise without rewriting qty cells. Stock-and-Sales Detail
     # (Cr.Qty layout) also allows classifier MINOR floor (±2) — a few printed
     # rows on that sheet are off-by-1/2 with every column correctly assigned.
+    # Pack|Op.Stock|Pur|Sales|Cl Statement grids are integer qty — keep half-unit
+    # OCR noise only; do not soft-pass non-zero quantity_difference as valid.
     def _closing_tol(actual: float) -> float:
+        if _op_stock_pur_sales_cl_row(item):
+            return _TOL
         tol = _qty_tolerance(opening, purchase, sales, actual, exp_closing)
         layout = str(extra.get("layout") or "")
         if layout == "stock_sales_detail_opval" or extra.get("credit_qty") is not None:
@@ -877,6 +894,11 @@ def apply_stock_reconciliation(
             item["extra"] = extra
         extra["reconciliation"] = recon
         extra["stock_identity_ok"] = bool(recon.get("valid"))
+        # Keep identity_valid aligned with recon for Pack|Op.Stock|Sales|Cl grids
+        # so off-by-1 document gaps are not reported as recon.valid=true while
+        # identity_valid=false (or the reverse).
+        if _op_stock_pur_sales_cl_row(item):
+            extra["identity_valid"] = bool(recon.get("valid"))
         if recon.get("br_trf_in_identity") is not None:
             extra["br_trf_in_identity"] = bool(recon.get("br_trf_in_identity"))
         # Candidate alternate when adaptive considered both Br formulas.
@@ -969,6 +991,47 @@ def apply_stock_reconciliation(
     extra_t["stock_reconciliation_fail_count"] = fail
     extra_t["stock_reconciliation_pass_count"] = pass_n
     extra_t["stock_identity_fail_count"] = fail
+    # Keep stock_validation mirrors in sync with current line_items + recon gate
+    # (identity validation may have run with a softer fail count earlier).
+    try:
+        opening_sum = 0.0
+        receipt_sum = 0.0
+        sales_sum = 0.0
+        closing_sum = 0.0
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            opening_sum += _f(it.get("opening_qty"))
+            if it.get("receipts_qty") not in (None, ""):
+                receipt_sum += _f(it.get("receipts_qty"))
+            else:
+                receipt_sum += _f(it.get("purchase_qty"))
+            sales_sum += _f(it.get("sales_qty"))
+            closing_sum += _f(it.get("closing_qty"))
+        expected_total = round(opening_sum + receipt_sum, 2)
+        calculated_closing = round(expected_total - sales_sum, 2)
+        prev = extra_t.get("stock_validation")
+        prev = dict(prev) if isinstance(prev, dict) else {}
+        prev.update(
+            {
+                "opening_plus_purchase": expected_total,
+                "expected_total": expected_total,
+                "extracted_opening": round(opening_sum, 2),
+                "extracted_purchase": round(receipt_sum, 2),
+                "extracted_sales_qty": round(sales_sum, 2),
+                "calculated_closing": calculated_closing,
+                "extracted_closing": round(closing_sum, 2),
+                "is_valid": fail == 0
+                and abs(calculated_closing - closing_sum) < 0.05,
+            }
+        )
+        extra_t["stock_validation"] = prev
+        if extra_t.get("sales_qty") is not None or sales_sum:
+            extra_t["sales_qty"] = round(sales_sum, 2)
+        if extra_t.get("closing_qty") is not None or closing_sum:
+            extra_t["closing_qty"] = round(closing_sum, 2)
+    except Exception:
+        logger.exception("STOCK_RECONCILIATION_VALIDATION_SYNC_FAILED")
     return result
 
 

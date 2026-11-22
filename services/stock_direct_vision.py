@@ -600,14 +600,17 @@ CRITICAL — Pack must never become opening_qty:
 
 CRITICAL — never drop a printed Sales Qty:
 - If Op.Stock and Cl.Stock differ, Sales Qty is usually non-zero — read that
-  cell. Never emit sales_qty=0 when the Sales Qty column shows 1, 5, 14, …
+  cell. Never emit sales_qty=0 when the Sales Qty column shows 1, 5, 6, 14, …
 - Pur.Free is NOT Sales Qty (Pur.Free is often 0 while Sales Qty is not).
+- Single-digit Sales Qty (1–9) is still a real Sales Qty cell — copy it.
 
 Examples when visible (copy EXACT printed digits):
 - HIMCOLIN GEL 30GM: Op.Stock 43, Pur 0, Pur.Free 0, Sales Qty 1,
   Cl.Stock 42 → sales_qty=1 (NOT 0)
 - HIMPLASIA TABS 30'S: Op.Stock 94, Pur 0, Pur.Free 0, Sales Qty 5,
   Cl.Stock 89 → sales_qty=5 (NOT 0)
+- LIV-52 DS SYRUP 200ML: Op.Stock 19, Pur 0, Pur.Free 0, Sales Qty 6,
+  Cl.Stock 13, Stock Value 3081.91 → sales_qty=6 (NOT 0)
 - SEPTILIN 60TABS: Pack 100, Op.Stock 200, Pur.Qty 0, Sales Qty 100,
   Cl.Stock 100, Stock Value 16902.60
   → opening_qty=200, receipts_qty=0, sales_qty=100, closing_qty=100,
@@ -620,11 +623,14 @@ Examples when visible (copy EXACT printed digits):
 - KOFLET SYP.100 ML: Pack 50 with zero movement → opening_qty=0 (NOT 50)
 
 Footer summary (Goods Value / Amount rows with OpStockValue, Purchase, SR,
-Sales, ClStockValue):
+Sales, ClStockValue) — when several TOTAL / GRAND TOTAL / Summary bands
+print, use ONLY the last Summary block:
   - Line Stock Value is goods money → prefer Goods Value ClStockValue for
-    totals.closing_value and Goods Value Sales for totals.sales_value.
-  - Copy Amount-row Sales / OpStockValue / ClStockValue into totals.extra
-    (amount_sales_value / opening_value / amount_closing_value) when printed.
+    totals.closing_value and Goods Value Sales for totals.sales_value /
+    totals.extra.goods_value.
+  - Copy Amount-row OpStockValue / Purchase / Sales / ClStockValue into
+    totals.extra as opening_value / purchase_value / amount_sales_value /
+    amount_closing_value (Amount is parallel money, not Goods).
   Never emit footer labels as line_items.
 
 Stockist = letterhead distributor (e.g. MAHAVEER PHARMA DISTRIBUTORS).
@@ -662,13 +668,16 @@ Return ONLY valid JSON:
       "opening_value": number|null,
       "purchase_value": number|null,
       "sales_return_value": number|null,
-      "goods_value": number|null
+      "goods_value": number|null,
+      "goods_sales_value": number|null,
+      "amount_sales_value": number|null,
+      "amount_closing_value": number|null
     }
   }
 }
 
 Include every product row top to bottom. Blank qty cells are 0.
-Skip Goods Value / Amount / User Name / Print Datetime footer rows.
+Skip Goods Value / Amount / User Name / Print Datetime / GRAND TOTAL footer rows.
 """.strip()
 
 
@@ -685,6 +694,9 @@ If Sales Qty shows a digit (1, 5, 14, 100, …), copy that exact digit.
 Known traps on this layout:
 - HIMCOLIN GEL 30GM: Sales Qty is 1 (not 0) when Op 43 / Cl 42
 - HIMPLASIA TABS 30'S: Sales Qty is 5 (not 0) when Op 94 / Cl 89
+- LIV-52 DS SYRUP 200ML: Sales Qty is 6 (not 0) when Op 19 / Cl 13
+- Single-digit Sales Qty cells are easy to miss — re-read that column
+  carefully for every product where Op.Stock ≠ Cl.Stock.
 
 Return ONLY valid JSON:
 {
@@ -2425,6 +2437,7 @@ def validate_stock_direct_vision(
     op_qty_val = layout.startswith("stock_sales_op_qty_val")
     opqty_qoh = layout.startswith("opqty_qoh_stock_sales")
     op_qty_pur_sale_bal = layout.startswith("op_qty_pur_sale_bal")
+    op_stock_pur_sales_cl = layout.startswith("op_stock_pur_sales_cl")
     normal_open_recp = layout.startswith("normal_stock_open_recp")
     stock_grid = (
         layout.startswith("product_stock_report")
@@ -2584,6 +2597,30 @@ def validate_stock_direct_vision(
                     extra["stock_identity_ok"] = False
                     extra["validation_failed"] = True
                     extra["identity_valid"] = False
+            else:
+                extra["stock_identity_ok"] = True
+                extra["identity_valid"] = True
+            item["extra"] = extra
+            continue
+
+        if op_stock_pur_sales_cl:
+            # Pack|Op.Stock|Pur.Qty|Sales Qty|Cl.Stock — integer qty grid.
+            # Document can print off-by-1/2 gaps; flag them (do not rewrite).
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+            expected = round(opening + receipts - sales, 2)
+            if abs(expected - closing) > 0.51 and (
+                opening or receipts or sales or closing
+            ):
+                identity_fail += 1
+                extra["stock_identity_ok"] = False
+                extra["validation_failed"] = True
+                extra["identity_valid"] = False
+                extra["identity_expected_closing"] = expected
+                if abs(expected - closing) <= 2.01:
+                    extra["identity_gap_document"] = True
             else:
                 extra["stock_identity_ok"] = True
                 extra["identity_valid"] = True
@@ -6545,11 +6582,40 @@ def _repair_pack_digit_parked_as_opening(item: Dict[str, Any]) -> bool:
     op_looks_like_pack = abs(op - round(op)) < 1e-6 and int(round(op)) in _COMMON_PACK_DIGITS
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     extra = dict(extra)
-    # Case A: Pack parked in opening; real Op sits in receipts.
+    # Case A0: Pack digit duplicated into Pur while opening already holds the
+    # real Op (= Pack size coincidentally). Clear ghost receipts only when
+    # Op−Sale≈Cl. Do NOT claim pack→opening→purchase shift (opening unchanged).
+    if (
+        rec > 0
+        and pack_digit is not None
+        and abs(op - pack_digit) <= 0.01
+        and abs(rec - pack_digit) <= 0.01
+        and abs((op - sale) - cl) <= 1.01
+    ):
+        extra["pack_as_opening_pre"] = {
+            "opening_qty": op,
+            "receipts_qty": rec,
+            "sales_qty": sale,
+            "closing_qty": cl,
+        }
+        item["receipts_qty"] = 0.0
+        extra["pack_receipts_ghost_cleared"] = True
+        item["extra"] = extra
+        logger.info(
+            "STOCK_OP_STOCK_PACK_RECEIPTS_GHOST_CLEAR product=%s "
+            "pack=%s opening=%s receipts=%s->0",
+            str(item.get("product_name") or "")[:60],
+            pack_digit,
+            op,
+            rec,
+        )
+        return False
+    # Case A: Pack parked in opening; real Op sits in receipts (values differ).
     # Accept when Pack text matches OR opening is a common pack size and the
     # shifted identity (rec-sale≈cl) holds while the printed assignment does not.
     if (
         rec > 0
+        and abs(op - rec) > 0.01
         and abs((rec - sale) - cl) <= 1.01
         and (pack_match or op_looks_like_pack)
     ):
@@ -6724,6 +6790,69 @@ def _merge_op_stock_sales_qty_repair(
     return patched
 
 
+def _widen_op_stock_sales_qty_columns(page_png: bytes) -> bytes:
+    """Paste an enlarged Product|Sales Qty|Cl.Stock band for Sales Qty repair.
+
+    Dense Pack|Op.Stock|Pur|Free|Sales|Cl grids often drop single-digit Sales
+    Qty. A labeled zoom of the Sales/Cl band keeps the printed digit readable
+    without inventing values from Op−Cl arithmetic.
+    """
+    if not page_png:
+        return page_png
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        return page_png
+    try:
+        img = Image.open(io.BytesIO(page_png)).convert("RGB")
+    except Exception:
+        return page_png
+    try:
+        width, height = img.size
+        if width < 200 or height < 200:
+            return page_png
+        # Product name through Stock Value — Sales Qty sits mid-right.
+        left = int(width * 0.18)
+        right = int(width * 0.92)
+        if right - left < 80:
+            return page_png
+        band = img.crop((left, 0, right, height))
+        zoom_w = max(band.width + 1, int(band.width * 1.45))
+        band_zoom = band.resize((zoom_w, height), Image.Resampling.LANCZOS)
+        gap = 8
+        canvas = Image.new(
+            "RGB", (width + gap + band_zoom.width, height), (255, 255, 255)
+        )
+        canvas.paste(img, (0, 0))
+        canvas.paste(band_zoom, (width + gap, 0))
+        draw = ImageDraw.Draw(canvas)
+        draw.rectangle(
+            [width + gap, 0, canvas.width - 1, height - 1],
+            outline=(0, 120, 0),
+            width=3,
+        )
+        draw.rectangle(
+            [left, int(height * 0.08), right - 2, height - 2],
+            outline=(0, 120, 0),
+            width=3,
+        )
+        draw.text(
+            (width + gap + 4, 6),
+            "ZOOM Product|Pack|Op.Stock|Pur|Free|Sales Qty|Cl.Stock|Stock Value",
+            fill=(0, 120, 0),
+        )
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG", optimize=True)
+        return buf.getvalue()
+    except Exception:
+        return page_png
+    finally:
+        try:
+            img.close()
+        except Exception:
+            pass
+
+
 def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
     """Pack→opening repair + footer hygiene for Op.Stock|Pur|Sales|Cl.Stock."""
     totals = result.setdefault("totals", {})
@@ -6738,7 +6867,8 @@ def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
             continue
         if re.search(
             r"^\s*(?:Goods\s*Value|Amount|OpStockValue|User\s*Name|"
-            r"Print\s*Datetime|Non\s*Moving|Short\s*Expiry)\b",
+            r"Print\s*Datetime|Non\s*Moving|Short\s*Expiry|Grand\s*Total|"
+            r"GRAND\s*TOTAL|^Total\b)\b",
             name,
             re.I,
         ):
@@ -6752,6 +6882,11 @@ def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
         # Qty-only grid: do not keep invented per-row sales_value zeros.
         if item.get("sales_value") in (0, 0.0):
             item["sales_value"] = None
+        row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        row_extra = dict(row_extra)
+        row_extra["layout"] = "op_stock_pur_sales_cl"
+        row_extra["psr_column_layout"] = "op_stock_pur_sales_cl"
+        item["extra"] = row_extra
         kept.append(item)
     result["line_items"] = kept
     if repaired:
@@ -6762,6 +6897,8 @@ def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
         )
     # Printed Goods Value / Amount footer is real chrome — keep sales_value
     # through sanitize (qty-only rows have no per-line sales money).
+    # Last Summary band = Goods Value + Amount; prefer Goods for line-matching
+    # closing, keep Amount parallel under amount_* / opening_value.
     extra_t["total_row_source"] = "printed_footer"
     try:
         line_cv = sum(
@@ -6783,7 +6920,17 @@ def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
     if goods_cv > 0 and (
         abs(goods_cv - line_cv) <= 1.0
         or (tot_cv > 0 and abs(goods_cv - tot_cv) <= 1.0)
+        or tot_cv <= 0
     ):
+        # Do not let Amount ClStockValue overwrite Goods when line sum agrees.
+        if tot_cv > 0 and abs(tot_cv - line_cv) > 1.0 and abs(goods_cv - line_cv) <= 1.0:
+            logger.info(
+                "STOCK_OP_STOCK_FOOTER_GOODS_OVER_AMOUNT "
+                "amount_closing=%s goods_closing=%s line_sum=%s",
+                tot_cv,
+                goods_cv,
+                line_cv,
+            )
         totals["closing_value"] = goods_cv
         extra_t["goods_closing_value"] = goods_cv
     # If Vision parked Amount Sales on totals.sales_value, keep it trusted;
@@ -6795,8 +6942,20 @@ def _finalize_op_stock_pur_sales_cl(result: Dict[str, Any]) -> Dict[str, Any]:
     if sales_tot > 0 and extra_t.get("amount_sales_value") in (None, "", 0, 0.0):
         # Heuristic: Amount Sales is typically below Goods Sales on this family.
         extra_t["amount_sales_value"] = sales_tot
+    # Prefer Goods Sales for top-level sales_value when both bands exist and
+    # Amount was parked on totals.sales_value (Goods is usually larger).
+    try:
+        goods_sales = float(extra_t.get("goods_sales_value") or 0)
+    except (TypeError, ValueError):
+        goods_sales = 0.0
+    if goods_sales <= 0:
+        # Some payloads put Goods Sales on totals.sales_value already.
+        goods_sales = 0.0
+    if goods_sales > 0:
+        totals["sales_value"] = goods_sales
     extra_t["extraction_method"] = "op_stock_pur_sales_cl_vision"
     extra_t["layout"] = "op_stock_pur_sales_cl"
+    extra_t["psr_column_layout"] = "op_stock_pur_sales_cl"
     logger.info(
         "STOCK_OP_STOCK_FOOTER_TRUSTED closing=%s sales=%s goods_value=%s",
         totals.get("closing_value"),
@@ -6874,15 +7033,17 @@ def extract_op_stock_pur_sales_cl_scanned_pdf(
             filename,
             missing_sales,
         )
+        repair_bytes = _widen_op_stock_sales_qty_columns(images[0]) or images[0]
         repair = _call_psr_vision(
-            images[0],
+            repair_bytes,
             filename,
             ".png",
-            vision_bytes=images[0],
+            vision_bytes=repair_bytes,
             image_meta={
                 "normalized": False,
                 "normalization_reason": None,
                 "op_stock_sales_qty_repair": True,
+                "op_stock_sales_qty_widen": repair_bytes is not images[0],
             },
             candidate=2,
             model=model,
@@ -6904,7 +7065,9 @@ def extract_op_stock_pur_sales_cl_scanned_pdf(
                     filename,
                     patched,
                 )
-    validation = validate_stock_direct_vision(seed, layout="op_qty_pur_sale_bal")
+    validation = validate_stock_direct_vision(
+        seed, layout="op_stock_pur_sales_cl"
+    )
     items_n = len(seed.get("line_items") or [])
     identity_fail = int(validation.get("identity_fail_count") or 0)
     # Header-matched Statement scans: soft-accept when enough rows exist.
