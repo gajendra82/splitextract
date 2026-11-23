@@ -21,7 +21,9 @@ _CANON_TO_ITEM = {
     "opening_qty": ("opening_qty", False),
     "opening_value": ("opening_value", False),
     "purchase_qty": ("receipts_qty", False),
-    "purchase_value": ("receipts_value", True),
+    # Top-level like opening_value/sales_value/closing_value; also mirrored
+    # into extra.receipts_value for consumers that read money from extra.
+    "purchase_value": ("receipts_value", False),
     "sales_qty": ("sales_qty", False),
     "sales_value": ("sales_value", False),
     "closing_qty": ("closing_qty", False),
@@ -304,7 +306,9 @@ def _empty_line_item() -> Dict[str, Any]:
         "product_name": None,
         "packing": None,
         "opening_qty": None,
+        "opening_value": None,
         "receipts_qty": None,
+        "receipts_value": None,
         "sales_qty": None,
         "sales_value": None,
         "closing_qty": None,
@@ -419,6 +423,9 @@ def fields_to_line_item(
                 item["sale_return"] = number
         else:
             item[dest] = number
+            if dest == "receipts_value" and number is not None:
+                extra["receipts_value"] = number
+                extra["purchase_value"] = number
 
     for tok in formula_tokens:
         if not isinstance(tok, dict) or not tok.get("formula"):
@@ -448,7 +455,114 @@ def fields_to_line_item(
                 extra.setdefault("row_status", RowStatus.MISSING_VALUE.value)
     _peel_leading_product_code(item)
     _peel_trailing_pack_from_product_code(item)
+    _peel_trailing_rate_garbage_from_product_name(item)
+    _recover_unit_rate_from_printed_pairs(item)
     return item
+
+
+def _recover_unit_rate_enabled() -> bool:
+    """STOCK_PDF_RECOVER_UNIT_RATE — fill unit_rate from printed value÷qty.
+
+    When the Rate cell is OCR garbage (unparseable) but Opening/Sales/Closing
+    value÷qty agree, store that consensus as extra.unit_rate with
+    field_source=derived. Never rewrites qty/value. Default ON.
+    Kill switch: STOCK_PDF_RECOVER_UNIT_RATE=false.
+    """
+    return os.getenv("STOCK_PDF_RECOVER_UNIT_RATE", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _recover_unit_rate_from_printed_pairs(item: Dict[str, Any]) -> None:
+    """Derive unit_rate from agreeing printed value/qty pairs when Rate is missing."""
+    if not _recover_unit_rate_enabled() or not isinstance(item, dict):
+        return
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("unit_rate") not in (None, ""):
+        return
+    pairs: List[float] = []
+    for qty_key, val_key in (
+        ("opening_qty", "opening_value"),
+        ("receipts_qty", "receipts_value"),
+        ("sales_qty", "sales_value"),
+        ("closing_qty", "closing_value"),
+    ):
+        qty = item.get(qty_key)
+        val = item.get(val_key)
+        if val in (None, "") and isinstance(extra, dict):
+            val = extra.get(val_key)
+        try:
+            qf = float(qty)
+            vf = float(val)
+        except (TypeError, ValueError):
+            continue
+        if abs(qf) < 1e-9:
+            continue
+        pairs.append(vf / qf)
+    if not pairs:
+        return
+    # Require at least one pair; when 2+ exist they must agree within 0.05.
+    rate = pairs[0]
+    for other in pairs[1:]:
+        if abs(other - rate) > 0.051:
+            logger.info(
+                "STOCK_PDF_RECOVER_UNIT_RATE status=disagree name=%s rates=%s",
+                str(item.get("product_name") or "")[:40],
+                [round(p, 4) for p in pairs],
+            )
+            return
+    rate = round(sum(pairs) / len(pairs), 2)
+    item.setdefault("extra", {})
+    item["extra"]["unit_rate"] = rate
+    fs = item["extra"].setdefault("field_source", {})
+    if isinstance(fs, dict):
+        fs["unit_rate"] = "derived"
+    logger.info(
+        "STOCK_PDF_RECOVER_UNIT_RATE name=%s rate=%s pairs=%s",
+        str(item.get("product_name") or "")[:40],
+        rate,
+        len(pairs),
+    )
+
+
+def _peel_trailing_rate_garbage_enabled() -> bool:
+    """STOCK_PDF_PEEL_RATE_COLUMN_GARBAGE — strip Rate OCR mash off product_name.
+
+    Default ON. Kill switch STOCK_PDF_PEEL_RATE_COLUMN_GARBAGE=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_PEEL_RATE_COLUMN_GARBAGE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _peel_trailing_rate_garbage_from_product_name(item: Dict[str, Any]) -> None:
+    """Drop a trailing Rate-column OCR mash already glued into product_name."""
+    if not _peel_trailing_rate_garbage_enabled() or not isinstance(item, dict):
+        return
+    name = str(item.get("product_name") or "").strip()
+    if not name:
+        return
+    parts = name.rsplit(None, 1)
+    if len(parts) != 2:
+        return
+    head, tail = parts
+    try:
+        from services.stock_native_tables import _looks_like_rate_column_garbage
+    except Exception:
+        return
+    if not _looks_like_rate_column_garbage(tail):
+        return
+    if not re.search(r"[A-Za-z]{3,}", head):
+        return
+    item["product_name"] = head
+    logger.info(
+        "STOCK_PDF_PEEL_RATE_COLUMN_GARBAGE name=%s junk=%s",
+        head[:40],
+        tail,
+    )
 
 
 def _peel_product_code_enabled() -> bool:
@@ -2595,6 +2709,124 @@ def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
     return False
 
 
+def _group_qty_value_stub_cleanup_enabled() -> bool:
+    """STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP — drop rate-less zero stubs.
+
+    Product|Rate|Opening…Closing sheets list idle SKUs as ``NAME 0.00`` with the
+    lone money parked in Closing value and no Rate. Same-name empties also
+    duplicate a later movement row (e.g. CLARINA FACE WASH). Default ON.
+    Kill switch: STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _group_item_movement_score(item: Dict[str, Any]) -> int:
+    """How many printed movement slots a row carries (prefer richer duplicate)."""
+    score = 0
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    for key in (
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "closing_qty",
+        "opening_value",
+        "sales_value",
+        "closing_value",
+    ):
+        if item.get(key) not in (None, ""):
+            score += 1
+    if item.get("receipts_value") not in (None, "") or extra.get(
+        "receipts_value"
+    ) not in (None, ""):
+        score += 1
+    if extra.get("unit_rate") not in (None, ""):
+        score += 1
+    return score
+
+
+def _is_rate_less_zero_stub(item: Dict[str, Any]) -> bool:
+    """True for idle ``NAME 0.00`` stubs — not blank Tally catalog lines.
+
+    Covers rate-less ``NAME 0.00`` and ``NAME rate 0.00`` when every qty/value
+    is a printed zero. All-None rows (Stock Category Summary products with no
+    movement) are real catalog lines and must stay.
+    """
+    if not isinstance(item, dict):
+        return False
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    has_printed_zero = False
+    for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
+        val = item.get(key)
+        if val in (0, 0.0):
+            has_printed_zero = True
+        elif val not in (None, ""):
+            return False
+    for key in ("opening_value", "receipts_value", "sales_value", "closing_value"):
+        val = item.get(key)
+        if val in (None, ""):
+            val = extra.get(key) if isinstance(extra, dict) else None
+        if val in (0, 0.0):
+            has_printed_zero = True
+        elif val not in (None, ""):
+            return False
+    return has_printed_zero
+
+
+def _cleanup_group_qty_value_stubs(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Drop rate-less zero stubs and keep the richer same-name duplicate."""
+    if not _group_qty_value_stub_cleanup_enabled():
+        return items
+    # Prefer the richest row per normalized product name.
+    best_by_name: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = _norm_name(item.get("product_name"))
+        if not key:
+            continue
+        if key not in best_by_name:
+            best_by_name[key] = item
+            order.append(key)
+            continue
+        prev = best_by_name[key]
+        if _group_item_movement_score(item) > _group_item_movement_score(prev):
+            logger.info(
+                "STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP action=prefer_richer "
+                "name=%s",
+                str(item.get("product_name") or "")[:40],
+            )
+            best_by_name[key] = item
+        else:
+            logger.info(
+                "STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP action=drop_duplicate "
+                "name=%s",
+                str(item.get("product_name") or "")[:40],
+            )
+    cleaned: List[Dict[str, Any]] = []
+    dropped = 0
+    for key in order:
+        item = best_by_name[key]
+        if _is_rate_less_zero_stub(item):
+            dropped += 1
+            logger.info(
+                "STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP action=drop_stub name=%s",
+                str(item.get("product_name") or "")[:40],
+            )
+            continue
+        cleaned.append(item)
+    if dropped or len(cleaned) != len(items):
+        logger.info(
+            "STOCK_PDF_GROUP_QTY_VALUE_STUB_CLEANUP before=%s after=%s dropped=%s",
+            len(items),
+            len(cleaned),
+            len(items) - len(cleaned),
+        )
+    return cleaned
+
+
 def parse_grouped_qty_value_pdf(
     file_bytes: bytes, filename: str
 ) -> Optional[Dict[str, Any]]:
@@ -2657,6 +2889,19 @@ def parse_grouped_qty_value_pdf(
             continue
         seen.add(key)
         deduped.append(item)
+    deduped = _cleanup_group_qty_value_stubs(deduped)
+    # Ensure purchase money is always on the top-level receipts_value field.
+    for item in deduped:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if item.get("receipts_value") in (None, "") and extra.get(
+            "receipts_value"
+        ) not in (None, ""):
+            item["receipts_value"] = extra.get("receipts_value")
+        elif item.get("receipts_value") in (None, "") and extra.get(
+            "purchase_value"
+        ) not in (None, ""):
+            item["receipts_value"] = extra.get("purchase_value")
+            extra["receipts_value"] = item["receipts_value"]
     if len(deduped) < 3:
         logger.info(
             "STOCK_PDF_GROUP_QTY_VALUE file=%s status=too_few items=%s",
@@ -2807,6 +3052,17 @@ _TRAILING_PACK_RE = re.compile(
     r"(?i)^(?P<name>.+?)\s+(?P<pack>\d+(?:\.\d+)?\s*(?:['’`]\s*)?S"
     r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|M))$"
 )
+# Glued / parenthetical packs when Packing cell is empty:
+# "…SPRAY100 ML", "…OR6S", "…CHO(10S" / "…(200ML)".
+_GLUED_OR_PAREN_PACK_UNIT = (
+    r"\d+(?:\.\d+)?\s*(?:['’`]\s*)?S|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|M)"
+)
+_GLUED_OR_PAREN_PACK_RE = re.compile(
+    rf"(?i)^(?:"
+    rf"(?P<head_paren>.+?)\(\s*(?P<pack_paren>{_GLUED_OR_PAREN_PACK_UNIT})\s*\)?"
+    rf"|(?P<head_glue>.+?[A-Za-z])(?P<pack_glue>{_GLUED_OR_PAREN_PACK_UNIT})"
+    rf")\s*$"
+)
 # "LIV.52 SYP,100ML" / "… GHEE 200ML" / "… TAB 30S" when Packing already holds
 # the same size (often truncated: 100M / 30'S).
 _DUP_PACK_IN_NAME_RE = re.compile(
@@ -2940,10 +3196,23 @@ def _peel_trailing_pack_into_packing(
         return
     name = str(item.get("product_name") or "").replace("`", "'").replace("´", "'")
     match = _TRAILING_PACK_RE.match(name.strip())
-    if not match:
+    pack = None
+    head = None
+    if match:
+        head = match.group("name")
+        pack = match.group("pack")
+    else:
+        glued = _GLUED_OR_PAREN_PACK_RE.match(name.strip())
+        if glued:
+            head = glued.group("head_paren") or glued.group("head_glue")
+            pack = glued.group("pack_paren") or glued.group("pack_glue")
+    if not head or not pack:
         return
-    item["product_name"] = re.sub(r"\s+", " ", match.group("name")).strip()
-    item["packing"] = re.sub(r"\s+", " ", match.group("pack")).strip()
+    peeled = _finish_peeled_product_name(head)
+    if not peeled or not re.search(r"[A-Za-z]", peeled):
+        return
+    item["product_name"] = peeled
+    item["packing"] = re.sub(r"\s+", " ", str(pack)).strip().replace("`", "'")
     logger.info(
         "STOCK_PDF_RIGHT_ALIGN_QTY peel_pack name=%s pack=%s",
         item["product_name"],

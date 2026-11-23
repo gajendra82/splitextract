@@ -184,12 +184,15 @@ def resolve_stock_ocr_region_key(
     region_id = (region or "page").strip() or "page"
     if (scope or "page") == "cell":
         return pixel_key or f"cell:{page_id}:{region_id}:{op}"
-    if region_id != "page":
-        return f"named:{page_id}:{region_id}:{op}"
     # Include a content fingerprint so a later upload on the same worker cannot
-    # region_shared_reuse another document's page OCR (page:1 alone is not
-    # document-safe when request_id is missing/unknown).
+    # region_shared_reuse another document's OCR (page+region alone is not
+    # document-safe when request_id is missing/unknown). Named Total-band peels
+    # hit this when two continuation pages reuse page=2 + same region label.
     pix = (pixel_key or "").strip()
+    if region_id != "page":
+        if pix:
+            return f"named:{page_id}:{region_id}:{op}:{pix[:32]}"
+        return f"named:{page_id}:{region_id}:{op}"
     if pix:
         return f"page:{page_id}:{op}:{pix[:32]}"
     return f"page:{page_id}:{op}"

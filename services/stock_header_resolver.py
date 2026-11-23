@@ -42,7 +42,37 @@ CANONICAL_FIELDS = (
 
 # Short aliases must match a whole token, never a substring.
 _SHORT_TOKEN_ALIASES = frozenset(
-    {"op", "in", "out", "sr", "cb", "rec", "sl", "pi", "dn", "cn", "tot", "code", "sku", "pq", "sq"}
+    {
+        "op",
+        "in",
+        "out",
+        "sr",
+        "cb",
+        "rec",
+        "sl",
+        "pi",
+        "dn",
+        "cn",
+        "tot",
+        "code",
+        "sku",
+        "pq",
+        "sq",
+        "stk",
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+        "she",
+    }
 )
 
 # Group aliases (normalised phrases). Mapping is to a group, then qty/value
@@ -162,6 +192,16 @@ ALIASES: Dict[str, List[str]] = {
         "previous last",
         "prev last",
         "prev. last sale",
+        # Truncated OCR of Previous Last / Previous Sale (Previous La / Si / Sa).
+        "previous la",
+        "previous si",
+        "previous sa",
+        "prev la",
+        "prev si",
+        "prev sa",
+        "previousla",
+        "previoussi",
+        "previoussa",
         # Previous Lz / Previous Sz history qty bands (not period opening).
         "previous lz",
         "previous sz",
@@ -177,6 +217,19 @@ ALIASES: Dict[str, List[str]] = {
         # L.Sales is remapped to lms only when Cur.Sls also prints
         # (see _apply_l_sales_cur_sls_pair) so a lone L.Sales column can
         # still mean period sales via the sales alias.
+        # Calendar-month history bands (Aug|Sep beside Sale) — never Op/Pur/Sale.
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
     ],
     # Descriptive / commercial columns that can sit before Opening in stock
     # statements. They must never claim movement qty semantics.
@@ -215,6 +268,27 @@ ALIASES: Dict[str, List[str]] = {
         "s sch",
         "psch",
         "ssch",
+        # Institutional Sale/Free (Ins Sale / Ins Free) — never period sales/free.
+        "ins sale",
+        "ins. sale",
+        "ins sales",
+        "institution sale",
+        "institution sales",
+        "instution sale",  # printed misspelling on some footers
+        "inst sale",
+        "inst sales",
+        "ins free",
+        "ins. free",
+        "institution free",
+        "inst free",
+        # Shelf expiry / Sh.E beside Rate — never closing qty/value or Exp/Dmg.
+        "sh e",
+        "sh.e",
+        "she",
+        "sh exp",
+        "shexp",
+        "shelf exp",
+        "shelf expiry",
     ],
     "opening": [
         "op",
@@ -532,6 +606,10 @@ ALIASES: Dict[str, List[str]] = {
         "cl bal",
         "cl balance",
         "cl qty",
+        "cls qty",  # Cls Qty — must beat sales infix "s qty" inside "clsqty"
+        "clsqty",
+        "cls qnt",
+        "cls qnty",
         "cl qnt",
         "cl qnty",
         "cl quantity",
@@ -544,6 +622,8 @@ ALIASES: Dict[str, List[str]] = {
         "qty on hand",
         "quantity on hand",
         "stock",  # Medica STOCK when paired with STK VAL; disambiguated below
+        # Bare Stk on Op|Pur|Sale|Stk|Rate grids (not Stk Val / Op Stk).
+        "stk",
         "bal.",
         "clstock",
         "cl.stock",
@@ -579,6 +659,10 @@ ALIASES: Dict[str, List[str]] = {
         "sale free qty",
         "sales free",
         "sales free qty",
+        # Compact SFree beside Sale on Op|Pur|Sale|Stk|Rate grids.
+        "sfree",
+        "s free",
+        "s.free",
     ],
     "sample": [
         "sample",
@@ -820,6 +904,8 @@ _DIRECT_VALUE_FIELDS = {
     "c value": "closing_value",
     "cval": "closing_value",
     "ci val": "closing_value",  # OCR of Cl.Val → Ci.Val
+    "ci value": "closing_value",  # OCR of Cl Value → CI Value
+    "civalue": "closing_value",
     "cival": "closing_value",
     "closing bal amt": "closing_value",
     "closingbalamt": "closing_value",
@@ -888,6 +974,12 @@ _DIRECT_VALUE_FIELDS = {
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
+    # Semantic export headers: rec_value / recvalue beside rec_qty.
+    "rec value": "purchase_value",
+    "recvalue": "purchase_value",
+    "rec val": "purchase_value",
+    "receipt value": "purchase_value",
+    "receipts value": "purchase_value",
     # COMPANY STOCK STATEMENT (SR): RCV-AMT / ISSUE-AMT / BAL-AMT / RTN-AMT.
     "rcv amt": "purchase_value",
     "rcvamt": "purchase_value",
@@ -897,12 +989,20 @@ _DIRECT_VALUE_FIELDS = {
     "issue value": "sales_value",
     "issue amt": "sales_value",
     "issueamt": "sales_value",
+    # Semantic export headers: iss_value / issvalue beside iss_qty.
+    "iss value": "sales_value",
+    "issvalue": "sales_value",
+    "iss val": "sales_value",
     "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
     "bal amt": "closing_value",
     "balamt": "closing_value",
     "bal value": "closing_value",
+    # Semantic export headers: clos_value / closvalue beside clos_qty.
+    "clos value": "closing_value",
+    "closvalue": "closing_value",
+    "clos val": "closing_value",
 }
 
 
@@ -1190,6 +1290,31 @@ def _pick_group(norm: str) -> Tuple[Optional[str], float, str]:
         # "Sales Free" is free-out, not sales qty.
         if group == "sales" and "free" in tokens:
             continue
+        # "Ins Sale" / institution sale is not period sales_qty.
+        if group == "sales" and set(tokens) & {
+            "ins",
+            "institution",
+            "instution",
+            "inst",
+        }:
+            continue
+        # "Ins Free" is institutional free, not scheme free_out.
+        if group == "free" and set(tokens) & {
+            "ins",
+            "institution",
+            "instution",
+            "inst",
+        }:
+            continue
+        # Bare "stk" must not claim Op Stk / Stk Val / Opening Stk headers.
+        if group == "closing" and alias == "stk" and len(tokens) > 1:
+            continue
+        # "Cls Qty" compact is clsqty — must not match sales via infix "sqty".
+        if group == "sales" and alias in {"s qty", "sqty"}:
+            if set(tokens) & {"cls", "cl", "closing", "close"} or compact_norm.startswith(
+                ("cls", "clq", "closing", "close")
+            ):
+                continue
         filtered.append((group, alias, conf))
     if not filtered:
         # Prefer unknown over restoring intentionally filtered purchase/sales
@@ -1610,8 +1735,12 @@ def _column_bands_enabled() -> bool:
 
 
 def _ignore_non_qty_headers_enabled() -> bool:
-    """STOCK_HEADER_IGNORE_NON_QTY — keep NRV/Age/etc. out of qty fields."""
-    return os.getenv("STOCK_HEADER_IGNORE_NON_QTY", "false").strip().lower() in {
+    """STOCK_HEADER_IGNORE_NON_QTY — keep NRV/Age/nonMoveQty out of qty fields.
+
+    Default ON. nonMoveQty is stagnant-stock chrome, never other_outward_qty.
+    Kill-switch: STOCK_HEADER_IGNORE_NON_QTY=false.
+    """
+    return os.getenv("STOCK_HEADER_IGNORE_NON_QTY", "true").strip().lower() in {
         "1",
         "true",
         "yes",
@@ -3850,12 +3979,12 @@ def resolve_columns(
                 text,
             )
 
-        # Bare "stock" (Medica STOCK) → closing_qty.
-        if (canonical == "ignore" or group == "closing") and norm == "stock":
+        # Bare "stock" / "stk" (Medica STOCK or Op|Pur|Sale|Stk|Rate) → closing_qty.
+        if (canonical == "ignore" or group == "closing") and norm in {"stock", "stk"}:
             canonical = "closing_qty"
             group = "closing"
             conf = max(float(conf), 0.85)
-            reason = "medica_stock"
+            reason = "medica_stock" if norm == "stock" else "bare_stk_closing"
         prelim.append(
             {
                 "col_index": idx,

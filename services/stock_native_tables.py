@@ -742,6 +742,61 @@ def _qty_and_pack_cluster_split(prev_text: str, text: str) -> bool:
     return False
 
 
+def _split_rate_column_garbage_enabled() -> bool:
+    """STOCK_PDF_SPLIT_RATE_COLUMN_GARBAGE — keep Rate OCR mash off product_name.
+
+    Product|Rate|Opening Qty/value layouts sometimes print a non-numeric Rate
+    glyph mash (e.g. 3109M5L.80) a few px right of the product. Clustering
+    glues it into product_name. Default ON.
+    Kill switch: STOCK_PDF_SPLIT_RATE_COLUMN_GARBAGE=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_SPLIT_RATE_COLUMN_GARBAGE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _looks_like_rate_column_garbage(text: str) -> bool:
+    """Digit-led OCR mash mixing letters — not a pack and not a parseable rate.
+
+    Examples: 3109M5L.80 (Rate glyph mash). Excludes 75GM / 60'S / 100x60'S
+    and Tally pack+code tails (200ML-HIHIM07 / 60'S-HIGUD01 / 20NX8S-HIQDC).
+    Requires a decimal money tail — a bare digit+letter token is a SKU/pack.
+    """
+    token = str(text or "").strip()
+    if len(token) < 4:
+        return False
+    if parse_number(token) is not None:
+        return False
+    if _looks_like_unit_pack(token):
+        return False
+    # Real box-pack cells (100x60'S / 1x30ML), not Rate OCR mash.
+    if re.search(r"(?i)\d\s*[xX×]\s*\d", token):
+        return False
+    # Pack / SKU code glued after size (200ML-HIHIM07, 60'S-HIGUD01).
+    if re.search(
+        r"(?i)\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|TAB|TABS|CAP|CAPS|SYP|'S|S)\b",
+        token,
+    ):
+        return False
+    if not re.match(r"^\d", token):
+        return False
+    if not re.search(r"[A-Za-z]", token):
+        return False
+    # Rate OCR almost always keeps a decimal money tail (.80 / .00).
+    return bool(re.search(r"\.\d{1,3}$", token))
+
+
+def _product_and_rate_garbage_cluster_split(prev_text: str, text: str) -> bool:
+    """True when a product name must not absorb a Rate-column OCR mash."""
+    if not _split_rate_column_garbage_enabled():
+        return False
+    if not re.search(r"[A-Za-z]", prev_text or ""):
+        return False
+    if _looks_like_unit_pack(prev_text):
+        return False
+    return _looks_like_rate_column_garbage(text)
+
+
 def _header_fragment_kind(text: str) -> Optional[str]:
     """'qual' for Qty/Free/Val, 'primary' for a movement/name alias, else None."""
     norm = normalize_header(text)
@@ -2711,6 +2766,22 @@ def _extract_pdf_page_rows(
                 if _qty_and_pack_cluster_split(prev_text, text):
                     logger.info(
                         "STOCK_PDF_SPLIT_QTY_PACK_CLUSTER left=%r right=%r",
+                        prev_text,
+                        text,
+                    )
+                    cells.append(
+                        {
+                            "text": text,
+                            "x0": x0,
+                            "x1": x1,
+                            "pipe_split": pipe_split,
+                        }
+                    )
+                    continue
+                # Rate-column OCR mash (3109M5L.80) must not glue onto product.
+                if _product_and_rate_garbage_cluster_split(prev_text, text):
+                    logger.info(
+                        "STOCK_PDF_SPLIT_RATE_COLUMN_GARBAGE left=%r right=%r",
                         prev_text,
                         text,
                     )

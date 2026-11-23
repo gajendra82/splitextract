@@ -88,6 +88,9 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "free",
         "sample_qty",
         "free_qty",
+        # PharmAssist ADJ. column (printed outward adjustment).
+        "adj_qty",
+        "stock_adj_qty",
     ),
     "sales_return": (
         "sales_return_qty",
@@ -96,6 +99,9 @@ FIELD_ALIASES: Dict[str, Tuple[str, ...]] = {
         "saleret",
         "sret",
         "sales_return",
+        # PharmAssist / Stock-and-Sales Detail credit columns.
+        "credit_qty",
+        "cr_qty",
     ),
     "purchase_return": (
         "purchase_return_qty",
@@ -1144,6 +1150,44 @@ def _line_item_unit_rates_consistent(
     return True
 
 
+def _honor_reconciliation_gate(
+    line_item: Dict[str, Any],
+    status: RowStatus,
+    info: Optional[Dict[str, Any]] = None,
+) -> RowStatus:
+    """Downgrade VALID when enforced reconciliation already failed the row.
+
+    Shadow counts must not report valid_ratio=1.0 while reconciliation.valid
+    is false / identity_gap_document is set. Never rewrites qty cells.
+    """
+    if status != RowStatus.VALID:
+        return status
+    extra = (
+        line_item.get("extra") if isinstance(line_item.get("extra"), dict) else {}
+    )
+    recon = (
+        extra.get("reconciliation")
+        if isinstance(extra.get("reconciliation"), dict)
+        else {}
+    )
+    failed = bool(extra.get("reconciliation_failed")) or recon.get("valid") is False
+    if not failed:
+        return status
+    if isinstance(info, dict):
+        info["reason"] = "reconciliation_failed"
+        try:
+            diff = recon.get("quantity_difference")
+            if diff is not None:
+                info["diff"] = abs(float(diff))
+        except (TypeError, ValueError):
+            pass
+        if extra.get("identity_gap_document") or (
+            info.get("diff") is not None and float(info["diff"]) <= 2.01
+        ):
+            info["document_qty_gap"] = True
+    return RowStatus.MINOR_DISCREPANCY
+
+
 def _soften_document_qty_gap(
     line_item: Dict[str, Any],
     status: RowStatus,
@@ -1247,6 +1291,7 @@ def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
             fields = read_row_fields(item)
             status, info = classify_row(fields)
             status = _soften_document_qty_gap(item, status, info)
+            status = _honor_reconciliation_gate(item, status, info)
         counts[status.value] = counts.get(status.value, 0) + 1
         row_details.append(
             {
@@ -1258,15 +1303,19 @@ def classify_result(result: Dict[str, Any]) -> Dict[str, Any]:
         )
 
     classified = sum(counts.values())
+    valid_only = int(counts[RowStatus.VALID.value] or 0)
     valid_like = (
-        counts[RowStatus.VALID.value]
-        + counts[RowStatus.MINOR_DISCREPANCY.value]
-        + counts.get(RowStatus.CLOSING_DERIVED.value, 0)
+        valid_only
+        + int(counts[RowStatus.MINOR_DISCREPANCY.value] or 0)
+        + int(counts.get(RowStatus.CLOSING_DERIVED.value, 0) or 0)
     )
-    valid_ratio = (float(valid_like) / float(classified)) if classified else 0.0
+    # valid_ratio = strict VALID share (MINOR document gaps do not inflate it).
+    valid_ratio = (float(valid_only) / float(classified)) if classified else 0.0
+    valid_like_ratio = (float(valid_like) / float(classified)) if classified else 0.0
     return {
         "row_status_counts": counts,
         "valid_ratio": round(valid_ratio, 4),
+        "valid_like_ratio": round(valid_like_ratio, 4),
         "classified_rows": classified,
         "rows": row_details,
     }
@@ -1280,19 +1329,33 @@ def would_fallback(summary: Dict[str, Any]) -> Tuple[bool, str]:
         return True, "no_product_rows"
     if int(counts.get(RowStatus.STRUCTURAL_ERROR.value, 0) or 0) > 0:
         return True, "structural_error"
-    valid_ratio = float(summary.get("valid_ratio") or 0.0)
-    if valid_ratio < 0.90:
+    # Fallback gate still treats MINOR / CLOSING_DERIVED as acceptable so a
+    # few printed ledger gaps do not force re-extraction; stored valid_ratio
+    # remains the strict VALID share.
+    if "valid_like_ratio" in summary and summary.get("valid_like_ratio") is not None:
+        gate_ratio = float(summary.get("valid_like_ratio") or 0.0)
+    else:
+        valid_like = (
+            int(counts.get(RowStatus.VALID.value, 0) or 0)
+            + int(counts.get(RowStatus.MINOR_DISCREPANCY.value, 0) or 0)
+            + int(counts.get(RowStatus.CLOSING_DERIVED.value, 0) or 0)
+        )
+        gate_ratio = (float(valid_like) / float(classified)) if classified else 0.0
+    if gate_ratio < 0.90:
         return True, "valid_ratio_below_0.90"
     return False, "ok"
 
 
 def shadow_summary_for_storage(summary: Dict[str, Any]) -> Dict[str, Any]:
     """Counts + valid_ratio only (no per-row payload)."""
-    return {
+    out = {
         "row_status_counts": dict(summary.get("row_status_counts") or {}),
         "valid_ratio": summary.get("valid_ratio"),
         "classified_rows": summary.get("classified_rows"),
     }
+    if summary.get("valid_like_ratio") is not None:
+        out["valid_like_ratio"] = summary.get("valid_like_ratio")
+    return out
 
 
 def classify_result_safe(result: Dict[str, Any]) -> Dict[str, Any]:

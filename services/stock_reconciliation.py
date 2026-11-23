@@ -73,6 +73,9 @@ def _sales_return_qty(item: Dict[str, Any]) -> float:
         extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None
     ):
         sales_return = _f(extra.get("credit_qty")) + _f(extra.get("credit_scheme_qty"))
+    # PharmAssist CR column (extra.cr_qty) is the same printed credit/return.
+    if sales_return == 0.0 and extra.get("cr_qty") is not None:
+        sales_return = _f(extra.get("cr_qty"))
     return sales_return
 
 
@@ -184,11 +187,32 @@ def _others_qty(item: Dict[str, Any]) -> float:
     return 0.0
 
 
+def _others_out_qty_printed(item: Dict[str, Any]) -> Optional[float]:
+    """Printed OTHERS-out column (ITEM/PACK/.../P.RETURN/OTHERS/CLOSING)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("others_out_qty") is not None and extra.get("others_out_qty") != "":
+        return _f(extra.get("others_out_qty"))
+    if item.get("others_out_qty") is not None and item.get("others_out_qty") != "":
+        return _f(item.get("others_out_qty"))
+    return None
+
+
+def _others_in_qty_printed(item: Dict[str, Any]) -> float:
+    """Printed OTHERS-in column before SUB TOTAL (inward adjustment)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("others_in_qty") is not None and extra.get("others_in_qty") != "":
+        return _f(extra.get("others_in_qty"))
+    if item.get("others_in_qty") is not None and item.get("others_in_qty") != "":
+        return _f(item.get("others_in_qty"))
+    return 0.0
+
+
 def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> float:
     """Outward adjustments (scheme / other / optional Br.Trf.)."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     other = 0.0
     br = _br_trf_qty(item)
+    others_out = _others_out_qty_printed(item)
     if extra.get("other_outward_qty") is not None:
         o = _f(extra.get("other_outward_qty"))
         # Native parser often mirrors br_trf into other_outward_qty — count once.
@@ -199,6 +223,13 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
             other += o
             if include_br_trf and br > 0:
                 other += br
+            # others_out_qty may duplicate other_outward_qty on dual-OTHERS grids.
+            if others_out is not None and abs(o - others_out) > 1e-9:
+                other += others_out
+    elif others_out is not None:
+        other += others_out
+        if include_br_trf and br > 0:
+            other += br
     elif include_br_trf and br > 0:
         other += br
     if extra.get("sales_scheme_qty") is not None:
@@ -211,17 +242,34 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
     for key in ("stock_tf_qty", "pr_qty", "repl_other_out"):
         if extra.get(key) is not None:
             other += _f(extra.get(key))
+    # PharmAssist ADJ. / stock_adj is a printed outward adjustment (not rewrite).
+    adj = None
+    if extra.get("adj_qty") is not None:
+        adj = _f(extra.get("adj_qty"))
+    elif extra.get("stock_adj_qty") is not None:
+        adj = _f(extra.get("stock_adj_qty"))
+    if adj is not None:
+        mirrored = (
+            extra.get("other_outward_qty") is not None
+            and abs(_f(extra.get("other_outward_qty")) - adj) <= 1e-9
+        )
+        if not mirrored and not (
+            others_out is not None and abs(others_out - adj) <= 1e-9
+        ):
+            other += adj
     return other
 
 
 def _free_in_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    free = 0.0
     if extra.get("free_in_qty") is not None:
-        return _f(extra.get("free_in_qty"))
-    if extra.get("purchase_free") is not None:
-        return _f(extra.get("purchase_free"))
-    return 0.0
-
+        free = _f(extra.get("free_in_qty"))
+    elif extra.get("purchase_free") is not None:
+        free = _f(extra.get("purchase_free"))
+    # Dual-OTHERS grids: OTHERS before SUBTOTAL is an inward (not free).
+    others_in = _others_in_qty_printed(item)
+    return free + others_in
 
 def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -231,6 +279,8 @@ def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     if extra.get("sale_return") is not None or extra.get("sales_return") is not None:
         return True
     if extra.get("credit_qty") is not None or extra.get("credit_scheme_qty") is not None:
+        return True
+    if extra.get("cr_qty") is not None:
         return True
     if item.get("sales_return_qty") is not None:
         return True
@@ -247,6 +297,11 @@ def _printed_total(item: Dict[str, Any]) -> Optional[float]:
         return _f(extra.get("total_stock"))
     if fs.get("total_qty") == "printed" and extra.get("total_qty") is not None:
         return _f(extra.get("total_qty"))
+    # ITEM/PACK/.../SUBTOTAL grids print SUBTOTAL = Op+Pur+S.Return+Others In.
+    if extra.get("subtotal_qty") is not None and extra.get("subtotal_qty") != "":
+        return _f(extra.get("subtotal_qty"))
+    if item.get("subtotal_qty") is not None and item.get("subtotal_qty") != "":
+        return _f(item.get("subtotal_qty"))
     return None
 
 
@@ -476,14 +531,36 @@ def _value_reconciliation_diagnostic(item: Dict[str, Any]) -> Optional[Dict[str,
 
     expected = round(opening_v + purchase_v - sales_v, 4)
     diff = round(closing_v - expected, 4)
-    return {
-        "basis": "opening_value+purchase_value-sales_value",
+    valid = abs(diff) <= max(_TOL, 1.0)
+    basis = "opening_value+purchase_value-sales_value"
+    # Many Product|Rate grids print Closing Value = Closing Qty × Rate even
+    # when open+purchase−sales money differs. Accept that as diagnostic-valid
+    # without rewriting any printed number.
+    rate = extra.get("unit_rate")
+    closing_qty = item.get("closing_qty")
+    rate_valued = None
+    try:
+        if rate not in (None, "") and closing_qty not in (None, ""):
+            rate_valued = round(float(rate) * float(closing_qty), 4)
+            if abs(closing_v - rate_valued) <= max(_TOL, 1.0):
+                if not valid:
+                    basis = "closing_qty*unit_rate"
+                    expected = rate_valued
+                    diff = round(closing_v - expected, 4)
+                valid = True
+    except (TypeError, ValueError):
+        rate_valued = None
+    out = {
+        "basis": basis,
         "enforced": False,
         "expected_closing_value": expected,
         "actual_closing_value": closing_v,
         "value_difference": diff,
-        "valid": abs(diff) <= max(_TOL, 1.0),
+        "valid": valid,
     }
+    if rate_valued is not None:
+        out["rate_valued_closing"] = rate_valued
+    return out
 
 
 def _sale_closing_only_row(item: Dict[str, Any], fs: Dict[str, Any]) -> bool:
@@ -542,6 +619,19 @@ def _op_qty_pur_sale_bal_row(item: Dict[str, Any]) -> bool:
     if str(extra.get("psr_column_layout") or "") == "op_qty_pur_sale_bal":
         return True
     if str(extra.get("schema") or "") == "op_qty_pur_sale_bal":
+        return True
+    return False
+
+
+def _op_stock_pur_sales_cl_row(item: Dict[str, Any]) -> bool:
+    """True for Pack|Op.Stock|Pur.Qty|Sales Qty|Cl.Stock Statement rows."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    layout = str(extra.get("layout") or "")
+    if layout.startswith("op_stock_pur_sales_cl"):
+        return True
+    if str(extra.get("psr_column_layout") or "") == "op_stock_pur_sales_cl":
+        return True
+    if str(extra.get("schema") or "") == "op_stock_pur_sales_cl":
         return True
     return False
 
@@ -667,7 +757,11 @@ def reconcile_row(item: Dict[str, Any]) -> Dict[str, Any]:
     # printed ledger noise without rewriting qty cells. Stock-and-Sales Detail
     # (Cr.Qty layout) also allows classifier MINOR floor (±2) — a few printed
     # rows on that sheet are off-by-1/2 with every column correctly assigned.
+    # Pack|Op.Stock|Pur|Sales|Cl Statement grids are integer qty — keep half-unit
+    # OCR noise only; do not soft-pass non-zero quantity_difference as valid.
     def _closing_tol(actual: float) -> float:
+        if _op_stock_pur_sales_cl_row(item):
+            return _TOL
         tol = _qty_tolerance(opening, purchase, sales, actual, exp_closing)
         layout = str(extra.get("layout") or "")
         if layout == "stock_sales_detail_opval" or extra.get("credit_qty") is not None:
@@ -837,6 +931,11 @@ def apply_stock_reconciliation(
             item["extra"] = extra
         extra["reconciliation"] = recon
         extra["stock_identity_ok"] = bool(recon.get("valid"))
+        # Keep identity_valid aligned with recon for Pack|Op.Stock|Sales|Cl grids
+        # so off-by-1 document gaps are not reported as recon.valid=true while
+        # identity_valid=false (or the reverse).
+        if _op_stock_pur_sales_cl_row(item):
+            extra["identity_valid"] = bool(recon.get("valid"))
         if recon.get("br_trf_in_identity") is not None:
             extra["br_trf_in_identity"] = bool(recon.get("br_trf_in_identity"))
         # Candidate alternate when adaptive considered both Br formulas.
@@ -929,6 +1028,68 @@ def apply_stock_reconciliation(
     extra_t["stock_reconciliation_fail_count"] = fail
     extra_t["stock_reconciliation_pass_count"] = pass_n
     extra_t["stock_identity_fail_count"] = fail
+    # Keep stock_validation mirrors in sync with current line_items + recon gate
+    # (identity validation may have run with a softer fail count earlier).
+    try:
+        opening_sum = 0.0
+        receipt_sum = 0.0
+        sales_sum = 0.0
+        closing_sum = 0.0
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            opening_sum += _f(it.get("opening_qty"))
+            if it.get("receipts_qty") not in (None, ""):
+                receipt_sum += _f(it.get("receipts_qty"))
+            else:
+                receipt_sum += _f(it.get("purchase_qty"))
+            sales_sum += _f(it.get("sales_qty"))
+            closing_sum += _f(it.get("closing_qty"))
+        expected_total = round(opening_sum + receipt_sum, 2)
+        # Prefer sum of per-row recon expected closings so dual-OTHERS /
+        # returns / free adjustments are not dropped from the rollup.
+        recon_closing_sum = 0.0
+        recon_closing_n = 0
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            row_extra = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+            recon = (
+                row_extra.get("reconciliation")
+                if isinstance(row_extra.get("reconciliation"), dict)
+                else {}
+            )
+            if recon.get("expected_closing_qty") is not None:
+                recon_closing_sum += _f(recon.get("expected_closing_qty"))
+                recon_closing_n += 1
+            else:
+                recon_closing_sum += _f(it.get("closing_qty"))
+        if recon_closing_n > 0:
+            calculated_closing = round(recon_closing_sum, 2)
+        else:
+            calculated_closing = round(expected_total - sales_sum, 2)
+        prev = extra_t.get("stock_validation")
+        prev = dict(prev) if isinstance(prev, dict) else {}
+        prev.update(
+            {
+                "opening_plus_purchase": expected_total,
+                "expected_total": expected_total,
+                "extracted_opening": round(opening_sum, 2),
+                "extracted_purchase": round(receipt_sum, 2),
+                "extracted_sales_qty": round(sales_sum, 2),
+                "calculated_closing": calculated_closing,
+                "extracted_closing": round(closing_sum, 2),
+                "is_valid": fail == 0
+                and abs(calculated_closing - closing_sum) < 0.05,
+            }
+        )
+        extra_t["stock_validation"] = prev
+        if extra_t.get("sales_qty") is not None or sales_sum:
+            extra_t["sales_qty"] = round(sales_sum, 2)
+        if extra_t.get("closing_qty") is not None or closing_sum:
+            extra_t["closing_qty"] = round(closing_sum, 2)
+    except Exception:
+        logger.exception("STOCK_RECONCILIATION_VALIDATION_SYNC_FAILED")
     return result
 
 

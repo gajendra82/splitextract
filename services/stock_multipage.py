@@ -1435,7 +1435,11 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
     """
     # Prefer last page with a trusted ORIC / main_stock TOTAL peel.
     oric_pick: Optional[Dict[str, Any]] = None
+    # CONSOLIDATED Op.Qty last-page Total: prefer full OCR peel (sales+closing)
+    # over Vision that kept only Cls.Val or page line-sum sales.
+    consolidated_peel_pick: Optional[Dict[str, Any]] = None
     consolidated_pick: Optional[Dict[str, Any]] = None
+    consolidated_weak_pick: Optional[Dict[str, Any]] = None
     _consolidated_sources = {
         "consolidated_op_qty_val_total_ocr",
         "op_stk_rcpts_footer",
@@ -1472,13 +1476,29 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
             "",
         ):
             continue
-        consolidated_pick = {
+        cand = {
             "sales_value": totals.get("sales_value"),
             "closing_value": totals.get("closing_value"),
             "extra": dict(extra),
             "extraction_method": extra.get("extraction_method")
             or page.get("extraction_method"),
         }
+        sales_src = str(extra.get("sales_value_source") or "")
+        has_sales = cand.get("sales_value") not in (None, "")
+        has_closing = cand.get("closing_value") not in (None, "")
+        is_peel = (
+            src == "consolidated_op_qty_val_total_ocr"
+            or sales_src == "consolidated_op_qty_val_total_ocr"
+        )
+        if is_peel and has_sales and has_closing:
+            consolidated_peel_pick = cand
+            continue
+        # Page-only line sums / closing-only Vision are weak — last-page Total
+        # peel (when present) must win over them.
+        if (not has_sales) or sales_src == "line_item_sum":
+            consolidated_weak_pick = cand
+            continue
+        consolidated_pick = cand
     if oric_pick is not None:
         logger.info(
             "MULTIPAGE EXTRACTION printed_totals source=main_stock_oric "
@@ -1487,12 +1507,16 @@ def _pick_printed_page_totals(pages: Sequence[Dict[str, Any]]) -> Dict[str, Any]
             oric_pick.get("closing_value"),
         )
         return oric_pick
+    consolidated_pick = (
+        consolidated_peel_pick or consolidated_pick or consolidated_weak_pick
+    )
     if consolidated_pick is not None:
         logger.info(
             "MULTIPAGE EXTRACTION printed_totals source=consolidated_op_qty_val "
-            "sales=%s closing=%s",
+            "sales=%s closing=%s total_row_source=%s",
             consolidated_pick.get("sales_value"),
             consolidated_pick.get("closing_value"),
+            (consolidated_pick.get("extra") or {}).get("total_row_source"),
         )
         return consolidated_pick
 
@@ -1896,13 +1920,18 @@ def extract_multipage_image_stock_statement(
             # Last-page CONSOLIDATED Total bar (Op.Val/P.Val/S.Val/Cls.Val).
             # _parse_image may keep only closing; peel sales/opening here so
             # multipage merge surfaces the printed statement Total.
+            # Pass real page_no — OCR policy keys bands by page; page="1" reuse
+            # made continuation Total peels return the first page's empty band.
             try:
                 from services.sales_statement_extractor import (
                     _apply_consolidated_op_qty_val_printed_total,
                 )
 
                 page_result = _apply_consolidated_op_qty_val_printed_total(
-                    page_result, file_bytes=file_bytes, ocr_hint=""
+                    page_result,
+                    file_bytes=file_bytes,
+                    ocr_hint="",
+                    page=str(page_no),
                 )
             except Exception:
                 pass
@@ -2041,6 +2070,71 @@ def extract_multipage_image_stock_statement(
         )
         for group in groups
     ]
+    # Fallback: statement Total often prints only on the last continuation
+    # page (Op.Val|P.Val|S.Val|Cls.Val). If merge still has null / page-only
+    # line-sum sales, OCR-peel only that stockist group's page images
+    # last→first (layout family, not stockist-named).
+    try:
+        from services.sales_statement_extractor import (
+            _apply_consolidated_op_qty_val_printed_total,
+        )
+
+        for stmt, group in zip(group_statements, groups):
+            if not isinstance(stmt, dict) or not isinstance(group, dict):
+                continue
+            tot = stmt.get("totals") if isinstance(stmt.get("totals"), dict) else {}
+            tex = tot.get("extra") if isinstance(tot.get("extra"), dict) else {}
+            sales_src = str(tex.get("sales_value_source") or "")
+            already_peeled = str(tex.get("total_row_source") or "") == (
+                "consolidated_op_qty_val_total_ocr"
+            ) and tot.get("sales_value") not in (None, "")
+            need_peel = (not already_peeled) and (
+                tot.get("sales_value") in (None, "")
+                or sales_src in {"", "line_item_sum"}
+            )
+            if not need_peel:
+                continue
+            group_page_nos = {
+                int(p)
+                for p in (group.get("page_numbers") or [])
+                if p is not None and str(p).strip().isdigit()
+            }
+            for idx in range(len(pages) - 1, -1, -1):
+                page_no = idx + 1
+                if group_page_nos and page_no not in group_page_nos:
+                    continue
+                _fname, raw = pages[idx]
+                before_sv = tot.get("sales_value")
+                _apply_consolidated_op_qty_val_printed_total(
+                    stmt,
+                    file_bytes=raw or b"",
+                    ocr_hint="",
+                    page=str(page_no),
+                )
+                tot = stmt.get("totals") if isinstance(stmt.get("totals"), dict) else {}
+                tex = tot.get("extra") if isinstance(tot.get("extra"), dict) else {}
+                if (
+                    tot.get("sales_value") not in (None, "")
+                    and str(tex.get("sales_value_source") or "")
+                    == "consolidated_op_qty_val_total_ocr"
+                ):
+                    logger.info(
+                        "MULTIPAGE EXTRACTION consolidated_total_fallback "
+                        "request_id=%s stockist_key=%s page=%s sales=%s "
+                        "closing=%s before_sales=%s",
+                        request_id or "-",
+                        group.get("stockist_key") or "none",
+                        page_no,
+                        tot.get("sales_value"),
+                        tot.get("closing_value"),
+                        before_sv,
+                    )
+                    break
+    except Exception as exc:
+        logger.info(
+            "MULTIPAGE EXTRACTION consolidated_total_fallback_skip err=%s",
+            type(exc).__name__,
+        )
     logger.info(
         "MULTI_PAGE_RECONCILIATION_COMPLETED request_id=%s page_count=%s "
         "duration=%.3f statement_groups=%s",
