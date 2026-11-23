@@ -6670,10 +6670,14 @@ def _apply_total_row_to_result(result: Dict[str, Any], text: str) -> Dict[str, A
     return result
 
 
-def _allow_negative_stock_money(extraction_method: Any) -> bool:
+def _allow_negative_stock_money(
+    extraction_method: Any,
+    *,
+    source_format: Any = None,
+) -> bool:
     """Layouts that can print negative Op/Cl qty and closing amount."""
     method = str(extraction_method or "")
-    return method in {
+    if method in {
         "swil_landscape_qty_value",
         "purc_sale_cl_layout",
         # Same Purc/Sale/Cl family with printed Op / Op val (and negative Cl val).
@@ -6689,7 +6693,13 @@ def _allow_negative_stock_money(extraction_method: Any) -> bool:
         # Tally Stock Category Summary: Opening/Inwards/Outwards/Closing with
         # printed (-) qty and (-) value under Closing Balance.
         "pdf_group_qty_value",
-    }
+        # Semantic Excel qty|value grids (op_value/rec_value/iss_value/clos_value).
+        "excel_qty_value_pairs",
+    }:
+        return True
+    # Spreadsheet cells are authoritative numbers (not OCR); keep printed negatives.
+    src = str(source_format or "").strip().lower().lstrip(".")
+    return src in {"xls", "xlsx", "xlsm", "excel"}
 
 
 def _is_implausible_money(
@@ -6951,7 +6961,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
     sales_total = totals.get("sales_value")
     closing_total = totals.get("closing_value")
     allow_negative_money = _allow_negative_stock_money(
-        totals.get("extra", {}).get("extraction_method")
+        totals.get("extra", {}).get("extraction_method"),
+        source_format=result.get("source_format"),
     )
     _trusted_footer_sources = {
         "daxinsoft_footer",
@@ -6960,6 +6971,10 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "marg_sale_purchase_value",
         "lstsl_open_recd_footer",
         "free_return_total_value",
+        # ITEM/PACK/S.RETURN/OTHERS Excel: last TOTAL VALUE / GRAND TOTAL money.
+        "sreturn_others_total_value",
+        # ITEM/PACK/P.RETURN/SALE Excel: last TOTAL VALUE / GRAND TOTAL money.
+        "preturn_sale_total_value",
         "op_pur_sale_bal_qnty_footer",
         "product_wise_stock_statement_footer",
         "docx_header_resolved_footer",
@@ -7071,6 +7086,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         not in {
             "lstsl_open_recd_footer",
             "free_return_total_value",
+            "sreturn_others_total_value",
+            "preturn_sale_total_value",
             "op_pur_sale_bal_qnty_footer",
             "ssa_value_footer",
             "chopada_zandra_footer",
@@ -7138,7 +7155,8 @@ def _sanitize_numeric_overrides(
 
     totals = result.get("totals") if isinstance(result.get("totals"), dict) else {}
     allow_negative_money = _allow_negative_stock_money(
-        (totals.get("extra") or {}).get("extraction_method")
+        (totals.get("extra") or {}).get("extraction_method"),
+        source_format=result.get("source_format"),
     )
 
     suppressed = 0
@@ -8497,6 +8515,93 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         }
         return result
 
+    # ITEM / PACK / OPENING / PURCHASE / P.RETURN / SALE / S.RETURN / OTHERS /
+    # CLOSING (+ optional REORDER / mislabeled ITEMCODE rate / opening value).
+    if totals["extra"].get("extraction_method") == "item_pack_preturn_sale":
+        mismatch = 0
+
+        def _preturn_move(item: Dict[str, Any], field: str, *extra_names: str) -> float:
+            if item.get(field) not in (None, ""):
+                return _to_float(item.get(field))
+            row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            for name in (field, *extra_names):
+                if row_extra.get(name) not in (None, ""):
+                    return _to_float(row_extra.get(name))
+            return 0.0
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            row_extra = item.setdefault("extra", {})
+            if not isinstance(row_extra, dict):
+                row_extra = {}
+                item["extra"] = row_extra
+            if row_extra.get("qty_parse_errors"):
+                mismatch += 1
+                row_extra["stock_identity_ok"] = False
+                continue
+            expected = round(
+                _preturn_move(item, "opening_qty")
+                + _preturn_move(item, "purchase_qty", "receipts_qty")
+                - _preturn_move(item, "purchase_return_qty")
+                - _preturn_move(item, "sales_qty")
+                + _preturn_move(item, "sales_return_qty")
+                + _preturn_move(item, "others_qty"),
+                2,
+            )
+            closing = _preturn_move(item, "closing_qty")
+            row_extra["expected_closing"] = expected
+            ok = abs(expected - closing) <= 0.05
+            row_extra["stock_identity_ok"] = ok
+            if not ok:
+                mismatch += 1
+        opening_sum = sum(
+            _to_float(i.get("opening_qty")) for i in items if isinstance(i, dict)
+        )
+        purchase_sum = sum(
+            _to_float(
+                i.get("purchase_qty")
+                if i.get("purchase_qty") not in (None, "")
+                else i.get("receipts_qty")
+            )
+            for i in items
+            if isinstance(i, dict)
+        )
+        sales_sum = sum(
+            _to_float(i.get("sales_qty")) for i in items if isinstance(i, dict)
+        )
+        closing_sum = sum(
+            _to_float(i.get("closing_qty")) for i in items if isinstance(i, dict)
+        )
+        opening_value_sum = round(
+            sum(
+                _to_float(i.get("opening_value"))
+                for i in items
+                if isinstance(i, dict) and i.get("opening_value") not in (None, "")
+            ),
+            2,
+        )
+        totals["extra"]["opening_qty"] = opening_sum
+        totals["extra"]["receipts_qty"] = purchase_sum
+        totals["extra"]["purchase_qty"] = purchase_sum
+        totals["extra"]["sales_qty"] = sales_sum
+        totals["extra"]["closing_qty"] = closing_sum
+        if opening_value_sum and totals["extra"].get("opening_value") is None:
+            totals["extra"]["opening_value_sum"] = opening_value_sum
+        totals["extra"]["stock_identity_kind"] = "item_pack_preturn_sale"
+        totals["extra"]["stock_identity_formula"] = (
+            "closing=opening+purchase-purchase_return-sale+sales_return+others"
+        )
+        totals["extra"]["stock_identity_fail_count"] = mismatch
+        totals["extra"]["stock_validation"] = {
+            "extracted_opening": opening_sum,
+            "extracted_purchase": purchase_sum,
+            "extracted_sales_qty": sales_sum,
+            "extracted_closing": closing_sum,
+            "is_valid": mismatch == 0,
+        }
+        return result
+
     # ITEM / PACK / OPENING / PURCHASE / FREE / P.RETURN / FREE / SALE / FREE /
     # S.RETURN / FREE / OTHERS / CLOSING. Printed closing includes every free
     # and return column, so opening + purchase - sale must not replace it.
@@ -8797,6 +8902,9 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "stock_sales_analysis_geometry",
             "ssa_sales_free_columns",
             "marg_sale_purchase_analysis",
+            # ITEM/PACK/P.RETURN/SALE Excel prints opening value only; sales/
+            # closing money live on TOTAL VALUE / GRAND TOTAL, not line rows.
+            "item_pack_preturn_sale",
         }
         or bool(extra.get("qty_only"))
     )
@@ -16173,7 +16281,12 @@ def _find_marg_erp_xls_header(
     Variants:
       - purchase_sale_rate: OPENING/PURCHASE/SALE/CLOSING + RATE
       - receive_issue_value: OPENING/RECEIVE/ISSUE/CLOSING + values
+
+    OPENING/RECEIPT/ISSUE/CLOSING with QTY|VALUE children + DUMP is handled by
+    `_parse_marg_qty_value_dump_xls` — do not claim that grid as generic Marg.
     """
+    if _find_marg_qty_value_dump_xls_header(rows) is not None:
+        return None
     for ri, row in enumerate(rows[:40]):
         labels = [_norm_xls_header_label(c) for c in row]
         if not any(
@@ -16794,6 +16907,9 @@ _XLS_HEADER_ALIASES = {
     "bval": "bval",
     "closingvalue": "bval",
     "closingval": "bval",
+    # Semantic export headers: clos_value / closvalue (paired with clos_qty).
+    "closvalue": "bval",
+    "closval": "bval",
     # QohValue — closing money beside Qoh qty.
     "qohvalue": "bval",
     "qohval": "bval",
@@ -16826,6 +16942,9 @@ _XLS_HEADER_ALIASES = {
     "secondaryvalue": "sval",
     "issuevalue": "sval",
     "issueval": "sval",
+    # Semantic export headers: iss_value / issvalue (paired with iss_qty).
+    "issvalue": "sval",
+    "issval": "sval",
     "salesvalue": "sval",
     "salevalue": "sval",
     "saleamount": "sval",
@@ -16843,8 +16962,14 @@ _XLS_HEADER_ALIASES = {
     "opval": "opval",
     "receivevalue": "purval",
     "receiveval": "purval",
+    # Semantic export headers: rec_value / recvalue (paired with rec_qty).
+    "recvalue": "purval",
+    "recval": "purval",
+    "receiptvalue": "purval",
+    "receiptsvalue": "purval",
     "purchasevalue": "purval",
     "inwardvalue": "purval",
+    "purval": "purval",
     "qtyopening": "op",
     "quantityopening": "op",
     "stockopening": "op",
@@ -19104,12 +19229,25 @@ def _split_marg_item_and_pack(text: str) -> Tuple[str, Optional[str]]:
     raw = str(text or "").strip()
     spaced = re.match(r"^(.*\S)\s{2,}(\S.*)$", raw)
     if spaced:
-        return _clean_name(spaced.group(1)), _clean_name(spaced.group(2)) or None
+        name = _clean_name(spaced.group(1))
+        packing = _clean_name(spaced.group(2)) or None
+        # Marg often prints pack in the name and again after wide spaces
+        # ("BRESOL SYRUP 200mL            200mL").
+        if name and packing:
+            peeled = re.sub(
+                r"(?i)\s+" + re.escape(packing) + r"\s*$",
+                "",
+                name,
+            ).strip()
+            if peeled:
+                name = peeled
+        return name, packing
     tokens = raw.split()
     pack: List[str] = []
-    unit = re.compile(r"(?i)^(?:ML|GM|GMS|MG|TAB|TABS|CAP|CAPS|PCS|KG|LTR|L)$")
+    # Include bare "s" / "'s" so "6 s" and "30's" peel when Marg omits wide spaces.
+    unit = re.compile(r"(?i)^(?:ML|GM|GMS|MG|TAB|TABS|CAP|CAPS|PCS|KG|LTR|L|'?S)$")
     pack_token = re.compile(
-        r"(?i)^(?:\d+[xX*]\d+[A-Za-z]*|\d+(?:ML|GM|GMS|MG|TAB|TABS|CAP|CAPS|PCS|KG)|PCS)$"
+        r"(?i)^(?:\d+[xX*]\d+[A-Za-z]*|\d+(?:ML|GM|GMS|MG|TAB|TABS|CAP|CAPS|PCS|KG|'?S)|PCS)$"
     )
     while tokens:
         if unit.match(tokens[-1]) and len(tokens) >= 2 and re.search(r"\d", tokens[-2]):
@@ -19147,17 +19285,12 @@ def _marg_dump_qty(value: Any) -> float:
     return _to_float(token)
 
 
-def _parse_marg_qty_value_dump_xls(
-    rows: List[List[Any]],
-    filename: str,
-    ext: str,
-    sheet_name: str,
-) -> Optional[Dict[str, Any]]:
-    """Marg ITEM DESCRIPTION grid with QTY and VALUE under OPENING, RECEIPT, ISSUE, CLOSING, plus DUMP.
+def _find_marg_qty_value_dump_xls_header(rows: List[List[Any]]) -> Optional[int]:
+    """Parent OPENING/RECEIPT/ISSUE/CLOSING/DUMP with QTY|VALUE children.
 
-    The five-column OPENING/RECEIPT/ISSUE/CLOSING sheet and the CLOSING M.EXP sheet do not match.
+    Layout-family fingerprint for Marg Excel STOCK & SALES ANALYSIS sheets that
+    print paired qty/value columns (not the qty-only or CLOSING M.EXP grids).
     """
-    header_idx = None
     expected = [
         "itemdescription",
         "opening",
@@ -19170,8 +19303,19 @@ def _parse_marg_qty_value_dump_xls(
         "",
         "dump",
     ]
-    sub_expected = ["", "qty", "value", "qty", "value", "qty", "value", "qty", "value", "qty"]
-    for index, row in enumerate(rows[:25]):
+    sub_expected = [
+        "",
+        "qty",
+        "value",
+        "qty",
+        "value",
+        "qty",
+        "value",
+        "qty",
+        "value",
+        "qty",
+    ]
+    for index, row in enumerate(rows[:40]):
         labels = [_marg_qty_value_label(cell) for cell in (row or [])]
         labels += [""] * (10 - len(labels))
         if labels[:10] != expected:
@@ -19182,8 +19326,39 @@ def _parse_marg_qty_value_dump_xls(
         sub += [""] * (10 - len(sub))
         if sub[:10] != sub_expected:
             continue
-        header_idx = index
-        break
+        return index
+    return None
+
+
+def _is_marg_qty_value_dump_chrome_row(raw_name: str) -> bool:
+    """Page banners / repeated headers that must not become line_items."""
+    text = str(raw_name or "").strip()
+    if not text:
+        return True
+    if re.match(
+        r"^(?:ITEM\s+DESCRIPTION|MARG\s+ERP|Continued|Page\s*No\.?|"
+        r"Digital\s+Signature|QTY\.?|VALUE)\b",
+        text,
+        re.I,
+    ):
+        return True
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", text, re.I):
+        return True
+    return False
+
+
+def _parse_marg_qty_value_dump_xls(
+    rows: List[List[Any]],
+    filename: str,
+    ext: str,
+    sheet_name: str,
+) -> Optional[Dict[str, Any]]:
+    """Marg ITEM DESCRIPTION grid with QTY and VALUE under OPENING, RECEIPT, ISSUE, CLOSING, plus DUMP.
+
+    The five-column OPENING/RECEIPT/ISSUE/CLOSING sheet and the CLOSING M.EXP sheet do not match.
+    When multiple TOTAL / GRAND TOTAL rows exist (page subtotals), keep the last one.
+    """
+    header_idx = _find_marg_qty_value_dump_xls_header(rows)
     if header_idx is None:
         return None
 
@@ -19207,6 +19382,11 @@ def _parse_marg_qty_value_dump_xls(
             )
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
+            # Title without trailing dates still carries company in parentheses.
+            if not result.get("company_name"):
+                company_only = re.search(r"ANALYSIS\s*\((.*)\)\s*$", text, re.I)
+                if company_only:
+                    result["company_name"] = _clean_name(company_only.group(1))
             period = re.search(
                 r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*[-–—]+\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
                 text,
@@ -19223,19 +19403,34 @@ def _parse_marg_qty_value_dump_xls(
         if not result.get("stockist_address"):
             result["stockist_address"] = _clean_name(text)
 
+    stockist_key = re.sub(
+        r"[^a-z0-9]", "", str(result.get("stockist_name") or "").lower()
+    )
+    company_key = re.sub(
+        r"[^a-z0-9]", "", str(result.get("company_name") or "").lower()
+    )
+
     items: List[Dict[str, Any]] = []
-    total_row = None
+    # Page subtotals may print several TOTAL bands; keep every match and prefer
+    # the last GRAND TOTAL when present, else the last TOTAL.
+    total_candidates: List[Tuple[str, List[Any]]] = []
     for row in rows[header_idx + 2 :]:
         raw_name = str(row[0] or "").strip() if row else ""
         if not raw_name:
             continue
-        if re.match(r"TOTAL\b", raw_name, re.I):
-            total_row = row
+        if re.match(r"^(?:GRAND\s+)?TOTAL\b", raw_name, re.I):
+            total_candidates.append((raw_name, row))
             continue
-        if re.match(r"MARG\s+ERP\b", raw_name, re.I):
+        if _is_marg_qty_value_dump_chrome_row(raw_name):
             continue
         name, packing = _split_marg_item_and_pack(raw_name)
         if not name:
+            continue
+        name_key = re.sub(r"[^a-z0-9]", "", name.lower())
+        if name_key and (
+            (stockist_key and name_key == stockist_key)
+            or (company_key and name_key == company_key)
+        ):
             continue
         opening = _marg_printed_number(row[1] if len(row) > 1 else None)
         opening_value = _marg_printed_number(row[2] if len(row) > 2 else None)
@@ -19246,17 +19441,15 @@ def _parse_marg_qty_value_dump_xls(
         closing = _marg_printed_number(row[7] if len(row) > 7 else None)
         closing_value = _marg_printed_number(row[8] if len(row) > 8 else None)
         dump_qty = _marg_dump_qty(row[9] if len(row) > 9 else None)
-        if (
-            opening == receipt == issue == closing == 0
-            and opening_value == receipt_value == issue_value == closing_value == 0
-            and not packing
-        ):
-            continue
+        # Excel grids print every SKU including all-zero / dash rows. Keep them —
+        # dropping pack-less zeros omitted real items (e.g. glued "30's" / "6 s").
         item = empty_line_item()
         item["product_name"] = name
         item["packing"] = packing
         item["opening_qty"] = opening
+        item["opening_value"] = opening_value
         item["receipts_qty"] = receipt
+        item["receipts_value"] = receipt_value
         item["sales_qty"] = issue
         item["sales_value"] = issue_value
         item["closing_qty"] = closing
@@ -19265,7 +19458,11 @@ def _parse_marg_qty_value_dump_xls(
         extra_item["layout"] = "marg_qty_value_dump"
         extra_item["opening_value"] = opening_value
         extra_item["receipts_value"] = receipt_value
+        extra_item["purchase_value"] = receipt_value
         extra_item["dump_qty"] = dump_qty
+        # Preserve printed negatives (adjustment receipts) for identity checks.
+        if receipt < 0:
+            extra_item["negative_receipts_qty"] = True
         items.append(item)
     if not items:
         return None
@@ -19275,7 +19472,11 @@ def _parse_marg_qty_value_dump_xls(
     extra["extraction_method"] = "marg_qty_value_dump_xls"
     extra["layout"] = "marg_qty_value_dump"
     extra["sheet"] = sheet_name
+    grand = [c for c in total_candidates if re.match(r"^GRAND\s+TOTAL\b", c[0], re.I)]
+    total_label, total_row = (grand[-1] if grand else total_candidates[-1]) if total_candidates else (None, None)
     extra["total_row_source"] = "marg_qty_value_dump_total"
+    if total_label and re.match(r"^GRAND\s+TOTAL\b", total_label, re.I):
+        extra["total_row_source"] = "marg_qty_value_dump_grand_total"
     if total_row:
         result["totals"]["sales_value"] = _marg_printed_number(
             total_row[6] if len(total_row) > 6 else None
@@ -19289,6 +19490,19 @@ def _parse_marg_qty_value_dump_xls(
         extra["receipts_value"] = _marg_printed_number(total_row[4] if len(total_row) > 4 else None)
         extra["sales_qty"] = _marg_printed_number(total_row[5] if len(total_row) > 5 else None)
         extra["closing_qty"] = _marg_printed_number(total_row[7] if len(total_row) > 7 else None)
+        # Printed DUMP QTY on TOTAL / GRAND TOTAL (often 0 while line dumps sum higher).
+        extra["dump_qty"] = _marg_dump_qty(total_row[9] if len(total_row) > 9 else None)
+    logger.info(
+        "MARG_QTY_VALUE_DUMP_XLS file=%s sheet=%s items=%s total_source=%s "
+        "receipts_qty=%s sales_qty=%s closing_value=%s",
+        filename,
+        sheet_name,
+        len(items),
+        extra.get("total_row_source"),
+        extra.get("receipts_qty"),
+        extra.get("sales_qty"),
+        result["totals"].get("closing_value"),
+    )
     return result
 
 
@@ -20025,6 +20239,17 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         # Keep empty cells so RATE / free / return stay in their printed columns.
         html_rows = _html_excel_table_rows(file_bytes)
         if html_rows:
+            # Qty|Value OPENING/RECEIPT/ISSUE/CLOSING+DUMP before generic Marg.
+            marg_dump_html = _parse_marg_qty_value_dump_xls(
+                html_rows, filename, ext, "html"
+            )
+            if marg_dump_html and marg_dump_html.get("line_items"):
+                logger.info(
+                    "SECONDARY_SALES_READER file=%s engine=html_excel "
+                    "method=marg_qty_value_dump_xls",
+                    filename,
+                )
+                return _xls_finalize_result(marg_dump_html)
             marg_header = _find_marg_erp_xls_header(html_rows)
             if marg_header is not None:
                 logger.info(
@@ -20091,6 +20316,11 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         groupwise = _parse_groupwise_qty_value_xls(rows, filename, ext)
         if groupwise and groupwise.get("line_items"):
             return _xls_finalize_result(groupwise)
+        # OPENING/RECEIPT/ISSUE/CLOSING × QTY|VALUE + DUMP must beat generic Marg
+        # (generic only mapped opening/closing and zeroed receipts/sales/values).
+        marg_dump = _parse_marg_qty_value_dump_xls(rows, filename, ext, sheet_name)
+        if marg_dump and marg_dump.get("line_items"):
+            return _xls_finalize_result(marg_dump)
         # Marg ERP Himalaya/Zeal STOCK & SALES STATEMENT — format-specific early exit
         marg_header = _find_marg_erp_xls_header(rows)
         if marg_header is not None:
@@ -20115,9 +20345,6 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         marg = _parse_marg_opening_receipt_issue(rows, filename, ext, sheet_name)
         if marg and marg.get("line_items"):
             return _xls_finalize_result(marg)
-        marg_dump = _parse_marg_qty_value_dump_xls(rows, filename, ext, sheet_name)
-        if marg_dump and marg_dump.get("line_items"):
-            return _xls_finalize_result(marg_dump)
         try:
             part = empty_result(filename, ext.lstrip("."))
             part = _xls_fill_from_rows(part, rows, formats, sheet_name)
@@ -20261,12 +20488,17 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if pextra.get(key) and not rextra.get(key):
                 rextra[key] = pextra[key]
         for item in part.get("line_items") or []:
+            # Packing must stay in the key: zero-qty SKUs that share a name
+            # (e.g. HIORA TOOTHPASTE 50G vs 100G) are distinct catalogue rows.
+            item_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
             key = (
                 item.get("product_code"),
                 item.get("product_name"),
+                item.get("packing") or item.get("source_packing"),
                 item.get("opening_qty"),
                 item.get("sales_qty"),
                 item.get("closing_qty"),
+                item_extra.get("unit_rate") or item_extra.get("rate"),
             )
             if key in seen:
                 continue
@@ -20347,7 +20579,38 @@ def _xls_item_pack_sreturn_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
     for idx, label in labels[len(_ITEM_PACK_SRETURN_HEADER) :]:
         if label == "itemcode" and "itemcode" not in indexes:
             indexes["itemcode"] = idx
+        elif label == "branchtotal" and "branchtotal" not in indexes:
+            indexes["branchtotal"] = idx
+        elif (
+            label in {"division", "total", "totalvalue"}
+            and "stock_value" not in indexes
+        ):
+            # BRANCH TOTAL | DIVISION/TOTAL — stock money after ITEMCODE.
+            indexes["stock_value"] = idx
+    # Trailing unlabeled cell after stock_value is often shifted sales value.
+    if "stock_value" in indexes:
+        indexes["sales_value_trail"] = indexes["stock_value"] + 1
+    elif "branchtotal" in indexes:
+        indexes["stock_value"] = indexes["branchtotal"]
+        indexes["sales_value_trail"] = indexes["branchtotal"] + 1
     return indexes
+
+
+def _xls_sreturn_near_expiry_header(row: List[Any]) -> bool:
+    """True when a near-expiry/batch sub-table header starts (Itemname|Batch|Expiry)."""
+    labels = [
+        _xls_header_compact(cell)
+        for cell in (row or [])
+        if _xls_header_compact(cell)
+    ]
+    if not labels:
+        return False
+    head = set(labels[:5])
+    if "itemname" in head and "batch" in head:
+        return True
+    if "batch" in head and "expiry" in head and ("qty" in head or "purdate" in head):
+        return True
+    return False
 
 
 def _xls_sreturn_qty_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
@@ -20373,6 +20636,22 @@ def _xls_sreturn_qty_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
         number = float(cleaned)
         return (-abs(number) if negative and number else number), None
     return None, text
+
+
+def _xls_optional_money_cell(value: Any) -> Tuple[Optional[float], Optional[str]]:
+    """Parse an optional money cell. Blank/dash mean missing (None), not 0.0."""
+    if value is None or value == "":
+        return None, None
+    if isinstance(value, bool):
+        return None, "ambiguous"
+    if isinstance(value, str) and not str(value).strip():
+        return None, None
+    if isinstance(value, str) and str(value).strip() in {"-", "—", "--", "–"}:
+        return None, None
+    number, error = _xls_sreturn_qty_cell(value)
+    if error:
+        return None, error
+    return number, None
 
 
 _ZENITH_OPSTK_HEADER = (
@@ -20590,12 +20869,74 @@ def _xls_fill_item_pack_sreturn_rows(
         company = re.search(r"Company\s*:\s*(.+)", joined, re.I)
         if company and not result.get("company_name"):
             result["company_name"] = _clean_name(company.group(1))
+        if (
+            not result.get("stockist_address")
+            and re.search(r"PLOT|FLOOR|INDUSTRIAL|AREA|\b\d{6}\b", joined, re.I)
+            and not re.search(r"Company\s*:|From\s*:|STOCK", joined, re.I)
+        ):
+            result["stockist_address"] = _clean_name(joined)
+        if re.fullmatch(r"STOCK\s*&\s*SALES", joined.strip(), re.I) and not result.get(
+            "report_title"
+        ):
+            result["report_title"] = _clean_name(joined)
 
     def cell(row: List[Any], key: str) -> Any:
         idx = indexes.get(key)
         if idx is None or idx >= len(row):
             return None
         return row[idx]
+
+    def _apply_sreturn_total_value_row(row: List[Any], label: str) -> None:
+        """Copy money under OPENING/PURCHASE/SALE/CLOSING on TOTAL VALUE / GRAND TOTAL.
+
+        Division 'Total Value (…)' banners are not used. Later matching rows win
+        so the last TOTAL VALUE / GRAND TOTAL is the statement total.
+        """
+        money: Dict[str, float] = {}
+        for field, key in (
+            ("opening_qty", "opening"),
+            ("purchase_qty", "purchase"),
+            ("sales_return_qty", "sales_return"),
+            ("others_in_qty", "others_in"),
+            ("sales_qty", "sale"),
+            ("purchase_return_qty", "purchase_return"),
+            ("others_out_qty", "others_out"),
+            ("closing_qty", "closing"),
+        ):
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            if error or number is None:
+                continue
+            money[field] = round(number, 2)
+        if "sales_qty" in money:
+            result["totals"]["sales_value"] = money["sales_qty"]
+        if "closing_qty" in money:
+            result["totals"]["closing_value"] = money["closing_qty"]
+        extra_totals = result.setdefault("totals", {}).setdefault("extra", {})
+        if "opening_qty" in money:
+            extra_totals["opening_value"] = money["opening_qty"]
+        if "purchase_qty" in money:
+            extra_totals["purchase_value"] = money["purchase_qty"]
+        if "sales_return_qty" in money:
+            extra_totals["sales_return_value"] = money["sales_return_qty"]
+        if "purchase_return_qty" in money:
+            extra_totals["purchase_return_value"] = money["purchase_return_qty"]
+        # Last TOTAL VALUE / GRAND TOTAL wins; OTHERS money stays on totals.extra.
+        if "others_in_qty" in money:
+            extra_totals["others_in_value"] = money["others_in_qty"]
+        if "others_out_qty" in money:
+            extra_totals["others_out_value"] = money["others_out_qty"]
+        extra_totals["total_row_source"] = "sreturn_others_total_value"
+        extra_totals["total_row_label"] = label
+        logger.info(
+            "ITEM_PACK_SRETURN_TOTAL_VALUE label=%s opening=%s purchase=%s "
+            "sales=%s closing=%s others_out=%s",
+            label,
+            money.get("opening_qty"),
+            money.get("purchase_qty"),
+            money.get("sales_qty"),
+            money.get("closing_qty"),
+            money.get("others_out_qty"),
+        )
 
     items: List[Dict[str, Any]] = []
     zero_rows = 0
@@ -20604,6 +20945,14 @@ def _xls_fill_item_pack_sreturn_rows(
     for row in rows[header_idx + 1 :]:
         if not isinstance(row, list):
             continue
+        # Near-expiry / batch sub-table below TOTAL VALUE is not product stock.
+        if _xls_sreturn_near_expiry_header(row):
+            logger.info(
+                "ITEM_PACK_SRETURN_NEAR_EXPIRY_STOP sheet=%s rows_kept=%s",
+                sheet_name,
+                len(items),
+            )
+            break
         raw_name = cell(row, "item")
         if raw_name in (None, ""):
             continue
@@ -20617,6 +20966,10 @@ def _xls_fill_item_pack_sreturn_rows(
             company = re.search(r"Company\s*:\s*(.+)", str(raw_name), re.I)
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
+            continue
+        # Exact TOTAL VALUE / GRAND TOTAL — last matching row wins (not division totals).
+        if re.fullmatch(r"(?:total\s+value|grand\s*total)", product_name, re.I):
+            _apply_sreturn_total_value_row(row, product_name)
             continue
         if re.match(
             r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
@@ -20663,6 +21016,84 @@ def _xls_fill_item_pack_sreturn_rows(
         item["source_product_name"] = product_name
         item["source_packing"] = packing or None
 
+        # Positional money after ITEMCODE:
+        #   DIVISION / TOTAL header cell -> opening_value
+        #   unlabeled cell immediately right -> sales_value
+        # Keep dash/0.0 in place. Skipping zeros used to collapse a lone
+        # sales figure into opening_value on zero-opening rows.
+        field_source: Dict[str, str] = {}
+        if "stock_value" in indexes:
+            open_number, open_error = _xls_sreturn_qty_cell(cell(row, "stock_value"))
+            if not open_error and open_number is not None:
+                item["opening_value"] = round(float(open_number), 2)
+                field_source["opening_value"] = "printed"
+        trail_i = indexes.get("sales_value_trail")
+        if trail_i is not None and trail_i < len(row):
+            sales_number, sales_error = _xls_sreturn_qty_cell(cell(row, "sales_value_trail"))
+            if not sales_error and sales_number is not None:
+                item["sales_value"] = round(float(sales_number), 2)
+                field_source["sales_value"] = "printed"
+                if float(item.get("opening_value") or 0.0) == 0.0 and float(
+                    item["sales_value"]
+                ) != 0.0:
+                    logger.info(
+                        "ITEM_PACK_SRETURN_TRAIL_SALES_VALUE product=%s "
+                        "sales_value=%s opening_value=%s",
+                        product_name[:60],
+                        item.get("sales_value"),
+                        item.get("opening_value"),
+                    )
+        # Zero-movement rows print one stock value for open and close.
+        if (
+            field_source.get("opening_value") == "printed"
+            and (parsed.get("sales_qty") or 0.0) == 0.0
+            and parsed.get("opening_qty") == parsed.get("closing_qty")
+            and float(item.get("sales_value") or 0.0) == 0.0
+            and item.get("opening_value") not in (None, "")
+            and float(item.get("opening_value") or 0.0) != 0.0
+        ):
+            item["closing_value"] = item["opening_value"]
+            field_source["closing_value"] = "printed"
+
+        # Explicit derived closing value: sheet prints opening stock value +
+        # sales value, not per-row closing money. rate = open_val/open_qty.
+        # Zero-opening rows have no opening rate; closing money stays missing.
+        open_qty = parsed.get("opening_qty")
+        close_qty = parsed.get("closing_qty")
+        open_val = item.get("opening_value")
+        close_val = item.get("closing_value")
+        if (
+            open_val not in (None, "")
+            and open_qty not in (None, "")
+            and close_qty not in (None, "")
+            and float(open_qty) > 0.001
+            and float(open_val or 0.0) != 0.0
+            and (close_val in (None, "") or float(close_val or 0) == 0.0)
+            and field_source.get("closing_value") != "printed"
+        ):
+            derived_close = round(float(open_val) / float(open_qty) * float(close_qty), 2)
+            item["closing_value"] = derived_close
+            field_source["closing_value"] = "derived"
+            logger.info(
+                "ITEM_PACK_SRETURN_DERIVED_CLOSING_VALUE product=%s "
+                "opening_value=%s opening_qty=%s closing_qty=%s closing_value=%s",
+                product_name[:60],
+                open_val,
+                open_qty,
+                close_qty,
+                derived_close,
+            )
+        elif (
+            field_source.get("closing_value") != "printed"
+            and field_source.get("closing_value") != "derived"
+            and close_qty not in (None, "")
+            and float(close_qty or 0.0) > 0.001
+            and float(close_val or 0.0) == 0.0
+        ):
+            # Closing qty printed but no per-row closing money / no open rate.
+            item["closing_value"] = None
+            field_source["closing_value"] = "missing"
+
         flags: List[str] = []
         numbers = [parsed[field] for field in _ITEM_PACK_QTY_FIELDS]
         if errors:
@@ -20703,6 +21134,8 @@ def _xls_fill_item_pack_sreturn_rows(
             "others_out_qty": parsed["others_out_qty"],
             "qty_reconcile_ok": not errors and not flags,
         }
+        if field_source:
+            extra["field_source"] = field_source
         if errors:
             extra["qty_parse_errors"] = errors
         if flags:
@@ -20954,6 +21387,436 @@ def _xls_fill_item_pack_free_return_rows(
     return result
 
 
+# ITEM|PACK|OPENING|PURCHASE|P.RETURN|SALE|S.RETURN|OTHERS|CLOSING
+# (+ optional REORDER-QTY; ITEMCODE often mislabeled unit rate; unlabeled opening value).
+_ITEM_PACK_PRETURN_SALE_HEADER = (
+    "item",
+    "pack",
+    "opening",
+    "purchase",
+    "preturn",
+    "sale",
+    "sreturn",
+    "others",
+    "closing",
+)
+_ITEM_PACK_PRETURN_SALE_FIELDS = (
+    "item",
+    "pack",
+    "opening",
+    "purchase",
+    "purchase_return",
+    "sale",
+    "sales_return",
+    "others",
+    "closing",
+)
+_ITEM_PACK_PRETURN_SALE_QTY = (
+    ("opening_qty", "opening"),
+    ("purchase_qty", "purchase"),
+    ("purchase_return_qty", "purchase_return"),
+    ("sales_qty", "sale"),
+    ("sales_return_qty", "sales_return"),
+    ("others_qty", "others"),
+    ("closing_qty", "closing"),
+)
+
+
+def _xls_item_pack_preturn_sale_enabled() -> bool:
+    """Default ON. Excel ITEM/PACK/P.RETURN/SALE grids with trailing value cols."""
+    return True
+
+
+def _xls_item_pack_preturn_sale_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
+    """Column indexes for ITEM/PACK/OPENING/PURCHASE/P.RETURN/SALE/S.RETURN/OTHERS/CLOSING.
+
+    FREE/SUBTOTAL variants return None so sibling ITEM/PACK parsers keep ownership.
+    """
+    if not _xls_item_pack_preturn_sale_enabled():
+        return None
+    labels = [
+        (idx, _xls_header_compact(cell))
+        for idx, cell in enumerate(row or [])
+        if _xls_header_compact(cell)
+    ]
+    if len(labels) < len(_ITEM_PACK_PRETURN_SALE_HEADER):
+        return None
+    head = [label for _idx, label in labels[: len(_ITEM_PACK_PRETURN_SALE_HEADER)]]
+    if head != list(_ITEM_PACK_PRETURN_SALE_HEADER):
+        return None
+    indexes = {
+        field: labels[pos][0]
+        for pos, field in enumerate(_ITEM_PACK_PRETURN_SALE_FIELDS)
+    }
+    for idx, label in labels[len(_ITEM_PACK_PRETURN_SALE_HEADER) :]:
+        if label in {"reorderqty", "reorder", "reorderqnty"} and "reorder" not in indexes:
+            indexes["reorder"] = idx
+        elif label == "itemcode" and "itemcode" not in indexes:
+            indexes["itemcode"] = idx
+        elif label == "branchtotal" and "branchtotal" not in indexes:
+            indexes["branchtotal"] = idx
+    return indexes
+
+
+def _xls_preturn_sale_discover_value_cols(
+    rows: List[List[Any]],
+    header_idx: int,
+    indexes: Dict[str, int],
+) -> Dict[str, int]:
+    """Map unlabeled cells after ITEMCODE/REORDER to rate/opening_value when printed."""
+    out = dict(indexes)
+    if "itemcode" not in out and "reorder" not in out:
+        return out
+    last_labeled = max(out.values()) if out else 0
+    max_c = 0
+    for row in rows[header_idx:]:
+        if isinstance(row, list):
+            max_c = max(max_c, len(row))
+    unlabeled = [c for c in range(last_labeled + 1, max_c)]
+    if not unlabeled:
+        return out
+
+    itemcode_i = out.get("itemcode")
+    opening_i = out.get("opening")
+    rate_hits = 0
+    rate_checks = 0
+    if itemcode_i is not None and opening_i is not None:
+        for row in rows[header_idx + 1 :]:
+            if not isinstance(row, list):
+                continue
+            if itemcode_i >= len(row) or opening_i >= len(row):
+                continue
+            raw_code = row[itemcode_i]
+            # Footer / division rows leave ITEMCODE blank — do not vote them as 0.0.
+            if raw_code in (None, "") or (
+                isinstance(raw_code, str) and not str(raw_code).strip()
+            ):
+                continue
+            if isinstance(raw_code, str) and str(raw_code).strip() in {
+                "-",
+                "—",
+                "--",
+                "–",
+            }:
+                continue
+            name_cell = row[out["item"]] if out.get("item", 0) < len(row) else None
+            name_text = _clean_name(str(name_cell or ""))
+            if name_text and re.match(
+                r"^(?:total\b|grand\s*total|sub\s*total|division\s*:|company\s*:)",
+                name_text,
+                re.I,
+            ):
+                continue
+            open_n, open_err = _xls_sreturn_qty_cell(row[opening_i])
+            code_n, code_err = _xls_sreturn_qty_cell(raw_code)
+            if open_err or code_err or open_n is None or code_n is None:
+                continue
+            if abs(float(open_n)) < 0.001 or abs(float(code_n)) < 0.001:
+                continue
+            # Catalogue codes are whole numbers; unit rates are almost always decimals.
+            if abs(float(code_n) - round(float(code_n))) < 1e-9 and float(code_n) >= 1000:
+                continue
+            trail_match = False
+            for ui in unlabeled:
+                if ui >= len(row):
+                    continue
+                val_n, val_err = _xls_sreturn_qty_cell(row[ui])
+                if val_err or val_n is None or abs(float(val_n)) < 0.001:
+                    continue
+                expected = round(float(open_n) * float(code_n), 2)
+                if abs(expected - float(val_n)) <= max(0.51, 0.01 * abs(float(val_n))):
+                    trail_match = True
+                    break
+            rate_checks += 1
+            if trail_match or abs(float(code_n) - round(float(code_n))) > 1e-9:
+                rate_hits += 1
+            if rate_checks >= 12:
+                break
+    # Large sheets: majority vote. Tiny sheets: one open×ITEMCODE=value hit is enough.
+    if rate_checks >= 3:
+        itemcode_is_rate = rate_hits >= max(2, int(0.7 * rate_checks))
+    else:
+        itemcode_is_rate = rate_checks >= 1 and rate_hits == rate_checks
+    if itemcode_is_rate and itemcode_i is not None:
+        out["rate"] = itemcode_i
+        out.pop("itemcode", None)
+        logger.info(
+            "ITEM_PACK_PRETURN_SALE_ITEMCODE_AS_RATE checks=%s hits=%s col=%s",
+            rate_checks,
+            rate_hits,
+            itemcode_i,
+        )
+    if unlabeled:
+        out["opening_value"] = unlabeled[-1]
+        if len(unlabeled) >= 2:
+            out["reorder_value"] = unlabeled[0]
+    return out
+
+
+def _xls_fill_item_pack_preturn_sale_rows(
+    result: Dict[str, Any],
+    rows: List[List[Any]],
+    header_idx: int,
+    sheet_name: str,
+    header_score: int,
+) -> Dict[str, Any]:
+    """Parse ITEM/PACK/P.RETURN/SALE Excel grids; last TOTAL VALUE / GRAND TOTAL wins."""
+    indexes = _xls_item_pack_preturn_sale_indexes(rows[header_idx])
+    if not indexes:
+        return result
+    indexes = _xls_preturn_sale_discover_value_cols(rows, header_idx, indexes)
+
+    division_name: Optional[str] = None
+    for row in rows[: header_idx + 8]:
+        if not isinstance(row, list):
+            continue
+        joined = " ".join(_xls_preamble_texts(row))
+        company = re.search(r"Company\s*:\s*(.+)", joined, re.I)
+        if company and not result.get("company_name"):
+            result["company_name"] = _clean_name(company.group(1))
+        div = re.search(r"Division\s*:\s*(.+)", joined, re.I)
+        if div and not division_name:
+            division_name = _clean_name(div.group(1))
+        if (
+            not result.get("stockist_address")
+            and re.search(r"PLOT|FLOOR|INDUSTRIAL|AREA|\b\d{6}\b", joined, re.I)
+            and not re.search(r"Company\s*:|From\s*:|STOCK|Division\s*:", joined, re.I)
+        ):
+            result["stockist_address"] = _clean_name(joined)
+        if re.fullmatch(r"STOCK\s*&\s*SALES", joined.strip(), re.I) and not result.get(
+            "report_title"
+        ):
+            result["report_title"] = _clean_name(joined)
+        period = re.search(
+            r"From\s*:\s*(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s*To\s*:\s*"
+            r"(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})",
+            joined,
+            re.I,
+        )
+        if period and not result.get("period_from"):
+            result["period_from"] = _normalize_date(period.group(1))
+            result["period_to"] = _normalize_date(period.group(2))
+
+    if division_name:
+        result.setdefault("totals", {}).setdefault("extra", {})["division"] = division_name
+        result["division"] = division_name
+        company = result.get("company_name")
+        if company and "division" not in str(company).lower():
+            result["company_name"] = f"{company} (Division: {division_name})"
+
+    def cell(row: List[Any], key: str) -> Any:
+        idx = indexes.get(key)
+        if idx is None or idx >= len(row):
+            return None
+        return row[idx]
+
+    def _apply_total_value_row(row: List[Any], label: str) -> None:
+        """Money under OPENING/SALE/CLOSING on TOTAL VALUE / GRAND TOTAL (last wins)."""
+        money: Dict[str, float] = {}
+        for field, key in _ITEM_PACK_PRETURN_SALE_QTY:
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            if error or number is None:
+                continue
+            money[field] = round(float(number), 2)
+        if "sales_qty" in money:
+            result["totals"]["sales_value"] = money["sales_qty"]
+        if "closing_qty" in money:
+            result["totals"]["closing_value"] = money["closing_qty"]
+        # Clear any earlier qty pollution from division Total Value banners.
+        result["totals"].pop("sales_qty", None)
+        result["totals"].pop("closing_qty", None)
+        extra_totals = result.setdefault("totals", {}).setdefault("extra", {})
+        if "opening_qty" in money:
+            extra_totals["opening_value"] = money["opening_qty"]
+        if "purchase_qty" in money:
+            extra_totals["purchase_value"] = money["purchase_qty"]
+        if "purchase_return_qty" in money:
+            extra_totals["purchase_return_value"] = money["purchase_return_qty"]
+        if "sales_return_qty" in money:
+            extra_totals["sales_return_value"] = money["sales_return_qty"]
+        if "others_qty" in money:
+            extra_totals["others_value"] = money["others_qty"]
+        extra_totals["total_row_source"] = "preturn_sale_total_value"
+        extra_totals["total_row_label"] = label
+        logger.info(
+            "ITEM_PACK_PRETURN_SALE_TOTAL_VALUE label=%s opening=%s sales=%s closing=%s",
+            label,
+            money.get("opening_qty"),
+            money.get("sales_qty"),
+            money.get("closing_qty"),
+        )
+
+    items: List[Dict[str, Any]] = []
+    zero_rows = 0
+    parse_error_rows = 0
+    for row in rows[header_idx + 1 :]:
+        if not isinstance(row, list):
+            continue
+        raw_name = cell(row, "item")
+        if raw_name in (None, ""):
+            continue
+        product_name = _clean_name(str(raw_name))
+        if not product_name:
+            continue
+        if re.match(r"^division\s*:", product_name, re.I):
+            div = re.search(r"Division\s*:\s*(.+)", str(raw_name), re.I)
+            if div:
+                division_name = _clean_name(div.group(1))
+                result.setdefault("totals", {}).setdefault("extra", {})[
+                    "division"
+                ] = division_name
+                result["division"] = division_name
+                company = result.get("company_name")
+                if company and "division" not in str(company).lower():
+                    # Strip a prior bare company so we can re-append once.
+                    bare = re.sub(
+                        r"\s*\(Division:\s*[^)]+\)\s*$",
+                        "",
+                        str(company),
+                        flags=re.I,
+                    ).strip()
+                    result["company_name"] = f"{bare} (Division: {division_name})"
+            continue
+        if re.match(r"^company\s*:", product_name, re.I):
+            company = re.search(r"Company\s*:\s*(.+)", str(raw_name), re.I)
+            if company and not result.get("company_name"):
+                result["company_name"] = _clean_name(company.group(1))
+            continue
+        # Last TOTAL VALUE / GRAND TOTAL wins. Division "Total Value (…)" skipped.
+        if re.fullmatch(r"(?:total\s+value|grand\s*total)", product_name, re.I):
+            _apply_total_value_row(row, product_name)
+            continue
+        if re.match(
+            r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
+            product_name,
+            re.I,
+        ):
+            continue
+
+        raw_pack = cell(row, "pack")
+        packing = _clean_name(str(raw_pack)) if raw_pack not in (None, "") else None
+        parsed: Dict[str, Optional[float]] = {}
+        errors: Dict[str, str] = {}
+        for field, key in _ITEM_PACK_PRETURN_SALE_QTY:
+            number, error = _xls_sreturn_qty_cell(cell(row, key))
+            parsed[field] = number
+            if error:
+                errors[field] = error
+        reorder_qty = None
+        if "reorder" in indexes:
+            reorder_qty, reorder_err = _xls_sreturn_qty_cell(cell(row, "reorder"))
+            if reorder_err:
+                errors["reorder_qty"] = reorder_err
+        if errors:
+            parse_error_rows += 1
+        elif all(parsed[field] == 0.0 for field, _key in _ITEM_PACK_PRETURN_SALE_QTY):
+            zero_rows += 1
+
+        item = empty_line_item()
+        item["product_name"] = product_name
+        item["packing"] = packing or None
+        field_source: Dict[str, str] = {}
+        if "rate" in indexes:
+            rate_n, rate_err = _xls_sreturn_qty_cell(cell(row, "rate"))
+            if not rate_err and rate_n is not None:
+                item["extra"]["unit_rate"] = round(float(rate_n), 4)
+                item["extra"]["rate"] = item["extra"]["unit_rate"]
+                field_source["rate"] = "printed"
+            item["product_code"] = None
+            field_source["product_code"] = "missing"
+        else:
+            item["product_code"] = _xls_cell_code(cell(row, "itemcode"))
+            if item["product_code"]:
+                field_source["product_code"] = "printed"
+            else:
+                field_source["product_code"] = "missing"
+        item["opening_qty"] = parsed["opening_qty"]
+        item["purchase_qty"] = parsed["purchase_qty"]
+        item["receipts_qty"] = parsed["purchase_qty"]
+        item["sales_qty"] = parsed["sales_qty"]
+        item["closing_qty"] = parsed["closing_qty"]
+        item["purchase_return_qty"] = parsed["purchase_return_qty"]
+        item["sales_return_qty"] = parsed["sales_return_qty"]
+        item["others_qty"] = parsed["others_qty"]
+        item["source_product_name"] = product_name
+        item["source_packing"] = packing or None
+
+        # Per-row sales/closing money is not printed on this layout.
+        item["sales_value"] = None
+        item["closing_value"] = None
+        field_source["sales_value"] = "missing"
+        field_source["closing_value"] = "missing"
+
+        if "opening_value" in indexes:
+            open_val, open_val_err = _xls_sreturn_qty_cell(cell(row, "opening_value"))
+            if not open_val_err and open_val is not None:
+                item["opening_value"] = round(float(open_val), 2)
+                field_source["opening_value"] = "printed"
+            else:
+                item["opening_value"] = None
+                field_source["opening_value"] = "missing"
+        else:
+            item["opening_value"] = None
+            field_source["opening_value"] = "missing"
+
+        row_extra = item.setdefault("extra", {})
+        if not isinstance(row_extra, dict):
+            row_extra = {}
+            item["extra"] = row_extra
+        row_extra.update(
+            {
+                "layout": "item_pack_preturn_sale",
+                "source_product_name": product_name,
+                "source_packing": packing or None,
+                "purchase_qty": parsed["purchase_qty"],
+                "purchase_return_qty": parsed["purchase_return_qty"],
+                "sales_return_qty": parsed["sales_return_qty"],
+                "others_qty": parsed["others_qty"],
+                "field_source": field_source,
+            }
+        )
+        if reorder_qty is not None:
+            row_extra["reorder_qty"] = reorder_qty
+        if "reorder_value" in indexes:
+            rv, rv_err = _xls_sreturn_qty_cell(cell(row, "reorder_value"))
+            if not rv_err and rv is not None:
+                row_extra["reorder_value"] = round(float(rv), 2)
+        if errors:
+            row_extra["qty_parse_errors"] = errors
+        items.append(item)
+
+    result["line_items"] = items
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    extra["sheet"] = sheet_name
+    extra["header_row"] = header_idx
+    extra["header_detection_confidence"] = (
+        round(min(1.0, header_score / 12.0), 2) if header_idx is not None else 0.0
+    )
+    extra["extraction_method"] = "item_pack_preturn_sale"
+    extra["layout"] = "item_pack_preturn_sale"
+    # No per-row sales money column — only unlabeled opening value + footer.
+    extra["no_sales_value"] = True
+    extra["rows_detected"] = len(items)
+    extra["zero_qty_rows"] = zero_rows
+    extra["qty_parse_error_rows"] = parse_error_rows
+    if "item" in indexes:
+        extra["product_column"] = _xls_col_letter(indexes["item"])
+        extra["product_column_header"] = str(
+            rows[header_idx][indexes["item"]] or ""
+        ).strip()
+    logger.info(
+        "ITEM_PACK_PRETURN_SALE sheet=%s items=%s zero_rows=%s "
+        "opening_value=%s sales_value=%s closing_value=%s",
+        sheet_name,
+        len(items),
+        zero_rows,
+        (result.get("totals") or {}).get("extra", {}).get("opening_value"),
+        (result.get("totals") or {}).get("sales_value"),
+        (result.get("totals") or {}).get("closing_value"),
+    )
+    return result
+
+
 def _xls_preamble_texts(row: List[Any]) -> List[str]:
     """Non-empty cells, collapsing merge-expanded repeats (same value across columns)."""
     texts = [str(c).strip() for c in row if c is not None and str(c).strip()]
@@ -20999,9 +21862,14 @@ def _xls_fill_from_rows(
         ):
             result["stockist_name"] = _clean_name(texts[0])
         if (
-            re.search(r"NAGAR|ROAD|HOUSE|COMPLEX|STREET|TEMPLE|NEAR|APT", joined, re.I)
+            re.search(
+                r"NAGAR|ROAD|HOUSE|COMPLEX|STREET|TEMPLE|NEAR|APT|PLOT|FLOOR|"
+                r"INDUSTRIAL|AREA|\b\d{6}\b",
+                joined,
+                re.I,
+            )
             and len(joined) > 20
-            and not re.search(r"E-?Mail|Phone\s*:", joined, re.I)
+            and not re.search(r"E-?Mail|Phone\s*:|Company\s*:|From\s*:", joined, re.I)
         ):
             if not result["stockist_address"]:
                 result["stockist_address"] = _clean_name(joined)
@@ -21120,6 +21988,10 @@ def _xls_fill_from_rows(
         )
     if _xls_item_pack_sreturn_indexes(rows[header_idx]):
         return _xls_fill_item_pack_sreturn_rows(
+            result, rows, header_idx, sheet_name, header_score
+        )
+    if _xls_item_pack_preturn_sale_indexes(rows[header_idx]):
+        return _xls_fill_item_pack_preturn_sale_rows(
             result, rows, header_idx, sheet_name, header_score
         )
     if _xls_zenith_opstk_indexes(rows[header_idx]):
@@ -21283,23 +22155,65 @@ def _xls_fill_from_rows(
             re.sub(r"^[-=*_]{2,}\s*", "", product_name),
             re.I,
         ):
+            _total_label = re.sub(r"^[-=*_]{2,}\s*", "", product_name).strip()
             if re.match(
                 r"^(?:grand\s*|net\s+)?totals?\b",
-                re.sub(r"^[-=*_]{2,}\s*", "", product_name).strip(),
+                _total_label,
                 re.I,
             ):
-                sv = _col("sval", "secondary value")
-                bv = _col("bval")
-                if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
-                    result["totals"]["sales_value"] = _to_float(row[sv])
-                if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
-                    result["totals"]["closing_value"] = _to_float(row[bv])
-                sq = _col("sale", "sale qty", "sales qty")
-                cq = _col("bal", "cl stock", "closing")
-                if sq is not None and sq < len(row) and _xls_cell_has_qty(row[sq]):
-                    result["totals"]["sales_qty"] = _to_float(row[sq])
-                if cq is not None and cq < len(row) and _xls_cell_has_qty(row[cq]):
-                    result["totals"]["closing_qty"] = _to_float(row[cq])
+                # Prefer GRAND TOTAL over earlier TOTAL/NET TOTAL when both print.
+                _is_grand = bool(
+                    re.match(r"^grand\s*totals?\b", _total_label, re.I)
+                )
+                _prev_src = str(
+                    result["totals"]["extra"].get("total_row_source") or ""
+                )
+                _keep_prev_grand = (
+                    _prev_src == "xls_grand_total" and not _is_grand
+                )
+                if not _keep_prev_grand:
+                    sv = _col("sval", "secondary value")
+                    bv = _col("bval")
+                    if sv is not None and sv < len(row) and _xls_cell_has_qty(row[sv]):
+                        result["totals"]["sales_value"] = _to_float(row[sv])
+                    if bv is not None and bv < len(row) and _xls_cell_has_qty(row[bv]):
+                        result["totals"]["closing_value"] = _to_float(row[bv])
+                    sq = _col("sale", "sale qty", "sales qty")
+                    cq = _col("bal", "cl stock", "closing")
+                    oq = _col("op.", "op", "op. stock", "ob (qty)")
+                    rq = _col("pur", "purch", "primary (qty)")
+                    if sq is not None and sq < len(row) and _xls_cell_has_qty(row[sq]):
+                        result["totals"]["sales_qty"] = _to_float(row[sq])
+                    if cq is not None and cq < len(row) and _xls_cell_has_qty(row[cq]):
+                        result["totals"]["closing_qty"] = _to_float(row[cq])
+                    if oq is not None and oq < len(row) and _xls_cell_has_qty(row[oq]):
+                        result["totals"]["extra"]["opening_qty"] = _to_float(row[oq])
+                    if rq is not None and rq < len(row) and _xls_cell_has_qty(row[rq]):
+                        result["totals"]["extra"]["receipts_qty"] = _to_float(row[rq])
+                    ov = _col("opval")
+                    pv = _col("purval")
+                    if ov is not None and ov < len(row) and _xls_cell_has_qty(row[ov]):
+                        result["totals"]["extra"]["opening_value"] = _to_float(row[ov])
+                    if pv is not None and pv < len(row) and _xls_cell_has_qty(row[pv]):
+                        result["totals"]["extra"]["receipts_value"] = _to_float(
+                            row[pv]
+                        )
+                        result["totals"]["extra"]["purchase_value"] = _to_float(
+                            row[pv]
+                        )
+                    result["totals"]["extra"]["total_row_source"] = (
+                        "xls_grand_total" if _is_grand else "xls_total"
+                    )
+                    result["totals"]["extra"]["total_row_label"] = _total_label
+                    logger.info(
+                        "STOCK_XLS_TOTAL_ROW label=%r grand=%s sales_value=%s "
+                        "closing_value=%s receipts_value=%s",
+                        _total_label,
+                        _is_grand,
+                        result["totals"].get("sales_value"),
+                        result["totals"].get("closing_value"),
+                        result["totals"]["extra"].get("receipts_value"),
+                    )
             continue
         if header_idx is not None:
             qty_cells = [
@@ -21479,6 +22393,19 @@ def _xls_fill_from_rows(
     extra["header_detection_confidence"] = (
         round(min(1.0, header_score / 12.0), 2) if header_idx is not None else 0.0
     )
+    # Semantic Excel: every movement qty has a printed value beside it
+    # (op_value/rec_value/iss_value/clos_value or Opening Value/…).
+    if {"op", "opval", "pur", "purval", "sale", "sval", "bal", "bval"} <= set(
+        colmap
+    ):
+        extra.setdefault("extraction_method", "excel_qty_value_pairs")
+        extra.setdefault("layout", "excel_qty_value_pairs")
+        logger.info(
+            "STOCK_XLS_QTY_VALUE_PAIRS sheet=%s items=%s",
+            sheet_name,
+            len(items),
+        )
+
     def _xls_header_label_at(idx: int) -> Optional[str]:
         """Label from the winning header row; fall back one row for QTY/VALUE children."""
         if header_idx is None or idx is None:

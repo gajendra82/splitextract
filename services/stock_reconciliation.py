@@ -187,11 +187,32 @@ def _others_qty(item: Dict[str, Any]) -> float:
     return 0.0
 
 
+def _others_out_qty_printed(item: Dict[str, Any]) -> Optional[float]:
+    """Printed OTHERS-out column (ITEM/PACK/.../P.RETURN/OTHERS/CLOSING)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("others_out_qty") is not None and extra.get("others_out_qty") != "":
+        return _f(extra.get("others_out_qty"))
+    if item.get("others_out_qty") is not None and item.get("others_out_qty") != "":
+        return _f(item.get("others_out_qty"))
+    return None
+
+
+def _others_in_qty_printed(item: Dict[str, Any]) -> float:
+    """Printed OTHERS-in column before SUB TOTAL (inward adjustment)."""
+    extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    if extra.get("others_in_qty") is not None and extra.get("others_in_qty") != "":
+        return _f(extra.get("others_in_qty"))
+    if item.get("others_in_qty") is not None and item.get("others_in_qty") != "":
+        return _f(item.get("others_in_qty"))
+    return 0.0
+
+
 def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> float:
     """Outward adjustments (scheme / other / optional Br.Trf.)."""
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
     other = 0.0
     br = _br_trf_qty(item)
+    others_out = _others_out_qty_printed(item)
     if extra.get("other_outward_qty") is not None:
         o = _f(extra.get("other_outward_qty"))
         # Native parser often mirrors br_trf into other_outward_qty — count once.
@@ -202,6 +223,13 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
             other += o
             if include_br_trf and br > 0:
                 other += br
+            # others_out_qty may duplicate other_outward_qty on dual-OTHERS grids.
+            if others_out is not None and abs(o - others_out) > 1e-9:
+                other += others_out
+    elif others_out is not None:
+        other += others_out
+        if include_br_trf and br > 0:
+            other += br
     elif include_br_trf and br > 0:
         other += br
     if extra.get("sales_scheme_qty") is not None:
@@ -225,19 +253,23 @@ def _other_out_qty(item: Dict[str, Any], *, include_br_trf: bool = True) -> floa
             extra.get("other_outward_qty") is not None
             and abs(_f(extra.get("other_outward_qty")) - adj) <= 1e-9
         )
-        if not mirrored:
+        if not mirrored and not (
+            others_out is not None and abs(others_out - adj) <= 1e-9
+        ):
             other += adj
     return other
 
 
 def _free_in_qty(item: Dict[str, Any]) -> float:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+    free = 0.0
     if extra.get("free_in_qty") is not None:
-        return _f(extra.get("free_in_qty"))
-    if extra.get("purchase_free") is not None:
-        return _f(extra.get("purchase_free"))
-    return 0.0
-
+        free = _f(extra.get("free_in_qty"))
+    elif extra.get("purchase_free") is not None:
+        free = _f(extra.get("purchase_free"))
+    # Dual-OTHERS grids: OTHERS before SUBTOTAL is an inward (not free).
+    others_in = _others_in_qty_printed(item)
+    return free + others_in
 
 def _sales_return_column_present(item: Dict[str, Any]) -> bool:
     extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
@@ -265,6 +297,11 @@ def _printed_total(item: Dict[str, Any]) -> Optional[float]:
         return _f(extra.get("total_stock"))
     if fs.get("total_qty") == "printed" and extra.get("total_qty") is not None:
         return _f(extra.get("total_qty"))
+    # ITEM/PACK/.../SUBTOTAL grids print SUBTOTAL = Op+Pur+S.Return+Others In.
+    if extra.get("subtotal_qty") is not None and extra.get("subtotal_qty") != "":
+        return _f(extra.get("subtotal_qty"))
+    if item.get("subtotal_qty") is not None and item.get("subtotal_qty") != "":
+        return _f(item.get("subtotal_qty"))
     return None
 
 
@@ -1009,7 +1046,28 @@ def apply_stock_reconciliation(
             sales_sum += _f(it.get("sales_qty"))
             closing_sum += _f(it.get("closing_qty"))
         expected_total = round(opening_sum + receipt_sum, 2)
-        calculated_closing = round(expected_total - sales_sum, 2)
+        # Prefer sum of per-row recon expected closings so dual-OTHERS /
+        # returns / free adjustments are not dropped from the rollup.
+        recon_closing_sum = 0.0
+        recon_closing_n = 0
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            row_extra = it.get("extra") if isinstance(it.get("extra"), dict) else {}
+            recon = (
+                row_extra.get("reconciliation")
+                if isinstance(row_extra.get("reconciliation"), dict)
+                else {}
+            )
+            if recon.get("expected_closing_qty") is not None:
+                recon_closing_sum += _f(recon.get("expected_closing_qty"))
+                recon_closing_n += 1
+            else:
+                recon_closing_sum += _f(it.get("closing_qty"))
+        if recon_closing_n > 0:
+            calculated_closing = round(recon_closing_sum, 2)
+        else:
+            calculated_closing = round(expected_total - sales_sum, 2)
         prev = extra_t.get("stock_validation")
         prev = dict(prev) if isinstance(prev, dict) else {}
         prev.update(

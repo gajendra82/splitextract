@@ -966,6 +966,12 @@ _DIRECT_VALUE_FIELDS = {
     "purchbillamt": "purchase_value",
     "purchase bill amt": "purchase_value",
     "receive value": "purchase_value",
+    # Semantic export headers: rec_value / recvalue beside rec_qty.
+    "rec value": "purchase_value",
+    "recvalue": "purchase_value",
+    "rec val": "purchase_value",
+    "receipt value": "purchase_value",
+    "receipts value": "purchase_value",
     # COMPANY STOCK STATEMENT (SR): RCV-AMT / ISSUE-AMT / BAL-AMT / RTN-AMT.
     "rcv amt": "purchase_value",
     "rcvamt": "purchase_value",
@@ -975,12 +981,20 @@ _DIRECT_VALUE_FIELDS = {
     "issue value": "sales_value",
     "issue amt": "sales_value",
     "issueamt": "sales_value",
+    # Semantic export headers: iss_value / issvalue beside iss_qty.
+    "iss value": "sales_value",
+    "issvalue": "sales_value",
+    "iss val": "sales_value",
     "stockv": "closing_value",
     "stock v": "closing_value",
     "stk v": "closing_value",
     "bal amt": "closing_value",
     "balamt": "closing_value",
     "bal value": "closing_value",
+    # Semantic export headers: clos_value / closvalue beside clos_qty.
+    "clos value": "closing_value",
+    "closvalue": "closing_value",
+    "clos val": "closing_value",
 }
 
 
