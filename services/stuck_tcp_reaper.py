@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import socket
 import subprocess
 import threading
@@ -279,6 +280,11 @@ def start_stuck_tcp_reaper() -> None:
     global _reaper_thread
     if not STUCK_TCP_REAPER_ENABLED:
         logger.info("stuck_tcp_reaper_disabled")
+        return
+    # ``ss`` is Linux iproute2. Windows (and any host without it) cannot reap
+    # Send-Q; skip the thread so the missing binary is not logged every tick.
+    if shutil.which("ss") is None:
+        logger.info("stuck_tcp_reaper_skipped reason=ss_not_on_path")
         return
     if _reaper_thread is not None and _reaper_thread.is_alive():
         return

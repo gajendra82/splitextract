@@ -56,6 +56,19 @@ class StuckTcpReaperTests(unittest.TestCase):
         with reaper._lock:
             self.assertNotIn("20.207.239.62:1", reaper._high_sendq_since)
 
+    def test_start_skips_when_ss_missing(self):
+        previous = reaper._reaper_thread
+        reaper._reaper_thread = None
+        try:
+            with patch.object(reaper, "STUCK_TCP_REAPER_ENABLED", True), patch.object(
+                reaper.shutil, "which", return_value=None
+            ), patch.object(reaper.threading, "Thread") as thread:
+                reaper.start_stuck_tcp_reaper()
+                thread.assert_not_called()
+            self.assertIsNone(reaper._reaper_thread)
+        finally:
+            reaper._reaper_thread = previous
+
 
 if __name__ == "__main__":
     unittest.main()
