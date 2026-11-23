@@ -6975,6 +6975,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "sreturn_others_total_value",
         # ITEM/PACK/P.RETURN/SALE Excel: last TOTAL VALUE / GRAND TOTAL money.
         "preturn_sale_total_value",
+        "preturn_sale_grand_total",
         "op_pur_sale_bal_qnty_footer",
         "product_wise_stock_statement_footer",
         "docx_header_resolved_footer",
@@ -7088,6 +7089,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "free_return_total_value",
             "sreturn_others_total_value",
             "preturn_sale_total_value",
+            "preturn_sale_grand_total",
             "op_pur_sale_bal_qnty_footer",
             "ssa_value_footer",
             "chopada_zandra_footer",
@@ -8586,6 +8588,9 @@ def _apply_stock_identity_validation(result: Dict[str, Any]) -> Dict[str, Any]:
         totals["extra"]["purchase_qty"] = purchase_sum
         totals["extra"]["sales_qty"] = sales_sum
         totals["extra"]["closing_qty"] = closing_sum
+        # Always surface printed line opening-value sum for this Excel family.
+        # Footer opening_value (TOTAL VALUE / GRAND TOTAL) stays authoritative.
+        totals["extra"]["line_opening_value_sum"] = opening_value_sum
         if opening_value_sum and totals["extra"].get("opening_value") is None:
             totals["extra"]["opening_value_sum"] = opening_value_sum
         totals["extra"]["stock_identity_kind"] = "item_pack_preturn_sale"
@@ -8902,13 +8907,22 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
             "stock_sales_analysis_geometry",
             "ssa_sales_free_columns",
             "marg_sale_purchase_analysis",
-            # ITEM/PACK/P.RETURN/SALE Excel prints opening value only; sales/
-            # closing money live on TOTAL VALUE / GRAND TOTAL, not line rows.
-            "item_pack_preturn_sale",
+            # item_pack_preturn_sale intentionally omitted: it prints unlabeled
+            # opening_value on rows; only sales/closing money stay footer-only.
         }
         or bool(extra.get("qty_only"))
     )
     line_items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    # Restore stamped printed opening_value before null/zero normalization.
+    if method == "item_pack_preturn_sale":
+        for item in line_items:
+            item_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            stamped = item_extra.get("printed_opening_value")
+            if stamped not in (None, "") and item.get("opening_value") in (None, ""):
+                item["opening_value"] = round(float(stamped), 2)
+                fs = item_extra.setdefault("field_source", {})
+                if isinstance(fs, dict):
+                    fs["opening_value"] = "printed"
     has_printed_opening_value = any(
         _extra_number(i, "opening_value") is not None for i in line_items
     )
@@ -8923,6 +8937,7 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
         _extra_number(i, "closing_value") is not None for i in line_items
     )
     no_sales_value_col = bool(extra.get("no_sales_value"))
+    no_closing_value_col = bool(extra.get("no_closing_value"))
     for item in line_items:
         if method == "summary_rtl_op_amt":
             continue
@@ -9009,7 +9024,8 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 ):
                     item[key] = None
                 elif key == "closing_value" and (
-                    preserve_null_pair_values and not has_printed_closing_value
+                    no_closing_value_col
+                    or (preserve_null_pair_values and not has_printed_closing_value)
                 ):
                     item[key] = None
                 elif preserve_null_pair_values and extra.get("qty_only"):
@@ -9017,7 +9033,24 @@ def _ensure_stock_qty_value_fields(result: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     item[key] = 0.0
         opening_value = _extra_number(item, "opening_value")
-        if preserve_null_pair_values or not has_printed_opening_value:
+        # ITEM/PACK/P.RETURN Excel: keep printed unlabeled opening_value; blank
+        # stays null (column present but cell empty), never wipe a stamped print.
+        if method == "item_pack_preturn_sale":
+            item_extra = (
+                item.get("extra") if isinstance(item.get("extra"), dict) else {}
+            )
+            stamped = (
+                item_extra.get("printed_opening_value")
+                if isinstance(item_extra, dict)
+                else None
+            )
+            if stamped not in (None, ""):
+                item["opening_value"] = round(float(stamped), 2)
+            elif opening_value is not None:
+                item["opening_value"] = round(float(opening_value), 2)
+            else:
+                item["opening_value"] = None
+        elif preserve_null_pair_values or not has_printed_opening_value:
             if opening_value is None:
                 _insert_line_field(item, "opening_qty", "opening_value", None)
         else:
@@ -16863,7 +16896,14 @@ _XLS_HEADER_ALIASES = {
     "issue": "sale",
     "issueqty": "sale",
     "issqty": "sale",
+    # Secondary Sales template: "Issue / Sales Qty" (compact issuesalesqty).
+    "issuesales": "sale",
+    "issuesalesqty": "sale",
+    "issuesaleqty": "sale",
+    "issalesqty": "sale",
     "sold": "sale",
+    # UOM sits where PACKING usually does on qty-only templates.
+    "uom": "pack",
     "bal": "bal",
     "bal.": "bal",
     "clstock": "bal",
@@ -21427,6 +21467,28 @@ def _xls_item_pack_preturn_sale_enabled() -> bool:
     return True
 
 
+def _xls_preturn_sale_is_grand_total_label(label: str) -> bool:
+    """True for GRAND TOTAL / GRAND TOTAL VALUE / G.TOTAL sheet footers."""
+    return bool(
+        re.fullmatch(
+            r"(?:grand\s*total(?:\s*value)?|g\.?\s*total(?:\s*value)?)",
+            str(label or "").strip(),
+            re.I,
+        )
+    )
+
+
+def _xls_preturn_sale_is_sheet_total_label(label: str) -> bool:
+    """True for statement money footers (TOTAL VALUE or GRAND TOTAL variants).
+
+    Division banners like "Total Value (ZEAL)" are intentionally excluded.
+    """
+    text = str(label or "").strip()
+    if _xls_preturn_sale_is_grand_total_label(text):
+        return True
+    return bool(re.fullmatch(r"total\s+value", text, re.I))
+
+
 def _xls_item_pack_preturn_sale_indexes(row: List[Any]) -> Optional[Dict[str, int]]:
     """Column indexes for ITEM/PACK/OPENING/PURCHASE/P.RETURN/SALE/S.RETURN/OTHERS/CLOSING.
 
@@ -21560,7 +21622,11 @@ def _xls_fill_item_pack_preturn_sale_rows(
     sheet_name: str,
     header_score: int,
 ) -> Dict[str, Any]:
-    """Parse ITEM/PACK/P.RETURN/SALE Excel grids; last TOTAL VALUE / GRAND TOTAL wins."""
+    """Parse ITEM/PACK/P.RETURN/SALE Excel grids.
+
+    Prefer the last GRAND TOTAL money row when present; else the last TOTAL VALUE.
+    Division banners like "Total Value (ZEAL)" are never used as statement totals.
+    """
     indexes = _xls_item_pack_preturn_sale_indexes(rows[header_idx])
     if not indexes:
         return result
@@ -21611,7 +21677,7 @@ def _xls_fill_item_pack_preturn_sale_rows(
         return row[idx]
 
     def _apply_total_value_row(row: List[Any], label: str) -> None:
-        """Money under OPENING/SALE/CLOSING on TOTAL VALUE / GRAND TOTAL (last wins)."""
+        """Money under OPENING/SALE/CLOSING on TOTAL VALUE / GRAND TOTAL."""
         money: Dict[str, float] = {}
         for field, key in _ITEM_PACK_PRETURN_SALE_QTY:
             number, error = _xls_sreturn_qty_cell(cell(row, key))
@@ -21636,7 +21702,15 @@ def _xls_fill_item_pack_preturn_sale_rows(
             extra_totals["sales_return_value"] = money["sales_return_qty"]
         if "others_qty" in money:
             extra_totals["others_value"] = money["others_qty"]
-        extra_totals["total_row_source"] = "preturn_sale_total_value"
+        # Reorder total money sometimes lands under REORDER-QTY on the footer.
+        if "reorder" in indexes:
+            reorder_money, reorder_err = _xls_optional_money_cell(cell(row, "reorder"))
+            if not reorder_err and reorder_money is not None and abs(float(reorder_money)) > 0.001:
+                extra_totals["reorder_value"] = round(float(reorder_money), 2)
+        is_grand = _xls_preturn_sale_is_grand_total_label(label)
+        extra_totals["total_row_source"] = (
+            "preturn_sale_grand_total" if is_grand else "preturn_sale_total_value"
+        )
         extra_totals["total_row_label"] = label
         logger.info(
             "ITEM_PACK_PRETURN_SALE_TOTAL_VALUE label=%s opening=%s sales=%s closing=%s",
@@ -21649,6 +21723,7 @@ def _xls_fill_item_pack_preturn_sale_rows(
     items: List[Dict[str, Any]] = []
     zero_rows = 0
     parse_error_rows = 0
+    total_candidates: List[Tuple[str, List[Any]]] = []
     for row in rows[header_idx + 1 :]:
         if not isinstance(row, list):
             continue
@@ -21682,9 +21757,10 @@ def _xls_fill_item_pack_preturn_sale_rows(
             if company and not result.get("company_name"):
                 result["company_name"] = _clean_name(company.group(1))
             continue
-        # Last TOTAL VALUE / GRAND TOTAL wins. Division "Total Value (…)" skipped.
-        if re.fullmatch(r"(?:total\s+value|grand\s*total)", product_name, re.I):
-            _apply_total_value_row(row, product_name)
+        # Collect TOTAL VALUE / GRAND TOTAL; apply after the loop (prefer last GRAND TOTAL).
+        # Division "Total Value (…)" falls through to the skip below.
+        if _xls_preturn_sale_is_sheet_total_label(product_name):
+            total_candidates.append((product_name, row))
             continue
         if re.match(
             r"^(?:total\b|grand\s*total|sub\s*total|net\s*total)\b",
@@ -21716,11 +21792,13 @@ def _xls_fill_item_pack_preturn_sale_rows(
         item["product_name"] = product_name
         item["packing"] = packing or None
         field_source: Dict[str, str] = {}
+        unit_rate: Optional[float] = None
         if "rate" in indexes:
-            rate_n, rate_err = _xls_sreturn_qty_cell(cell(row, "rate"))
+            rate_n, rate_err = _xls_optional_money_cell(cell(row, "rate"))
             if not rate_err and rate_n is not None:
-                item["extra"]["unit_rate"] = round(float(rate_n), 4)
-                item["extra"]["rate"] = item["extra"]["unit_rate"]
+                unit_rate = round(float(rate_n), 4)
+                item["extra"]["unit_rate"] = unit_rate
+                item["extra"]["rate"] = unit_rate
                 field_source["rate"] = "printed"
             item["product_code"] = None
             field_source["product_code"] = "missing"
@@ -21741,16 +21819,19 @@ def _xls_fill_item_pack_preturn_sale_rows(
         item["source_product_name"] = product_name
         item["source_packing"] = packing or None
 
-        # Per-row sales/closing money is not printed on this layout.
+        # Per-row sales/closing money is not printed on this layout — only
+        # report-level TOTAL VALUE / GRAND TOTAL money exists.
         item["sales_value"] = None
         item["closing_value"] = None
         field_source["sales_value"] = "missing"
         field_source["closing_value"] = "missing"
 
+        printed_opening_value: Optional[float] = None
         if "opening_value" in indexes:
-            open_val, open_val_err = _xls_sreturn_qty_cell(cell(row, "opening_value"))
+            open_val, open_val_err = _xls_optional_money_cell(cell(row, "opening_value"))
             if not open_val_err and open_val is not None:
-                item["opening_value"] = round(float(open_val), 2)
+                printed_opening_value = round(float(open_val), 2)
+                item["opening_value"] = printed_opening_value
                 field_source["opening_value"] = "printed"
             else:
                 item["opening_value"] = None
@@ -21775,15 +21856,78 @@ def _xls_fill_item_pack_preturn_sale_rows(
                 "field_source": field_source,
             }
         )
+        if printed_opening_value is not None:
+            # Durable copy so later null-normalization cannot drop the print.
+            row_extra["printed_opening_value"] = printed_opening_value
+            row_extra["opening_value"] = printed_opening_value
         if reorder_qty is not None:
             row_extra["reorder_qty"] = reorder_qty
         if "reorder_value" in indexes:
-            rv, rv_err = _xls_sreturn_qty_cell(cell(row, "reorder_value"))
+            rv, rv_err = _xls_optional_money_cell(cell(row, "reorder_value"))
             if not rv_err and rv is not None:
                 row_extra["reorder_value"] = round(float(rv), 2)
+        # Identity diagnostic only: never rewrite printed money fields.
+        diag_candidates: List[Dict[str, Any]] = []
+        open_qty = parsed.get("opening_qty")
+        open_val = item.get("opening_value")
+        if (
+            unit_rate is not None
+            and open_qty not in (None, "")
+            and abs(float(open_qty)) > 0.001
+            and open_val not in (None, "")
+        ):
+            expected_open = round(float(open_qty) * float(unit_rate), 2)
+            if abs(expected_open - float(open_val)) > max(0.51, 0.01 * abs(float(open_val))):
+                diag_candidates.append(
+                    {
+                        "field": "opening_value",
+                        "value": expected_open,
+                        "source": "opening_qty_x_unit_rate",
+                        "note": "printed_opening_value_differs_from_qty_x_rate",
+                    }
+                )
+        # Sales/closing money columns are absent: keep null, but record qty×rate
+        # candidates so auditors can see the Excel rate without inventing prints.
+        if unit_rate is not None:
+            sale_qty = parsed.get("sales_qty")
+            close_qty = parsed.get("closing_qty")
+            if sale_qty not in (None, "") and abs(float(sale_qty)) > 0.001:
+                diag_candidates.append(
+                    {
+                        "field": "sales_value",
+                        "value": round(float(sale_qty) * float(unit_rate), 2),
+                        "source": "sales_qty_x_unit_rate",
+                        "note": "no_printed_line_sales_value_column",
+                    }
+                )
+            if close_qty not in (None, "") and abs(float(close_qty)) > 0.001:
+                diag_candidates.append(
+                    {
+                        "field": "closing_value",
+                        "value": round(float(close_qty) * float(unit_rate), 2),
+                        "source": "closing_qty_x_unit_rate",
+                        "note": "no_printed_line_closing_value_column",
+                    }
+                )
+        if diag_candidates:
+            row_extra["candidates"] = diag_candidates
         if errors:
             row_extra["qty_parse_errors"] = errors
         items.append(item)
+
+    if total_candidates:
+        grand = [
+            cand
+            for cand in total_candidates
+            if _xls_preturn_sale_is_grand_total_label(cand[0])
+        ]
+        chosen_label, chosen_row = (grand[-1] if grand else total_candidates[-1])
+        _apply_total_value_row(chosen_row, chosen_label)
+        logger.info(
+            "ITEM_PACK_PRETURN_SALE_FOOTER_CHOICE candidates=%s chosen=%s",
+            [label for label, _row in total_candidates],
+            chosen_label,
+        )
 
     result["line_items"] = items
     extra = result.setdefault("totals", {}).setdefault("extra", {})
@@ -21794,11 +21938,81 @@ def _xls_fill_item_pack_preturn_sale_rows(
     )
     extra["extraction_method"] = "item_pack_preturn_sale"
     extra["layout"] = "item_pack_preturn_sale"
-    # No per-row sales money column — only unlabeled opening value + footer.
+    # No per-row sales/closing money column — only unlabeled opening value + footer.
     extra["no_sales_value"] = True
+    extra["no_closing_value"] = True
+    extra["sales_closing_value_scope"] = "footer_only"
+    extra["excel_column_aligned"] = True
     extra["rows_detected"] = len(items)
     extra["zero_qty_rows"] = zero_rows
     extra["qty_parse_error_rows"] = parse_error_rows
+    # Source-side diagnostic: footer sales vs sum(sales_qty×unit_rate). Never
+    # overwrite the trusted TOTAL VALUE / GRAND TOTAL print with this sum.
+    qty_rate_sales = 0.0
+    qty_rate_closing = 0.0
+    for item in items:
+        row_extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        rate = row_extra.get("unit_rate")
+        if rate in (None, ""):
+            continue
+        try:
+            rate_f = float(rate)
+        except (TypeError, ValueError):
+            continue
+        sale_qty = item.get("sales_qty")
+        close_qty = item.get("closing_qty")
+        if sale_qty not in (None, ""):
+            try:
+                qty_rate_sales += float(sale_qty) * rate_f
+            except (TypeError, ValueError):
+                pass
+        if close_qty not in (None, ""):
+            try:
+                qty_rate_closing += float(close_qty) * rate_f
+            except (TypeError, ValueError):
+                pass
+    qty_rate_sales = round(qty_rate_sales, 2)
+    qty_rate_closing = round(qty_rate_closing, 2)
+    extra["line_sales_qty_x_rate_sum"] = qty_rate_sales
+    extra["line_closing_qty_x_rate_sum"] = qty_rate_closing
+    footer_sales = (result.get("totals") or {}).get("sales_value")
+    footer_closing = (result.get("totals") or {}).get("closing_value")
+    source_gaps: List[Dict[str, Any]] = []
+    try:
+        if footer_sales not in (None, "") and abs(float(footer_sales) - qty_rate_sales) > 0.51:
+            source_gaps.append(
+                {
+                    "field": "sales_value",
+                    "footer": round(float(footer_sales), 2),
+                    "qty_rate_sum": qty_rate_sales,
+                    "delta": round(float(footer_sales) - qty_rate_sales, 2),
+                    "note": "source_footer_differs_from_line_qty_x_rate",
+                }
+            )
+    except (TypeError, ValueError):
+        pass
+    try:
+        if (
+            footer_closing not in (None, "")
+            and abs(float(footer_closing) - qty_rate_closing) > 0.51
+        ):
+            source_gaps.append(
+                {
+                    "field": "closing_value",
+                    "footer": round(float(footer_closing), 2),
+                    "qty_rate_sum": qty_rate_closing,
+                    "delta": round(float(footer_closing) - qty_rate_closing, 2),
+                    "note": "source_footer_differs_from_line_qty_x_rate",
+                }
+            )
+    except (TypeError, ValueError):
+        pass
+    if source_gaps:
+        extra["source_value_gaps"] = source_gaps
+        logger.info(
+            "ITEM_PACK_PRETURN_SALE_SOURCE_GAPS gaps=%s",
+            source_gaps,
+        )
     if "item" in indexes:
         extra["product_column"] = _xls_col_letter(indexes["item"])
         extra["product_column_header"] = str(
@@ -21825,6 +22039,130 @@ def _xls_preamble_texts(row: List[Any]) -> List[str]:
     return texts
 
 
+def _xls_labeled_kv_metadata_enabled() -> bool:
+    """STOCK_XLS_LABELED_KV_METADATA — Label|Value header rows on Excel templates.
+
+    Default ON. Covers Secondary Sales Stock Statement style sheets where
+    Company / Stockist Name / Location / Date of Submission sit in column A
+    with values in column B. Kill-switch: STOCK_XLS_LABELED_KV_METADATA=false.
+    """
+    return os.getenv("STOCK_XLS_LABELED_KV_METADATA", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+_XLS_LABELED_KV_FIELD_RE = (
+    r"^(?:company|division|stockist\s*(?:name|code|location)|"
+    r"reporting\s*month|sales\s*representative\s*(?:name|code)|"
+    r"date\s*of\s*submission)\b"
+)
+
+
+def _xls_is_labeled_meta_label(text: str) -> bool:
+    """True when a cell is a Label|Value header label, not a stockist name."""
+    label = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not label:
+        return False
+    return bool(re.match(_XLS_LABELED_KV_FIELD_RE, label, re.I))
+
+
+def _xls_apply_labeled_kv_metadata(
+    result: Dict[str, Any],
+    rows: List[List[Any]],
+    formats: Optional[List[List[Optional[str]]]] = None,
+    limit_row: int = 25,
+) -> bool:
+    """Read Label|Value pairs from the Excel preamble (column A → B).
+
+    Layout family: SECONDARY SALES STOCK STATEMENT / SS_STOCK_STATEMENT_TEMPLATE
+    style sheets. Does not invent blank values. Prefer GRAND TOTAL elsewhere;
+    this only fills header metadata.
+    """
+    if not _xls_labeled_kv_metadata_enabled() or not isinstance(result, dict):
+        return False
+    formats = formats or []
+    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    applied = False
+    scan_n = min(max(limit_row, 0), len(rows))
+    for ri in range(scan_n):
+        row = rows[ri]
+        if not isinstance(row, list):
+            continue
+        texts = _xls_preamble_texts(row)
+        if len(texts) < 1:
+            continue
+        label = texts[0]
+        if not _xls_is_labeled_meta_label(label):
+            continue
+        value = texts[1] if len(texts) >= 2 else ""
+        value = str(value or "").strip()
+        label_key = re.sub(r"[^a-z]+", "", label.lower())
+        fmts = formats[ri] if ri < len(formats) and isinstance(formats[ri], list) else []
+        value_fmt = None
+        # Value is usually column B (index 1) after merge collapse.
+        if len(row) > 1 and row[1] not in (None, "") and str(row[1]).strip() == value:
+            value_fmt = fmts[1] if len(fmts) > 1 else None
+        elif len(texts) >= 2:
+            for ci, cell in enumerate(row):
+                if cell is not None and str(cell).strip() == value:
+                    value_fmt = fmts[ci] if ci < len(fmts) else None
+                    break
+
+        if label_key.startswith("company") and value and not result.get("company_name"):
+            result["company_name"] = _clean_name(value)
+            applied = True
+        elif label_key.startswith("division"):
+            if value and not extra.get("division"):
+                extra["division"] = _clean_name(value)
+                applied = True
+        elif label_key.startswith("stockistname") and value:
+            # Labeled stockist always wins over a stray Division/label guess.
+            result["stockist_name"] = _clean_name(value)
+            applied = True
+        elif label_key.startswith("stockistcode") and value:
+            code = _xls_cell_code(value)
+            if code:
+                extra["stockist_code"] = code
+                result["stockist_code"] = code
+                applied = True
+        elif label_key.startswith("stockistlocation") and value:
+            result["stockist_address"] = _clean_name(value)
+            applied = True
+        elif label_key.startswith("reportingmonth"):
+            if value and not extra.get("reporting_month"):
+                extra["reporting_month"] = value
+                applied = True
+        elif label_key.startswith("salesrepresentativename") and value:
+            extra["sales_rep_name"] = _clean_name(value)
+            applied = True
+        elif label_key.startswith("salesrepresentativecode") and value:
+            code = _xls_cell_code(value)
+            if code:
+                extra["sales_rep_code"] = code
+                applied = True
+        elif label_key.startswith("dateofsubmission") and value:
+            parsed = _normalize_excel_date(row[1] if len(row) > 1 else value, value_fmt)
+            if not parsed:
+                parsed = _normalize_date(value)
+            if parsed and not result.get("statement_date"):
+                result["statement_date"] = parsed
+                applied = True
+    if applied:
+        logger.info(
+            "STOCK_XLS_LABELED_KV_METADATA stockist=%r company=%r "
+            "statement_date=%r stockist_code=%r sales_rep=%r",
+            result.get("stockist_name"),
+            result.get("company_name"),
+            result.get("statement_date"),
+            result.get("stockist_code") or extra.get("stockist_code"),
+            extra.get("sales_rep_name"),
+        )
+    return applied
+
+
 def _xls_fill_from_rows(
     result: Dict[str, Any],
     rows: List[List[Any]],
@@ -21844,11 +22182,17 @@ def _xls_fill_from_rows(
     if marg_header is not None:
         return _parse_marg_erp_xls(rows, filename, ext, marg_header)
 
+    # Label|Value preamble (Company / Stockist Name / Date of Submission / …).
+    _xls_apply_labeled_kv_metadata(result, rows, formats)
+
     # Metadata scan (legacy Item / Op. / Sale / Bal. layout)
     for row in rows[:20]:
         texts = _xls_preamble_texts(row)
         joined = " ".join(texts)
         if not texts:
+            continue
+        # Skip Label|Value template rows — values are already applied above.
+        if _xls_is_labeled_meta_label(texts[0]):
             continue
         if (
             not result["stockist_name"]
@@ -21872,7 +22216,9 @@ def _xls_fill_from_rows(
             and not re.search(r"E-?Mail|Phone\s*:|Company\s*:|From\s*:", joined, re.I)
         ):
             if not result["stockist_address"]:
-                result["stockist_address"] = _clean_name(joined)
+                # Prefer the address cell when a label sits in column A.
+                addr = texts[-1] if len(texts) >= 2 else joined
+                result["stockist_address"] = _clean_name(addr)
         if re.search(r"Stock and Sale|Stock & Sale|Sales Report", joined, re.I):
             result["report_title"] = _clean_name(joined)
             if not result.get("company_name"):
@@ -21970,9 +22316,12 @@ def _xls_fill_from_rows(
             if len(texts) != 1:
                 continue
             name = texts[0]
+            if _xls_is_labeled_meta_label(name):
+                continue
             if re.search(
                 r"@|\d|STOCK|SALES|STATEMENT|PRODUCT|ITEM|OPENING|CLOSING|"
-                r"REPORT|PHONE|E-?MAIL|D\.?L|PAGE|FROM|DATE|ADDRESS",
+                r"REPORT|PHONE|E-?MAIL|D\.?L|PAGE|FROM|DATE|ADDRESS|"
+                r"DIVISION|COMPANY|TEMPLATE|INSTRUCTIONS|SECONDARY",
                 name,
                 re.I,
             ):
@@ -22277,7 +22626,13 @@ def _xls_fill_from_rows(
             "opening balance qty",
         )
         pur_i = _col("pur", "primary (qty)", "purchases")
-        sale_i = _col("sale", "secondary qty total", "sales")
+        sale_i = _col(
+            "sale",
+            "secondary qty total",
+            "sales",
+            "issue / sales qty",
+            "issuesalesqty",
+        )
         bal_i = _col(
             "bal.",
             "bal",
