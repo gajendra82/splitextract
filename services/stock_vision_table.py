@@ -5749,14 +5749,49 @@ def _split_rate_opening_glued_token(raw: Any) -> Optional[Tuple[str, str]]:
 
 
 def _looks_like_primary_qty_token(raw: Any) -> bool:
-    """Primary_qty on these grids is printed with decimals (0.00 / 28.00)."""
+    """Primary_qty may print as 0.00 / 28.00 / plain 0 / 28 (Vision drops decimals)."""
     s = str(raw or "").strip()
     if not s:
         return False
     if re.fullmatch(r"-?\d+\.\d+", s):
         return True
     # OCR space for decimal: "28 00"
+    if re.fullmatch(r"-?\d+\s+\d{2}", s):
+        return True
+    # Plain integer Primary (common when Vision drops ".00").
+    return bool(re.fullmatch(r"-?\d+", s))
+
+
+def _looks_like_primary_decimal_token(raw: Any) -> bool:
+    """Primary_qty with explicit decimals (0.00 / 28.00 / '0 00') — not plain ints."""
+    s = str(raw or "").strip()
+    if not s:
+        return False
+    if re.fullmatch(r"-?\d+\.\d+", s):
+        return True
     return bool(re.fullmatch(r"-?\d+\s+\d{2}", s))
+
+
+def _looks_like_whole_qty_token(raw: Any) -> bool:
+    """Whole closing-style qty (30 / 0) — no decimal / space-decimal."""
+    s = str(raw or "").strip()
+    if not s or s in {"-", "--"}:
+        return False
+    return bool(re.fullmatch(r"-?\d+", s))
+
+
+def _qty_token_as_float(raw: Any) -> Optional[float]:
+    """Parse a qty/rate fragment for glue comparisons (spaces as decimal OK)."""
+    s = str(raw or "").strip()
+    if not s or s in {"-", "--"}:
+        return None
+    m = re.fullmatch(r"(-?\d+)\s+(\d{2})", s)
+    if m:
+        s = f"{m.group(1)}.{m.group(2)}"
+    try:
+        return float(s.replace(",", ""))
+    except (TypeError, ValueError):
+        return None
 
 
 def _header_looks_like_rate_secondary(header_text: Any) -> bool:
@@ -5764,6 +5799,44 @@ def _header_looks_like_rate_secondary(header_text: Any) -> bool:
     if not ht:
         return False
     return ("rate" in ht) or ("mrp" in ht) or ("secondary" in ht)
+
+
+def _col_index_for_canonical(
+    columns: Sequence[Dict[str, Any]], canonical: str
+) -> Optional[int]:
+    for c in columns:
+        if not isinstance(c, dict) or c.get("canonical") != canonical:
+            continue
+        try:
+            return int(c.get("col_index"))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _columns_look_like_zl_opening_primary_closing(
+    columns: Sequence[Dict[str, Any]],
+) -> bool:
+    """Mrp|Secondaryrate|Opening_bal_qty|Primary_qty|Closing_bal_qty (no sales)."""
+    canons = {
+        str(c.get("canonical") or "")
+        for c in columns
+        if isinstance(c, dict)
+    }
+    if "opening_qty" not in canons or "closing_qty" not in canons:
+        return False
+    if "purchase_qty" not in canons and "receipts_qty" not in canons:
+        return False
+    if "sales_qty" in canons or "sales_value" in canons or "closing_value" in canons:
+        return False
+    has_rate = "rate" in canons
+    has_secondary_hdr = any(
+        "secondary" in normalize_header(c.get("header_text") or "")
+        or "primary" in normalize_header(c.get("header_text") or "")
+        for c in columns
+        if isinstance(c, dict)
+    )
+    return has_rate or has_secondary_hdr
 
 
 def _repair_cells_rate_opening_glue(
@@ -5817,6 +5890,57 @@ def _repair_cells_rate_opening_glue(
         return cells, column_count
     rate_txt, open_txt = split
     open_cell = out[oq_idx]
+    open_from_glue = _qty_token_as_float(open_txt)
+    open_in_slot = _qty_token_as_float(open_cell)
+    pq_idx = _col_index_for_canonical(columns, "purchase_qty")
+    if pq_idx is None:
+        pq_idx = _col_index_for_canonical(columns, "receipts_qty")
+    cq_idx = _col_index_for_canonical(columns, "closing_qty")
+    primary_cell = out[pq_idx] if pq_idx is not None and pq_idx < len(out) else None
+
+    # Opening column already holds the glued opening — only clean the rate cell
+    # (no left-shift). Avoids duplicating opening into Primary.
+    if (
+        open_in_slot is not None
+        and open_from_glue is not None
+        and abs(open_in_slot - open_from_glue) < 0.001
+    ):
+        out[left_idx] = rate_txt
+        logger.info(
+            "VISION_TABLE RATE_OPENING_GLUE rate_only=%s opening_kept=%s "
+            "col_left=%s oq=%s",
+            rate_txt,
+            open_txt,
+            left_idx,
+            oq_idx,
+        )
+        return out, column_count
+
+    # Glued open + Opening holds Closing + Primary already in Primary slot
+    # ("176.51 38", "30", "0 00") — do not classic-shift (that parks Closing
+    # under Primary). Place opening from glue; move Opening-slot int → Closing.
+    if (
+        _looks_like_whole_qty_token(open_cell)
+        and _looks_like_primary_decimal_token(primary_cell)
+        and cq_idx is not None
+        and cq_idx < len(out)
+        and open_from_glue is not None
+    ):
+        out[left_idx] = rate_txt
+        out[oq_idx] = open_txt
+        out[cq_idx] = open_cell
+        logger.info(
+            "VISION_TABLE RATE_OPENING_GLUE closing_in_opening "
+            "rate=%s opening=%s primary_kept=%r closing=%r col_left=%s oq=%s",
+            rate_txt,
+            open_txt,
+            primary_cell,
+            open_cell,
+            left_idx,
+            oq_idx,
+        )
+        return out, column_count
+
     if not _looks_like_primary_qty_token(open_cell):
         # Blank opening slot with glued open still counts as a shift.
         if open_cell is not None and str(open_cell).strip() not in {"", "-", "--"}:
@@ -5838,6 +5962,263 @@ def _repair_cells_rate_opening_glue(
         oq_idx,
     )
     return out, column_count
+
+
+def _repair_cells_primary_closing_decimal_swap(
+    cells: List[Any],
+    columns: Sequence[Dict[str, Any]],
+    column_count: int,
+) -> Tuple[List[Any], int]:
+    """Swap Primary↔Closing when Closing holds Primary-style decimals (0 00).
+
+    Opening|Primary|Closing grids often print Primary with paisa (0.00 / 28.00)
+    and Closing as a whole qty. When Vision swaps those two cells, restore them.
+    Also when Closing is 0/blank and Primary holds a whole qty that fits under
+    Opening (stolen Closing, Primary was 0.00).
+    """
+    if not _columns_look_like_zl_opening_primary_closing(columns):
+        return cells, column_count
+    pq_idx = _col_index_for_canonical(columns, "purchase_qty")
+    if pq_idx is None:
+        pq_idx = _col_index_for_canonical(columns, "receipts_qty")
+    cq_idx = _col_index_for_canonical(columns, "closing_qty")
+    oq_idx = _col_index_for_canonical(columns, "opening_qty")
+    if pq_idx is None or cq_idx is None:
+        return cells, column_count
+    out = list(cells)
+    if len(out) < column_count:
+        out = out + [None] * (column_count - len(out))
+    elif len(out) > column_count:
+        out = out[:column_count]
+    if pq_idx >= len(out) or cq_idx >= len(out):
+        return cells, column_count
+    primary_cell = out[pq_idx]
+    closing_cell = out[cq_idx]
+    if _looks_like_whole_qty_token(primary_cell) and _looks_like_primary_decimal_token(
+        closing_cell
+    ):
+        out[pq_idx], out[cq_idx] = closing_cell, primary_cell
+        logger.info(
+            "VISION_TABLE PRIMARY_CLOSING_DECIMAL_SWAP primary_was=%r closing_was=%r "
+            "pq=%s cq=%s",
+            primary_cell,
+            closing_cell,
+            pq_idx,
+            cq_idx,
+        )
+        return out, column_count
+
+    # Primary holds Closing, Closing slot is 0: "38 | 30 | 0" → "38 | 0 | 30".
+    open_f = (
+        _qty_token_as_float(out[oq_idx])
+        if oq_idx is not None and oq_idx < len(out)
+        else None
+    )
+    primary_f = _qty_token_as_float(primary_cell)
+    closing_f = _qty_token_as_float(closing_cell)
+    closing_blank = closing_cell is None or str(closing_cell).strip() in {
+        "",
+        "-",
+        "--",
+        "0",
+        "0.0",
+        "0.00",
+    }
+    if (
+        _looks_like_whole_qty_token(primary_cell)
+        and primary_f is not None
+        and primary_f > 0.001
+        and closing_blank
+        and (closing_f is None or abs(closing_f) < 0.001)
+        and open_f is not None
+        and open_f + 0.001 >= primary_f
+    ):
+        out[pq_idx] = "0"
+        out[cq_idx] = primary_cell
+        logger.info(
+            "VISION_TABLE PRIMARY_HOLDS_CLOSING primary_was=%r opening=%s "
+            "pq=%s cq=%s",
+            primary_cell,
+            open_f,
+            pq_idx,
+            cq_idx,
+        )
+    return out, column_count
+
+
+def _zl_opening_primary_closing_rate_value_enabled() -> bool:
+    """STOCK_VISION_ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE — default ON.
+
+    No sales column on Opening_bal|Primary|Closing grids. Derive:
+    sales_qty = opening + Primary − closing (printed movement only);
+    sales_value / closing_value = qty × Secondaryrate when rate is printed.
+    """
+    return os.getenv(
+        "STOCK_VISION_ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _repair_zl_item_primary_holds_closing(item: Dict[str, Any]) -> bool:
+    """When Closing is 0 and Primary holds a whole qty ≤ Opening, restore Closing.
+
+    Vision often parks Closing under Primary and leaves Closing as 0 (integer),
+    which then inflates derived sales to opening+Primary. Re-slot printed digits
+    only — Primary becomes 0.
+    """
+    if not isinstance(item, dict):
+        return False
+    extra = item.setdefault("extra", {})
+    if str(extra.get("layout") or "") not in {"", "zl_opening_primary_closing"}:
+        # Still allow when layout not stamped yet.
+        headers = extra.get("vision_column_headers") or []
+        blob = " ".join(str(h or "") for h in headers).lower()
+        if not (
+            "primary" in blob
+            and ("opening" in blob or "opening_bal" in blob.replace(" ", ""))
+            and ("closing" in blob or "closing_bal" in blob.replace(" ", ""))
+        ):
+            return False
+    fs = extra.setdefault("field_source", {})
+    if not isinstance(fs, dict):
+        return False
+    try:
+        oq = float(item.get("opening_qty")) if item.get("opening_qty") not in (None, "") else None
+        pq = float(item.get("receipts_qty")) if item.get("receipts_qty") not in (None, "") else None
+        if pq is None and item.get("purchase_qty") not in (None, ""):
+            pq = float(item.get("purchase_qty"))
+        cq = float(item.get("closing_qty")) if item.get("closing_qty") not in (None, "") else None
+    except (TypeError, ValueError):
+        return False
+    if oq is None or pq is None:
+        return False
+    if pq <= 0.001:
+        return False
+    if cq is not None and abs(cq) > 0.001:
+        return False
+    if oq + 0.001 < pq:
+        return False
+    # Primary should look like a whole closing qty, not money.
+    if abs(pq - round(pq)) > 0.001:
+        return False
+    item["receipts_qty"] = 0.0
+    if "purchase_qty" in item:
+        item["purchase_qty"] = 0.0
+    item["closing_qty"] = float(pq)
+    fs["purchase_qty"] = "printed"
+    fs["closing_qty"] = "printed"
+    logger.info(
+        "VISION_TABLE ZL_PRIMARY_HOLDS_CLOSING product=%s opening=%s "
+        "primary_was=%s closing_now=%s",
+        str(item.get("product_name") or "")[:60],
+        oq,
+        pq,
+        item["closing_qty"],
+    )
+    return True
+
+
+def _apply_zl_opening_primary_closing_rate_value_pass(
+    items: Sequence[Dict[str, Any]],
+    column_map: Sequence[Dict[str, Any]],
+) -> None:
+    """Derive sales + money from printed Opening/Primary/Closing/rate."""
+    if not _zl_opening_primary_closing_rate_value_enabled():
+        return
+    if not _columns_look_like_zl_opening_primary_closing(column_map):
+        return
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        extra = item.setdefault("extra", {})
+        fs = extra.setdefault("field_source", {})
+        if not isinstance(fs, dict):
+            continue
+        extra["layout"] = "zl_opening_primary_closing"
+        if _repair_zl_item_primary_holds_closing(item):
+            # Closing was restored — drop stale 0 closing_value so rate×qty runs.
+            item["closing_value"] = None
+            fs["closing_value"] = "missing"
+        rate = extra.get("unit_rate")
+        if rate is None:
+            rate = extra.get("secondary_rate")
+        try:
+            rate_f = float(rate) if rate not in (None, "") else None
+        except (TypeError, ValueError):
+            rate_f = None
+        if rate_f is not None and rate_f > 0:
+            extra["unit_rate"] = rate_f
+            extra["secondary_rate"] = rate_f
+
+        def _f(key: str) -> Optional[float]:
+            raw = item.get(key)
+            if raw is None and key == "receipts_qty":
+                raw = item.get("purchase_qty")
+            try:
+                return float(raw) if raw not in (None, "") else None
+            except (TypeError, ValueError):
+                return None
+
+        oq_f = _f("opening_qty")
+        pq_f = _f("receipts_qty")
+        if pq_f is None:
+            pq_f = _f("purchase_qty")
+        cq_f = _f("closing_qty")
+
+        # sales = opening + Primary − closing (Primary=0 when absent).
+        # Never invent when opening or closing were not read.
+        if oq_f is not None and cq_f is not None:
+            primary = 0.0 if pq_f is None else pq_f
+            sales_q = round(oq_f + primary - cq_f, 6)
+            if sales_q < -0.001:
+                item["sales_qty"] = None
+                item["sales_value"] = None
+                fs["sales_qty"] = "missing"
+                fs["sales_value"] = "missing"
+            else:
+                if sales_q < 0:
+                    sales_q = 0.0
+                item["sales_qty"] = float(sales_q)
+                fs["sales_qty"] = "derived"
+                if rate_f is not None and rate_f > 0:
+                    item["sales_value"] = round(float(sales_q) * rate_f, 2)
+                    fs["sales_value"] = "derived"
+                else:
+                    item["sales_value"] = None
+                    fs["sales_value"] = "missing"
+                logger.info(
+                    "VISION_TABLE ZL_OPENING_PRIMARY_CLOSING_DERIVED_SALES "
+                    "product=%s opening=%s primary=%s closing=%s "
+                    "sales_qty=%s sales_value=%s",
+                    str(item.get("product_name") or "")[:60],
+                    oq_f,
+                    primary,
+                    cq_f,
+                    item.get("sales_qty"),
+                    item.get("sales_value"),
+                )
+        else:
+            item["sales_qty"] = None
+            item["sales_value"] = None
+            fs["sales_qty"] = "missing"
+            fs["sales_value"] = "missing"
+
+        if (
+            rate_f is not None
+            and rate_f > 0
+            and cq_f is not None
+            and abs(cq_f) > 0.001
+            and _closing_value_missing(item)
+        ):
+            item["closing_value"] = round(cq_f * rate_f, 2)
+            fs["closing_value"] = "derived"
+            logger.info(
+                "VISION_TABLE ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE "
+                "product=%s closing_qty=%s rate=%s closing_value=%s",
+                str(item.get("product_name") or "")[:60],
+                cq_f,
+                rate_f,
+                item["closing_value"],
+            )
 
 
 def _lstsl_close_in_order_enabled() -> bool:
@@ -8309,6 +8690,107 @@ def _unread_zero_closing_enabled() -> bool:
 _HIMALAYA_COMPANY_LINE = re.compile(
     r"(?i)\bHIMALAYA\b|WELLNESS\s*CO|\bZANDRA\b|\bZENITH\b|\b(?:HIM-?)?ZEAL\b"
 )
+
+
+def _prefer_customer_name_stockist(
+    result: Dict[str, Any],
+    column_map: Sequence[Dict[str, Any]],
+    products: Sequence[Dict[str, Any]],
+) -> bool:
+    """Prefer Customer_name cell when Vision stockist_name is OCR garbage.
+
+    Opening_bal|Primary|Closing grids print the agency in Customer_name on
+    every row. Use that when the header stockist looks contaminated (SKU codes,
+    long digit runs, glued product text).
+    """
+    if not isinstance(result, dict):
+        return False
+    if not _columns_look_like_zl_opening_primary_closing(column_map):
+        return False
+    cust_idx = None
+    for col in column_map or []:
+        if not isinstance(col, dict):
+            continue
+        ht = normalize_header(col.get("header_text") or "")
+        if "customer" in ht and "code" not in ht and "name" in ht.replace(" ", ""):
+            try:
+                cust_idx = int(col.get("col_index"))
+            except (TypeError, ValueError):
+                cust_idx = None
+            break
+        if ht in {"customer name", "customer_name", "customername"}:
+            try:
+                cust_idx = int(col.get("col_index"))
+            except (TypeError, ValueError):
+                cust_idx = None
+            break
+    if cust_idx is None:
+        # Fall back: first ignore column labeled customer, or physical cell 0.
+        for col in column_map or []:
+            if not isinstance(col, dict):
+                continue
+            ht = normalize_header(col.get("header_text") or "")
+            if "customer" in ht and "code" not in ht:
+                try:
+                    cust_idx = int(col.get("col_index"))
+                except (TypeError, ValueError):
+                    cust_idx = None
+                break
+    if cust_idx is None:
+        cust_idx = 0
+
+    candidate = None
+    for item in products or []:
+        if not isinstance(item, dict):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        cells = extra.get("vision_raw_cells") or extra.get("physical_cells")
+        text = None
+        if isinstance(cells, (list, tuple)) and cust_idx < len(cells):
+            text = cells[cust_idx]
+        elif isinstance(cells, dict):
+            text = cells.get(str(cust_idx), cells.get(cust_idx))
+        if text is None:
+            continue
+        name = str(text).strip()
+        if not name or len(name) < 4:
+            continue
+        # Reject material codes / pure digits.
+        if re.fullmatch(r"\d{5,}", name):
+            continue
+        if re.search(r"(?i)\b(?:tablets?|syrup|capsules?|gel|lozenges?)\b", name):
+            continue
+        candidate = name
+        break
+    if not candidate:
+        return False
+
+    current = str(result.get("stockist_name") or "").strip()
+    contaminated = False
+    if not current:
+        contaminated = True
+    elif len(current) > 60:
+        contaminated = True
+    elif re.search(r"\d{6,}", current):
+        contaminated = True
+    elif re.search(
+        r"(?i)\b(?:tablets?|syrup|capsules?|gel|lozenges?|gasex|ashwagandha)\b",
+        current,
+    ):
+        contaminated = True
+    elif candidate.lower() not in current.lower() and current.lower() not in candidate.lower():
+        # Header OCR drifted entirely away from the Customer_name cell.
+        if re.search(r"\d", current) and not re.search(r"\d", candidate):
+            contaminated = True
+    if not contaminated:
+        return False
+    result["stockist_name"] = candidate
+    logger.info(
+        "VISION_TABLE CUSTOMER_NAME_STOCKIST was=%r now=%r",
+        current[:80] if current else None,
+        candidate[:80],
+    )
+    return True
 
 
 def _correct_letterhead_stockist(result: Dict[str, Any]) -> bool:
@@ -11365,6 +11847,9 @@ def _map_single_table(
         cells, column_count = _repair_cells_rate_opening_glue(
             cells, columns, column_count
         )
+        cells, column_count = _repair_cells_primary_closing_decimal_swap(
+            cells, columns, column_count
+        )
         cells, column_count = _align_oric_qv_blank_receipt_qty(
             cells, columns, column_count
         )
@@ -11778,6 +12263,7 @@ def map_vision_table(
     _apply_unread_zero_closing_pass(all_items)
     _apply_closing_qty_from_header_pass(all_items, column_map or [])
     _apply_issue_from_header_pass(all_items, column_map or [])
+    _apply_zl_opening_primary_closing_rate_value_pass(all_items, column_map or [])
 
     return {
         "line_items": all_items,
@@ -13237,6 +13723,7 @@ def _stamp_vision_result(
         result["stockist_address"] = stockist_address
     if company_name:
         result["company_name"] = company_name
+    _prefer_customer_name_stockist(result, column_map, products)
     _correct_letterhead_stockist(result)
     period = str(statement_period or "").strip()
     if period:
@@ -13324,6 +13811,19 @@ def _stamp_vision_result(
         logger.info(
             "SALE_CLOSING_ONLY vision_table stamped stock_identity_kind=sale_closing_only "
             "rows=%s",
+            len(line_items or []),
+        )
+    elif _columns_look_like_zl_opening_primary_closing(column_map):
+        extra["stock_identity_kind"] = "zl_opening_primary_closing"
+        extra["layout"] = "zl_opening_primary_closing"
+        extra["stock_identity_formula"] = (
+            "opening=Opening_bal_qty; purchase=Primary_qty; closing=Closing_bal_qty; "
+            "sales_qty=opening+Primary-closing; "
+            "sales_value/closing_value=qty*Secondaryrate"
+        )
+        logger.info(
+            "ZL_OPENING_PRIMARY_CLOSING vision_table stamped "
+            "stock_identity_kind=zl_opening_primary_closing rows=%s",
             len(line_items or []),
         )
     if totals_rows:
@@ -13975,6 +14475,8 @@ def run_vision_table_path(
             _repair_pack_rate_opening_receipt_sales_in_free(item)
             _repair_clear_money_duplicate_free_out(item)
         _clear_neighbor_stolen_closing_fields(all_items)
+        # After neighbor clears — derive sales/closing_value from final qtys.
+        _apply_zl_opening_primary_closing_rate_value_pass(all_items, column_map or [])
 
         all_items, peeled_totals = _peel_vision_total_named_items(all_items)
         all_totals.extend(peeled_totals)

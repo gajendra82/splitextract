@@ -842,6 +842,116 @@ class SsaGroupQtyValueFanoutTests(unittest.TestCase):
         self.assertEqual(out[6], "0.00")
         self.assertEqual(out[7], "30")
 
+        # Vision often drops ".00" → plain "0" in the Opening slot (shifted Primary).
+        # Without this peel, parse_number collapses "176 51 38" → unit_rate 1765138.
+        cells_plain_zero = [
+            "ANIL MEDICAL AGENCY",
+            "7002304",
+            "ASHWAGANDHA TABLETS 60 S INDIA",
+            "260",
+            "176 51 38",
+            "0",
+            "30",
+            "30",
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_RATE_OPENING_GLUE": "true"}, clear=False
+        ):
+            out0, _ = _repair_cells_rate_opening_glue(
+                cells_plain_zero, columns, 8
+            )
+        self.assertEqual(out0[4], "176.51")
+        self.assertEqual(out0[5], "38")
+        self.assertEqual(out0[6], "0")
+        self.assertEqual(out0[7], "30")
+
+        # Integer Primary in Opening slot (Gasex-style left-shift).
+        cells_int_primary = [
+            "ANIL MEDICAL AGENCY",
+            "7000143",
+            "GASEX SYRUP ELAICHI FLVR 200ml",
+            "150",
+            "101.31 0",
+            "28",
+            "20",
+            "20",
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_RATE_OPENING_GLUE": "true"}, clear=False
+        ):
+            out_g, _ = _repair_cells_rate_opening_glue(
+                cells_int_primary, columns, 8
+            )
+        self.assertEqual(out_g[4], "101.31")
+        self.assertEqual(out_g[5], "0")
+        self.assertEqual(out_g[6], "28")
+        self.assertEqual(out_g[7], "20")
+
+        # Opening already correct + rate still glued → clean rate only, no shift.
+        cells_rate_only = [
+            "ANIL MEDICAL AGENCY",
+            "7002304",
+            "ASHWAGANDHA TABLETS 60 S INDIA",
+            "260",
+            "176 51 38",
+            "38",
+            "0.00",
+            "30",
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_RATE_OPENING_GLUE": "true"}, clear=False
+        ):
+            out_ro, _ = _repair_cells_rate_opening_glue(
+                cells_rate_only, columns, 8
+            )
+        self.assertEqual(out_ro[4], "176.51")
+        self.assertEqual(out_ro[5], "38")
+        self.assertEqual(out_ro[6], "0.00")
+        self.assertEqual(out_ro[7], "30")
+
+        # Closing parked in Opening + Primary already decimal ("0 00").
+        cells_close_in_open = [
+            "ANIL MEDICAL AGENCY",
+            "7002304",
+            "ASHWAGANDHA TABLETS 60 S INDIA",
+            "260",
+            "176.51 38",
+            "30",
+            "0 00",
+            "0",
+        ]
+        with patch.dict(
+            os.environ, {"STOCK_VISION_RATE_OPENING_GLUE": "true"}, clear=False
+        ):
+            out_cio, _ = _repair_cells_rate_opening_glue(
+                cells_close_in_open, columns, 8
+            )
+        self.assertEqual(out_cio[4], "176.51")
+        self.assertEqual(out_cio[5], "38")
+        self.assertEqual(out_cio[6], "0 00")
+        self.assertEqual(out_cio[7], "30")
+
+        from services.stock_vision_table import (
+            _repair_cells_primary_closing_decimal_swap,
+        )
+
+        # Unglued but Primary↔Closing swapped (30 vs 0 00).
+        cells_swapped = [
+            "ANIL MEDICAL AGENCY",
+            "7002304",
+            "ASHWAGANDHA TABLETS 60 S INDIA",
+            "260",
+            "176.51",
+            "38",
+            "30",
+            "0 00",
+        ]
+        out_sw, _ = _repair_cells_primary_closing_decimal_swap(
+            cells_swapped, columns, 8
+        )
+        self.assertEqual(out_sw[6], "0 00")
+        self.assertEqual(out_sw[7], "30")
+
         headers = [
             {"col_index": i, "text": t}
             for i, t in enumerate(
@@ -897,6 +1007,7 @@ class SsaGroupQtyValueFanoutTests(unittest.TestCase):
             os.environ,
             {
                 "STOCK_VISION_RATE_OPENING_GLUE": "true",
+                "STOCK_VISION_ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE": "true",
             },
             clear=False,
         ):
@@ -907,10 +1018,107 @@ class SsaGroupQtyValueFanoutTests(unittest.TestCase):
         self.assertEqual(ash.get("opening_qty"), 38.0)
         self.assertEqual(ash.get("receipts_qty"), 0.0)
         self.assertEqual(ash.get("closing_qty"), 30.0)
+        # sales = opening + Primary − closing (not open−close alone).
+        self.assertEqual(ash.get("sales_qty"), 8.0)
+        self.assertEqual(ash.get("sales_value"), round(8 * 176.51, 2))
+        self.assertEqual(ash.get("closing_value"), round(30 * 176.51, 2))
+        self.assertEqual(ash.get("extra", {}).get("unit_rate"), 176.51)
+        self.assertEqual(ash.get("extra", {}).get("field_source", {}).get("sales_qty"), "derived")
         gas = items[1]
         self.assertEqual(gas.get("opening_qty"), 0.0)
         self.assertEqual(gas.get("receipts_qty"), 28.0)
         self.assertEqual(gas.get("closing_qty"), 20.0)
+        self.assertEqual(gas.get("sales_qty"), 8.0)
+        self.assertEqual(gas.get("sales_value"), round(8 * 101.31, 2))
+        self.assertEqual(gas.get("closing_value"), round(20 * 101.31, 2))
+
+        # Production Vision shape: rate already split, Primary↔Closing swapped.
+        swapped_table = {
+            "tables": [
+                {
+                    "column_count": 8,
+                    "header_rows": [headers],
+                    "rows": [
+                        {
+                            "row_index": 0,
+                            "cells": [
+                                "ANIL MEDICAL AGENCY",
+                                "7002304",
+                                "ASHWAGANDHA TABLETS 60 S INDIA",
+                                "260",
+                                "176.51",
+                                "38",
+                                "30",
+                                "0 00",
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_RATE_OPENING_GLUE": "true",
+                "STOCK_VISION_ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE": "true",
+            },
+            clear=False,
+        ):
+            mapped_sw = map_vision_table(
+                swapped_table, request_id="primary-close-swap"
+            )
+        ash_sw = (mapped_sw.get("line_items") or [None])[0]
+        self.assertIsNotNone(ash_sw)
+        self.assertEqual(ash_sw.get("opening_qty"), 38.0)
+        self.assertEqual(ash_sw.get("receipts_qty"), 0.0)
+        self.assertEqual(ash_sw.get("closing_qty"), 30.0)
+        self.assertEqual(ash_sw.get("sales_qty"), 8.0)
+        self.assertEqual(ash_sw.get("sales_value"), round(8 * 176.51, 2))
+        self.assertEqual(ash_sw.get("closing_value"), round(30 * 176.51, 2))
+
+        # Closing parked under Primary as whole qty, Closing slot = 0.
+        stolen_close = {
+            "tables": [
+                {
+                    "column_count": 8,
+                    "header_rows": [headers],
+                    "rows": [
+                        {
+                            "row_index": 0,
+                            "cells": [
+                                "ANIL MEDICAL AGENCY",
+                                "7000341",
+                                "RUMALAYA FORTE TABS (FC) 30 s",
+                                "230",
+                                "154.68",
+                                "96",
+                                "86",
+                                "0",
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        with patch.dict(
+            os.environ,
+            {
+                "STOCK_VISION_RATE_OPENING_GLUE": "true",
+                "STOCK_VISION_ZL_OPENING_PRIMARY_CLOSING_RATE_VALUE": "true",
+            },
+            clear=False,
+        ):
+            mapped_sc = map_vision_table(
+                stolen_close, request_id="primary-holds-closing"
+            )
+        rum = (mapped_sc.get("line_items") or [None])[0]
+        self.assertIsNotNone(rum)
+        self.assertEqual(rum.get("opening_qty"), 96.0)
+        self.assertEqual(rum.get("receipts_qty"), 0.0)
+        self.assertEqual(rum.get("closing_qty"), 86.0)
+        self.assertEqual(rum.get("sales_qty"), 10.0)
+        self.assertEqual(rum.get("sales_value"), round(10 * 154.68, 2))
+        self.assertEqual(rum.get("closing_value"), round(86 * 154.68, 2))
 
     def test_map_vision_closing_value_glued_to_expiry_date(self):
         """CLOSING VALUE cell '1904.62 01-Dec-28' must parse money, not go missing."""
