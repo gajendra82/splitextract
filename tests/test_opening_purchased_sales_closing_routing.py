@@ -223,6 +223,53 @@ class ManufacturerStockistSwapTests(unittest.TestCase):
             result["stockist_name"], "EASTERN AGENCIES HEALTHCARE PVT. LTD"
         )
 
+    def test_swaps_rama_sales_letterhead_out_of_company(self):
+        from services.sales_statement_extractor import (
+            _apply_parsed_sales_json,
+            _clear_company_confused_stockist,
+            _repair_stockist_company_from_statement_header,
+            empty_result,
+        )
+
+        # Vision parked manufacturer in stockist_name and "* SALES" letterhead
+        # in company_name (STOCK AND SALES ANALYSIS screenshots).
+        parsed = {
+            "stockist_name": "THE HIMALAYA DRUG COMPANY",
+            "company_name": "RAMA SALES",
+            "report_title": "STOCK AND SALES ANALYSIS",
+            "line_items": [
+                {
+                    "product_name": "CYSTONE TAB",
+                    "packing": "60 TAB",
+                    "opening_qty": 2,
+                    "receipts_qty": 2,
+                    "sales_qty": 0,
+                    "closing_qty": 4,
+                    "closing_value": 671.44,
+                    "purchase_value": 335.72,
+                }
+            ],
+        }
+        result = _apply_parsed_sales_json(empty_result("458.png", "png"), parsed)
+        self.assertEqual(result["stockist_name"], "RAMA SALES")
+        self.assertIn("HIMALAYA", (result.get("company_name") or "").upper())
+        cyst = result["line_items"][0]
+        self.assertEqual(cyst["receipts_value"], 335.72)
+        self.assertEqual(cyst["extra"]["purchase_value"], 335.72)
+
+        # Repair + clear must not wipe the swapped stockist.
+        _repair_stockist_company_from_statement_header(result, "")
+        with patch.dict(
+            "os.environ",
+            {
+                "STOCK_REJECT_COMPANY_AS_STOCKIST": "true",
+                "STOCK_SWAP_MANUFACTURER_STOCKIST": "true",
+            },
+        ):
+            _clear_company_confused_stockist(result)
+        self.assertEqual(result["stockist_name"], "RAMA SALES")
+        self.assertIn("HIMALAYA", (result.get("company_name") or "").upper())
+
 
 if __name__ == "__main__":
     unittest.main()

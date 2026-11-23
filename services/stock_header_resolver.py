@@ -876,6 +876,8 @@ _DIRECT_VALUE_FIELDS = {
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
+    "pur. value": "purchase_value",
+    "pur.value": "purchase_value",
     "purcv": "purchase_value",
     "purc val": "purchase_value",
     "purchase value": "purchase_value",

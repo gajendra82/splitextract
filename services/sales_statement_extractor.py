@@ -19759,7 +19759,7 @@ def _clear_company_confused_stockist(result: Dict[str, Any]) -> bool:
         and re.search(
             r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|pharma|stores|associates|"
             r"enterprises|traders|healthcare|private\s+limited|pvt\.?\s*ltd|"
-            r"unit\s+of)\b",
+            r"unit\s+of|sales)\b",
             company,
         )
         and os.getenv(
@@ -23008,31 +23008,39 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT = """
-This image is a printed "STOCK & SALES STATEMENT" grid (not Marg OPENING/RECEIVE/ISSUE).
+This image is a printed "STOCK & SALES STATEMENT" / "STOCK AND SALES ANALYSIS" grid
+(not Marg OPENING/RECEIVE/ISSUE).
 
-Printed columns LEFT TO RIGHT (names may vary slightly). Three common header sets:
+Printed columns LEFT TO RIGHT (names may vary slightly). Four common header sets:
 
 A) Code | Item | Packing | LMS1 | LMS | OP.STK | RCPTS | SALES | SL.VALUE | FREE | CL.STK | CL.VALUE
 B) Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
 C) P.code | Product Name | Pack | LASTMON SALE | OPEN | COMP | FREE | REPL | CUST | SALE | FREE | REPL | E&B | T&S | Closing Stock | Order Qty | Cl.Stk Value
    (Receipts band = OPEN/COMP/FREE/REPL/CUST; Issues band = SALE/FREE/REPL/E&B/T&S)
+D) PRODUCT | PACK | OPENING | PURCHASE | TOTAL | SALE | CLOSING | PUR. VALUE | SALE VALUE | CLOSING VALUE
+   (STOCK AND SALES ANALYSIS — TOTAL is OPENING+PURCHASE only; never closing_qty)
 
 Qty mapping ONLY (blank cell / "-" = 0). NEVER shift a later number left into a blank cell.
-- OP.STK / Op_Stk / OPEN -> opening_qty
-- RCPTS / Rcpts / COMP -> receipts_qty (layout C: COMP + receipt FREE/REPL/CUST when printed)
+- OP.STK / Op_Stk / OPEN / OPENING -> opening_qty
+- RCPTS / Rcpts / COMP / PURCHASE -> receipts_qty (layout C: COMP + receipt FREE/REPL/CUST when printed)
+- Layout D TOTAL -> extra.total_qty ONLY (OPENING+PURCHASE). Never sales_qty or closing_qty.
 - SALES / Sales / SALE -> sales_qty
   Layout C only: sales_qty = Issues SALE + Issues FREE (+ REPL/E&B/T&S when printed)
-- SL.VALUE -> sales_value (money; never a qty). Layout C has NO per-row sales money.
+- SL.VALUE / SALE VALUE -> sales_value (money; never a qty). Layout C has NO per-row sales money.
+- Layout D PUR. VALUE -> purchase_value and receipts_value (money; never a qty)
 - Layout A FREE (after SL.VALUE) -> ignore for opening/receipts/sales/closing
-- CL.STK / Cl_Stk / Closing Stock -> closing_qty
-- CL.VALUE / Value / Cl.Stk Value -> closing_value
+- CL.STK / Cl_Stk / Closing Stock / CLOSING -> closing_qty
+- CL.VALUE / Value / Cl.Stk Value / CLOSING VALUE -> closing_value
 - LMS1 / LMS / LASTMON SALE -> lms1 / lms ONLY. NEVER opening_qty or receipts_qty.
 - Rate / Order Qty -> ignore for stock identity (optional extra.rate / extra.order_qty)
 - P.Ret / Hos.Sal / Brk / Repl (layout B) -> ignore for opening/receipts/sales/closing
 
 Critical: LMS1/LMS/LASTMON SALE sit LEFT of OPEN/OP.STK. Do not treat them as opening or receipts.
-Do not put SL.VALUE / CL.VALUE / Rate / Order Qty into opening_qty. Do not put Op_Stk into closing_qty.
+Do not put SL.VALUE / CL.VALUE / Rate / Order Qty / PUR. VALUE into opening_qty.
+Do not put Op_Stk / TOTAL into closing_qty.
 Packing (200ml / 30ml / 60 S / 1*60T) belongs in packing, not product_name.
+Layout D: if OPENING+PURCHASE does not equal TOTAL, re-read OPENING digits (8 vs 9)
+from the image — do not invent OPENING from TOTAL arithmetic.
 
 Worked example (layout A). Printed cells left→right after packing:
 LMS1=10, LMS=20, OP.STK=30, RCPTS=40, SALES=15, SL.VALUE=100.50, FREE=0, CL.STK=55, CL.VALUE=200.00
@@ -23052,10 +23060,11 @@ Item cell rules:
   ("HIMALAYA ZANDRA" then "ARJUNA TAB"), product_name is the SKU and company_name
   is the banner. Include that SKU row even when qty cells are blank (use 0).
 
-stockist_name = distributor above the title (e.g. … PRIVATE LIMITED).
-company_name = Company: line when printed (e.g. HIMALAYA ZANDRA).
+stockist_name = distributor letterhead ABOVE the title (e.g. RAMA SALES, … PRIVATE LIMITED).
+company_name = "Company :" / manufacturer line (e.g. THE HIMALAYA DRUG COMPANY, HIMALAYA ZANDRA).
+Never put Himalaya/manufacturer into stockist_name or the letterhead into company_name.
 period from "For The Month Of: MonYY" → first/last day of that month (Oct26 → 2026-10-01..2026-10-31)
-or the statement date line.
+or From:/To: date lines (01-Oct-26 → 2026-10-01).
 Include EVERY product row. Skip TOTAL lines.
 
 Skip TOTAL / Grand Total product lines. Skip page chrome and stamps.
@@ -23079,6 +23088,14 @@ LASTMON=48, OPEN=71, COMP=-, SALE=41, Closing=30, Cl.Stk Value=5295.30
 → lms=48, opening_qty=71, receipts_qty=0, sales_qty=41, closing_qty=30, closing_value=5295.30
 With Issues FREE: OPEN=78, COMP=100, SALE=73, FREE=1, Closing=104
 → opening_qty=78, receipts_qty=100, sales_qty=74, closing_qty=104
+
+Layout D worked example (STOCK AND SALES ANALYSIS):
+OPENING=1920, PURCHASE=10, TOTAL=1930, SALE=10, CLOSING=1920,
+PUR. VALUE=1953.86, SALE VALUE=1991.13, CLOSING VALUE=375141.12
+→ opening_qty=1920, receipts_qty=10, sales_qty=10, closing_qty=1920,
+  purchase_value=1953.86, sales_value=1991.13, closing_value=375141.12,
+  extra.total_qty=1930
+Dash "-" under SALE / PUR. VALUE → 0 / null money as printed (qty blank → 0).
 
 Return ONLY JSON:
 {
@@ -23107,13 +23124,33 @@ Return ONLY JSON:
       "receipts_qty": number,
       "sales_qty": number,
       "sales_value": number|null,
+      "purchase_value": number|null,
       "closing_qty": number,
       "closing_value": number,
-      "extra": {"transit": number|null}
+      "extra": {"transit": number|null, "total_qty": number|null}
     }
   ]
 }
 """.strip()
+
+_OP_STK_ANALYSIS_TOTAL_RETRY_ADDON = """
+RETRY — STOCK AND SALES ANALYSIS OPENING/PURCHASE/TOTAL/SALE/CLOSING grid.
+
+Columns after PACK are ALWAYS:
+OPENING | PURCHASE | TOTAL | SALE | CLOSING | PUR. VALUE | SALE VALUE | CLOSING VALUE
+
+For EVERY row re-read OPENING from the image (watch 8 vs 9). TOTAL equals
+OPENING+PURCHASE; CLOSING equals TOTAL-SALE. Do not invent OPENING from TOTAL.
+Map PUR. VALUE → purchase_value, SALE VALUE → sales_value, CLOSING VALUE → closing_value.
+stockist_name = letterhead above the title (e.g. RAMA SALES).
+company_name = Company: line (e.g. THE HIMALAYA DRUG COMPANY). Do not swap them.
+""".strip()
+
+
+def _op_stk_analysis_total_retry_enabled() -> bool:
+    """Retry Op_Stk Vision when ANALYSIS TOTAL/OPENING identity fails. Default ON."""
+    return True
+
 
 _OP_STK_LMS1_STRICT_RETRY_ADDON = """
 RETRY — previous read put LMS1/LMS into opening_qty/receipts_qty.
@@ -23142,6 +23179,16 @@ def _repair_stockist_company_from_statement_header(
     cn = str(result.get("company_name") or "").strip()
     sn = str(result.get("stockist_name") or "").strip()
     blob = ocr_text or ""
+    # Manufacturer in stockist_name + party letterhead in company_name.
+    if (
+        sn
+        and _stockist_name_is_manufacturer_or_title(sn)
+        and cn
+        and not _stockist_name_is_manufacturer_or_title(cn)
+    ):
+        result["company_name"] = sn
+        result["stockist_name"] = cn
+        return
     if sn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
         return
     if cn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
@@ -24302,6 +24349,62 @@ def _extract_op_stk_rcpts_stock_sale_vision(
         result, ocr_hint, file_bytes=file_bytes
     )
     fail_rate = _op_stk_lms1_identity_fail_rate(result)
+    title_blob = " ".join(
+        [
+            str(result.get("report_title") or ""),
+            ocr_hint or "",
+        ]
+    )
+    analysis_total_grid = bool(
+        re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS", title_blob, re.I)
+        or re.search(r"PUR\.?\s*VALUE", title_blob, re.I)
+    )
+    if (
+        gemini_calls < 2
+        and fail_rate > 0
+        and _op_stk_analysis_total_retry_enabled()
+        and analysis_total_grid
+        and len(result.get("line_items") or []) >= 3
+    ):
+        logger.info(
+            "OP_STK_ANALYSIS_TOTAL_RETRY file=%s fail_rate=%.2f",
+            filename,
+            fail_rate,
+        )
+        parsed2 = _call(
+            _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT
+            + "\n\n"
+            + _OP_STK_ANALYSIS_TOTAL_RETRY_ADDON,
+            attempts=1,
+        )
+        gemini_calls = 2
+        if parsed2 and parsed2.get("line_items"):
+            result2 = empty_result(filename, ext.lstrip(".") or "jpg")
+            result2 = _apply_parsed_sales_json(result2, parsed2)
+            result2 = _op_stk_apply_lms_fields(result2, parsed2)
+            result2 = _finalize_op_stk_rcpts_stock_sale(
+                result2, ocr_hint, file_bytes=file_bytes
+            )
+            fail2 = _op_stk_lms1_identity_fail_rate(result2)
+            if fail2 <= fail_rate:
+                extra2 = result2.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra2, dict):
+                    extra2["op_stk_analysis_total_retry"] = True
+                    extra2["op_stk_identity_fail_rate_before"] = round(fail_rate, 3)
+                    extra2["op_stk_identity_fail_rate_after"] = round(fail2, 3)
+                logger.info(
+                    "OP_STK_ANALYSIS_TOTAL_RETRY file=%s kept fail_rate %.2f -> %.2f",
+                    filename,
+                    fail_rate,
+                    fail2,
+                )
+                return result2
+            logger.info(
+                "OP_STK_ANALYSIS_TOTAL_RETRY file=%s discarded fail_rate %.2f -> %.2f",
+                filename,
+                fail_rate,
+                fail2,
+            )
     if (
         gemini_calls < 2
         and _op_stk_lms1_strict_retry_enabled()
@@ -50688,7 +50791,8 @@ def _apply_parsed_sales_json(
         stockist_is_himalaya = bool(re.search(r"\bHIMALAYA\b", stockist))
         company_is_distributor = bool(
             re.search(
-                r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|PVT\.?\s*LTD",
+                r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|"
+                r"PVT\.?\s*LTD|\bSALES\b",
                 company,
             )
         ) and not re.search(r"\bHIMALAYA\b", company)
@@ -50762,6 +50866,8 @@ def _apply_parsed_sales_json(
             item["opening_value"] = _to_float(opening_value)
             item.setdefault("extra", {})["opening_value"] = item["opening_value"]
         receipts_value = raw.get("receipts_value")
+        if receipts_value in (None, ""):
+            receipts_value = raw.get("purchase_value")
         if receipts_value in (None, "") and isinstance(raw.get("extra"), dict):
             receipts_value = raw["extra"].get("receipts_value")
             if receipts_value in (None, ""):
