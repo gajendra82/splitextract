@@ -887,6 +887,89 @@ class GarbageBalanceTokenTests(unittest.TestCase):
         )
         self.assertTrue(out["line_items"][0]["extra"].get("reconciliation_failed"))
 
+    def test_printed_negative_closing_passes_when_identity_matches(self):
+        item = {
+            "product_name": "HIMCOCID MINT",
+            "opening_qty": 3.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 42.0,
+            "closing_qty": -39.0,
+            "closing_value": -3556.77,
+            "extra": {
+                "field_source": {
+                    "opening_qty": "printed",
+                    "purchase_qty": "missing",
+                    "sales_qty": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "printed",
+                },
+            },
+        }
+        recon = reconcile_row(item)
+        self.assertTrue(recon.get("valid"))
+        self.assertEqual(recon.get("actual_closing_qty"), -39.0)
+
+    def test_blank_closing_passes_when_expected_is_zero(self):
+        item = {
+            "product_name": "HUDUCHI",
+            "opening_qty": 1.0,
+            "receipts_qty": 0.0,
+            "sales_qty": 1.0,
+            "closing_qty": None,
+            "extra": {
+                "field_source": {
+                    "opening_qty": "printed",
+                    "sales_qty": "printed",
+                    "closing_qty": "missing",
+                },
+            },
+        }
+        recon = reconcile_row(item)
+        self.assertTrue(recon.get("valid"))
+        self.assertEqual(recon.get("actual_closing_qty"), 0.0)
+
+    def test_zero_activity_missing_closing_passes(self):
+        item = {
+            "product_name": "OSTEGOSAGE JR",
+            "opening_qty": None,
+            "receipts_qty": None,
+            "sales_qty": None,
+            "closing_qty": None,
+            "extra": {
+                "field_source": {
+                    "opening_qty": "missing",
+                    "purchase_qty": "missing",
+                    "sales_qty": "missing",
+                    "closing_qty": "missing",
+                },
+            },
+        }
+        recon = reconcile_row(item)
+        self.assertTrue(recon.get("valid"))
+        self.assertEqual(recon.get("actual_closing_qty"), 0.0)
+
+
+class NegativeStockMoneySanitizeTests(unittest.TestCase):
+    def test_pdf_group_qty_value_keeps_negative_closing_value(self):
+        from services.sales_statement_extractor import (
+            _sanitize_numeric_overrides,
+            empty_line_item,
+            empty_result,
+        )
+
+        result = empty_result("StkCSum.pdf", "pdf")
+        result["totals"]["extra"]["extraction_method"] = "pdf_group_qty_value"
+        item = empty_line_item()
+        item["product_name"] = "COLD BALM 10GM -HIC"
+        item["opening_qty"] = -232.0
+        item["closing_qty"] = -232.0
+        item["closing_value"] = -2232.83
+        result["line_items"] = [item]
+        out = _sanitize_numeric_overrides(result, report_only=False, stage="lines")
+        cold = out["line_items"][0]
+        self.assertAlmostEqual(cold["closing_value"], -2232.83, places=2)
+        self.assertNotIn("rejected_closing_value", cold.get("extra") or {})
+
 
 if __name__ == "__main__":
     unittest.main()

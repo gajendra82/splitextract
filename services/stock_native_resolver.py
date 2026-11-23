@@ -208,8 +208,16 @@ def _footer_totals_from_page_results(
                 except (TypeError, ValueError):
                     continue
             if kind != "value":
-                for src in ("sales_value", "closing_value"):
+                for src in (
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                ):
                     val = item.get(src)
+                    if val in (None, ""):
+                        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                        val = extra.get(src)
                     if val in (None, ""):
                         continue
                     try:
@@ -583,6 +591,26 @@ def build_line_items_from_tokens(
                 token_blob[:60],
             )
             continue
+        try:
+            from services.stock_native_tables import (
+                _is_nameless_money_footer_tokens,
+                _looks_like_legend_or_footer_header,
+            )
+
+            if _is_nameless_money_footer_tokens(tokens):
+                logger.info(
+                    "STOCK_PDF_WORDS_MONEY_FOOTER_SKIP blob=%s",
+                    token_blob[:60],
+                )
+                continue
+            if _looks_like_legend_or_footer_header(tokens):
+                logger.info(
+                    "STOCK_PDF_WORDS_FOOTER_CHROME_SKIP blob=%s",
+                    token_blob[:60],
+                )
+                continue
+        except Exception:
+            pass
         # Product lot totals print "Total :" — not sheet "Total Count:" / "Total:-".
         is_product_total = bool(
             re.search(r"\bTotal\s*:", token_blob, re.I)
@@ -733,19 +761,37 @@ def build_line_items_from_tokens(
                 pending_name = None
             else:
                 cur = frag
-                if not cur or cur.upper() in pending_name.upper():
-                    item["product_name"] = pending_name
-                elif pending_name.lower() not in cur.lower():
-                    item["product_name"] = f"{pending_name} {cur}".strip()
+                # Next row already has its own product title — emit the pending
+                # name-only SKU (zero movement) instead of concatenating.
+                if (
+                    cur
+                    and len(cur.split()) >= 2
+                    and pending_name.lower() not in cur.lower()
+                    and cur.upper() not in pending_name.upper()
+                ):
+                    empty = _empty_line_item()
+                    empty["product_name"] = pending_name
+                    items.append(empty)
+                    logger.info(
+                        "STOCK_PDF_WORDS_NAME_PENDING_EMIT pending=%s next=%s",
+                        pending_name[:40],
+                        cur[:40],
+                    )
+                    pending_name = None
                 else:
-                    item["product_name"] = cur
-                logger.info(
-                    "STOCK_PDF_WORDS_NAME_PENDING_APPLY name=%s",
-                    str(item.get("product_name") or "")[:60],
-                )
-                pending_name = None
-                name = item.get("product_name")
-                frag = str(name or "").strip()
+                    if not cur or cur.upper() in pending_name.upper():
+                        item["product_name"] = pending_name
+                    elif pending_name.lower() not in cur.lower():
+                        item["product_name"] = f"{pending_name} {cur}".strip()
+                    else:
+                        item["product_name"] = cur
+                    logger.info(
+                        "STOCK_PDF_WORDS_NAME_PENDING_APPLY name=%s",
+                        str(item.get("product_name") or "")[:60],
+                    )
+                    pending_name = None
+                    name = item.get("product_name")
+                    frag = str(name or "").strip()
         # Name printed above the code/qty row (Months SS Report wraps).
         # Require truly missing movement cells — not printed zeros.
         if (
@@ -795,13 +841,19 @@ def build_line_items_from_tokens(
                     )
                     pending_name = None
                     continue
-                pending_name = (
-                    f"{pending_name} {frag}".strip() if pending_name else frag
-                )
-                logger.info(
-                    "STOCK_PDF_WORDS_NAME_PENDING name=%s", pending_name[:60]
-                )
-                continue
+                # Zero-movement product with a pack word (KARELA TAB) — keep row.
+                if len(frag.split()) >= 2 and _SECTION_PACK_WORD.search(frag):
+                    logger.info(
+                        "STOCK_PDF_WORDS_ZERO_NAME_KEEP name=%s", frag[:60]
+                    )
+                else:
+                    pending_name = (
+                        f"{pending_name} {frag}".strip() if pending_name else frag
+                    )
+                    logger.info(
+                        "STOCK_PDF_WORDS_NAME_PENDING name=%s", pending_name[:60]
+                    )
+                    continue
         elif qty_empty and not qty_missing and frag:
             logger.info(
                 "STOCK_PDF_WORDS_ZERO_MOVEMENT_KEEP name=%s pack=%s",
@@ -856,6 +908,8 @@ def _join_leading_particular_tokens(
     """
     if not _pdf_words_split_particular_enabled() or not tokens:
         return tokens
+    from services.stock_header_resolver import parse_number
+
     leading_idx: List[int] = []
     for i, tok in enumerate(tokens):
         if not isinstance(tok, dict):
@@ -864,6 +918,9 @@ def _join_leading_particular_tokens(
         if not text:
             continue
         if re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(",", "")):
+            break
+        # Tally qty+unit / accounting negatives: "1,344 NOs", "(-)232 NOs".
+        if parse_number(text) is not None:
             break
         if re.fullmatch(r"\d{1,2}/\d{2,4}", text):
             break
@@ -905,6 +962,8 @@ def _recover_split_particular_name(
     """Fallback: set product_name from leading alpha tokens after assign."""
     if not _pdf_words_split_particular_enabled():
         return False
+    from services.stock_header_resolver import parse_number
+
     existing = str(item.get("product_name") or "").strip()
     if existing and re.search(r"[A-Za-z]", existing):
         return False
@@ -916,6 +975,8 @@ def _recover_split_particular_name(
         if not text:
             continue
         if re.fullmatch(r"-?\d+(?:,\d{3})*(?:\.\d+)?", text.replace(",", "")):
+            break
+        if parse_number(text) is not None:
             break
         if re.fullmatch(r"\d{1,2}/\d{2,4}", text):
             break
@@ -1015,6 +1076,18 @@ def _merge_nameless_lot_into_prev(
         return False
     if _is_total_row_name(prev_name) or _is_sheet_total_name(prev_name):
         return False
+    # Nameless money footer under qty headers is never a lot continuation.
+    try:
+        from services.stock_native_tables import _is_nameless_money_footer_tokens
+
+        if _is_nameless_money_footer_tokens(tokens):
+            logger.info(
+                "STOCK_PDF_WORDS_LOT_CONTINUATION skip=money_footer prev=%s",
+                prev_name[:40],
+            )
+            return False
+    except Exception:
+        pass
     # Reject rows that still carry alphabetic product fragments.
     for tok in tokens or []:
         if not isinstance(tok, dict):
@@ -2467,6 +2540,34 @@ def _grouped_qty_value_enabled() -> bool:
     }
 
 
+_OPENING_INWARDS_OUTWARDS_CLOSING_FAMILY = "opening_inwards_outwards_closing"
+
+
+def is_opening_inwards_outwards_closing_layout(text: Any) -> bool:
+    """Tally Stock Category Summary chrome — layout family, not a stockist name.
+
+    Particulars | Opening Balance | Inwards | Outwards | Closing Balance with
+    Quantity/Rate/Value children. Used to prefer pdf_group_qty_value and to
+    keep Gemini from replacing that native read.
+    """
+    blob = str(text or "")
+    if not blob.strip():
+        return False
+    low = blob.lower()
+    if re.search(r"stock\s+category\s+summary", low):
+        return True
+    has_opening = bool(re.search(r"\bopening\s+balance\b", low))
+    has_closing = bool(re.search(r"\bclosing\s+balance\b", low))
+    has_in = bool(re.search(r"\binwards?\b", low))
+    has_out = bool(re.search(r"\boutwards?\b", low))
+    has_qrv = bool(
+        re.search(r"\bquantity\b", low)
+        and re.search(r"\brate\b", low)
+        and re.search(r"\bvalue\b", low)
+    )
+    return has_opening and has_closing and has_in and has_out and has_qrv
+
+
 def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
     name = str(item.get("product_name") or "").strip()
     if not name:
@@ -2477,8 +2578,15 @@ def _drop_grouped_banner_item(item: Dict[str, Any]) -> bool:
         return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", name, re.I):
         return True
+    # Page carry / bring-forward rows — not SKUs.
+    if re.match(
+        r"(?i)^(?:carried\s+over|brought\s+forward|c/?o\b|b/?f\b)",
+        name,
+    ):
+        return True
     if re.search(
-        r"stock\s+statement|^\s*date\b|^\s*page\b|wellness\s+company|"
+        r"stock\s+statement|stock\s+category\s+summary|^\s*date\b|^\s*page\b|"
+        r"wellness\s+company|"
         r"\bopening\b.*\bpurchase\b|\bqty\b.*\bvalue\b",
         name,
         re.I,
@@ -2558,21 +2666,41 @@ def parse_grouped_qty_value_pdf(
         return None
     result = empty_result(filename, "pdf")
     result["line_items"] = deduped
-    result["report_title"] = "Stock Statement"
-    first = ""
-    for line in peek.splitlines():
-        if line.strip():
-            first = line.strip()
-            break
+    if re.search(r"stock\s+category\s+summary", peek, re.I):
+        result["report_title"] = "Stock Category Summary"
+    else:
+        result["report_title"] = "Stock Statement"
+    lines = [ln.strip() for ln in peek.splitlines() if ln.strip()]
+    first = lines[0] if lines else ""
     if first and re.search(r"[A-Za-z]", first) and not re.search(
-        r"stock\s+statement", first, re.I
+        r"stock\s+(?:statement|category)", first, re.I
     ):
         result["stockist_name"] = first
+    # Address block: lines after stockist name until company / report title.
+    addr_parts: List[str] = []
+    for ln in lines[1:8]:
+        if re.search(
+            r"(?i)stock\s+(?:statement|category)|^page\b|"
+            r"\d{1,2}[-/][A-Za-z]{3}[-/]\d{2,4}\s+to\s+",
+            ln,
+        ):
+            break
+        if re.search(r"(?i)^e-?mail\b|^phone\b|^tel\b|^gstin\b", ln):
+            continue
+        if re.fullmatch(r"[A-Z0-9][A-Z0-9 .&-]{0,12}", ln) and len(ln) <= 12:
+            # Short all-caps company / division code (e.g. HIM).
+            if not result.get("company_name"):
+                result["company_name"] = ln
+            break
+        if re.search(r"[A-Za-z]", ln):
+            addr_parts.append(ln)
+    if addr_parts and not result.get("stockist_address"):
+        result["stockist_address"] = ", ".join(addr_parts)
     company = re.search(
         r"((?:[A-Z][A-Z&. ]{2,})\s+COMPANY(?:\s+[A-Z][A-Z]+)?)",
         peek,
     )
-    if company:
+    if company and not result.get("company_name"):
         result["company_name"] = re.sub(r"\s+", " ", company.group(1)).strip()
     period = re.search(
         r"(?:From|Duration)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
@@ -2587,15 +2715,70 @@ def parse_grouped_qty_value_pdf(
 
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
-    extra = result.setdefault("totals", {}).setdefault("extra", {})
+    else:
+        # Tally: 1-Sep-26 to 30-Sep-26
+        mon_period = re.search(
+            r"(\d{1,2})[- ]([A-Za-z]{3})[- ](\d{2,4})\s+to\s+"
+            r"(\d{1,2})[- ]([A-Za-z]{3})[- ](\d{2,4})",
+            peek,
+            re.I,
+        )
+        if mon_period:
+            months = {
+                "jan": 1,
+                "feb": 2,
+                "mar": 3,
+                "apr": 4,
+                "may": 5,
+                "jun": 6,
+                "jul": 7,
+                "aug": 8,
+                "sep": 9,
+                "oct": 10,
+                "nov": 11,
+                "dec": 12,
+            }
+
+            def _iso_mon(day: str, mon: str, year: str) -> Optional[str]:
+                mi = months.get(mon[:3].lower())
+                if not mi:
+                    return None
+                yr = year if len(year) == 4 else ("20" + year)
+                return f"{yr}-{mi:02d}-{int(day):02d}"
+
+            pf = _iso_mon(
+                mon_period.group(1), mon_period.group(2), mon_period.group(3)
+            )
+            pt = _iso_mon(
+                mon_period.group(4), mon_period.group(5), mon_period.group(6)
+            )
+            if pf and pt:
+                result["period_from"] = pf
+                result["period_to"] = pt
+    footer = _footer_totals_from_page_results(pages)
+    totals = result.setdefault("totals", {})
+    if footer:
+        for key, val in footer.items():
+            if val is not None:
+                totals[key] = val
+        totals.setdefault("extra", {})["total_row_source"] = "printed_footer"
+        logger.info(
+            "STOCK_PDF_GROUP_QTY_VALUE footer_totals keys=%s",
+            sorted(footer.keys()),
+        )
+    extra = totals.setdefault("extra", {})
     extra["extraction_method"] = "pdf_group_qty_value"
     extra["statement_count"] = 1
+    if is_opening_inwards_outwards_closing_layout(peek):
+        extra["layout_family"] = _OPENING_INWARDS_OUTWARDS_CLOSING_FAMILY
+        extra["layout"] = _OPENING_INWARDS_OUTWARDS_CLOSING_FAMILY
     logger.info(
-        "STOCK_PDF_GROUP_QTY_VALUE file=%s items=%s period=%s..%s",
+        "STOCK_PDF_GROUP_QTY_VALUE file=%s items=%s period=%s..%s layout=%s",
         filename,
         len(deduped),
         result.get("period_from"),
         result.get("period_to"),
+        extra.get("layout_family") or "-",
     )
     return result
 
@@ -2622,8 +2805,124 @@ def _count_moved_items(items: Optional[List[Dict[str, Any]]]) -> int:
 
 _TRAILING_PACK_RE = re.compile(
     r"(?i)^(?P<name>.+?)\s+(?P<pack>\d+(?:\.\d+)?\s*(?:['’`]\s*)?S"
-    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G))$"
+    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|M))$"
 )
+# "LIV.52 SYP,100ML" / "… GHEE 200ML" / "… TAB 30S" when Packing already holds
+# the same size (often truncated: 100M / 30'S).
+_DUP_PACK_IN_NAME_RE = re.compile(
+    r"(?i)^(?P<head>.+?)(?:[,\s]+)(?P<num>\d+(?:\.\d+)?)\s*"
+    r"(?P<unit>['’`]?S|ML|MG|GM|GRM|KG|G|M)$"
+)
+# "BONNISAN LIQ(200ML)" when Packing already holds 200M.
+_PAREN_PACK_IN_NAME_RE = re.compile(
+    r"(?i)^(?P<head>.+?)\(\s*(?P<num>\d+(?:\.\d+)?)\s*"
+    r"(?P<unit>['’`]?S|ML|MG|GM|GRM|KG|G|M)\s*\)$"
+)
+# "GEL60ML" / "SYP-100ML" / "PASTE-50G" glued onto the last word.
+_GLUED_PACK_SUFFIX_RE = re.compile(
+    r"(?i)^(?P<head>.*?)(?P<num>\d+(?:\.\d+)?)(?P<unit>['’`]?S|ML|MG|GM|GRM|KG|G|M)$"
+)
+
+
+def _normalize_pack_unit(unit: Any) -> str:
+    return re.sub(r"['’`´]", "", str(unit or "").strip()).upper()
+
+
+def _pack_num_unit(pack: Any) -> Optional[Tuple[str, str]]:
+    raw = re.sub(r"\s+", "", str(pack or "").strip())
+    raw = re.sub(r"['’`´]", "", raw)
+    match = re.fullmatch(
+        r"(?i)(\d+(?:\.\d+)?)(ML|MG|GM|GRM|KG|G|M|S)", raw
+    )
+    if not match:
+        return None
+    return match.group(1), match.group(2).upper()
+
+
+def _pack_units_equivalent(a: str, b: str) -> bool:
+    ua, ub = _normalize_pack_unit(a), _normalize_pack_unit(b)
+    if not ua or not ub:
+        return False
+    if ua == ub:
+        return True
+    # Truncated Pack column: 100M for 100ML / 100GM, 200M for 200ML.
+    return {ua, ub} in (
+        {"M", "ML"},
+        {"M", "GM"},
+        {"M", "G"},
+        {"G", "GM"},
+        {"G", "GRM"},
+        {"GM", "GRM"},
+    )
+
+
+def _finish_peeled_product_name(name: str) -> str:
+    """Collapse spaces and drop a dangling hyphen left by SYP-100ML peels."""
+    cleaned = re.sub(r"\s+", " ", str(name or "").strip())
+    cleaned = re.sub(r"[-–—]+\s*$", "", cleaned).strip()
+    return cleaned
+
+
+def _peel_duplicate_pack_from_name(item: Dict[str, Any]) -> bool:
+    """Drop a volume already present in packing from the trailing product_name."""
+    pack = str(item.get("packing") or "").strip()
+    parsed_pack = _pack_num_unit(pack)
+    if not parsed_pack:
+        return False
+    pack_num, pack_unit = parsed_pack
+    name = str(item.get("product_name") or "").replace("`", "'").replace("´", "'")
+    name = name.strip()
+    if not name:
+        return False
+
+    def _apply_head(head: str, reason: str) -> bool:
+        peeled = _finish_peeled_product_name(head)
+        if peeled and re.search(r"[A-Za-z]", peeled):
+            item["product_name"] = peeled
+            logger.info(
+                "STOCK_PDF_RIGHT_ALIGN_QTY %s name=%s pack=%s",
+                reason,
+                item["product_name"],
+                pack,
+            )
+            return True
+        return False
+
+    # Parenthetical volume: "BONNISAN LIQ(200ML)".
+    match = _PAREN_PACK_IN_NAME_RE.match(name)
+    if match and match.group("num") == pack_num and _pack_units_equivalent(
+        match.group("unit"), pack_unit
+    ):
+        if _apply_head(match.group("head"), "peel_paren_pack"):
+            return True
+
+    # Spaced / comma volume: "LIV.52 SYP,100ML" or "… TAB 30S".
+    match = _DUP_PACK_IN_NAME_RE.match(name)
+    if match and match.group("num") == pack_num and _pack_units_equivalent(
+        match.group("unit"), pack_unit
+    ):
+        if _apply_head(match.group("head"), "peel_dup_pack"):
+            return True
+
+    # Glued suffix on last token: "… GEL60ML" / "SYP-100ML" / "PASTE-50G".
+    parts = name.split()
+    if not parts:
+        return False
+    last = parts[-1]
+    glued = _GLUED_PACK_SUFFIX_RE.match(last)
+    if (
+        glued
+        and glued.group("num") == pack_num
+        and _pack_units_equivalent(glued.group("unit"), pack_unit)
+    ):
+        stem = str(glued.group("head") or "").strip()
+        if stem and re.search(r"[A-Za-z]", stem):
+            parts[-1] = stem
+        else:
+            parts = parts[:-1]
+        if _apply_head(" ".join(parts), "peel_glued_pack"):
+            return True
+    return False
 
 
 def _peel_trailing_pack_into_packing(
@@ -2637,6 +2936,7 @@ def _peel_trailing_pack_into_packing(
     if not any(str(c.get("canonical") or "") == "pack" for c in columns or []):
         return
     if item.get("packing"):
+        _peel_duplicate_pack_from_name(item)
         return
     name = str(item.get("product_name") or "").replace("`", "'").replace("´", "'")
     match = _TRAILING_PACK_RE.match(name.strip())
@@ -2649,6 +2949,7 @@ def _peel_trailing_pack_into_packing(
         item["product_name"],
         item["packing"],
     )
+    _peel_duplicate_pack_from_name(item)
 
 
 _LABELED_VALUE_FOOTERS = (
@@ -2980,7 +3281,8 @@ def _items_from_resolved_word_columns(
             r"prepared\s+by|computer\s+generated|does\s+not\s+require\s+stamp|"
             r"\bDSTK\b|days\s+stock\s+on|\bCIN\s*No\b|\bPAN\s*No\b|\bGSTIN\b|"
             r"UAM/UDYAM|UDYAM-|\bARKAY\s+MEDICOS\b|"
-            r"^manufacturer\s*(?:name\s*)?:",
+            r"^manufacturer\s*(?:name\s*)?:|"
+            r"^report\s*date\b|^page\s+\d+\s+of\s+\d+\b",
             name,
             re.I,
         ):
@@ -3096,6 +3398,33 @@ def _op_qty_pur_sale_bal_meta_enabled() -> bool:
     ).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _stockist_looks_like_qty_headers(name: Any) -> bool:
+    """True when Op/Pur/Sale/Bal column chrome was parked as stockist_name."""
+    s = re.sub(r"\s+", " ", str(name or "").strip())
+    if not s:
+        return False
+    hits = 0
+    for pat in (
+        r"\bItem\s+Name\b",
+        r"\bOp\.?\s*Qty\b",
+        r"\bPur\.?\s*Qty\b",
+        r"\bSale\.?\s*Qty\b",
+        r"\bBal\.?\s*Qty\b",
+        r"\bTotal\s+Qty\b",
+        r"\bPack(?:ing)?\b",
+    ):
+        if re.search(pat, s, re.I):
+            hits += 1
+    return hits >= 2
+
+
+def _letterhead_digits_are_fy_only(line: str) -> bool:
+    """True when the only multi-digit runs are a FY/year paren like (2024-2025)."""
+    s = str(line or "")
+    without_fy = _LETTERHEAD_FY_RE.sub("", s)
+    return not bool(re.search(r"\d{2,}", without_fy))
+
+
 def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
     """Fingerprint Op.Qty|Pur.Qty|Sale.Qty|Bal and fill title/company/stockist."""
     if not _op_qty_pur_sale_bal_meta_enabled() or not isinstance(result, dict):
@@ -3122,12 +3451,19 @@ def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
     extra["schema"] = "op_qty_pur_sale_bal"
     extra["qty_only"] = True
 
-    if re.search(r"Mfac\s+SAS\s+Summary", blob, re.I) or not result.get(
-        "report_title"
-    ):
-        if re.search(r"Mfac\s+SAS\s+Summary", blob, re.I):
-            result["report_title"] = "Mfac SAS Summary Report"
-            changed = True
+    if re.search(r"Mfac\s+SAS\s+Summary", blob, re.I):
+        result["report_title"] = "Mfac SAS Summary Report"
+        changed = True
+    elif re.search(r"Stock\s+and\s+Sale\s+Report", blob, re.I) and not str(
+        result.get("report_title") or ""
+    ).strip():
+        result["report_title"] = "Stock and Sale Report"
+        changed = True
+
+    # Drop column-header chrome parked as stockist_name.
+    if _stockist_looks_like_qty_headers(result.get("stockist_name")):
+        result["stockist_name"] = None
+        changed = True
 
     seller = re.search(
         r"Seller\s*:\s*([A-Za-z][A-Za-z0-9 .&'/-]*?)"
@@ -3145,6 +3481,31 @@ def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
     ):
         result["stockist_name"] = None
         changed = True
+    elif not str(result.get("stockist_name") or "").strip():
+        # Letterhead above Stock and Sale Report (address may sit between).
+        for line in blob.splitlines():
+            stripped = re.sub(r"\s+", " ", line.strip())
+            if not stripped or _LETTERHEAD_TABLE_RE.match(stripped):
+                continue
+            if _LETTERHEAD_TITLE_RE.search(stripped):
+                continue
+            if _LETTERHEAD_ADDRESS_RE.search(stripped):
+                continue
+            if re.search(r"\d{2,}", stripped) and not _letterhead_digits_are_fy_only(
+                stripped
+            ):
+                continue
+            if not re.search(
+                r"(?i)\b(?:distribut|agenc(?:y|ies)|medico|stores|pharma)\b",
+                stripped,
+            ):
+                continue
+            stockist = _LETTERHEAD_FY_RE.sub("", stripped).strip(" -")
+            stockist = re.sub(r"\s+", " ", stockist).strip()
+            if stockist and not _stockist_looks_like_qty_headers(stockist):
+                result["stockist_name"] = stockist
+                changed = True
+                break
 
     mfr = re.search(
         r"Manufacturer\s*(?:Name\s*)?:\s*"
@@ -3166,6 +3527,56 @@ def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
     ):
         result["company_name"] = None
         changed = True
+    elif not str(result.get("company_name") or "").strip():
+        m_zeal = re.search(
+            r"\b(HIMALAYA\s*\([^)]{2,40}\))(?:\s*\[[^\]]+\])?",
+            blob,
+            re.I,
+        )
+        if m_zeal:
+            company = re.sub(r"\s+", " ", m_zeal.group(1)).strip()
+            stockist_now = str(result.get("stockist_name") or "").strip()
+            if company and (
+                not stockist_now or company.upper() != stockist_now.upper()
+            ):
+                result["company_name"] = company
+                changed = True
+
+    # From Date 01-10-26 to 31-10-26 (qty-grid letterhead).
+    if not str(result.get("period_from") or "").strip():
+        from_date = re.search(
+            r"From\s+Date\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+            r"to\s+(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
+            blob,
+            re.I,
+        )
+        if from_date:
+            def _iso_from_date(day: str, month: str, year: str) -> str:
+                yr = year if len(year) == 4 else ("20" + year)
+                return f"{yr}-{int(month):02d}-{int(day):02d}"
+
+            result["period_from"] = _iso_from_date(
+                from_date.group(1), from_date.group(2), from_date.group(3)
+            )
+            result["period_to"] = _iso_from_date(
+                from_date.group(4), from_date.group(5), from_date.group(6)
+            )
+            changed = True
+
+    # Printed "Report Date :02-11-26 17:14:12" — metadata only, never a line item.
+    if not str(extra.get("report_date") or "").strip():
+        report_date = re.search(
+            r"Report\s*Date\s*:?\s*"
+            r"(\d{1,2}[-./]\d{1,2}[-./]\d{2,4}"
+            r"(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)",
+            blob,
+            re.I,
+        )
+        if report_date:
+            extra["report_date"] = re.sub(
+                r"\s+", " ", report_date.group(1)
+            ).strip()
+            changed = True
 
     # Manufacturer totals band under headers: Op / Pur / Sale / Bal money.
     # e.g. "Manufacturer : HIMALAYA - ZANDRA 3,89,850.04 2,46,223.81 …"
@@ -3237,12 +3648,16 @@ def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
 
 
 _LETTERHEAD_TITLE_RE = re.compile(
-    r"(?i)stock\s+and\s+sales|stock\s*&\s*sales|sale\s+and\s+stock|"
-    r"stock\s+statement|page\s*no\b|for\s+the\s+period"
+    r"(?i)stock\s+and\s+sales|stock\s+and\s+sale\s+report|stock\s*&\s*sales|"
+    r"sale\s+and\s+stock|stock\s+statement|page\s*no\b|for\s+the\s+period|"
+    r"report\s*date\b"
 )
 _LETTERHEAD_TABLE_RE = re.compile(
     r"(?i)^(?:sl\.?\s*no|sno|product(?:\s+name)?|item(?:\s+name)?|"
-    r"particulars|opening|op\.?\s*stock|pack(?:ing)?)\b"
+    r"particulars|opening|op\.?\s*stock|op\.?\s*qty|pack(?:ing)?)\b"
+)
+_LETTERHEAD_FY_RE = re.compile(
+    r"\(\s*\d{4}\s*[-–/]\s*\d{2,4}\s*\)"
 )
 _LETTERHEAD_ADDRESS_RE = re.compile(
     r"(?i)\bgstin\b|\bgst\s*:|\bpin(?:code)?\b|\bdist(?:rict)?\b|"
@@ -3522,6 +3937,8 @@ def parse_pdf_free_column_statement(
         result["report_title"] = "STOCK & SALES"
     elif re.search(r"Stock\s+And\s+Sales\s+Statement", peek, re.I):
         result["report_title"] = "Stock And Sales Statement"
+    elif re.search(r"Stock\s+and\s+Sale\s+Report", peek, re.I):
+        result["report_title"] = "Stock and Sale Report"
     elif re.search(r"Stock\s+Statement", peek, re.I):
         result["report_title"] = "Stock Statement Report"
     elif re.search(r"Statements\s+of", peek, re.I):
@@ -3545,17 +3962,25 @@ def parse_pdf_free_column_statement(
     elif (
         first
         and re.search(r"[A-Za-z]", first)
-        and not re.search(r"\d{2,}", first)
+        and (
+            not re.search(r"\d{2,}", first)
+            or _letterhead_digits_are_fy_only(first)
+        )
         and not re.search(r"^page\s*\d+\s*of\s*\d+", first, re.I)
+        and not _stockist_looks_like_qty_headers(first)
         and not re.search(
             r"PRODUCT\s+DESCRIPTION|ITEM\s+DESCRIPTION|^ITEM$|^PRODUCT$",
             first,
             re.I,
         )
     ):
-        result["stockist_name"] = first
+        stockist_first = _LETTERHEAD_FY_RE.sub("", first).strip(" -")
+        stockist_first = re.sub(r"\s+", " ", stockist_first).strip() or first
+        result["stockist_name"] = stockist_first
         if not parsed.get("letterhead_is_stockist_only"):
-            result["company_name"] = first
+            # FY letterhead is the stockist, not the manufacturer/company.
+            if not _letterhead_digits_are_fy_only(first):
+                result["company_name"] = first
     if company:
         result["company_name"] = company.group(1).strip()
     title_co = re.search(
@@ -3578,22 +4003,36 @@ def parse_pdf_free_column_statement(
     if parsed.get("prefer_letterhead_stockist") and not result.get("stockist_name"):
         for line in peek.splitlines():
             stripped = line.strip()
-            if not stripped or re.search(r"\d{2,}", stripped):
+            if not stripped:
+                continue
+            if re.search(r"\d{2,}", stripped) and not _letterhead_digits_are_fy_only(
+                stripped
+            ):
                 continue
             if re.search(r"^page\s*\d+\s*of\s*\d+", stripped, re.I):
                 continue
+            if _stockist_looks_like_qty_headers(stripped):
+                continue
+            if _LETTERHEAD_TABLE_RE.match(stripped):
+                continue
             if re.search(
-                r"stock\s+statement|company\s*:|item type|product name|page\s*:|"
-                r"product\s+description|item\s+description",
+                r"stock\s+statement|stock\s+and\s+sale|company\s*:|item type|"
+                r"product name|page\s*:|product\s+description|item\s+description|"
+                r"report\s*date",
                 stripped,
                 re.I,
             ):
                 continue
             if re.search(r"[A-Za-z]{3,}", stripped):
-                result["stockist_name"] = stripped
+                stockist_line = _LETTERHEAD_FY_RE.sub("", stripped).strip(" -")
+                result["stockist_name"] = (
+                    re.sub(r"\s+", " ", stockist_line).strip() or stripped
+                )
                 break
+    if _stockist_looks_like_qty_headers(result.get("stockist_name")):
+        result["stockist_name"] = None
     period = re.search(
-        r"(?:From|Duration)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
+        r"(?:From|Duration)(?:\s+Date)?\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\s+"
         r"(?:To|to)\s*:?\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})",
         peek,
         re.I,

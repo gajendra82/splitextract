@@ -4693,6 +4693,17 @@ def _finalize_detail_op_qty_val_result(
         _clear_detail_closing_qty_copied_from_sales(result)
     except Exception:
         pass
+    # CONSOLIDATED Total Op.Val|P.Val|S.Val|Cls.Val before line-sum sanitize.
+    try:
+        from services.sales_statement_extractor import (
+            _apply_consolidated_op_qty_val_printed_total,
+        )
+
+        result = _apply_consolidated_op_qty_val_printed_total(
+            result, file_bytes=file_bytes or b"", ocr_hint=""
+        )
+    except Exception:
+        pass
     # Prefer printed Total-row money; else line sums so multipage totals are not null.
     try:
         from services.sales_statement_extractor import _sanitize_compute_totals
@@ -5821,6 +5832,7 @@ def extract_opening_receive_issue_closing_scanned_pdf(
     seen_names: set = set()
     last_upright_for_footer: Optional[bytes] = None
     first_page_upright: Optional[bytes] = None
+    last_page_totals_blob: Optional[Dict[str, Any]] = None
     for page_index, image in enumerate(images[:2]):
         upright = _upright_oric_scanned_page_png(image)
         upright = _crop_oric_ink_content_png(upright)
@@ -5919,6 +5931,52 @@ def extract_opening_receive_issue_closing_scanned_pdf(
             if name_key:
                 seen_names.add(name_key)
             merged_items.append(item)
+
+        # Continuation page owns the printed TOTAL footer — keep Vision peel.
+        try:
+            page_tot = (
+                page.get("totals") if isinstance(page.get("totals"), dict) else {}
+            )
+            page_ex = (
+                page_tot.get("extra") if isinstance(page_tot.get("extra"), dict) else {}
+            )
+            src = str(page_ex.get("total_row_source") or "")
+            blob = {
+                "opening_qty": page_tot.get("opening_qty", page_ex.get("opening_qty")),
+                "opening_value": page_ex.get("opening_value"),
+                "receipts_qty": page_tot.get(
+                    "receipts_qty", page_ex.get("receipts_qty")
+                ),
+                "receipts_value": page_ex.get("receipts_value"),
+                "sales_qty": page_tot.get("sales_qty", page_ex.get("sales_qty")),
+                "sales_value": page_tot.get("sales_value"),
+                "closing_qty": page_tot.get("closing_qty", page_ex.get("closing_qty")),
+                "closing_value": page_tot.get("closing_value"),
+                "last_month_sale": page_ex.get("last_month_sale", page_ex.get("lms")),
+            }
+            need = (
+                "opening_qty",
+                "opening_value",
+                "receipts_qty",
+                "receipts_value",
+                "sales_qty",
+                "sales_value",
+                "closing_qty",
+                "closing_value",
+            )
+            if all(blob.get(k) not in (None, "") for k in need):
+                try:
+                    cq = float(blob.get("closing_qty") or 0)
+                    cv = float(blob.get("closing_value") or 0)
+                except (TypeError, ValueError):
+                    cq, cv = 0.0, 0.0
+                if cq >= 10 and cv >= 1000 and (
+                    src.startswith("main_stock") or page_index > 0 or cq >= 100
+                ):
+                    last_page_totals_blob = dict(blob)
+        except Exception:
+            pass
+
         logger.info(
             "STOCK_ORIC_SCANNED_PDF file=%s page=%s rows=%s nonzero=%s",
             filename,
@@ -6022,6 +6080,31 @@ def extract_opening_receive_issue_closing_scanned_pdf(
             )
     except Exception:
         pass
+    # Prefer last-page Vision TOTAL blob (continuation owns the footer row).
+    if last_page_totals_blob:
+        try:
+            from services.sales_statement_extractor import (
+                _main_stock_apply_vision_totals_blob,
+            )
+
+            if _main_stock_apply_vision_totals_blob(
+                seed,
+                last_page_totals_blob,
+                source="main_stock_vision_totals",
+            ):
+                logger.info(
+                    "STOCK_ORIC_SCANNED_PDF file=%s status=applied_last_page_vision_totals "
+                    "closing_value=%s sales_value=%s",
+                    filename,
+                    last_page_totals_blob.get("closing_value"),
+                    last_page_totals_blob.get("sales_value"),
+                )
+        except Exception as exc:
+            logger.info(
+                "STOCK_ORIC_SCANNED_PDF file=%s vision_totals_apply_skip=%s",
+                filename,
+                type(exc).__name__,
+            )
     # Footer TOTAL lives on the last page — upright + ink-crop for peel.
     try:
         footer_img = last_upright_for_footer or _crop_oric_ink_content_png(

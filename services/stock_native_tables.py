@@ -969,6 +969,9 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
     numeric = sum(1 for t in texts if parse_number(t) is not None)
     if numeric < 3:
         return None
+    if re.search(r"(?i)\bgrand\s+total\b", joined):
+        # Qty+Value under Opening/Inwards/Outwards/Closing (Tally category).
+        return "quantity"
     if re.search(
         r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
         r"total\s+(?:quantity|qty|qnt)\b",
@@ -993,6 +996,9 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
             return "quantity"
         if re.match(r"(?i)^value$", second):
             return "value"
+    # Nameless .xx strip under Op/Pur/Sale/Bal qty headers is printed money.
+    if _is_nameless_money_footer_tokens(tokens):
+        return "value"
     return None
 
 
@@ -1728,7 +1734,18 @@ def _merge_split_stock_header_cells(
     def _is_name_frag(norm: str) -> bool:
         return norm == "name"
 
+    def _is_opening_balance_pair(n0: str, n1: str) -> bool:
+        return n0 in {"opening", "open", "opn"} and n1 in {"balance", "bal"}
+
+    def _is_closing_balance_pair(n0: str, n1: str) -> bool:
+        return n0 in {"closing", "close", "clos", "cls"} and n1 in {
+            "balance",
+            "bal",
+        }
+
+    # Opening/Balance can sit farther apart than Op.+Stock; still one label.
     max_gap = 8.0
+    balance_gap = 48.0
     merged: List[Dict[str, Any]] = []
     i = 0
     while i < len(header):
@@ -1749,6 +1766,15 @@ def _merge_split_stock_header_cells(
             elif gap <= max_gap and _is_product_frag(n0) and _is_name_frag(n1):
                 join = True
                 label = "product_name"
+            # Tally Stock Category Summary: "Opening" + "Balance" / "Closing" +
+            # "Balance" print as two words. Bare "Balance" aliases to closing and
+            # steals Opening's Value column.
+            elif gap <= balance_gap and _is_opening_balance_pair(n0, n1):
+                join = True
+                label = "opening_balance"
+            elif gap <= balance_gap and _is_closing_balance_pair(n0, n1):
+                join = True
+                label = "closing_balance"
             if join:
                 cur["text"] = (
                     str(cur.get("text") or "").strip()
@@ -1863,7 +1889,8 @@ def _looks_like_legend_or_footer_header(cells: List[Dict[str, Any]]) -> bool:
     blob = " ".join(texts)
     if re.search(
         r"Prepared\s+by|Computer\s+Generated|Does\s+Not\s+Require\s+Stamp|"
-        r"Days\s+Stock\s+on|No\s+Sale\s+No\s+Stock|\bDSTK\b",
+        r"Days\s+Stock\s+on|No\s+Sale\s+No\s+Stock|\bDSTK\b|"
+        r"Report\s*Date\b|Page\s+\d+\s+of\s+\d+",
         blob,
         re.I,
     ):
@@ -1872,6 +1899,37 @@ def _looks_like_legend_or_footer_header(cells: List[Dict[str, Any]]) -> bool:
     if len(re.findall(r"[A-Za-z]{2,}\s*:\s*-?\d", blob)) >= 2:
         return True
     return False
+
+
+def _is_nameless_money_footer_tokens(tokens: List[Dict[str, Any]]) -> bool:
+    """All-numeric strip with several .xx amounts — sheet money totals, not a lot.
+
+    Op Qty|Pur Qty|Sale Qty|Bal Qty grids print a nameless value band under the
+    last SKU (e.g. ``0 57166.34 19995.03 …``). That must never LOT_CONTINUATION
+    into the prior product.
+    """
+    texts = [
+        str(t.get("text") or "").strip()
+        for t in (tokens or [])
+        if isinstance(t, dict)
+    ]
+    texts = [t for t in texts if t]
+    if len(texts) < 4:
+        return False
+    if any(re.search(r"[A-Za-z]", t) for t in texts):
+        return False
+    from services.stock_header_resolver import parse_number
+
+    numeric = 0
+    moneyish = 0
+    for text in texts:
+        raw = text.replace(",", "")
+        if parse_number(text) is None:
+            return False
+        numeric += 1
+        if re.search(r"\.\d{2}$", raw):
+            moneyish += 1
+    return numeric >= 4 and moneyish >= 2
 
 
 def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
@@ -1886,10 +1944,17 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
         [{"text": t} for t in texts]
     ):
         return True
+    if _is_nameless_money_footer_tokens(tokens):
+        logger.info(
+            "STOCK_PDF_WORDS_MONEY_FOOTER_SKIP blob=%s", joined[:60]
+        )
+        return True
     # Company / page / grand footers only. Product "Total :" rows with movement
     # numbers must stay so multi-lot sheets can fold printed totals.
     if re.search(
-        r"GRAND\s+TOTAL|PAGE\s*TOTAL|COMPANY\s*Total|Firm\s*Total|CONTINUED|Page\s*No",
+        r"GRAND\s+TOTAL|PAGE\s*TOTAL|COMPANY\s*Total|Firm\s*Total|CONTINUED|Page\s*No|"
+        r"Carried\s+Over|Brought\s+Forward|"
+        r"Report\s*Date\b|Page\s+\d+\s+of\s+\d+",
         joined,
         re.I,
     ):
@@ -2139,10 +2204,71 @@ def _left_align_text_column_centers(cells: List[Dict[str, Any]]) -> None:
         cell["x_center"] = old * (gap_mid / word_mid)
 
 
+def _merge_balance_group_parents(
+    parents: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Glue Opening+Balance / Closing+Balance before Qty/Rate/Value fan-out.
+
+    Tally prints those as two words; bare Balance aliases to closing and the
+    Opening Value child binds to the wrong parent.
+    """
+    if len(parents) < 2:
+        return parents
+    out: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(parents):
+        cur = dict(parents[i])
+        if i + 1 < len(parents):
+            nxt = parents[i + 1]
+            n0 = normalize_header(cur.get("text"))
+            n1 = normalize_header(nxt.get("text"))
+            gap = float(nxt.get("x0") or 0) - float(cur.get("x1") or 0)
+            join = False
+            if gap <= 48.0 and n0 in {"opening", "open", "opn"} and n1 in {
+                "balance",
+                "bal",
+            }:
+                join = True
+            elif gap <= 48.0 and n0 in {
+                "closing",
+                "close",
+                "clos",
+                "cls",
+            } and n1 in {"balance", "bal"}:
+                join = True
+            if join:
+                cur["text"] = (
+                    str(cur.get("text") or "").strip()
+                    + " "
+                    + str(nxt.get("text") or "").strip()
+                ).strip()
+                cur["x0"] = min(
+                    float(cur.get("x0") or 0), float(nxt.get("x0") or 0)
+                )
+                cur["x1"] = max(
+                    float(cur.get("x1") or 0), float(nxt.get("x1") or 0)
+                )
+                xc0 = float(cur.get("x_center") or 0)
+                xc1 = float(nxt.get("x_center") or 0)
+                if xc0 or xc1:
+                    cur["x_center"] = (xc0 + xc1) / 2.0
+                logger.info(
+                    "STOCK_PDF_GROUP_QTY_VALUE merge_balance text=%r",
+                    cur["text"],
+                )
+                out.append(cur)
+                i += 2
+                continue
+        out.append(cur)
+        i += 1
+    return out
+
+
 def _pair_group_labels_with_children(
     parents: List[Dict[str, Any]], children: List[Dict[str, Any]]
 ) -> Optional[List[Dict[str, Any]]]:
     """One header cell per child column, labelled by the group above it."""
+    parents = _merge_balance_group_parents(parents)
     group_parents = [
         p for p in parents if _header_group_name(p.get("text"))
     ]

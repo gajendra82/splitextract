@@ -6581,6 +6581,9 @@ def _allow_negative_stock_money(extraction_method: Any) -> bool:
         "rate_qty_value_vision",
         # Word-read statements can print a negative closing amount.
         "pdf_words_free_columns",
+        # Tally Stock Category Summary: Opening/Inwards/Outwards/Closing with
+        # printed (-) qty and (-) value under Closing Balance.
+        "pdf_group_qty_value",
     }
 
 
@@ -6814,6 +6817,8 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         or str(totals.get("extra", {}).get("sales_qty_source") or "")
         == "printed_total"
     )
+    # ORIC printed/Vision TOTAL: keep statement-level qty (do not replace with line sums).
+    preserve_main_stock_printed_qty = _total_row_src.startswith("main_stock")
     if has_footer_qty:
         if totals.get("sales_qty") is not None:
             totals["extra"]["sales_qty"] = totals.get("sales_qty")
@@ -6823,7 +6828,11 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             totals["extra"]["closing_qty"] = totals.get("closing_qty")
         else:
             totals["extra"]["closing_qty"] = sum_closing_qty
-    elif preserve_prompt_datewise_footer_qty or preserve_pack_rate_printed_qty:
+    elif (
+        preserve_prompt_datewise_footer_qty
+        or preserve_pack_rate_printed_qty
+        or preserve_main_stock_printed_qty
+    ):
         if totals["extra"].get("sales_qty") is None:
             totals["extra"]["sales_qty"] = sum_sales_qty
         if totals["extra"].get("closing_qty") is None:
@@ -6866,6 +6875,13 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "op_qty_pur_sale_bal_manufacturer_band",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
+        # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
+        "main_stock_printed_totals",
+        "main_stock_vision_totals",
+        "main_stock_total_row_item",
+        "main_stock_total_contamination_peel",
+        # STOCK AND SALES (CONSOLIDATED) Total Op.Val|P.Val|S.Val|Cls.Val OCR.
+        "consolidated_op_qty_val_total_ocr",
     }
     _total_row_trusted = str(totals.get("extra", {}).get("total_row_source") or "") in (
         _trusted_footer_sources
@@ -6962,6 +6978,10 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             "printed_total",
             "op_qty_pur_sale_bal_manufacturer_band",
             "pharmassist_footer_ocr",
+            "main_stock_printed_totals",
+            "main_stock_vision_totals",
+            "main_stock_total_row_item",
+            "main_stock_total_contamination_peel",
         }
     ):
         # Closing "value" is likely a qty total mislabeled from OCR TOTAL
@@ -23632,6 +23652,223 @@ def _op_stk_recover_lead_from_vision_table_hint(
     return _op_stk_prepend_name_list(result, leads, source="vision_table_fallback")
 
 
+def _consolidated_op_qty_val_total_peel_enabled() -> bool:
+    """Peel printed Total Op.Val|P.Val|S.Val|Cls.Val on CONSOLIDATED Op.Qty pages.
+
+    Default ON. Kill switch: STOCK_CONSOLIDATED_OPVAL_TOTAL_PEEL=false.
+    """
+    return os.getenv("STOCK_CONSOLIDATED_OPVAL_TOTAL_PEEL", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _looks_like_consolidated_op_qty_val_chrome(text: str) -> bool:
+    """STOCK AND SALES (CONSOLIDATED) Op.Qty/Op.Val/Cls.Val family chrome.
+
+    Layout fingerprint (Sale Report Updated Till / CONSOLIDATED + Op.Qty), not
+    a stockist name branch.
+    """
+    blob = text or ""
+    if not blob.strip():
+        return False
+    if re.search(r"Sale\s+Report\s+Updated\s+Till", blob, re.I):
+        return True
+    consolidated = bool(
+        re.search(r"STOCK\s+AND\s+SALES\s*\(\s*CONSOLIDATED\s*\)", blob, re.I)
+    )
+    if not consolidated:
+        return False
+    has_op = bool(re.search(r"\bOp\.?\s*Qty\b|\bOpQty\b|\bOp\.?\s*Val\b|\bOpVal\b", blob, re.I))
+    has_cls = bool(
+        re.search(
+            r"\bCls?\.?\s*Qty\b|\bCls?\.?\s*Val\b|\bCl\.?\s*Qty\b|\bCl\.?\s*Val\b",
+            blob,
+            re.I,
+        )
+    )
+    return has_op and has_cls
+
+
+def _parse_consolidated_op_qty_val_total_line(text: str) -> Dict[str, float]:
+    """Parse 'Total 39,704.16 0.00 22,542.60 31,993.62' → Op/P/S/Cls values.
+
+    Never invents — only returns when four money tokens follow Total.
+    """
+    found: Dict[str, float] = {}
+    if not (text or "").strip():
+        return found
+    blob = str(text).replace("\r", "\n")
+    money_re = r"([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.\d+)?|[0-9]+\.\d{2})"
+    m = re.search(
+        rf"(?im)^\s*Total\s+{money_re}\s+{money_re}\s+{money_re}\s+{money_re}\b",
+        blob,
+    )
+    if not m:
+        # Same tokens glued on one line with noise between Total and money.
+        m = re.search(
+            rf"(?is)\bTotal\b[^\n]{{0,40}}?{money_re}\s+{money_re}\s+{money_re}\s+{money_re}\b",
+            blob,
+        )
+    if not m:
+        return found
+    vals: List[float] = []
+    for g in m.groups():
+        parsed = _to_float(g)
+        if parsed is None:
+            return {}
+        vals.append(float(parsed))
+    if len(vals) != 4:
+        return found
+    # Op.Val, P.Val, S.Val, Cls.Val — closing must be statement-scale.
+    if vals[3] < 100.0 and vals[0] < 100.0 and vals[2] < 100.0:
+        return found
+    found["opening_value"] = vals[0]
+    found["purchase_value"] = vals[1]
+    found["sales_value"] = vals[2]
+    found["closing_value"] = vals[3]
+    return found
+
+
+def _ocr_peel_consolidated_op_qty_val_total(
+    file_bytes: bytes,
+    *,
+    prefer_closing: Optional[float] = None,
+) -> Dict[str, float]:
+    """OCR mid/bottom bands for CONSOLIDATED Total Op.Val|P.Val|S.Val|Cls.Val."""
+    if not file_bytes or not _consolidated_op_qty_val_total_peel_enabled():
+        return {}
+    try:
+        from PIL import Image, ImageOps
+        from services.stock_ocr_policy import stock_ocr_context
+    except Exception:
+        return {}
+    candidates: List[Dict[str, float]] = []
+    try:
+        with Image.open(io.BytesIO(file_bytes)) as raw:
+            img = ImageOps.exif_transpose(raw).convert("RGB")
+            width, height = img.size
+            if width < 80 or height < 80:
+                return {}
+            bands = (
+                (0.55, 0.82),
+                (0.48, 0.78),
+                (0.40, 0.75),
+                (0.58, 0.88),
+            )
+            tess = _a2z_tesseract()
+            for y0, y1 in bands:
+                top = max(0, int(height * y0))
+                bot = min(height, int(height * y1))
+                if bot - top < 40:
+                    continue
+                crop = img.crop((0, top, width, bot))
+                probe = crop.copy()
+                probe.thumbnail((1800, 1200))
+                gray = probe.convert("L")
+                bw = gray.point(lambda x: 255 if x > 160 else 0)
+                # Colour first — BW sometimes flips a digit on the Total bar.
+                for idx, surface in enumerate((probe, bw)):
+                    region = f"consolidated_opval_total_{y0}_{y1}_{idx}"
+                    with stock_ocr_context(region=region, page="1"):
+                        text = tess.image_to_string(surface, config="--psm 6") or ""
+                    peeled = _parse_consolidated_op_qty_val_total_line(text)
+                    if peeled.get("closing_value") is None:
+                        continue
+                    candidates.append(peeled)
+                    if prefer_closing is not None:
+                        try:
+                            if abs(float(peeled["closing_value"]) - float(prefer_closing)) <= 0.51:
+                                return peeled
+                        except (TypeError, ValueError):
+                            pass
+    except Exception:
+        return candidates[0] if candidates else {}
+    if not candidates:
+        return {}
+    if prefer_closing is not None:
+        for cand in candidates:
+            try:
+                if abs(float(cand["closing_value"]) - float(prefer_closing)) <= 0.51:
+                    return cand
+            except (TypeError, ValueError):
+                continue
+    return candidates[0]
+
+
+def _apply_consolidated_op_qty_val_printed_total(
+    result: Dict[str, Any],
+    file_bytes: Optional[bytes] = None,
+    ocr_hint: str = "",
+) -> Dict[str, Any]:
+    """Fill statement totals from printed CONSOLIDATED Total-row money.
+
+    Used when Vision keeps only Cls.Val (or null sales) from the last-page Total
+    bar. Never invents — OCR must show four money tokens after Total.
+    """
+    if not isinstance(result, dict) or not _consolidated_op_qty_val_total_peel_enabled():
+        return result
+    peek = ocr_hint or ""
+    if not _looks_like_consolidated_op_qty_val_chrome(peek):
+        try:
+            from services.stock_direct_vision import _layout_header_text
+
+            if file_bytes:
+                peek = _layout_header_text(file_bytes) or peek
+        except Exception:
+            pass
+    if not _looks_like_consolidated_op_qty_val_chrome(peek):
+        return result
+
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        return result
+    prefer_closing = None
+    try:
+        if totals.get("closing_value") not in (None, ""):
+            prefer_closing = float(totals.get("closing_value"))
+    except (TypeError, ValueError):
+        prefer_closing = None
+
+    peeled = _parse_consolidated_op_qty_val_total_line(peek)
+    if not peeled and file_bytes:
+        peeled = _ocr_peel_consolidated_op_qty_val_total(
+            file_bytes, prefer_closing=prefer_closing
+        )
+    if not peeled:
+        return result
+
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+
+    # Prefer printed Total over incomplete page line sums / partial Vision peel.
+    if peeled.get("sales_value") is not None:
+        totals["sales_value"] = peeled["sales_value"]
+        extra["sales_value_source"] = "consolidated_op_qty_val_total_ocr"
+    if peeled.get("closing_value") is not None:
+        totals["closing_value"] = peeled["closing_value"]
+        extra["closing_value_source"] = "consolidated_op_qty_val_total_ocr"
+    if peeled.get("opening_value") is not None:
+        extra["opening_value"] = peeled["opening_value"]
+    if peeled.get("purchase_value") is not None:
+        extra["purchase_value"] = peeled["purchase_value"]
+        extra["receipts_value"] = peeled["purchase_value"]
+    extra["total_row_source"] = "consolidated_op_qty_val_total_ocr"
+    logger.info(
+        "STOCK_CONSOLIDATED_OPVAL_TOTAL peel sales=%s closing=%s "
+        "opening=%s purchase=%s",
+        totals.get("sales_value"),
+        totals.get("closing_value"),
+        extra.get("opening_value"),
+        extra.get("purchase_value"),
+    )
+    return result
+
+
 def _parse_labeled_stock_value_footer(text: str) -> Dict[str, float]:
     """Parse footer labels like 'Sales value: 10033.23' / 'Closing stock value'.
 
@@ -23820,6 +24057,14 @@ def _finalize_op_stk_rcpts_stock_sale(
                 tex.get("opening_value"),
                 tex.get("purchase_value"),
             )
+    # CONSOLIDATED Op.Qty|Op.Val Total bar: Vision often keeps only Cls.Val.
+    # OCR-peel Op.Val/P.Val/S.Val/Cls.Val so multipage last-page totals land.
+    try:
+        result = _apply_consolidated_op_qty_val_printed_total(
+            result, file_bytes=file_bytes, ocr_hint=ocr_text or ""
+        )
+    except Exception:
+        pass
     logger.info(
         "OP_STK_RCPTS_VISION rows=%s stockist=%s company=%s",
         len(result.get("line_items") or []),
@@ -43529,6 +43774,41 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             marg_analysis["totals"]["extra"]["statement_count"] = 1
             return marg_analysis
 
+        # Tally Stock Category Summary / Opening Balance|Inwards|Outwards|
+        # Closing Balance × Qty/Rate/Value — prefer native group_qty_value
+        # (layout family, not stockist). Kill switch: STOCK_PDF_GROUP_QTY_VALUE=false.
+        try:
+            from services.stock_native_resolver import (
+                is_opening_inwards_outwards_closing_layout,
+                parse_grouped_qty_value_pdf,
+                _grouped_qty_value_enabled,
+            )
+
+            if (
+                _grouped_qty_value_enabled()
+                and is_opening_inwards_outwards_closing_layout(marg_analysis_text)
+            ):
+                grouped_early = parse_grouped_qty_value_pdf(file_bytes, filename)
+                if grouped_early and grouped_early.get("line_items"):
+                    extra_g = grouped_early.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )
+                    extra_g["statement_count"] = 1
+                    extra_g["layout_family"] = "opening_inwards_outwards_closing"
+                    logger.info(
+                        "STOCK_PDF_GROUP_QTY_VALUE file=%s status=early_layout_hit "
+                        "layout=opening_inwards_outwards_closing items=%s",
+                        filename,
+                        len(grouped_early.get("line_items") or []),
+                    )
+                    return grouped_early
+        except Exception as exc:
+            logger.info(
+                "STOCK_PDF_GROUP_QTY_VALUE file=%s status=early_layout_skip error=%s",
+                filename,
+                type(exc).__name__,
+            )
+
         # Flag-gated: multi-division Group Wise / Sales & Stock image-only PDFs
         # need Swil Receipt/Pur page merge (division stamp + page completeness)
         # ahead of camera_multipage vision_table, which flattens divisions.
@@ -61627,12 +61907,40 @@ def _main_stock_printed_totals_enabled() -> bool:
     }
 
 
+
+def _main_stock_repair_ocr_digit_token(token: str) -> str:
+    """Map common OCR letter/digit confusions before TOTALS numeric parse."""
+    raw = str(token or "").strip()
+    if not raw:
+        return ""
+    out = []
+    for ch in raw:
+        if ch in "OoDdQq":
+            out.append("0")
+        elif ch in "Il|!":
+            out.append("1")
+        elif ch in "Zz":
+            out.append("2")
+        elif ch in "Aa":
+            out.append("4")
+        elif ch in "Ss":
+            out.append("5")
+        elif ch in "Bb":
+            out.append("8")
+        elif ch in "Gg":
+            out.append("9")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
 def _main_stock_fix_footer_money_token(token: str) -> Optional[float]:
     """Parse a TOTALS money/qty token; repair OCR that dropped the decimal point."""
     raw = str(token or "").strip()
     if not raw:
         return None
     raw = raw.replace(",", "").replace("|", " ").replace("]", " ").replace("[", " ")
+    raw = _main_stock_repair_ocr_digit_token(raw)
     raw = re.sub(r"[^0-9.\-]", "", raw)
     if not re.fullmatch(r"-?\d+(?:\.\d+)?", raw or ""):
         return None
@@ -61972,18 +62280,30 @@ def _main_stock_peel_oric_total_contamination(result: Dict[str, Any]) -> int:
     return fixed
 
 
-def _main_stock_apply_printed_totals_footer(
-    result: Dict[str, Any], file_bytes: bytes
-) -> None:
-    """Peel PRODUCT DESCRIPTION ORIC TOTALS row into totals (printed numbers only)."""
-    if not _main_stock_printed_totals_enabled() or not isinstance(result, dict):
-        return
-    if not file_bytes:
-        return
-    footer = _main_stock_footer_ocr_text(file_bytes)
-    if not footer.strip():
-        return
-    # TOTAL / TOTALS with OCR junk between cells (| __ ] etc.).
+
+def _main_stock_oric_totals_identity_ok(vals: Sequence[float]) -> bool:
+    """True when an 8-cell peel matches OPENING+RECEIVE-ISSUE≈CLOSING qty."""
+    if len(vals) < 8:
+        return False
+    try:
+        oq, ov, rq, rv, iq, iv, cq, cv = [float(v) for v in vals[:8]]
+    except (TypeError, ValueError):
+        return False
+    if cq < 10 or cv < 1000 or oq < 10 or ov < 1000:
+        return False
+    if abs((oq + rq - iq) - cq) > 2.05:
+        return False
+    moneyish = sum(
+        1 for v in (ov, rv, iv, cv) if abs(v - round(v)) > 0.001 or v >= 100
+    )
+    return moneyish >= 3
+
+
+def _main_stock_extract_oric_totals_vals(footer: str) -> Optional[List[float]]:
+    """Pull 8/9 ORIC TOTAL cells from footer OCR (TOTAL label or identity window)."""
+    text = str(footer or "")
+    if not text.strip():
+        return None
     match = re.search(
         r"(?is)\bTOTALS?\b\s*[|\-_=:]*\s*"
         r"(-?\d[\d,]*(?:\.\d+)?)\D+"
@@ -61995,22 +62315,73 @@ def _main_stock_apply_printed_totals_footer(
         r"(-?\d[\d,]*(?:\.\d+)?)\D+"
         r"(-?\d[\d,]*(?:\.\d+)?)"
         r"(?:\D+(-?\d[\d,]*(?:\.\d+)?))?",
-        footer,
+        text,
     )
-    if not match:
-        logger.info("MAIN_STOCK_PRINTED_TOTALS status=no_match footer_len=%s", len(footer))
-        return
-    vals: List[float] = []
-    for g in match.groups():
-        if g is None:
+    if match:
+        vals: List[float] = []
+        for g in match.groups():
+            if g is None:
+                continue
+            parsed = _main_stock_fix_footer_money_token(g)
+            if parsed is None:
+                vals = []
+                break
+            vals.append(parsed)
+        if len(vals) >= 8 and _main_stock_oric_totals_identity_ok(vals):
+            return vals
+    tokens = re.findall(
+        r"-?\d[\d,]*(?:\.\d+)?|[OoIlSsZzBbGgAa|]{2,}",
+        text,
+    )
+    parsed_tokens: List[float] = []
+    for tok in tokens:
+        parsed = _main_stock_fix_footer_money_token(tok)
+        if parsed is not None:
+            parsed_tokens.append(parsed)
+    best: Optional[List[float]] = None
+    for i in range(0, max(0, len(parsed_tokens) - 7)):
+        window = parsed_tokens[i : i + 9]
+        if len(window) < 8:
             continue
-        parsed = _main_stock_fix_footer_money_token(g)
-        if parsed is None:
-            return
-        vals.append(parsed)
-    if len(vals) < 8:
+        if not _main_stock_oric_totals_identity_ok(window):
+            continue
+        if float(window[0]) < 200 and float(window[1]) < 20000:
+            continue
+        best = list(window[:9] if len(window) >= 9 else window[:8])
+    return best
+
+
+def _main_stock_apply_printed_totals_footer(
+    result: Dict[str, Any], file_bytes: bytes
+) -> None:
+    """Peel PRODUCT DESCRIPTION ORIC TOTALS row into totals (printed numbers only)."""
+    if not _main_stock_printed_totals_enabled() or not isinstance(result, dict):
+        return
+    if not file_bytes:
+        return
+    # Keep a Vision/contamination peel already parked on totals.
+    extra_now = (
+        (result.get("totals") or {}).get("extra")
+        if isinstance(result.get("totals"), dict)
+        else None
+    )
+    src_now = str((extra_now or {}).get("total_row_source") or "")
+    if src_now.startswith("main_stock") and (result.get("totals") or {}).get(
+        "closing_value"
+    ) not in (None, ""):
+        return
+    footer = _main_stock_footer_ocr_text(file_bytes)
+    if not footer.strip():
+        return
+    vals = _main_stock_extract_oric_totals_vals(footer)
+    if not vals or len(vals) < 8:
+        logger.info(
+            "MAIN_STOCK_PRINTED_TOTALS status=no_match footer_len=%s",
+            len(footer),
+        )
         return
     _main_stock_apply_totals_values(result, vals, source="main_stock_printed_totals")
+
 
 
 def _main_stock_repair_closing_value_hundreds_digit(
@@ -70359,6 +70730,21 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     "reason=sale_period_or_no_op_stk_tokens",
                     filename,
                 )
+        # CONSOLIDATED Op.Qty/Op.Val must not enter Op_Stk via PRIVATE LIMITED.
+        try:
+            from services.stock_direct_vision import (
+                _has_stock_sales_op_qty_val_headers as _detail_hdrs_block_op_stk,
+            )
+
+            if _detail_hdrs_block_op_stk(_op_stk_peek or ""):
+                _allow_op_stk_before_ssa = False
+                logger.info(
+                    "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                    "reason=stock_sales_op_qty_val_headers",
+                    filename,
+                )
+        except Exception:
+            pass
         # LstSL|Open|Recd|Sales|Close must not enter Op_Stk / LMS1 mapping.
         _lstsl_chrome_peek = _text_looks_like_lstsl_open_recd_chrome(
             _op_stk_peek or ""
