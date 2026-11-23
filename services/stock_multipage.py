@@ -25,6 +25,10 @@ STOCK_MULTIPAGE_ROW_FINGERPRINT_FLAG = "STOCK_MULTIPAGE_ROW_FINGERPRINT_DEDUP"
 # When on: drop OCR junk packs (1X00 / 0) when the same product name already has a
 # real pack on an earlier/better row. Camera dual-panel re-reads only.
 STOCK_MULTIPAGE_DROP_GARBAGE_PACK_FLAG = "STOCK_MULTIPAGE_DROP_GARBAGE_PACK"
+# When on: two self-contained pages with different printed company/division
+# (e.g. ZANDRA vs ZENITH) become separate statements even if stockist+month match.
+# Kill-switch only — default ON. True multipage continuations stay merged.
+STOCK_MULTIPAGE_SELF_CONTAINED_SPLIT_FLAG = "STOCK_MULTIPAGE_SELF_CONTAINED_SPLIT"
 
 # Top-level qty fields + extra aliases used for conflict / continuation checks.
 _TOP_QTY = (
@@ -75,6 +79,21 @@ def is_row_fingerprint_dedup_enabled() -> bool:
 def is_drop_garbage_pack_enabled() -> bool:
     """Drop same-name rows whose packing is OCR garbage when a real pack exists."""
     return os.getenv(STOCK_MULTIPAGE_DROP_GARBAGE_PACK_FLAG, "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def is_self_contained_statement_split_enabled() -> bool:
+    """Split complete statements that share stockist+month but differ by company.
+
+    Default ON. Set STOCK_MULTIPAGE_SELF_CONTAINED_SPLIT=0 to disable.
+    """
+    return os.getenv(
+        STOCK_MULTIPAGE_SELF_CONTAINED_SPLIT_FLAG, "true"
+    ).strip().lower() in {
         "1",
         "true",
         "yes",
@@ -1260,6 +1279,127 @@ def _page_stockist_group_key(page: Dict[str, Any]) -> str:
     return key
 
 
+def _normalize_company_group_key(raw: Any) -> str:
+    """Stable company/division key for multipage statement boundaries."""
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    try:
+        from services.sales_statement_extractor import _detect_statement_division
+
+        div = _detect_statement_division(text)
+        if isinstance(div, dict):
+            code = str(div.get("division_code") or "").strip().upper()
+            if code:
+                return code
+    except Exception:
+        pass
+    key = re.sub(r"[^A-Z0-9]+", "", text.upper())
+    key = re.sub(r"(?:DIVISION|DIVI|DIV)$", "", key)
+    return key
+
+
+def _page_company_group_key(page: Dict[str, Any]) -> str:
+    """Printed company/division identity for a page extract (empty when absent)."""
+    if not isinstance(page, dict):
+        return ""
+    raw = str(page.get("company_name") or "").strip()
+    if not raw:
+        totals = page.get("totals") if isinstance(page.get("totals"), dict) else {}
+        extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+        raw = str(extra.get("company_name") or "").strip()
+    return _normalize_company_group_key(raw)
+
+
+def _page_has_money_footer(page: Dict[str, Any]) -> bool:
+    """True when the page extract carries printed statement money totals."""
+    if not isinstance(page, dict):
+        return False
+    totals = page.get("totals") if isinstance(page.get("totals"), dict) else {}
+    extra = totals.get("extra") if isinstance(totals.get("extra"), dict) else {}
+    for value in (
+        totals.get("sales_value"),
+        totals.get("closing_value"),
+        totals.get("opening_value"),
+    ):
+        if value not in (None, ""):
+            return True
+    if extra.get("total_row_source"):
+        return True
+    for key in (
+        "opening_value",
+        "purchase_value",
+        "receipts_value",
+        "sales_value",
+        "closing_value",
+    ):
+        if extra.get(key) not in (None, ""):
+            return True
+    return False
+
+
+def _page_looks_self_contained(page: Dict[str, Any]) -> bool:
+    """True when a page looks like a complete statement, not a bare continuation.
+
+    Counts independent chrome signals (period, money footer, company, stockist).
+    Continuation pages typically lack most of these and stay below the threshold.
+    """
+    if not isinstance(page, dict):
+        return False
+    signals = 0
+    if normalize_page_period_yyyy_mm(page):
+        signals += 1
+    if _page_has_money_footer(page):
+        signals += 1
+    if _page_company_group_key(page):
+        signals += 1
+    if _page_stockist_group_key(page):
+        signals += 1
+    return signals >= 2
+
+
+def _group_company_key(current: Dict[str, Any]) -> str:
+    for page in reversed(list(current.get("pages") or [])):
+        key = _page_company_group_key(page if isinstance(page, dict) else {})
+        if key:
+            return key
+    return ""
+
+
+def _should_split_self_contained_statement(
+    current: Dict[str, Any],
+    page: Dict[str, Any],
+    *,
+    request_id: str = "",
+) -> bool:
+    """Split when both pages are complete statements with different companies.
+
+    Same stockist + same YYYY-MM alone is not enough to merge two division
+    statements (e.g. ZANDRA vs ZENITH). Headerless continuations do not split.
+    """
+    if not is_self_contained_statement_split_enabled():
+        return False
+    pages = current.get("pages") or []
+    prev = pages[-1] if pages else None
+    if not isinstance(prev, dict) or not isinstance(page, dict):
+        return False
+    if not _page_looks_self_contained(prev) or not _page_looks_self_contained(page):
+        return False
+    prev_co = _group_company_key(current)
+    new_co = _page_company_group_key(page)
+    if not prev_co or not new_co or prev_co == new_co:
+        return False
+    logger.info(
+        "MULTI_PAGE_SELF_CONTAINED_SPLIT request_id=%s page=%s "
+        "prev_company=%s new_company=%s action=new_statement_group",
+        request_id or "-",
+        page.get("page_number"),
+        prev_co,
+        new_co,
+    )
+    return True
+
+
 def group_pages_by_stockist_period(
     page_entries: Sequence[Dict[str, Any]],
     *,
@@ -1270,6 +1410,10 @@ def group_pages_by_stockist_period(
     Same month/year (different days) stays one group. A different YYYY-MM
     starts a new statement group. Missing period/stockist on a page uses the
     current group (continuation fallback) — never invents a date.
+
+    Self-contained pages with different printed company/division also start a
+    new group (default ON) so two complete statements are not merged solely
+    because they share stockist + calendar month.
     """
     groups: List[Dict[str, Any]] = []
     current: Optional[Dict[str, Any]] = None
@@ -1282,11 +1426,12 @@ def group_pages_by_stockist_period(
         detected_stockist = _page_stockist_group_key(page)
         logger.info(
             "MULTI_PAGE_PERIOD_DETECT request_id=%s page=%s detected_period=%s "
-            "stockist_key=%s",
+            "stockist_key=%s company_key=%s",
             request_id or "-",
             page_no,
             detected_period or "none",
             detected_stockist or "none",
+            _page_company_group_key(page) or "none",
         )
 
         if current is None:
@@ -1310,7 +1455,13 @@ def group_pages_by_stockist_period(
             or detected_stockist == current["stockist_key"]
         )
 
-        if period_compatible and stockist_compatible:
+        if (
+            period_compatible
+            and stockist_compatible
+            and not _should_split_self_contained_statement(
+                current, page, request_id=request_id
+            )
+        ):
             if current["period"] is None and detected_period:
                 current["period"] = detected_period
             if not current["stockist_key"] and detected_stockist:
@@ -1712,8 +1863,9 @@ def extract_multipage_image_stock_statement(
 
     Pages are processed sequentially via the existing image path (_parse_image /
     Geometry V3). Pages are grouped by stockist + calendar month (YYYY-MM);
-    same-month days stay one statement. Cross-page product reconciliation runs
-    per statement group via resolve_cross_page_product_rows.
+    same-month days stay one statement unless both pages are self-contained
+    with different printed company/division. Cross-page product reconciliation
+    runs per statement group via resolve_cross_page_product_rows.
     """
     t0 = time.perf_counter()
     page_count = len(pages)
@@ -2031,8 +2183,10 @@ def extract_multipage_image_stock_statement(
             "period_to": page_result.get("period_to"),
             "report_title": page_result.get("report_title"),
             "stockist_address": page_result.get("stockist_address"),
-            # Keep printed TOTAL footer so group merge can surface sales/closing.
+            # Keep printed TOTAL footer so group merge / self-contained split
+            # can see sales/closing/opening money chrome.
             "totals": {
+                "opening_value": page_totals.get("opening_value"),
                 "sales_value": page_totals.get("sales_value"),
                 "closing_value": page_totals.get("closing_value"),
                 "extra": dict(extra) if isinstance(extra, dict) else {},

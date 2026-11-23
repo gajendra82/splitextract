@@ -1757,12 +1757,11 @@ def _ignore_age_stock_header_enabled() -> bool:
 def _absorb_ignore_geometry_enabled() -> bool:
     """STOCK_HEADER_ABSORB_IGNORE_GEOMETRY — keep ignore columns in x-bands.
 
-    When OFF (default), ignore columns (NRV/Age/unrecognized Rate OCR, etc.)
-    are dropped from geometry centres and their tokens spill into neighbouring
-    qty bands — often opening_qty. When ON, those columns absorb tokens so
-    rate/NRV never become opening/closing qty.
+    Default ON. Trailing Age after Value must absorb; otherwise Age days spill
+    into closing_value (O.Stk|Purc|Tot|Sale|Qoh|Value|Age Profitmaker grids
+    and Excel exports of the same chrome). Kill switch: false.
     """
-    return os.getenv("STOCK_HEADER_ABSORB_IGNORE_GEOMETRY", "false").strip().lower() in {
+    return os.getenv("STOCK_HEADER_ABSORB_IGNORE_GEOMETRY", "true").strip().lower() in {
         "1",
         "true",
         "yes",

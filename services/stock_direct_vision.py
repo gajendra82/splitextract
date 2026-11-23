@@ -391,32 +391,87 @@ Do NOT sum line sales_value yourself when the Total-row S.Val is printed.
 
 
 OPQTY_QOH_STOCK_VISION_PROMPT = """
-You are reading a "Stock & Sales Statement" photo with OpQty / PurQty / SaleQty
-and Qoh columns (NOT a SaleRet/ClosStock Product Stock Report).
+You are reading a "Stock & Sales Statement" photo with Qoh (Quantity on Hand)
+as the CLOSING qty column. This is NOT a SaleRet/ClosStock Product Stock Report
+and NOT an Op_Stk|Rcpts|Cl_Stk grid.
 
 Read the TABLE VISUALLY from the supplied image pixels.
 Do NOT invent numbers. Do NOT calculate or balance anything.
 Do NOT shift a value into a neighboring column.
-Do NOT treat packing (30ML, 60S, 100GM) as stock quantities.
+Do NOT treat packing (30ML, 60S, 100GM, 60 T) as stock quantities.
+Do NOT emit the "Company :" banner as a line_item — put it in company_name.
+Do NOT emit Opening Value / Purchase Value / Sale Value / Closing Value /
+Grand Total footer labels as product rows.
 
-Printed columns left → right after Item Name / Packing:
+Two common header variants (same semantics):
+
+A) Profitmaker / Daxinsoft (most common):
+  Product Name | Packing | O.Stk | Purc | Tot | Sale | Qoh | Value | Age
+  O.Stk  -> opening_qty
+  Purc   -> receipts_qty
+  Tot    -> extra.total_stock (optional; Op+Pur printed total — do not invent)
+  Sale   -> sales_qty
+  Qoh    -> closing_qty   ← Quantity on Hand is CLOSING
+  Value  -> closing_value ← money with decimals (e.g. 7162.74). NEVER Age.
+  Age    -> extra.age_days (integer days). NEVER put Age into closing_value,
+            closing_qty, opening_qty, or sales_value.
+
+B) OpQty / PurQty / SaleQty / … / Qoh / Age (no Value column):
   OpQty   -> opening_qty
   PurQty  -> receipts_qty
   SaleQty -> sales_qty
   PRetQty -> purchase_return_qty (extra only; 0 when blank)
   SRetQty -> sales_return_qty
   SAdjQty -> stock_adj_qty (extra only; 0 when blank)
-  Qoh     -> closing_qty   ← Quantity on Hand is CLOSING. Never use Age.
-  Age     -> ignore (days); NEVER put Age into closing_qty
+  Qoh     -> closing_qty
+  Age     -> extra.age_days; NEVER put Age into closing_qty / closing_value
+  closing_value stays null when no Value column is printed.
 
-Examples when visible:
+CRITICAL — never swap columns:
+- Value (money, often *.xx) must NEVER land in opening_qty / closing_qty.
+- Age (whole days like 637, 215, 282) must NEVER land in closing_value.
+- O.Stk / OpQty must NEVER land in sales_value.
+- Packing tokens (60 T, 200ML, 200gm) must NEVER become opening_qty.
+- There is NO per-row Sale Value / sales rupee column. line sales_value = 0.
+  Footer "Sale Value" goes only to totals.sales_value.
+- Purc is receipts_qty. Tot is NOT receipts_qty (Tot → extra.total_stock only).
+- When Purc is 0, receipts_qty must be 0 — NEVER copy Sale into receipts_qty.
+- When Qoh is 0, closing_qty must be 0 — NEVER copy O.Stk into closing_qty.
+
+Examples when visible (Profitmaker):
+- ARJUNA TAB 60 T: O.Stk 0, Purc 0, Tot 0, Sale 0, Qoh 0, Value 0.00, Age 637
+  → opening 0, receipts 0, sales 0, closing_qty 0, closing_value 0.00,
+    extra.age_days 637 (NOT closing_value=637)
+- BONNISAN LIQUID 200ML: 83 / 0 / 83 / 0 / 83 / 7162.74 / 230
+  → closing_qty=83, closing_value=7162.74, age_days=230
+- BONNISAN LIQUID 100ML: 327 / 0 / 327 / 0 / 327 / 18571.97 / 215
+  → opening_qty=327 (NOT 18571.97), closing_value=18571.97, age_days=215
+- BRESOL SYRUP 200ML: 18 / 10 / 28 / 9 / 19 / 2873.99 / 21
+- CYSTONE TAB 60 TAB: 209 / 0 / 209 / 6 / 203 / 33514.27 / 157
+  → opening_qty=209 (NOT 60 from packing), sales_qty=6, receipts_qty=0
+- LIV-52 DS TAB 60 TS: 836 / 0 / 836 / 20 / 816 / 150587.97 / 282
+  → opening_qty=836 (NOT 60), sales_qty=20, closing_qty=816, receipts_qty=0
+- MENTAT SYRUP 200 ML: 15 / 2 / 17 / 17 / 0 / 0.00 / 20
+  → opening 15, receipts 2 (NOT Tot 17), sales 17, closing_qty 0 (NOT 15)
+- SPEMEN TAB 60 T: 100 / 0 / 100 / 30 / 70 / 11696.38
+  → opening 100, receipts 0 (NOT Sale 30), sales 30, closing 70
+- STYPLON TAB 30T: 80 / 0 / 80 / 10 / 70 / 8340.05
+  → opening 80, receipts 0 (NOT Sale 10), sales 10, closing 70
+- SEPTILIN TAB 60 T: 119 / 100 / 219 / 0 / 219 / 37899.21
+
+Examples when visible (OpQty variant):
 - BONNISAN DROPS 30ML: OpQty 18, PurQty 50, SaleQty 1, SRetQty 1, Qoh 68
   (closing_qty=68, NOT 1)
-- BONNISAN SYP 100ML: OpQty 162, SaleQty 8, Qoh 154
-- HIORA K TOOTHPASTE 100GM: OpQty 1, PurQty 50, SaleQty 25, Qoh 26
 
-Stockist is the letterhead (e.g. BALAJI PHARMA DISTRIBUTORS).
-Company is the "Company:" line (e.g. HIMALAYA ZANDRA).
+Stockist is the letterhead (e.g. LAXMI AYURVEDIC BHAWAN / BALAJI PHARMA).
+Company is the "Company:" line (e.g. HZA-THE HIMALAYA DRUG).
+
+Footer money labels (copy into totals; prefer the LAST Grand Total band when
+several TOTAL / GRAND TOTAL rows exist):
+  Opening Value  -> totals.extra.opening_value
+  Purchase Value -> totals.extra.purchase_value
+  Sale Value     -> totals.sales_value   (page total only — not per line)
+  Closing Value  -> totals.closing_value
 
 Return ONLY valid JSON:
 {
@@ -437,17 +492,28 @@ Return ONLY valid JSON:
       "sales_return_qty": number|null,
       "closing_qty": number|null,
       "sales_value": 0,
-      "closing_value": null,
+      "closing_value": number|null,
       "extra": {
         "purchase_return_qty": number|null,
-        "stock_adj_qty": number|null
+        "stock_adj_qty": number|null,
+        "total_stock": number|null,
+        "age_days": number|null
       }
     }
   ],
-  "totals": { "sales_value": null, "closing_value": null, "extra": {} }
+  "totals": {
+    "sales_value": number|null,
+    "closing_value": number|null,
+    "extra": {
+      "opening_value": number|null,
+      "purchase_value": number|null
+    }
+  }
 }
 
-Include every product row. Blank qty cells are 0. Skip Group/Company banner rows.
+Include every product row top→bottom across stacked page panels. Blank qty
+cells are 0. Skip Group/Company/Page/header chrome rows. Keep printed all-zero
+SKU rows when the name is a real product.
 """.strip()
 
 
@@ -2404,6 +2470,17 @@ def _coerce_vision_payload(parsed: Dict[str, Any]) -> Dict[str, Any]:
             extra["purchase_return_qty"] = raw.get("purchase_return_qty")
         if raw.get("purchase_return_qty") is not None and extra.get("purchase_return") is None:
             extra["purchase_return"] = raw.get("purchase_return_qty")
+        # Profitmaker Age / Tot — never leave age parked only on the root.
+        if raw.get("age_days") is not None and extra.get("age_days") is None:
+            extra["age_days"] = raw.get("age_days")
+        if (
+            isinstance(raw.get("extra"), dict)
+            and raw["extra"].get("age_days") is not None
+            and extra.get("age_days") is None
+        ):
+            extra["age_days"] = raw["extra"].get("age_days")
+        if raw.get("total_stock") is not None and extra.get("total_stock") is None:
+            extra["total_stock"] = raw.get("total_stock")
         raw["extra"] = extra
     return parsed
 
@@ -2670,9 +2747,11 @@ def validate_stock_direct_vision(
     # Identity is soft: flag for retry/selection, but do not hard-fail a
     # structurally complete Vision table into the OCR cascade.
     soft_reasons: List[str] = []
-    # Op.Qty|Pur.Qty|Sale.Qty|Bal ledgers often print Bal ≠ Op+Pur-Sale.
+    # Op.Qty|Pur.Qty|Sale.Qty|Bal and O.Stk|Qoh|Value|Age often OCR with
+    # small gaps; do not soft-fail into SSA dump (zeros Sale/Qoh).
     if (
         not op_qty_pur_sale_bal
+        and not opqty_qoh
         and not op_qty_val
         and row_count >= min_rows
         and identity_fail > max(2, row_count // 4)
@@ -2886,7 +2965,17 @@ def _call_psr_vision(
             continue
         name = str(item.get("product_name") or "").strip()
         if not name or re.search(
-            r"^Done$|free\s*trial|Division\s*Total|^Total\b", name, re.I
+            r"^Done$|free\s*trial|Division\s*Total|^Total\b|"
+            r"^Company\s*:|"
+            r"^Grand\s*Total\b|"
+            r"^Opening\s+Val(?:ue)?\b|"
+            r"^Purchase\s+Val(?:ue)?\b|"
+            r"^Sale\s+Val(?:ue)?\b|"
+            r"^Closing\s+Val(?:ue)?\b|"
+            r"^Product\s+Name\b|"
+            r"^Page\s*:",
+            name,
+            re.I,
         ):
             continue
         if not _stock_vision_product_name_ok(name):
@@ -2911,6 +3000,7 @@ def _call_psr_vision(
             "opening_value",
             "receipts_value",
             "purchase_value",
+            "age_days",
         ):
             if extra.get(key) is not None:
                 try:
@@ -7423,6 +7513,345 @@ def extract_stock_sales_op_qty_val_scanned_pdf(
     return seed
 
 
+def _peel_ostk_qoh_footer_money(text: str) -> Dict[str, float]:
+    """Peel Opening/Purchase/Sale/Closing Value from Profitmaker Qoh footers.
+
+    When ``Grand Total`` is printed, prefer the last Grand Total band over
+    earlier section totals. OCR may garble Purchase→Surchase, Closing→Closina.
+    """
+    blob = text or ""
+    out: Dict[str, float] = {}
+    if not blob.strip():
+        return out
+    grand_matches = list(re.finditer(r"Grand\s*Total\s*:?", blob, re.I))
+    if grand_matches:
+        start = grand_matches[-1].start()
+        blob = blob[start : start + 800]
+
+    specs = (
+        (
+            "opening_value",
+            r"Open(?:ing)?\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+        ),
+        (
+            "purchase_value",
+            r"(?:P|S)?urchase\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+        ),
+        (
+            "sales_value",
+            r"Sale\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+        ),
+        (
+            "closing_value",
+            r"Clos(?:ing|ina)\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+        ),
+    )
+    for key, pat in specs:
+        matches = list(re.finditer(pat, blob, re.I))
+        if not matches:
+            continue
+        # Prefer the last printed label (final Grand Total / page footer).
+        compact = matches[-1].group(1).replace(",", "").strip()
+        try:
+            val = float(compact)
+        except ValueError:
+            val = None
+        if val is not None:
+            out[key] = val
+    return out
+
+
+def _ocr_ostk_qoh_footer_band(file_bytes: bytes) -> str:
+    """OCR the lower band where Opening/Purchase/Sale/Closing Value prints."""
+    if not file_bytes:
+        return ""
+    try:
+        from PIL import Image
+        from services.sales_statement_extractor import _a2z_tesseract
+        from services.stock_ocr_policy import stock_ocr_context
+    except Exception:
+        return ""
+    try:
+        digest = hashlib.sha256(file_bytes).hexdigest()[:10]
+        tess = _a2z_tesseract()
+        with Image.open(io.BytesIO(file_bytes)) as raw:
+            img = raw.convert("RGB")
+        width, height = img.size
+        if width < 80 or height < 80:
+            return ""
+        # Stacked page photos print the final money footer near the bottom.
+        band = img.crop((0, int(height * 0.72), width, height))
+        band.thumbnail((1600, 900))
+        with stock_ocr_context(region=f"ostk_qoh_footer_{digest}", page="1"):
+            return tess.image_to_string(band, config="--psm 6") or ""
+    except Exception:
+        return ""
+
+
+def _apply_ostk_qoh_footer_money(
+    result: Optional[Dict[str, Any]], file_bytes: bytes
+) -> None:
+    """Stamp printed footer money onto totals; last Grand Total wins."""
+    if not isinstance(result, dict):
+        return
+    footer_text = _ocr_ostk_qoh_footer_band(file_bytes)
+    money = _peel_ostk_qoh_footer_money(footer_text)
+    if not money:
+        return
+    totals = result.setdefault("totals", {})
+    extra = totals.setdefault("extra", {})
+    if "opening_value" in money:
+        extra["opening_value"] = money["opening_value"]
+        extra["opening_value_source"] = "ostk_qoh_footer_ocr"
+    if "purchase_value" in money:
+        extra["purchase_value"] = money["purchase_value"]
+        extra["purchase_value_source"] = "ostk_qoh_footer_ocr"
+    if "sales_value" in money:
+        totals["sales_value"] = money["sales_value"]
+        extra["sales_value_source"] = "ostk_qoh_footer_ocr"
+    if "closing_value" in money:
+        totals["closing_value"] = money["closing_value"]
+        extra["closing_value_source"] = "ostk_qoh_footer_ocr"
+    extra["total_row_source"] = "ostk_qoh_footer"
+    logger.info(
+        "STOCK_OSTK_QOH_FOOTER opening=%s purchase=%s sales=%s closing=%s",
+        money.get("opening_value"),
+        money.get("purchase_value"),
+        money.get("sales_value"),
+        money.get("closing_value"),
+    )
+
+
+def _opqty_qoh_item_key(item: Dict[str, Any]) -> str:
+    name = re.sub(
+        r"\s+", " ", str(item.get("product_name") or "").strip().upper()
+    )
+    pack = re.sub(r"\s+", "", str(item.get("packing") or "").strip().upper())
+    return f"{name}|{pack}"
+
+
+def _merge_opqty_qoh_halves(
+    top: Dict[str, Any], bottom: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Merge overlapping tall-page Vision halves; keep first fingerprint."""
+    merged = top if isinstance(top, dict) else bottom
+    if not isinstance(bottom, dict):
+        return merged
+    if not isinstance(top, dict):
+        return bottom
+    seen = {
+        _opqty_qoh_item_key(i)
+        for i in (top.get("line_items") or [])
+        if isinstance(i, dict) and _opqty_qoh_item_key(i) != "|"
+    }
+    out_items = [
+        i for i in (top.get("line_items") or []) if isinstance(i, dict)
+    ]
+    added = 0
+    for item in bottom.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        key = _opqty_qoh_item_key(item)
+        if key == "|" or key in seen:
+            continue
+        seen.add(key)
+        out_items.append(item)
+        added += 1
+    merged["line_items"] = out_items
+    # Prefer bottom-half letterhead/footer when top crop missed them.
+    for field in ("stockist_name", "company_name", "period_from", "period_to"):
+        if not merged.get(field) and bottom.get(field):
+            merged[field] = bottom.get(field)
+    top_tot = top.get("totals") if isinstance(top.get("totals"), dict) else {}
+    bot_tot = bottom.get("totals") if isinstance(bottom.get("totals"), dict) else {}
+    merged_tot = merged.setdefault("totals", {})
+    for key in ("sales_value", "closing_value"):
+        if bot_tot.get(key) is not None:
+            merged_tot[key] = bot_tot.get(key)
+        elif top_tot.get(key) is not None and merged_tot.get(key) is None:
+            merged_tot[key] = top_tot.get(key)
+    top_ex = top_tot.get("extra") if isinstance(top_tot.get("extra"), dict) else {}
+    bot_ex = bot_tot.get("extra") if isinstance(bot_tot.get("extra"), dict) else {}
+    merged_ex = merged_tot.setdefault("extra", {})
+    for key, val in {**top_ex, **bot_ex}.items():
+        if key not in merged_ex or merged_ex.get(key) in (None, "", 0, 0.0):
+            merged_ex[key] = val
+    merged_ex["opqty_qoh_halves_merged"] = True
+    merged_ex["opqty_qoh_halves_added"] = added
+    logger.info(
+        "STOCK_OSTK_QOH_HALVES_MERGED top=%s bottom=%s out=%s added=%s",
+        len(top.get("line_items") or []),
+        len(bottom.get("line_items") or []),
+        len(out_items),
+        added,
+    )
+    return merged
+
+
+def _finalize_opqty_qoh_result(
+    result: Optional[Dict[str, Any]], file_bytes: bytes
+) -> Optional[Dict[str, Any]]:
+    """Age/receipts repair + footer peel + letterhead enrich for Qoh Vision."""
+    if not isinstance(result, dict):
+        return result
+    _repair_ostk_qoh_age_as_closing_value(result)
+    _repair_ostk_qoh_receipts_shift(result)
+    _apply_ostk_qoh_footer_money(result, file_bytes)
+    try:
+        from services.sales_statement_extractor import (
+            _enrich_ostk_qoh_letterhead,
+            _ocr_image_to_text,
+        )
+
+        peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+        _enrich_ostk_qoh_letterhead(result, peek)
+    except Exception:
+        pass
+    return result
+
+
+def _repair_ostk_qoh_receipts_shift(result: Optional[Dict[str, Any]]) -> None:
+    """Undo Tot/Sale parked in receipts_qty on O.Stk|Purc|Tot|Sale|Qoh rows.
+
+    Does not invent Purc from thin air:
+    - Sale duplicated into receipts when Purc was 0 and opening-sales=closing
+      → receipts_qty = 0
+    - Tot parked in receipts when extra.total_stock == receipts → Purc = Tot-Op
+    - Qoh=0 rows where closing copied opening after a full sell-through
+      (sales == Tot) → closing_qty = 0
+    """
+    if not isinstance(result, dict):
+        return
+    sale_dup = 0
+    tot_as_purc = 0
+    qoh_zero = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        tot = extra.get("total_stock")
+        try:
+            tot_f = float(tot) if tot is not None else None
+        except (TypeError, ValueError):
+            tot_f = None
+
+        # Tot parked as receipts (MENTAT: receipts=17 was Tot, Purc=2).
+        if (
+            tot_f is not None
+            and abs(receipts - tot_f) < 0.051
+            and abs(tot_f - opening) >= 0.051
+        ):
+            purc = round(tot_f - opening, 2)
+            if purc >= -0.051:
+                item["receipts_qty"] = max(0.0, purc)
+                receipts = float(item["receipts_qty"])
+                tot_as_purc += 1
+                extra["ostk_qoh_receipts_from_tot"] = True
+
+        # Sale duplicated into receipts when Purc printed 0
+        # (SPEMEN/STYPLON: receipts==sales and opening-sales==closing).
+        if (
+            receipts > 0.051
+            and abs(receipts - sales) < 0.051
+            and abs(opening - sales - closing) < 0.51
+        ):
+            item["receipts_qty"] = 0.0
+            receipts = 0.0
+            sale_dup += 1
+            extra["ostk_qoh_receipts_cleared_sale_dup"] = True
+
+        # Full sell-through: Tot==Sale and Qoh printed 0, but closing kept O.Stk.
+        if (
+            tot_f is not None
+            and abs(sales - tot_f) < 0.051
+            and abs(closing - opening) < 0.051
+            and opening > 0.051
+            and abs(opening + receipts - sales) < 0.51
+        ):
+            item["closing_qty"] = 0.0
+            if item.get("closing_value") not in (None,):
+                try:
+                    if abs(float(item.get("closing_value") or 0)) < 0.051:
+                        pass
+                    elif abs(opening + receipts - sales) < 0.51:
+                        # Qoh 0 ⇒ Value 0.00 on this family.
+                        item["closing_value"] = 0.0
+                except (TypeError, ValueError):
+                    pass
+            qoh_zero += 1
+            extra["ostk_qoh_closing_cleared_full_sale"] = True
+
+        item["extra"] = extra
+        # Force line sales_value null/0 — no per-row Sale Value column.
+        if item.get("sales_value") not in (None, 0, 0.0):
+            # Only clear when it looks like a qty leak (integer / equals a qty).
+            try:
+                sv = float(item.get("sales_value") or 0)
+            except (TypeError, ValueError):
+                sv = None
+            if sv is not None and (
+                abs(sv - sales) < 0.051
+                or abs(sv - opening) < 0.051
+                or abs(sv - receipts) < 0.051
+                or abs(sv - round(sv)) < 0.051
+            ):
+                item["sales_value"] = 0.0
+        else:
+            item["sales_value"] = 0.0
+
+    if sale_dup or tot_as_purc or qoh_zero:
+        logger.info(
+            "STOCK_OSTK_QOH_RECEIPTS_REPAIR sale_dup=%s tot_as_purc=%s qoh_zero=%s",
+            sale_dup,
+            tot_as_purc,
+            qoh_zero,
+        )
+
+
+def _repair_ostk_qoh_age_as_closing_value(result: Optional[Dict[str, Any]]) -> None:
+    """When Age days landed in closing_value and Value was 0.00, move to age_days.
+
+    Heuristic only: integer-like closing_value (>=30) with zero qty and no
+    decimals — typical Age spill on zero-stock rows (e.g. ARJUNA Age 637).
+    Never invent money; never rewrite non-zero printed Value amounts.
+    """
+    if not isinstance(result, dict):
+        return
+    fixed = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            cv = float(item.get("closing_value") or 0)
+            cq = float(item.get("closing_qty") or 0)
+            oq = float(item.get("opening_qty") or 0)
+            sq = float(item.get("sales_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        if extra.get("age_days") is not None:
+            continue
+        # Age days are whole integers; money Value almost always has paise.
+        if abs(cv - round(cv)) >= 0.005:
+            continue
+        if cv < 30 or cq or oq or sq:
+            continue
+        # Zero-stock row with integer "value" → Age spill.
+        extra["age_days"] = float(int(round(cv)))
+        item["closing_value"] = 0.0
+        item["extra"] = extra
+        fixed += 1
+    if fixed:
+        logger.info("STOCK_OSTK_QOH_AGE_REPAIR moved_age_from_closing_value=%s", fixed)
+
+
 def extract_opqty_qoh_direct_vision(
     file_bytes: bytes,
     filename: str,
@@ -7430,7 +7859,7 @@ def extract_opqty_qoh_direct_vision(
     *,
     reason: str = "opqty_qoh_stock_sales_headers",
 ) -> Optional[Dict[str, Any]]:
-    """Vision for OpQty/PurQty/SaleQty/Qoh Stock & Sales Statement (Balaji etc.)."""
+    """Vision for O.Stk/Qoh/Value/Age and OpQty/Qoh Stock & Sales Statement."""
     model = os.getenv("VISION_MODEL", "gemini-2.5-flash-lite").strip()
     max_attempts = _max_attempts()
     layout = "opqty_qoh_stock_sales"
@@ -7448,6 +7877,8 @@ def extract_opqty_qoh_direct_vision(
     original_meta = {"normalized": False, "normalization_reason": None}
     candidates: List[Tuple[int, Dict[str, Any], Dict[str, Any]]] = []
 
+    # Prefer one full-frame call first. Tall top/bottom halves often return an
+    # empty top band (Gemini budget burned) and drop the first page of SKUs.
     result = _call_psr_vision(
         file_bytes,
         filename,
@@ -7494,27 +7925,69 @@ def extract_opqty_qoh_direct_vision(
         extra = result.setdefault("totals", {}).setdefault("extra", {})
         extra["extraction_method"] = "opqty_qoh_stock_sales_vision"
         extra["layout"] = "opqty_qoh_stock_sales"
+        _finalize_opqty_qoh_result(result, file_bytes)
         candidates.append(
             (int(validation.get("identity_score") or 0), result, validation)
         )
-        if validation.get("soft_ok"):
+        row_n = len(result.get("line_items") or [])
+        # Dense Profitmaker sheets have ~60–90 SKUs; accept full-frame soft_ok.
+        if validation.get("soft_ok") and row_n >= 40:
+            return result
+        if validation.get("soft_ok") and row_n >= 20 and max_attempts < 2:
             return result
 
-    if max_attempts >= 2 and (not candidates or not (validation or {}).get("soft_ok")):
+    if max_attempts >= 2 and (
+        not candidates or not (validation or {}).get("soft_ok")
+        or len((result or {}).get("line_items") or []) < 40
+    ):
+        # Second slot: bottom-band supplement (footer SKUs) merged into full frame,
+        # or a full-frame retry when the first pass was empty/weak.
+        vision2 = file_bytes
+        reason2 = reason + "+retry"
+        meta2 = original_meta
+        try:
+            from services.stock_vision_table import (
+                _needs_vertical_split,
+                _vertical_halves,
+            )
+
+            if _needs_vertical_split(file_bytes) and candidates:
+                halves = _vertical_halves(file_bytes) or []
+                if len(halves) >= 2:
+                    vision2 = halves[1]
+                    reason2 = reason + "+bottom_band_merge"
+                    meta2 = {
+                        **original_meta,
+                        "normalization_reason": "ostk_qoh_bottom_band",
+                    }
+                    logger.info(
+                        "STOCK_OSTK_QOH_BOTTOM_BAND_MERGE file=%s reason=%s",
+                        filename,
+                        reason2,
+                    )
+        except Exception:
+            pass
         result2 = _call_psr_vision(
             file_bytes,
             filename,
             ext,
-            vision_bytes=file_bytes,
-            image_meta=original_meta,
+            vision_bytes=vision2,
+            image_meta=meta2,
             candidate=2,
             model=model,
             route=layout,
-            reason=reason + "+retry",
+            reason=reason2,
             prompt=OPQTY_QOH_STOCK_VISION_PROMPT,
             layout_label="opqty_qoh_stock_sales",
             default_title="Stock & Sales Statement",
         )
+        if (
+            result2
+            and result2.get("line_items")
+            and candidates
+            and "bottom_band" in reason2
+        ):
+            result2 = _merge_opqty_qoh_halves(candidates[0][1], result2)
         validation2 = (
             validate_stock_direct_vision(result2, layout=layout)
             if result2
@@ -7530,8 +8003,13 @@ def extract_opqty_qoh_direct_vision(
             extra2 = result2.setdefault("totals", {}).setdefault("extra", {})
             extra2["extraction_method"] = "opqty_qoh_stock_sales_vision"
             extra2["layout"] = "opqty_qoh_stock_sales"
+            _finalize_opqty_qoh_result(result2, file_bytes)
             candidates.append(
-                (int(validation2.get("identity_score") or 0), result2, validation2)
+                (
+                    int(validation2.get("identity_score") or 0),
+                    result2,
+                    validation2,
+                )
             )
             if validation2.get("soft_ok"):
                 return result2
@@ -7548,7 +8026,9 @@ def extract_opqty_qoh_direct_vision(
         )
         return None
     candidates.sort(key=lambda row: row[0], reverse=True)
-    return candidates[0][1]
+    best = candidates[0][1]
+    _finalize_opqty_qoh_result(best, file_bytes)
+    return best
 
 
 def _op_qty_pur_sale_bal_bottom_band_retry_enabled() -> bool:

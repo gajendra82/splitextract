@@ -238,6 +238,42 @@ def _is_excel_date_number_format(number_format: Optional[str]) -> bool:
     return bool(re.search(r"(mm|m|dd|d)[-/.\s](mm|m|dd|d)", lowered))
 
 
+def _normalize_date_mdy(raw: Optional[Any]) -> Optional[str]:
+    """Normalize M/D/YYYY (US-style). Used only when DD/MM fails for a pair."""
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    m = re.search(r"(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})", text)
+    if not m:
+        return None
+    mo, d, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if y < 100:
+        y += 2000
+    try:
+        return datetime(y, mo, d).strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def _normalize_between_period(
+    raw_from: str, raw_to: str
+) -> Tuple[Optional[str], Optional[str]]:
+    """Parse a between/from–to pair. Prefer DD/MM; fall back to M/D when needed.
+
+    MetaLinks TXT prints ``between 9/1/2026 and 9/30/2026`` (US M/D/Y). Under
+    DD/MM the day-30 month is invalid, so both ends flip to M/D together.
+    """
+    pf = _normalize_date(raw_from)
+    pt = _normalize_date(raw_to)
+    if pf and pt:
+        return pf, pt
+    pf_m = _normalize_date_mdy(raw_from)
+    pt_m = _normalize_date_mdy(raw_to)
+    if pf_m and pt_m:
+        return pf_m, pt_m
+    return pf or pf_m, pt or pt_m
+
+
 def _normalize_date(raw: Optional[Any]) -> Optional[str]:
     """Normalize a statement date to YYYY-MM-DD using DD/MM/YYYY business rules.
 
@@ -10174,6 +10210,34 @@ _ITEM_PACKG_OPEN_STK_VALUE_FOOTER = {
 }
 
 
+def _txt_op_receipts_sales_closing_enabled() -> bool:
+    """STOCK_TXT_OP_RECEIPTS_SALES_CLOSING — MetaLinks OP/Receipts/Sales/Closing TXT.
+
+    Default ON. These sheets print Product Name + <---Receipts---> banners but
+    never the word STOCK, so the generic stock-chrome gate must not reject them.
+    Kill-switch: STOCK_TXT_OP_RECEIPTS_SALES_CLOSING=false.
+    """
+    return os.getenv("STOCK_TXT_OP_RECEIPTS_SALES_CLOSING", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _is_op_receipts_sales_closing_chrome(text: str) -> bool:
+    """True for OP / <---Receipts---> / <----Sales----> / <---Closing----> TXT."""
+    if not text:
+        return False
+    return bool(
+        re.search(r"Product\s*Name", text, re.I)
+        and re.search(r"<[-]+Receipts[-]+>", text, re.I)
+        and re.search(r"<[-]+Sales[-]+>", text, re.I)
+        and re.search(r"<[-]+Closing[-]+>", text, re.I)
+        and re.search(r"\bOP\b", text, re.I)
+    )
+
+
 def _match_text_stock_family(text: str):
     # This header includes the word Opening in the footer ("Opening Value").
     # That must not select a shorter column list that reads Tot as Sale.
@@ -10186,12 +10250,21 @@ def _match_text_stock_family(text: str):
         ):
             continue
         if re.search(left_pat, text, re.I) and re.search(right_pat, text, re.I):
-            if not re.search(
-                r"STOCK|SALES\s*&\s*STOCK|S\.S\.REPORT|STOCK\s+STATEMENT",
-                text,
-                re.I,
-            ):
-                continue
+            has_stock_chrome = bool(
+                re.search(
+                    r"STOCK|SALES\s*&\s*STOCK|S\.S\.REPORT|STOCK\s+STATEMENT",
+                    text,
+                    re.I,
+                )
+            )
+            if not has_stock_chrome:
+                # MetaLinks OP/Receipts/Sales/Closing never prints "STOCK".
+                if not (
+                    name == "op_receipts_sales_closing"
+                    and _txt_op_receipts_sales_closing_enabled()
+                    and _is_op_receipts_sales_closing_chrome(text)
+                ):
+                    continue
             logger.info(
                 "stock_txt_family matched family=%s roles=%s",
                 name,
@@ -10496,8 +10569,13 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             re.I,
         )
         if m_period and not result.get("period_from"):
-            result["period_from"] = _normalize_date(m_period.group(1))
-            result["period_to"] = _normalize_date(m_period.group(2))
+            pf, pt = _normalize_between_period(m_period.group(1), m_period.group(2))
+            if pf:
+                result["period_from"] = pf
+            if pt:
+                result["period_to"] = pt
+            if pf or pt:
+                result["totals"]["extra"]["statement_period_source"] = "report_between"
         else:
             m_from = re.search(
                 r"\bFrom\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})", raw, re.I
@@ -10525,11 +10603,47 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             continue
         split = _trailing_metrics(raw, len(roles))
         if not split:
+            # MetaLinks value footer: four unlabeled money cells under Value cols.
+            if family == "op_receipts_sales_closing":
+                split4 = _trailing_metrics(raw, 4)
+                if split4:
+                    left4, metrics4 = split4
+                    left_has_alpha = any(
+                        re.search(r"[A-Za-z]", tok or "") for tok in left4
+                    )
+                    if not left_has_alpha:
+                        nums = [
+                            _metric_number(cell, money=True) for cell in metrics4
+                        ]
+                        if all(n is not None for n in nums):
+                            # Prefer last unlabeled footer when pages reprint totals.
+                            result["totals"]["extra"]["opening_value"] = nums[0]
+                            result["totals"]["extra"]["receipts_value"] = nums[1]
+                            result["totals"]["sales_value"] = nums[2]
+                            result["totals"]["closing_value"] = nums[3]
+                            result["totals"]["extra"]["total_row_source"] = (
+                                "op_receipts_value_footer"
+                            )
+                            logger.info(
+                                "STOCK_TXT_OP_RECEIPTS_VALUE_FOOTER "
+                                "opening=%s receipts=%s sales=%s closing=%s",
+                                nums[0],
+                                nums[1],
+                                nums[2],
+                                nums[3],
+                            )
+                            continue
             if not result.get("stockist_name") and not re.search(
-                r"STOCK|SALES|FROM\s*:|COMPANY|Page|PRODUCT|DESCRIPTION|MEDICINE|GST|BETWEEN",
+                r"STOCK|SALES|FROM\s*:|COMPANY|Page|PRODUCT|DESCRIPTION|MEDICINE|"
+                r"GST|BETWEEN|Powered|MetaLinks|Follow\s+page|End\.?|"
+                r"^\s*Qty\b|^\s*Value\b",
                 raw,
                 re.I,
             ):
+                # Sub-header "Qty Qty Value …" is never a stockist.
+                tokens = re.findall(r"[A-Za-z]+", raw)
+                if tokens and all(t.lower() in {"qty", "value", "amt", "amount"} for t in tokens):
+                    continue
                 if (
                     len(re.sub(r"[^A-Za-z]", "", raw)) >= 4
                     and not re.search(r"TOTAL|Value\s+Rs|Page\b", raw, re.I)
@@ -10543,6 +10657,12 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             r"Item\s*Name|Packg|Open\.?\s*Stk",
             label,
             re.I,
+        ):
+            continue
+        # Qty/Value sub-header tokens must never become a product or stockist.
+        label_tokens = re.findall(r"[A-Za-z]+", label)
+        if label_tokens and all(
+            t.lower() in {"qty", "value", "amt", "amount", "op"} for t in label_tokens
         ):
             continue
         if re.match(r"^(GRAND\s+)?TOTAL\b", label, re.I):
@@ -10579,10 +10699,31 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
                     result["totals"].get("closing_value"),
                 )
             else:
+                # Prefer last GRAND TOTAL over earlier TOTAL / NET TOTAL.
+                _is_grand = bool(re.match(r"^grand\s*totals?\b", label, re.I))
+                _prev_src = str(
+                    result["totals"]["extra"].get("total_row_source") or ""
+                )
+                if _prev_src == "footer_grand_total" and not _is_grand:
+                    continue
                 for key in ("opening_qty", "receipts_qty", "sales_qty", "closing_qty"):
                     if key in parsed:
                         result["totals"][key] = parsed[key]
-                result["totals"]["extra"]["total_row_source"] = "footer_total"
+                for key in (
+                    "opening_value",
+                    "receipts_value",
+                    "sales_value",
+                    "closing_value",
+                ):
+                    if key not in parsed:
+                        continue
+                    if key in {"sales_value", "closing_value"}:
+                        result["totals"][key] = parsed[key]
+                    else:
+                        result["totals"]["extra"][key] = parsed[key]
+                result["totals"]["extra"]["total_row_source"] = (
+                    "footer_grand_total" if _is_grand else "footer_total"
+                )
             continue
         item = empty_line_item()
         tokens = left
@@ -10633,6 +10774,37 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
             readable = re.findall(r"[A-Za-z][A-Za-z .&'-]{3,}", stockist)
             if readable:
                 result["stockist_name"] = _clean_stockist_label(readable[-1])
+    if family == "op_receipts_sales_closing":
+        result["totals"]["extra"]["layout"] = "op_receipts_sales_closing"
+        stockist = str(result.get("stockist_name") or "")
+        stockist_tokens = re.findall(r"[A-Za-z]+", stockist)
+        # Never keep printer chrome / period / Qty-Value subheaders as stockist.
+        if (
+            re.search(
+                r"Powered|MetaLinks|between\b|Follow\s+page|^End\.?$|Page\s*-",
+                stockist,
+                re.I,
+            )
+            or (
+                stockist_tokens
+                and all(
+                    t.lower() in {"qty", "value", "amt", "amount", "op"}
+                    for t in stockist_tokens
+                )
+            )
+        ):
+            result["stockist_name"] = None
+        if not result.get("report_title"):
+            result["report_title"] = "OP Receipts Sales Closing"
+        logger.info(
+            "STOCK_TXT_OP_RECEIPTS_SALES_CLOSING items=%s period=%s..%s "
+            "sales_value=%s closing_value=%s",
+            len(items),
+            result.get("period_from"),
+            result.get("period_to"),
+            result["totals"].get("sales_value"),
+            result["totals"].get("closing_value"),
+        )
     if result.get("stockist_name"):
         result["stockist_name"] = _clean_stockist_label(str(result["stockist_name"]))
     if result["totals"].get("sales_value") is None and not any(
@@ -36026,21 +36198,32 @@ def _parse_daxinsoft_stock_sales_statement(doc, filename: str) -> Optional[Dict[
         m_co = re.search(r"Company\s*:?\s*([A-Z][A-Z0-9 .&()-]+)", text, re.I)
         if m_co:
             result["company_name"] = _clean_name(m_co.group(1))
-        m_sale = re.search(r"Sale\s+Value\s*:\s*([\d,.]+)", text, re.I)
-        m_close = re.search(r"Closing\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        # Prefer the last Grand Total band when several TOTAL rows exist.
+        footer_blob = text
+        grand_hits = list(re.finditer(r"Grand\s*Total\s*:?", text, re.I))
+        if grand_hits:
+            footer_blob = text[grand_hits[-1].start() :]
+        m_sale = list(re.finditer(r"Sale\s+Value\s*:\s*([\d,.]+)", footer_blob, re.I))
+        m_close = list(
+            re.finditer(r"Clos(?:ing|ina)\s+Value\s*:\s*([\d,.]+)", footer_blob, re.I)
+        )
         if m_sale:
-            result["totals"]["sales_value"] = _to_float(m_sale.group(1))
+            result["totals"]["sales_value"] = _to_float(m_sale[-1].group(1))
         if m_close:
-            result["totals"]["closing_value"] = _to_float(m_close.group(1))
+            result["totals"]["closing_value"] = _to_float(m_close[-1].group(1))
         if m_sale or m_close:
             result["totals"]["extra"]["total_row_source"] = "daxinsoft_footer"
-        m_open = re.search(r"Opening\s+Value\s*:\s*([\d,.]+)", text, re.I)
-        m_pur = re.search(r"Purchase\s+Value\s*:\s*([\d,.]+)", text, re.I)
+        m_open = list(
+            re.finditer(r"Opening\s+Value\s*:\s*([\d,.]+)", footer_blob, re.I)
+        )
+        m_pur = list(
+            re.finditer(r"(?:P|S)?urchase\s+Value\s*:\s*([\d,.]+)", footer_blob, re.I)
+        )
         extra = result["totals"]["extra"]
         if m_open:
-            extra["opening_value"] = _to_float(m_open.group(1))
+            extra["opening_value"] = _to_float(m_open[-1].group(1))
         if m_pur:
-            extra["purchase_value"] = _to_float(m_pur.group(1))
+            extra["purchase_value"] = _to_float(m_pur[-1].group(1))
 
         rows = _swil_land_group_words(page.get_text("words") or [], y_tol=3.5)
         buckets = list(_DAXIN_DEFAULT_BUCKETS)
@@ -56088,6 +56271,10 @@ def _is_ssa_opening_receipt_issue_dump_text(text: str) -> bool:
     """
     if not text or not re.search(r"STOCK\s*&\s*SALES", text, re.I):
         return False
+    # Profitmaker O.Stk|Qoh|Value|Age — footer Opening/Closing Value must not
+    # satisfy OPENING/VALUE tokens and steal this into SSA dump Vision.
+    if _looks_like_ostk_qoh_stock_sales_text(text):
+        return False
     # MFR Wise Packing|Op|PQ|SQ|Cl Qty is qty-only — never this dump reader.
     if _is_mfr_wise_stock_sales_text(text):
         return False
@@ -56120,6 +56307,10 @@ def _is_ssa_opening_receipt_issue_dump_text_fuzzy(text: str) -> bool:
     """
     if not text:
         return False
+    # Profitmaker O.Stk|Purc|Tot|Sale|Qoh|Value|Age (footer Opening Value /
+    # Closing Value previously matched OPEN+CLOS+VALUE → SSA dump zeros qtys).
+    if _looks_like_ostk_qoh_stock_sales_text(text):
+        return False
     # "MFR Wise Stock and Sales" matches STOCK AND SALES — exclude it.
     if _is_mfr_wise_stock_sales_text(text):
         return False
@@ -56144,14 +56335,24 @@ def _is_ssa_opening_receipt_issue_dump_text_fuzzy(text: str) -> bool:
     # RATE column sheets must use the RATE-aware reader (rate is not opening qty).
     if re.search(r"\bRATE\b", text, re.I):
         return False
-    blob = text.upper()
+    # Strip Profitmaker money footers before OPEN/CLOS fuzzy hits.
+    sniff = re.sub(
+        r"OPEN(?:ING)?\s+VALUE\s*:?\s*[\d.,]*|"
+        r"PURCHASE\s+VALUE\s*:?\s*[\d.,]*|"
+        r"SALE\s+VALUE\s*:?[.\-]?\s*[\d.,]*|"
+        r"CLOS(?:ING|INA)\s+VALUE\s*:?\s*[\d.,_]*",
+        " ",
+        text,
+        flags=re.I,
+    )
+    blob = sniff.upper()
     has_value = bool(re.search(r"VALUE|VAWUE|VAUUE|VALLUE", blob))
     # Phone photos of Excel often OCR the title but miss VALUE in the header band.
-    has_money = bool(re.search(r"\d+\.\d{2}", text))
+    has_money = bool(re.search(r"\d+\.\d{2}", sniff))
     if not has_value and not has_money:
         return False
     if not re.search(
-        r"ITEM|TEM\s|DESCRIPTION|DERCASAT|OESCARPTION|DERCASAT", text, re.I
+        r"ITEM|TEM\s|DESCRIPTION|DERCASAT|OESCARPTION|DERCASAT", sniff, re.I
     ):
         # Title + money alone can still be this grid when ITEM is unreadable.
         if not (has_money and re.search(r"CLOS|DUMP|ZANDRA|ANALYSIS", blob)):
@@ -56392,6 +56593,17 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             return None
     except Exception:
         pass
+    # Profitmaker O.Stk|Qoh|Value|Age — SSA dump parks O.Stk in receipts_qty and
+    # zeros Sale/Qoh (SSA_DUMP_RECEIPT_AS_OPENING). Soft-reject always.
+    if _looks_like_ostk_qoh_stock_sales_text(soft_preview) or re.search(
+        r"\bQoh\b|\bO\.?\s*Stk\b", soft_preview or "", re.I
+    ):
+        logger.info(
+            "SSA_DUMP_SKIP reason=ostk_qoh_stock_sales file=%s skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
+        return None
 
     if not skip_ocr_gate:
         preview = soft_preview
@@ -64577,10 +64789,15 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
         r"\bRECEIPT\b", upper
     ) and not re.search(r"RECEIVE\s+QUANTITY|RECEIVE\s+QTY", upper):
         return False
+    # Profitmaker O.Stk|Purc|Tot|Sale|Qoh|Value|Age must never enter Marg ORIC
+    # (footer "Opening Value" / "Closing Value" previously matched OPEN…VAL).
+    if _looks_like_ostk_qoh_stock_sales_text(text):
+        return False
     # Op_Stk / Op.Stk / P Qty / Cl_Stk grids must not enter the Marg path
     # (underscore headers previously slipped past Op\\s*Stk and returned zeros).
     if re.search(
-        r"\bDUMP\b|QTY\.?\s+VALUE|\bOp[_\s.]*Stk\b|\bP\s*Qty\b|\bCl[_\s.]*Stk\b",
+        r"\bDUMP\b|QTY\.?\s+VALUE|\bOp[_\s.]*Stk\b|\bP\s*Qty\b|\bCl[_\s.]*Stk\b|"
+        r"\bO\.?\s*STK\b|\bQOH\b",
         upper,
         re.I,
     ):
@@ -64605,6 +64822,17 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
         return False
     if _looks_like_op_stk_rcpts_grid_text(text):
         return False
+    # Strip Profitmaker / Daxinsoft money footers so "Opening Value" /
+    # "Closing Value" cannot satisfy OPEN…VAL / CLOS…VAL column heuristics.
+    sniff = re.sub(
+        r"OPEN(?:ING)?\s+VALUE\s*:?\s*[\d.,]*|"
+        r"PURCHASE\s+VALUE\s*:?\s*[\d.,]*|"
+        r"SALE\s+VALUE\s*:?[.\-]?\s*[\d.,]*|"
+        r"CLOS(?:ING|INA)\s+VALUE\s*:?\s*[\d.,_]*",
+        " ",
+        upper,
+        flags=re.I,
+    )
     # Phone photos often OCR the gray header as junk. Product rows still
     # carry 8 qty/value cells + expiry (01-Oct-26) — keep this layout.
     row_hits = 0
@@ -64616,18 +64844,18 @@ def _is_opening_receive_issue_closing_stock_text(text: str) -> bool:
     has_open = bool(
         re.search(
             r"OPEN(?:ING)?\s*STOCK|OPEN(?:ING)?\s*VAL|\bOPENING\b|\bOPN\b|\bOP\s*[\{\[]",
-            upper,
+            sniff,
         )
     )
-    has_recv = bool(re.search(r"RECEIVE|REC\s*[\{\[]|\bRECE\b|\bREC\b", upper))
-    has_issue = bool(re.search(r"\bISSUE\b|\bTSSUE\b", upper))
+    has_recv = bool(re.search(r"RECEIVE|REC\s*[\{\[]|\bRECE\b|\bREC\b", sniff))
+    has_issue = bool(re.search(r"\bISSUE\b|\bTSSUE\b", sniff))
     has_close = bool(
         re.search(
             r"CLOS(?:ING)?(?:\s*STOCK|\s*VAL)?|\bCOSINE\b|\bCLOSINE\b|\bCLOSI\b|\bCLO\b",
-            upper,
+            sniff,
         )
     )
-    has_product = bool(re.search(r"PRODUCT\s+DESC|PRODUCT", upper))
+    has_product = bool(re.search(r"PRODUCT\s+DESC|PRODUCT", sniff))
     return bool(
         (has_open and has_recv and has_issue and has_close)
         or (has_product and has_open and has_issue and has_close)
@@ -66999,6 +67227,98 @@ def _main_stock_enrich_spreadsheet_meta(
             result["company_name"] = _clean_name(company.group(1))
 
 
+def _enrich_ostk_qoh_letterhead(result: Dict[str, Any], text: str) -> None:
+    """Fill stockist / company from Profitmaker chrome when Vision OCR is garbled.
+
+    Letterhead is the ALL-CAPS distributor above "Stock & Sales Statement".
+    ``Company :…`` is the manufacturer line — never a product row.
+    """
+    if not isinstance(result, dict):
+        return
+    blob = text or ""
+    # Drop Company: rows that leaked into line_items.
+    cleaned_items: List[Dict[str, Any]] = []
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "").strip()
+        if re.match(r"^Company\s*:", name, re.I):
+            if not result.get("company_name"):
+                co = re.sub(r"^Company\s*:\s*", "", name, flags=re.I).strip()
+                if co:
+                    result["company_name"] = _clean_name(co)
+            continue
+        cleaned_items.append(item)
+    result["line_items"] = cleaned_items
+
+    m_co = re.search(
+        r"Com(?:pany|bany)\s*:?\s*([A-Z0-9][A-Z0-9 .&()/-]{3,80})",
+        blob,
+        re.I,
+    )
+    if m_co and (
+        not result.get("company_name")
+        or len(str(result.get("company_name") or "")) < 6
+    ):
+        result["company_name"] = _clean_name(m_co.group(1))
+
+    if not result.get("period_from") or not result.get("period_to"):
+        m_per = re.search(
+            r"From\s+(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+To\s+"
+            r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
+            blob,
+            re.I,
+        )
+        if m_per:
+            if not result.get("period_from"):
+                result["period_from"] = _normalize_date(m_per.group(1))
+            if not result.get("period_to"):
+                result["period_to"] = _normalize_date(m_per.group(2))
+
+    stockist = str(result.get("stockist_name") or "").strip()
+    garbage = (
+        not stockist
+        or len(re.sub(r"[^A-Za-z]", "", stockist)) < 8
+        or re.search(r"[~*]{2,}|^\W+$", stockist)
+        or stockist.lower() in {"done", "try out the tools first"}
+    )
+    if not garbage:
+        return
+    title_idx = None
+    lines = [ln.strip() for ln in blob.splitlines() if ln.strip()]
+    for i, ln in enumerate(lines):
+        if re.search(r"Stock\s*&\s*Sales\s*Statement", ln, re.I):
+            title_idx = i
+            break
+    if title_idx is None:
+        return
+    for ln in reversed(lines[:title_idx]):
+        if re.search(
+            r"Page\s*:|From\s+\d|Company\s*:|Product\s+Name|Packing|O\.?\s*Stk|Qoh",
+            ln,
+            re.I,
+        ):
+            continue
+        cleaned = _clean_name(ln)
+        cleaned = re.sub(r"^[\W\d_]+", "", cleaned).strip()
+        letters = re.sub(r"[^A-Za-z]", "", cleaned)
+        if len(letters) < 8:
+            continue
+        if re.search(
+            r"AYURVEDIC|BHAWAN|DISTRIBUT|AGENC|PHARMA|MEDICAL|ENTERPRISE|"
+            r"STORES|MEDICO|CHEMIST",
+            cleaned,
+            re.I,
+        ) or (cleaned.isupper() and len(letters) >= 10):
+            result["stockist_name"] = cleaned
+            logger.info(
+                "STOCK_OSTK_QOH_LETTERHEAD stockist=%r company=%r",
+                result.get("stockist_name"),
+                result.get("company_name"),
+            )
+            return
+
+
 def _extract_opening_receive_issue_closing_photo(
     file_bytes: bytes, filename: str, ext: str
 ) -> Optional[Dict[str, Any]]:
@@ -67051,6 +67371,33 @@ def _extract_opening_receive_issue_closing_photo(
     # Op_Stk|Rcpts|Cl_Stk photos must not use Marg OPENING/RECEIVE path
     # (name-vision then locks all-zero rows as trusted structured).
     probe = "\n".join(x for x in (text, full_text) if x)
+    # Profitmaker O.Stk|Purc|Tot|Sale|Qoh|Value|Age → dedicated Qoh Vision.
+    # Must beat Marg ORIC (footer Opening/Closing Value + Age→closing_value).
+    if _looks_like_ostk_qoh_stock_sales_text(probe):
+        logger.info(
+            "MAIN_STOCK_SKIP file=%s reason=ostk_qoh_route_opqty_qoh_vision",
+            filename,
+        )
+        try:
+            from services.stock_direct_vision import extract_opqty_qoh_direct_vision
+
+            qoh = extract_opqty_qoh_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="ostk_qoh_before_main_stock",
+            )
+        except Exception as exc:
+            logger.info(
+                "MAIN_STOCK_SKIP file=%s ostk_qoh vision failed: %s",
+                filename,
+                type(exc).__name__,
+            )
+            qoh = None
+        if qoh and qoh.get("line_items"):
+            _enrich_ostk_qoh_letterhead(qoh, probe)
+            return qoh
+        return None
     if _looks_like_op_stk_rcpts_grid_text(probe):
         logger.info(
             "MAIN_STOCK_SKIP file=%s reason=op_stk_rcpts_grid",
@@ -70934,6 +71281,36 @@ def _maybe_early_vision_for_image(
                 len(direct.get("line_items") or []),
             )
             return direct, True
+
+    # Profitmaker O.Stk|Qoh|Value|Age before KNOWN_IMAGE_FORMAT / Marg ORIC.
+    # Footer "Opening Value" previously made ORIC look native and skipped Vision.
+    if _looks_like_ostk_qoh_stock_sales_text(sample or ""):
+        try:
+            from services.stock_direct_vision import extract_opqty_qoh_direct_vision
+
+            qoh_early = extract_opqty_qoh_direct_vision(
+                file_bytes,
+                filename,
+                ext,
+                reason="ostk_qoh_early_before_known_format",
+            )
+        except Exception as exc:
+            logger.info(
+                "[SalesStatement] file=%s ostk_qoh early vision failed: %s",
+                filename,
+                type(exc).__name__,
+            )
+            qoh_early = None
+        if qoh_early and qoh_early.get("line_items"):
+            _enrich_ostk_qoh_letterhead(qoh_early, sample or "")
+            extra = qoh_early.setdefault("totals", {}).setdefault("extra", {})
+            extra["early_vision_reason"] = "ostk_qoh_stock_sales"
+            logger.info(
+                "[SalesStatement] file=%s decision=OPQTY_QOH_VISION rows=%s",
+                filename,
+                len(qoh_early.get("line_items") or []),
+            )
+            return qoh_early, True
 
     if _image_known_ocr_native_format(sample):
         # Product wise stock statement photos: dedicated OCR column reader first.

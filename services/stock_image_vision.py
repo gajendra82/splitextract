@@ -528,10 +528,61 @@ def assess_stock_structured_quality(
             str(signals.get("ocr_text") or ""),
             str((result or {}).get("stockist_name") or ""),
             str((result or {}).get("report_title") or ""),
+            " ".join(
+                str(i.get("product_name") or "")
+                for i in (items[:5] if items else [])
+                if isinstance(i, dict)
+            ),
         ]
     )
     if _phone_ui(ocr_text):
         reasons.append("phone_ui_text")
+
+    # Marg main_stock / SSA dump on Profitmaker Qoh/Value/Age: column shifts
+    # and SSA_DUMP_RECEIPT_AS_OPENING. Never keep as trusted structured.
+    if method in {
+        "main_stock_sales_statement",
+        "main_stock_sales_statement_sheets",
+        "ssa_qty_value_vision",
+        "ssa_qty_value_vision_pdf",
+    } or layout in {
+        "opening_receive_issue_closing",
+        "ssa_opening_receipt_issue_value",
+        "ssa_opening_receipt_issue",
+    }:
+        try:
+            from services.sales_statement_extractor import (
+                _looks_like_ostk_qoh_stock_sales_text,
+            )
+
+            peek_blob = " ".join(
+                [
+                    ocr_text,
+                    str(signals.get("ocr_text") or ""),
+                    str((result or {}).get("report_title") or ""),
+                ]
+            )
+            flags_blob = str(
+                extra.get("flags")
+                or extra.get("quality_flags")
+                or extra.get("post_flags")
+                or ""
+            )
+            if (
+                _looks_like_ostk_qoh_stock_sales_text(peek_blob)
+                or re.search(r"\bQoh\b|\bO\.?\s*Stk\b", peek_blob, re.I)
+                or "SSA_DUMP_RECEIPT_AS_OPENING" in flags_blob
+            ):
+                tag = (
+                    "ostk_qoh_misfiled_as_ssa_dump"
+                    if "ssa" in method.lower() or "ssa" in layout.lower()
+                    else "ostk_qoh_misfiled_as_main_stock"
+                )
+                if tag not in reasons:
+                    reasons.append(tag)
+                trusted = False
+        except Exception:
+            pass
 
     extraction_confidence = signals.get(
         "extraction_confidence", extra.get("extraction_confidence")
@@ -1517,6 +1568,80 @@ def apply_direct_stock_image_gemini(
                 filename,
                 type(detail_exc).__name__,
             )
+
+        # Misfiled Marg main_stock OR SSA dump on Profitmaker Qoh/Value/Age pages.
+        # SSA dump zeros Sale/Qoh and parks O.Stk in receipts_qty
+        # (SSA_DUMP_RECEIPT_AS_OPENING).
+        want_ostk_qoh = _looks_like_ostk_qoh_stock_sales_text(peek_text) and (
+            method
+            in {
+                "main_stock_sales_statement",
+                "main_stock_sales_statement_sheets",
+                "ssa_qty_value_vision",
+                "ssa_qty_value_vision_pdf",
+            }
+            or layout
+            in {
+                "opening_receive_issue_closing",
+                "ssa_opening_receipt_issue_value",
+                "ssa_opening_receipt_issue",
+            }
+            or force_gemini
+            or "identity_failure_rate" in set(decision.get("reasons") or [])
+            or any(
+                str(r).startswith("ostk_qoh_misfiled")
+                for r in (decision.get("reasons") or [])
+            )
+            or "COLUMN_ASSIGNMENT_SUSPECTED" in str(extra.get("row_classify") or "")
+            or "SSA_DUMP_RECEIPT_AS_OPENING"
+            in str(
+                extra.get("flags")
+                or extra.get("quality_flags")
+                or extra.get("post_flags")
+                or ""
+            )
+        )
+        if want_ostk_qoh and _enabled():
+            try:
+                from services.stock_direct_vision import extract_opqty_qoh_direct_vision
+                from services.sales_statement_extractor import _enrich_ostk_qoh_letterhead
+
+                ostk_qoh = extract_opqty_qoh_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="ostk_qoh_after_main_stock_misfile",
+                )
+                if ostk_qoh and ostk_qoh.get("line_items"):
+                    _enrich_ostk_qoh_letterhead(ostk_qoh, peek_text)
+                    selected_extra = ostk_qoh.setdefault("totals", {}).setdefault(
+                        "extra", {}
+                    )
+                    selected_extra["quality_decision"] = decision
+                    selected_extra["structured_extraction"] = {
+                        "extraction_method": extra.get("extraction_method"),
+                        "layout": layout,
+                        "schema": decision.get("schema"),
+                        "row_count": decision.get("row_count"),
+                        "line_items": copy.deepcopy(result.get("line_items") or []),
+                    }
+                    selected_extra["final_selected_extraction"] = "gemini"
+                    selected_extra["stock_image_vision_decided"] = True
+                    selected_extra["stock_image_gemini_status"] = (
+                        "ostk_qoh_after_main_stock_misfile"
+                    )
+                    logger.info(
+                        "STOCK_IMAGE_GEMINI file=%s status=ostk_qoh_preferred rows=%s",
+                        filename,
+                        len(ostk_qoh.get("line_items") or []),
+                    )
+                    return ostk_qoh
+            except Exception as qoh_exc:
+                logger.info(
+                    "STOCK_IMAGE_GEMINI file=%s ostk_qoh preferred failed: %s",
+                    filename,
+                    type(qoh_exc).__name__,
+                )
 
         ssa_misfile = (
             method in {"ssa_qty_value_vision", "ssa_qty_value_vision_pdf"}
