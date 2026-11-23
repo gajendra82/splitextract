@@ -31408,8 +31408,10 @@ def _parse_order_form_stock_statement_doc(doc, filename: str) -> Optional[Dict[s
 # Lone "-" is a blank/zero cell. Signed qty/value tokens must also match
 # (e.g. receipt -11 / -3967.48) or the whole product row is skipped.
 _SSA_ORI_TOKEN_RE = re.compile(r"^(?:-|-?\d+(?:\.\d+)?)$")
+# Pack cells include apostrophe forms printed on SSA grids (60'S, 30'ML).
 _SSA_ORI_PACK_RE = re.compile(
-    r"^(?:\d+\s*\*\s*\d+|\d+X\d+|\d+(?:\.\d+)?(?:ML|GM|GMS|TAB|CC|S)?)$",
+    r"^(?:\d+\s*\*\s*\d+|\d+X\d+|"
+    r"\d+(?:\.\d+)?(?:'?(?:ML|GM|GMS|TAB|CC|S))?)$",
     re.I,
 )
 
@@ -31708,7 +31710,9 @@ def _parse_ssa_opening_receipt_issue_value(
         item["product_name"] = name
         item["packing"] = pack
         item["opening_qty"] = _ssa_ori_number(tail[0])
+        # RECEIPT qty is the purchase column on this layout.
         item["receipts_qty"] = _ssa_ori_number(tail[2])
+        item["purchase_qty"] = item["receipts_qty"]
         item["sales_qty"] = _ssa_ori_number(tail[4])
         item["sales_value"] = _ssa_ori_number(tail[5])
         item["closing_qty"] = _ssa_ori_number(tail[6])

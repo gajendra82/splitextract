@@ -146,6 +146,60 @@ class TestSsaOriDetection(unittest.TestCase):
         self.assertEqual(parsed["totals"]["sales_value"], 13047.77)
         self.assertEqual(parsed["totals"]["closing_value"], 40921.16)
 
+    def test_agrawal_opening_closing_qty_and_apostrophe_pack(self):
+        """OPENING/CLOSING qty stay on printed QTY cells; 60'S is packing."""
+        from services.sales_statement_extractor import (
+            _parse_ssa_opening_receipt_issue_value,
+        )
+
+        text = (
+            "AGRAWAL & AGRAWAL\n"
+            "K-61/135,SAPTSAGAR,MAIDAGIN VARANASI (U.P.) 221001\n"
+            "Phone : 8004227318,9838944133\n"
+            "GSTIN : 09AXBPA3521G1Z1\n"
+            "STOCK & SALES ANALYSIS  (HIMALAYA ZANDRA) "
+            "01-10-2026 - 31-10-2026  Store : Sale\n"
+            "ITEM DESCRIPTION  OPENING  RECEIPT  ISSUE  CLOSING  DUMP\n"
+            "QTY. VALUE QTY. VALUE QTY. VALUE QTY. VALUE QTY.\n"
+            "HIMALAYA ZANDRA\n"
+            "ARJUNA-TAB 60'S 4 926.65 60 13899.70 51 11988.63 13 3011.60 -\n"
+            "BONISAN-SY(B) 200ML 120 12126.35 - 0.00 19 1976.31 101 10206.34 101\n"
+            "BONISON DROP 30'ML 66 4357.62 350 23108.58 222 14754.35 194 12808.75 14\n"
+            "TOTAL 10505 1555445.07 18281 3325845.15 20312 3576234.34 8474 1315480.95 0\n"
+        )
+        parsed = _parse_ssa_opening_receipt_issue_value(text, "zandra_oct.pdf", "pdf")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["stockist_name"], "AGRAWAL & AGRAWAL")
+        by_name = {
+            str(item.get("product_name") or "").upper(): item
+            for item in parsed["line_items"]
+        }
+        arjuna = by_name["ARJUNA-TAB"]
+        self.assertEqual(arjuna.get("packing"), "60'S")
+        self.assertEqual(arjuna["opening_qty"], 4.0)
+        self.assertEqual(arjuna["purchase_qty"], 60.0)
+        self.assertEqual(arjuna["receipts_qty"], 60.0)
+        self.assertEqual(arjuna["sales_qty"], 51.0)
+        self.assertEqual(arjuna["closing_qty"], 13.0)
+        self.assertEqual(arjuna["closing_value"], 3011.6)
+        self.assertEqual(arjuna["extra"]["opening_value"], 926.65)
+        self.assertEqual(arjuna["extra"]["dump_qty"], 0.0)
+
+        bonisan = by_name["BONISAN-SY(B)"]
+        self.assertEqual(bonisan.get("packing"), "200ML")
+        self.assertEqual(bonisan["opening_qty"], 120.0)
+        self.assertEqual(bonisan["purchase_qty"], 0.0)
+        self.assertEqual(bonisan["receipts_qty"], 0.0)
+        self.assertEqual(bonisan["sales_qty"], 19.0)
+        self.assertEqual(bonisan["closing_qty"], 101.0)
+        self.assertEqual(bonisan["extra"]["dump_qty"], 101.0)
+
+        drop = by_name["BONISON DROP"]
+        self.assertEqual(drop.get("packing"), "30'ML")
+        self.assertEqual(drop["opening_qty"], 66.0)
+        self.assertEqual(drop["closing_qty"], 194.0)
+        self.assertEqual(drop["purchase_qty"], 350.0)
+
 
 @unittest.skipUnless(FIXTURE.is_file(), "missing Prakash SSA fixture")
 class TestSsaOriFixture(unittest.TestCase):
