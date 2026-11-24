@@ -64,11 +64,15 @@ def _is_total_row_name(name: Any) -> bool:
         return True
     if "totalvalue" in key or key.startswith("grandtotal"):
         return True
+    if key.startswith("grouptotal"):
+        return True
     return key in {
         "total",
         "totals",
         "grandtotal",
         "grandtotals",
+        "grouptotal",
+        "grouptotals",
         "subtotal",
         "subtotals",
         "pagetotal",
@@ -79,11 +83,12 @@ def _is_total_row_name(name: Any) -> bool:
 
 
 _SHEET_TOTAL_NAME = re.compile(
-    r"(?:^|\b)(?:grand\s+|sub\s+|division\s+|company\s+|page\s+)?"
+    r"(?:^|\b)(?:grand\s+|sub\s+|division\s+|company\s+|page\s+|group\s+)?"
     r"total\s+value\b"
     r"|^\s*(?:amount|qty|quantity)\s+(?:grand\s+)?total\b"
-    r"|^\s*(?:division|company)\s+total\b"
+    r"|^\s*(?:division|company|group)\s+total\b"
     r"|^\s*grand\s+total\b"
+    r"|^\s*group\s*totals?\b"
     r"|total\s+for\b"
     r"|^\s*total\s*count\b"
     r"|^\s*total\s*:-",
@@ -158,13 +163,24 @@ def _is_sheet_total_name(name: Any) -> bool:
     return "totalvalue" in key
 
 
+def _footer_row_label_blob(tokens: List[Dict[str, Any]]) -> str:
+    parts = [
+        str(t.get("text") or "").strip()
+        for t in (tokens or [])
+        if isinstance(t, dict) and str(t.get("text") or "").strip()
+    ]
+    return " ".join(parts)
+
+
 def _footer_totals_from_page_results(
     page_results: List[Dict[str, Any]],
 ) -> Dict[str, float]:
     """Copy printed TOTAL QUANTITY / TOTAL VALUE cells onto statement totals.
 
     Column assignment uses the same header bands as product rows. TOTAL VALUE
-    numbers land in qty canons because the header is qty; remap those to values.
+    and GroupTotal money land in qty canons because the header is qty; remap
+    those to values. When several TOTAL / GRAND TOTAL / GroupTotal bands print,
+    prefer the last GRAND TOTAL; else the last GroupTotal / value footer.
     """
     from services.stock_header_resolver import assign_cells
     from services.stock_native_tables import (
@@ -175,7 +191,10 @@ def _footer_totals_from_page_results(
 
     if not _footer_totals_enabled():
         return {}
-    out: Dict[str, float] = {}
+    # (priority, order, fragment) — higher priority wins; last among equals.
+    # GRAND TOTAL = 2, GroupTotal / TOTAL VALUE = 1, qty TOTAL = 0.
+    candidates: List[Tuple[int, int, Dict[str, float]]] = []
+    order = 0
     for page in page_results or []:
         ready = resolver_ready(page.get("header_cells") or [])
         columns = ready.get("columns") or []
@@ -187,11 +206,20 @@ def _footer_totals_from_page_results(
                 continue
             assigned = assign_cells(row, columns)
             item = fields_to_line_item(assigned.get("fields") or {})
+            frag: Dict[str, float] = {}
+            label = _footer_row_label_blob(row)
+            is_group_total = bool(re.search(r"(?i)\bgroup\s*totals?\b", label))
             if kind == "value":
+                # GroupTotal prints money under Opening/Received/Issued/Closing;
+                # Issued is sales-at-cost, while "Sales Value On prate" often
+                # sits in the trailing free column.
+                sales_dest = (
+                    "sales_issue_value" if is_group_total else "sales_value"
+                )
                 mapping = (
                     ("opening_qty", "opening_value"),
                     ("receipts_qty", "receipts_value"),
-                    ("sales_qty", "sales_value"),
+                    ("sales_qty", sales_dest),
                     ("closing_qty", "closing_value"),
                 )
             else:
@@ -206,7 +234,7 @@ def _footer_totals_from_page_results(
                 if val in (None, ""):
                     continue
                 try:
-                    out[dest] = float(val)
+                    frag[dest] = float(val)
                 except (TypeError, ValueError):
                     continue
             if kind != "value":
@@ -218,23 +246,67 @@ def _footer_totals_from_page_results(
                 ):
                     val = item.get(src)
                     if val in (None, ""):
-                        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                        extra = (
+                            item.get("extra")
+                            if isinstance(item.get("extra"), dict)
+                            else {}
+                        )
                         val = extra.get(src)
                     if val in (None, ""):
                         continue
                     try:
-                        out[src] = float(val)
+                        frag[src] = float(val)
                     except (TypeError, ValueError):
                         continue
+            elif is_group_total:
+                free_val = None
+                extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                for key in ("free_out_qty", "free_in_qty", "sample_qty"):
+                    raw = item.get(key)
+                    if raw in (None, ""):
+                        raw = extra.get(key)
+                    if raw in (None, ""):
+                        continue
+                    try:
+                        free_val = float(raw)
+                        break
+                    except (TypeError, ValueError):
+                        continue
+                if free_val is not None and abs(free_val) >= 1.0:
+                    frag["sales_value"] = free_val
+            if re.search(r"(?i)\bgrand\s*totals?\b", label):
+                priority = 2
+            elif is_group_total or kind == "value":
+                priority = 1
+            else:
+                priority = 0
+            candidates.append((priority, order, frag))
+            order += 1
             logger.info(
-                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s opening=%s receipts=%s "
-                "sales=%s closing=%s",
+                "STOCK_PDF_WORDS_FOOTER_TOTALS kind=%s priority=%s opening=%s "
+                "receipts=%s sales=%s closing=%s",
                 kind,
-                out.get("opening_qty", out.get("opening_value")),
-                out.get("receipts_qty", out.get("receipts_value")),
-                out.get("sales_qty", out.get("sales_value")),
-                out.get("closing_qty", out.get("closing_value")),
+                priority,
+                frag.get("opening_qty", frag.get("opening_value")),
+                frag.get("receipts_qty", frag.get("receipts_value")),
+                frag.get(
+                    "sales_qty",
+                    frag.get("sales_value", frag.get("sales_issue_value")),
+                ),
+                frag.get("closing_qty", frag.get("closing_value")),
             )
+    if not candidates:
+        return {}
+    best_priority = max(c[0] for c in candidates)
+    chosen = next(
+        frag
+        for pri, _ord, frag in reversed(candidates)
+        if pri == best_priority
+    )
+    out = dict(chosen)
+    # Promote issue-band money only when Sales Value On prate was absent.
+    if out.get("sales_value") is None and out.get("sales_issue_value") is not None:
+        out["sales_value"] = out["sales_issue_value"]
     return out
 
 
@@ -3050,12 +3122,13 @@ def _count_moved_items(items: Optional[List[Dict[str, Any]]]) -> int:
 
 _TRAILING_PACK_RE = re.compile(
     r"(?i)^(?P<name>.+?)\s+(?P<pack>\d+(?:\.\d+)?\s*(?:['’`]\s*)?S"
-    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|M))$"
+    r"|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|KG|G|M))$"
 )
 # Glued / parenthetical packs when Packing cell is empty:
 # "…SPRAY100 ML", "…OR6S", "…CHO(10S" / "…(200ML)".
 _GLUED_OR_PAREN_PACK_UNIT = (
-    r"\d+(?:\.\d+)?\s*(?:['’`]\s*)?S|\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|KG|G|M)"
+    r"\d+(?:\.\d+)?\s*(?:['’`]\s*)?S|"
+    r"\d+(?:\.\d+)?\s*(?:ML|MG|GM|GRM|GR|KG|G|M)"
 )
 _GLUED_OR_PAREN_PACK_RE = re.compile(
     rf"(?i)^(?:"
@@ -3067,7 +3140,7 @@ _GLUED_OR_PAREN_PACK_RE = re.compile(
 # the same size (often truncated: 100M / 30'S).
 _DUP_PACK_IN_NAME_RE = re.compile(
     r"(?i)^(?P<head>.+?)(?:[,\s]+)(?P<num>\d+(?:\.\d+)?)\s*"
-    r"(?P<unit>['’`]?S|ML|MG|GM|GRM|KG|G|M)$"
+    r"(?P<unit>['’`]?S|ML|MG|GM|GRM|GR|KG|G|M)$"
 )
 # "BONNISAN LIQ(200ML)" when Packing already holds 200M.
 _PAREN_PACK_IN_NAME_RE = re.compile(
@@ -3076,7 +3149,7 @@ _PAREN_PACK_IN_NAME_RE = re.compile(
 )
 # "GEL60ML" / "SYP-100ML" / "PASTE-50G" glued onto the last word.
 _GLUED_PACK_SUFFIX_RE = re.compile(
-    r"(?i)^(?P<head>.*?)(?P<num>\d+(?:\.\d+)?)(?P<unit>['’`]?S|ML|MG|GM|GRM|KG|G|M)$"
+    r"(?i)^(?P<head>.*?)(?P<num>\d+(?:\.\d+)?)(?P<unit>['’`]?S|ML|MG|GM|GRM|GR|KG|G|M)$"
 )
 
 
@@ -3107,7 +3180,10 @@ def _pack_units_equivalent(a: str, b: str) -> bool:
         {"M", "GM"},
         {"M", "G"},
         {"G", "GM"},
+        {"G", "GR"},
         {"G", "GRM"},
+        {"GR", "GM"},
+        {"GR", "GRM"},
         {"GM", "GRM"},
     )
 
@@ -3223,9 +3299,12 @@ def _peel_trailing_pack_into_packing(
 
 _LABELED_VALUE_FOOTERS = (
     (re.compile(r"(?i)^open(?:ing)?\s+stock\s+value$"), "opening_value"),
+    (re.compile(r"(?i)^opening\s+value$"), "opening_value"),
     (re.compile(r"(?i)^purchase\s+value$"), "receipts_value"),
     (re.compile(r"(?i)^sale\s+value$"), "sales_value"),
+    (re.compile(r"(?i)^sales\s+value\s+on\s+prate$"), "sales_value"),
     (re.compile(r"(?i)^closing\s+stock\s+value$"), "closing_value"),
+    (re.compile(r"(?i)^closing\s+value$"), "closing_value"),
 )
 # LstSL / Open / Recd sheets print "Last Month Sales / Open. Value / …" footers.
 # Same labels as vision `_LSTSL_FOOTER_LABEL_NAME`; never product rows.
@@ -3236,26 +3315,29 @@ _LSTSL_LABELED_VALUE_FOOTERS = (
     (re.compile(r"(?i)^open\.?\s*value$"), "opening_value"),
     (re.compile(r"(?i)^opening\s*(?:stock\s*)?value$"), "opening_value"),
     (re.compile(r"(?i)^receipt\s*value$"), "receipts_value"),
+    (re.compile(r"(?i)^sales\s+value\s+on\s+prate$"), "sales_value"),
     (re.compile(r"(?i)^sales?\s*(?:stock\s*)?value$"), "sales_value"),
     (re.compile(r"(?i)^closing\s*(?:stock\s*)?value$"), "closing_value"),
 )
 _SKIP_VALUE_FOOTER_RE = re.compile(
     r"(?i)^(?:\((?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\)\s+)?"
-    r"(?:open(?:ing)?\s+stock\s+value|purchase\s+value|sale\s+value|"
-    r"closing\s+stock\s+value|sale\s+return\s+value|"
-    r"purchase\s+return\s+value|st\s+value)$"
+    r"(?:open(?:ing)?\s+stock\s+value|opening\s+value|purchase\s+value|"
+    r"sale\s+value|sales\s+value\s+on\s+prate|closing\s+(?:stock\s+)?value|"
+    r"sale\s+return\s+value|purchase\s+return\s+value|st\s+value)$"
 )
 # Prefix match (vision-style): "Closing Value * - Near Expiry" is still a footer.
 _SKIP_LSTSL_VALUE_FOOTER_RE = re.compile(
     r"(?i)^(?:last\s*month\s*sales?|open\.?\s*value|"
     r"opening\s*(?:stock\s*)?value|receipt\s*value|"
+    r"sales\s+value\s+on\s+prate|"
     r"sales?\s*(?:stock\s*)?value|closing\s*(?:stock\s*)?value|"
     r"order\s*value)\b"
 )
 _LSTSL_FOOTER_PAIR_RE = re.compile(
     r"(?ix)"
     r"(last\s*month\s*sales?|open\.?\s*value|opening\s*(?:stock\s*)?value|"
-    r"receipt\s*value|sales?\s*(?:stock\s*)?value|closing\s*(?:stock\s*)?value|"
+    r"receipt\s*value|sales\s+value\s+on\s+prate|"
+    r"sales?\s*(?:stock\s*)?value|closing\s*(?:stock\s*)?value|"
     r"order\s*value|pend\.?\s*value)"
     r"\s*"
     r"([+-]?[0-9][0-9,]*(?:\.\d+)?)"
@@ -3575,10 +3657,20 @@ def _items_from_resolved_word_columns(
             item.get("closing_qty"),
         ]
         qty_blank = all(v in (None, "") for v in qty_vals)
+        qty_all_zero = all(v in (None, "", 0, 0.0) for v in qty_vals)
+        pack_raw = str(item.get("packing") or "").strip()
+        # Misaligned first-column "0" under a brand banner is not a pack size.
+        if pack_raw in {"0", "0.0", "0.00"} and _BRAND_SECTION_PREFIX_RE.match(name):
+            item["packing"] = None
+            pack_raw = ""
         # Brand/division line alone (no qtys). Do not drop a real SKU that still
         # starts with HIMALAYA after a bad pending merge — strip the banner.
         if _BRAND_SECTION_PREFIX_RE.match(name):
-            if qty_blank:
+            if qty_blank or (
+                qty_all_zero
+                and not _SECTION_PACK_WORD.search(name)
+                and not pack_raw
+            ):
                 logger.info("STOCK_PDF_WORDS_BRAND_BANNER_SKIP name=%s", name[:60])
                 continue
             if _brand_section_pending_skip_enabled():
@@ -3692,6 +3784,169 @@ def _letterhead_digits_are_fy_only(line: str) -> bool:
     s = str(line or "")
     without_fy = _LETTERHEAD_FY_RE.sub("", s)
     return not bool(re.search(r"\d{2,}", without_fy))
+
+
+def _opening_received_issued_header_summary_enabled() -> bool:
+    """STOCK_PDF_OPENING_RECEIVED_ISSUED_SUMMARY — labeled header money.
+
+    Opening/Received/Issued/Closing sheets print Opening Value / Purchase /
+    Sales / Closing Value / Sales Value On prate above the grid. Default ON.
+    Kill switch: STOCK_PDF_OPENING_RECEIVED_ISSUED_SUMMARY=false.
+    """
+    return os.getenv(
+        "STOCK_PDF_OPENING_RECEIVED_ISSUED_SUMMARY", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
+
+_OPENING_RECEIVED_ISSUED_HEADER_RE = re.compile(
+    r"(?is)"
+    r"(?:\bitem\s*name\b.+\bpack\b.+\bopening\b.+\breceived\b.+\bissued\b"
+    r".+\bclosing\b)"
+    r"|(?:\bopening\s+value\b.+\bclosing\s+value\b)"
+    r"|(?:\bsales\s+value\s+on\s+prate\b)"
+)
+
+_OPENING_RECEIVED_ISSUED_PAIR_RE = re.compile(
+    r"(?ix)"
+    r"(?P<label>"
+    r"opening\s+value|"
+    r"closing\s+value|"
+    r"sales\s+value\s+on\s+prate|"
+    r"purchase\s+value|"
+    r"purchase(?!\s+return)|"
+    r"sales?(?!\s+value|\s+return)"
+    r")"
+    r"\s*[:=\-]?\s*"
+    r"(?P<amount>[+-]?\d{1,3}(?:,\d{2,3})+(?:\.\d+)?|[+-]?\d+\.\d{2})"
+)
+
+
+def _apply_opening_received_issued_header_summary(
+    result: Dict[str, Any], peek: str
+) -> bool:
+    """Peel Opening Value / Purchase / Sales Value On prate / Closing Value.
+
+    Layout-family fix for Opening|Received|Issued|Closing grids (and the same
+    columns in Excel). Never invents amounts; only copies printed labels.
+    """
+    if not _opening_received_issued_header_summary_enabled():
+        return False
+    if not isinstance(result, dict):
+        return False
+    blob = str(peek or "")
+    if not blob.strip() or not _OPENING_RECEIVED_ISSUED_HEADER_RE.search(blob):
+        return False
+    from services.stock_header_resolver import parse_number
+
+    found: Dict[str, float] = {}
+    for match in _OPENING_RECEIVED_ISSUED_PAIR_RE.finditer(blob):
+        label = re.sub(r"\s+", " ", match.group("label")).strip().lower()
+        amount = parse_number(match.group("amount"))
+        if amount is None:
+            continue
+        if label == "opening value":
+            found["opening_value"] = float(amount)
+        elif label == "closing value":
+            found["closing_value"] = float(amount)
+        elif label == "sales value on prate":
+            found["sales_value"] = float(amount)
+        elif label in {"purchase", "purchase value"}:
+            found["receipts_value"] = float(amount)
+            found["purchase_value"] = float(amount)
+        elif label in {"sale", "sales"}:
+            # Cost/issue band — keep only when Sales Value On prate is absent.
+            found.setdefault("sales_issue_value", float(amount))
+    if not found:
+        return False
+    totals = result.setdefault("totals", {})
+    if not isinstance(totals, dict):
+        totals = {}
+        result["totals"] = totals
+    extra = totals.setdefault("extra", {})
+    if not isinstance(extra, dict):
+        extra = {}
+        totals["extra"] = extra
+    changed = False
+    if found.get("opening_value") is not None:
+        totals["opening_value"] = found["opening_value"]
+        extra["opening_value"] = found["opening_value"]
+        changed = True
+    if found.get("closing_value") is not None:
+        totals["closing_value"] = found["closing_value"]
+        changed = True
+    if found.get("sales_value") is not None:
+        totals["sales_value"] = found["sales_value"]
+        changed = True
+    elif found.get("sales_issue_value") is not None and totals.get(
+        "sales_value"
+    ) in (None, ""):
+        totals["sales_value"] = found["sales_issue_value"]
+        changed = True
+    for key in ("receipts_value", "purchase_value", "sales_issue_value"):
+        if found.get(key) is not None:
+            extra[key] = found[key]
+            if key == "receipts_value":
+                totals["receipts_value"] = found[key]
+            changed = True
+    if changed:
+        extra["layout"] = extra.get("layout") or "opening_received_issued_closing"
+        extra["psr_column_layout"] = (
+            extra.get("psr_column_layout") or "opening_received_issued_closing"
+        )
+        if not extra.get("total_row_source"):
+            extra["total_row_source"] = "opening_received_issued_header"
+        logger.info(
+            "STOCK_PDF_OPENING_RECEIVED_ISSUED_SUMMARY "
+            "opening_value=%s receipts_value=%s sales_value=%s closing_value=%s",
+            found.get("opening_value"),
+            found.get("receipts_value"),
+            totals.get("sales_value"),
+            found.get("closing_value"),
+        )
+    return changed
+
+
+def _drop_consecutive_duplicate_zero_rows(
+    items: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Drop consecutive identical all-zero SKU rows (printed pack/name twins)."""
+    if not items:
+        return items
+    out: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if not out:
+            out.append(item)
+            continue
+        prev = out[-1]
+        name_a = _norm_name(item.get("product_name"))
+        name_b = _norm_name(prev.get("product_name"))
+        pack_a = _norm_name(item.get("packing"))
+        pack_b = _norm_name(prev.get("packing"))
+        qty_keys = (
+            "opening_qty",
+            "receipts_qty",
+            "sales_qty",
+            "closing_qty",
+        )
+
+        def _zeroish(row: Dict[str, Any]) -> bool:
+            vals = [row.get(k) for k in qty_keys]
+            if any(v not in (None, "", 0, 0.0) for v in vals):
+                return False
+            return True
+
+        same = name_a and name_a == name_b and pack_a == pack_b
+        if same and _zeroish(item) and _zeroish(prev):
+            logger.info(
+                "STOCK_PDF_OPENING_RECEIVED_ISSUED_DEDUP name=%s pack=%s",
+                item.get("product_name"),
+                item.get("packing"),
+            )
+            continue
+        out.append(item)
+    return out
 
 
 def _apply_op_qty_pur_sale_bal_meta(result: Dict[str, Any], peek: str) -> bool:
@@ -4197,7 +4452,9 @@ def parse_pdf_free_column_statement(
     if not parsed or not parsed.get("line_items"):
         return None
     result = empty_result(filename, "pdf")
-    result["line_items"] = parsed["line_items"]
+    result["line_items"] = _drop_consecutive_duplicate_zero_rows(
+        list(parsed["line_items"] or [])
+    )
     if re.search(r"Sale\s+And\s+Stock\s+Statement", peek, re.I):
         result["report_title"] = "Sale And Stock Statement"
     elif re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", peek, re.I):
@@ -4314,9 +4571,10 @@ def parse_pdf_free_column_statement(
         result["period_from"] = _iso(period.group(1), period.group(2), period.group(3))
         result["period_to"] = _iso(period.group(4), period.group(5), period.group(6))
     if not result.get("period_from"):
+        # FROM 01/Oct/2026 TO 31/Oct/2026 (slash or dash month names).
         month_period = re.search(
-            r"From\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s+"
-            r"To\s*:?\s*(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+            r"From\s*:?\s*(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s+"
+            r"To\s*:?\s*(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})",
             peek,
             re.I,
         )
@@ -4411,6 +4669,7 @@ def parse_pdf_free_column_statement(
         ):
             result["stockist_address"] = lines[1]
     _apply_pdf_words_letterhead_meta(result, peek)
+    _apply_opening_received_issued_header_summary(result, peek)
     # Printed Manufacturer/Division beats a letterhead street line.
     mfr_line = re.search(
         r"Manufacturer\s*Name\s*:\s*(.+?)(?:\s+Division\b|$)",
@@ -4458,9 +4717,22 @@ def parse_pdf_free_column_statement(
     # Manufacturer Op/Pur/Sale/Bal money band already filled totals — do not
     # let a qty-only footer wipe sales_value / closing_value or the source tag.
     keep_mfr_band = bool(extra.get("manufacturer_band_totals"))
+    keep_header_summary = bool(
+        extra.get("total_row_source") == "opening_received_issued_header"
+        or result["totals"].get("sales_value") not in (None, "")
+        or result["totals"].get("closing_value") not in (None, "")
+    )
     if footer:
-        if not keep_mfr_band:
+        if not keep_mfr_band and not keep_header_summary:
             extra["total_row_source"] = "printed_footer"
+        elif not keep_mfr_band and keep_header_summary:
+            extra["total_row_source"] = (
+                extra.get("total_row_source") or "printed_footer"
+            )
+            if footer.get("opening_value") is not None or footer.get(
+                "closing_value"
+            ) is not None:
+                extra["total_row_source"] = "opening_received_issued_grouptotal"
         for key in (
             "opening_qty",
             "receipts_qty",
@@ -4469,10 +4741,22 @@ def parse_pdf_free_column_statement(
             "opening_value",
             "receipts_value",
             "last_month_sales_value",
+            "sales_issue_value",
+            "purchase_value",
         ):
             if footer.get(key) is not None:
                 if keep_mfr_band and key in {"opening_value", "receipts_value"}:
                     continue
+                if keep_header_summary and key in {
+                    "opening_value",
+                    "receipts_value",
+                    "purchase_value",
+                }:
+                    # Header labels already filled these; keep printed values.
+                    if result["totals"].get(key) not in (None, "") or extra.get(
+                        key
+                    ) not in (None, ""):
+                        continue
                 if key in {
                     "opening_qty",
                     "receipts_qty",
@@ -4483,10 +4767,27 @@ def parse_pdf_free_column_statement(
                 }:
                     result["totals"][key] = footer[key]
                 extra[key] = footer[key]
-        if footer.get("sales_value") is not None and not keep_mfr_band:
+        if (
+            footer.get("sales_value") is not None
+            and not keep_mfr_band
+            and result["totals"].get("sales_value") in (None, "")
+        ):
             result["totals"]["sales_value"] = footer["sales_value"]
-        if footer.get("closing_value") is not None and not keep_mfr_band:
+        if (
+            footer.get("closing_value") is not None
+            and not keep_mfr_band
+            and result["totals"].get("closing_value") in (None, "")
+        ):
             result["totals"]["closing_value"] = footer["closing_value"]
+    # Ensure period from peek survives the content-only finalize late pass.
+    try:
+        from services.sales_statement_extractor import (
+            _finalize_statement_period_fields,
+        )
+
+        result = _finalize_statement_period_fields(result, content_text=peek)
+    except Exception:
+        pass
     logger.info(
         "STOCK_PDF_WORDS_TABLE file=%s items=%s closing_value=%s",
         filename,

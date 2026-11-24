@@ -150,7 +150,8 @@ _DIGIT_CONFUSIONS = {
 }
 
 _TOTAL_ROW_NAME = re.compile(
-    r"(?i)^\s*(?:grand\s*)?(?:sub\s*)?totals?\b|^\s*total\s*(?:qty|value|amount)?\s*$"
+    r"(?i)^\s*(?:grand\s*|group\s*)?(?:sub\s*)?totals?\b|"
+    r"^\s*total\s*(?:qty|value|amount)?\s*$"
 )
 
 

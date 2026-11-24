@@ -1618,13 +1618,31 @@ def apply_direct_stock_image_gemini(
                         "extra", {}
                     )
                     selected_extra["quality_decision"] = decision
-                    selected_extra["structured_extraction"] = {
-                        "extraction_method": extra.get("extraction_method"),
-                        "layout": layout,
-                        "schema": decision.get("schema"),
-                        "row_count": decision.get("row_count"),
-                        "line_items": copy.deepcopy(result.get("line_items") or []),
-                    }
+                    # Never keep SSA/main_stock shadow for this layout — Age↔Value
+                    # shifts and SSA_DUMP_RECEIPT_AS_OPENING pollute audits.
+                    prior_method = str(extra.get("extraction_method") or method or "")
+                    if prior_method in {
+                        "ssa_qty_value_vision",
+                        "ssa_qty_value_vision_pdf",
+                        "main_stock_sales_statement",
+                        "main_stock_sales_statement_sheets",
+                    } or "ssa" in prior_method.lower():
+                        selected_extra["structured_extraction"] = {
+                            "discarded": True,
+                            "reason": "ostk_qoh_misfiled_shadow",
+                            "extraction_method": prior_method,
+                            "row_count": decision.get("row_count"),
+                        }
+                    else:
+                        selected_extra["structured_extraction"] = {
+                            "extraction_method": extra.get("extraction_method"),
+                            "layout": layout,
+                            "schema": decision.get("schema"),
+                            "row_count": decision.get("row_count"),
+                            "line_items": copy.deepcopy(
+                                result.get("line_items") or []
+                            ),
+                        }
                     selected_extra["final_selected_extraction"] = "gemini"
                     selected_extra["stock_image_vision_decided"] = True
                     selected_extra["stock_image_gemini_status"] = (

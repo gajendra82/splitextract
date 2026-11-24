@@ -442,6 +442,10 @@ Examples when visible (Profitmaker):
 - ARJUNA TAB 60 T: O.Stk 0, Purc 0, Tot 0, Sale 0, Qoh 0, Value 0.00, Age 637
   → opening 0, receipts 0, sales 0, closing_qty 0, closing_value 0.00,
     extra.age_days 637 (NOT closing_value=637)
+- BONNISAN DROP 1X30ML: O.Stk 22, Purc 50, Tot 72, Sale 4, Qoh 68,
+  Value 4489.67, Age 24
+  → opening 22, receipts 50, sales 4, closing_qty 68, closing_value 4489.67
+    (NEVER leave qty as 0 when Tot/Value are printed)
 - BONNISAN LIQUID 200ML: 83 / 0 / 83 / 0 / 83 / 7162.74 / 230
   → closing_qty=83, closing_value=7162.74, age_days=230
 - BONNISAN LIQUID 100ML: 327 / 0 / 327 / 0 / 327 / 18571.97 / 215
@@ -472,6 +476,10 @@ several TOTAL / GRAND TOTAL rows exist):
   Purchase Value -> totals.extra.purchase_value
   Sale Value     -> totals.sales_value   (page total only — not per line)
   Closing Value  -> totals.closing_value
+- When Purchase Value is blank / empty next to its label, purchase_value MUST
+  be null — NEVER copy Sale Value into purchase_value.
+- Keep each row's own Value on that same product. Do NOT shift Value down onto
+  the next SKU (e.g. RUMALAYA TABS Value must not land on TENTEX ROYAL CAPS).
 
 Return ONLY valid JSON:
 {
@@ -7517,7 +7525,8 @@ def _peel_ostk_qoh_footer_money(text: str) -> Dict[str, float]:
     """Peel Opening/Purchase/Sale/Closing Value from Profitmaker Qoh footers.
 
     When ``Grand Total`` is printed, prefer the last Grand Total band over
-    earlier section totals. OCR may garble Purchase→Surchase, Closing→Closina.
+    earlier section totals. OCR may garble Purchase→Surchase, Closing→Closina,
+    Sale Value→Sale Vatue. Blank Purchase Value stays absent (never Sale copy).
     """
     blob = text or ""
     out: Dict[str, float] = {}
@@ -7531,19 +7540,21 @@ def _peel_ostk_qoh_footer_money(text: str) -> Dict[str, float]:
     specs = (
         (
             "opening_value",
-            r"Open(?:ing)?\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+            r"Open(?:ing)?\s+Va[lt](?:ue|uc)?\s*[:.\-]?\s*([\d,.]+)",
         ),
         (
             "purchase_value",
-            r"(?:P|S)?urchase\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+            # Require a real digit after the label so "Purchase Value : Closing"
+            # (blank field) does not steal Closing's money.
+            r"(?:P|S)?urchase\s+Va[lt](?:ue|uc)?\s*[:.\-]?\s*([\d,.]+)",
         ),
         (
             "sales_value",
-            r"Sale\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+            r"Sale\s+Va[lt](?:ue|uc)?\s*[:.\-]?\s*([\d,.]+)",
         ),
         (
             "closing_value",
-            r"Clos(?:ing|ina)\s+Val(?:ue)?\s*[:.\-]?\s*([\d,.]+)",
+            r"Clos(?:ing|ina)\s+Va[lt](?:ue|uc)?\s*[:.\-]?\s*([\d,.]+)",
         ),
     )
     for key, pat in specs:
@@ -7558,6 +7569,32 @@ def _peel_ostk_qoh_footer_money(text: str) -> Dict[str, float]:
             val = None
         if val is not None:
             out[key] = val
+
+    # Blank Purchase Value: label present, no digit before Closing / end.
+    # Mark explicitly so callers clear Vision's Sale→Purchase copy.
+    if "purchase_value" not in out and re.search(
+        r"(?:P|S)?urchase\s+Va[lt]|PU[A-Z]?[GgHh].{0,8}(?:Val|Nau|Value)",
+        blob,
+        re.I,
+    ):
+        blank = re.search(
+            r"(?:P|S)?urchase\s+Va[lt](?:ue|uc)?\s*[:.\-]?\s*"
+            r"(?=Clos|\n|$)",
+            blob,
+            re.I,
+        ) or re.search(
+            r"PU[A-Z]?[GgHh].{0,12}\s*[:.\-]?\s*(?=Clos|\n|$)",
+            blob,
+            re.I,
+        )
+        # "Purchase Value : 0.00" next to a blank cell is often OCR noise when
+        # Sale Value is non-zero — treat as blank unless a non-zero purchase
+        # digit was peeled above.
+        if blank or (
+            re.search(r"(?:P|S)?urchase\s+Va[lt]|PU[A-Z]?[GgHh]", blob, re.I)
+            and abs(float(out.get("sales_value") or 0)) > 0.051
+        ):
+            out["_purchase_value_blank"] = 1.0
     return out
 
 
@@ -7596,14 +7633,29 @@ def _apply_ostk_qoh_footer_money(
         return
     footer_text = _ocr_ostk_qoh_footer_band(file_bytes)
     money = _peel_ostk_qoh_footer_money(footer_text)
+    if not money or (
+        "sales_value" not in money and "closing_value" not in money
+    ):
+        # Band crop sometimes misses labels; fall back to full-page OCR.
+        try:
+            from services.sales_statement_extractor import _ocr_image_to_text
+
+            full_money = _peel_ostk_qoh_footer_money(
+                _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+            )
+            if full_money:
+                money = {**(money or {}), **full_money}
+        except Exception:
+            pass
     if not money:
         return
     totals = result.setdefault("totals", {})
     extra = totals.setdefault("extra", {})
+    purchase_blank = bool(money.pop("_purchase_value_blank", None))
     if "opening_value" in money:
         extra["opening_value"] = money["opening_value"]
         extra["opening_value_source"] = "ostk_qoh_footer_ocr"
-    if "purchase_value" in money:
+    if "purchase_value" in money and not purchase_blank:
         extra["purchase_value"] = money["purchase_value"]
         extra["purchase_value_source"] = "ostk_qoh_footer_ocr"
     if "sales_value" in money:
@@ -7612,13 +7664,38 @@ def _apply_ostk_qoh_footer_money(
     if "closing_value" in money:
         totals["closing_value"] = money["closing_value"]
         extra["closing_value_source"] = "ostk_qoh_footer_ocr"
+    # Blank / missing Purchase Value: never keep Vision's Sale Value copy.
+    try:
+        pv = float(extra.get("purchase_value")) if extra.get("purchase_value") is not None else None
+    except (TypeError, ValueError):
+        pv = None
+    try:
+        sv = float(totals.get("sales_value")) if totals.get("sales_value") is not None else None
+    except (TypeError, ValueError):
+        sv = None
+    if purchase_blank or "purchase_value" not in money:
+        if pv is not None and (
+            purchase_blank
+            or (sv is not None and abs(pv - sv) < 0.051)
+            or abs(pv) < 0.051
+        ):
+            extra["purchase_value"] = None
+            extra["purchase_value_source"] = "ostk_qoh_footer_blank"
+            if "receipts_value" in extra and extra.get("receipts_value") == pv:
+                extra["receipts_value"] = None
+            logger.info(
+                "STOCK_OSTK_QOH_FOOTER_PURCHASE_BLANK cleared_pv=%s sales=%s",
+                pv,
+                sv,
+            )
     extra["total_row_source"] = "ostk_qoh_footer"
     logger.info(
-        "STOCK_OSTK_QOH_FOOTER opening=%s purchase=%s sales=%s closing=%s",
+        "STOCK_OSTK_QOH_FOOTER opening=%s purchase=%s sales=%s closing=%s blank_pur=%s",
         money.get("opening_value"),
-        money.get("purchase_value"),
+        extra.get("purchase_value"),
         money.get("sales_value"),
         money.get("closing_value"),
+        purchase_blank,
     )
 
 
@@ -7630,33 +7707,104 @@ def _opqty_qoh_item_key(item: Dict[str, Any]) -> str:
     return f"{name}|{pack}"
 
 
+def _ostk_qoh_closing_value_num(item: Dict[str, Any]) -> float:
+    try:
+        return float(item.get("closing_value") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _merge_opqty_qoh_halves(
     top: Dict[str, Any], bottom: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Merge overlapping tall-page Vision halves; keep first fingerprint."""
+    """Merge overlapping tall-page Vision halves; prefer bottom Value on overlaps.
+
+    Full-frame top often zeros/shifts closing_value on the last active SKUs.
+    Bottom-band Vision is zoomed on those rows — reuse its printed Value (and
+    matching qty) instead of discarding the overlap.
+    """
     merged = top if isinstance(top, dict) else bottom
     if not isinstance(bottom, dict):
         return merged
     if not isinstance(top, dict):
         return bottom
-    seen = {
-        _opqty_qoh_item_key(i)
-        for i in (top.get("line_items") or [])
-        if isinstance(i, dict) and _opqty_qoh_item_key(i) != "|"
-    }
-    out_items = [
-        i for i in (top.get("line_items") or []) if isinstance(i, dict)
-    ]
+    by_key: Dict[str, Dict[str, Any]] = {}
+    out_items: List[Dict[str, Any]] = []
+    for item in top.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        key = _opqty_qoh_item_key(item)
+        out_items.append(item)
+        if key != "|":
+            by_key[key] = item
     added = 0
+    value_updated = 0
     for item in bottom.get("line_items") or []:
         if not isinstance(item, dict):
             continue
         key = _opqty_qoh_item_key(item)
-        if key == "|" or key in seen:
+        if key == "|":
             continue
-        seen.add(key)
-        out_items.append(item)
-        added += 1
+        existing = by_key.get(key)
+        if existing is None:
+            out_items.append(item)
+            by_key[key] = item
+            added += 1
+            continue
+        # Overlap: prefer bottom closing_value when top dropped/shifted it.
+        bot_cv = _ostk_qoh_closing_value_num(item)
+        top_cv = _ostk_qoh_closing_value_num(existing)
+        try:
+            bot_qoh = float(item.get("closing_qty") or 0)
+            top_qoh = float(existing.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            bot_qoh = top_qoh = 0.0
+        better_value = bot_cv > 0.051 and (
+            top_cv < 0.051 or abs(bot_cv - top_cv) > 0.051
+        )
+        better_qoh = abs(bot_qoh - top_qoh) > 0.051 and bot_qoh >= 0
+        if better_value or (top_cv < 0.051 and bot_cv > 0.051):
+            existing["closing_value"] = bot_cv
+            value_updated += 1
+            extra = (
+                existing.get("extra")
+                if isinstance(existing.get("extra"), dict)
+                else {}
+            )
+            extra = dict(extra)
+            extra["ostk_qoh_closing_from_bottom_band"] = True
+            extra["ostk_qoh_pre_bottom_closing_value"] = top_cv
+            existing["extra"] = extra
+            logger.info(
+                "STOCK_OSTK_QOH_BOTTOM_VALUE_OVERRIDE product=%s top_cv=%s bot_cv=%s",
+                str(existing.get("product_name") or "")[:60],
+                top_cv,
+                bot_cv,
+            )
+        if better_qoh and bot_qoh >= 0:
+            # Only adopt bottom qty when top Value was also wrong/missing —
+            # avoids rewriting good full-frame qty from a partial crop.
+            if top_cv < 0.051 or better_value:
+                for qty_key in (
+                    "opening_qty",
+                    "receipts_qty",
+                    "sales_qty",
+                    "closing_qty",
+                ):
+                    if item.get(qty_key) is not None:
+                        existing[qty_key] = item.get(qty_key)
+                bot_ex = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+                if bot_ex.get("total_stock") is not None:
+                    extra = (
+                        existing.get("extra")
+                        if isinstance(existing.get("extra"), dict)
+                        else {}
+                    )
+                    extra = dict(extra)
+                    extra["total_stock"] = bot_ex.get("total_stock")
+                    if bot_ex.get("age_days") is not None:
+                        extra["age_days"] = bot_ex.get("age_days")
+                    existing["extra"] = extra
     merged["line_items"] = out_items
     # Prefer bottom-half letterhead/footer when top crop missed them.
     for field in ("stockist_name", "company_name", "period_from", "period_to"):
@@ -7674,18 +7822,143 @@ def _merge_opqty_qoh_halves(
     bot_ex = bot_tot.get("extra") if isinstance(bot_tot.get("extra"), dict) else {}
     merged_ex = merged_tot.setdefault("extra", {})
     for key, val in {**top_ex, **bot_ex}.items():
+        if key == "purchase_value":
+            # Do not let a Vision Sale→Purchase copy win over a blank footer.
+            continue
         if key not in merged_ex or merged_ex.get(key) in (None, "", 0, 0.0):
             merged_ex[key] = val
+    # Prefer bottom purchase only when it is a real distinct money figure.
+    for src in (bot_ex, top_ex):
+        pv = src.get("purchase_value")
+        try:
+            pv_f = float(pv) if pv is not None else None
+        except (TypeError, ValueError):
+            pv_f = None
+        if pv_f is None:
+            continue
+        try:
+            sv_f = float(merged_tot.get("sales_value") or 0)
+        except (TypeError, ValueError):
+            sv_f = 0.0
+        if abs(pv_f - sv_f) < 0.051:
+            continue
+        merged_ex["purchase_value"] = pv_f
+        break
     merged_ex["opqty_qoh_halves_merged"] = True
     merged_ex["opqty_qoh_halves_added"] = added
+    merged_ex["opqty_qoh_halves_value_updated"] = value_updated
     logger.info(
-        "STOCK_OSTK_QOH_HALVES_MERGED top=%s bottom=%s out=%s added=%s",
+        "STOCK_OSTK_QOH_HALVES_MERGED top=%s bottom=%s out=%s added=%s value_updated=%s",
         len(top.get("line_items") or []),
         len(bottom.get("line_items") or []),
         len(out_items),
         added,
+        value_updated,
     )
     return merged
+
+
+def _repair_ostk_qoh_closing_value_row_shift(
+    result: Optional[Dict[str, Any]], peek_text: str = ""
+) -> int:
+    """Unshift Value when Vision parked row i's money on row i+1.
+
+    Layout-family only (O.Stk|Purc|Tot|Sale|Qoh|Value|Age). Uses printed OCR
+    ``Sale Qoh Value`` digits — never invents from footer arithmetic.
+    """
+    if not isinstance(result, dict):
+        return 0
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 2:
+        return 0
+
+    # OCR map: (sales_qty, closing_qty) → printed Value (last wins).
+    ocr_by_sale_qoh: Dict[Tuple[int, int], float] = {}
+    for m in re.finditer(
+        r"(?<!\d)(\d+)\s+(\d+)\s+([\d,]+\.\d{2})\s+(\d{2,4})(?!\d)",
+        peek_text or "",
+    ):
+        try:
+            sale_i = int(m.group(1))
+            qoh_i = int(m.group(2))
+            val = float(m.group(3).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if val < 0.051:
+            continue
+        ocr_by_sale_qoh[(sale_i, qoh_i)] = val
+
+    fixed = 0
+    for i in range(len(items) - 1):
+        a = items[i]
+        b = items[i + 1]
+        try:
+            a_qoh = float(a.get("closing_qty") or 0)
+            a_sale = float(a.get("sales_qty") or 0)
+            a_cv = float(a.get("closing_value") or 0)
+            b_qoh = float(b.get("closing_qty") or 0)
+            b_sale = float(b.get("sales_qty") or 0)
+            b_cv = float(b.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if a_qoh < 0.051 or b_cv < 0.051:
+            continue
+        ocr_a = ocr_by_sale_qoh.get((int(round(a_sale)), int(round(a_qoh))))
+        ocr_b = ocr_by_sale_qoh.get((int(round(b_sale)), int(round(b_qoh))))
+
+        # Case 1: a Value missing; b holds a's printed OCR Value.
+        if a_cv < 0.051 and ocr_a is not None and abs(ocr_a - b_cv) < 0.051:
+            a["closing_value"] = float(ocr_a)
+            a_extra = a.get("extra") if isinstance(a.get("extra"), dict) else {}
+            a_extra = dict(a_extra)
+            a_extra["ostk_qoh_value_unshift_from_next"] = True
+            a["extra"] = a_extra
+            if ocr_b is not None and abs(ocr_b - ocr_a) > 0.051:
+                b["closing_value"] = float(ocr_b)
+            else:
+                b["closing_value"] = 0.0
+                b_extra = b.get("extra") if isinstance(b.get("extra"), dict) else {}
+                b_extra = dict(b_extra)
+                b_extra["ostk_qoh_value_steal_cleared"] = True
+                b_extra["ostk_qoh_pre_steal_closing_value"] = b_cv
+                b["extra"] = b_extra
+            fixed += 1
+            logger.info(
+                "STOCK_OSTK_QOH_VALUE_UNSHIFT product=%s value=%s next=%s",
+                str(a.get("product_name") or "")[:60],
+                ocr_a,
+                str(b.get("product_name") or "")[:60],
+            )
+            continue
+
+        # Case 2: a already repaired to OCR Value, but b still duplicates it
+        # (neighbor steal). Restore b from OCR when available; else clear.
+        if (
+            a_cv > 0.051
+            and abs(a_cv - b_cv) < 0.051
+            and b_qoh > 0.051
+            and ocr_a is not None
+            and abs(ocr_a - a_cv) < 0.051
+        ):
+            if ocr_b is not None and abs(ocr_b - a_cv) > 0.051:
+                b["closing_value"] = float(ocr_b)
+            else:
+                b["closing_value"] = 0.0
+                b_extra = b.get("extra") if isinstance(b.get("extra"), dict) else {}
+                b_extra = dict(b_extra)
+                b_extra["ostk_qoh_value_steal_cleared"] = True
+                b_extra["ostk_qoh_pre_steal_closing_value"] = b_cv
+                b["extra"] = b_extra
+            fixed += 1
+            logger.info(
+                "STOCK_OSTK_QOH_VALUE_STEAL_CLEAR product=%s stolen=%s next=%s",
+                str(a.get("product_name") or "")[:60],
+                a_cv,
+                str(b.get("product_name") or "")[:60],
+            )
+    if fixed:
+        logger.info("STOCK_OSTK_QOH_VALUE_ROW_SHIFT fixed=%s", fixed)
+    return fixed
 
 
 def _finalize_opqty_qoh_result(
@@ -7701,10 +7974,15 @@ def _finalize_opqty_qoh_result(
         from services.sales_statement_extractor import (
             _enrich_ostk_qoh_letterhead,
             _ocr_image_to_text,
+            _repair_ostk_qoh_closing_value_from_ocr,
+            _repair_ostk_qoh_zero_qty_from_ocr,
         )
 
         peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
         _enrich_ostk_qoh_letterhead(result, peek)
+        _repair_ostk_qoh_zero_qty_from_ocr(result, peek)
+        _repair_ostk_qoh_closing_value_from_ocr(result, peek)
+        _repair_ostk_qoh_closing_value_row_shift(result, peek)
     except Exception:
         pass
     return result
@@ -7852,6 +8130,47 @@ def _repair_ostk_qoh_age_as_closing_value(result: Optional[Dict[str, Any]]) -> N
         logger.info("STOCK_OSTK_QOH_AGE_REPAIR moved_age_from_closing_value=%s", fixed)
 
 
+def _ostk_qoh_needs_bottom_value_pass(result: Optional[Dict[str, Any]]) -> bool:
+    """True when last active Qoh rows dropped Value or line sum undershoots footer."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if not items:
+        return False
+    active = []
+    line_sum = 0.0
+    for item in items:
+        try:
+            qoh = float(item.get("closing_qty") or 0)
+            cv = float(item.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        line_sum += cv
+        if qoh > 0.051:
+            active.append(cv)
+    # Last few Qoh>0 rows with missing Value (classic camera-photo shift).
+    if any(cv < 0.051 for cv in active[-4:]):
+        return True
+    try:
+        footer_cv = float((result.get("totals") or {}).get("closing_value") or 0)
+    except (TypeError, ValueError):
+        footer_cv = 0.0
+    if footer_cv > 1.0 and line_sum + 0.51 < footer_cv * 0.92:
+        return True
+    # Neighbor steal: consecutive active rows sharing the same non-zero Value.
+    for i in range(len(items) - 1):
+        try:
+            a_q = float(items[i].get("closing_qty") or 0)
+            b_q = float(items[i + 1].get("closing_qty") or 0)
+            a_v = float(items[i].get("closing_value") or 0)
+            b_v = float(items[i + 1].get("closing_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if a_q > 0.051 and b_q > 0.051 and a_v > 0.051 and abs(a_v - b_v) < 0.051:
+            return True
+    return False
+
+
 def extract_opqty_qoh_direct_vision(
     file_bytes: bytes,
     filename: str,
@@ -7930,18 +8249,37 @@ def extract_opqty_qoh_direct_vision(
             (int(validation.get("identity_score") or 0), result, validation)
         )
         row_n = len(result.get("line_items") or [])
-        # Dense Profitmaker sheets have ~60–90 SKUs; accept full-frame soft_ok.
-        if validation.get("soft_ok") and row_n >= 40:
+        needs_value_repair = _ostk_qoh_needs_bottom_value_pass(result)
+        # Dense Profitmaker sheets have ~60–90 SKUs; accept full-frame soft_ok
+        # unless the last active Value cells were dropped/shifted.
+        if (
+            validation.get("soft_ok")
+            and row_n >= 40
+            and not needs_value_repair
+        ):
             return result
-        if validation.get("soft_ok") and row_n >= 20 and max_attempts < 2:
+        if (
+            validation.get("soft_ok")
+            and row_n >= 20
+            and max_attempts < 2
+            and not needs_value_repair
+        ):
             return result
 
+    first_seed = candidates[0][1] if candidates else result
+    need_bottom_values = bool(candidates) and _ostk_qoh_needs_bottom_value_pass(
+        first_seed
+    )
     if max_attempts >= 2 and (
-        not candidates or not (validation or {}).get("soft_ok")
+        not candidates
+        or not (validation or {}).get("soft_ok")
         or len((result or {}).get("line_items") or []) < 40
+        or need_bottom_values
     ):
         # Second slot: bottom-band supplement (footer SKUs) merged into full frame,
         # or a full-frame retry when the first pass was empty/weak.
+        # Phone-portrait photos often skip generic vertical split; still force a
+        # bottom crop when last Qoh rows dropped/shifted Value.
         vision2 = file_bytes
         reason2 = reason + "+retry"
         meta2 = original_meta
@@ -7951,19 +8289,28 @@ def extract_opqty_qoh_direct_vision(
                 _vertical_halves,
             )
 
-            if _needs_vertical_split(file_bytes) and candidates:
+            want_bottom = candidates and (
+                _needs_vertical_split(file_bytes) or need_bottom_values
+            )
+            if want_bottom:
                 halves = _vertical_halves(file_bytes) or []
                 if len(halves) >= 2:
                     vision2 = halves[1]
-                    reason2 = reason + "+bottom_band_merge"
+                    reason2 = reason + (
+                        "+bottom_band_value_repair"
+                        if need_bottom_values
+                        else "+bottom_band_merge"
+                    )
                     meta2 = {
                         **original_meta,
                         "normalization_reason": "ostk_qoh_bottom_band",
                     }
                     logger.info(
-                        "STOCK_OSTK_QOH_BOTTOM_BAND_MERGE file=%s reason=%s",
+                        "STOCK_OSTK_QOH_BOTTOM_BAND_MERGE file=%s reason=%s "
+                        "value_repair=%s",
                         filename,
                         reason2,
+                        need_bottom_values,
                     )
         except Exception:
             pass

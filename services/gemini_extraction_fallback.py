@@ -811,9 +811,12 @@ def _is_total_row_name(name: Any) -> bool:
     key = _normalize_product_key(name)
     if not key:
         return True
+    if key.startswith("grouptotal"):
+        return True
     return key in {
         "total",
         "grandtotal",
+        "grouptotal",
         "subtotal",
         "page total",
         "pagetotal",

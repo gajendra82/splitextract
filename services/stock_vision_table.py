@@ -11129,7 +11129,8 @@ _LSTSL_FOOTER_LABEL_NAME = re.compile(
 # "Total:", and category "Total Value (GEL)" rows.
 # Does not match product names that merely start with Total (e.g. TOTAL CARE).
 _VISION_TOTAL_ROW_NAME = re.compile(
-    r"(?ix)^\s*(?:[-–—=~>*\s]*)?(?:grand\s+|page\s+|sub\s+|net\s+)?totals?\s*"
+    r"(?ix)^\s*(?:[-–—=~>*\s]*)?(?:grand\s+|group\s+|page\s+|sub\s+|net\s+)?"
+    r"totals?\s*"
     r"(?:[:.\-–—=>*]*)\s*"
     r"(?:"
     r"\(.*\)"

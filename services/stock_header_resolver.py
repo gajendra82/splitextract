@@ -400,6 +400,7 @@ ALIASES: Dict[str, List[str]] = {
         "sq",  # Sales Qty (whole token)
         "sl",
         "issue",
+        "issued",
         "iss",
         "issu",  # OCR truncate of ISSUE
         "issur",

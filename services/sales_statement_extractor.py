@@ -323,8 +323,8 @@ def _normalize_date(raw: Optional[Any]) -> Optional[str]:
         except ValueError:
             pass
 
-    # 01-Jun-26 / 01-Jun-2026
-    m = re.search(r"(\d{1,2})[- ]([A-Za-z]{3,9})[- ](\d{2,4})", text)
+    # 01-Jun-26 / 01-Jun-2026 / 01/Oct/2026
+    m = re.search(r"(\d{1,2})[-/ ]([A-Za-z]{3,9})[-/ ](\d{2,4})", text)
     if m:
         d = int(m.group(1))
         mo = _MONTH_MAP.get(m.group(2).lower()[:3]) or _MONTH_MAP.get(m.group(2).lower())
@@ -610,9 +610,9 @@ _REPORT_PERIOD_INLINE_RE = re.compile(
 )
 # Printed "01-Apr-26 To 30-Apr-26" / "From : 01-Apr-26 To : 30-Apr-26".
 _REPORT_PERIOD_MON_RANGE_RE = re.compile(
-    r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})\s*"
+    r"(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s*"
     r"(?:to|upto|-|–|—)\s*:?\s*"
-    r"(\d{1,2}[- ][A-Za-z]{3,9}[- ]\d{2,4})",
+    r"(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})",
     re.I,
 )
 # ORDER FORM / header "Date: October, 2026" or bare "October 2026".
@@ -1286,7 +1286,7 @@ def _parse_pack_mexp_qty_statement(
             re.I,
         ):
             continue
-        if re.match(r"^(?:TOTAL|GRAND\s+TOTAL)\b", stripped, re.I):
+        if re.match(r"^(?:TOTAL|GRAND\s+TOTAL|GROUP\s*TOTAL)\b", stripped, re.I):
             continue
         tokens = stripped.replace("|", " ").split()
         mexp = None
@@ -1531,7 +1531,7 @@ def _parse_pack_mexp_qty_doc(doc, filename: str) -> Optional[Dict[str, Any]]:
             name = _clean_name(" ".join(name_bits))
             if not name or not re.search(r"[A-Za-z]", name):
                 continue
-            if re.match(r"^(?:TOTAL|GRAND|HIMALAYA|COMPANY)\b", name, re.I):
+            if re.match(r"^(?:TOTAL|GRAND|GROUP|HIMALAYA|COMPANY)\b", name, re.I):
                 continue
             pack = _clean_name(" ".join(cells.get("pack") or [])) or None
             def _cell_qty(field: str) -> float:
@@ -7030,6 +7030,9 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "pack_rate_sale_value_footer",
         # Op.Qty|Pur.Qty|Sale.Qty|Bal manufacturer money band (qty-only grid).
         "op_qty_pur_sale_bal_manufacturer_band",
+        # Opening|Received|Issued|Closing labeled header / GroupTotal money.
+        "opening_received_issued_header",
+        "opening_received_issued_grouptotal",
         # PharmAssist Opening Val / Purchase / Sales / Closing Val peel.
         "pharmassist_footer_ocr",
         # Marg ORIC OPENING|RECEIVE|ISSUE|CLOSING printed / Vision TOTAL peel.
@@ -7039,6 +7042,10 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         "main_stock_total_contamination_peel",
         # STOCK AND SALES (CONSOLIDATED) Total Op.Val|P.Val|S.Val|Cls.Val OCR.
         "consolidated_op_qty_val_total_ocr",
+        # Profitmaker O.Stk|Qoh|Value|Age — Sale Value is page footer only
+        # (line sales_value is always 0; do not treat as qty-only bogus).
+        "ostk_qoh_footer",
+        "daxinsoft_footer",
     }
     _total_row_trusted = str(totals.get("extra", {}).get("total_row_source") or "") in (
         _trusted_footer_sources
@@ -7057,6 +7064,11 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
         and sum(1 for i in items if isinstance(i, dict) and _to_float(i.get("sales_value")) > 0)
         <= max(1, len(items) // 10)
     )
+    _layout_name = str(totals.get("extra", {}).get("layout") or "")
+    _ostk_qoh_layout = _layout_name in {
+        "opqty_qoh_stock_sales",
+        "ostk_purc_tot_sale_qoh_value_age",
+    }
 
     bogus_sales = (
         _is_implausible_money(sales_total, allow_negative=allow_negative_money)
@@ -7072,6 +7084,7 @@ def _sanitize_compute_totals(result: Dict[str, Any]) -> Dict[str, Any]:
             and float(sales_total) > 0
             and not _total_row_trusted
             and not _printed_value_footer
+            and not _ostk_qoh_layout
         )
     )
 
@@ -10068,14 +10081,15 @@ def _text_stock_families():
 
 
 def _is_ostk_purc_sale_qoh_text(text: str) -> bool:
-    """Product Name / Pack / O.Stk / Purc / Tot / Sale / Qoh / Value / Age."""
+    """Product Name / Pack(ing) / O.Stk / Purc / Tot / Sale / Qoh / Value / Age."""
     if not text:
         return False
     if not re.search(r"Stock\s*&\s*Sales|Stock\s+and\s+Sales|Stock\s+Statement", text, re.I):
         return False
     return bool(
         re.search(r"Product\s+Name", text, re.I)
-        and re.search(r"\bPack\b", text, re.I)
+        # Profitmaker prints "Packing"; Excel/TXT siblings may print "Pack".
+        and re.search(r"\bPack(?:ing)?\b", text, re.I)
         and re.search(r"O\.Stk", text, re.I)
         and re.search(r"\bPurc\b", text, re.I)
         and re.search(r"\bTot\b", text, re.I)
@@ -10769,11 +10783,34 @@ def _parse_text_stock_fallback(text: str, filename: str) -> Optional[Dict[str, A
     result["totals"]["extra"]["column_roles"] = list(roles)
     if family == "ps_global_qoh" and _is_ostk_purc_sale_qoh_text(cleaned):
         result["totals"]["extra"]["layout"] = "ostk_purc_tot_sale_qoh_value_age"
+        result["totals"]["extra"]["psr_column_layout"] = "opqty_qoh"
+        # No per-row Sale Value on this family — footer Sale Value only.
+        for _it in result.get("line_items") or []:
+            if isinstance(_it, dict):
+                _it["sales_value"] = 0.0
+        # Prefer LAST Grand Total / page footer money band.
+        try:
+            from services.stock_direct_vision import _peel_ostk_qoh_footer_money
+
+            money = _peel_ostk_qoh_footer_money(cleaned)
+        except Exception:
+            money = {}
+        if money:
+            if "opening_value" in money:
+                result["totals"]["extra"]["opening_value"] = money["opening_value"]
+            if "purchase_value" in money:
+                result["totals"]["extra"]["purchase_value"] = money["purchase_value"]
+            if "sales_value" in money:
+                result["totals"]["sales_value"] = money["sales_value"]
+            if "closing_value" in money:
+                result["totals"]["closing_value"] = money["closing_value"]
+            result["totals"]["extra"]["total_row_source"] = "ostk_qoh_footer"
         stockist = str(result.get("stockist_name") or "")
         if re.search(r"[^\x00-\x7f]", stockist):
             readable = re.findall(r"[A-Za-z][A-Za-z .&'-]{3,}", stockist)
             if readable:
                 result["stockist_name"] = _clean_stockist_label(readable[-1])
+        _enrich_ostk_qoh_letterhead(result, cleaned)
     if family == "op_receipts_sales_closing":
         result["totals"]["extra"]["layout"] = "op_receipts_sales_closing"
         stockist = str(result.get("stockist_name") or "")
@@ -18256,6 +18293,21 @@ def _xls_finalize_result(result: Dict[str, Any]) -> Dict[str, Any]:
             _usable_period_date(result.get("period_from"))
             or _usable_period_date(result.get("period_to"))
         )
+    # O.Stk|Qoh|Value|Age Excel grids: blank Purchase Value stays null (never 0
+    # placeholder). Aligned sheet columns already keep per-row Value correct.
+    layout = str(extra.get("layout") or extra.get("psr_column_layout") or "")
+    if "opqty_qoh" in layout or "ostk_purc" in layout:
+        try:
+            pv = (
+                float(extra.get("purchase_value"))
+                if extra.get("purchase_value") is not None
+                else None
+            )
+        except (TypeError, ValueError):
+            pv = None
+        if pv is not None and abs(pv) < 0.051:
+            extra["purchase_value"] = None
+            extra["purchase_value_source"] = "ostk_qoh_excel_blank"
     extra.setdefault(
         "extraction_metadata",
         {
@@ -56595,8 +56647,18 @@ def _extract_ssa_opening_receipt_issue_dump_image(
         pass
     # Profitmaker O.Stk|Qoh|Value|Age — SSA dump parks O.Stk in receipts_qty and
     # zeros Sale/Qoh (SSA_DUMP_RECEIPT_AS_OPENING). Soft-reject always.
-    if _looks_like_ostk_qoh_stock_sales_text(soft_preview) or re.search(
-        r"\bQoh\b|\bO\.?\s*Stk\b", soft_preview or "", re.I
+    # Landscape rotation for dump Vision can drop Qoh/O.Stk from soft_preview;
+    # always also check the upright original.
+    upright_preview = ""
+    try:
+        upright_preview = _ssa_dump_header_preview(file_bytes) or ""
+    except Exception:
+        upright_preview = ""
+    ostk_preview_blob = "\n".join(
+        x for x in (soft_preview or "", upright_preview) if x
+    )
+    if _looks_like_ostk_qoh_stock_sales_text(ostk_preview_blob) or re.search(
+        r"\bQoh\b|\bO\.?\s*Stk\b", ostk_preview_blob, re.I
     ):
         logger.info(
             "SSA_DUMP_SKIP reason=ostk_qoh_stock_sales file=%s skip_ocr_gate=%s",
@@ -57133,6 +57195,16 @@ def _ssa_dump_phone_photo_candidate(file_bytes: bytes, peek: str) -> bool:
     """
     if re.search(r"\bOPSTK\b|\bOPBAL\b|\bPURCH\b|\bSALE\s*VAL\b", peek or "", re.I):
         return False
+    # Profitmaker O.Stk|Purc|Tot|Sale|Qoh|Value|Age — never SSA dump.
+    # "Opening Value" footer alone used to trip OPEN(?:ING)? and burn Gemini.
+    if _looks_like_ostk_qoh_stock_sales_text(peek or "") or re.search(
+        r"\bQoh\b|\bO\.?\s*Stk\b", peek or "", re.I
+    ):
+        logger.info(
+            "SSA_PHONE_EXCLUDE_OSTK_QOH reason=ostk_qoh_stock_sales "
+            "action=skip_ssa_phone_claim"
+        )
+        return False
     if _ssa_dump_text_is_group_wise(peek or ""):
         logger.info(
             "SSA_PHONE_EXCLUDE_GROUP_WISE reason=group_wise_sales "
@@ -57459,6 +57531,11 @@ def _ssa_dump_portrait_noise_candidate(file_bytes: bytes, peek: str) -> bool:
         return False
     blob = peek or ""
     if _ssa_dump_text_is_group_wise(blob):
+        return False
+    # Profitmaker Qoh/Value/Age — not sideways SSA (O.Stk ≠ Op.Stk token).
+    if _looks_like_ostk_qoh_stock_sales_text(blob) or re.search(
+        r"\bQoh\b|\bO\.?\s*Stk\b", blob, re.I
+    ):
         return False
     # Competing layouts — leave to their dedicated readers.
     if re.search(
@@ -64644,6 +64721,69 @@ def _looks_like_ostk_qoh_stock_sales_text(text: str) -> bool:
     return False
 
 
+def _ostk_qoh_ocr_fallback_enabled() -> bool:
+    """STOCK_OSTK_QOH_OCR_FALLBACK — OCR line parse for O.Stk|Qoh|Value|Age photos.
+
+    Default ON. Mono Profitmaker screenshots OCR cleanly; Vision often zeros the
+    first SKU while still printing Tot. Kill switch: false.
+    """
+    return os.getenv("STOCK_OSTK_QOH_OCR_FALLBACK", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _try_ostk_qoh_ocr_text_parse(
+    text: str, filename: str, *, source_ext: str = "jpg"
+) -> Optional[Dict[str, Any]]:
+    """Native OCR/TXT builder for O.Stk|Purc|Tot|Sale|Qoh|Value|Age lines."""
+    if not _ostk_qoh_ocr_fallback_enabled():
+        return None
+    blob = text or ""
+    if not (
+        _is_ostk_purc_sale_qoh_text(blob) or _looks_like_ostk_qoh_stock_sales_text(blob)
+    ):
+        return None
+    parsed = _parse_text_stock_fallback(blob, filename)
+    if not parsed or not parsed.get("line_items"):
+        return None
+    extra = parsed.setdefault("totals", {}).setdefault("extra", {})
+    family = str(extra.get("txt_family") or "")
+    layout = str(extra.get("layout") or "")
+    if family not in {"ps_global_qoh"} and "ostk" not in layout and "qoh" not in layout:
+        # Wrong family claimed the chrome — do not trust shifted Age→Value rows.
+        return None
+    # Drop doubled rows when peek OCR was concatenated (name+pack key).
+    seen_keys = set()
+    deduped: List[Dict[str, Any]] = []
+    for item in parsed.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        key = (
+            re.sub(r"[^A-Z0-9]", "", str(item.get("product_name") or "").upper()),
+            re.sub(r"[^A-Z0-9]", "", str(item.get("packing") or "").upper()),
+        )
+        if not key[0] or key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(item)
+    parsed["line_items"] = deduped
+    extra["extraction_method"] = "ostk_qoh_ocr_text"
+    extra["layout"] = "opqty_qoh_stock_sales"
+    extra["psr_column_layout"] = "opqty_qoh"
+    parsed["source_type"] = source_ext.lstrip(".") or "jpg"
+    _enrich_ostk_qoh_letterhead(parsed, blob)
+    logger.info(
+        "STOCK_OSTK_QOH_OCR_TEXT file=%s rows=%s closing_value=%s",
+        filename,
+        len(parsed.get("line_items") or []),
+        (parsed.get("totals") or {}).get("closing_value"),
+    )
+    return parsed
+
+
 def _looks_like_op_stk_rcpts_grid_text(text: str) -> bool:
     """Op_Stk / Op.Stk / Rcpts / Cl_Stk grids — not Marg OPENING/RECEIVE/ISSUE."""
     if not text:
@@ -67225,6 +67365,245 @@ def _main_stock_enrich_spreadsheet_meta(
         )
         if company:
             result["company_name"] = _clean_name(company.group(1))
+
+
+_OSTK_QOH_OCR_ROW_RE = re.compile(
+    r"^(?P<name>.+?)\s+"
+    r"(?P<pack>\S*[0-9]\S*)\s+"
+    r"(?P<ostk>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<purc>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<tot>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<sale>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<qoh>-?\d+(?:\.\d+)?)\s+"
+    r"(?P<value>-?\d+(?:,\d{3})*(?:\.\d+)?)\s+"
+    r"(?P<age>-?\d+(?:\.\d+)?)\s*$",
+    re.I,
+)
+
+
+def _ostk_qoh_ocr_row_index(text: str) -> Dict[str, Dict[str, Any]]:
+    """Map normalized product name → printed O.Stk/Purc/Tot/Sale/Qoh/Value/Age."""
+    out: Dict[str, Dict[str, Any]] = {}
+    for ln in (text or "").splitlines():
+        raw = ln.strip()
+        if not raw or re.search(
+            r"Product\s+Name|Company\s*:|Opening\s+Value|Purchase\s+Value|"
+            r"Generated\s+in|PROFITMAKER|Page\s*:",
+            raw,
+            re.I,
+        ):
+            continue
+        m = _OSTK_QOH_OCR_ROW_RE.match(raw)
+        if not m:
+            continue
+        name = _clean_name(m.group("name"))
+        if not name or len(re.sub(r"[^A-Za-z]", "", name)) < 4:
+            continue
+        key = re.sub(r"[^A-Z0-9]", "", name.upper())
+        try:
+            row: Dict[str, Any] = {
+                "opening_qty": float(m.group("ostk")),
+                "receipts_qty": float(m.group("purc")),
+                "total_stock": float(m.group("tot")),
+                "sales_qty": float(m.group("sale")),
+                "closing_qty": float(m.group("qoh")),
+                "closing_value": float(m.group("value").replace(",", "")),
+                "age_days": float(m.group("age")),
+            }
+            pack = _clean_name(m.group("pack"))
+            if pack:
+                row["packing"] = pack
+            out[key] = row
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _repair_ostk_qoh_zero_qty_from_ocr(
+    result: Optional[Dict[str, Any]], text: str
+) -> int:
+    """Fill Vision-zeroed qty rows from printed OCR lines (never invent).
+
+    Typical failure: Tot/Value/Age read, but O.Stk/Purc/Sale/Qoh left as 0.
+    """
+    if not isinstance(result, dict) or not (text or "").strip():
+        return 0
+    index = _ostk_qoh_ocr_row_index(text)
+    if not index:
+        return 0
+    fixed = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        key = re.sub(r"[^A-Z0-9]", "", name.upper())
+        printed = index.get(key)
+        if not printed:
+            # Soft match: OCR name is a prefix/suffix of vision name.
+            for ok, vals in index.items():
+                if key.startswith(ok) or ok.startswith(key) or key in ok or ok in key:
+                    if len(ok) >= 8 and len(key) >= 8:
+                        printed = vals
+                        break
+        if not printed:
+            continue
+        try:
+            opening = float(item.get("opening_qty") or 0)
+            receipts = float(item.get("receipts_qty") or 0)
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+        except (TypeError, ValueError):
+            continue
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        tot = extra.get("total_stock")
+        try:
+            tot_f = float(tot) if tot is not None else None
+        except (TypeError, ValueError):
+            tot_f = None
+        try:
+            cv = float(item.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            cv = 0.0
+        zero_qty = opening == 0 and receipts == 0 and sales == 0 and closing == 0
+        tot_present = (tot_f is not None and tot_f > 0.051) or cv > 0.051
+        if not (zero_qty and tot_present):
+            continue
+        # Only overwrite zeros — printed OCR digits, not arithmetic invention.
+        item["opening_qty"] = float(printed["opening_qty"])
+        item["receipts_qty"] = float(printed["receipts_qty"])
+        item["sales_qty"] = float(printed["sales_qty"])
+        item["closing_qty"] = float(printed["closing_qty"])
+        item["closing_value"] = float(printed["closing_value"])
+        item["sales_value"] = 0.0
+        extra["total_stock"] = float(printed["total_stock"])
+        extra["age_days"] = float(printed["age_days"])
+        extra["ostk_qoh_ocr_qty_repair"] = True
+        if printed.get("packing") and not str(item.get("packing") or "").strip():
+            item["packing"] = printed["packing"]
+        item["extra"] = extra
+        fixed += 1
+    if fixed:
+        logger.info("STOCK_OSTK_QOH_OCR_QTY_REPAIR fixed=%s", fixed)
+    return fixed
+
+
+def _ostk_qoh_ocr_value_by_sale_qoh(text: str) -> Dict[Tuple[int, int], float]:
+    """Map (Sale, Qoh) → printed Value from OCR lines (name may be garbled)."""
+    out: Dict[Tuple[int, int], float] = {}
+    blob = text or ""
+    # Full 6-qty band: O.Stk Purc Tot Sale Qoh Value Age
+    for m in re.finditer(
+        r"(?<!\d)(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+"
+        r"([\d,]+\.\d{2})\s+(\d{2,4})(?!\d)",
+        blob,
+    ):
+        try:
+            sale_i = int(m.group(4))
+            qoh_i = int(m.group(5))
+            val = float(m.group(6).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if val >= 0.051:
+            out[(sale_i, qoh_i)] = val
+    # Truncated OCR that dropped O.Stk: Purc Tot Sale Qoh Value Age
+    # e.g. "0 11 4 7 973.07 126" for O.Stk 11 / Purc 0 / Tot 11 / Sale 4 / Qoh 7.
+    for m in re.finditer(
+        r"(?<!\d)(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\d,]+\.\d{2})\s+(\d{2,4})(?!\d)",
+        blob,
+    ):
+        try:
+            sale_i = int(m.group(3))
+            qoh_i = int(m.group(4))
+            val = float(m.group(5).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if val >= 0.051 and (sale_i, qoh_i) not in out:
+            out[(sale_i, qoh_i)] = val
+    # Bare Sale Qoh Value Age (when only the right edge is readable).
+    for m in re.finditer(
+        r"(?<!\d)(\d+)\s+(\d+)\s+([\d,]+\.\d{2})\s+(\d{2,4})(?!\d)",
+        blob,
+    ):
+        try:
+            sale_i = int(m.group(1))
+            qoh_i = int(m.group(2))
+            val = float(m.group(3).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+        if val >= 0.051 and (sale_i, qoh_i) not in out:
+            out[(sale_i, qoh_i)] = val
+    return out
+
+
+def _repair_ostk_qoh_closing_value_from_ocr(
+    result: Optional[Dict[str, Any]], text: str
+) -> int:
+    """Restore missing/stolen Value from OCR Sale|Qoh|Value digits (never invent).
+
+    Camera photos often zero closing_value on the last active Qoh>0 rows while
+    OCR still shows ``Sale Qoh Value Age`` (e.g. ``4 7 973.07 126``).
+    """
+    if not isinstance(result, dict) or not (text or "").strip():
+        return 0
+    by_sale_qoh = _ostk_qoh_ocr_value_by_sale_qoh(text)
+    name_index = _ostk_qoh_ocr_row_index(text)
+    if not by_sale_qoh and not name_index:
+        return 0
+    fixed = 0
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            sales = float(item.get("sales_qty") or 0)
+            closing = float(item.get("closing_qty") or 0)
+            cv = float(item.get("closing_value") or 0)
+        except (TypeError, ValueError):
+            continue
+        if closing < 0.051:
+            continue
+        printed_val = None
+        name = str(item.get("product_name") or "")
+        key = re.sub(r"[^A-Z0-9]", "", name.upper())
+        named = name_index.get(key)
+        if named and float(named.get("closing_value") or 0) > 0.051:
+            # Prefer name match when qty fingerprint also agrees.
+            try:
+                if (
+                    abs(float(named.get("sales_qty") or 0) - sales) < 0.51
+                    and abs(float(named.get("closing_qty") or 0) - closing) < 0.51
+                ):
+                    printed_val = float(named["closing_value"])
+            except (TypeError, ValueError):
+                printed_val = float(named["closing_value"])
+        if printed_val is None:
+            printed_val = by_sale_qoh.get((int(round(sales)), int(round(closing))))
+        if printed_val is None or printed_val < 0.051:
+            continue
+        if abs(cv - printed_val) < 0.051:
+            continue
+        # Only refill when Vision dropped Value (0) or clearly stole a neighbor's
+        # small money while OCR shows a different printed figure.
+        if cv > 0.051 and abs(cv - printed_val) < 0.051:
+            continue
+        if cv > 0.051:
+            # Guard: do not overwrite a plausible non-zero Value unless OCR qty
+            # fingerprint matches and Vision value looks like a neighbor steal
+            # (handled by row-shift repair). Skip non-zero here.
+            continue
+        item["closing_value"] = float(printed_val)
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra = dict(extra)
+        extra["ostk_qoh_ocr_closing_value_repair"] = True
+        item["extra"] = extra
+        fixed += 1
+        logger.info(
+            "STOCK_OSTK_QOH_OCR_VALUE_REPAIR product=%s value=%s",
+            name[:60],
+            printed_val,
+        )
+    if fixed:
+        logger.info("STOCK_OSTK_QOH_OCR_CLOSING_VALUE_REPAIR fixed=%s", fixed)
+    return fixed
 
 
 def _enrich_ostk_qoh_letterhead(result: Dict[str, Any], text: str) -> None:
@@ -74064,8 +74443,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             # Second pass helps Medica/OPSTK peeks, but concatenating another
             # full-page OCR onto an already-complete OPENING|RECEIPT|ISSUE|
             # CLOSING sheet doubles every product row in the ORIC parser.
-            if not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I) and not re.search(
-                r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", _op_stk_peek, re.I
+            # Same for Profitmaker O.Stk|Qoh|Value|Age (OCR text parse).
+            if (
+                not re.search(r"\bOPSTK\b|\bPURCH\b", _op_stk_peek, re.I)
+                and not re.search(
+                    r"OPENING\s+RECEIPT\s+ISSUE\s+CLOSING", _op_stk_peek, re.I
+                )
+                and not _looks_like_ostk_qoh_stock_sales_text(_op_stk_peek)
+                and not re.search(r"\bQoh\b|\bO\.?\s*Stk\b", _op_stk_peek, re.I)
             ):
                 _op_stk_peek = (
                     (_op_stk_peek or "")
@@ -74659,6 +75044,69 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 len(_mfr_pre_dump.get("line_items") or []),
             )
             return _mfr_pre_dump
+        # Profitmaker O.Stk|Qoh|Value|Age before SSA dump (phone "Opening Value"
+        # used to force SSA and burn Gemini on Age↔Value misreads).
+        if _looks_like_ostk_qoh_stock_sales_text(_op_stk_peek or ""):
+            ostk_ocr = _try_ostk_qoh_ocr_text_parse(
+                _op_stk_peek or "", filename, source_ext=ext
+            )
+            # Brightened phone peeks often keep headers but drop body rows —
+            # retry unaugmented OCR before spending Gemini.
+            if not ostk_ocr or len(ostk_ocr.get("line_items") or []) < 5:
+                try:
+                    _ostk_plain = (
+                        _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
+                    )
+                except Exception:
+                    _ostk_plain = ""
+                if _ostk_plain.strip():
+                    ostk_ocr = _try_ostk_qoh_ocr_text_parse(
+                        _ostk_plain, filename, source_ext=ext
+                    ) or ostk_ocr
+            if ostk_ocr and len(ostk_ocr.get("line_items") or []) >= 5:
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=ostk_qoh_ocr_text "
+                    "file=%s line_items=%s reason=before_ssa_dump",
+                    filename,
+                    len(ostk_ocr.get("line_items") or []),
+                )
+                return ostk_ocr
+            try:
+                from services.stock_direct_vision import extract_opqty_qoh_direct_vision
+
+                ostk_vis = extract_opqty_qoh_direct_vision(
+                    file_bytes,
+                    filename,
+                    ext,
+                    reason="ostk_qoh_before_ssa_dump",
+                )
+            except Exception as _ostk_pre_exc:
+                logger.info(
+                    "[SalesStatement] file=%s ostk_qoh before SSA dump failed: %s",
+                    filename,
+                    type(_ostk_pre_exc).__name__,
+                )
+                ostk_vis = None
+            if ostk_vis and ostk_vis.get("line_items"):
+                _ostk_repair_text = _op_stk_peek or ""
+                try:
+                    _ostk_repair_text = (
+                        _ocr_image_to_text(file_bytes, psm=6, enhance=False)
+                        or _ostk_repair_text
+                    )
+                except Exception:
+                    pass
+                _enrich_ostk_qoh_letterhead(ostk_vis, _ostk_repair_text)
+                # Patch Vision zero-qty rows from printed OCR when Tot/Value
+                # landed but O.Stk/Purc/Sale/Qoh were dropped.
+                _repair_ostk_qoh_zero_qty_from_ocr(ostk_vis, _ostk_repair_text)
+                logger.info(
+                    "[STOCK_EXTRACTION_PATH] stage=ostk_qoh_vision "
+                    "file=%s line_items=%s reason=before_ssa_dump",
+                    filename,
+                    len(ostk_vis.get("line_items") or []),
+                )
+                return ostk_vis
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _skip_vt_for_op_stk
@@ -74667,6 +75115,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
             and not _is_product_packg_sales_closing_ord_text(_op_stk_peek or "")
             and not _is_mfr_wise_stock_sales_text(_op_stk_peek or "")
+            and not _looks_like_ostk_qoh_stock_sales_text(_op_stk_peek or "")
             and (
                 _peek_unreadable
                 or _ssa_phone
