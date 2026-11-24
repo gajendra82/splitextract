@@ -36949,15 +36949,21 @@ def stock_statement_open_pur_ret_sales_close_enabled() -> bool:
 
 
 def _text_has_stock_statement_open_pur_ret_sales_close(text: str) -> bool:
-    """True for STOCK STATEMENT sheets with OPEN/PUR./RETURN/PUR.RET/SALES/CLOSE."""
+    """True for PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE qty grids.
+
+    Title may be \"STOCK STATEMENT : …\" (StockHDR) or stockist letterhead only
+    (StockHI1) — fingerprint the printed header band, not the title chrome.
+    """
     if not text:
         return False
-    if not re.search(r"STOCK\s+STATEMENT", text, re.I):
+    if not re.search(r"\bPRODUCT\b", text, re.I):
         return False
     # Distinctive PUR.RET band — avoids OPENING/RECEIVE and Purc/Sale/Cl sheets.
     if not re.search(r"PUR\.?\s*RET\b", text, re.I):
         return False
     if not re.search(r"\bOPEN\b", text, re.I):
+        return False
+    if not re.search(r"\bPUR\.?\b", text, re.I):
         return False
     if not re.search(r"\bRETURN\b", text, re.I):
         return False
@@ -37120,6 +37126,22 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
     )
     if title_m:
         result["company_name"] = _clean_name(title_m.group(1))
+    else:
+        # Letterhead form: stockist on first lines, company band under header.
+        for line in combined.splitlines()[:10]:
+            line = str(line or "").strip()
+            if not line:
+                continue
+            if re.search(
+                r"^(PRODUCT|OPEN|PUR\.?|RETURN|SALES|CLOSE)\b", line, re.I
+            ) or re.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", line):
+                break
+            if result.get("stockist_name"):
+                break
+            if re.fullmatch(r"[A-Za-z]{2,}", line) and len(line) <= 16:
+                # City / area alone (e.g. RAIGARH) — keep scanning.
+                continue
+            result["stockist_name"] = _clean_name(line)
 
     period_m = re.search(
         r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–]\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
@@ -37210,6 +37232,15 @@ def _parse_stock_statement_open_pur_ret_sales_close_words(
                     closing_qty,
                 )
             ):
+                # Company strip under header (HIMALAYA DRUG CO.(ZENRA) HI).
+                if (
+                    not result.get("company_name")
+                    and re.search(r"[A-Za-z]{3,}", blob)
+                    and re.search(
+                        r"\b(DRUG|CO\.|COMPANY|PHARMA|LABS?|LTD)\b", blob, re.I
+                    )
+                ):
+                    result["company_name"] = _clean_name(blob)
                 continue
 
             name, packing = _stock_open_pur_ret_split_name_pack(name_parts)

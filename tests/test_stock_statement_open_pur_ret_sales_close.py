@@ -43,6 +43,13 @@ class StockStatementOpenPurRetSalesCloseTests(unittest.TestCase):
             "PRODUCT OPEN PUR. RETURN PUR.RET SALES CLOSE\n"
         )
         self.assertTrue(_text_has_stock_statement_open_pur_ret_sales_close(ok))
+        # Letterhead-only chrome (no STOCK STATEMENT title) — same header family.
+        self.assertTrue(
+            _text_has_stock_statement_open_pur_ret_sales_close(
+                "PREM MEDICAL AGENCY\nRAIGARH\n"
+                "PRODUCT OPEN PUR. RETURN PUR.RET SALES CLOSE\n"
+            )
+        )
         self.assertFalse(
             _text_has_stock_statement_open_pur_ret_sales_close(
                 "STOCK STATEMENT\nPRODUCT OPEN PUR. SALES CLOSE\n"
@@ -53,6 +60,99 @@ class StockStatementOpenPurRetSalesCloseTests(unittest.TestCase):
                 "Stock and Sales\nOp Purc Sale Cl qty\n"
             )
         )
+
+    def test_letterhead_blank_cells_do_not_slide_sales(self):
+        """StockHI1-style: no STOCK STATEMENT title; blank PUR must not slide."""
+        words = list(_header_words())
+        rows = [
+            (70.0, [("HIMALAYA", 0.0), ("DRUG", 60.0), ("CO.(ZENRA)", 100.0), ("HI", 180.0)]),
+            (
+                100.0,
+                [
+                    ("Bonnisan", 0.0),
+                    ("Drops", 60.0),
+                    ("30ml", 157.0),
+                    ("48", 232.0),
+                    ("23", 509.0),
+                    ("25", 569.0),
+                ],
+            ),
+            (
+                120.0,
+                [
+                    ("Bresol", 0.0),
+                    ("Syp", 60.0),
+                    ("200ml", 100.0),
+                    ("200m", 157.0),
+                    ("17", 232.0),
+                    ("17", 569.0),
+                ],
+            ),
+            (
+                140.0,
+                [
+                    ("Bresol", 0.0),
+                    ("Tab", 60.0),
+                    ("60,s", 157.0),
+                    ("2", 232.0),
+                    ("2", 569.0),
+                ],
+            ),
+            (
+                160.0,
+                [
+                    ("Diabecon", 0.0),
+                    ("Tab", 60.0),
+                    ("60,s", 157.0),
+                    ("5", 232.0),
+                    ("5", 569.0),
+                ],
+            ),
+            (
+                180.0,
+                [
+                    ("Evecare", 0.0),
+                    ("Syp", 60.0),
+                    ("200ml", 100.0),
+                    ("200m", 157.0),
+                    ("4", 232.0),
+                    ("28", 299.0),
+                    ("9", 509.0),
+                    ("23", 569.0),
+                ],
+            ),
+        ]
+        for y, cells in rows:
+            for text, x in cells:
+                words.append(_word(x, y, text))
+        text_blob = (
+            "PREM MEDICAL AGENCY\nRAIGARH\n"
+            "01/10/2026-31/10/2026\n"
+            "PRODUCT OPEN PUR. RETURN PUR.RET SALES CLOSE\n"
+        )
+        page = MagicMock()
+        page.get_text = MagicMock(
+            side_effect=lambda kind="text": text_blob if kind == "text" else words
+        )
+        result = _parse_stock_statement_open_pur_ret_sales_close_words(
+            [page], "StockHI1.pdf"
+        )
+        self.assertIsNotNone(result)
+        assert result is not None
+        self.assertEqual(result["stockist_name"], "PREM MEDICAL AGENCY")
+        self.assertIn("HIMALAYA", str(result.get("company_name") or "").upper())
+        by_name = {str(i["product_name"]): i for i in result["line_items"]}
+        bon = by_name["Bonnisan Drops"]
+        self.assertEqual(bon["opening_qty"], 48.0)
+        self.assertIsNone(bon["receipts_qty"])
+        self.assertEqual(bon["sales_qty"], 23.0)
+        self.assertEqual(bon["closing_qty"], 25.0)
+        eve = by_name["Evecare Syp"]
+        self.assertEqual(eve["opening_qty"], 4.0)
+        self.assertEqual(eve["receipts_qty"], 28.0)
+        self.assertEqual(eve["sales_qty"], 9.0)
+        self.assertEqual(eve["closing_qty"], 23.0)
+        self.assertIn("200", str(eve.get("packing") or ""))
 
     def test_header_centres(self):
         pairs = [
