@@ -57919,7 +57919,6 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             return None
     except Exception:
         pass
-<<<<<<< HEAD
     # Profitmaker O.Stk|Qoh|Value|Age — SSA dump parks O.Stk in receipts_qty and
     # zeros Sale/Qoh (SSA_DUMP_RECEIPT_AS_OPENING). Soft-reject always.
     # Landscape rotation for dump Vision can drop Qoh/O.Stk from soft_preview;
@@ -57937,14 +57936,16 @@ def _extract_ssa_opening_receipt_issue_dump_image(
     ):
         logger.info(
             "SSA_DUMP_SKIP reason=ostk_qoh_stock_sales file=%s skip_ocr_gate=%s",
-=======
+            filename,
+            skip_ocr_gate,
+        )
+        return None
     # Soft-reject Stock and Sale Op|Pur|Gd.In|Purchase|Sale|Stock (trailing money).
     # SSA OPENING/RECEIPT/ISSUE schema parks Tot In as closing and zeros sales.
     if _text_looks_like_stock_and_sale_op_pur_gd_chrome(soft_preview):
         logger.info(
             "SSA_DUMP_SKIP reason=stock_and_sale_op_pur_gd file=%s "
             "skip_ocr_gate=%s",
->>>>>>> ed61f8b76735e92ae26836e14676b51f11353a26
             filename,
             skip_ocr_gate,
         )

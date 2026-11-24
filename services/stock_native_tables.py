@@ -3254,6 +3254,28 @@ class _FitzWordPage:
         return list(self._words)
 
 
+def pdf_built_table_empty(built: Optional[Dict[str, Any]]) -> bool:
+    """True when plumber/fitz built no header band and no data rows.
+
+    Some text PDFs (OPENING|PURCHASE|LMS|SALES|CLOSING) yield an empty
+    pdfplumber word table; without a fitz fallback the extract falls through
+    to Vision and packing slides into opening_qty.
+    """
+    if not built:
+        return True
+    headers = built.get("header_cells") or []
+    rows = built.get("data_rows") or []
+    if headers and rows:
+        return False
+    # page_results may still carry a usable page when top-level merge is empty
+    for page in built.get("page_results") or []:
+        if not isinstance(page, dict):
+            continue
+        if (page.get("header_cells") or []) and (page.get("data_rows") or []):
+            return False
+    return True
+
+
 def pdf_built_has_nul_digits(built: Dict[str, Any]) -> bool:
     """True when plumber dropped custom-encoded digits to NUL."""
     for page in (built or {}).get("page_results") or []:
