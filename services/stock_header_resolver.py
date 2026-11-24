@@ -502,6 +502,8 @@ ALIASES: Dict[str, List[str]] = {
         "pr qty",
         "pr quantity",
         "pur ret",
+        "pur.ret",
+        "pur. ret",
         "purc ret",
         "purc. ret",
         "purret",

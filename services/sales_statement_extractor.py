@@ -36943,6 +36943,345 @@ def _purc_sale_cl_field(x: float, starts: List[Tuple[str, float]]) -> Optional[s
     return field
 
 
+def stock_statement_open_pur_ret_sales_close_enabled() -> bool:
+    """PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE qty grid (default ON)."""
+    return True
+
+
+def _text_has_stock_statement_open_pur_ret_sales_close(text: str) -> bool:
+    """True for STOCK STATEMENT sheets with OPEN/PUR./RETURN/PUR.RET/SALES/CLOSE."""
+    if not text:
+        return False
+    if not re.search(r"STOCK\s+STATEMENT", text, re.I):
+        return False
+    # Distinctive PUR.RET band — avoids OPENING/RECEIVE and Purc/Sale/Cl sheets.
+    if not re.search(r"PUR\.?\s*RET\b", text, re.I):
+        return False
+    if not re.search(r"\bOPEN\b", text, re.I):
+        return False
+    if not re.search(r"\bRETURN\b", text, re.I):
+        return False
+    if not re.search(r"\bSALES\b", text, re.I):
+        return False
+    if not re.search(r"\bCLOSE\b", text, re.I):
+        return False
+    # Other stock families that also print RETURN / CLOSE tokens.
+    if re.search(
+        r"OPENING\s+STOCK|Op\.?\s*Qty|Cls?\.?\s*Qty|CL\.?\s*Stk|LMS\b|"
+        r"Stock\s+and\s+Sales|OpBal|OPSTK",
+        text,
+        re.I,
+    ):
+        return False
+    return True
+
+
+def _stock_open_pur_ret_sales_close_header_centres(
+    row_words: Sequence[Tuple[Any, ...]],
+) -> Optional[Dict[str, float]]:
+    """Map OPEN/PUR./RETURN/PUR.RET/SALES/CLOSE → x-centres from a header row.
+
+    Each entry is (x_centre, token) or (x_centre, token, x0). OPEN's left edge
+    is stored as open_left so right-aligned opening digits are not peeled into
+    packing.
+    """
+    anchors: Dict[str, float] = {}
+    for entry in sorted(row_words, key=lambda pair: float(pair[0])):
+        x = float(entry[0])
+        token = str(entry[1])
+        x0 = float(entry[2]) if len(entry) >= 3 else x
+        raw = str(token).strip()
+        norm = re.sub(r"[^a-z0-9.]", "", raw.lower())
+        if not norm:
+            continue
+        if norm == "product" and "name" not in anchors:
+            anchors["name"] = float(x)
+        elif norm == "open" and "opening_qty" not in anchors:
+            anchors["opening_qty"] = float(x)
+            anchors["open_left"] = float(x0)
+        elif norm in {"pur", "pur."} and "receipts_qty" not in anchors:
+            anchors["receipts_qty"] = float(x)
+        elif norm == "return" and "sales_return_qty" not in anchors:
+            anchors["sales_return_qty"] = float(x)
+        elif norm in {"pur.ret", "purret"} and "purchase_return_qty" not in anchors:
+            anchors["purchase_return_qty"] = float(x)
+        elif norm == "sales" and "sales_qty" not in anchors:
+            anchors["sales_qty"] = float(x)
+        elif norm == "close" and "closing_qty" not in anchors:
+            anchors["closing_qty"] = float(x)
+    needed = {
+        "name",
+        "opening_qty",
+        "receipts_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "sales_qty",
+        "closing_qty",
+    }
+    if not needed.issubset(anchors):
+        return None
+    return anchors
+
+
+def _stock_open_pur_ret_field_for_x(
+    x: float, anchors: Dict[str, float]
+) -> Optional[str]:
+    """Assign a cell by header midpoints; packing stays left of OPEN.
+
+    Pack prints between PRODUCT and OPEN with no Pack header. Use OPEN's left
+    edge (not centre) so right-aligned opening digits under OPEN stay in
+    opening_qty. Midpoints apply among qty columns only.
+    """
+    open_left = anchors.get("open_left", anchors.get("opening_qty"))
+    if open_left is not None and float(x) < float(open_left):
+        return "name"
+    qty_anchors = {
+        k: v
+        for k, v in anchors.items()
+        if k not in {"name", "open_left"}
+    }
+    ordered = sorted(qty_anchors.items(), key=lambda kv: kv[1])
+    if not ordered:
+        return "name" if anchors.get("name") is not None else None
+    for i, (name, start) in enumerate(ordered):
+        left = -1e9 if i == 0 else (ordered[i - 1][1] + start) / 2.0
+        right = (
+            1e9
+            if i + 1 >= len(ordered)
+            else (start + ordered[i + 1][1]) / 2.0
+        )
+        if left <= x < right:
+            return name
+    return ordered[-1][0]
+
+
+def _stock_open_pur_ret_split_name_pack(
+    tokens: List[str],
+) -> Tuple[str, Optional[str]]:
+    """Trailing digit-bearing tokens sit before OPEN with no Pack header.
+
+    Letter-only words (Tab, Cap, Syp) stay in the product name — only tokens
+    that contain a digit (75gm, 30'S, 200m, 50) are peeled as packing.
+    """
+    if not tokens:
+        return "", None
+    pack_idx = len(tokens)
+    for i in range(len(tokens) - 1, -1, -1):
+        tok = tokens[i].strip()
+        if re.search(r"\d", tok):
+            pack_idx = i
+            continue
+        break
+    if pack_idx >= len(tokens):
+        return _clean_name(" ".join(tokens)), None
+    name = _clean_name(" ".join(tokens[:pack_idx]))
+    pack = _clean_name(" ".join(tokens[pack_idx:]))
+    return name, (pack or None)
+
+
+def _parse_stock_statement_open_pur_ret_sales_close_words(
+    page_iter: Sequence[Any],
+    filename: str,
+    *,
+    source_format: str = "pdf",
+) -> Optional[Dict[str, Any]]:
+    """Parse PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE via word x-centres.
+
+    Blank PUR./RETURN/PUR.RET cells are omitted in the text stream; midpoint
+    assignment keeps SALES under SALES and CLOSE under CLOSE. Returns None when
+    this header family is absent so other formats are unchanged.
+    """
+    if not stock_statement_open_pur_ret_sales_close_enabled():
+        return None
+    page_payloads: List[Tuple[str, List[Any]]] = []
+    for page in page_iter:
+        if isinstance(page, dict):
+            text = str(page.get("text") or "")
+            words = list(page.get("words") or [])
+        else:
+            text = page.get_text("text") or ""
+            words = list(page.get_text("words") or [])
+        page_payloads.append((text, words))
+    combined = "\n".join(t for t, _w in page_payloads)
+    if not _text_has_stock_statement_open_pur_ret_sales_close(combined):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Stock Statement"
+    items: List[Dict[str, Any]] = []
+    anchors: Optional[Dict[str, float]] = None
+    footer_sv: Optional[float] = None
+    footer_cv: Optional[float] = None
+
+    title_m = re.search(
+        r"STOCK\s+STATEMENT\s*:\s*(.+?)(?:\s+\d{1,2}[-/]\d{1,2}[-/]\d|\n|$)",
+        combined,
+        re.I,
+    )
+    if title_m:
+        result["company_name"] = _clean_name(title_m.group(1))
+
+    period_m = re.search(
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–]\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        combined,
+    )
+    if period_m:
+        result["period_from"] = _normalize_date(period_m.group(1))
+        result["period_to"] = _normalize_date(period_m.group(2))
+
+    for _text, words in page_payloads:
+        rows = _cluster_words_by_y(words, y_tol=4.0)
+        for row in rows:
+            pair_words = [
+                (
+                    (float(w[0]) + float(w[2])) / 2.0,
+                    str(w[4]).strip(),
+                    float(w[0]),
+                )
+                for w in row
+                if str(w[4]).strip()
+            ]
+            blob = " ".join(tok for _x, tok, _x0 in pair_words)
+            header = _stock_open_pur_ret_sales_close_header_centres(pair_words)
+            if header:
+                anchors = header
+                logger.info(
+                    "STOCK_OPEN_PUR_RET_SALES_CLOSE header_centres=%s file=%s",
+                    {k: round(v, 1) for k, v in sorted(header.items())},
+                    filename,
+                )
+                continue
+            if not anchors:
+                continue
+            if re.search(
+                r"STOCK\s+STATEMENT|PRODUCT\s+OPEN|Page\s*\d|Continued",
+                blob,
+                re.I,
+            ):
+                continue
+
+            cells: Dict[str, List[str]] = {}
+            name_parts: List[str] = []
+            for x, token, _x0 in pair_words:
+                field = _stock_open_pur_ret_field_for_x(x, anchors)
+                if field == "name":
+                    name_parts.append(token)
+                    continue
+                if field:
+                    cells.setdefault(field, []).append(token)
+
+            def _num(field: str) -> Optional[float]:
+                return _prompt_cell_number(cells.get(field) or [])
+
+            opening_qty = _num("opening_qty")
+            receipts_qty = _num("receipts_qty")
+            sales_return_qty = _num("sales_return_qty")
+            purchase_return_qty = _num("purchase_return_qty")
+            sales_qty = _num("sales_qty")
+            closing_qty = _num("closing_qty")
+
+            # Footer money under SALES / CLOSE (no product name letters).
+            if not re.search(r"[A-Za-z]{2,}", blob) and sales_qty is not None:
+                money_tokens = [
+                    tok
+                    for tok in (cells.get("sales_qty") or [])
+                    + (cells.get("closing_qty") or [])
+                    if re.search(r"\d", tok)
+                ]
+                if len(money_tokens) >= 2 and (
+                    "." in money_tokens[0] or "." in money_tokens[1]
+                ):
+                    footer_sv = _prompt_cell_number(
+                        cells.get("sales_qty") or []
+                    )
+                    footer_cv = _prompt_cell_number(
+                        cells.get("closing_qty") or []
+                    )
+                continue
+
+            if all(
+                v is None
+                for v in (
+                    opening_qty,
+                    receipts_qty,
+                    sales_return_qty,
+                    purchase_return_qty,
+                    sales_qty,
+                    closing_qty,
+                )
+            ):
+                continue
+
+            name, packing = _stock_open_pur_ret_split_name_pack(name_parts)
+            if not name or not re.search(r"[A-Za-z]{3,}", name):
+                continue
+            if re.match(
+                r"^(PRODUCT|OPEN|PUR|RETURN|SALES|CLOSE|TOTAL)\b", name, re.I
+            ):
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = opening_qty
+            item["receipts_qty"] = receipts_qty
+            item["sales_qty"] = sales_qty
+            item["closing_qty"] = closing_qty
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["sales_return_qty"] = sales_return_qty
+            item["purchase_return_qty"] = purchase_return_qty
+            fs: Dict[str, str] = {
+                "opening_qty": "printed" if opening_qty is not None else "missing",
+                "receipts_qty": "printed" if receipts_qty is not None else "missing",
+                "sales_return_qty": (
+                    "printed" if sales_return_qty is not None else "missing"
+                ),
+                "purchase_return_qty": (
+                    "printed" if purchase_return_qty is not None else "missing"
+                ),
+                "sales_qty": "printed" if sales_qty is not None else "missing",
+                "closing_qty": "printed" if closing_qty is not None else "missing",
+                "sales_value": "missing",
+                "closing_value": "missing",
+            }
+            extra: Dict[str, Any] = {
+                "layout": "stock_statement_open_pur_ret_sales_close",
+                "field_source": fs,
+            }
+            if sales_return_qty is not None:
+                extra["sales_return_qty"] = sales_return_qty
+            if purchase_return_qty is not None:
+                extra["purchase_return_qty"] = purchase_return_qty
+            item["extra"] = extra
+            items.append(item)
+
+    if len(items) < 5:
+        return None
+    result["line_items"] = items
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "stock_statement_open_pur_ret_sales_close_words"
+    extra_t["layout"] = "stock_statement_open_pur_ret_sales_close"
+    if footer_sv is not None:
+        result["totals"]["sales_value"] = footer_sv
+    if footer_cv is not None:
+        result["totals"]["closing_value"] = footer_cv
+    logger.info(
+        "STOCK_OPEN_PUR_RET_SALES_CLOSE accepted rows=%s file=%s",
+        len(items),
+        filename,
+    )
+    return result
+
+
+def _parse_stock_statement_open_pur_ret_sales_close_from_doc(
+    doc: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    return _parse_stock_statement_open_pur_ret_sales_close_words(
+        doc, filename, source_format="pdf"
+    )
+
+
 def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Parse Purc / Sale / Cl qty sheets from word positions.
 
@@ -49050,6 +49389,15 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
         if op_qty_val_words and op_qty_val_words.get("line_items"):
             op_qty_val_words["totals"]["extra"]["statement_count"] = 1
             return op_qty_val_words
+
+        # PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE — blank PUR./RETURN
+        # must not slide SALES into receipts (StockHDR / Himalaya qty grid).
+        open_pur_ret = _parse_stock_statement_open_pur_ret_sales_close_from_doc(
+            doc, filename
+        )
+        if open_pur_ret and open_pur_ret.get("line_items"):
+            open_pur_ret["totals"]["extra"]["statement_count"] = 1
+            return open_pur_ret
 
         detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
         if detail_stmt and detail_stmt.get("line_items"):
