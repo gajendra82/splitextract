@@ -1024,8 +1024,19 @@ def _sheet_total_row_kind(tokens: List[Dict[str, Any]]) -> Optional[str]:
     numeric = sum(1 for t in texts if parse_number(t) is not None)
     if numeric < 3:
         return None
+    # GroupTotal under Opening/Received/Issued/Closing prints money, not qty.
+    if re.search(r"(?i)\bgroup\s*totals?\b", joined):
+        return "value"
     if re.search(r"(?i)\bgrand\s+total\b", joined):
         # Qty+Value under Opening/Inwards/Outwards/Closing (Tally category).
+        # Money-looking .xx strips under qty headers are still value totals.
+        if _is_nameless_money_footer_tokens(tokens) or sum(
+            1
+            for t in texts
+            if parse_number(t) is not None
+            and re.search(r"\.\d{2}$", str(t).replace(",", ""))
+        ) >= 2:
+            return "value"
         return "quantity"
     if re.search(
         r"(?i)(?:^|\b)(?:grand\s+|page\s+|sub\s+|company\s+|division\s+)?"
@@ -2004,10 +2015,11 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
             "STOCK_PDF_WORDS_MONEY_FOOTER_SKIP blob=%s", joined[:60]
         )
         return True
-    # Company / page / grand footers only. Product "Total :" rows with movement
-    # numbers must stay so multi-lot sheets can fold printed totals.
+    # Company / page / grand / group footers only. Product "Total :" rows with
+    # movement numbers must stay so multi-lot sheets can fold printed totals.
     if re.search(
-        r"GRAND\s+TOTAL|PAGE\s*TOTAL|COMPANY\s*Total|Firm\s*Total|CONTINUED|Page\s*No|"
+        r"GRAND\s+TOTAL|GROUP\s*TOTAL|PAGE\s*TOTAL|COMPANY\s*Total|Firm\s*Total|"
+        r"CONTINUED|Page\s*No|"
         r"Carried\s+Over|Brought\s+Forward|"
         r"Report\s*Date\b|Page\s+\d+\s+of\s+\d+",
         joined,
@@ -2018,14 +2030,21 @@ def _is_footer_or_total_tokens(tokens: List[Dict[str, Any]]) -> bool:
 
     numeric = sum(1 for t in texts if parse_number(t) is not None)
     first = texts[0]
-    # Bare TOTAL / GRAND TOTAL is a sheet footer even when qty columns are filled.
-    # Product lot totals print "Total :" (colon) and must remain.
+    # Bare TOTAL / GRAND TOTAL / GroupTotal is a sheet footer even when qty
+    # columns are filled. Product lot totals print "Total :" (colon) and must
+    # remain — except GroupTotal, which is always a money footer.
+    if re.match(r"(?i)^group\s*totals?\b", first):
+        logger.info("STOCK_PDF_WORDS_TOTAL_SKIP footer blob=%s", joined[:60])
+        return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I) and ":" not in first:
         logger.info("STOCK_PDF_WORDS_TOTAL_SKIP footer blob=%s", joined[:60])
         return True
     if re.match(r"^(?:GRAND\s+)?TOTAL\b", first, re.I) and numeric < 3:
         return True
     alpha = next((t for t in texts if re.search(r"[A-Za-z]", t)), "")
+    if re.match(r"(?i)^group\s*totals?\b", alpha):
+        logger.info("STOCK_PDF_WORDS_TOTAL_SKIP footer blob=%s", joined[:60])
+        return True
     if (
         re.match(r"^(?:GRAND\s+|PAGE\s+|SUB\s+)?TOTAL\b", alpha, re.I)
         and ":" not in alpha
@@ -3233,6 +3252,28 @@ class _FitzWordPage:
 
     def extract_words(self, **_kwargs: Any) -> List[Dict[str, Any]]:
         return list(self._words)
+
+
+def pdf_built_table_empty(built: Optional[Dict[str, Any]]) -> bool:
+    """True when plumber/fitz built no header band and no data rows.
+
+    Some text PDFs (OPENING|PURCHASE|LMS|SALES|CLOSING) yield an empty
+    pdfplumber word table; without a fitz fallback the extract falls through
+    to Vision and packing slides into opening_qty.
+    """
+    if not built:
+        return True
+    headers = built.get("header_cells") or []
+    rows = built.get("data_rows") or []
+    if headers and rows:
+        return False
+    # page_results may still carry a usable page when top-level merge is empty
+    for page in built.get("page_results") or []:
+        if not isinstance(page, dict):
+            continue
+        if (page.get("header_cells") or []) and (page.get("data_rows") or []):
+            return False
+    return True
 
 
 def pdf_built_has_nul_digits(built: Dict[str, Any]) -> bool:
