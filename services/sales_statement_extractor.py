@@ -16546,6 +16546,9 @@ def _find_marg_erp_xls_header(
     """
     if _find_marg_qty_value_dump_xls_header(rows) is not None:
         return None
+    # Two-row SALE PURCHASES / PURCHASE SALES (+ RATE) uses the dedicated parser.
+    if _find_marg_sale_purchase_analysis_header(rows) is not None:
+        return None
     for ri, row in enumerate(rows[:40]):
         labels = [_norm_xls_header_label(c) for c in row]
         if not any(
@@ -18470,6 +18473,8 @@ _MARG_ANALYSIS_CHILD = (
     "stock",
     "order",
 )
+# Same grid with RATE instead of RE-ORDER (Book1 / Marg ERP 9+ Excel Report).
+_MARG_ANALYSIS_CHILD_RATE = _MARG_ANALYSIS_CHILD[:-1] + ("rate",)
 _MARG_ANALYSIS_ROLES = (
     "opening_qty",
     "purchase_qty",
@@ -18525,22 +18530,31 @@ def _marg_analysis_numbers(value: Any) -> List[float]:
 def _find_marg_sale_purchase_analysis_header(
     rows: List[List[Any]],
 ) -> Optional[Tuple[int, Dict[str, int]]]:
-    """Two-row Marg analysis header. Single-row ITEM/OPENING/RECEIPT sheets return None."""
+    """Two-row Marg analysis header. Single-row ITEM/OPENING/RECEIPT sheets return None.
+
+    Accepts parent with or without trailing RE-, and child ending in ORDER or RATE.
+    """
     for index in range(min(len(rows) - 1, 30)):
-        if tuple(_marg_analysis_tokens(rows[index])) != _MARG_ANALYSIS_PARENT:
+        parent = tuple(_marg_analysis_tokens(rows[index]))
+        if parent != _MARG_ANALYSIS_PARENT and parent != _MARG_ANALYSIS_PARENT[:-1]:
             continue
         child_tokens = tuple(_marg_analysis_tokens(rows[index + 1]))
-        if child_tokens[: len(_MARG_ANALYSIS_CHILD)] != _MARG_ANALYSIS_CHILD:
+        role_names = list(_MARG_ANALYSIS_ROLES)
+        if child_tokens[: len(_MARG_ANALYSIS_CHILD)] == _MARG_ANALYSIS_CHILD:
+            pass
+        elif child_tokens[: len(_MARG_ANALYSIS_CHILD_RATE)] == _MARG_ANALYSIS_CHILD_RATE:
+            role_names[-1] = "rate"
+        else:
             continue
         seen: List[int] = []
         for ci, cell in enumerate(rows[index + 1]):
             if re.sub(r"[^a-z]", "", str(cell or "").lower()):
                 seen.append(ci)
-        if len(seen) < len(_MARG_ANALYSIS_ROLES):
+        if len(seen) < len(role_names):
             continue
         roles = {
             role: ci
-            for ci, role in zip(seen[: len(_MARG_ANALYSIS_ROLES)], _MARG_ANALYSIS_ROLES)
+            for ci, role in zip(seen[: len(role_names)], role_names)
         }
         for ci, cell in enumerate(rows[index]):
             if re.sub(r"[^a-z]", "", str(cell or "").lower()) == "itemdescription":
@@ -18669,6 +18683,8 @@ def _parse_marg_sale_purchase_analysis_xls(
         purchase_return = cell_qty(row, "purchase_return_qty")
         others_out = cell_qty(row, "others_out_qty")
         reorder_nums = cell_numbers(row, "reorder_qty")
+        rate_nums = cell_numbers(row, "rate") if "rate" in roles else []
+        rate = rate_nums[0] if rate_nums else None
 
         item = empty_line_item()
         item["product_name"] = name
@@ -18686,6 +18702,12 @@ def _parse_marg_sale_purchase_analysis_xls(
         item["reorder_qty"] = reorder_nums[0] if reorder_nums else 0.0
         item["sales_value"] = None
         item["closing_value"] = None
+        if rate is not None:
+            item["extra"]["rate"] = rate
+            item["sales_value"] = round(float(sales) * float(rate), 2)
+            item["closing_value"] = round(
+                float(item["closing_qty"] or 0.0) * float(rate), 2
+            )
         extra_item = item.setdefault("extra", {})
         extra_item["layout"] = "marg_sale_purchase_analysis"
         extra_item["purchase_qty"] = purchase
@@ -18697,6 +18719,8 @@ def _parse_marg_sale_purchase_analysis_xls(
         extra_item["reorder_qty"] = item["reorder_qty"]
         if len(reorder_nums) > 1:
             extra_item["order_qty"] = reorder_nums[1]
+        if rate is not None:
+            extra_item["rate"] = rate
         items.append(item)
 
     if not items:
@@ -18707,7 +18731,13 @@ def _parse_marg_sale_purchase_analysis_xls(
     extra["layout"] = "marg_sale_purchase_analysis"
     extra["sheet"] = sheet_name
     extra.setdefault("total_row_source", "marg_sale_purchase_value")
-    extra.setdefault("qty_only", True)
+    if any(
+        isinstance(item, dict) and item.get("sales_value") not in (None, "", 0, 0.0)
+        for item in items
+    ):
+        extra["qty_only"] = False
+    else:
+        extra.setdefault("qty_only", True)
     return result
 
 
@@ -20531,6 +20561,16 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     filename,
                 )
                 return _xls_finalize_result(marg_dump_html)
+            marg_sale_purchase_html = _parse_marg_sale_purchase_analysis_xls(
+                html_rows, filename, ext, "html"
+            )
+            if marg_sale_purchase_html and marg_sale_purchase_html.get("line_items"):
+                logger.info(
+                    "SECONDARY_SALES_READER file=%s engine=html_excel "
+                    "method=marg_sale_purchase_analysis",
+                    filename,
+                )
+                return _xls_finalize_result(marg_sale_purchase_html)
             marg_header = _find_marg_erp_xls_header(html_rows)
             if marg_header is not None:
                 logger.info(
@@ -20602,6 +20642,13 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
         marg_dump = _parse_marg_qty_value_dump_xls(rows, filename, ext, sheet_name)
         if marg_dump and marg_dump.get("line_items"):
             return _xls_finalize_result(marg_dump)
+        # Two-row SALE PURCHASES / … / SALES / … / RATE before generic Marg ERP —
+        # that path parks PURCHASE RETURN as purchase and leaves sales_qty at 0.
+        marg_sale_purchase = _parse_marg_sale_purchase_analysis_xls(
+            rows, filename, ext, sheet_name
+        )
+        if marg_sale_purchase and marg_sale_purchase.get("line_items"):
+            return _xls_finalize_result(marg_sale_purchase)
         # Marg ERP Himalaya/Zeal STOCK & SALES STATEMENT — format-specific early exit
         marg_header = _find_marg_erp_xls_header(rows)
         if marg_header is not None:
@@ -20615,11 +20662,6 @@ def _parse_xls(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     rows, filename, ext, analysis_header
                 )
             )
-        marg_sale_purchase = _parse_marg_sale_purchase_analysis_xls(
-            rows, filename, ext, sheet_name
-        )
-        if marg_sale_purchase and marg_sale_purchase.get("line_items"):
-            return _xls_finalize_result(marg_sale_purchase)
         marg_mexp = _parse_marg_closing_mexp_xls(rows, filename, ext, sheet_name)
         if marg_mexp and marg_mexp.get("line_items"):
             return _xls_finalize_result(marg_mexp)
