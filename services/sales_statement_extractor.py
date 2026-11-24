@@ -608,6 +608,13 @@ _REPORT_PERIOD_INLINE_RE = re.compile(
     r"(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})",
     re.I | re.M,
 )
+# STOCK REPORT prints the range on its own line: "01/09/26 To :30/09/26"
+# (no From / Period cue). Only match a whole short line so expiry cells
+# (11/2028) never claim the statement period.
+_REPORT_PERIOD_BARE_TO_RE = re.compile(
+    r"(?m)^\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s+"
+    r"(?:To|to)\s*:?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{2,4})\s*$"
+)
 # Printed "01-Apr-26 To 30-Apr-26" / "From : 01-Apr-26 To : 30-Apr-26".
 _REPORT_PERIOD_MON_RANGE_RE = re.compile(
     r"(\d{1,2}[-/ ][A-Za-z]{3,9}[-/ ]\d{2,4})\s*"
@@ -726,6 +733,14 @@ def _extract_report_period_from_content(
         pt = _normalize_date(date_bits[1])
         if pf and pt:
             return pf, pt, source
+    # STOCK REPORT / similar: bare "01/09/26 To :30/09/26" under the title.
+    if re.search(r"(?i)\bSTOCK\s+REPORT\b", header_band):
+        m_bare = _REPORT_PERIOD_BARE_TO_RE.search(header_band)
+        if m_bare:
+            pf = _normalize_date(m_bare.group(1))
+            pt = _normalize_date(m_bare.group(2))
+            if pf and pt:
+                return pf, pt, "report_stock_report_bare_to"
     # Month+year only (ORDER FORM Date field, "Month of Oct26", etc.).
     for band in (header_band, trailer_band, text[:4000]):
         pf, pt = _parse_month_year_period_text(band)
@@ -9490,6 +9505,8 @@ def extract_sales_statement(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             "CLOSING_QTY_PARKED_IN_VALUE late_pass failed file=%s", name
         )
     result = _finalize_statement_period_fields(result)
+    # Every path: TOTAL / GRAND TOTAL footers must never remain as products.
+    result = _peel_named_total_products(result)
     return _group_statements_by_stockist_month(result)
 
 
@@ -23385,7 +23402,7 @@ def _clear_company_confused_stockist(result: Dict[str, Any]) -> bool:
         and re.search(
             r"(?i)\b(?:agenc(?:y|ies)|distribut|medico|pharma|stores|associates|"
             r"enterprises|traders|healthcare|private\s+limited|pvt\.?\s*ltd|"
-            r"unit\s+of)\b",
+            r"unit\s+of|sales)\b",
             company,
         )
         and os.getenv(
@@ -25294,16 +25311,105 @@ def _drop_trailing_statement_total_item(
     return cleaned
 
 
+def _drop_named_total_products_enabled() -> bool:
+    """Strip TOTAL / GRAND TOTAL footers from line_items on every path.
+
+    Default ON. No new ops env — kill only via code change.
+    """
+    return True
+
+
+def _is_statement_total_product_name(name: Any) -> bool:
+    """True for printed TOTAL footers, never SKUs that merely start with Total."""
+    text = str(name or "").strip()
+    if not text:
+        return False
+    try:
+        from services.stock_vision_table import _is_vision_total_row_name
+        from services.stock_native_resolver import _is_sheet_total_name
+
+        if _is_vision_total_row_name(text) or _is_sheet_total_name(text):
+            return True
+    except Exception:
+        pass
+    # Fallback when imports fail: bare TOTAL / GRAND TOTAL only (not TOTAL CARE).
+    return bool(
+        re.match(
+            r"(?ix)^\s*(?:[-–—_=.*]{2,}\s*)?"
+            r"(?:grand\s+|page\s+|sub\s+|net\s+|amount\s+)?"
+            r"totals?\s*"
+            r"(?:[:.\-–—_=>*]*)\s*"
+            r"(?:"
+            r"\(.*\)"
+            r"|(?:qty\.?|value|amount|amt|in\s+rs\.?|rs\.?)\b.*"
+            r")?"
+            r"\s*(?:[-–—_=.*]{2,})?\s*$",
+            text,
+        )
+    )
+
+
+def _peel_named_total_products(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Final safety net: TOTAL footers must never remain as line_items.
+
+    Parks already-mapped TOTAL money into statement totals when those fields
+    are still null. Does not invent numbers or rewrite product qty/value.
+    """
+    if not isinstance(result, dict) or not _drop_named_total_products_enabled():
+        return result
+    if result.get("multi_statement") and isinstance(result.get("statements"), list):
+        result["statements"] = [
+            _peel_named_total_products(stmt) if isinstance(stmt, dict) else stmt
+            for stmt in result["statements"]
+        ]
+    items = result.get("line_items") or []
+    if not items:
+        return result
+    kept: List[Dict[str, Any]] = []
+    peeled: List[Dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("product_name") or "")
+        if _is_statement_total_product_name(name):
+            peeled.append(item)
+            logger.info(
+                "STOCK_TOTAL_AS_PRODUCT_DROP name=%s file=%s",
+                name[:60],
+                result.get("source_file"),
+            )
+            continue
+        kept.append(item)
+    if not peeled:
+        return result
+    result["line_items"] = kept
+    totals = result.setdefault("totals", {})
+    if isinstance(totals, dict):
+        try:
+            from services.stock_vision_table import _promote_printed_total_row_money
+
+            promoted = _promote_printed_total_row_money(totals, peeled)
+        except Exception:
+            promoted = []
+        extra = totals.setdefault("extra", {})
+        if isinstance(extra, dict):
+            extra["named_total_products_dropped"] = int(
+                extra.get("named_total_products_dropped") or 0
+            ) + len(peeled)
+            if promoted:
+                extra.setdefault("printed_total_row_source", "named_total_product_peel")
+            prior = list(extra.get("vision_table_total_rows") or [])
+            prior.extend(peeled)
+            extra["vision_table_total_rows"] = prior
+    return result
+
+
 def _is_non_product_line_name(name: str) -> bool:
     """True for footer/total/date/header rows that must not be line items."""
     text = _clean_name(name)
     if not text:
         return True
-    if re.match(
-        r"^(TOTAL|GRAND\s*TOTAL|SUB\s*TOTAL|AMOUNT\s*TOTAL|NET\s*TOTAL)\b",
-        text,
-        re.I,
-    ):
+    if _is_statement_total_product_name(text):
         return True
     if re.fullmatch(r"(?:amounts?|amts?|bills?)\s*[:.]?", text, re.I):
         return True
@@ -26545,31 +26651,39 @@ def _finalize_zandra_stock_sale(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT = """
-This image is a printed "STOCK & SALES STATEMENT" grid (not Marg OPENING/RECEIVE/ISSUE).
+This image is a printed "STOCK & SALES STATEMENT" / "STOCK AND SALES ANALYSIS" grid
+(not Marg OPENING/RECEIVE/ISSUE).
 
-Printed columns LEFT TO RIGHT (names may vary slightly). Three common header sets:
+Printed columns LEFT TO RIGHT (names may vary slightly). Four common header sets:
 
 A) Code | Item | Packing | LMS1 | LMS | OP.STK | RCPTS | SALES | SL.VALUE | FREE | CL.STK | CL.VALUE
 B) Code | Item | Pack | LMS | Rate | Op_Stk | Rcpts | P.Ret | Sales | Hos.Sal | Brk | Repl | Cl_Stk | Value
 C) P.code | Product Name | Pack | LASTMON SALE | OPEN | COMP | FREE | REPL | CUST | SALE | FREE | REPL | E&B | T&S | Closing Stock | Order Qty | Cl.Stk Value
    (Receipts band = OPEN/COMP/FREE/REPL/CUST; Issues band = SALE/FREE/REPL/E&B/T&S)
+D) PRODUCT | PACK | OPENING | PURCHASE | TOTAL | SALE | CLOSING | PUR. VALUE | SALE VALUE | CLOSING VALUE
+   (STOCK AND SALES ANALYSIS — TOTAL is OPENING+PURCHASE only; never closing_qty)
 
 Qty mapping ONLY (blank cell / "-" = 0). NEVER shift a later number left into a blank cell.
-- OP.STK / Op_Stk / OPEN -> opening_qty
-- RCPTS / Rcpts / COMP -> receipts_qty (layout C: COMP + receipt FREE/REPL/CUST when printed)
+- OP.STK / Op_Stk / OPEN / OPENING -> opening_qty
+- RCPTS / Rcpts / COMP / PURCHASE -> receipts_qty (layout C: COMP + receipt FREE/REPL/CUST when printed)
+- Layout D TOTAL -> extra.total_qty ONLY (OPENING+PURCHASE). Never sales_qty or closing_qty.
 - SALES / Sales / SALE -> sales_qty
   Layout C only: sales_qty = Issues SALE + Issues FREE (+ REPL/E&B/T&S when printed)
-- SL.VALUE -> sales_value (money; never a qty). Layout C has NO per-row sales money.
+- SL.VALUE / SALE VALUE -> sales_value (money; never a qty). Layout C has NO per-row sales money.
+- Layout D PUR. VALUE -> purchase_value and receipts_value (money; never a qty)
 - Layout A FREE (after SL.VALUE) -> ignore for opening/receipts/sales/closing
-- CL.STK / Cl_Stk / Closing Stock -> closing_qty
-- CL.VALUE / Value / Cl.Stk Value -> closing_value
+- CL.STK / Cl_Stk / Closing Stock / CLOSING -> closing_qty
+- CL.VALUE / Value / Cl.Stk Value / CLOSING VALUE -> closing_value
 - LMS1 / LMS / LASTMON SALE -> lms1 / lms ONLY. NEVER opening_qty or receipts_qty.
 - Rate / Order Qty -> ignore for stock identity (optional extra.rate / extra.order_qty)
 - P.Ret / Hos.Sal / Brk / Repl (layout B) -> ignore for opening/receipts/sales/closing
 
 Critical: LMS1/LMS/LASTMON SALE sit LEFT of OPEN/OP.STK. Do not treat them as opening or receipts.
-Do not put SL.VALUE / CL.VALUE / Rate / Order Qty into opening_qty. Do not put Op_Stk into closing_qty.
+Do not put SL.VALUE / CL.VALUE / Rate / Order Qty / PUR. VALUE into opening_qty.
+Do not put Op_Stk / TOTAL into closing_qty.
 Packing (200ml / 30ml / 60 S / 1*60T) belongs in packing, not product_name.
+Layout D: if OPENING+PURCHASE does not equal TOTAL, re-read OPENING digits (8 vs 9)
+from the image — do not invent OPENING from TOTAL arithmetic.
 
 Worked example (layout A). Printed cells left→right after packing:
 LMS1=10, LMS=20, OP.STK=30, RCPTS=40, SALES=15, SL.VALUE=100.50, FREE=0, CL.STK=55, CL.VALUE=200.00
@@ -26589,10 +26703,11 @@ Item cell rules:
   ("HIMALAYA ZANDRA" then "ARJUNA TAB"), product_name is the SKU and company_name
   is the banner. Include that SKU row even when qty cells are blank (use 0).
 
-stockist_name = distributor above the title (e.g. … PRIVATE LIMITED).
-company_name = Company: line when printed (e.g. HIMALAYA ZANDRA).
+stockist_name = distributor letterhead ABOVE the title (e.g. RAMA SALES, … PRIVATE LIMITED).
+company_name = "Company :" / manufacturer line (e.g. THE HIMALAYA DRUG COMPANY, HIMALAYA ZANDRA).
+Never put Himalaya/manufacturer into stockist_name or the letterhead into company_name.
 period from "For The Month Of: MonYY" → first/last day of that month (Oct26 → 2026-10-01..2026-10-31)
-or the statement date line.
+or From:/To: date lines (01-Oct-26 → 2026-10-01).
 Include EVERY product row. Skip TOTAL lines.
 
 Skip TOTAL / Grand Total product lines. Skip page chrome and stamps.
@@ -26616,6 +26731,14 @@ LASTMON=48, OPEN=71, COMP=-, SALE=41, Closing=30, Cl.Stk Value=5295.30
 → lms=48, opening_qty=71, receipts_qty=0, sales_qty=41, closing_qty=30, closing_value=5295.30
 With Issues FREE: OPEN=78, COMP=100, SALE=73, FREE=1, Closing=104
 → opening_qty=78, receipts_qty=100, sales_qty=74, closing_qty=104
+
+Layout D worked example (STOCK AND SALES ANALYSIS):
+OPENING=1920, PURCHASE=10, TOTAL=1930, SALE=10, CLOSING=1920,
+PUR. VALUE=1953.86, SALE VALUE=1991.13, CLOSING VALUE=375141.12
+→ opening_qty=1920, receipts_qty=10, sales_qty=10, closing_qty=1920,
+  purchase_value=1953.86, sales_value=1991.13, closing_value=375141.12,
+  extra.total_qty=1930
+Dash "-" under SALE / PUR. VALUE → 0 / null money as printed (qty blank → 0).
 
 Return ONLY JSON:
 {
@@ -26644,13 +26767,33 @@ Return ONLY JSON:
       "receipts_qty": number,
       "sales_qty": number,
       "sales_value": number|null,
+      "purchase_value": number|null,
       "closing_qty": number,
       "closing_value": number,
-      "extra": {"transit": number|null}
+      "extra": {"transit": number|null, "total_qty": number|null}
     }
   ]
 }
 """.strip()
+
+_OP_STK_ANALYSIS_TOTAL_RETRY_ADDON = """
+RETRY — STOCK AND SALES ANALYSIS OPENING/PURCHASE/TOTAL/SALE/CLOSING grid.
+
+Columns after PACK are ALWAYS:
+OPENING | PURCHASE | TOTAL | SALE | CLOSING | PUR. VALUE | SALE VALUE | CLOSING VALUE
+
+For EVERY row re-read OPENING from the image (watch 8 vs 9). TOTAL equals
+OPENING+PURCHASE; CLOSING equals TOTAL-SALE. Do not invent OPENING from TOTAL.
+Map PUR. VALUE → purchase_value, SALE VALUE → sales_value, CLOSING VALUE → closing_value.
+stockist_name = letterhead above the title (e.g. RAMA SALES).
+company_name = Company: line (e.g. THE HIMALAYA DRUG COMPANY). Do not swap them.
+""".strip()
+
+
+def _op_stk_analysis_total_retry_enabled() -> bool:
+    """Retry Op_Stk Vision when ANALYSIS TOTAL/OPENING identity fails. Default ON."""
+    return True
+
 
 _OP_STK_LMS1_STRICT_RETRY_ADDON = """
 RETRY — previous read put LMS1/LMS into opening_qty/receipts_qty.
@@ -26679,6 +26822,16 @@ def _repair_stockist_company_from_statement_header(
     cn = str(result.get("company_name") or "").strip()
     sn = str(result.get("stockist_name") or "").strip()
     blob = ocr_text or ""
+    # Manufacturer in stockist_name + party letterhead in company_name.
+    if (
+        sn
+        and _stockist_name_is_manufacturer_or_title(sn)
+        and cn
+        and not _stockist_name_is_manufacturer_or_title(cn)
+    ):
+        result["company_name"] = sn
+        result["stockist_name"] = cn
+        return
     if sn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
         return
     if cn and not re.search(r"HIMALAYA|ZANDRA|WELLNESS|DRUG\s*CO", cn, re.I):
@@ -27854,6 +28007,62 @@ def _extract_op_stk_rcpts_stock_sale_vision(
         result, ocr_hint, file_bytes=file_bytes
     )
     fail_rate = _op_stk_lms1_identity_fail_rate(result)
+    title_blob = " ".join(
+        [
+            str(result.get("report_title") or ""),
+            ocr_hint or "",
+        ]
+    )
+    analysis_total_grid = bool(
+        re.search(r"STOCK\s+AND\s+SALES\s+ANALYSIS", title_blob, re.I)
+        or re.search(r"PUR\.?\s*VALUE", title_blob, re.I)
+    )
+    if (
+        gemini_calls < 2
+        and fail_rate > 0
+        and _op_stk_analysis_total_retry_enabled()
+        and analysis_total_grid
+        and len(result.get("line_items") or []) >= 3
+    ):
+        logger.info(
+            "OP_STK_ANALYSIS_TOTAL_RETRY file=%s fail_rate=%.2f",
+            filename,
+            fail_rate,
+        )
+        parsed2 = _call(
+            _OP_STK_RCPTS_STOCK_SALE_VISION_PROMPT
+            + "\n\n"
+            + _OP_STK_ANALYSIS_TOTAL_RETRY_ADDON,
+            attempts=1,
+        )
+        gemini_calls = 2
+        if parsed2 and parsed2.get("line_items"):
+            result2 = empty_result(filename, ext.lstrip(".") or "jpg")
+            result2 = _apply_parsed_sales_json(result2, parsed2)
+            result2 = _op_stk_apply_lms_fields(result2, parsed2)
+            result2 = _finalize_op_stk_rcpts_stock_sale(
+                result2, ocr_hint, file_bytes=file_bytes
+            )
+            fail2 = _op_stk_lms1_identity_fail_rate(result2)
+            if fail2 <= fail_rate:
+                extra2 = result2.setdefault("totals", {}).setdefault("extra", {})
+                if isinstance(extra2, dict):
+                    extra2["op_stk_analysis_total_retry"] = True
+                    extra2["op_stk_identity_fail_rate_before"] = round(fail_rate, 3)
+                    extra2["op_stk_identity_fail_rate_after"] = round(fail2, 3)
+                logger.info(
+                    "OP_STK_ANALYSIS_TOTAL_RETRY file=%s kept fail_rate %.2f -> %.2f",
+                    filename,
+                    fail_rate,
+                    fail2,
+                )
+                return result2
+            logger.info(
+                "OP_STK_ANALYSIS_TOTAL_RETRY file=%s discarded fail_rate %.2f -> %.2f",
+                filename,
+                fail_rate,
+                fail2,
+            )
     if (
         gemini_calls < 2
         and _op_stk_lms1_strict_retry_enabled()
@@ -30224,6 +30433,19 @@ def _extract_statement_from_pdf_group(
                 if not opval_words.get("stockist_name"):
                     opval_words["stockist_name"] = group["stockist_name"]
             return opval_words
+
+    # MediVision Op/Purc/Sale/WSale (+ Sep/Aug Sa) native words — before SSA/Zandra.
+    if _is_medivision_op_wsale_header(combined_text):
+        wsale_words = _parse_medivision_op_wsale_words_pages(pages, filename)
+        if wsale_words and wsale_words.get("line_items"):
+            wsale_words["totals"]["extra"]["split_pages"] = page_nos
+            wsale_words["totals"]["extra"]["statement_count"] = 1
+            if group.get("stockist_name") and not re.search(
+                r"^Statement_\d+$", str(group.get("stockist_name") or "")
+            ):
+                if not wsale_words.get("stockist_name"):
+                    wsale_words["stockist_name"] = group["stockist_name"]
+            return wsale_words
 
     # STOCK VALUATION AS ON with Batch / M.R.P. (text PDF) — keep MRP.
     if _is_stock_valuation_mrp_batch_text(combined_text):
@@ -36956,6 +37178,376 @@ def _purc_sale_cl_field(x: float, starts: List[Tuple[str, float]]) -> Optional[s
     return field
 
 
+def stock_statement_open_pur_ret_sales_close_enabled() -> bool:
+    """PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE qty grid (default ON)."""
+    return True
+
+
+def _text_has_stock_statement_open_pur_ret_sales_close(text: str) -> bool:
+    """True for PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE qty grids.
+
+    Title may be \"STOCK STATEMENT : …\" (StockHDR) or stockist letterhead only
+    (StockHI1) — fingerprint the printed header band, not the title chrome.
+    """
+    if not text:
+        return False
+    if not re.search(r"\bPRODUCT\b", text, re.I):
+        return False
+    # Distinctive PUR.RET band — avoids OPENING/RECEIVE and Purc/Sale/Cl sheets.
+    if not re.search(r"PUR\.?\s*RET\b", text, re.I):
+        return False
+    if not re.search(r"\bOPEN\b", text, re.I):
+        return False
+    if not re.search(r"\bPUR\.?\b", text, re.I):
+        return False
+    if not re.search(r"\bRETURN\b", text, re.I):
+        return False
+    if not re.search(r"\bSALES\b", text, re.I):
+        return False
+    if not re.search(r"\bCLOSE\b", text, re.I):
+        return False
+    # Other stock families that also print RETURN / CLOSE tokens.
+    if re.search(
+        r"OPENING\s+STOCK|Op\.?\s*Qty|Cls?\.?\s*Qty|CL\.?\s*Stk|LMS\b|"
+        r"Stock\s+and\s+Sales|OpBal|OPSTK",
+        text,
+        re.I,
+    ):
+        return False
+    return True
+
+
+def _stock_open_pur_ret_sales_close_header_centres(
+    row_words: Sequence[Tuple[Any, ...]],
+) -> Optional[Dict[str, float]]:
+    """Map OPEN/PUR./RETURN/PUR.RET/SALES/CLOSE → x-centres from a header row.
+
+    Each entry is (x_centre, token) or (x_centre, token, x0). OPEN's left edge
+    is stored as open_left so right-aligned opening digits are not peeled into
+    packing.
+    """
+    anchors: Dict[str, float] = {}
+    for entry in sorted(row_words, key=lambda pair: float(pair[0])):
+        x = float(entry[0])
+        token = str(entry[1])
+        x0 = float(entry[2]) if len(entry) >= 3 else x
+        raw = str(token).strip()
+        norm = re.sub(r"[^a-z0-9.]", "", raw.lower())
+        if not norm:
+            continue
+        if norm == "product" and "name" not in anchors:
+            anchors["name"] = float(x)
+        elif norm == "open" and "opening_qty" not in anchors:
+            anchors["opening_qty"] = float(x)
+            anchors["open_left"] = float(x0)
+        elif norm in {"pur", "pur."} and "receipts_qty" not in anchors:
+            anchors["receipts_qty"] = float(x)
+        elif norm == "return" and "sales_return_qty" not in anchors:
+            anchors["sales_return_qty"] = float(x)
+        elif norm in {"pur.ret", "purret"} and "purchase_return_qty" not in anchors:
+            anchors["purchase_return_qty"] = float(x)
+        elif norm == "sales" and "sales_qty" not in anchors:
+            anchors["sales_qty"] = float(x)
+        elif norm == "close" and "closing_qty" not in anchors:
+            anchors["closing_qty"] = float(x)
+    needed = {
+        "name",
+        "opening_qty",
+        "receipts_qty",
+        "sales_return_qty",
+        "purchase_return_qty",
+        "sales_qty",
+        "closing_qty",
+    }
+    if not needed.issubset(anchors):
+        return None
+    return anchors
+
+
+def _stock_open_pur_ret_field_for_x(
+    x: float, anchors: Dict[str, float]
+) -> Optional[str]:
+    """Assign a cell by header midpoints; packing stays left of OPEN.
+
+    Pack prints between PRODUCT and OPEN with no Pack header. Use OPEN's left
+    edge (not centre) so right-aligned opening digits under OPEN stay in
+    opening_qty. Midpoints apply among qty columns only.
+    """
+    open_left = anchors.get("open_left", anchors.get("opening_qty"))
+    if open_left is not None and float(x) < float(open_left):
+        return "name"
+    qty_anchors = {
+        k: v
+        for k, v in anchors.items()
+        if k not in {"name", "open_left"}
+    }
+    ordered = sorted(qty_anchors.items(), key=lambda kv: kv[1])
+    if not ordered:
+        return "name" if anchors.get("name") is not None else None
+    for i, (name, start) in enumerate(ordered):
+        left = -1e9 if i == 0 else (ordered[i - 1][1] + start) / 2.0
+        right = (
+            1e9
+            if i + 1 >= len(ordered)
+            else (start + ordered[i + 1][1]) / 2.0
+        )
+        if left <= x < right:
+            return name
+    return ordered[-1][0]
+
+
+def _stock_open_pur_ret_split_name_pack(
+    tokens: List[str],
+) -> Tuple[str, Optional[str]]:
+    """Trailing digit-bearing tokens sit before OPEN with no Pack header.
+
+    Letter-only words (Tab, Cap, Syp) stay in the product name — only tokens
+    that contain a digit (75gm, 30'S, 200m, 50) are peeled as packing.
+    """
+    if not tokens:
+        return "", None
+    pack_idx = len(tokens)
+    for i in range(len(tokens) - 1, -1, -1):
+        tok = tokens[i].strip()
+        if re.search(r"\d", tok):
+            pack_idx = i
+            continue
+        break
+    if pack_idx >= len(tokens):
+        return _clean_name(" ".join(tokens)), None
+    name = _clean_name(" ".join(tokens[:pack_idx]))
+    pack = _clean_name(" ".join(tokens[pack_idx:]))
+    return name, (pack or None)
+
+
+def _parse_stock_statement_open_pur_ret_sales_close_words(
+    page_iter: Sequence[Any],
+    filename: str,
+    *,
+    source_format: str = "pdf",
+) -> Optional[Dict[str, Any]]:
+    """Parse PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE via word x-centres.
+
+    Blank PUR./RETURN/PUR.RET cells are omitted in the text stream; midpoint
+    assignment keeps SALES under SALES and CLOSE under CLOSE. Returns None when
+    this header family is absent so other formats are unchanged.
+    """
+    if not stock_statement_open_pur_ret_sales_close_enabled():
+        return None
+    page_payloads: List[Tuple[str, List[Any]]] = []
+    for page in page_iter:
+        if isinstance(page, dict):
+            text = str(page.get("text") or "")
+            words = list(page.get("words") or [])
+        else:
+            text = page.get_text("text") or ""
+            words = list(page.get_text("words") or [])
+        page_payloads.append((text, words))
+    combined = "\n".join(t for t, _w in page_payloads)
+    if not _text_has_stock_statement_open_pur_ret_sales_close(combined):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Stock Statement"
+    items: List[Dict[str, Any]] = []
+    anchors: Optional[Dict[str, float]] = None
+    footer_sv: Optional[float] = None
+    footer_cv: Optional[float] = None
+
+    title_m = re.search(
+        r"STOCK\s+STATEMENT\s*:\s*(.+?)(?:\s+\d{1,2}[-/]\d{1,2}[-/]\d|\n|$)",
+        combined,
+        re.I,
+    )
+    if title_m:
+        result["company_name"] = _clean_name(title_m.group(1))
+    else:
+        # Letterhead form: stockist on first lines, company band under header.
+        for line in combined.splitlines()[:10]:
+            line = str(line or "").strip()
+            if not line:
+                continue
+            if re.search(
+                r"^(PRODUCT|OPEN|PUR\.?|RETURN|SALES|CLOSE)\b", line, re.I
+            ) or re.match(r"^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}", line):
+                break
+            if result.get("stockist_name"):
+                break
+            if re.fullmatch(r"[A-Za-z]{2,}", line) and len(line) <= 16:
+                # City / area alone (e.g. RAIGARH) — keep scanning.
+                continue
+            result["stockist_name"] = _clean_name(line)
+
+    period_m = re.search(
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s*[-–]\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+        combined,
+    )
+    if period_m:
+        result["period_from"] = _normalize_date(period_m.group(1))
+        result["period_to"] = _normalize_date(period_m.group(2))
+
+    for _text, words in page_payloads:
+        rows = _cluster_words_by_y(words, y_tol=4.0)
+        for row in rows:
+            pair_words = [
+                (
+                    (float(w[0]) + float(w[2])) / 2.0,
+                    str(w[4]).strip(),
+                    float(w[0]),
+                )
+                for w in row
+                if str(w[4]).strip()
+            ]
+            blob = " ".join(tok for _x, tok, _x0 in pair_words)
+            header = _stock_open_pur_ret_sales_close_header_centres(pair_words)
+            if header:
+                anchors = header
+                logger.info(
+                    "STOCK_OPEN_PUR_RET_SALES_CLOSE header_centres=%s file=%s",
+                    {k: round(v, 1) for k, v in sorted(header.items())},
+                    filename,
+                )
+                continue
+            if not anchors:
+                continue
+            if re.search(
+                r"STOCK\s+STATEMENT|PRODUCT\s+OPEN|Page\s*\d|Continued",
+                blob,
+                re.I,
+            ):
+                continue
+
+            cells: Dict[str, List[str]] = {}
+            name_parts: List[str] = []
+            for x, token, _x0 in pair_words:
+                field = _stock_open_pur_ret_field_for_x(x, anchors)
+                if field == "name":
+                    name_parts.append(token)
+                    continue
+                if field:
+                    cells.setdefault(field, []).append(token)
+
+            def _num(field: str) -> Optional[float]:
+                return _prompt_cell_number(cells.get(field) or [])
+
+            opening_qty = _num("opening_qty")
+            receipts_qty = _num("receipts_qty")
+            sales_return_qty = _num("sales_return_qty")
+            purchase_return_qty = _num("purchase_return_qty")
+            sales_qty = _num("sales_qty")
+            closing_qty = _num("closing_qty")
+
+            # Footer money under SALES / CLOSE (no product name letters).
+            if not re.search(r"[A-Za-z]{2,}", blob) and sales_qty is not None:
+                money_tokens = [
+                    tok
+                    for tok in (cells.get("sales_qty") or [])
+                    + (cells.get("closing_qty") or [])
+                    if re.search(r"\d", tok)
+                ]
+                if len(money_tokens) >= 2 and (
+                    "." in money_tokens[0] or "." in money_tokens[1]
+                ):
+                    footer_sv = _prompt_cell_number(
+                        cells.get("sales_qty") or []
+                    )
+                    footer_cv = _prompt_cell_number(
+                        cells.get("closing_qty") or []
+                    )
+                continue
+
+            if all(
+                v is None
+                for v in (
+                    opening_qty,
+                    receipts_qty,
+                    sales_return_qty,
+                    purchase_return_qty,
+                    sales_qty,
+                    closing_qty,
+                )
+            ):
+                # Company strip under header (HIMALAYA DRUG CO.(ZENRA) HI).
+                if (
+                    not result.get("company_name")
+                    and re.search(r"[A-Za-z]{3,}", blob)
+                    and re.search(
+                        r"\b(DRUG|CO\.|COMPANY|PHARMA|LABS?|LTD)\b", blob, re.I
+                    )
+                ):
+                    result["company_name"] = _clean_name(blob)
+                continue
+
+            name, packing = _stock_open_pur_ret_split_name_pack(name_parts)
+            if not name or not re.search(r"[A-Za-z]{3,}", name):
+                continue
+            if re.match(
+                r"^(PRODUCT|OPEN|PUR|RETURN|SALES|CLOSE|TOTAL)\b", name, re.I
+            ):
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            item["packing"] = packing
+            item["opening_qty"] = opening_qty
+            item["receipts_qty"] = receipts_qty
+            item["sales_qty"] = sales_qty
+            item["closing_qty"] = closing_qty
+            item["sales_value"] = None
+            item["closing_value"] = None
+            item["sales_return_qty"] = sales_return_qty
+            item["purchase_return_qty"] = purchase_return_qty
+            fs: Dict[str, str] = {
+                "opening_qty": "printed" if opening_qty is not None else "missing",
+                "receipts_qty": "printed" if receipts_qty is not None else "missing",
+                "sales_return_qty": (
+                    "printed" if sales_return_qty is not None else "missing"
+                ),
+                "purchase_return_qty": (
+                    "printed" if purchase_return_qty is not None else "missing"
+                ),
+                "sales_qty": "printed" if sales_qty is not None else "missing",
+                "closing_qty": "printed" if closing_qty is not None else "missing",
+                "sales_value": "missing",
+                "closing_value": "missing",
+            }
+            extra: Dict[str, Any] = {
+                "layout": "stock_statement_open_pur_ret_sales_close",
+                "field_source": fs,
+            }
+            if sales_return_qty is not None:
+                extra["sales_return_qty"] = sales_return_qty
+            if purchase_return_qty is not None:
+                extra["purchase_return_qty"] = purchase_return_qty
+            item["extra"] = extra
+            items.append(item)
+
+    if len(items) < 5:
+        return None
+    result["line_items"] = items
+    extra_t = result.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "stock_statement_open_pur_ret_sales_close_words"
+    extra_t["layout"] = "stock_statement_open_pur_ret_sales_close"
+    if footer_sv is not None:
+        result["totals"]["sales_value"] = footer_sv
+    if footer_cv is not None:
+        result["totals"]["closing_value"] = footer_cv
+    logger.info(
+        "STOCK_OPEN_PUR_RET_SALES_CLOSE accepted rows=%s file=%s",
+        len(items),
+        filename,
+    )
+    return result
+
+
+def _parse_stock_statement_open_pur_ret_sales_close_from_doc(
+    doc: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    return _parse_stock_statement_open_pur_ret_sales_close_words(
+        doc, filename, source_format="pdf"
+    )
+
+
 def _parse_purc_sale_cl_statement(doc, filename: str) -> Optional[Dict[str, Any]]:
     """Parse Purc / Sale / Cl qty sheets from word positions.
 
@@ -37198,6 +37790,9 @@ def _is_medivision_op_wsale_header(text: str) -> bool:
         return False
     if not re.search(r"\bOp\b", text, re.I):
         return False
+    # Op/Op val/Purc val/S.R./Sa val/P.R./Cl stacks use the native text map.
+    if _text_has_medivision_op_val_purc_val_sr_sa_val(text):
+        return False
     return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
 
 
@@ -37267,13 +37862,80 @@ def _text_has_medivision_nm90d_only(text: str) -> bool:
     return bool(re.search(r"Cl\s*qty|Cl\s*val", text, re.I))
 
 
+def _medivision_op_val_scm_sa_val_enabled() -> bool:
+    """Op/Op val/Purc/Scm/Purc val/Sale/Scm/Sa val/Cl qty/Cl val (+NM*). Default ON."""
+    return True
+
+
+def _text_has_medivision_op_val_scm_sa_val(text: str) -> bool:
+    """Wide MediVision value sheet: Op val + Scm + Purc val + Sa val + Cl val.
+
+    Distinct from NM90D compact (Op/Purc/Sale/Sa val only, no Op val/Scm/Purc val)
+    and from Op-val/S.R./WSale stacks.
+    """
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if not re.search(r"\bOp\s*val\b", text, re.I):
+        return False
+    if not re.search(r"\bScm\b", text, re.I):
+        return False
+    if not re.search(r"Purc\s*val", text, re.I):
+        return False
+    if not re.search(r"Sa\s*val", text, re.I):
+        return False
+    if re.search(r"S\.R\.|S\s*R\s*qty|WSale|Aug\s*sale", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty", text, re.I) and re.search(r"Cl\s*val", text, re.I))
+
+
+def _medivision_op_val_purc_val_sr_sa_val_enabled() -> bool:
+    """Op/Op val/Purc/Purc val/S.R./Sale/WSale/Sa val/P.R./Cl qty. Default ON."""
+    return True
+
+
+def _text_has_medivision_op_val_purc_val_sr_sa_val(text: str) -> bool:
+    """Wide value sheet with S.R. + Sa val + Purc val (no Scm / Cl val / NM*).
+
+    Column plan: Op, Op val, Purc, Purc val, S.R. qty, S.R. val, Sale, WSale,
+    Sa val, P.R. qty, P.R. val, Cl qty. Distinct from DVS Scm stacks and from
+    Op-val/S.R./Aug/Jul/Cl-val/NM sheets that omit Purc val and Sa val.
+    """
+    if not text:
+        return False
+    if not re.search(r"Stock\s+and\s+Sales", text, re.I):
+        return False
+    if not re.search(r"\bOp\s*val\b", text, re.I):
+        return False
+    if not re.search(r"Purc\s*val", text, re.I):
+        return False
+    if not re.search(r"S\.R\.|S\s*R\s*qty|Sales?\s*Ret", text, re.I):
+        return False
+    if not re.search(r"Sa\s*val", text, re.I):
+        return False
+    if re.search(r"\bScm\b", text, re.I):
+        return False
+    return bool(re.search(r"Cl\s*qty", text, re.I))
+
+
 def _is_medivision_op_purc_nm60d_text(text: str) -> bool:
-    """MediVision Op/Purc/Sale/Cl stacked PDF: NM60D (Supekar) or NM90D-only compact."""
+    """MediVision Op/Purc/Sale/Cl stacked PDF: NM60D, NM90D compact, or Op-val/Scm wide."""
     has_nm60 = _text_has_medivision_nm60d(text)
     has_nm90_compact = (
         _medivision_nm90d_compact_enabled() and _text_has_medivision_nm90d_only(text)
     )
-    if not (has_nm60 or has_nm90_compact):
+    has_op_val_scm = (
+        _medivision_op_val_scm_sa_val_enabled()
+        and _text_has_medivision_op_val_scm_sa_val(text)
+    )
+    has_op_val_purc_val_sr = (
+        _medivision_op_val_purc_val_sr_sa_val_enabled()
+        and _text_has_medivision_op_val_purc_val_sr_sa_val(text)
+    )
+    if not (
+        has_nm60 or has_nm90_compact or has_op_val_scm or has_op_val_purc_val_sr
+    ):
         return False
     if not re.search(r"\bOp\b", text, re.I):
         return False
@@ -37344,11 +38006,30 @@ def _parse_medivision_op_purc_nm60d_text(
     if len(lines) < 20:
         return None
 
-    # Compact = NM90D near-expiry only (no NM60D / Scm / Jul / jun side columns).
-    compact = _text_has_medivision_nm90d_only(text) and _medivision_nm90d_compact_enabled()
+    # Wide Op-val/Scm/Sa-val sheet (DVS-style) before NM90D compact — compact
+    # would park Op val in Purc and Sale qty in Cl val.
+    op_val_scm = (
+        _medivision_op_val_scm_sa_val_enabled()
+        and _text_has_medivision_op_val_scm_sa_val(text)
+    )
+    # Op/Op val/Purc/Purc val/S.R./Sale/WSale/Sa val/P.R./Cl (no NM*/Cl val).
+    op_val_purc_val_sr = (
+        not op_val_scm
+        and _medivision_op_val_purc_val_sr_sa_val_enabled()
+        and _text_has_medivision_op_val_purc_val_sr_sa_val(text)
+    )
+    # Compact = NM90D near-expiry only (no NM60D / Op val / Scm / Jul side columns).
+    compact = (
+        not op_val_scm
+        and not op_val_purc_val_sr
+        and _text_has_medivision_nm90d_only(text)
+        and _medivision_nm90d_compact_enabled()
+    )
     # Cl val printed: Op OpVal Purc S.R. Sale WSale Aug Jul ClQty ClVal NM*.
     op_val_sr = (
         not compact
+        and not op_val_scm
+        and not op_val_purc_val_sr
         and _medivision_op_val_sr_enabled()
         and _text_has_medivision_op_val_sr(text)
         and bool(re.search(r"Cl\s*val", text or "", re.I))
@@ -37356,11 +38037,27 @@ def _parse_medivision_op_purc_nm60d_text(
     # No Cl val: Op OpVal Purc S.R. Sale WSale Aug Jul ClQty NM*.
     op_val = (
         not compact
+        and not op_val_scm
+        and not op_val_purc_val_sr
         and not op_val_sr
         and _text_has_medivision_op_val_header(text)
         and not re.search(r"Cl\s*val", text or "", re.I)
     )
-    if op_val_sr or op_val:
+    if op_val_scm:
+        layout_key = "medivision_op_val_scm_sa_val"
+        min_nums = 10
+        logger.info(
+            "MEDIVISION_OP_VAL_SCM_SA_VAL layout=op_val_scm_sa_val file=%s",
+            filename,
+        )
+    elif op_val_purc_val_sr:
+        layout_key = "medivision_op_val_purc_val_sr_sa_val"
+        min_nums = 12
+        logger.info(
+            "MEDIVISION_OP_VAL_PURC_VAL_SR_SA_VAL layout=op_val_purc_val_sr_sa_val file=%s",
+            filename,
+        )
+    elif op_val_sr or op_val:
         layout_key = "medivision_op_val_sr_nm60d"
         min_nums = 10 if op_val_sr else 9
         logger.info(
@@ -37379,7 +38076,9 @@ def _parse_medivision_op_purc_nm60d_text(
     skip_name = re.compile(
         r"(?i)^(SUPEKAR|SHOP\s+NO|Stock\s+and\s+Sales|Company:|Page\s*No\.?|"
         r"Product\s*Name|\bUnit\b|\bComp\b|\bOp\b|\bOp\s*val\b|\bPurc\b|"
-        r"Purc\s+S\.R\.|\bS\.R\.\b|\bS\.?\s*R\.?\s*qty\b|\bScm\b|\bSale\b|"
+        r"Purc\s*val|Purc\s+S\.R\.|\bS\.R\.\b|\bS\.?\s*R\.?\s*qty\b|"
+        r"S\.R\.\s*val|\bP\.R\.\b|\bP\.?\s*R\.?\s*qty\b|P\.R\.\s*val|"
+        r"\bScm\b|\bSale\b|"
         r"\bW\s*Sale\b|\bWSale\b|"
         r"Aug\s*sale|Jul\s*sale|Jun\s*sale|Sa\s*val|Cl\s*qty|Cl\s*val|"
         r"NM\s*60\s*D|NM60D|NM\s*90\s*D|NM90D|NM\s*val|\bqty\b|\bNE\b|"
@@ -37387,12 +38086,18 @@ def _parse_medivision_op_purc_nm60d_text(
         r".*\bAGENCIES?\b$|.*\bDISTRIBUT)"
     )
     num_line = re.compile(r"^-?\d+(?:\.\d+)?$")
+    # Sheets without NM* end the header at Cl qty; NM sheets end at NM val.
+    header_end = (
+        re.compile(r"(?i)^Cl\s*qty$")
+        if op_val_purc_val_sr
+        else re.compile(r"(?i)^NM\s*val$")
+    )
 
     items: List[Dict[str, Any]] = []
     i = 0
     # Seek first product after header labels.
     while i < len(lines):
-        if re.fullmatch(r"(?i)NM\s*val", lines[i]):
+        if header_end.fullmatch(lines[i]):
             i += 1
             break
         i += 1
@@ -37401,7 +38106,7 @@ def _parse_medivision_op_purc_nm60d_text(
         ln = lines[i]
         if re.match(r"(?i)^(Page\s*No|Stock\s+and\s+Sales|Product\s*Name|Continued)", ln):
             # Resync after page break header.
-            while i < len(lines) and not re.fullmatch(r"(?i)NM\s*val", lines[i]):
+            while i < len(lines) and not header_end.fullmatch(lines[i]):
                 i += 1
             if i < len(lines):
                 i += 1
@@ -37423,6 +38128,16 @@ def _parse_medivision_op_purc_nm60d_text(
             elif next_ln and re.match(r"(?i)^HIMAL", next_ln):
                 packing = cand
                 i += 1
+            elif op_val_purc_val_sr and cand_num:
+                # Digit-only unit before Op (e.g. pack "1"); need 12 qty/value lines after.
+                peek = 0
+                j = i + 1
+                while j < len(lines) and num_line.match(lines[j].replace(",", "")):
+                    peek += 1
+                    j += 1
+                if peek >= 12:
+                    packing = cand
+                    i += 1
         # Comp (HIMAL) — skip non-numeric token
         if i < len(lines) and not num_line.match(lines[i].replace(",", "")):
             if re.match(r"(?i)^HIMAL", lines[i]) or lines[i] in {"-----", "-"}:
@@ -37444,7 +38159,71 @@ def _parse_medivision_op_purc_nm60d_text(
             continue
         opening_value = None
         sales_return = None
-        if op_val_sr:
+        if op_val_scm:
+            # Op OpVal Purc Scm PurcVal Sale Scm SaVal ClQty ClVal [NM90 NMVal]
+            opening = nums[0]
+            opening_value = nums[1]
+            receipts = nums[2]
+            sales = nums[5]
+            sales_value = nums[7]
+            closing = nums[8]
+            closing_value = nums[9]
+            nm60 = None
+            nm90 = nums[10] if len(nums) > 10 else None
+            nm_val = nums[11] if len(nums) > 11 else None
+            extra = {
+                "layout": layout_key,
+                "opening_value": opening_value,
+                "purchase_value": nums[4],
+                "scheme_qty": nums[3],
+                "sale_scheme_qty": nums[6],
+                "field_source": {
+                    "opening_qty": "printed",
+                    "opening_value": "printed",
+                    "receipts_qty": "printed",
+                    "purchase_value": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "printed",
+                },
+            }
+        elif op_val_purc_val_sr:
+            # Op OpVal Purc PurcVal SRqty SRval Sale WSale SaVal PRqty PRval ClQty
+            opening = nums[0]
+            opening_value = nums[1]
+            receipts = nums[2]
+            sales_return = nums[4]
+            sales = nums[6]
+            sales_value = nums[8]
+            closing = nums[11]
+            closing_value = None
+            nm60 = None
+            nm90 = None
+            nm_val = None
+            extra = {
+                "layout": layout_key,
+                "opening_value": opening_value,
+                "purchase_value": nums[3],
+                "sales_return_qty": sales_return,
+                "sale_return": sales_return,
+                "sales_return_value": nums[5],
+                "wholesale_qty": nums[7],
+                "purchase_return_qty": nums[9],
+                "purchase_return_value": nums[10],
+                "field_source": {
+                    "opening_qty": "printed",
+                    "opening_value": "printed",
+                    "receipts_qty": "printed",
+                    "purchase_value": "printed",
+                    "sales_return_qty": "printed",
+                    "sales_qty": "printed",
+                    "sales_value": "printed",
+                    "closing_qty": "printed",
+                    "closing_value": "missing",
+                },
+            }
+        elif op_val_sr:
             # Op OpVal Purc SR Sale WSale Aug Jul ClQty ClVal [NM60 NM90 NMVal NE]
             opening = nums[0]
             opening_value = nums[1]
@@ -37565,7 +38344,7 @@ def _parse_medivision_op_purc_nm60d_text(
             filename,
         )
 
-    if compact:
+    if op_val_scm or compact:
         balanced = sum(
             1
             for it in items
@@ -37577,9 +38356,15 @@ def _parse_medivision_op_purc_nm60d_text(
             )
         )
         need = max(3, int(0.6 * len(items)))
+        label = (
+            "medivision_op_val_scm_sa_val"
+            if op_val_scm
+            else "medivision_nm90d_compact"
+        )
         if balanced < need:
             logger.info(
-                "medivision_nm90d_compact: reject identity_fail balanced=%s need=%s total=%s file=%s",
+                "%s: reject identity_fail balanced=%s need=%s total=%s file=%s",
+                label,
                 balanced,
                 need,
                 len(items),
@@ -37587,20 +38372,23 @@ def _parse_medivision_op_purc_nm60d_text(
             )
             return None
         logger.info(
-            "medivision_nm90d_compact: accepted rows=%s balanced=%s file=%s",
+            "%s: accepted rows=%s balanced=%s file=%s",
+            label,
             len(items),
             balanced,
             filename,
         )
-    elif op_val_sr:
-        # Printed identity: Op + Purc + S.R. - Sale = Cl qty.
+    elif op_val_purc_val_sr or op_val_sr:
+        # Printed identity: Op + Purc + S.R. - Sale [- P.R.] = Cl qty.
         balanced = 0
         for it in items:
+            extra_it = it.get("extra") if isinstance(it.get("extra"), dict) else {}
             sr = _to_float(
-                ((it.get("extra") or {}).get("sales_return_qty"))
-                if isinstance(it.get("extra"), dict)
-                else 0
+                it.get("sales_return_qty")
+                if it.get("sales_return_qty") is not None
+                else (extra_it or {}).get("sales_return_qty")
             )
+            pr = _to_float((extra_it or {}).get("purchase_return_qty"))
             if (
                 abs(
                     (
@@ -37608,6 +38396,7 @@ def _parse_medivision_op_purc_nm60d_text(
                         + _to_float(it.get("receipts_qty"))
                         + sr
                         - _to_float(it.get("sales_qty"))
+                        - pr
                     )
                     - _to_float(it.get("closing_qty"))
                 )
@@ -37615,9 +38404,15 @@ def _parse_medivision_op_purc_nm60d_text(
             ):
                 balanced += 1
         need = max(3, int(0.6 * len(items)))
+        label = (
+            "MEDIVISION_OP_VAL_PURC_VAL_SR_SA_VAL"
+            if op_val_purc_val_sr
+            else "MEDIVISION_OP_VAL_SR"
+        )
         if balanced < need:
             logger.info(
-                "MEDIVISION_OP_VAL_SR reject identity_fail balanced=%s need=%s total=%s file=%s",
+                "%s reject identity_fail balanced=%s need=%s total=%s file=%s",
+                label,
                 balanced,
                 need,
                 len(items),
@@ -37625,7 +38420,8 @@ def _parse_medivision_op_purc_nm60d_text(
             )
             return None
         logger.info(
-            "MEDIVISION_OP_VAL_SR accepted rows=%s balanced=%s file=%s",
+            "%s accepted rows=%s balanced=%s file=%s",
+            label,
             len(items),
             balanced,
             filename,
@@ -37675,6 +38471,467 @@ def _parse_medivision_op_purc_nm60d_from_doc(
 ) -> Optional[Dict[str, Any]]:
     text = "\n".join((page.get_text("text") or "") for page in doc)
     return _parse_medivision_op_purc_nm60d_text(text, filename, "pdf")
+
+
+def _medivision_op_wsale_header_anchors(
+    header_words: Sequence[Tuple[float, str]],
+) -> Optional[Dict[str, float]]:
+    """Left-edge x anchors for Op/Purc/Sale…Cl val on a MediVision WSale header row.
+
+    Glued OCR tokens (SaleWSaleSep, SaAug) still yield Sale and prior-month
+    anchors so blank Purc does not slide Sale into receipts_qty.
+    """
+    anchors: Dict[str, float] = {}
+    # Left-to-right so Sa val is seen before the Cl/qty band (stacked headers
+    # often emit Sep/Aug/Cl above the Product row before Sa val tokens).
+    for x, token in sorted(
+        ((float(x), str(token)) for x, token in header_words),
+        key=lambda pair: pair[0],
+    ):
+        norm = re.sub(r"[^a-z0-9]", "", str(token).lower())
+        if not norm:
+            continue
+        if norm in {"product", "name"} and "name" not in anchors:
+            anchors["name"] = float(x)
+        elif norm == "unit" and "pack" not in anchors:
+            anchors["pack"] = float(x)
+        elif norm == "op" and "opening_qty" not in anchors:
+            anchors["opening_qty"] = float(x)
+        elif norm == "purc" and "receipts_qty" not in anchors:
+            anchors["receipts_qty"] = float(x)
+        elif (
+            norm.startswith("sale")
+            and "wsale" in norm
+            and "sales_qty" not in anchors
+        ):
+            # SaleWSaleSep / SaleWSaleAug glued — Sale at token left edge only.
+            # Bare "WSale" must NOT match here ("sale" is a substring of "wsale").
+            anchors["sales_qty"] = float(x)
+        elif norm == "sale" and "sales_qty" not in anchors:
+            anchors["sales_qty"] = float(x)
+        elif norm == "wsale" or re.fullmatch(r"w\s*sale", str(token), re.I):
+            anchors.setdefault("wholesale_qty", float(x))
+        elif re.match(r"^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)sa$", norm):
+            mon = norm[:3]
+            key = {
+                "jan": "january_sale_qty",
+                "feb": "february_sale_qty",
+                "mar": "march_sale_qty",
+                "apr": "april_sale_qty",
+                "may": "may_sale_qty",
+                "jun": "june_sale_qty",
+                "jul": "july_sale_qty",
+                "aug": "august_sale_qty",
+                "sep": "september_sale_qty",
+                "oct": "october_sale_qty",
+                "nov": "november_sale_qty",
+                "dec": "december_sale_qty",
+            }.get(mon)
+            if key:
+                anchors.setdefault(key, float(x))
+        elif norm in {
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "may",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "oct",
+            "nov",
+            "dec",
+        }:
+            # Stacked "Sep" / "Aug" above "Sa" on multi-line MediVision headers.
+            key = {
+                "jan": "january_sale_qty",
+                "feb": "february_sale_qty",
+                "mar": "march_sale_qty",
+                "apr": "april_sale_qty",
+                "may": "may_sale_qty",
+                "jun": "june_sale_qty",
+                "jul": "july_sale_qty",
+                "aug": "august_sale_qty",
+                "sep": "september_sale_qty",
+                "oct": "october_sale_qty",
+                "nov": "november_sale_qty",
+                "dec": "december_sale_qty",
+            }.get(norm)
+            if key:
+                anchors.setdefault(key, float(x))
+        elif norm in {"saaug", "augsa"} and "august_sale_qty" not in anchors:
+            anchors["august_sale_qty"] = float(x)
+        elif norm == "sa" and "closing_qty" not in anchors:
+            # Bare "Sa" before Cl may be a prior-month col or the Sa val label.
+            # Two Sa tokens before "val": earlier one is prior-month qty.
+            prev_sa = anchors.get("_last_sa")
+            if prev_sa is not None:
+                anchors.setdefault("september_sale_qty", float(prev_sa))
+            anchors["_last_sa"] = float(x)
+        elif norm == "val" and "closing_qty" not in anchors and "sales_value" not in anchors:
+            # "Sa val" — money prints under Sa (not the trailing val glyph).
+            last_sa = anchors.pop("_last_sa", None)
+            if last_sa is not None and abs(float(last_sa) - float(x)) <= 20.0:
+                anchors["sales_value"] = float(last_sa)
+            else:
+                anchors["sales_value"] = float(x)
+                if last_sa is not None and abs(float(last_sa) - float(x)) > 10.0:
+                    anchors.setdefault("september_sale_qty", float(last_sa))
+        elif norm == "cl" and "closing_qty" not in anchors:
+            anchors.pop("_last_sa", None)
+            anchors["closing_qty"] = float(x)
+        elif norm == "qty" and "closing_qty" in anchors and "closing_value" not in anchors:
+            # "Cl qty" — numbers sit under qty, not the left-edge Cl label.
+            anchors["closing_qty"] = float(x)
+        elif norm == "cl" and "closing_qty" in anchors and "closing_value" not in anchors:
+            # Prefer Cl label x — Cl val digits print under Cl, not trailing val.
+            anchors["closing_value"] = float(x)
+        elif norm == "val" and "closing_qty" in anchors and "closing_value" not in anchors:
+            anchors["closing_value"] = float(x)
+        elif re.match(r"^nm\d+d$", norm):
+            # Only park NM* when clearly right of Cl val (avoid stealing Cl val).
+            if "closing_value" in anchors and float(x) > float(anchors["closing_value"]) + 12.0:
+                if "60" in norm:
+                    anchors.setdefault("nm60_qty", float(x))
+                elif "90" in norm:
+                    anchors.setdefault("nm90_qty", float(x))
+            elif "closing_value" not in anchors:
+                anchors.setdefault(
+                    "_pending_nm60" if "60" in norm else "_pending_nm90", float(x)
+                )
+        elif norm == "nm" and "closing_value" in anchors:
+            if float(x) > float(anchors["closing_value"]) + 12.0:
+                anchors.setdefault("_nm_label", float(x))
+        elif (
+            norm == "val"
+            and "closing_value" in anchors
+            and "nm_value" not in anchors
+            and "_nm_label" in anchors
+            and float(x) > float(anchors["closing_value"]) + 12.0
+        ):
+            anchors["nm_value"] = float(x)
+            anchors.pop("_nm_label", None)
+        elif norm == "ne" and "closing_value" in anchors:
+            if float(x) > float(anchors["closing_value"]) + 20.0:
+                anchors.setdefault("ne_qty", float(x))
+    # Flush pending NM labels that landed right of the final Cl val anchor.
+    if "closing_value" in anchors:
+        cv = float(anchors["closing_value"])
+        for pending, dest in (
+            ("_pending_nm60", "nm60_qty"),
+            ("_pending_nm90", "nm90_qty"),
+        ):
+            px = anchors.pop(pending, None)
+            if px is not None and float(px) > cv + 12.0:
+                anchors.setdefault(dest, float(px))
+    anchors = {k: v for k, v in anchors.items() if not str(k).startswith("_")}
+    needed = {
+        "name",
+        "opening_qty",
+        "receipts_qty",
+        "sales_qty",
+        "sales_value",
+        "closing_qty",
+        "closing_value",
+    }
+    if not needed.issubset(anchors):
+        return None
+    return anchors
+
+
+def _medivision_op_wsale_collect_header_words(
+    rows: Sequence[Dict[str, Any]], center_idx: int, *, y_pad: float = 12.0
+) -> List[Tuple[float, str]]:
+    """Merge stacked MediVision header bands (Sep/Aug / Op…Sa val / Sa qty).
+
+    Native PDFs often print month labels and Cl qty on adjacent y-bands within
+    ~10pt of the Product/Op/Sale row; a single band misses Cl qty and prior-Sa.
+    """
+    if center_idx < 0 or center_idx >= len(rows):
+        return []
+    center_y = float(rows[center_idx]["y"])
+    header_tok = re.compile(
+        r"(?i)^(Product|name|Unit|Op|Purc|Sale|WSale|W\s*Sale|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|"
+        r"Sa|val|Cl|qty|NM\d*D?|NM|NE|SaleWSale.*)$"
+    )
+    merged: List[Tuple[float, str]] = []
+    for row in rows:
+        if abs(float(row["y"]) - center_y) > y_pad:
+            continue
+        tokens = list(row.get("words") or [])
+        if abs(float(row["y"]) - center_y) > 0.5:
+            if not any(header_tok.match(str(tok)) for _x, tok in tokens):
+                continue
+        merged.extend((float(x), str(tok)) for x, tok in tokens)
+    return merged
+
+
+def _medivision_op_wsale_field_for_x(
+    x: float, anchors: Dict[str, float]
+) -> Optional[str]:
+    """Nearest-left anchor field for a numeric cell (midpoint boundaries)."""
+    ordered = sorted(anchors.items(), key=lambda kv: kv[1])
+    if not ordered:
+        return None
+    for i, (name, start) in enumerate(ordered):
+        left = -1e9 if i == 0 else (ordered[i - 1][1] + start) / 2.0
+        right = (
+            1e9
+            if i + 1 >= len(ordered)
+            else (start + ordered[i + 1][1]) / 2.0
+        )
+        if left <= x < right:
+            return name
+    return ordered[-1][0]
+
+
+def _parse_medivision_op_wsale_words(
+    page_iter: Sequence[Any],
+    filename: str,
+    *,
+    source_format: str = "pdf",
+) -> Optional[Dict[str, Any]]:
+    """Parse MediVision Op/Purc/Sale/WSale/prior-Sa/Sa val/Cl from word x positions.
+
+    Blank Purc/WSale cells are omitted in the text stream; x-centres keep Sale
+    under Sale and Sa val under Sa val. Returns None when this header is absent.
+    """
+    if not _medivision_op_wsale_early_enabled():
+        return None
+    page_payloads: List[Tuple[str, List[Any]]] = []
+    for page in page_iter:
+        if isinstance(page, dict):
+            text = str(page.get("text") or "")
+            words = list(page.get("words") or [])
+        else:
+            text = page.get_text("text") or ""
+            words = list(page.get_text("words") or [])
+        page_payloads.append((text, words))
+    combined = "\n".join(t for t, _w in page_payloads)
+    if not _is_medivision_op_wsale_header(combined):
+        return None
+    # Wide Op-val/Scm/Sa-val sheets use a different native parser.
+    if _text_has_medivision_op_val_scm_sa_val(combined):
+        return None
+    # Op/Op val/Purc val/S.R./Sa val/P.R./Cl stacks use the text column map.
+    if _text_has_medivision_op_val_purc_val_sr_sa_val(combined):
+        return None
+
+    result = empty_result(filename, source_format)
+    result["report_title"] = "Stock and Sales"
+    items: List[Dict[str, Any]] = []
+    anchors: Optional[Dict[str, float]] = None
+    footer_sv: Optional[float] = None
+    footer_cv: Optional[float] = None
+
+    for text, words in page_payloads:
+        if result["period_from"] is None:
+            m = re.search(
+                r"(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+to\s+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})",
+                text,
+                re.I,
+            )
+            if m:
+                result["period_from"] = _normalize_date(m.group(1))
+                result["period_to"] = _normalize_date(m.group(2))
+        company = re.search(r"Company:\s*(.+)", text, re.I)
+        if company and not result.get("company_name"):
+            result["company_name"] = _clean_name(company.group(1).split("\n")[0])
+
+        rows: List[Dict[str, Any]] = []
+        # 5pt clusters wrap multi-line product names onto their qty band without
+        # merging adjacent products (typical row pitch is ~12pt).
+        _row_y_tol = 5.0
+        for w in sorted(words, key=lambda b: (round(float(b[1]), 1), float(b[0]))):
+            x0, y0 = float(w[0]), float(w[1])
+            token = str(w[4]).strip()
+            if not token:
+                continue
+            if rows and abs(y0 - rows[-1]["y"]) <= _row_y_tol:
+                rows[-1]["words"].append((x0, token))
+            else:
+                rows.append({"y": y0, "words": [(x0, token)]})
+
+        for row_idx, row in enumerate(rows):
+            blob = " ".join(tok for _x, tok in row["words"])
+            if _is_medivision_op_wsale_header(blob) or (
+                re.search(r"\bOp\b", blob, re.I)
+                and re.search(r"\bPurc\b", blob, re.I)
+                and re.search(r"Sale|WSale|Sa\s*val", blob, re.I)
+                and re.search(r"Cl\s*qty|Cl\s*val", blob, re.I)
+            ):
+                header_words = _medivision_op_wsale_collect_header_words(rows, row_idx)
+                found = _medivision_op_wsale_header_anchors(
+                    header_words or row["words"]
+                )
+                if found:
+                    anchors = found
+                    logger.info(
+                        "MEDIVISION_OP_WSALE_WORDS anchors=%s file=%s",
+                        {k: round(v, 1) for k, v in sorted(found.items())},
+                        filename,
+                    )
+                if not result.get("stockist_name"):
+                    for prev in rows:
+                        if prev["y"] >= row["y"] - 2:
+                            break
+                        line = " ".join(tok for _x, tok in prev["words"]).strip()
+                        if not line or re.search(
+                            r"Phone|Email|Stock|Company|Page|MediVision|@",
+                            line,
+                            re.I,
+                        ):
+                            continue
+                        result["stockist_name"] = _clean_name(line)
+                        break
+                continue
+            if not anchors:
+                continue
+            if re.search(r"Continued|Page\s*No|MediVision|Generated\s+at", blob, re.I):
+                continue
+            if re.match(r"^Totals?\b", blob.strip(), re.I):
+                money: List[float] = []
+                for _x, token in sorted(row["words"], key=lambda t: t[0]):
+                    if re.match(r"^Totals?\b", token, re.I):
+                        continue
+                    num = _prompt_cell_number([token])
+                    if num is not None:
+                        money.append(float(num))
+                if len(money) >= 2:
+                    footer_sv = money[0]
+                    footer_cv = money[1]
+                continue
+
+            cells: Dict[str, List[str]] = {}
+            name_parts: List[str] = []
+            pack_parts: List[str] = []
+            for x, token in row["words"]:
+                field = _medivision_op_wsale_field_for_x(x, anchors)
+                if field == "name":
+                    if not re.fullmatch(r"-?\d+(?:\.\d+)?", token.replace(",", "")):
+                        name_parts.append(token)
+                    continue
+                if field == "pack":
+                    pack_parts.append(token)
+                    continue
+                if field:
+                    cells.setdefault(field, []).append(token)
+
+            def _num(field: str) -> Optional[float]:
+                return _prompt_cell_number(cells.get(field) or [])
+
+            opening_qty = _num("opening_qty")
+            receipts_qty = _num("receipts_qty")
+            sales_qty = _num("sales_qty")
+            sales_value = _num("sales_value")
+            closing_qty = _num("closing_qty")
+            closing_value = _num("closing_value")
+            # Drop wrapped-name orphans / blank stock rows with no printed figures.
+            if all(
+                v is None
+                for v in (
+                    opening_qty,
+                    receipts_qty,
+                    sales_qty,
+                    sales_value,
+                    closing_qty,
+                    closing_value,
+                )
+            ):
+                continue
+
+            # Append wrapped product-name lines sitting just below the qty band.
+            j = row_idx + 1
+            while j < len(rows) and abs(float(rows[j]["y"]) - float(row["y"])) <= 12.0:
+                cont_cells: Dict[str, List[str]] = {}
+                cont_name: List[str] = []
+                for x, token in rows[j]["words"]:
+                    field = _medivision_op_wsale_field_for_x(x, anchors)
+                    if field == "name":
+                        if not re.fullmatch(
+                            r"-?\d+(?:\.\d+)?", token.replace(",", "")
+                        ):
+                            cont_name.append(token)
+                        continue
+                    if field and field not in {"name", "pack"}:
+                        cont_cells.setdefault(field, []).append(token)
+                if cont_cells:
+                    break
+                if not cont_name or not re.search(
+                    r"[A-Za-z]{3,}", " ".join(cont_name)
+                ):
+                    break
+                name_parts.extend(cont_name)
+                j += 1
+
+            name = _clean_name(" ".join(name_parts))
+            if not name or re.match(
+                r"^(Product|Unit|Totals?|Page|Op|Purc|Sale)\b", name, re.I
+            ):
+                continue
+            if not re.search(r"[A-Za-z]{3,}", name):
+                continue
+
+            item = empty_line_item()
+            item["product_name"] = name
+            pack = _clean_name(" ".join(pack_parts))
+            item["packing"] = pack or None
+            item["opening_qty"] = opening_qty
+            item["receipts_qty"] = receipts_qty
+            item["sales_qty"] = sales_qty
+            item["sales_value"] = sales_value
+            item["closing_qty"] = closing_qty
+            item["closing_value"] = closing_value
+            extra: Dict[str, Any] = {"layout": "medivision_op_wsale"}
+            for side_key in (
+                "wholesale_qty",
+                "september_sale_qty",
+                "august_sale_qty",
+                "july_sale_qty",
+                "june_sale_qty",
+            ):
+                side_n = _num(side_key)
+                if side_n is not None:
+                    extra[side_key] = side_n
+            item["extra"] = extra
+            items.append(item)
+
+    if len(items) < 5:
+        return None
+    result["line_items"] = items
+    finalized = _finalize_medivision_op_wsale(result)
+    if not finalized:
+        return None
+    extra_t = finalized.setdefault("totals", {}).setdefault("extra", {})
+    extra_t["extraction_method"] = "medivision_op_wsale_words"
+    extra_t["layout"] = "medivision_op_wsale"
+    if footer_sv is not None and finalized["totals"].get("sales_value") is None:
+        finalized["totals"]["sales_value"] = footer_sv
+    if footer_cv is not None:
+        # Prefer printed footer Cl val when present.
+        finalized["totals"]["closing_value"] = footer_cv
+    if footer_sv is not None:
+        finalized["totals"]["sales_value"] = footer_sv
+    logger.info(
+        "MEDIVISION_OP_WSALE_WORDS accepted rows=%s file=%s",
+        len(finalized.get("line_items") or []),
+        filename,
+    )
+    return finalized
+
+
+def _parse_medivision_op_wsale_from_doc(
+    doc: Any, filename: str
+) -> Optional[Dict[str, Any]]:
+    return _parse_medivision_op_wsale_words(doc, filename, source_format="pdf")
+
+
+def _parse_medivision_op_wsale_words_pages(
+    pages: List[Dict[str, Any]], filename: str
+) -> Optional[Dict[str, Any]]:
+    return _parse_medivision_op_wsale_words(pages, filename, source_format="pdf")
 
 
 def _repair_medivision_op_wsale_sales(item: Dict[str, Any]) -> None:
@@ -48399,10 +49656,24 @@ def _parse_pdf(file_bytes: bytes, filename: str) -> Dict[str, Any]:
             op_qty_val_words["totals"]["extra"]["statement_count"] = 1
             return op_qty_val_words
 
+        # PRODUCT|OPEN|PUR.|RETURN|PUR.RET|SALES|CLOSE — blank PUR./RETURN
+        # must not slide SALES into receipts (StockHDR / Himalaya qty grid).
+        open_pur_ret = _parse_stock_statement_open_pur_ret_sales_close_from_doc(
+            doc, filename
+        )
+        if open_pur_ret and open_pur_ret.get("line_items"):
+            open_pur_ret["totals"]["extra"]["statement_count"] = 1
+            return open_pur_ret
+
         detail_stmt = _parse_stock_sales_detail_opval(doc, filename)
         if detail_stmt and detail_stmt.get("line_items"):
             detail_stmt["totals"]["extra"]["statement_count"] = 1
             return detail_stmt
+
+        medivision_wsale = _parse_medivision_op_wsale_from_doc(doc, filename)
+        if medivision_wsale and medivision_wsale.get("line_items"):
+            medivision_wsale["totals"]["extra"]["statement_count"] = 1
+            return medivision_wsale
 
         medivision_nm60 = _parse_medivision_op_purc_nm60d_from_doc(doc, filename)
         if medivision_nm60 and medivision_nm60.get("line_items"):
@@ -53946,7 +55217,8 @@ def _apply_parsed_sales_json(
         stockist_is_himalaya = bool(re.search(r"\bHIMALAYA\b", stockist))
         company_is_distributor = bool(
             re.search(
-                r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|PVT\.?\s*LTD",
+                r"MEDISALES|DISTRIBUT|AGENC|STORES|MEDICO|PRIVATE\s+LIMITED|"
+                r"PVT\.?\s*LTD|\bSALES\b",
                 company,
             )
         ) and not re.search(r"\bHIMALAYA\b", company)
@@ -54020,6 +55292,8 @@ def _apply_parsed_sales_json(
             item["opening_value"] = _to_float(opening_value)
             item.setdefault("extra", {})["opening_value"] = item["opening_value"]
         receipts_value = raw.get("receipts_value")
+        if receipts_value in (None, ""):
+            receipts_value = raw.get("purchase_value")
         if receipts_value in (None, "") and isinstance(raw.get("extra"), dict):
             receipts_value = raw["extra"].get("receipts_value")
             if receipts_value in (None, ""):
@@ -56645,6 +57919,7 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             return None
     except Exception:
         pass
+<<<<<<< HEAD
     # Profitmaker O.Stk|Qoh|Value|Age — SSA dump parks O.Stk in receipts_qty and
     # zeros Sale/Qoh (SSA_DUMP_RECEIPT_AS_OPENING). Soft-reject always.
     # Landscape rotation for dump Vision can drop Qoh/O.Stk from soft_preview;
@@ -56662,6 +57937,14 @@ def _extract_ssa_opening_receipt_issue_dump_image(
     ):
         logger.info(
             "SSA_DUMP_SKIP reason=ostk_qoh_stock_sales file=%s skip_ocr_gate=%s",
+=======
+    # Soft-reject Stock and Sale Op|Pur|Gd.In|Purchase|Sale|Stock (trailing money).
+    # SSA OPENING/RECEIPT/ISSUE schema parks Tot In as closing and zeros sales.
+    if _text_looks_like_stock_and_sale_op_pur_gd_chrome(soft_preview):
+        logger.info(
+            "SSA_DUMP_SKIP reason=stock_and_sale_op_pur_gd file=%s "
+            "skip_ocr_gate=%s",
+>>>>>>> ed61f8b76735e92ae26836e14676b51f11353a26
             filename,
             skip_ocr_gate,
         )
@@ -56827,6 +58110,15 @@ receipts_qty (do not park RECEIVE under OPENING).
         )
         return None
     repaired_items = _ssa_dump_clean_and_repair(parsed)
+    # Unit-sale slide already proves association failure — do not spend the
+    # second Gemini call on identity retry; callers reject and use vision_table.
+    _unit_sale_slide = _ssa_dump_items_look_like_unit_sale_slide(repaired_items)
+    if _unit_sale_slide:
+        logger.info(
+            "SSA_DUMP_UNIT_SALE_SLIDE file=%s rows=%s skip_identity_retry=1",
+            filename,
+            len(repaired_items),
+        )
     # One anti-slide retry when association repairs still leave broken rows.
     # Forward-absorb sheets retry on a single remaining fail (continuation
     # pages often leave one hollow duplicate after the cascade unwinds).
@@ -56835,7 +58127,11 @@ receipts_qty (do not park RECEIVE under OPENING).
         isinstance(it, dict) and _ssa_dump_item_has_forward_flag(it)
         for it in repaired_items
     )
-    if _ssa_dump_identity_retry_enabled() and _fail_n >= (1 if _had_forward else 2):
+    if (
+        (not _unit_sale_slide)
+        and _ssa_dump_identity_retry_enabled()
+        and _fail_n >= (1 if _had_forward else 2)
+    ):
         logger.info(
             "SSA_DUMP_IDENTITY_RETRY file=%s fails=%s forward=%s",
             filename,
@@ -56863,6 +58159,17 @@ receipts_qty (do not park RECEIVE under OPENING).
             skip_ocr_gate,
         )
         return None
+    if _ssa_dump_result_looks_like_unit_sale_slide(result):
+        # Keep the payload so empty-OCR gates can reject + force vision_table
+        # without spending LstSL / a second SSA dump call.
+        extra_slide = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra_slide, dict):
+            extra_slide["ssa_dump_unit_sale_slide"] = True
+        logger.info(
+            "SSA_DUMP_UNIT_SALE_SLIDE_MARKED file=%s rows=%s",
+            filename,
+            len(result.get("line_items") or []),
+        )
     if _ssa_dump_identity_retry_enabled():
         extra_retry = result.setdefault("totals", {}).setdefault("extra", {})
         if isinstance(extra_retry, dict):
@@ -56921,6 +58228,8 @@ receipts_qty (do not park RECEIVE under OPENING).
             )
     except Exception:
         logger.exception("SSA_DUMP_TRAILING_TOTAL_PEEL failed")
+    # Call sites reject stock_and_sale_op_pur misfiles so empty-OCR LstSL can
+    # be skipped without burning the VISION_TABLE Gemini slot.
     return result
 
 
@@ -57328,6 +58637,153 @@ def _ssa_dump_result_looks_like_op_stk_misfile(result: Optional[Dict[str, Any]])
     return False
 
 
+def _ssa_reject_stock_and_sale_op_pur_enabled() -> bool:
+    """STOCK_SSA_REJECT_STOCK_AND_SALE_OP_PUR — defer Op|Pur|Gd.In grids to VT.
+
+    Default ON. Empty-OCR SSA dump / Op_Stk readers invent OPENING/RECEIPT/ISSUE
+    or drop trailing Purchase|Sale|Stock money on Stock and Sale sheets. Kill
+    switch: false.
+    """
+    return os.getenv(
+        "STOCK_SSA_REJECT_STOCK_AND_SALE_OP_PUR", "true"
+    ).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _text_looks_like_stock_and_sale_op_pur_gd_chrome(text: str) -> bool:
+    """True for Stock and Sale Op|Pur|Gd.In|Tot In|Sale|Closing|Purchase|Sale|Stock."""
+    if not (text or "").strip():
+        return False
+    if re.search(r"stock\s+and\s+sales?\s+detail", text, re.I):
+        return False
+    if re.search(r"STOCK\s*&\s*SALES\s+ANALYSIS", text, re.I):
+        return False
+    if not re.search(r"stock\s+and\s+sale(?!\s*s?\s*detail)", text, re.I):
+        return False
+    return bool(
+        re.search(r"\bgd\.?\s*in\b|\btot\s*in\b|\bgd\.?\s*out\b|\bnear\s*exp", text, re.I)
+        or (
+            re.search(r"\bOp\b", text)
+            and re.search(r"\bPur\b", text)
+            and re.search(r"\bClosing\b", text)
+            and re.search(r"\bPurchase\b", text)
+            and re.search(r"\bStock\b", text)
+        )
+    )
+
+
+def _result_title_looks_like_plain_stock_and_sale(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Title is bare 'Stock and Sale' (not Detail / ANALYSIS / PharmAssist Report)."""
+    if not isinstance(result, dict):
+        return False
+    title = str(result.get("report_title") or "").strip()
+    if not title:
+        return False
+    if re.search(
+        r"detail|analysis|op\.?\s*stk|lstsl|pharm|report\b|statement\b",
+        title,
+        re.I,
+    ):
+        return False
+    return bool(re.search(r"(?i)^stock\s+and\s+sale$", title))
+
+
+def _ssa_dump_result_looks_like_stock_and_sale_misfile(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """SSA qty+value schema forced onto Op|Pur|Gd.In|Purchase|Sale|Stock grids.
+
+    Tot In parked as closing with sales wiped, or RECEIPT_AS_OPENING on Pur=0
+    rows, while DUMP is absent and packing is dense.
+    """
+    if not _ssa_reject_stock_and_sale_op_pur_enabled():
+        return False
+    if not isinstance(result, dict):
+        return False
+    if _result_title_looks_like_plain_stock_and_sale(result):
+        return True
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    pack_rows = 0
+    receipt_as_open = 0
+    tot_in_as_close = 0
+    checked = 0
+    oq_rows = 0
+    oq_no_ov = 0
+    dump_hits = 0
+    for item in items:
+        if str(item.get("packing") or "").strip():
+            pack_rows += 1
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        flags = list(extra.get("flags") or [])
+        if "SSA_DUMP_RECEIPT_AS_OPENING" in flags:
+            receipt_as_open += 1
+        if abs(_to_float(extra.get("dump_qty"))) > 0.05:
+            dump_hits += 1
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if abs(oq) + abs(rq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        if oq > 0.05:
+            oq_rows += 1
+            if _ssa_dump_item_opening_value(item) <= 0.05:
+                oq_no_ov += 1
+        if (
+            abs(sq) <= 0.05
+            and (oq + rq) > 0.5
+            and abs(cq - (oq + rq)) <= 0.51
+        ):
+            tot_in_as_close += 1
+    if dump_hits >= 2:
+        return False
+    if pack_rows < max(5, len(items) // 4) or checked < 3:
+        return False
+    if receipt_as_open >= 2 and tot_in_as_close >= max(3, checked // 5):
+        return True
+    if (
+        oq_rows >= 3
+        and (oq_no_ov / float(oq_rows)) >= 0.45
+        and tot_in_as_close >= max(3, checked // 4)
+    ):
+        return True
+    return False
+
+
+def _op_stk_result_should_defer_stock_and_sale_to_vt(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Op_Stk reader claimed bare Stock and Sale but dropped Sale/Purchase money."""
+    if not _ssa_reject_stock_and_sale_op_pur_enabled():
+        return False
+    if not _result_title_looks_like_plain_stock_and_sale(result):
+        return False
+    items = [
+        i
+        for i in ((result or {}).get("line_items") or [])
+        if isinstance(i, dict)
+    ]
+    if len(items) < 5:
+        return False
+    cv_hits = 0
+    sv_hits = 0
+    for item in items:
+        if _to_float(item.get("closing_value")) > 0.05:
+            cv_hits += 1
+        if _to_float(item.get("sales_value")) > 0.05:
+            sv_hits += 1
+    return cv_hits >= 5 and sv_hits <= max(1, cv_hits // 4)
+
+
 def _ssa_dump_dump_as_closing_enabled() -> bool:
     """STOCK_SSA_DUMP_DUMP_AS_CLOSING — DUMP QTY holds printed CLOSING QTY."""
     return os.getenv(
@@ -57668,6 +59124,57 @@ def _ssa_dump_money_in_qty_row_count(result: Optional[Dict[str, Any]]) -> int:
                 hits += 1
                 break
     return hits
+
+
+def _ssa_dump_unit_sale_slide_reject_enabled() -> bool:
+    """Reject SSA dump grids that invent sales_qty=1 on most rows (default ON)."""
+    return True
+
+
+def _ssa_dump_items_look_like_unit_sale_slide(
+    items: Optional[Sequence[Dict[str, Any]]],
+) -> bool:
+    """True when many rows are opening=N / sales=1 / closing=N-1 with no receipt.
+
+    RATE|OPENING|RECEIPT|ISSUE|CLOSING column slides often make Vision emit a
+    fake unit sale so identity still balances. Real SSA sheets rarely sell
+    exactly one unit on a large share of SKUs. Used to fall through to
+    vision_table without burning the identity-retry Gemini call.
+    """
+    if not _ssa_dump_unit_sale_slide_reject_enabled():
+        return False
+    rows = [i for i in (items or []) if isinstance(i, dict)]
+    if len(rows) < 8:
+        return False
+    checked = 0
+    unit_hits = 0
+    for item in rows:
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if abs(oq) + abs(rq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        if (
+            oq >= 5.0
+            and abs(rq) < 0.05
+            and abs(sq - 1.0) < 0.01
+            and abs((oq - 1.0) - cq) < 0.51
+        ):
+            unit_hits += 1
+    if checked < 8:
+        return False
+    return (unit_hits / float(checked)) >= 0.35
+
+
+def _ssa_dump_result_looks_like_unit_sale_slide(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Result wrapper for empty-OCR SSA dump acceptance gates."""
+    if not isinstance(result, dict):
+        return False
+    return _ssa_dump_items_look_like_unit_sale_slide(result.get("line_items") or [])
 
 
 def _ssa_dump_vision_table_needs_rescue(result: Optional[Dict[str, Any]]) -> bool:
@@ -74068,6 +75575,10 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
 
     result = empty_result(filename, ext.lstrip("."))
     _vt_meta: Dict[str, Any] = {}
+    # Set when empty-OCR SSA dump misfiles Op|Pur|Gd.In Stock and Sale — skip
+    # Op_Stk (second Gemini) so VISION_TABLE still has budget for money cols.
+    _defer_stock_and_sale_vt = False
+    _defer_ssa_unit_sale_vt = False
     _diag = {
         "geometry_called": False,
         "vision_called": False,
@@ -74352,7 +75863,33 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         type(_ssa_first_exc).__name__,
                     )
                     ssa_first = None
-                if (
+                _ssa_stock_sale_misfile = bool(
+                    ssa_first
+                    and _ssa_dump_result_looks_like_stock_and_sale_misfile(
+                        ssa_first
+                    )
+                )
+                if _ssa_stock_sale_misfile:
+                    _defer_stock_and_sale_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=rejected reason=stock_and_sale_op_pur "
+                        "line_items=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
+                elif ssa_first and _ssa_dump_result_looks_like_unit_sale_slide(
+                    ssa_first
+                ):
+                    _defer_ssa_unit_sale_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=rejected reason=unit_sale_slide "
+                        "line_items=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
+                elif (
                     ssa_first
                     and ssa_first.get("line_items")
                     and _ssa_dump_result_looks_like_oric_qty_value(ssa_first)
@@ -74367,7 +75904,20 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         len(ssa_first.get("line_items") or []),
                     )
                     return ssa_first
-            lstsl_vis = _extract_lstsl_open_recd_vision(file_bytes, filename, ext)
+                # Empty-OCR LstSL would burn the last Gemini slot before
+                # VISION_TABLE can read trailing Purchase|Sale|Stock money.
+                if (
+                    _ssa_stock_sale_misfile or _defer_ssa_unit_sale_vt
+                ) and _lstsl_empty_ocr:
+                    lstsl_vis = None
+                else:
+                    lstsl_vis = _extract_lstsl_open_recd_vision(
+                        file_bytes, filename, ext
+                    )
+            else:
+                lstsl_vis = _extract_lstsl_open_recd_vision(
+                    file_bytes, filename, ext
+                )
             if lstsl_vis and lstsl_vis.get("line_items"):
                 logger.info(
                     "[STOCK_EXTRACTION_PATH] stage=lstsl_open_recd_vision "
@@ -74817,7 +76367,19 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "reason=stacked_multi_block_pack_rate",
                 filename,
             )
-        if (
+        if _defer_stock_and_sale_vt:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=stock_and_sale_op_pur_defer_vt",
+                filename,
+            )
+        elif _defer_ssa_unit_sale_vt:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=ssa_unit_sale_slide_defer_vt",
+                filename,
+            )
+        elif (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
@@ -74848,9 +76410,17 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 if isinstance(extra_pre, dict):
                     extra_pre["early_vision_reason"] = "op_stk_before_ssa_phone"
                     extra_pre["op_stk_identity_fail_rate"] = round(fail_pre, 3)
+                if _op_stk_result_should_defer_stock_and_sale_to_vt(op_stk_pre):
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
+                        "file=%s status=defer_vision_table "
+                        "reason=stock_and_sale_op_pur_money rows=%s",
+                        filename,
+                        len(op_stk_pre.get("line_items") or []),
+                    )
                 # Keep only when LMS1→OP.STK mapping largely balances; otherwise
                 # fall through so STOCK_VISION_TABLE / later readers can try.
-                if fail_pre <= 0.35:
+                elif fail_pre <= 0.35:
                     logger.info(
                         "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
                         "file=%s line_items=%s fail_rate=%.2f",
@@ -74859,63 +76429,71 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         fail_pre,
                     )
                     return op_stk_pre
-                logger.info(
-                    "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
-                    "file=%s status=continue_high_fail fail_rate=%.2f rows=%s",
-                    filename,
-                    fail_pre,
-                    len(op_stk_pre.get("line_items") or []),
-                )
-                # High Op_Stk fail often means LstSL|Open|Recd|Sales|Close with
-                # Order shifted into closing — try locked LstSL vision once.
-                # Skip when peek is OPENING|RECEIPT|ISSUE|CLOSING|M.EXP (pack).
-                if not _text_looks_like_pack_mexp_oric_chrome(_op_stk_peek or ""):
-                    # Skip when OCR already shows Opening Quantity | Cl. Qnty. only.
-                    lstsl_pre = None
-                    if _text_looks_like_opening_cl_qnty_only(_op_stk_peek or ""):
-                        logger.info(
-                            "STOCK_LSTSL_SKIP_OPENING_CL_QNTY_ONLY file=%s",
-                            filename,
-                        )
-                    else:
-                        try:
-                            lstsl_pre = _extract_lstsl_open_recd_vision(
-                                file_bytes, filename, ext
-                            )
-                        except Exception:
-                            lstsl_pre = None
-                    if lstsl_pre and lstsl_pre.get("line_items"):
-                        fail_lstsl = _op_stk_lms1_identity_fail_rate(lstsl_pre)
-                        repaired_cl = _lstsl_cl_qnty_repaired(lstsl_pre)
-                        if repaired_cl or (
-                            fail_lstsl < fail_pre and fail_lstsl <= 0.50
-                        ):
-                            extra_l = lstsl_pre.setdefault("totals", {}).setdefault(
-                                "extra", {}
-                            )
-                            if isinstance(extra_l, dict):
-                                extra_l["early_vision_reason"] = (
-                                    "lstsl_after_op_stk_high_fail"
-                                )
-                            logger.info(
-                                "[STOCK_EXTRACTION_PATH] "
-                                "stage=lstsl_after_op_stk_high_fail "
-                                "file=%s line_items=%s fail_rate=%.2f repaired_cl=%s",
-                                filename,
-                                len(lstsl_pre.get("line_items") or []),
-                                fail_lstsl,
-                                repaired_cl,
-                            )
-                            return lstsl_pre
                 else:
-                    pack_rescue = _try_pack_mexp_photo_before_lstsl(
-                        file_bytes,
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=op_stk_before_ssa_phone "
+                        "file=%s status=continue_high_fail fail_rate=%.2f rows=%s",
                         filename,
-                        ext,
-                        reason="pack_mexp_after_op_stk_high_fail",
+                        fail_pre,
+                        len(op_stk_pre.get("line_items") or []),
                     )
-                    if pack_rescue and pack_rescue.get("line_items"):
-                        return pack_rescue
+                    # High Op_Stk fail often means LstSL|Open|Recd|Sales|Close with
+                    # Order shifted into closing — try locked LstSL vision once.
+                    # Skip when peek is OPENING|RECEIPT|ISSUE|CLOSING|M.EXP (pack).
+                    if not _text_looks_like_pack_mexp_oric_chrome(
+                        _op_stk_peek or ""
+                    ):
+                        # Skip when OCR already shows Opening Quantity | Cl. Qnty.
+                        lstsl_pre = None
+                        if _text_looks_like_opening_cl_qnty_only(
+                            _op_stk_peek or ""
+                        ):
+                            logger.info(
+                                "STOCK_LSTSL_SKIP_OPENING_CL_QNTY_ONLY file=%s",
+                                filename,
+                            )
+                        else:
+                            try:
+                                lstsl_pre = _extract_lstsl_open_recd_vision(
+                                    file_bytes, filename, ext
+                                )
+                            except Exception:
+                                lstsl_pre = None
+                        if lstsl_pre and lstsl_pre.get("line_items"):
+                            fail_lstsl = _op_stk_lms1_identity_fail_rate(
+                                lstsl_pre
+                            )
+                            repaired_cl = _lstsl_cl_qnty_repaired(lstsl_pre)
+                            if repaired_cl or (
+                                fail_lstsl < fail_pre and fail_lstsl <= 0.50
+                            ):
+                                extra_l = lstsl_pre.setdefault(
+                                    "totals", {}
+                                ).setdefault("extra", {})
+                                if isinstance(extra_l, dict):
+                                    extra_l["early_vision_reason"] = (
+                                        "lstsl_after_op_stk_high_fail"
+                                    )
+                                logger.info(
+                                    "[STOCK_EXTRACTION_PATH] "
+                                    "stage=lstsl_after_op_stk_high_fail "
+                                    "file=%s line_items=%s fail_rate=%.2f "
+                                    "repaired_cl=%s",
+                                    filename,
+                                    len(lstsl_pre.get("line_items") or []),
+                                    fail_lstsl,
+                                    repaired_cl,
+                                )
+                                return lstsl_pre
+                    else:
+                        pack_rescue = _try_pack_mexp_photo_before_lstsl(
+                            file_bytes,
+                            filename,
+                            ext,
+                            reason="pack_mexp_after_op_stk_high_fail",
+                        )
+                        if pack_rescue and pack_rescue.get("line_items"):
+                            return pack_rescue
         _ssa_portrait_noise = bool(_ssa_portrait_noise_early)
         # Marg PRODUCT DESCRIPTION OPENING/RECEIVE/ISSUE (+ LMS) STATEMENT photos:
         # dedicated main_stock reader before SSA dump (dump shifts ISSUE→next row).
@@ -75109,6 +76687,8 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 return ostk_vis
         if (
             _ssa_dump_unreadable_ocr_skip_enabled()
+            and not _defer_stock_and_sale_vt
+            and not _defer_ssa_unit_sale_vt
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _main_stock_oric_peek
@@ -75147,7 +76727,27 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 rows_u = len(ssa_unread.get("line_items") or [])
                 # Reject dump results that still park money in qty (wrong layout).
                 if money_u <= max(2, rows_u // 5):
-                    if _ssa_dump_result_looks_like_op_stk_misfile(ssa_unread):
+                    if _ssa_dump_result_looks_like_stock_and_sale_misfile(
+                        ssa_unread
+                    ):
+                        _defer_stock_and_sale_vt = True
+                        logger.info(
+                            "[SalesStatement] file=%s SSA dump unreadable-OCR "
+                            "rejected reason=stock_and_sale_op_pur rows=%s "
+                            "continuing",
+                            filename,
+                            rows_u,
+                        )
+                    elif _ssa_dump_result_looks_like_unit_sale_slide(ssa_unread):
+                        _defer_ssa_unit_sale_vt = True
+                        logger.info(
+                            "[SalesStatement] file=%s SSA dump unreadable-OCR "
+                            "rejected reason=unit_sale_slide rows=%s "
+                            "continuing",
+                            filename,
+                            rows_u,
+                        )
+                    elif _ssa_dump_result_looks_like_op_stk_misfile(ssa_unread):
                         logger.info(
                             "[SalesStatement] file=%s SSA dump unreadable-OCR "
                             "rejected reason=op_stk_misfile rows=%s continuing",
@@ -75510,16 +77110,38 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _stacked_force_vt = bool(_nv_split(file_bytes))
         except Exception:
             _stacked_force_vt = False
+        # Empty-OCR Stock and Sale Op|Pur|Gd.In / unit-sale SSA slide: dump was
+        # rejected; force VT past portrait-noise (and SSA-sheet) skips.
+        _force_vt_stock_and_sale = bool(_defer_stock_and_sale_vt)
+        _force_vt_ssa_unit_sale = bool(_defer_ssa_unit_sale_vt)
+        _force_vt_ssa_rescue = bool(
+            _force_vt_stock_and_sale or _force_vt_ssa_unit_sale
+        )
         if (
             vision_table_active_for("image")
             and not _skip_vt_for_op_stk
             and not _skip_vt_for_medica
             and not _skip_vt_for_pharmassist
-            and not _skip_vt_for_mfr
-            and not _ssa_sheets_qty_value
-            and (not _ssa_portrait_noise_early or _stacked_force_vt)
+            and (not _ssa_sheets_qty_value or _force_vt_ssa_rescue)
+            and (
+                not _ssa_portrait_noise_early
+                or _stacked_force_vt
+                or _force_vt_ssa_rescue
+            )
         ):
-            if _ssa_portrait_noise_early and _stacked_force_vt:
+            if _ssa_portrait_noise_early and _force_vt_stock_and_sale:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE force "
+                    "reason=stock_and_sale_op_pur_over_ssa_portrait_noise",
+                    filename,
+                )
+            elif _force_vt_ssa_unit_sale:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE force "
+                    "reason=ssa_unit_sale_slide_rescue",
+                    filename,
+                )
+            elif _ssa_portrait_noise_early and _stacked_force_vt:
                 logger.info(
                     "[SalesStatement] file=%s VISION_TABLE force "
                     "reason=stacked_multi_block_over_ssa_portrait_noise",
@@ -75622,6 +77244,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     # VT money-in-qty on OPENING/RECEIPT/ISSUE/CLOSING → SSA dump.
                     if (
                         _ssa_dump_unreadable_ocr_skip_enabled()
+                        and not _defer_ssa_unit_sale_vt
                         and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                         and _ssa_dump_vision_table_needs_rescue(result)
                     ):
@@ -75643,7 +77266,13 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                 type(exc).__name__,
                             )
                             ssa_rescue = None
-                        if ssa_rescue and ssa_rescue.get("line_items"):
+                        if (
+                            ssa_rescue
+                            and ssa_rescue.get("line_items")
+                            and not _ssa_dump_result_looks_like_unit_sale_slide(
+                                ssa_rescue
+                            )
+                        ):
                             rescue_money = _ssa_dump_money_in_qty_row_count(ssa_rescue)
                             vt_money = _ssa_dump_money_in_qty_row_count(result)
                             if rescue_money < vt_money:
@@ -75705,6 +77334,23 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                                 len(_mfr_after_vt.get("line_items") or []),
                             )
                             return _mfr_after_vt
+                        elif ssa_rescue and _ssa_dump_result_looks_like_unit_sale_slide(
+                            ssa_rescue
+                        ):
+                            logger.info(
+                                "[SalesStatement] file=%s SSA dump VT rescue "
+                                "rejected reason=unit_sale_slide rows=%s",
+                                filename,
+                                len(ssa_rescue.get("line_items") or []),
+                            )
+                    elif _defer_ssa_unit_sale_vt and _ssa_dump_vision_table_needs_rescue(
+                        result
+                    ):
+                        logger.info(
+                            "[SalesStatement] file=%s VISION_TABLE ssa_qty_value "
+                            "money_in_qty rescue=skipped reason=unit_sale_slide_defer",
+                            filename,
+                        )
                     _diag["selected_path"] = "VISION_TABLE"
                     extra = result.setdefault("totals", {}).setdefault("extra", {})
                     if isinstance(extra, dict):
@@ -75799,6 +77445,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             )
             if (
                 _ssa_dump_unreadable_ocr_skip_enabled()
+                and not _defer_ssa_unit_sale_vt
                 and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                 and (
                     _ssa_dump_vision_table_needs_rescue(_vt_fb)
@@ -75821,7 +77468,11 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         type(exc).__name__,
                     )
                     ssa_fb = None
-                if ssa_fb and ssa_fb.get("line_items"):
+                if (
+                    ssa_fb
+                    and ssa_fb.get("line_items")
+                    and not _ssa_dump_result_looks_like_unit_sale_slide(ssa_fb)
+                ):
                     fb_money = _ssa_dump_money_in_qty_row_count(ssa_fb)
                     vt_money = _ssa_dump_money_in_qty_row_count(_vt_fb)
                     if fb_money <= max(2, len(ssa_fb.get("line_items") or []) // 5) and (

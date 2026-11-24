@@ -503,6 +503,8 @@ ALIASES: Dict[str, List[str]] = {
         "pr qty",
         "pr quantity",
         "pur ret",
+        "pur.ret",
+        "pur. ret",
         "purc ret",
         "purc. ret",
         "purret",
@@ -645,6 +647,12 @@ ALIASES: Dict[str, List[str]] = {
         "free replace",
         "free repl",
         "free receipt",
+        # Stock and Sale: Gd.In sits between Pur and Tot In (free inward).
+        "gd in",
+        "gd.in",
+        "gdin",
+        "goods in",
+        "goods inward",
         # MR Report / Stock and Sales: PUR FREE QTY | SALE FREE QTY.
         "pur free",
         "pur free qty",
@@ -957,6 +965,8 @@ _DIRECT_VALUE_FIELDS = {
     "open. value": "opening_value",
     "opening value": "opening_value",
     "pur val": "purchase_value",
+    "pur. value": "purchase_value",
+    "pur.value": "purchase_value",
     "purcv": "purchase_value",
     "purc val": "purchase_value",
     "purchase value": "purchase_value",
@@ -2919,7 +2929,12 @@ def _peel_pack_from_qty_texts(texts: Sequence[str]) -> Tuple[List[str], List[str
 
 
 def _stash_peeled_pack(fields: Dict[str, Optional[str]], packs: Sequence[str]) -> None:
-    token = " ".join(p for p in packs if p).strip()
+    cleaned = [
+        p
+        for p in packs
+        if p and not _is_batch_type_marker_token(p)
+    ]
+    token = " ".join(cleaned).strip()
     if not token:
         return
     existing = str(fields.get("pack") or "").strip()
