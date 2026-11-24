@@ -3619,6 +3619,21 @@ def _ssa_oric_normalize_pack_token(pack: str) -> str:
     if m:
         return f"{m.group(1)}'S"
     m = re.fullmatch(
+        r"(?i)1\s*[Xx×]\s*(\d+(?:\.\d+)?)\s*'?\s*S",
+        text,
+    )
+    if m:
+        return f"1X{m.group(1)}'S"
+    m = re.fullmatch(
+        r"(?i)1\s*[Xx×]\s*(\d+(?:\.\d+)?)\s*(ML|MG|GMS|GM|GRM|KG|G)?",
+        text,
+    )
+    if m:
+        unit = (m.group(2) or "").upper()
+        if unit == "GMS":
+            unit = "GM"
+        return f"1X{m.group(1)}{unit}"
+    m = re.fullmatch(
         r"(?i)(\d+(?:\.\d+)?)\s*(ML|MG|GMS|GM|GRM|KG|G|TAB|TABS|TA|CAP|CAPS|SYP)",
         text,
     )
@@ -3655,6 +3670,18 @@ def _ssa_oric_peel_trailing_pack(name: str) -> Tuple[str, Optional[str]]:
     # Parenthetical pack, optionally unclosed: "…CHO(10S" / "…(200ML)"
     m = re.match(
         rf"(?i)^(?P<head>.+?)\(\s*(?P<pack>{_SSA_ORIC_PACK_TOKEN})\s*\)?\s*$",
+        cleaned,
+    )
+    if m:
+        finished = _finish(m.group("head"), m.group("pack"))
+        if finished:
+            return finished
+
+    # Spreadsheet packs glued/spaced onto the name: "…TAB 1X60'S" / "…1X100" /
+    # "…1×200ML". Peel the whole 1X… token so "1X" is not left on the name.
+    m = re.match(
+        r"(?i)^(?P<head>.+?)\s*(?P<pack>1\s*[Xx×]\s*\d+(?:\.\d+)?"
+        r"(?:\s*'?\s*S|\s*(?:ML|MG|GMS|GM|GRM|KG|G))?)\s*$",
         cleaned,
     )
     if m:
@@ -12983,6 +13010,133 @@ def _is_sale_closing_only_header(text: str) -> bool:
     if not re.search(r"<\s*=+\s*CLOSING\s*=+\s*>", text, re.I):
         return False
     if re.search(r"\bDUMP\b|\bO\.Stk\b|OPENING\s+RECEIPT\s+ISSUE", text, re.I):
+        return False
+    return True
+
+
+# Soft-reject SSA OPENING/RECEIPT dump on SALE+CLOSING-only chrome (default ON).
+_SALE_CLOSING_SSA_REJECT_ENABLED = True
+
+
+def _sale_closing_ssa_reject_enabled() -> bool:
+    return bool(_SALE_CLOSING_SSA_REJECT_ENABLED)
+
+
+def _sale_closing_only_weak_signal(text: str) -> bool:
+    """Noisy OCR: SALE+CLOSING banners without Opening/Receipt/Issue/Dump."""
+    if not (text or "").strip():
+        return False
+    blob = str(text)
+    if not (
+        re.search(r"<\s*=+\s*SALE\s*=+\s*>", blob, re.I)
+        or (
+            re.search(r"ITEM\s+DESCRIPTION", blob, re.I)
+            and re.search(r"\bSALE\b", blob, re.I)
+        )
+    ):
+        return False
+    if not (
+        re.search(r"<\s*=+\s*CLOSING\s*=+\s*>", blob, re.I)
+        or re.search(r"\bCLOSING\b", blob, re.I)
+    ):
+        return False
+    if re.search(
+        r"\bDUMP\b|\bO\.Stk\b|OPENING\s+RECEIPT\s+ISSUE|"
+        r"\bOPENING\b|\bRECEIPT\b|\bISSUE\b|\bRECD\b|\bOPSTK\b",
+        blob,
+        re.I,
+    ):
+        return False
+    return True
+
+
+def _stamp_sale_closing_only_result(result: Dict[str, Any]) -> Dict[str, Any]:
+    """Mark SALE+CLOSING-only; opening/receipt stay missing (never invent 0)."""
+    if not isinstance(result, dict):
+        return result
+    for item in result.get("line_items") or []:
+        if not isinstance(item, dict):
+            continue
+        item["opening_qty"] = None
+        item["opening_value"] = None
+        item["receipts_qty"] = None
+        if "receipts_value" in item:
+            item["receipts_value"] = None
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        extra = dict(extra)
+        extra.pop("receipts_value", None)
+        fs = extra.get("field_source") if isinstance(extra.get("field_source"), dict) else {}
+        fs = dict(fs)
+        for field in (
+            "opening_qty",
+            "opening_value",
+            "receipts_qty",
+            "receipts_value",
+            "purchase_qty",
+        ):
+            fs[field] = "missing"
+        if item.get("sales_qty") not in (None, ""):
+            fs.setdefault("sales_qty", "printed")
+        if item.get("sales_value") not in (None, ""):
+            fs.setdefault("sales_value", "printed")
+        if item.get("closing_qty") not in (None, ""):
+            fs.setdefault("closing_qty", "printed")
+        if item.get("closing_value") not in (None, ""):
+            fs.setdefault("closing_value", "printed")
+        extra["field_source"] = fs
+        extra.setdefault("layout", "sale_qty_value_closing_qty_value")
+        item["extra"] = extra
+    totals = result.setdefault("totals", {})
+    extra_t = totals.setdefault("extra", {})
+    if isinstance(extra_t, dict):
+        extra_t["stock_identity_kind"] = "sale_closing_only"
+        extra_t.setdefault(
+            "stock_identity_formula",
+            "sales=SALE; closing=CLOSING; no opening or receipt columns",
+        )
+        extra_t.setdefault("layout", "sale_qty_value_closing_qty_value")
+    return result
+
+
+def _result_looks_like_sale_closing_only(result: Optional[Dict[str, Any]]) -> bool:
+    """Gemini/fallback payload with sales+closing and no real opening column."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    title = str(result.get("report_title") or "")
+    company = str(result.get("company_name") or "")
+    title_ok = bool(
+        re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I)
+        or re.search(r"HIMALAYA", company, re.I)
+    )
+    if not title_ok:
+        return False
+    sales_hits = 0
+    closing_hits = 0
+    opening_nonzero = 0
+    receipts_nonzero = 0
+    for item in items:
+        if abs(_to_float(item.get("opening_qty"))) > 0.05:
+            opening_nonzero += 1
+        if abs(_to_float(item.get("receipts_qty"))) > 0.05:
+            receipts_nonzero += 1
+        if (
+            abs(_to_float(item.get("sales_qty"))) > 0.05
+            or abs(_to_float(item.get("sales_value"))) > 0.05
+        ):
+            sales_hits += 1
+        if (
+            abs(_to_float(item.get("closing_qty"))) > 0.05
+            or abs(_to_float(item.get("closing_value"))) > 0.05
+        ):
+            closing_hits += 1
+    if sales_hits < 3 or closing_hits < 3:
+        return False
+    if opening_nonzero > max(1, len(items) // 10):
+        return False
+    if receipts_nonzero > max(1, len(items) // 10):
         return False
     return True
 
@@ -50248,9 +50402,13 @@ def _stock_identity_kind(result: Dict[str, Any]) -> str:
         if not isinstance(item, dict):
             continue
         extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
-        if any(k in extra for k in ("sale_return", "sale_return_qty", "exp_damage", "exp_dmg")):
+        # Null placeholders from missing columns must not select SaleRet identity.
+        if any(
+            extra.get(k) not in (None, "")
+            for k in ("sale_return", "sale_return_qty", "exp_damage", "exp_dmg")
+        ):
             has_sr = True
-        if extra.get("sample_qty"):
+        if extra.get("sample_qty") not in (None, "", 0, 0.0):
             has_sample = True
     if _is_product_stock_report_result(result):
         if has_sr:
@@ -57932,6 +58090,18 @@ def _extract_ssa_opening_receipt_issue_dump_image(
             skip_ocr_gate,
         )
         return None
+    # SALE qty/value + CLOSING qty/value only (optional CHAL/RE-ORDER). SSA dump
+    # invents OPENING/RECEIPT and parks SALE under opening. Soft-reject always.
+    if _sale_closing_ssa_reject_enabled() and (
+        _is_sale_closing_only_header(soft_preview)
+        or _sale_closing_only_weak_signal(soft_preview)
+    ):
+        logger.info(
+            "SSA_DUMP_SKIP reason=sale_closing_only file=%s skip_ocr_gate=%s",
+            filename,
+            skip_ocr_gate,
+        )
+        return None
     # MFR Wise Packing|Op|PQ|SQ|Cl Qty — SSA dump parks Op under receipts_qty
     # and zeros sales. Soft-reject even when skip_ocr_gate is on.
     if _is_mfr_wise_stock_sales_text(soft_preview) or (
@@ -58162,6 +58332,17 @@ receipts_qty (do not park RECEIVE under OPENING).
             filename,
             len(repaired_items),
         )
+    # SALE+CLOSING-only misfile: RECEIPT_AS_OPENING / empty DUMP. Skip retry so
+    # VISION_TABLE keeps a Gemini slot.
+    _sale_closing_misfile = _ssa_dump_items_look_like_sale_closing_only(
+        repaired_items
+    )
+    if _sale_closing_misfile:
+        logger.info(
+            "SSA_DUMP_SALE_CLOSING_ONLY file=%s rows=%s skip_identity_retry=1",
+            filename,
+            len(repaired_items),
+        )
     # One anti-slide retry when association repairs still leave broken rows.
     # Forward-absorb sheets retry on a single remaining fail (continuation
     # pages often leave one hollow duplicate after the cascade unwinds).
@@ -58172,6 +58353,7 @@ receipts_qty (do not park RECEIVE under OPENING).
     )
     if (
         (not _unit_sale_slide)
+        and (not _sale_closing_misfile)
         and _ssa_dump_identity_retry_enabled()
         and _fail_n >= (1 if _had_forward else 2)
     ):
@@ -58210,6 +58392,15 @@ receipts_qty (do not park RECEIVE under OPENING).
             extra_slide["ssa_dump_unit_sale_slide"] = True
         logger.info(
             "SSA_DUMP_UNIT_SALE_SLIDE_MARKED file=%s rows=%s",
+            filename,
+            len(result.get("line_items") or []),
+        )
+    if _ssa_dump_result_looks_like_sale_closing_only(result):
+        extra_sc = result.setdefault("totals", {}).setdefault("extra", {})
+        if isinstance(extra_sc, dict):
+            extra_sc["ssa_dump_sale_closing_only"] = True
+        logger.info(
+            "SSA_DUMP_SALE_CLOSING_ONLY_MARKED file=%s rows=%s",
             filename,
             len(result.get("line_items") or []),
         )
@@ -59052,6 +59243,9 @@ def _ssa_dump_portrait_noise_candidate(file_bytes: bytes, peek: str) -> bool:
         re.I,
     ):
         return False
+    # SALE+CLOSING-only upright photos must reach VISION_TABLE, not dump rotate.
+    if _is_sale_closing_only_header(blob) or _sale_closing_only_weak_signal(blob):
+        return False
     # Must lack upright stock movement headers (sideways → glyph soup).
     if re.search(
         r"\bOPENING\b|\bRECEIPT\b|\bISSUE\b|\bCLOSING\b|\bANALYSIS\b|\bDUMP\b",
@@ -59218,6 +59412,95 @@ def _ssa_dump_result_looks_like_unit_sale_slide(
     if not isinstance(result, dict):
         return False
     return _ssa_dump_items_look_like_unit_sale_slide(result.get("line_items") or [])
+
+
+def _ssa_dump_items_look_like_sale_closing_only(
+    items: Optional[Sequence[Any]],
+) -> bool:
+    """SSA OPENING/RECEIPT schema forced onto SALE+CLOSING-only sheets.
+
+    SALE lands under receipts then RECEIPT_AS_OPENING, or directly under
+    opening_qty; DUMP is empty; sales and closing values still print.
+    """
+    if not _sale_closing_ssa_reject_enabled():
+        return False
+    rows = [i for i in (items or []) if isinstance(i, dict)]
+    if len(rows) < 5:
+        return False
+    receipt_as_open = 0
+    dump_hits = 0
+    sales_hits = 0
+    closing_hits = 0
+    opening_nonzero = 0
+    open_no_receipt = 0
+    identity_fails = 0
+    checked = 0
+    purchase_hits = 0
+    for item in rows:
+        extra = item.get("extra") if isinstance(item.get("extra"), dict) else {}
+        flags = list(extra.get("flags") or [])
+        if "SSA_DUMP_RECEIPT_AS_OPENING" in flags:
+            receipt_as_open += 1
+        if abs(_to_float(extra.get("dump_qty"))) > 0.05:
+            dump_hits += 1
+        oq = _to_float(item.get("opening_qty"))
+        rq = _to_float(item.get("receipts_qty"))
+        pq = _to_float(item.get("purchase_qty")) if item.get("purchase_qty") is not None else 0.0
+        sq = _to_float(item.get("sales_qty"))
+        cq = _to_float(item.get("closing_qty"))
+        if abs(oq) > 0.05:
+            opening_nonzero += 1
+            if abs(rq) <= 0.05 and abs(pq) <= 0.05:
+                open_no_receipt += 1
+        if abs(rq) > 0.05 or abs(pq) > 0.05:
+            purchase_hits += 1
+        if abs(sq) > 0.05 or abs(_to_float(item.get("sales_value"))) > 0.05:
+            sales_hits += 1
+        if abs(cq) > 0.05 or abs(_to_float(item.get("closing_value"))) > 0.05:
+            closing_hits += 1
+        if abs(oq) + abs(rq) + abs(pq) + abs(sq) + abs(cq) < 0.05:
+            continue
+        checked += 1
+        if not _ssa_dump_row_balances(oq, rq if abs(rq) > 0.05 else pq, sq, cq):
+            identity_fails += 1
+    if dump_hits >= 2:
+        return False
+    # Opening/Purchase/Sale/Closing sheets are not SALE+CLOSING-only.
+    if purchase_hits >= 3:
+        return False
+    if sales_hits < 3 or closing_hits < 3:
+        return False
+    if receipt_as_open >= 1 and identity_fails >= 2:
+        return True
+    if receipt_as_open >= 2:
+        return True
+    # Empty-OCR dump may skip RECEIPT_AS_OPENING when openings stay 0.
+    if opening_nonzero <= max(1, len(rows) // 10):
+        return True
+    # SALE parked directly in opening (no receipt column on the print).
+    if (
+        open_no_receipt >= max(3, len(rows) // 4)
+        and identity_fails >= max(2, checked // 5 if checked else 2)
+    ):
+        return True
+    return False
+
+
+def _ssa_dump_result_looks_like_sale_closing_only(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """Result wrapper for empty-OCR SSA dump → force VISION_TABLE."""
+    if not isinstance(result, dict):
+        return False
+    extra = (result.get("totals") or {}).get("extra") or {}
+    if isinstance(extra, dict) and extra.get("ssa_dump_sale_closing_only"):
+        return True
+    title = str(result.get("report_title") or "")
+    if re.search(r"STOCK\s*&\s*SALES\s*ANALYSIS", title, re.I) or not title:
+        return _ssa_dump_items_look_like_sale_closing_only(
+            result.get("line_items") or []
+        )
+    return False
 
 
 def _ssa_dump_vision_table_needs_rescue(result: Optional[Dict[str, Any]]) -> bool:
@@ -74579,6 +74862,35 @@ def _header_driven_fix_period(result: Dict[str, Any], filename: str) -> None:
     result["period_to"] = f"{year}-{month:02d}-{last:02d}"
 
 
+def _header_driven_looks_like_sale_closing_shift(
+    result: Optional[Dict[str, Any]],
+) -> bool:
+    """SALE+CLOSING photo misread as Opening/Sales — closing column emptied."""
+    if not isinstance(result, dict):
+        return False
+    items = [i for i in (result.get("line_items") or []) if isinstance(i, dict)]
+    if len(items) < 5:
+        return False
+    open_hits = 0
+    closing_empty = 0
+    sales_hits = 0
+    for item in items:
+        if abs(_to_float(item.get("opening_qty"))) > 0.05:
+            open_hits += 1
+        if abs(_to_float(item.get("closing_qty"))) <= 0.05:
+            closing_empty += 1
+        if (
+            abs(_to_float(item.get("sales_qty"))) > 0.05
+            or abs(_to_float(item.get("sales_value"))) > 0.05
+        ):
+            sales_hits += 1
+    return (
+        open_hits >= 3
+        and sales_hits >= 3
+        and closing_empty >= max(4, int(len(items) * 0.7))
+    )
+
+
 def _extract_header_driven_stock_photo(
     file_bytes: bytes,
     filename: str,
@@ -74593,6 +74905,15 @@ def _extract_header_driven_stock_photo(
         peek = _ocr_image_to_text(file_bytes, psm=6, enhance=False) or ""
     except Exception:
         peek = ""
+    # SALE+CLOSING-only chrome — header-driven invents Opening from SALE.
+    if _sale_closing_ssa_reject_enabled() and (
+        _is_sale_closing_only_header(peek) or _sale_closing_only_weak_signal(peek)
+    ):
+        logger.info(
+            "HEADER_DRIVEN_SKIP reason=sale_closing_only file=%s",
+            filename,
+        )
+        return None
     if _peek_suggests_swil_receipt_value(peek) or _is_swil_opening_receipt_value_statement(peek):
         try:
             swil = _extract_swil_receipt_value_vision(
@@ -75622,6 +75943,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
     # Op_Stk (second Gemini) so VISION_TABLE still has budget for money cols.
     _defer_stock_and_sale_vt = False
     _defer_ssa_unit_sale_vt = False
+    _defer_sale_closing_vt = False
     _diag = {
         "geometry_called": False,
         "vision_called": False,
@@ -75932,6 +76254,17 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         filename,
                         len(ssa_first.get("line_items") or []),
                     )
+                elif ssa_first and _ssa_dump_result_looks_like_sale_closing_only(
+                    ssa_first
+                ):
+                    _defer_sale_closing_vt = True
+                    logger.info(
+                        "[STOCK_EXTRACTION_PATH] stage=ssa_dump_before_lstsl "
+                        "file=%s status=rejected reason=sale_closing_only "
+                        "line_items=%s",
+                        filename,
+                        len(ssa_first.get("line_items") or []),
+                    )
                 elif (
                     ssa_first
                     and ssa_first.get("line_items")
@@ -75950,7 +76283,9 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 # Empty-OCR LstSL would burn the last Gemini slot before
                 # VISION_TABLE can read trailing Purchase|Sale|Stock money.
                 if (
-                    _ssa_stock_sale_misfile or _defer_ssa_unit_sale_vt
+                    _ssa_stock_sale_misfile
+                    or _defer_ssa_unit_sale_vt
+                    or _defer_sale_closing_vt
                 ) and _lstsl_empty_ocr:
                     lstsl_vis = None
                 else:
@@ -76422,6 +76757,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 "reason=ssa_unit_sale_slide_defer_vt",
                 filename,
             )
+        elif _defer_sale_closing_vt:
+            logger.info(
+                "[SalesStatement] file=%s Op_Stk before SSA skipped "
+                "reason=sale_closing_only_defer_vt",
+                filename,
+            )
         elif (
             _op_stk_before_ssa_phone_enabled()
             and not _skip_vt_for_op_stk
@@ -76732,11 +77073,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _ssa_dump_unreadable_ocr_skip_enabled()
             and not _defer_stock_and_sale_vt
             and not _defer_ssa_unit_sale_vt
+            and not _defer_sale_closing_vt
             and not _skip_vt_for_op_stk
             and not _opbal_excess_peek
             and not _main_stock_oric_peek
             and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
             and not _is_product_packg_sales_closing_ord_text(_op_stk_peek or "")
+            and not _is_sale_closing_only_header(_op_stk_peek or "")
+            and not _sale_closing_only_weak_signal(_op_stk_peek or "")
             and not _is_mfr_wise_stock_sales_text(_op_stk_peek or "")
             and not _looks_like_ostk_qoh_stock_sales_text(_op_stk_peek or "")
             and (
@@ -76786,6 +77130,15 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         logger.info(
                             "[SalesStatement] file=%s SSA dump unreadable-OCR "
                             "rejected reason=unit_sale_slide rows=%s "
+                            "continuing",
+                            filename,
+                            rows_u,
+                        )
+                    elif _ssa_dump_result_looks_like_sale_closing_only(ssa_unread):
+                        _defer_sale_closing_vt = True
+                        logger.info(
+                            "[SalesStatement] file=%s SSA dump unreadable-OCR "
+                            "rejected reason=sale_closing_only rows=%s "
                             "continuing",
                             filename,
                             rows_u,
@@ -77153,12 +77506,15 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             _stacked_force_vt = bool(_nv_split(file_bytes))
         except Exception:
             _stacked_force_vt = False
-        # Empty-OCR Stock and Sale Op|Pur|Gd.In / unit-sale SSA slide: dump was
-        # rejected; force VT past portrait-noise (and SSA-sheet) skips.
+        # Empty-OCR Stock and Sale Op|Pur|Gd.In / unit-sale SSA slide /
+        # SALE+CLOSING-only: dump was rejected; force VT past portrait-noise.
         _force_vt_stock_and_sale = bool(_defer_stock_and_sale_vt)
         _force_vt_ssa_unit_sale = bool(_defer_ssa_unit_sale_vt)
+        _force_vt_sale_closing = bool(_defer_sale_closing_vt)
         _force_vt_ssa_rescue = bool(
-            _force_vt_stock_and_sale or _force_vt_ssa_unit_sale
+            _force_vt_stock_and_sale
+            or _force_vt_ssa_unit_sale
+            or _force_vt_sale_closing
         )
         if (
             vision_table_active_for("image")
@@ -77182,6 +77538,12 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 logger.info(
                     "[SalesStatement] file=%s VISION_TABLE force "
                     "reason=ssa_unit_sale_slide_rescue",
+                    filename,
+                )
+            elif _force_vt_sale_closing:
+                logger.info(
+                    "[SalesStatement] file=%s VISION_TABLE force "
+                    "reason=sale_closing_only_rescue",
                     filename,
                 )
             elif _ssa_portrait_noise_early and _stacked_force_vt:
@@ -77288,6 +77650,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     if (
                         _ssa_dump_unreadable_ocr_skip_enabled()
                         and not _defer_ssa_unit_sale_vt
+                        and not _defer_sale_closing_vt
                         and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                         and _ssa_dump_vision_table_needs_rescue(result)
                     ):
@@ -77394,6 +77757,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                             "money_in_qty rescue=skipped reason=unit_sale_slide_defer",
                             filename,
                         )
+                    elif _defer_sale_closing_vt and _ssa_dump_vision_table_needs_rescue(
+                        result
+                    ):
+                        logger.info(
+                            "[SalesStatement] file=%s VISION_TABLE ssa_qty_value "
+                            "money_in_qty rescue=skipped reason=sale_closing_only_defer",
+                            filename,
+                        )
                     _diag["selected_path"] = "VISION_TABLE"
                     extra = result.setdefault("totals", {}).setdefault("extra", {})
                     if isinstance(extra, dict):
@@ -77489,6 +77860,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
             if (
                 _ssa_dump_unreadable_ocr_skip_enabled()
                 and not _defer_ssa_unit_sale_vt
+                and not _defer_sale_closing_vt
                 and not _ssa_dump_text_is_group_wise(_op_stk_peek or "")
                 and (
                     _ssa_dump_vision_table_needs_rescue(_vt_fb)
@@ -77515,6 +77887,7 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                     ssa_fb
                     and ssa_fb.get("line_items")
                     and not _ssa_dump_result_looks_like_unit_sale_slide(ssa_fb)
+                    and not _ssa_dump_result_looks_like_sale_closing_only(ssa_fb)
                 ):
                     fb_money = _ssa_dump_money_in_qty_row_count(ssa_fb)
                     vt_money = _ssa_dump_money_in_qty_row_count(_vt_fb)
@@ -77838,7 +78211,16 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                 )
                 driven = None
             if driven and driven.get("line_items"):
-                return driven
+                if _header_driven_looks_like_sale_closing_shift(driven):
+                    logger.info(
+                        "[SalesStatement] file=%s decision=HEADER_DRIVEN_SKIP "
+                        "reason=sale_closing_shift rows=%s",
+                        filename,
+                        len(driven.get("line_items") or []),
+                    )
+                    driven = None
+                else:
+                    return driven
     if (
         not early_is_jr_shah
         and (
@@ -78231,6 +78613,14 @@ def _parse_image(file_bytes: bytes, filename: str, ext: str) -> Dict[str, Any]:
                         return medivision
                 if sale_closing_only or _vision_filed_sale_qty_as_receipt(result):
                     return _refile_sale_qty_held_as_receipt(result)
+                if _result_looks_like_sale_closing_only(result):
+                    result = _stamp_sale_closing_only_result(result)
+                    logger.info(
+                        "SALE_CLOSING_ONLY gemini_vision stamped "
+                        "stock_identity_kind=sale_closing_only file=%s rows=%s",
+                        filename,
+                        len(result.get("line_items") or []),
+                    )
                 # Unpark closing qty from closing_value even when openings are filled
                 # (PILEX 3+100-33→70). Full SSA dump repair still needs empty openings.
                 try:
